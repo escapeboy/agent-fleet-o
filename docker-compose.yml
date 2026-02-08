@@ -1,0 +1,144 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: development
+    container_name: agent-fleet-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+      - vendor_data:/var/www/vendor
+    environment:
+      - APP_ENV=local
+      - COMPOSER_CACHE_DIR=/root/.composer
+    networks:
+      - agent-fleet
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: agent-fleet-nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - agent-fleet
+    depends_on:
+      - app
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: agent-fleet-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-agent_fleet}
+      POSTGRES_USER: ${DB_USERNAME:-agent_fleet}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - agent-fleet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-agent_fleet}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: agent-fleet-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - agent-fleet
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  horizon:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: development
+    container_name: agent-fleet-horizon
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan horizon
+    volumes:
+      - .:/var/www
+      - vendor_data:/var/www/vendor
+    environment:
+      - APP_ENV=local
+    networks:
+      - agent-fleet
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: development
+    container_name: agent-fleet-scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+    command: >
+      sh -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
+    volumes:
+      - .:/var/www
+      - vendor_data:/var/www/vendor
+    environment:
+      - APP_ENV=local
+    networks:
+      - agent-fleet
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  vite:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: development
+    container_name: agent-fleet-vite
+    restart: unless-stopped
+    working_dir: /var/www
+    command: npm run dev -- --host
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/var/www
+      - node_modules:/var/www/node_modules
+    networks:
+      - agent-fleet
+
+volumes:
+  postgres_data:
+  redis_data:
+  vendor_data:
+  node_modules:
+
+networks:
+  agent-fleet:
+    driver: bridge

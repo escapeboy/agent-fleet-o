@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Domain\Experiment\Listeners;
+
+use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Events\ExperimentTransitioned;
+use App\Domain\Experiment\Pipeline\CollectMetrics;
+use App\Domain\Experiment\Pipeline\CreateOutboundProposals;
+use App\Domain\Experiment\Pipeline\ExecuteOutbound;
+use App\Domain\Experiment\Pipeline\PlaybookExecutor;
+use App\Domain\Experiment\Pipeline\RunBuildingStage;
+use App\Domain\Experiment\Pipeline\RunEvaluationStage;
+use App\Domain\Experiment\Pipeline\RunPlanningStage;
+use App\Domain\Experiment\Pipeline\RunScoringStage;
+use Illuminate\Support\Facades\Log;
+
+class DispatchNextStageJob
+{
+    /**
+     * Map: new experiment state => job class to dispatch.
+     * States not in this map are human gates (awaiting_approval) or terminal.
+     */
+    private const STATE_JOB_MAP = [
+        'scoring' => RunScoringStage::class,
+        'planning' => RunPlanningStage::class,
+        'building' => RunBuildingStage::class,
+        'awaiting_approval' => CreateOutboundProposals::class,
+        'executing' => ExecuteOutbound::class,
+        'collecting_metrics' => CollectMetrics::class,
+        'evaluating' => RunEvaluationStage::class,
+        'iterating' => RunPlanningStage::class,
+    ];
+
+    public function handle(ExperimentTransitioned $event): void
+    {
+        $newState = $event->toState->value;
+        $experiment = $event->experiment;
+
+        // Playbook mode: if experiment has playbook steps and enters Executing,
+        // use PlaybookExecutor instead of the default pipeline
+        if ($newState === 'executing' && $experiment->playbookSteps()->exists()) {
+            Log::info('DispatchNextStageJob: Dispatching PlaybookExecutor', [
+                'experiment_id' => $experiment->id,
+                'steps_count' => $experiment->playbookSteps()->count(),
+            ]);
+
+            app(PlaybookExecutor::class)->execute($experiment);
+
+            return;
+        }
+
+        $jobClass = self::STATE_JOB_MAP[$newState] ?? null;
+
+        if (! $jobClass) {
+            Log::debug('DispatchNextStageJob: No job mapped for state', [
+                'experiment_id' => $experiment->id,
+                'to_state' => $newState,
+            ]);
+
+            return;
+        }
+
+        Log::info('DispatchNextStageJob: Dispatching', [
+            'experiment_id' => $experiment->id,
+            'to_state' => $newState,
+            'job' => class_basename($jobClass),
+        ]);
+
+        $jobClass::dispatch($experiment->id);
+    }
+}
