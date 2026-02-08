@@ -12,6 +12,7 @@ use App\Domain\Experiment\Pipeline\RunBuildingStage;
 use App\Domain\Experiment\Pipeline\RunEvaluationStage;
 use App\Domain\Experiment\Pipeline\RunPlanningStage;
 use App\Domain\Experiment\Pipeline\RunScoringStage;
+use App\Domain\Workflow\Services\WorkflowGraphExecutor;
 use Illuminate\Support\Facades\Log;
 
 class DispatchNextStageJob
@@ -36,15 +37,25 @@ class DispatchNextStageJob
         $newState = $event->toState->value;
         $experiment = $event->experiment;
 
-        // Playbook mode: if experiment has playbook steps and enters Executing,
-        // use PlaybookExecutor instead of the default pipeline
+        // Workflow/Playbook mode: if experiment enters Executing and has playbook steps,
+        // use graph executor for workflow experiments or flat executor for legacy playbooks
         if ($newState === 'executing' && $experiment->playbookSteps()->exists()) {
-            Log::info('DispatchNextStageJob: Dispatching PlaybookExecutor', [
-                'experiment_id' => $experiment->id,
-                'steps_count' => $experiment->playbookSteps()->count(),
-            ]);
+            if ($experiment->hasWorkflow()) {
+                Log::info('DispatchNextStageJob: Dispatching WorkflowGraphExecutor', [
+                    'experiment_id' => $experiment->id,
+                    'workflow_id' => $experiment->workflow_id,
+                    'steps_count' => $experiment->playbookSteps()->count(),
+                ]);
 
-            app(PlaybookExecutor::class)->execute($experiment);
+                app(WorkflowGraphExecutor::class)->execute($experiment);
+            } else {
+                Log::info('DispatchNextStageJob: Dispatching PlaybookExecutor (legacy)', [
+                    'experiment_id' => $experiment->id,
+                    'steps_count' => $experiment->playbookSteps()->count(),
+                ]);
+
+                app(PlaybookExecutor::class)->execute($experiment);
+            }
 
             return;
         }

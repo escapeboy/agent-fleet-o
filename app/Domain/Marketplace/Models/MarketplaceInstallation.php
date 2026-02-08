@@ -19,6 +19,7 @@ class MarketplaceInstallation extends Model
         'installed_version',
         'installed_skill_id',
         'installed_agent_id',
+        'installed_workflow_id',
     ];
 
     public function listing(): BelongsTo

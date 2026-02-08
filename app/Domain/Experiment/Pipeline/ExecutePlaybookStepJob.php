@@ -100,7 +100,10 @@ class ExecutePlaybookStepJob implements ShouldQueue
 
     /**
      * Resolve step input from input_mapping configuration.
-     * Supports references like "steps.{order}.output.{field}" and "experiment.{field}".
+     * Supports references like:
+     *   "steps.{order}.output.{field}"     — legacy flat playbook reference
+     *   "node:{uuid}.output.{field}"       — workflow graph node reference
+     *   "experiment.{field}"               — experiment-level data
      */
     private function resolveInput(PlaybookStep $step, Experiment $experiment): array
     {
@@ -114,8 +117,23 @@ class ExecutePlaybookStepJob implements ShouldQueue
         $resolved = [];
 
         foreach ($mapping as $key => $source) {
-            if (is_string($source) && str_starts_with($source, 'steps.')) {
-                // Reference to another step's output: steps.{order}.output.{path}
+            if (is_string($source) && str_starts_with($source, 'node:')) {
+                // Workflow graph node reference: node:{uuid}.output.{path}
+                $parts = explode('.', $source, 3);
+                $nodeId = str_replace('node:', '', $parts[0]);
+                $path = $parts[2] ?? null;
+
+                $nodeStep = PlaybookStep::where('experiment_id', $experiment->id)
+                    ->where('workflow_node_id', $nodeId)
+                    ->first();
+
+                if ($nodeStep && is_array($nodeStep->output)) {
+                    $resolved[$key] = $path ? data_get($nodeStep->output, $path) : $nodeStep->output;
+                } else {
+                    $resolved[$key] = null;
+                }
+            } elseif (is_string($source) && str_starts_with($source, 'steps.')) {
+                // Legacy flat playbook reference: steps.{order}.output.{path}
                 $parts = explode('.', $source, 4);
                 $stepOrder = (int) ($parts[1] ?? 0);
                 $previousStep = PlaybookStep::where('experiment_id', $experiment->id)

@@ -6,6 +6,8 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Marketplace\Actions\PublishToMarketplaceAction;
 use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Workflow\Enums\WorkflowStatus;
+use App\Domain\Workflow\Models\Workflow;
 use Livewire\Component;
 
 class PublishForm extends Component
@@ -22,7 +24,7 @@ class PublishForm extends Component
     protected function rules(): array
     {
         return [
-            'itemType' => 'required|in:skill,agent',
+            'itemType' => 'required|in:skill,agent,workflow',
             'itemId' => 'required|uuid',
             'name' => 'required|string|min:3|max:100',
             'description' => 'required|string|min:10|max:500',
@@ -39,9 +41,12 @@ class PublishForm extends Component
             return;
         }
 
-        $item = $this->itemType === 'skill'
-            ? Skill::find($this->itemId)
-            : Agent::find($this->itemId);
+        $item = match ($this->itemType) {
+            'skill' => Skill::find($this->itemId),
+            'agent' => Agent::find($this->itemId),
+            'workflow' => Workflow::find($this->itemId),
+            default => null,
+        };
 
         if ($item) {
             $this->name = $item->name;
@@ -54,16 +59,18 @@ class PublishForm extends Component
         $this->validate();
 
         $user = auth()->user();
-        $team = $user->currentTeam();
+        $team = $user->currentTeam;
 
         if (! $team) {
             session()->flash('error', 'You must belong to a team to publish.');
             return;
         }
 
-        $item = $this->itemType === 'skill'
-            ? Skill::findOrFail($this->itemId)
-            : Agent::findOrFail($this->itemId);
+        $item = match ($this->itemType) {
+            'skill' => Skill::findOrFail($this->itemId),
+            'agent' => Agent::findOrFail($this->itemId),
+            'workflow' => Workflow::findOrFail($this->itemId),
+        };
 
         $tags = $this->tagsInput
             ? array_map('trim', explode(',', $this->tagsInput))
@@ -89,10 +96,12 @@ class PublishForm extends Component
     {
         $skills = Skill::where('status', 'active')->get(['id', 'name']);
         $agents = Agent::where('status', 'active')->get(['id', 'name']);
+        $workflows = Workflow::where('status', WorkflowStatus::Active)->get(['id', 'name']);
 
         return view('livewire.marketplace.publish-form', [
             'skills' => $skills,
             'agents' => $agents,
+            'workflows' => $workflows,
             'canPublish' => true,
         ])->layout('layouts.app', ['header' => 'Publish to Marketplace']);
     }

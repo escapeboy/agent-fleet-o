@@ -4,6 +4,8 @@ namespace App\Livewire\Experiments;
 
 use App\Domain\Experiment\Actions\CreateExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentTrack;
+use App\Domain\Workflow\Enums\WorkflowStatus;
+use App\Domain\Workflow\Models\Workflow;
 use Livewire\Component;
 
 class CreateExperimentForm extends Component
@@ -14,6 +16,7 @@ class CreateExperimentForm extends Component
     public int $budgetCapCredits = 10000;
     public int $maxIterations = 3;
     public int $maxOutboundCount = 100;
+    public string $workflowId = '';
 
     protected function rules(): array
     {
@@ -24,6 +27,7 @@ class CreateExperimentForm extends Component
             'budgetCapCredits' => 'required|integer|min:100|max:1000000',
             'maxIterations' => 'required|integer|min:1|max:20',
             'maxOutboundCount' => 'required|integer|min:1|max:10000',
+            'workflowId' => 'nullable|uuid',
         ];
     }
 
@@ -31,7 +35,7 @@ class CreateExperimentForm extends Component
     {
         $this->validate();
 
-        $team = auth()->user()->currentTeam();
+        $team = auth()->user()->currentTeam;
 
         $action = app(CreateExperimentAction::class);
         $experiment = $action->execute(
@@ -43,6 +47,7 @@ class CreateExperimentForm extends Component
             maxIterations: $this->maxIterations,
             maxOutboundCount: $this->maxOutboundCount,
             teamId: $team?->id,
+            workflowId: $this->workflowId ?: null,
         );
 
         $this->redirect(route('experiments.show', $experiment), navigate: true);
@@ -52,6 +57,7 @@ class CreateExperimentForm extends Component
     {
         return view('livewire.experiments.create-experiment-form', [
             'tracks' => ExperimentTrack::cases(),
+            'workflows' => Workflow::where('status', WorkflowStatus::Active)->get(['id', 'name']),
             'canCreate' => true,
         ]);
     }

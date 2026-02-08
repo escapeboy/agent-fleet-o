@@ -29,6 +29,13 @@
 
             <x-form-input wire:model="maxOutboundCount" label="Max Outbound Count" type="number" id="maxOutboundCount" min="1"
                 :error="$errors->first('maxOutboundCount')" />
+
+            <x-form-select wire:model="workflowId" label="Workflow (optional)" id="workflowId">
+                <option value="">No workflow</option>
+                @foreach($workflows as $wf)
+                    <option value="{{ $wf->id }}">{{ $wf->name }}</option>
+                @endforeach
+            </x-form-select>
         </div>
 
         <div class="flex items-center gap-3 pt-2">
