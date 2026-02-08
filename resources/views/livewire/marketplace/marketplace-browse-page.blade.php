@@ -21,6 +21,7 @@
             <option value="">All Types</option>
             <option value="skill">Skills</option>
             <option value="agent">Agents</option>
+            <option value="workflow">Workflows</option>
         </x-form-select>
 
         <x-form-select wire:model.live="categoryFilter">
@@ -63,7 +64,7 @@
                             {{ $listing->name }}
                         </a>
                         <span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                            {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' }}">
+                            {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') }}">
                             {{ ucfirst($listing->type) }}
                         </span>
                     </div>

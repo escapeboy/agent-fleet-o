@@ -67,7 +67,12 @@ app/
       Enums/                     # SkillType, SkillStatus, RiskLevel, ExecutionType
       Models/                    # Skill, SkillVersion, SkillExecution
       Services/                  # SchemaValidator, SkillCostCalculator
-    Marketplace/                 # Skill & agent marketplace
+    Workflow/                    # Reusable workflow templates (visual DAG builder)
+      Actions/                   # CreateWorkflow, UpdateWorkflow, DeleteWorkflow, ValidateWorkflowGraph, EstimateWorkflowCost, MaterializeWorkflow
+      Enums/                     # WorkflowNodeType (start/end/agent/conditional), WorkflowStatus (draft/active/archived)
+      Models/                    # Workflow, WorkflowNode, WorkflowEdge
+      Services/                  # WorkflowGraphExecutor, GraphValidator, ConditionEvaluator
+    Marketplace/                 # Skill, agent & workflow marketplace
       Actions/                   # PublishToMarketplace, InstallFromMarketplace
       Enums/                     # MarketplaceStatus, ListingVisibility
       Models/                    # MarketplaceListing, MarketplaceInstallation, MarketplaceReview
@@ -96,6 +101,7 @@ app/
     Health/                      # HealthPage
     Skills/                      # List, Detail, Create
     Agents/                      # List, Detail, Create
+    Workflows/                   # List, Builder (visual DAG editor), Detail
     Marketplace/                 # Browse, Detail, Publish
     Teams/                       # TeamSettingsPage (BYOK + API tokens)
   Console/Commands/              # AgentHealthCheck, AggregateMetrics, ExpireStaleApprovals, PollInputConnectors,
@@ -123,6 +129,10 @@ app/
 | `GET /agents` | AgentListPage | agents.index |
 | `GET /agents/create` | CreateAgentForm | agents.create |
 | `GET /agents/{agent}` | AgentDetailPage | agents.show |
+| `GET /workflows` | WorkflowListPage | workflows.index |
+| `GET /workflows/create` | WorkflowBuilderPage | workflows.create |
+| `GET /workflows/{workflow}/edit` | WorkflowBuilderPage | workflows.edit |
+| `GET /workflows/{workflow}` | WorkflowDetailPage | workflows.show |
 | `GET /marketplace` | MarketplaceBrowsePage | marketplace.index |
 | `GET /marketplace/publish` | PublishForm | marketplace.publish |
 | `GET /marketplace/{listing:slug}` | MarketplaceDetailPage | marketplace.show |
@@ -172,7 +182,7 @@ Reusable form components in `resources/views/components/`:
 - JSONB columns with GIN indexes (PostgreSQL).
 - Partial indexes for frequently filtered statuses.
 - Budget operations use `lockForUpdate()` for pessimistic locking.
-- 42 migrations.
+- 47 migrations.
 
 ### State Machine
 - Custom implementation (NOT spatie/laravel-model-states).

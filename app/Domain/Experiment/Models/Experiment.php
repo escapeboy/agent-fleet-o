@@ -11,6 +11,7 @@ use App\Domain\Metrics\Models\Metric;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Workflow\Models\Workflow;
 use App\Models\Artifact;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -27,6 +28,8 @@ class Experiment extends Model
     protected $fillable = [
         'team_id',
         'user_id',
+        'workflow_id',
+        'workflow_version',
         'title',
         'thesis',
         'track',
@@ -67,6 +70,16 @@ class Experiment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function workflow(): BelongsTo
+    {
+        return $this->belongsTo(Workflow::class);
+    }
+
+    public function hasWorkflow(): bool
+    {
+        return $this->workflow_id !== null;
     }
 
     public function stages(): HasMany

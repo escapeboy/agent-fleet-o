@@ -13,7 +13,7 @@
             <div class="flex items-center gap-3">
                 <h2 class="text-xl font-semibold text-gray-900">{{ $listing->name }}</h2>
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                    {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' }}">
+                    {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') }}">
                     {{ ucfirst($listing->type) }}
                 </span>
                 <span class="text-sm text-gray-400">v{{ $listing->version }}</span>
@@ -129,7 +129,7 @@
                         </div>
                     </div>
                 @endif
-            @else
+            @elseif($listing->type === 'agent')
                 {{-- Agent config --}}
                 <div class="rounded-xl border border-gray-200 bg-white p-4">
                     <h3 class="mb-3 text-sm font-semibold text-gray-700">Agent Configuration</h3>
@@ -154,6 +154,60 @@
                         @endif
                     </dl>
                 </div>
+
+            @elseif($listing->type === 'workflow')
+                {{-- Workflow config --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">Workflow Overview</h3>
+                    <dl class="space-y-3">
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Nodes</dt>
+                            <dd class="text-sm text-gray-700">{{ $snapshot['node_count'] ?? count($snapshot['nodes'] ?? []) }} nodes ({{ $snapshot['agent_node_count'] ?? 0 }} agent nodes)</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Connections</dt>
+                            <dd class="text-sm text-gray-700">{{ count($snapshot['edges'] ?? []) }} edges</dd>
+                        </div>
+                        @if(!empty($snapshot['max_loop_iterations']))
+                            <div>
+                                <dt class="text-xs font-medium text-gray-500">Max Loop Iterations</dt>
+                                <dd class="text-sm text-gray-700">{{ $snapshot['max_loop_iterations'] }}</dd>
+                            </div>
+                        @endif
+                        @if(!empty($snapshot['estimated_cost_credits']))
+                            <div>
+                                <dt class="text-xs font-medium text-gray-500">Estimated Cost</dt>
+                                <dd class="text-sm text-gray-700">{{ number_format($snapshot['estimated_cost_credits']) }} credits</dd>
+                            </div>
+                        @endif
+                    </dl>
+                </div>
+
+                @if(!empty($snapshot['nodes']))
+                    <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <h3 class="mb-3 text-sm font-semibold text-gray-700">Nodes</h3>
+                        <div class="space-y-2">
+                            @foreach($snapshot['nodes'] as $node)
+                                <div class="flex items-center justify-between rounded border border-gray-100 px-3 py-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                                            {{ $node['type'] === 'start' ? 'bg-green-100 text-green-800' :
+                                               ($node['type'] === 'end' ? 'bg-red-100 text-red-800' :
+                                               ($node['type'] === 'conditional' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800')) }}">
+                                            {{ ucfirst($node['type']) }}
+                                        </span>
+                                        <span class="text-sm text-gray-700">{{ $node['label'] }}</span>
+                                    </div>
+                                    @if(!empty($node['agent_name']) || !empty($node['skill_name']))
+                                        <span class="text-xs text-gray-500">
+                                            {{ $node['agent_name'] ?? '' }}{{ !empty($node['agent_name']) && !empty($node['skill_name']) ? ' / ' : '' }}{{ $node['skill_name'] ?? '' }}
+                                        </span>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             @endif
         </div>
 

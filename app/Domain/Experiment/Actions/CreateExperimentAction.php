@@ -4,9 +4,15 @@ namespace App\Domain\Experiment\Actions;
 
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Workflow\Actions\MaterializeWorkflowAction;
+use App\Domain\Workflow\Models\Workflow;
 
 class CreateExperimentAction
 {
+    public function __construct(
+        private MaterializeWorkflowAction $materializeAction,
+    ) {}
+
     public function execute(
         string $userId,
         string $title,
@@ -18,8 +24,9 @@ class CreateExperimentAction
         array $constraints = [],
         array $successCriteria = [],
         ?string $teamId = null,
+        ?string $workflowId = null,
     ): Experiment {
-        return Experiment::create([
+        $experiment = Experiment::create([
             'user_id' => $userId,
             'title' => $title,
             'thesis' => $thesis,
@@ -37,5 +44,16 @@ class CreateExperimentAction
             'max_outbound_count' => $maxOutboundCount,
             'outbound_count' => 0,
         ]);
+
+        // If a workflow is provided, materialize its graph into PlaybookSteps
+        if ($workflowId) {
+            $workflow = Workflow::withoutGlobalScopes()->find($workflowId);
+
+            if ($workflow) {
+                $this->materializeAction->execute($experiment, $workflow);
+            }
+        }
+
+        return $experiment;
     }
 }

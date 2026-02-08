@@ -17,6 +17,9 @@ use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
 use App\Livewire\Teams\TeamSettingsPage;
+use App\Livewire\Workflows\WorkflowBuilderPage;
+use App\Livewire\Workflows\WorkflowDetailPage;
+use App\Livewire\Workflows\WorkflowListPage;
 use Illuminate\Support\Facades\Route;
 
 // Root — redirect to dashboard or login
@@ -44,6 +47,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
+
+    Route::get('/workflows', WorkflowListPage::class)->name('workflows.index');
+    Route::get('/workflows/create', WorkflowBuilderPage::class)->name('workflows.create');
+    Route::get('/workflows/{workflow}/edit', WorkflowBuilderPage::class)->name('workflows.edit');
+    Route::get('/workflows/{workflow}', WorkflowDetailPage::class)->name('workflows.show');
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/health', HealthPage::class)->name('health');

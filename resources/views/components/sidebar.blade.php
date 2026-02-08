@@ -1,4 +1,4 @@
-<aside class="flex w-64 flex-col bg-(--color-sidebar) text-white" x-data="{ current: '{{ request()->routeIs('dashboard') ? 'dashboard' : (request()->routeIs('experiments.*') ? 'experiments' : (request()->routeIs('approvals.*') ? 'approvals' : (request()->routeIs('health') ? 'health' : (request()->routeIs('settings') ? 'settings' : (request()->routeIs('audit') ? 'audit' : (request()->routeIs('team.*') ? 'team' : 'dashboard')))))) }}' }">
+<aside class="flex w-64 flex-col bg-(--color-sidebar) text-white" x-data="{ current: '{{ request()->routeIs('dashboard') ? 'dashboard' : (request()->routeIs('experiments.*') ? 'experiments' : (request()->routeIs('workflows.*') ? 'workflows' : (request()->routeIs('approvals.*') ? 'approvals' : (request()->routeIs('health') ? 'health' : (request()->routeIs('settings') ? 'settings' : (request()->routeIs('audit') ? 'audit' : (request()->routeIs('team.*') ? 'team' : 'dashboard'))))))) }}' }">
     {{-- Logo --}}
     <div class="flex h-16 items-center border-b border-gray-800 px-6">
         <span class="text-xl font-bold tracking-tight">Agent Fleet</span>
@@ -20,6 +20,10 @@
 
         <x-sidebar-link href="{{ route('agents.index') }}" :active="request()->routeIs('agents.*')" icon="cpu-chip">
             Agents
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('workflows.index') }}" :active="request()->routeIs('workflows.*')" icon="arrow-path">
+            Workflows
         </x-sidebar-link>
 
         <x-sidebar-link href="{{ route('marketplace.index') }}" :active="request()->routeIs('marketplace.*')" icon="shopping-bag">

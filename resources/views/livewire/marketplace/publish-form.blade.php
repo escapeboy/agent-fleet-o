@@ -12,6 +12,7 @@
                 <x-form-select wire:model.live="itemType" label="Item Type">
                     <option value="skill">Skill</option>
                     <option value="agent">Agent</option>
+                    <option value="workflow">Workflow</option>
                 </x-form-select>
             </div>
 
@@ -24,9 +25,13 @@
                         @foreach($skills as $skill)
                             <option value="{{ $skill->id }}">{{ $skill->name }}</option>
                         @endforeach
-                    @else
+                    @elseif($itemType === 'agent')
                         @foreach($agents as $agent)
                             <option value="{{ $agent->id }}">{{ $agent->name }}</option>
+                        @endforeach
+                    @elseif($itemType === 'workflow')
+                        @foreach($workflows as $wf)
+                            <option value="{{ $wf->id }}">{{ $wf->name }}</option>
                         @endforeach
                     @endif
                 </x-form-select>
