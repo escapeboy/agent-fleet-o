@@ -120,7 +120,7 @@ services:
     container_name: agent-fleet-vite
     restart: unless-stopped
     working_dir: /var/www
-    command: npm run dev -- --host
+    command: sh -c "npm install && npm run dev -- --host"
     ports:
       - "5173:5173"
     volumes:
