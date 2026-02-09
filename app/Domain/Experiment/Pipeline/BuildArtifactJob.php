@@ -70,7 +70,7 @@ class BuildArtifactJob implements ShouldQueue
         // Serialize local agent calls — the bridge/CLI handles one request at a time.
         // If the lock is held, release the job back to the queue to avoid timeout.
         $lock = null;
-        if (str_starts_with($llm['provider'], 'local/')) {
+        if (str_starts_with($llm['provider'], 'local')) {
             $lock = Cache::store('redis')->lock('local-agent-bridge', 600);
             if (! $lock->get()) {
                 if ($task->status === ExperimentTaskStatus::Pending) {
