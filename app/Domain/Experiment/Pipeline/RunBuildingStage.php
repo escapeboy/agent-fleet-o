@@ -86,9 +86,9 @@ class RunBuildingStage extends BaseStageJob
             ->first();
 
         $plan = $planningStage?->output_snapshot ?? [];
-        $artifactsToBuild = $plan['artifacts_to_build'] ?? [
-            ['type' => 'email_template', 'name' => 'outreach_email', 'description' => 'Outreach email for experiment'],
-        ];
+        $artifactsToBuild = $plan['artifacts_to_build']
+            ?? $plan['plan']['artifacts_to_build']
+            ?? [['type' => 'email_template', 'name' => 'outreach_email', 'description' => 'Outreach email for experiment']];
 
         // Create ExperimentTask records
         $tasks = [];
