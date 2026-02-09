@@ -35,6 +35,21 @@
                 </button>
             @endif
 
+            @if($experiment->status->isFailed())
+                @if($showRetryConfirm)
+                    <div class="flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2">
+                        <span class="text-sm text-blue-700">Retry this experiment?</span>
+                        <button wire:click="retryExperiment" class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700">Yes, retry</button>
+                        <button wire:click="$set('showRetryConfirm', false)" class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">Cancel</button>
+                    </div>
+                @else
+                    <button wire:click="$set('showRetryConfirm', true)"
+                        class="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">
+                        Retry
+                    </button>
+                @endif
+            @endif
+
             @if(!$experiment->status->isTerminal())
                 @if($showKillConfirm)
                     <div class="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2">

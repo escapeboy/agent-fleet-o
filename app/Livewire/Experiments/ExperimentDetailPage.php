@@ -5,6 +5,7 @@ namespace App\Livewire\Experiments;
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
+use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
@@ -17,6 +18,8 @@ class ExperimentDetailPage extends Component
     public string $activeTab = 'timeline';
 
     public bool $showKillConfirm = false;
+
+    public bool $showRetryConfirm = false;
 
     public function mount(Experiment $experiment): void
     {
@@ -60,6 +63,14 @@ class ExperimentDetailPage extends Component
         $action = app(ResumeExperimentAction::class);
         $action->execute($this->experiment, auth()->id());
         $this->experiment = $this->experiment->fresh();
+    }
+
+    public function retryExperiment(): void
+    {
+        $action = app(RetryExperimentAction::class);
+        $action->execute($this->experiment, auth()->id());
+        $this->experiment = $this->experiment->fresh();
+        $this->showRetryConfirm = false;
     }
 
     public function killExperiment(): void
