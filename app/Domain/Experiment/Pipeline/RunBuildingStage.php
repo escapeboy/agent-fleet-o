@@ -123,7 +123,7 @@ class RunBuildingStage extends BaseStageJob
         $experimentId = $experiment->id;
         $stageId = $stage->id;
 
-        $batch = Bus::batch($jobs)
+        $batch = Bus::batch([$jobs])
             ->name("building:{$experimentId}")
             ->onQueue('ai-calls')
             ->then(function () use ($experimentId, $stageId) {
