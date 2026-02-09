@@ -93,6 +93,45 @@
             </div>
         </div>
 
+        {{-- Local Agents --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-medium text-gray-500">Local Agents</h3>
+                <button wire:click="rescanLocalAgents"
+                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                    Re-scan
+                </button>
+            </div>
+            <div class="mt-4 space-y-3">
+                @if($localAgentsEnabled)
+                    @forelse($allLocalAgents as $key => $agentConfig)
+                        @php $detected = $detectedLocalAgents[$key] ?? null; @endphp
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ $agentConfig['name'] }}</p>
+                                <p class="text-xs text-gray-500">{{ $agentConfig['description'] }}</p>
+                            </div>
+                            <div>
+                                @if($detected)
+                                    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                        v{{ $detected['version'] }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                                        Not found
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-400">No local agents configured.</p>
+                    @endforelse
+                @else
+                    <p class="text-sm text-gray-400">Local agents are disabled. Set <code class="text-xs">LOCAL_AGENTS_ENABLED=true</code> in .env to enable.</p>
+                @endif
+            </div>
+        </div>
+
         {{-- Blacklist Management --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6 lg:col-span-2">
             <h3 class="text-sm font-medium text-gray-500">Blacklist Management</h3>

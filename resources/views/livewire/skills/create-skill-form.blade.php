@@ -103,15 +103,29 @@
         @elseif($step === 3)
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <x-form-select wire:model="provider" label="LLM Provider (optional)">
+                    <x-form-select wire:model.live="provider" label="LLM Provider (optional)">
                         <option value="">Team Default</option>
-                        <option value="anthropic">Anthropic</option>
-                        <option value="openai">OpenAI</option>
-                        <option value="google">Google</option>
+                        @foreach($providers as $key => $providerConfig)
+                            <option value="{{ $key }}">{{ $providerConfig['name'] }}</option>
+                        @endforeach
                     </x-form-select>
 
-                    <x-form-input wire:model="model" label="Model (optional)" type="text" placeholder="e.g. claude-sonnet-4-5" />
+                    @if($provider && isset($providers[$provider]))
+                        <x-form-select wire:model="model" label="Model">
+                            @foreach($providers[$provider]['models'] as $modelKey => $modelConfig)
+                                <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                            @endforeach
+                        </x-form-select>
+                    @else
+                        <x-form-input wire:model="model" label="Model (optional)" type="text" placeholder="e.g. claude-sonnet-4-5" />
+                    @endif
                 </div>
+
+                @if($provider === 'local')
+                    <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                        Local agent — executes on the host machine using its own CLI process. No per-request API costs.
+                    </div>
+                @endif
 
                 <x-form-textarea wire:model="systemPrompt" label="System Prompt" rows="5" :mono="true"
                     placeholder="Instruct the AI how to process input..." />

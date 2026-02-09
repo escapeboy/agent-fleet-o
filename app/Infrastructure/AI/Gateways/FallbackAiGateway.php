@@ -7,6 +7,7 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use Illuminate\Support\Facades\Log;
+use Prism\Prism\Exceptions\PrismRateLimitedException;
 use Throwable;
 
 class FallbackAiGateway implements AiGatewayInterface
@@ -18,10 +19,16 @@ class FallbackAiGateway implements AiGatewayInterface
         private readonly PrismAiGateway $gateway,
         private readonly CircuitBreaker $circuitBreaker,
         private readonly array $fallbackChains = [],
+        private readonly ?LocalAgentGateway $localGateway = null,
     ) {}
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
+        // Route local agent requests directly — no fallback chain
+        if ($request->provider === 'local' && $this->localGateway) {
+            return $this->localGateway->complete($request);
+        }
+
         $chain = $this->getFallbackChain($request->provider, $request->model);
 
         $lastException = null;
@@ -50,6 +57,7 @@ class FallbackAiGateway implements AiGatewayInterface
                     purpose: $request->purpose,
                     idempotencyKey: $request->idempotencyKey,
                     temperature: $request->temperature,
+                    teamId: $request->teamId,
                 );
 
                 $response = $this->gateway->complete($adjustedRequest);
@@ -57,6 +65,12 @@ class FallbackAiGateway implements AiGatewayInterface
                 $this->circuitBreaker->recordSuccess($providerName);
 
                 return $response;
+            } catch (PrismRateLimitedException $e) {
+                // Rate limits are temporary — don't break the circuit
+                $lastException = $e;
+                Log::warning("AI Gateway: {$providerName}/{$modelName} rate limited (not recording CB failure)", [
+                    'error' => $e->getMessage(),
+                ]);
             } catch (Throwable $e) {
                 $lastException = $e;
                 $this->circuitBreaker->recordFailure($providerName);
@@ -71,6 +85,10 @@ class FallbackAiGateway implements AiGatewayInterface
 
     public function estimateCost(AiRequestDTO $request): int
     {
+        if ($request->provider === 'local') {
+            return 0;
+        }
+
         return $this->gateway->estimateCost($request);
     }
 

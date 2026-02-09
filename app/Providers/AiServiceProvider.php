@@ -7,6 +7,7 @@ use App\Domain\Budget\Actions\SettleBudgetAction;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Gateways\FallbackAiGateway;
+use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
@@ -14,6 +15,7 @@ use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\AI\Services\CircuitBreaker;
+use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use Illuminate\Support\ServiceProvider;
 
 class AiServiceProvider extends ServiceProvider
@@ -22,6 +24,13 @@ class AiServiceProvider extends ServiceProvider
     {
         $this->app->singleton(CostCalculator::class);
         $this->app->singleton(CircuitBreaker::class);
+        $this->app->singleton(LocalAgentDiscovery::class);
+
+        $this->app->singleton(LocalAgentGateway::class, function ($app) {
+            return new LocalAgentGateway(
+                discovery: $app->make(LocalAgentDiscovery::class),
+            );
+        });
 
         $this->app->singleton(PrismAiGateway::class, function ($app) {
             $gateway = new PrismAiGateway(
@@ -51,7 +60,13 @@ class AiServiceProvider extends ServiceProvider
                     'google/gemini-2.5-pro' => [
                         ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5-20250929'],
                     ],
+                    'google/gemini-2.5-flash' => [
+                        ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5-20250929'],
+                    ],
                 ],
+                localGateway: config('local_agents.enabled')
+                    ? $app->make(LocalAgentGateway::class)
+                    : null,
             );
         });
     }
