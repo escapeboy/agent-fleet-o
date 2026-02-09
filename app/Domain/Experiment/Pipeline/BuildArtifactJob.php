@@ -20,6 +20,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class BuildArtifactJob implements ShouldQueue
@@ -27,7 +28,7 @@ class BuildArtifactJob implements ShouldQueue
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 2;
-    public int $timeout = 300;
+    public int $timeout = 540;
     public int $backoff = 30;
 
     public function __construct(
@@ -63,22 +64,36 @@ class BuildArtifactJob implements ShouldQueue
             return;
         }
 
+        // Resolve LLM early to check for local agent serialization
+        $llm = $this->resolveLlm($task, $experiment);
+
+        // Serialize local agent calls — the bridge/CLI handles one request at a time.
+        // If the lock is held, release the job back to the queue to avoid timeout.
+        $lock = null;
+        if (str_starts_with($llm['provider'], 'local/')) {
+            $lock = Cache::store('redis')->lock('local-agent-bridge', 600);
+            if (! $lock->get()) {
+                if ($task->status === ExperimentTaskStatus::Pending) {
+                    $task->update(['status' => ExperimentTaskStatus::Queued]);
+                }
+                $this->release(15);
+
+                return;
+            }
+        }
+
         // Mark task as running
         $task->update([
             'status' => ExperimentTaskStatus::Running,
             'started_at' => now(),
+            'provider' => $llm['provider'],
+            'model' => $llm['model'],
         ]);
 
         $startTime = hrtime(true);
 
         try {
             $gateway = app(AiGatewayInterface::class);
-            $llm = $this->resolveLlm($task, $experiment);
-
-            $task->update([
-                'provider' => $llm['provider'],
-                'model' => $llm['model'],
-            ]);
 
             $inputData = $task->input_data ?? [];
             $plan = $inputData['plan'] ?? [];
@@ -110,7 +125,8 @@ class BuildArtifactJob implements ShouldQueue
                 'metadata' => $output['metadata'] ?? [],
             ]);
 
-            ArtifactVersion::create([
+            ArtifactVersion::withoutGlobalScopes()->create([
+                'team_id' => $experiment->team_id,
                 'artifact_id' => $artifact->id,
                 'version' => 1,
                 'content' => $output['content'] ?? $response->content,
@@ -146,6 +162,8 @@ class BuildArtifactJob implements ShouldQueue
             ]);
 
             throw $e;
+        } finally {
+            $lock?->release();
         }
     }
 

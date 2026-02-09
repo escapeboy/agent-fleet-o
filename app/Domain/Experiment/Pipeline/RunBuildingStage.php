@@ -126,7 +126,6 @@ class RunBuildingStage extends BaseStageJob
         $batch = Bus::batch($jobs)
             ->name("building:{$experimentId}")
             ->onQueue('ai-calls')
-            ->allowFailures()
             ->then(function () use ($experimentId, $stageId) {
                 // All jobs succeeded
                 $stage = ExperimentStage::withoutGlobalScopes()->find($stageId);
