@@ -27,7 +27,8 @@ class BuildArtifactJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 2;
+    public int $tries = 0;            // Unlimited — release() cycling for lock doesn't exhaust
+    public int $maxExceptions = 2;    // Only 2 real failures cause permanent failure
     public int $timeout = 540;
     public int $backoff = 30;
 
@@ -37,6 +38,14 @@ class BuildArtifactJob implements ShouldQueue
         public readonly ?string $teamId = null,
     ) {
         $this->onQueue('ai-calls');
+    }
+
+    /**
+     * Time-based safety net: give up after 60 minutes total (covers 8 sequential artifacts).
+     */
+    public function retryUntil(): \DateTime
+    {
+        return now()->addMinutes(60);
     }
 
     public function middleware(): array
