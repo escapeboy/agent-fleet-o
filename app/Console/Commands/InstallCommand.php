@@ -33,7 +33,14 @@ class InstallCommand extends Command
         // Step 2: Database
         $this->components->twoColumnDetail('Step 2/4', 'Database');
 
-        if (Team::query()->exists()) {
+        $alreadyInstalled = false;
+        try {
+            $alreadyInstalled = Team::query()->exists();
+        } catch (\Exception) {
+            // Table doesn't exist yet — fresh install
+        }
+
+        if ($alreadyInstalled) {
             $this->components->warn('Agent Fleet is already installed.');
 
             if (! $this->option('force') && ! $this->components->confirm('Re-run migrations anyway?', false)) {
@@ -50,7 +57,14 @@ class InstallCommand extends Command
         // Step 3: Admin account
         $this->components->twoColumnDetail('Step 3/4', 'Admin Account');
 
-        if (User::query()->exists() && ! $this->option('force')) {
+        $usersExist = false;
+        try {
+            $usersExist = User::query()->exists();
+        } catch (\Exception) {
+            // Table may not exist yet
+        }
+
+        if ($usersExist && ! $this->option('force')) {
             $this->components->info('Users already exist. Skipping admin creation.');
         } else {
             $this->createAdminAccount();
@@ -60,7 +74,12 @@ class InstallCommand extends Command
 
         // Step 4: LLM Provider
         $this->components->twoColumnDetail('Step 4/4', 'LLM Provider (optional)');
-        $this->configureLlmProvider();
+
+        if ($this->option('force')) {
+            $this->components->info('Skipping LLM configuration (--force). Configure later in Settings or .env.');
+        } else {
+            $this->configureLlmProvider();
+        }
 
         $this->newLine();
 

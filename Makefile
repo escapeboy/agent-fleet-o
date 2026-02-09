@@ -4,6 +4,8 @@
 install:
 	@cp -n .env.example .env 2>/dev/null || true
 	docker compose up -d --build
+	docker compose exec app composer install --no-interaction --optimize-autoloader
+	docker compose exec app npm install
 	docker compose exec app php artisan app:install
 
 # Start services
@@ -26,6 +28,8 @@ logs:
 update:
 	git pull
 	docker compose up -d --build
+	docker compose exec app composer install --no-interaction --optimize-autoloader
+	docker compose exec app npm install
 	docker compose exec app php artisan migrate --force
 	docker compose exec app php artisan config:clear
 	docker compose exec app php artisan view:clear
