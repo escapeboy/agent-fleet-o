@@ -15,3 +15,4 @@ Schedule::command('metrics:aggregate --period=daily')->dailyAt('01:00');
 Schedule::command('connectors:poll --driver=rss')->everyFifteenMinutes();
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
+Schedule::command('sanctum:prune-expired --hours=48')->daily();
