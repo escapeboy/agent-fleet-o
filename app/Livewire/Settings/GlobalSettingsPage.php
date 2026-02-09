@@ -149,6 +149,7 @@ class GlobalSettingsPage extends Component
     public function render()
     {
         $discovery = app(LocalAgentDiscovery::class);
+        $bridgeMode = $discovery->isBridgeMode();
 
         return view('livewire.settings.global-settings-page', [
             'blacklistEntries' => Blacklist::orderByDesc('created_at')->get(),
@@ -156,6 +157,8 @@ class GlobalSettingsPage extends Component
             'localAgentsEnabled' => config('local_agents.enabled'),
             'detectedLocalAgents' => $discovery->detect(),
             'allLocalAgents' => $discovery->allAgents(),
+            'bridgeMode' => $bridgeMode,
+            'bridgeConnected' => $bridgeMode ? $discovery->bridgeHealth() : false,
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

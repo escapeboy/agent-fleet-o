@@ -231,11 +231,29 @@ class InstallCommand extends Command
         $detected = $discovery->detect();
 
         if (empty($detected)) {
-            $this->components->info('No local agents detected. You can install them later:');
-            $this->components->bulletList([
-                'Codex: npm install -g @openai/codex',
-                'Claude Code: see https://docs.anthropic.com/en/docs/claude-code',
-            ]);
+            if ($discovery->isBridgeMode()) {
+                $this->components->warn('Running in Docker — bridge mode active but no agents found on host.');
+                $this->components->info('Ensure the host bridge is running:');
+                $this->components->bulletList([
+                    'LOCAL_AGENT_BRIDGE_SECRET=your-secret php -S 0.0.0.0:8065 docker/host-bridge.php',
+                ]);
+            } else {
+                $inDocker = env('RUNNING_IN_DOCKER') || file_exists('/.dockerenv');
+                if ($inDocker) {
+                    $this->components->warn('Running in Docker — local agents require the host bridge.');
+                    $this->components->info('On the host machine, run:');
+                    $this->components->bulletList([
+                        'LOCAL_AGENT_BRIDGE_SECRET=your-secret php -S 0.0.0.0:8065 docker/host-bridge.php',
+                        'Then set LOCAL_AGENT_BRIDGE_SECRET in .env',
+                    ]);
+                } else {
+                    $this->components->info('No local agents detected. You can install them later:');
+                    $this->components->bulletList([
+                        'Codex: npm install -g @openai/codex',
+                        'Claude Code: see https://docs.anthropic.com/en/docs/claude-code',
+                    ]);
+                }
+            }
             return;
         }
 

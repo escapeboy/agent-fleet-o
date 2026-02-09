@@ -96,7 +96,14 @@
         {{-- Local Agents --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium text-gray-500">Local Agents</h3>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-medium text-gray-500">Local Agents</h3>
+                    @if($bridgeMode)
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $bridgeConnected ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800' }}">
+                            Bridge {{ $bridgeConnected ? 'connected' : 'unreachable' }}
+                        </span>
+                    @endif
+                </div>
                 <button wire:click="rescanLocalAgents"
                     class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
                     Re-scan

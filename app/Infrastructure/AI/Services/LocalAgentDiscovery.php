@@ -2,11 +2,14 @@
 
 namespace App\Infrastructure\AI\Services;
 
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 class LocalAgentDiscovery
 {
+    private ?array $bridgeCache = null;
+
     /**
      * Detect which local agents are available on the system.
      *
@@ -16,6 +19,10 @@ class LocalAgentDiscovery
     {
         if (! config('local_agents.enabled')) {
             return [];
+        }
+
+        if ($this->shouldUseBridge()) {
+            return $this->bridgeDiscover();
         }
 
         $agents = config('local_agents.agents', []);
@@ -47,6 +54,12 @@ class LocalAgentDiscovery
             return false;
         }
 
+        if ($this->shouldUseBridge()) {
+            $agents = $this->bridgeDiscover();
+
+            return isset($agents[$agentKey]);
+        }
+
         return $this->binaryPath($agentKey) !== null;
     }
 
@@ -59,6 +72,14 @@ class LocalAgentDiscovery
 
         if (! $config) {
             return null;
+        }
+
+        if ($this->shouldUseBridge()) {
+            $agents = $this->bridgeDiscover();
+
+            return isset($agents[$agentKey])
+                ? ($agents[$agentKey]['path'] ?? "bridge://{$agentKey}")
+                : null;
         }
 
         $binary = $config['binary'];
@@ -92,6 +113,12 @@ class LocalAgentDiscovery
             return null;
         }
 
+        if ($this->shouldUseBridge()) {
+            $agents = $this->bridgeDiscover();
+
+            return $agents[$agentKey]['version'] ?? null;
+        }
+
         $detectCommand = $config['detect_command'];
 
         $process = Process::fromShellCommandline($detectCommand);
@@ -120,6 +147,107 @@ class LocalAgentDiscovery
     public function allAgents(): array
     {
         return config('local_agents.agents', []);
+    }
+
+    /**
+     * Whether the app is running inside Docker and should use the host bridge.
+     */
+    public function isBridgeMode(): bool
+    {
+        return $this->shouldUseBridge();
+    }
+
+    /**
+     * Get the bridge base URL.
+     */
+    public function bridgeUrl(): string
+    {
+        return config('local_agents.bridge.url', 'http://host.docker.internal:8065');
+    }
+
+    /**
+     * Get the bridge auth secret.
+     */
+    public function bridgeSecret(): string
+    {
+        return config('local_agents.bridge.secret', '');
+    }
+
+    /**
+     * Check if the bridge server is reachable.
+     */
+    public function bridgeHealth(): bool
+    {
+        try {
+            $response = Http::timeout(config('local_agents.bridge.connect_timeout', 5))
+                ->get($this->bridgeUrl() . '/health');
+
+            return $response->successful() && ($response->json('status') === 'ok');
+        } catch (\Throwable $e) {
+            Log::debug('LocalAgentDiscovery: bridge health check failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Determine if we're running inside Docker.
+     */
+    private function isRunningInDocker(): bool
+    {
+        if (env('RUNNING_IN_DOCKER')) {
+            return true;
+        }
+
+        return file_exists('/.dockerenv');
+    }
+
+    /**
+     * Determine if the bridge should be used instead of direct binary detection.
+     */
+    private function shouldUseBridge(): bool
+    {
+        return $this->isRunningInDocker()
+            && config('local_agents.bridge.auto_detect', true)
+            && ! empty(config('local_agents.bridge.secret'));
+    }
+
+    /**
+     * Discover agents via the host bridge HTTP server.
+     *
+     * @return array<string, array{name: string, version: string, path: string}>
+     */
+    private function bridgeDiscover(): array
+    {
+        if ($this->bridgeCache !== null) {
+            return $this->bridgeCache;
+        }
+
+        try {
+            $response = Http::timeout(config('local_agents.bridge.connect_timeout', 5))
+                ->withToken($this->bridgeSecret())
+                ->get($this->bridgeUrl() . '/discover');
+
+            if ($response->successful()) {
+                $this->bridgeCache = $response->json('agents') ?? [];
+
+                return $this->bridgeCache;
+            }
+
+            Log::warning('LocalAgentDiscovery: bridge discover failed', [
+                'status' => $response->status(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::debug('LocalAgentDiscovery: bridge connection failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $this->bridgeCache = [];
+
+        return [];
     }
 
     /**

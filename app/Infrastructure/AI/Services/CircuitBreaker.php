@@ -124,8 +124,9 @@ class CircuitBreaker
                 'half_open_at' => now(),
             ]);
 
-            Log::info("CircuitBreaker: {$state->agent->provider} transitioned to half-open", [
-                'provider' => $state->agent->provider,
+            $providerName = $state->agent?->provider ?? 'unknown';
+            Log::info("CircuitBreaker: {$providerName} transitioned to half-open", [
+                'provider' => $providerName,
                 'cooldown_seconds' => $state->cooldown_seconds,
             ]);
 
@@ -137,7 +138,8 @@ class CircuitBreaker
 
     private function getState(string $provider): ?CircuitBreakerState
     {
-        $agent = Agent::where('provider', $provider)
+        $agent = Agent::withoutGlobalScopes()
+            ->where('provider', $provider)
             ->whereHas('circuitBreakerState')
             ->first();
 
@@ -146,25 +148,26 @@ class CircuitBreaker
 
     private function getOrCreateState(string $provider): CircuitBreakerState
     {
-        $agent = Agent::where('provider', $provider)->first();
+        $agent = Agent::withoutGlobalScopes()->where('provider', $provider)->first();
 
         if (! $agent) {
-            // Create a transient state for unregistered providers
-            return CircuitBreakerState::firstOrCreate(
-                ['agent_id' => null],
-                [
-                    'state' => self::STATE_CLOSED,
-                    'failure_count' => 0,
-                    'success_count' => 0,
-                    'cooldown_seconds' => 60,
-                    'failure_threshold' => 5,
-                ]
-            );
+            // For unregistered providers, return a transient in-memory state (not persisted)
+            $state = new CircuitBreakerState([
+                'state' => self::STATE_CLOSED,
+                'failure_count' => 0,
+                'success_count' => 0,
+                'cooldown_seconds' => 60,
+                'failure_threshold' => 5,
+            ]);
+            $state->exists = false;
+
+            return $state;
         }
 
-        return CircuitBreakerState::firstOrCreate(
+        return CircuitBreakerState::withoutGlobalScopes()->firstOrCreate(
             ['agent_id' => $agent->id],
             [
+                'team_id' => $agent->team_id,
                 'state' => self::STATE_CLOSED,
                 'failure_count' => 0,
                 'success_count' => 0,

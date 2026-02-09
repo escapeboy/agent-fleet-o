@@ -20,42 +20,54 @@ class IdempotencyCheck implements AiMiddlewareInterface
     {
         $idempotencyKey = $request->generateIdempotencyKey();
 
-        // Check for existing completed request
-        $existing = LlmRequestLog::where('idempotency_key', $idempotencyKey)
-            ->where('status', 'completed')
+        // Check for existing record (withoutGlobalScopes for queue context)
+        $existing = LlmRequestLog::withoutGlobalScopes()
+            ->where('idempotency_key', $idempotencyKey)
             ->first();
 
         if ($existing) {
-            $content = is_array($existing->response_body)
-                ? json_encode($existing->response_body)
-                : ($existing->response_body ?? '');
+            // Return cached response for completed requests
+            if ($existing->status === 'completed') {
+                $content = is_array($existing->response_body)
+                    ? json_encode($existing->response_body)
+                    : ($existing->response_body ?? '');
 
-            return new AiResponseDTO(
-                content: $content,
-                parsedOutput: is_array($existing->response_body) ? $existing->response_body : null,
-                usage: new AiUsageDTO(
-                    promptTokens: $existing->input_tokens ?? 0,
-                    completionTokens: $existing->output_tokens ?? 0,
-                    costCredits: 0, // No cost for cached responses
-                ),
-                provider: $existing->provider,
-                model: $existing->model,
-                latencyMs: 0,
-                cached: true,
-            );
+                return new AiResponseDTO(
+                    content: $content,
+                    parsedOutput: is_array($existing->response_body) ? $existing->response_body : null,
+                    usage: new AiUsageDTO(
+                        promptTokens: $existing->input_tokens ?? 0,
+                        completionTokens: $existing->output_tokens ?? 0,
+                        costCredits: 0, // No cost for cached responses
+                    ),
+                    provider: $existing->provider,
+                    model: $existing->model,
+                    latencyMs: 0,
+                    cached: true,
+                );
+            }
+
+            // For pending/failed records, reset and retry
+            $existing->update([
+                'status' => 'pending',
+                'error' => null,
+                'team_id' => $request->teamId ?? $existing->team_id,
+            ]);
+            $log = $existing;
+        } else {
+            // Create pending log entry (withoutGlobalScopes for queue context)
+            $log = LlmRequestLog::withoutGlobalScopes()->create([
+                'team_id' => $request->teamId,
+                'idempotency_key' => $idempotencyKey,
+                'agent_id' => $request->agentId,
+                'experiment_id' => $request->experimentId,
+                'experiment_stage_id' => $request->experimentStageId,
+                'provider' => $request->provider,
+                'model' => $request->model,
+                'prompt_hash' => hash('xxh128', $request->systemPrompt . $request->userPrompt),
+                'status' => 'pending',
+            ]);
         }
-
-        // Create pending log entry
-        $log = LlmRequestLog::create([
-            'idempotency_key' => $idempotencyKey,
-            'agent_id' => $request->agentId,
-            'experiment_id' => $request->experimentId,
-            'experiment_stage_id' => $request->experimentStageId,
-            'provider' => $request->provider,
-            'model' => $request->model,
-            'prompt_hash' => hash('xxh128', $request->systemPrompt . $request->userPrompt),
-            'status' => 'pending',
-        ]);
 
         try {
             $response = $next($request);
@@ -74,7 +86,7 @@ class IdempotencyCheck implements AiMiddlewareInterface
         } catch (\Throwable $e) {
             $log->update([
                 'status' => 'failed',
-                'error' => $e->getMessage(),
+                'error' => substr($e->getMessage(), 0, 1000),
             ]);
 
             throw $e;

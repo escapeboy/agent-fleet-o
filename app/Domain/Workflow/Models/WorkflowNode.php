@@ -3,6 +3,7 @@
 namespace App\Domain\Workflow\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Models\Crew;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -18,6 +19,7 @@ class WorkflowNode extends Model
         'workflow_id',
         'agent_id',
         'skill_id',
+        'crew_id',
         'type',
         'label',
         'position_x',
@@ -52,6 +54,11 @@ class WorkflowNode extends Model
         return $this->belongsTo(Skill::class);
     }
 
+    public function crew(): BelongsTo
+    {
+        return $this->belongsTo(Crew::class);
+    }
+
     public function outgoingEdges(): HasMany
     {
         return $this->hasMany(WorkflowEdge::class, 'source_node_id')->orderBy('sort_order');
@@ -80,6 +87,11 @@ class WorkflowNode extends Model
     public function isConditional(): bool
     {
         return $this->type === WorkflowNodeType::Conditional;
+    }
+
+    public function isCrew(): bool
+    {
+        return $this->type === WorkflowNodeType::Crew;
     }
 
     public function requiresAgent(): bool

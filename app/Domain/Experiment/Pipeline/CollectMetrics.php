@@ -44,8 +44,9 @@ class CollectMetrics extends BaseStageJob
             // Record delivery metric
             $delivered = $action->status === OutboundActionStatus::Sent;
 
-            Metric::create([
+            Metric::withoutGlobalScopes()->create([
                 'experiment_id' => $experiment->id,
+                'team_id' => $experiment->team_id,
                 'outbound_action_id' => $action->id,
                 'type' => 'delivery',
                 'value' => $delivered ? 1.0 : 0.0,

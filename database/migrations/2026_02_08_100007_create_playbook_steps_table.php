@@ -12,7 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('experiment_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('agent_id')->constrained();
-            $table->foreignUuid('skill_id')->constrained();
+            $table->foreignUuid('skill_id')->nullable()->constrained();
             $table->integer('order');
             $table->string('execution_mode')->default('sequential');
             $table->string('group_id')->nullable();

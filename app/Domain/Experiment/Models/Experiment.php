@@ -63,6 +63,7 @@ class Experiment extends Model
             'outbound_count' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'workflow_version' => 'integer',
             'killed_at' => 'datetime',
         ];
     }
@@ -70,16 +71,6 @@ class Experiment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function workflow(): BelongsTo
-    {
-        return $this->belongsTo(Workflow::class);
-    }
-
-    public function hasWorkflow(): bool
-    {
-        return $this->workflow_id !== null;
     }
 
     public function stages(): HasMany
@@ -130,5 +121,20 @@ class Experiment extends Model
     public function playbookSteps(): HasMany
     {
         return $this->hasMany(PlaybookStep::class)->orderBy('order');
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(ExperimentTask::class)->orderBy('sort_order');
+    }
+
+    public function workflow(): BelongsTo
+    {
+        return $this->belongsTo(Workflow::class);
+    }
+
+    public function hasWorkflow(): bool
+    {
+        return $this->workflow_id !== null;
     }
 }

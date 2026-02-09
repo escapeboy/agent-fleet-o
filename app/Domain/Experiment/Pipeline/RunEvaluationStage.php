@@ -32,6 +32,7 @@ class RunEvaluationStage extends BaseStageJob
     {
         $gateway = app(AiGatewayInterface::class);
         $transition = app(TransitionExperimentAction::class);
+        $llm = $this->resolvePipelineLlm($experiment);
 
         // Gather all metrics for this experiment
         $metrics = $experiment->metrics()
@@ -45,9 +46,9 @@ class RunEvaluationStage extends BaseStageJob
             ]);
 
         $request = new AiRequestDTO(
-            provider: 'anthropic',
-            model: 'claude-sonnet-4-5-20250929',
-            systemPrompt: 'You are an experiment evaluation agent. Analyze the collected metrics and decide the experiment outcome. Return a JSON object with: verdict (completed|iterate|kill), reasoning (string), confidence (0.0-1.0), key_findings (array of strings), recommendations (array of strings).',
+            provider: $llm['provider'],
+            model: $llm['model'],
+            systemPrompt: 'You are an experiment evaluation agent. Analyze metrics and decide the outcome. Return ONLY a valid JSON object (no markdown, no code fences) with: verdict (completed|iterate|kill), reasoning (string, max 2 sentences), confidence (0.0-1.0), key_findings (array of max 5 strings), recommendations (array of max 3 strings). Keep compact.',
             userPrompt: "Evaluate this experiment:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nIteration: {$experiment->current_iteration} of {$experiment->max_iterations}\nSuccess criteria: " . json_encode($experiment->success_criteria) . "\nMetrics: " . json_encode($metrics),
             maxTokens: 1024,
             userId: $experiment->user_id,
@@ -55,10 +56,11 @@ class RunEvaluationStage extends BaseStageJob
             experimentStageId: $stage->id,
             purpose: 'evaluating',
             temperature: 0.3,
+            teamId: $experiment->team_id,
         );
 
         $response = $gateway->complete($request);
-        $parsedOutput = $response->parsedOutput ?? json_decode($response->content, true);
+        $parsedOutput = $this->parseJsonResponse($response);
 
         $stage->update([
             'output_snapshot' => $parsedOutput,

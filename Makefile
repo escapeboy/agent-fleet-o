@@ -1,4 +1,4 @@
-.PHONY: install start stop restart logs update shell migrate fresh test
+.PHONY: install start stop restart logs update shell migrate fresh test bridge
 
 # First-time setup
 install:
@@ -50,3 +50,8 @@ fresh:
 # Run tests
 test:
 	docker compose exec app php artisan test
+
+# Start the host agent bridge (run on host machine, not in Docker)
+# Auto-detects PHP or Python 3, auto-generates secret if needed
+bridge:
+	@sh docker/start-bridge.sh

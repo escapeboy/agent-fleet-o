@@ -80,15 +80,27 @@
         </div>
     </div>
 
+    {{-- Workflow Progress (shown when experiment uses a workflow) --}}
+    @if($experiment->hasWorkflow())
+        <div class="mb-6">
+            <livewire:experiments.workflow-progress-panel :experimentId="$experiment->id" :key="'workflow-progress-'.$experiment->id" />
+        </div>
+    @endif
+
     {{-- Tab Navigation --}}
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex gap-6">
-            @foreach(['timeline' => 'Timeline', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'transitions' => 'Transitions'] as $tab => $label)
+            @php
+                $tabs = ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'transitions' => 'Transitions'];
+            @endphp
+            @foreach($tabs as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
                     class="border-b-2 px-1 pb-3 text-sm font-medium transition
                     {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                     {{ $label }}
-                    @if($tab === 'artifacts')
+                    @if($tab === 'tasks' && $experiment->tasks_count > 0)
+                        <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->tasks_count }}</span>
+                    @elseif($tab === 'artifacts')
                         <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->artifacts_count }}</span>
                     @elseif($tab === 'outbound')
                         <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->outbound_proposals_count }}</span>
@@ -101,6 +113,8 @@
     {{-- Tab Content --}}
     @if($activeTab === 'timeline')
         <livewire:experiments.experiment-timeline :experiment="$experiment" :key="'timeline-'.$experiment->id" />
+    @elseif($activeTab === 'tasks')
+        <livewire:experiments.experiment-tasks-panel :experiment="$experiment" :key="'tasks-'.$experiment->id" />
     @elseif($activeTab === 'artifacts')
         <livewire:experiments.artifact-list :experiment="$experiment" :key="'artifacts-'.$experiment->id" />
     @elseif($activeTab === 'outbound')

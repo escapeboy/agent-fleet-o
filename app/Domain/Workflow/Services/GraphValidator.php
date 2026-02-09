@@ -27,6 +27,7 @@ class GraphValidator
         $this->validateConditionalNodes();
         $this->validateLoopExits();
         $this->validateAgentNodes();
+        $this->validateCrewNodes();
 
         return $this->errors;
     }
@@ -276,6 +277,21 @@ class GraphValidator
                 $this->errors[] = [
                     'type' => 'agent_node_no_agent',
                     'message' => "Agent node '{$node->label}' has no agent assigned.",
+                    'node_id' => $node->id,
+                ];
+            }
+        }
+    }
+
+    private function validateCrewNodes(): void
+    {
+        $crewNodes = $this->nodes->where('type', WorkflowNodeType::Crew);
+
+        foreach ($crewNodes as $node) {
+            if (! $node->crew_id) {
+                $this->errors[] = [
+                    'type' => 'crew_node_no_crew',
+                    'message' => "Crew node '{$node->label}' has no crew assigned.",
                     'node_id' => $node->id,
                 ];
             }

@@ -16,8 +16,9 @@ class CreateApprovalRequestAction
     ): ApprovalRequest {
         $defaultTimeout = $experiment->constraints['approval_timeout_hours'] ?? 48;
 
-        return ApprovalRequest::create([
+        return ApprovalRequest::withoutGlobalScopes()->create([
             'experiment_id' => $experiment->id,
+            'team_id' => $experiment->team_id,
             'outbound_proposal_id' => $outboundProposal?->id,
             'status' => ApprovalStatus::Pending,
             'context' => array_merge($context, [

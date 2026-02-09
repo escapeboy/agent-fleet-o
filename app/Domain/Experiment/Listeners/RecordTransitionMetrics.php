@@ -22,8 +22,9 @@ class RecordTransitionMetrics
             ? now()->diffInSeconds($previousTransition->created_at)
             : 0;
 
-        Metric::create([
+        Metric::withoutGlobalScopes()->create([
             'experiment_id' => $experiment->id,
+            'team_id' => $experiment->team_id,
             'type' => 'state_duration',
             'value' => $durationSeconds,
             'source' => 'state_machine',

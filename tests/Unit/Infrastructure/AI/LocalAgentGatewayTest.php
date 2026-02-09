@@ -44,6 +44,7 @@ class LocalAgentGatewayTest extends TestCase
         ]]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('isBridgeMode')->andReturn(false);
         $discovery->shouldReceive('binaryPath')
             ->with('codex')
             ->andReturn(null);
@@ -94,6 +95,7 @@ class LocalAgentGatewayTest extends TestCase
         config(['local_agents.timeout' => 10]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('isBridgeMode')->andReturn(false);
         $discovery->shouldReceive('binaryPath')
             ->with('echo-agent')
             ->andReturn('/bin/echo');

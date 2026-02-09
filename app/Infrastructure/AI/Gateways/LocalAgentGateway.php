@@ -7,6 +7,7 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -24,6 +25,10 @@ class LocalAgentGateway implements AiGatewayInterface
 
         if (! $config) {
             throw new RuntimeException("Unknown local agent: {$agentKey}");
+        }
+
+        if ($this->discovery->isBridgeMode()) {
+            return $this->executeViaBridge($agentKey, $config, $request);
         }
 
         $binaryPath = $this->discovery->binaryPath($agentKey);
@@ -85,6 +90,75 @@ class LocalAgentGateway implements AiGatewayInterface
     public function estimateCost(AiRequestDTO $request): int
     {
         return 0;
+    }
+
+    /**
+     * Execute an agent via the host bridge HTTP server.
+     */
+    private function executeViaBridge(string $agentKey, array $config, AiRequestDTO $request): AiResponseDTO
+    {
+        $prompt = $this->buildPrompt($request);
+        $timeout = config('local_agents.timeout', 300);
+        $bridgeUrl = $this->discovery->bridgeUrl();
+        $bridgeSecret = $this->discovery->bridgeSecret();
+
+        Log::debug("LocalAgentGateway: executing {$agentKey} via bridge", [
+            'bridge_url' => $bridgeUrl,
+            'prompt_length' => strlen($prompt),
+        ]);
+
+        $startTime = hrtime(true);
+
+        try {
+            $response = Http::timeout($timeout + 10)
+                ->connectTimeout(config('local_agents.bridge.connect_timeout', 5))
+                ->withToken($bridgeSecret)
+                ->post($bridgeUrl . '/execute', [
+                    'agent_key' => $agentKey,
+                    'prompt' => $prompt,
+                    'timeout' => $timeout,
+                    'working_directory' => config('local_agents.working_directory'),
+                ]);
+        } catch (\Throwable $e) {
+            throw new RuntimeException(
+                "Bridge connection failed for '{$config['name']}': " . $e->getMessage()
+            );
+        }
+
+        $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+        $data = $response->json();
+
+        if (! $response->successful() || ! ($data['success'] ?? false)) {
+            $error = $data['error'] ?? $data['stderr'] ?? 'Unknown bridge error';
+            $exitCode = $data['exit_code'] ?? $response->status();
+
+            Log::error("LocalAgentGateway: bridge execution failed for {$agentKey}", [
+                'exit_code' => $exitCode,
+                'error' => substr($error, 0, 1000),
+            ]);
+
+            throw new RuntimeException(
+                "Local agent '{$config['name']}' failed via bridge (code {$exitCode}): "
+                . substr($error, 0, 500)
+            );
+        }
+
+        $output = $data['output'] ?? '';
+        $parsed = $this->parseOutput($agentKey, $output);
+
+        return new AiResponseDTO(
+            content: $parsed['content'],
+            parsedOutput: $parsed['structured'],
+            usage: new AiUsageDTO(
+                promptTokens: $this->estimateTokens($prompt),
+                completionTokens: $this->estimateTokens($parsed['content']),
+                costCredits: 0,
+            ),
+            provider: 'local',
+            model: $agentKey,
+            latencyMs: $data['execution_time_ms'] ?? $latencyMs,
+        );
     }
 
     private function buildPrompt(AiRequestDTO $request): string

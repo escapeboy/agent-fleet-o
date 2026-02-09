@@ -4,6 +4,10 @@ use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\CreateAgentForm;
 use App\Livewire\Approvals\ApprovalInboxPage;
+use App\Livewire\Crews\CrewDetailPage;
+use App\Livewire\Crews\CrewExecutionPage;
+use App\Livewire\Crews\CrewListPage;
+use App\Livewire\Crews\CreateCrewForm;
 use App\Livewire\Audit\AuditLogPage;
 use App\Livewire\Dashboard\DashboardPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
@@ -47,6 +51,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
+
+    Route::get('/crews', CrewListPage::class)->name('crews.index');
+    Route::get('/crews/create', CreateCrewForm::class)->name('crews.create');
+    Route::get('/crews/{crew}/execute', CrewExecutionPage::class)->name('crews.execute');
+    Route::get('/crews/{crew}', CrewDetailPage::class)->name('crews.show');
 
     Route::get('/workflows', WorkflowListPage::class)->name('workflows.index');
     Route::get('/workflows/create', WorkflowBuilderPage::class)->name('workflows.create');

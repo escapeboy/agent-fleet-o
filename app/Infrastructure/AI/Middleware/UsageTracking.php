@@ -18,7 +18,8 @@ class UsageTracking implements AiMiddlewareInterface
             return $response; // Don't track cached responses as new runs
         }
 
-        AiRun::create([
+        AiRun::withoutGlobalScopes()->create([
+            'team_id' => $request->teamId,
             'agent_id' => $request->agentId,
             'experiment_id' => $request->experimentId,
             'experiment_stage_id' => $request->experimentStageId,

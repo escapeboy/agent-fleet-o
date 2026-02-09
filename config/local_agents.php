@@ -23,6 +23,14 @@ return [
         ],
     ],
 
+    // Host bridge — allows Docker containers to reach host-installed agents
+    'bridge' => [
+        'auto_detect' => (bool) env('LOCAL_AGENT_BRIDGE_AUTO', true),
+        'url' => env('LOCAL_AGENT_BRIDGE_URL', 'http://host.docker.internal:8065'),
+        'secret' => env('LOCAL_AGENT_BRIDGE_SECRET', ''),
+        'connect_timeout' => (int) env('LOCAL_AGENT_BRIDGE_CONNECT_TIMEOUT', 5),
+    ],
+
     // Working directory for local agent execution (defaults to project root)
     'working_directory' => env('LOCAL_AGENT_WORKDIR', null),
 
