@@ -35,7 +35,7 @@ return [
     'working_directory' => env('LOCAL_AGENT_WORKDIR', null),
 
     // Maximum execution time in seconds
-    'timeout' => (int) env('LOCAL_AGENT_TIMEOUT', 600),
+    'timeout' => (int) env('LOCAL_AGENT_TIMEOUT', 900),
 
     // Enable/disable local agent support
     'enabled' => (bool) env('LOCAL_AGENTS_ENABLED', true),

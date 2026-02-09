@@ -29,7 +29,7 @@ class BuildArtifactJob implements ShouldQueue
 
     public int $tries = 0;            // Unlimited — release() cycling for lock doesn't exhaust
     public int $maxExceptions = 2;    // Only 2 real failures cause permanent failure
-    public int $timeout = 540;
+    public int $timeout = 960;
     public int $backoff = 30;
 
     public function __construct(
