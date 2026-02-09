@@ -107,6 +107,25 @@ class LocalAgentGateway implements AiGatewayInterface
             'prompt_length' => strlen($prompt),
         ]);
 
+        // Pre-flight: quick health check to fail fast if bridge is down/stuck
+        try {
+            $health = Http::timeout(5)
+                ->connectTimeout(3)
+                ->get($bridgeUrl . '/health');
+
+            if (! $health->successful()) {
+                throw new RuntimeException(
+                    "Bridge health check failed (HTTP {$health->status()}). Is the bridge running?"
+                );
+            }
+        } catch (RuntimeException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            throw new RuntimeException(
+                "Bridge unreachable at {$bridgeUrl} — start it with: ./docker/start-bridge.sh"
+            );
+        }
+
         $startTime = hrtime(true);
 
         try {
