@@ -22,6 +22,10 @@
             Agents
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('crews.index') }}" :active="request()->routeIs('crews.*')" icon="user-group">
+            Crews
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('workflows.index') }}" :active="request()->routeIs('workflows.*')" icon="arrow-path">
             Workflows
         </x-sidebar-link>

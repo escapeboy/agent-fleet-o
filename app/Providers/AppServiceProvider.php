@@ -8,9 +8,16 @@ use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,5 +45,26 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ExperimentTransitioned::class, NotifyOnCriticalTransition::class);
         Event::listen(ExperimentTransitioned::class, PauseOnBudgetExceeded::class);
         Event::listen(ExperimentTransitioned::class, LogExperimentTransition::class);
+
+        // API rate limiting
+        RateLimiter::for('api', function (Request $request) {
+            $user = $request->user();
+
+            if (! $user) {
+                return Limit::perMinute(10)->by($request->ip());
+            }
+
+            return Limit::perMinute(60)->by($user->currentAccessToken()?->id ?? $user->id);
+        });
+
+        // Scramble API documentation — only document /api/v1 routes
+        Scramble::configure()
+            ->routes(fn (\Illuminate\Routing\Route $route) => Str::startsWith($route->uri(), 'api/v1/'));
+
+        Scramble::afterOpenApiGenerated(function (OpenApi $openApi) {
+            $openApi->secure(
+                SecurityScheme::http('bearer', 'token')
+            );
+        });
     }
 }

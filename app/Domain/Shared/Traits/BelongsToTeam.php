@@ -26,12 +26,17 @@ trait BelongsToTeam
 
     protected static function resolveTeamId(): ?string
     {
+        $user = auth()->user();
+
+        if ($user?->current_team_id) {
+            return $user->current_team_id;
+        }
+
+        // In console context without auth, skip auto-assignment (queue jobs set team_id explicitly)
         if (app()->runningInConsole() && ! app()->runningUnitTests()) {
             return null;
         }
 
-        $user = auth()->user();
-
-        return $user?->current_team_id;
+        return null;
     }
 }

@@ -23,7 +23,7 @@ class TransitionExperimentAction
         array $metadata = [],
     ): Experiment {
         return DB::transaction(function () use ($experiment, $toState, $reason, $actorId, $metadata) {
-            $experiment = Experiment::lockForUpdate()->findOrFail($experiment->id);
+            $experiment = Experiment::withoutGlobalScopes()->lockForUpdate()->findOrFail($experiment->id);
 
             $fromState = $experiment->status;
 
@@ -36,8 +36,9 @@ class TransitionExperimentAction
                 'killed_at' => $toState === ExperimentStatus::Killed ? now() : $experiment->killed_at,
             ]);
 
-            ExperimentStateTransition::create([
+            ExperimentStateTransition::withoutGlobalScopes()->create([
                 'experiment_id' => $experiment->id,
+                'team_id' => $experiment->team_id,
                 'from_state' => $fromState->value,
                 'to_state' => $toState->value,
                 'reason' => $reason,

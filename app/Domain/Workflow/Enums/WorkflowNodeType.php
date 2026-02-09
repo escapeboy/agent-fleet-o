@@ -8,6 +8,7 @@ enum WorkflowNodeType: string
     case End = 'end';
     case Agent = 'agent';
     case Conditional = 'conditional';
+    case Crew = 'crew';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum WorkflowNodeType: string
             self::End => 'End',
             self::Agent => 'Agent',
             self::Conditional => 'Condition',
+            self::Crew => 'Crew',
         };
     }
 
@@ -26,11 +28,17 @@ enum WorkflowNodeType: string
             self::End => 'stop-circle',
             self::Agent => 'cpu-chip',
             self::Conditional => 'arrows-right-left',
+            self::Crew => 'users',
         };
     }
 
     public function requiresAgent(): bool
     {
         return $this === self::Agent;
+    }
+
+    public function requiresCrew(): bool
+    {
+        return $this === self::Crew;
     }
 }

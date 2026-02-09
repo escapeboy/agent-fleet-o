@@ -35,8 +35,8 @@ class CheckBudgetAvailable
             return;
         }
 
-        // Check global user balance
-        $balance = CreditLedger::where('user_id', $experiment->user_id)
+        // Check global team balance (billing is team-based)
+        $balance = CreditLedger::where('team_id', $experiment->team_id)
             ->orderByDesc('created_at')
             ->value('balance_after') ?? 0;
 

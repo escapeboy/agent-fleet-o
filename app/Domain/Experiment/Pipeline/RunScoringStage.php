@@ -32,14 +32,15 @@ class RunScoringStage extends BaseStageJob
     {
         $gateway = app(AiGatewayInterface::class);
         $transition = app(TransitionExperimentAction::class);
+        $llm = $this->resolvePipelineLlm($experiment);
 
         $signal = $experiment->signals()->latest()->first();
         $signalPayload = $signal?->payload ?? ['thesis' => $experiment->thesis];
 
         $request = new AiRequestDTO(
-            provider: 'anthropic',
-            model: 'claude-sonnet-4-5-20250929',
-            systemPrompt: 'You are an experiment scoring agent. Evaluate the business potential of the given signal or thesis. Return a JSON object with: score (0.0-1.0), reasoning (string), recommended_track (growth|retention|revenue|engagement), and key_metrics (array of strings).',
+            provider: $llm['provider'],
+            model: $llm['model'],
+            systemPrompt: 'You are an experiment scoring agent. Evaluate the business potential of the given signal or thesis. Return ONLY a valid JSON object (no markdown, no code fences) with: score (0.0-1.0), reasoning (string, max 2 sentences), recommended_track (growth|retention|revenue|engagement), and key_metrics (array of max 5 short strings). Keep the response compact.',
             userPrompt: "Score this experiment thesis:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nSignal: " . json_encode($signalPayload),
             maxTokens: 1024,
             userId: $experiment->user_id,
@@ -47,11 +48,12 @@ class RunScoringStage extends BaseStageJob
             experimentStageId: $stage->id,
             purpose: 'scoring',
             temperature: 0.3,
+            teamId: $experiment->team_id,
         );
 
         $response = $gateway->complete($request);
 
-        $parsedOutput = $response->parsedOutput ?? json_decode($response->content, true);
+        $parsedOutput = $this->parseJsonResponse($response);
         $score = $parsedOutput['score'] ?? 0.0;
 
         // Update signal with score

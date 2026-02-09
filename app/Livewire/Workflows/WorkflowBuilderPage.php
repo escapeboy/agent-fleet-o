@@ -3,6 +3,7 @@
 namespace App\Livewire\Workflows;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Models\Crew;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\EstimateWorkflowCostAction;
@@ -32,6 +33,7 @@ class WorkflowBuilderPage extends Component
     // Available resources for node config
     public array $availableAgents = [];
     public array $availableSkills = [];
+    public array $availableCrews = [];
 
     public function mount(?Workflow $workflow = null): void
     {
@@ -49,6 +51,7 @@ class WorkflowBuilderPage extends Component
                 'label' => $node->label,
                 'agent_id' => $node->agent_id,
                 'skill_id' => $node->skill_id,
+                'crew_id' => $node->crew_id,
                 'config' => $node->config ?? [],
                 'position_x' => $node->position_x,
                 'position_y' => $node->position_y,
@@ -103,6 +106,12 @@ class WorkflowBuilderPage extends Component
             ->orderBy('name')
             ->get()
             ->toArray();
+
+        $this->availableCrews = Crew::select('id', 'name', 'status', 'process_type')
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get()
+            ->toArray();
     }
 
     public function saveGraph(array $nodes, array $edges): void
@@ -122,11 +131,14 @@ class WorkflowBuilderPage extends Component
             if ($this->workflowId) {
                 $workflow = Workflow::findOrFail($this->workflowId);
 
-                app(UpdateWorkflowAction::class)->execute($workflow, [
-                    'name' => $this->name,
-                    'description' => $this->description,
-                    'max_loop_iterations' => $this->maxLoopIterations,
-                ], $this->nodes, $this->edges);
+                app(UpdateWorkflowAction::class)->execute(
+                    workflow: $workflow,
+                    name: $this->name,
+                    description: $this->description,
+                    maxLoopIterations: $this->maxLoopIterations,
+                    nodes: $this->nodes,
+                    edges: $this->edges,
+                );
 
                 session()->flash('success', 'Workflow updated.');
             } else {

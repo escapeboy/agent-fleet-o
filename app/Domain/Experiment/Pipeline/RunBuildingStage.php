@@ -4,13 +4,14 @@ namespace App\Domain\Experiment\Pipeline;
 
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\ExperimentTaskStatus;
+use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
-use App\Infrastructure\AI\Contracts\AiGatewayInterface;
-use App\Infrastructure\AI\DTOs\AiRequestDTO;
-use App\Models\Artifact;
-use App\Models\ArtifactVersion;
+use App\Domain\Experiment\Models\ExperimentTask;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
 
 class RunBuildingStage extends BaseStageJob
 {
@@ -30,13 +31,55 @@ class RunBuildingStage extends BaseStageJob
         return StageType::Building;
     }
 
-    protected function process(Experiment $experiment, ExperimentStage $stage): void
+    /**
+     * Override BaseStageJob::handle() entirely to dispatch a Bus::batch
+     * instead of building artifacts inline. The stage stays Running while
+     * individual BuildArtifactJob instances run in parallel.
+     */
+    public function handle(): void
     {
-        $gateway = app(AiGatewayInterface::class);
-        $transition = app(TransitionExperimentAction::class);
+        $experiment = Experiment::withoutGlobalScopes()->find($this->experimentId);
 
-        // Get the plan from planning stage
-        $planningStage = $experiment->stages()
+        if (! $experiment) {
+            Log::warning('RunBuildingStage: Experiment not found', [
+                'experiment_id' => $this->experimentId,
+            ]);
+            return;
+        }
+
+        if ($experiment->status !== $this->expectedState()) {
+            Log::info('RunBuildingStage: State guard — not in Building state', [
+                'experiment_id' => $experiment->id,
+                'actual' => $experiment->status->value,
+            ]);
+            return;
+        }
+
+        $stage = $this->findOrCreateStage($experiment);
+
+        // Idempotency: if tasks already exist for this stage, skip re-creation.
+        // This prevents duplicates when RunBuildingStage is retried.
+        $existingTasks = ExperimentTask::withoutGlobalScopes()
+            ->where('experiment_id', $experiment->id)
+            ->where('stage', 'building')
+            ->count();
+
+        if ($existingTasks > 0) {
+            Log::info('RunBuildingStage: Tasks already exist, skipping dispatch', [
+                'experiment_id' => $experiment->id,
+                'existing_tasks' => $existingTasks,
+            ]);
+            return;
+        }
+
+        $stage->update([
+            'status' => StageStatus::Running,
+            'started_at' => now(),
+        ]);
+
+        // Get plan from planning stage
+        $planningStage = ExperimentStage::withoutGlobalScopes()
+            ->where('experiment_id', $experiment->id)
             ->where('stage', StageType::Planning)
             ->where('iteration', $experiment->current_iteration)
             ->latest()
@@ -47,59 +90,164 @@ class RunBuildingStage extends BaseStageJob
             ['type' => 'email_template', 'name' => 'outreach_email', 'description' => 'Outreach email for experiment'],
         ];
 
-        $builtArtifacts = [];
-
-        foreach ($artifactsToBuild as $artifactSpec) {
-            $request = new AiRequestDTO(
-                provider: 'anthropic',
-                model: 'claude-sonnet-4-5-20250929',
-                systemPrompt: "You are a content builder agent. Generate the requested artifact content. Return a JSON object with: content (string - the actual artifact content), metadata (object - any relevant metadata about the artifact).",
-                userPrompt: "Build this artifact:\n\nType: {$artifactSpec['type']}\nName: {$artifactSpec['name']}\nDescription: {$artifactSpec['description']}\n\nExperiment context:\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nPlan: " . json_encode($plan),
-                maxTokens: 2048,
-                userId: $experiment->user_id,
-                experimentId: $experiment->id,
-                experimentStageId: $stage->id,
-                purpose: 'building',
-                temperature: 0.7,
-            );
-
-            $response = $gateway->complete($request);
-            $output = $response->parsedOutput ?? json_decode($response->content, true);
-
-            // Create artifact and version
-            $artifact = Artifact::create([
+        // Create ExperimentTask records
+        $tasks = [];
+        foreach ($artifactsToBuild as $index => $artifactSpec) {
+            $tasks[] = ExperimentTask::withoutGlobalScopes()->create([
+                'team_id' => $experiment->team_id,
                 'experiment_id' => $experiment->id,
-                'type' => $artifactSpec['type'],
-                'name' => $artifactSpec['name'],
-                'current_version' => 1,
-                'metadata' => $output['metadata'] ?? [],
+                'stage' => 'building',
+                'name' => $artifactSpec['name'] ?? "artifact_{$index}",
+                'description' => $artifactSpec['description'] ?? null,
+                'type' => $artifactSpec['type'] ?? 'unknown',
+                'status' => ExperimentTaskStatus::Pending,
+                'sort_order' => $index,
+                'input_data' => [
+                    'artifact_spec' => $artifactSpec,
+                    'plan' => $plan,
+                ],
             ]);
-
-            ArtifactVersion::create([
-                'artifact_id' => $artifact->id,
-                'version' => 1,
-                'content' => $output['content'] ?? $response->content,
-                'metadata' => ['iteration' => $experiment->current_iteration],
-            ]);
-
-            $builtArtifacts[] = [
-                'artifact_id' => $artifact->id,
-                'type' => $artifactSpec['type'],
-                'name' => $artifactSpec['name'],
-            ];
         }
 
+        // Build job instances
+        $jobs = array_map(
+            fn (ExperimentTask $task) => new BuildArtifactJob(
+                experimentId: $experiment->id,
+                taskId: $task->id,
+                teamId: $experiment->team_id,
+            ),
+            $tasks
+        );
+
+        // Capture IDs for closures (closures can't use $this in serialized callbacks)
+        $experimentId = $experiment->id;
+        $stageId = $stage->id;
+
+        $batch = Bus::batch($jobs)
+            ->name("building:{$experimentId}")
+            ->onQueue('ai-calls')
+            ->allowFailures()
+            ->then(function () use ($experimentId, $stageId) {
+                // All jobs succeeded
+                $stage = ExperimentStage::withoutGlobalScopes()->find($stageId);
+                if ($stage && $stage->status === StageStatus::Running) {
+                    $builtArtifacts = ExperimentTask::withoutGlobalScopes()
+                        ->where('experiment_id', $experimentId)
+                        ->where('stage', 'building')
+                        ->where('status', ExperimentTaskStatus::Completed)
+                        ->get()
+                        ->map(fn ($t) => $t->output_data)
+                        ->filter()
+                        ->values()
+                        ->toArray();
+
+                    $stage->update([
+                        'status' => StageStatus::Completed,
+                        'completed_at' => now(),
+                        'duration_ms' => $stage->started_at ? (int) now()->diffInMilliseconds($stage->started_at) : null,
+                        'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
+                            'artifacts_built' => $builtArtifacts,
+                        ]),
+                    ]);
+
+                    $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
+                    if ($experiment && $experiment->status === ExperimentStatus::Building) {
+                        app(TransitionExperimentAction::class)->execute(
+                            experiment: $experiment,
+                            toState: ExperimentStatus::AwaitingApproval,
+                            reason: 'All artifacts built, awaiting approval',
+                        );
+                    }
+                }
+            })
+            ->catch(function (\Throwable $e) use ($experimentId) {
+                Log::warning('RunBuildingStage: Batch has failures', [
+                    'experiment_id' => $experimentId,
+                    'error' => $e->getMessage(),
+                ]);
+            })
+            ->finally(function () use ($experimentId, $stageId) {
+                $stage = ExperimentStage::withoutGlobalScopes()->find($stageId);
+
+                // If stage is still Running after all jobs finished (meaning then() didn't fire = there were failures)
+                if ($stage && $stage->status === StageStatus::Running) {
+                    $failedCount = ExperimentTask::withoutGlobalScopes()
+                        ->where('experiment_id', $experimentId)
+                        ->where('stage', 'building')
+                        ->where('status', ExperimentTaskStatus::Failed)
+                        ->count();
+
+                    if ($failedCount > 0) {
+                        // Skip remaining pending tasks
+                        ExperimentTask::withoutGlobalScopes()
+                            ->where('experiment_id', $experimentId)
+                            ->where('stage', 'building')
+                            ->whereIn('status', [ExperimentTaskStatus::Pending, ExperimentTaskStatus::Queued])
+                            ->update([
+                                'status' => ExperimentTaskStatus::Skipped,
+                                'error' => 'Batch aborted — other tasks failed',
+                                'completed_at' => now(),
+                            ]);
+
+                        $stage->update([
+                            'status' => StageStatus::Failed,
+                            'completed_at' => now(),
+                            'duration_ms' => $stage->started_at ? (int) now()->diffInMilliseconds($stage->started_at) : null,
+                            'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
+                                'error' => "{$failedCount} artifact(s) failed to build",
+                            ]),
+                        ]);
+
+                        $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
+                        if ($experiment && $experiment->status === ExperimentStatus::Building) {
+                            try {
+                                app(TransitionExperimentAction::class)->execute(
+                                    experiment: $experiment,
+                                    toState: ExperimentStatus::BuildingFailed,
+                                    reason: "{$failedCount} artifact(s) failed to build",
+                                );
+                            } catch (\Throwable $e) {
+                                Log::error('RunBuildingStage: Failed to transition to BuildingFailed', [
+                                    'experiment_id' => $experimentId,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                        }
+                    }
+                }
+            })
+            ->dispatch();
+
+        // Store batch_id FIRST on the stage (before any jobs can complete)
+        $batchId = $batch->id;
+
         $stage->update([
-            'output_snapshot' => [
-                'artifacts_built' => $builtArtifacts,
-                'plan' => $plan,
-            ],
+            'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
+                'batch_id' => $batchId,
+                'total_tasks' => count($tasks),
+            ]),
         ]);
 
-        $transition->execute(
-            experiment: $experiment,
-            toState: ExperimentStatus::AwaitingApproval,
-            reason: 'Artifacts built, awaiting approval',
-        );
+        // Update all tasks with batch_id (regardless of current status — fast jobs may already be running)
+        ExperimentTask::withoutGlobalScopes()
+            ->where('experiment_id', $experiment->id)
+            ->where('stage', 'building')
+            ->whereNull('batch_id')
+            ->update(['batch_id' => $batchId]);
+
+        Log::info('RunBuildingStage: Dispatched artifact batch', [
+            'experiment_id' => $experiment->id,
+            'batch_id' => $batchId,
+            'total_tasks' => count($tasks),
+        ]);
+    }
+
+    /**
+     * process() is required by BaseStageJob but won't be called since
+     * we override handle() entirely.
+     */
+    protected function process(Experiment $experiment, ExperimentStage $stage): void
+    {
+        // Not used — handle() is overridden
     }
 }

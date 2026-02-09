@@ -10,8 +10,9 @@ class LogExperimentTransition
 {
     public function handle(ExperimentTransitioned $event): void
     {
-        AuditEntry::create([
+        AuditEntry::withoutGlobalScopes()->create([
             'user_id' => $event->experiment->user_id,
+            'team_id' => $event->experiment->team_id,
             'event' => 'experiment.transitioned',
             'subject_type' => Experiment::class,
             'subject_id' => $event->experiment->id,

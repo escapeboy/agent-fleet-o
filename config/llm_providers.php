@@ -23,4 +23,11 @@ return [
             'gemini-2.5-pro' => ['label' => 'Gemini 2.5 Pro', 'input_cost' => 7, 'output_cost' => 21],
         ],
     ],
+    'local' => [
+        'name' => 'Local Agents',
+        'models' => [
+            'codex' => ['label' => 'OpenAI Codex (local)', 'input_cost' => 0, 'output_cost' => 0],
+            'claude-code' => ['label' => 'Claude Code (local)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
 ];

@@ -6,6 +6,7 @@ use App\Domain\Skill\Actions\CreateSkillAction;
 use App\Domain\Skill\Enums\ExecutionType;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillType;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Livewire\Component;
 
 class CreateSkillForm extends Component
@@ -139,9 +140,12 @@ class CreateSkillForm extends Component
 
     public function render()
     {
+        $providers = app(ProviderResolver::class)->availableProviders();
+
         return view('livewire.skills.create-skill-form', [
             'types' => SkillType::cases(),
             'riskLevels' => RiskLevel::cases(),
+            'providers' => $providers,
             'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Create Skill']);
     }

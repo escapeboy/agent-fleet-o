@@ -21,6 +21,14 @@ class ExperimentDetailPage extends Component
     public function mount(Experiment $experiment): void
     {
         $this->experiment = $experiment;
+
+        // Auto-select Tasks tab when experiment has tasks and is building
+        if ($experiment->tasks()->exists() && in_array($experiment->status, [
+            ExperimentStatus::Building,
+            ExperimentStatus::BuildingFailed,
+        ])) {
+            $this->activeTab = 'tasks';
+        }
     }
 
     public function startExperiment(): void
@@ -64,7 +72,7 @@ class ExperimentDetailPage extends Component
 
     public function render()
     {
-        $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions']);
+        $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions', 'tasks']);
 
         return view('livewire.experiments.experiment-detail-page')
             ->layout('layouts.app', ['header' => $this->experiment->title]);

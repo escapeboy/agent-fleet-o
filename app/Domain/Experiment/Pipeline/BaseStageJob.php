@@ -8,9 +8,11 @@ use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Shared\Models\Team;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
+use App\Models\GlobalSetting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -24,7 +26,7 @@ abstract class BaseStageJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
-    public int $backoff = 30;
+    public int $backoff = 60;
 
     public function __construct(
         public readonly string $experimentId,
@@ -129,7 +131,7 @@ abstract class BaseStageJob implements ShouldQueue
                 app(TransitionExperimentAction::class)->execute(
                     experiment: $experiment,
                     toState: $failedState,
-                    reason: "Stage failed: {$exception->getMessage()}",
+                    reason: substr("Stage failed: {$exception->getMessage()}", 0, 250),
                 );
             } catch (\Throwable $e) {
                 Log::error('BaseStageJob: Failed to transition to failed state', [
@@ -165,6 +167,90 @@ abstract class BaseStageJob implements ShouldQueue
                 'retry_count' => 0,
             ],
         );
+    }
+
+    /**
+     * Parse a JSON response from the LLM, handling markdown code fences
+     * and the {'text': '...'} wrapper from idempotency cache.
+     */
+    protected function parseJsonResponse(\App\Infrastructure\AI\DTOs\AiResponseDTO $response): ?array
+    {
+        // If parsedOutput is already a proper result (not a text wrapper), use it
+        if (is_array($response->parsedOutput) && !isset($response->parsedOutput['text'])) {
+            $parsed = $response->parsedOutput;
+
+            // Handle Claude Code / local agent output: {type: "result", result: "{...json...}"}
+            if (isset($parsed['type'], $parsed['result']) && $parsed['type'] === 'result' && is_string($parsed['result'])) {
+                $inner = $this->stripMarkdownCodeFences($parsed['result']);
+                $decoded = json_decode($inner, true);
+
+                return is_array($decoded) ? $decoded : $parsed;
+            }
+
+            return $parsed;
+        }
+
+        // Get the raw text — either from parsedOutput['text'] or content
+        $raw = $response->parsedOutput['text'] ?? $response->content;
+
+        // Strip markdown code fences
+        $raw = $this->stripMarkdownCodeFences($raw);
+
+        return json_decode($raw, true);
+    }
+
+    protected function stripMarkdownCodeFences(string $content): string
+    {
+        if (preg_match('/```(?:json)?\s*\n?(.*?)```/s', $content, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return $content;
+    }
+
+    /**
+     * Resolve the LLM provider/model for pipeline stages.
+     * Priority: experiment config → team settings → platform default.
+     *
+     * @return array{provider: string, model: string}
+     */
+    protected function resolvePipelineLlm(Experiment $experiment): array
+    {
+        // 1. Experiment-level override (config.llm or constraints.llm)
+        $config = $experiment->config ?? [];
+        if (! empty($config['llm']['provider']) && ! empty($config['llm']['model'])) {
+            return [
+                'provider' => $config['llm']['provider'],
+                'model' => $config['llm']['model'],
+            ];
+        }
+
+        $constraints = $experiment->constraints ?? [];
+        if (! empty($constraints['llm']['provider']) && ! empty($constraints['llm']['model'])) {
+            return [
+                'provider' => $constraints['llm']['provider'],
+                'model' => $constraints['llm']['model'],
+            ];
+        }
+
+        // 2. Team-level default
+        $team = Team::withoutGlobalScopes()->find($experiment->team_id);
+        $settings = $team?->settings ?? [];
+        if (! empty($settings['default_llm_provider']) && ! empty($settings['default_llm_model'])) {
+            return [
+                'provider' => $settings['default_llm_provider'],
+                'model' => $settings['default_llm_model'],
+            ];
+        }
+
+        // 3. Platform default (GlobalSetting → config fallback)
+        $platformProvider = GlobalSetting::get('default_llm_provider') ?? config('llm_pricing.default_provider', 'anthropic');
+        $platformModel = GlobalSetting::get('default_llm_model') ?? config('llm_pricing.default_model', 'claude-sonnet-4-5');
+
+        return [
+            'provider' => $platformProvider,
+            'model' => $platformModel,
+        ];
     }
 
     protected function generateIdempotencyKey(string $suffix = ''): string

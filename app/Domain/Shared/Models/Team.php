@@ -60,4 +60,12 @@ class Team extends Model
 
         return $pivot ? TeamRole::from($pivot->role) : null;
     }
+
+    /**
+     * Community edition: all features are available.
+     */
+    public function hasFeature(string $feature): bool
+    {
+        return true;
+    }
 }

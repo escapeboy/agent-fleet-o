@@ -9,9 +9,12 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('approvals:expire-stale')->hourly();
-Schedule::command('agents:health-check')->everyFiveMinutes();
+// Temporarily disabled to avoid rate-limiting Google Gemini during experiment runs
+// Schedule::command('agents:health-check')->everyFiveMinutes();
 Schedule::command('metrics:aggregate --period=hourly')->hourly();
 Schedule::command('metrics:aggregate --period=daily')->dailyAt('01:00');
 Schedule::command('connectors:poll --driver=rss')->everyFifteenMinutes();
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
+Schedule::command('sanctum:prune-expired --hours=48')->daily();
+Schedule::command('tasks:recover-stuck')->everyFiveMinutes();

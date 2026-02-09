@@ -4,6 +4,7 @@ namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
 use App\Domain\Skill\Models\Skill;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Livewire\Component;
 
 class CreateAgentForm extends Component
@@ -19,11 +20,13 @@ class CreateAgentForm extends Component
 
     protected function rules(): array
     {
+        $providerKeys = implode(',', array_keys(app(ProviderResolver::class)->availableProviders()));
+
         return [
             'name' => 'required|min:2|max:255',
             'role' => 'required|max:255',
             'goal' => 'required|max:1000',
-            'provider' => 'required|in:anthropic,openai,google',
+            'provider' => "required|in:{$providerKeys}",
             'model' => 'required|max:255',
         ];
     }
@@ -63,9 +66,11 @@ class CreateAgentForm extends Component
     public function render()
     {
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
+        $providers = app(ProviderResolver::class)->availableProviders();
 
         return view('livewire.agents.create-agent-form', [
             'availableSkills' => $availableSkills,
+            'providers' => $providers,
             'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Create Agent']);
     }

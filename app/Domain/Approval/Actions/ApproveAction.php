@@ -7,6 +7,7 @@ use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
 use InvalidArgumentException;
 
@@ -37,8 +38,9 @@ class ApproveAction
             ->where('status', OutboundProposalStatus::PendingApproval)
             ->update(['status' => OutboundProposalStatus::Approved]);
 
-        AuditEntry::create([
+        AuditEntry::withoutGlobalScopes()->create([
             'user_id' => $reviewerId,
+            'team_id' => $experiment->team_id,
             'event' => 'approval.approved',
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approvalRequest->id,
@@ -60,7 +62,7 @@ class ApproveAction
 
         // Immediately transition to executing
         $this->transition->execute(
-            experiment: $experiment->fresh(),
+            experiment: Experiment::withoutGlobalScopes()->find($experiment->id),
             toState: ExperimentStatus::Executing,
             reason: 'Outbound dispatched after approval',
         );

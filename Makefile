@@ -1,9 +1,11 @@
-.PHONY: install start stop restart logs update shell migrate fresh test
+.PHONY: install start stop restart logs update shell migrate fresh test bridge
 
 # First-time setup
 install:
 	@cp -n .env.example .env 2>/dev/null || true
 	docker compose up -d --build
+	docker compose exec app composer install --no-interaction --optimize-autoloader
+	docker compose exec app npm install
 	docker compose exec app php artisan app:install
 
 # Start services
@@ -26,6 +28,8 @@ logs:
 update:
 	git pull
 	docker compose up -d --build
+	docker compose exec app composer install --no-interaction --optimize-autoloader
+	docker compose exec app npm install
 	docker compose exec app php artisan migrate --force
 	docker compose exec app php artisan config:clear
 	docker compose exec app php artisan view:clear
@@ -46,3 +50,8 @@ fresh:
 # Run tests
 test:
 	docker compose exec app php artisan test
+
+# Start the host agent bridge (run on host machine, not in Docker)
+# Auto-detects PHP or Python 3, auto-generates secret if needed
+bridge:
+	@sh docker/start-bridge.sh

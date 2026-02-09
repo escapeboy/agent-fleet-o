@@ -35,9 +35,9 @@ class MaterializeWorkflowAction
                 ]),
             ]);
 
-            // Create PlaybookSteps for agent nodes only
+            // Create PlaybookSteps for agent and crew nodes
             $agentNodes = $workflow->nodes
-                ->where('type', WorkflowNodeType::Agent)
+                ->whereIn('type', [WorkflowNodeType::Agent, WorkflowNodeType::Crew])
                 ->sortBy('order');
 
             $steps = collect();
@@ -50,6 +50,7 @@ class MaterializeWorkflowAction
                     'experiment_id' => $experiment->id,
                     'agent_id' => $node->agent_id,
                     'skill_id' => $node->skill_id,
+                    'crew_id' => $node->crew_id,
                     'workflow_node_id' => $node->id,
                     'order' => $order++,
                     'execution_mode' => $executionMode,
@@ -86,6 +87,7 @@ class MaterializeWorkflowAction
                 'label' => $node->label,
                 'agent_id' => $node->agent_id,
                 'skill_id' => $node->skill_id,
+                'crew_id' => $node->crew_id,
                 'config' => $node->config,
                 'order' => $node->order,
                 'position_x' => $node->position_x,
@@ -117,9 +119,9 @@ class MaterializeWorkflowAction
             ->values()
             ->toArray();
 
-        // Find other agent nodes with the same predecessors
+        // Find other executable nodes (agent or crew) with the same predecessors
         $siblings = $workflow->nodes
-            ->where('type', WorkflowNodeType::Agent)
+            ->whereIn('type', [WorkflowNodeType::Agent, WorkflowNodeType::Crew])
             ->where('id', '!=', $node->id)
             ->filter(function ($sibling) use ($workflow, $predecessors) {
                 $siblingPreds = $workflow->edges

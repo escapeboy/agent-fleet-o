@@ -32,6 +32,7 @@ class RunPlanningStage extends BaseStageJob
     {
         $gateway = app(AiGatewayInterface::class);
         $transition = app(TransitionExperimentAction::class);
+        $llm = $this->resolvePipelineLlm($experiment);
 
         // Gather context from prior stages
         $scoringStage = $experiment->stages()
@@ -61,9 +62,9 @@ class RunPlanningStage extends BaseStageJob
         }
 
         $request = new AiRequestDTO(
-            provider: 'anthropic',
-            model: 'claude-sonnet-4-5-20250929',
-            systemPrompt: 'You are an experiment planning agent. Create an execution plan for the experiment. Return a JSON object with: plan_summary (string), artifacts_to_build (array of {type, name, description}), outbound_channels (array of {channel, target_description}), success_metrics (array of strings), estimated_timeline_hours (int).',
+            provider: $llm['provider'],
+            model: $llm['model'],
+            systemPrompt: 'You are an experiment planning agent. Create an execution plan. Return ONLY a valid JSON object (no markdown, no code fences) with: plan_summary (string, max 3 sentences), artifacts_to_build (array of {type, name, description}), outbound_channels (array of {channel, target_description}), success_metrics (array of max 5 strings), estimated_timeline_hours (int). Keep compact.',
             userPrompt: implode("\n\n", $contextParts),
             maxTokens: 2048,
             userId: $experiment->user_id,
@@ -71,11 +72,12 @@ class RunPlanningStage extends BaseStageJob
             experimentStageId: $stage->id,
             purpose: 'planning',
             temperature: 0.5,
+            teamId: $experiment->team_id,
         );
 
         $response = $gateway->complete($request);
 
-        $parsedOutput = $response->parsedOutput ?? json_decode($response->content, true);
+        $parsedOutput = $this->parseJsonResponse($response);
 
         $stage->update([
             'output_snapshot' => $parsedOutput,
