@@ -141,10 +141,10 @@
                             <div x-show="viewMode === 'preview'" x-cloak class="h-full">
                                 @if($category === 'html')
                                     {{-- HTML: sandboxed iframe via route --}}
-                                    <div wire:ignore class="h-full">
+                                    <div wire:key="preview-{{ $artifact->id }}-{{ $selectedVersion }}" class="h-full">
                                         <iframe
                                             src="{{ route('artifacts.render', ['artifact' => $artifact->id, 'version' => $selectedVersion]) }}"
-                                            sandbox="allow-scripts"
+                                            sandbox="allow-same-origin allow-scripts"
                                             referrerpolicy="no-referrer"
                                             loading="lazy"
                                             title="Artifact Preview: {{ $artifact->name }}"
@@ -154,10 +154,10 @@
                                     </div>
                                 @elseif($category === 'markdown')
                                     {{-- Markdown: rendered via route in iframe for isolation --}}
-                                    <div wire:ignore class="h-full">
+                                    <div wire:key="preview-md-{{ $artifact->id }}-{{ $selectedVersion }}" class="h-full">
                                         <iframe
                                             src="{{ route('artifacts.render', ['artifact' => $artifact->id, 'version' => $selectedVersion]) }}"
-                                            sandbox=""
+                                            sandbox="allow-same-origin"
                                             referrerpolicy="no-referrer"
                                             loading="lazy"
                                             title="Artifact Preview: {{ $artifact->name }}"
@@ -269,9 +269,10 @@
                     <div :style="{ width: previewWidth, maxWidth: '100%' }"
                          class="h-full bg-white shadow-lg transition-all duration-300"
                          :class="previewWidth !== '100%' && 'rounded-lg border border-gray-200'">
-                        <iframe wire:ignore
+                        <iframe
+                            wire:key="fs-{{ $fsArtifact->id }}-{{ $selectedVersion }}"
                             src="{{ route('artifacts.render', ['artifact' => $fsArtifact->id, 'version' => $selectedVersion]) }}"
-                            sandbox="allow-scripts"
+                            sandbox="allow-same-origin allow-scripts"
                             referrerpolicy="no-referrer"
                             title="Full-screen preview: {{ $fsArtifact->name }}"
                             class="h-full w-full border-0"
