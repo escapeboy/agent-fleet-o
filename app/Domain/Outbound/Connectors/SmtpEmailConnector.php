@@ -2,8 +2,10 @@
 
 namespace App\Domain\Outbound\Connectors;
 
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
+use App\Domain\Outbound\Mail\ExperimentSummaryMail;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
 use Illuminate\Support\Facades\Mail;
@@ -40,26 +42,35 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 throw new \InvalidArgumentException("Invalid email address: {$to}");
             }
 
-            $subject = $content['subject'] ?? "Experiment: {$proposal->experiment->title}";
-            $body = $content['body'] ?? 'No content generated.';
-            $fromName = $content['from_name'] ?? config('mail.from.name');
-            $fromAddress = $content['from_address'] ?? config('mail.from.address');
+            if (($content['type'] ?? null) === 'experiment_summary') {
+                $experiment = Experiment::withoutGlobalScopes()->find($content['experiment_id']);
+                if (!$experiment) {
+                    throw new \RuntimeException("Experiment {$content['experiment_id']} not found");
+                }
 
-            // Append tracking pixel if tracking base URL is configured
-            $trackingBaseUrl = config('services.tracking.base_url');
-            if ($trackingBaseUrl) {
-                $pixelUrl = "{$trackingBaseUrl}/api/track/pixel?" . http_build_query([
-                    'oa' => $action->id,
-                    'exp' => $proposal->experiment_id,
-                ]);
-                $body .= "\n\n<img src=\"{$pixelUrl}\" width=\"1\" height=\"1\" alt=\"\" />";
+                Mail::to($to)->send(new ExperimentSummaryMail($experiment));
+            } else {
+                $subject = $content['subject'] ?? "Experiment: {$proposal->experiment->title}";
+                $body = $content['body'] ?? 'No content generated.';
+                $fromName = $content['from_name'] ?? config('mail.from.name');
+                $fromAddress = $content['from_address'] ?? config('mail.from.address');
+
+                // Append tracking pixel if tracking base URL is configured
+                $trackingBaseUrl = config('services.tracking.base_url');
+                if ($trackingBaseUrl) {
+                    $pixelUrl = "{$trackingBaseUrl}/api/track/pixel?" . http_build_query([
+                        'oa' => $action->id,
+                        'exp' => $proposal->experiment_id,
+                    ]);
+                    $body .= "\n\n<img src=\"{$pixelUrl}\" width=\"1\" height=\"1\" alt=\"\" />";
+                }
+
+                Mail::html($body, function ($message) use ($to, $subject, $fromName, $fromAddress) {
+                    $message->to($to)
+                        ->subject($subject)
+                        ->from($fromAddress, $fromName);
+                });
             }
-
-            Mail::html($body, function ($message) use ($to, $subject, $fromName, $fromAddress) {
-                $message->to($to)
-                    ->subject($subject)
-                    ->from($fromAddress, $fromName);
-            });
 
             $action->update([
                 'status' => OutboundActionStatus::Sent,
