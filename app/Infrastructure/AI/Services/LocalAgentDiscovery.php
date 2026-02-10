@@ -197,8 +197,11 @@ class LocalAgentDiscovery
      */
     private function isRunningInDocker(): bool
     {
-        if (env('RUNNING_IN_DOCKER')) {
-            return true;
+        $env = env('RUNNING_IN_DOCKER');
+
+        // Explicit override takes precedence (supports both true and false)
+        if ($env !== null) {
+            return filter_var($env, FILTER_VALIDATE_BOOLEAN);
         }
 
         return file_exists('/.dockerenv');

@@ -7,6 +7,21 @@ use Tests\TestCase;
 
 class LocalAgentDiscoveryTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These tests cover native (non-bridge) detection
+        putenv('RUNNING_IN_DOCKER=false');
+        config(['local_agents.bridge.secret' => '']);
+    }
+
+    protected function tearDown(): void
+    {
+        putenv('RUNNING_IN_DOCKER');
+        parent::tearDown();
+    }
+
     public function test_detect_returns_empty_when_disabled(): void
     {
         config(['local_agents.enabled' => false]);

@@ -47,16 +47,21 @@ class HostBridgeTest extends TestCase
     private function simulateDocker(): void
     {
         putenv('RUNNING_IN_DOCKER=true');
+        $_ENV['RUNNING_IN_DOCKER'] = 'true';
+        $_SERVER['RUNNING_IN_DOCKER'] = 'true';
     }
 
     private function simulateNative(): void
     {
-        putenv('RUNNING_IN_DOCKER');
+        putenv('RUNNING_IN_DOCKER=false');
+        $_ENV['RUNNING_IN_DOCKER'] = 'false';
+        $_SERVER['RUNNING_IN_DOCKER'] = 'false';
     }
 
     protected function tearDown(): void
     {
         putenv('RUNNING_IN_DOCKER');
+        unset($_ENV['RUNNING_IN_DOCKER'], $_SERVER['RUNNING_IN_DOCKER']);
         parent::tearDown();
     }
 
