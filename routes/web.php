@@ -22,6 +22,7 @@ use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
 use App\Livewire\Teams\TeamSettingsPage;
 use App\Livewire\Workflows\WorkflowBuilderPage;
+use App\Http\Controllers\ArtifactPreviewController;
 use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +62,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/workflows/create', WorkflowBuilderPage::class)->name('workflows.create');
     Route::get('/workflows/{workflow}/edit', WorkflowBuilderPage::class)->name('workflows.edit');
     Route::get('/workflows/{workflow}', WorkflowDetailPage::class)->name('workflows.show');
+
+    Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/health', HealthPage::class)->name('health');
