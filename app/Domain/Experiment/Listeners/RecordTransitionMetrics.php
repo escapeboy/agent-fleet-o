@@ -19,7 +19,7 @@ class RecordTransitionMetrics
             ->first();
 
         $durationSeconds = $previousTransition
-            ? now()->diffInSeconds($previousTransition->created_at)
+            ? abs(now()->diffInSeconds($previousTransition->created_at))
             : 0;
 
         Metric::withoutGlobalScopes()->create([
