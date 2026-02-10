@@ -16,7 +16,7 @@ class DummyConnector implements OutboundConnectorInterface
         $idempotencyKey = hash('xxh128', "dummy|{$proposal->id}");
 
         // Check for existing action with same idempotency key
-        $existing = OutboundAction::where('idempotency_key', $idempotencyKey)->first();
+        $existing = OutboundAction::withoutGlobalScopes()->where('idempotency_key', $idempotencyKey)->first();
         if ($existing) {
             return $existing;
         }
@@ -27,7 +27,8 @@ class DummyConnector implements OutboundConnectorInterface
             'target' => $proposal->target,
         ]);
 
-        return OutboundAction::create([
+        return OutboundAction::withoutGlobalScopes()->create([
+            'team_id' => $proposal->team_id,
             'outbound_proposal_id' => $proposal->id,
             'status' => OutboundActionStatus::Sent,
             'external_id' => 'dummy-' . Str::uuid()->toString(),

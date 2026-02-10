@@ -20,12 +20,13 @@ class TelegramConnector implements OutboundConnectorInterface
     {
         $idempotencyKey = hash('xxh128', "telegram|{$proposal->id}");
 
-        $existing = OutboundAction::where('idempotency_key', $idempotencyKey)->first();
+        $existing = OutboundAction::withoutGlobalScopes()->where('idempotency_key', $idempotencyKey)->first();
         if ($existing) {
             return $existing;
         }
 
-        $action = OutboundAction::create([
+        $action = OutboundAction::withoutGlobalScopes()->create([
+            'team_id' => $proposal->team_id,
             'outbound_proposal_id' => $proposal->id,
             'status' => OutboundActionStatus::Sending,
             'idempotency_key' => $idempotencyKey,

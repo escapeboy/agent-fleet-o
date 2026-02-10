@@ -57,17 +57,12 @@ class RunBuildingStage extends BaseStageJob
 
         $stage = $this->findOrCreateStage($experiment);
 
-        // Idempotency: if tasks already exist for this stage, skip re-creation.
+        // Idempotency: if this stage already has a batch_id, it was already dispatched.
         // This prevents duplicates when RunBuildingStage is retried.
-        $existingTasks = ExperimentTask::withoutGlobalScopes()
-            ->where('experiment_id', $experiment->id)
-            ->where('stage', 'building')
-            ->count();
-
-        if ($existingTasks > 0) {
-            Log::info('RunBuildingStage: Tasks already exist, skipping dispatch', [
+        if (! empty($stage->output_snapshot['batch_id'])) {
+            Log::info('RunBuildingStage: Batch already dispatched for this stage, skipping', [
                 'experiment_id' => $experiment->id,
-                'existing_tasks' => $existingTasks,
+                'batch_id' => $stage->output_snapshot['batch_id'],
             ]);
             return;
         }
