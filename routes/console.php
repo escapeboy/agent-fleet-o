@@ -18,3 +18,7 @@ Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
+
+// Project scheduling & budget enforcement
+Schedule::command('projects:check-budgets')->hourly();
+Schedule::job(new \App\Domain\Project\Jobs\DispatchScheduledProjectsJob)->everyMinute();

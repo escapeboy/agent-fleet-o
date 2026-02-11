@@ -21,6 +21,9 @@ use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
 use App\Livewire\Teams\TeamSettingsPage;
+use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
+use App\Livewire\Projects\ProjectDetailPage;
+use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Livewire\Workflows\WorkflowDetailPage;
@@ -57,6 +60,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/crews/create', CreateCrewForm::class)->name('crews.create');
     Route::get('/crews/{crew}/execute', CrewExecutionPage::class)->name('crews.execute');
     Route::get('/crews/{crew}', CrewDetailPage::class)->name('crews.show');
+
+    Route::get('/projects', ProjectListPage::class)->name('projects.index');
+    Route::get('/projects/create', CreateProjectFormPage::class)->name('projects.create');
+    Route::get('/projects/{project}', ProjectDetailPage::class)->name('projects.show');
 
     Route::get('/workflows', WorkflowListPage::class)->name('workflows.index');
     Route::get('/workflows/create', WorkflowBuilderPage::class)->name('workflows.create');

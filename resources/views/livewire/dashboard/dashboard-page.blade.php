@@ -9,12 +9,14 @@
             :changeType="$pendingApprovals > 0 ? 'negative' : 'positive'" />
     </div>
 
-    {{-- Skills & Agents KPIs --}}
-    <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    {{-- Skills, Agents & Projects KPIs --}}
+    <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3 lg:grid-cols-6">
         <x-stat-card label="Active Skills" :value="$activeSkills" />
         <x-stat-card label="Active Agents" :value="$activeAgents" />
         <x-stat-card label="Skill Executions (24h)" :value="number_format($skillExecutions24h)" />
         <x-stat-card label="Agent Runs (24h)" :value="number_format($agentRuns24h)" />
+        <x-stat-card label="Active Projects" :value="$activeProjects" />
+        <x-stat-card label="Project Runs (24h)" :value="number_format($projectRuns24h)" />
     </div>
 
     <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
