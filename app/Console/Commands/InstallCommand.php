@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Domain\Shared\Models\Team;
+use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
@@ -22,7 +23,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 1: Check requirements
-        $this->components->twoColumnDetail('Step 1/4', 'System Requirements');
+        $this->components->twoColumnDetail('Step 1/5', 'System Requirements');
 
         if (! $this->checkRequirements()) {
             return self::FAILURE;
@@ -31,9 +32,16 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 2: Database
-        $this->components->twoColumnDetail('Step 2/4', 'Database');
+        $this->components->twoColumnDetail('Step 2/5', 'Database');
 
-        if (Team::query()->exists()) {
+        $alreadyInstalled = false;
+        try {
+            $alreadyInstalled = Team::query()->exists();
+        } catch (\Exception) {
+            // Table doesn't exist yet — fresh install
+        }
+
+        if ($alreadyInstalled) {
             $this->components->warn('Agent Fleet is already installed.');
 
             if (! $this->option('force') && ! $this->components->confirm('Re-run migrations anyway?', false)) {
@@ -48,9 +56,16 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 3: Admin account
-        $this->components->twoColumnDetail('Step 3/4', 'Admin Account');
+        $this->components->twoColumnDetail('Step 3/5', 'Admin Account');
 
-        if (User::query()->exists() && ! $this->option('force')) {
+        $usersExist = false;
+        try {
+            $usersExist = User::query()->exists();
+        } catch (\Exception) {
+            // Table may not exist yet
+        }
+
+        if ($usersExist && ! $this->option('force')) {
             $this->components->info('Users already exist. Skipping admin creation.');
         } else {
             $this->createAdminAccount();
@@ -59,8 +74,19 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 4: LLM Provider
-        $this->components->twoColumnDetail('Step 4/4', 'LLM Provider (optional)');
-        $this->configureLlmProvider();
+        $this->components->twoColumnDetail('Step 4/5', 'LLM Provider (optional)');
+
+        if ($this->option('force')) {
+            $this->components->info('Skipping LLM configuration (--force). Configure later in Settings or .env.');
+        } else {
+            $this->configureLlmProvider();
+        }
+
+        $this->newLine();
+
+        // Step 5: Local Agents
+        $this->components->twoColumnDetail('Step 5/5', 'Local Agents (optional)');
+        $this->detectLocalAgents();
 
         $this->newLine();
 
@@ -194,6 +220,67 @@ class InstallCommand extends Command
         $envVar = $providers[$selected]['env'];
         $this->setEnvValue($envVar, $apiKey);
         $this->components->info("Saved {$envVar} to .env");
+    }
+
+    private function detectLocalAgents(): void
+    {
+        $this->components->info('Scanning for local AI agents...');
+        $this->newLine();
+
+        $discovery = app(LocalAgentDiscovery::class);
+        $detected = $discovery->detect();
+
+        if (empty($detected)) {
+            if ($discovery->isBridgeMode()) {
+                $this->components->warn('Running in Docker — bridge mode active but no agents found on host.');
+                $this->components->info('Ensure the host bridge is running:');
+                $this->components->bulletList([
+                    'LOCAL_AGENT_BRIDGE_SECRET=your-secret php -S 0.0.0.0:8065 docker/host-bridge.php',
+                ]);
+            } else {
+                $inDocker = env('RUNNING_IN_DOCKER') || file_exists('/.dockerenv');
+                if ($inDocker) {
+                    $this->components->warn('Running in Docker — local agents require the host bridge.');
+                    $this->components->info('On the host machine, run:');
+                    $this->components->bulletList([
+                        'LOCAL_AGENT_BRIDGE_SECRET=your-secret php -S 0.0.0.0:8065 docker/host-bridge.php',
+                        'Then set LOCAL_AGENT_BRIDGE_SECRET in .env',
+                    ]);
+                } else {
+                    $this->components->info('No local agents detected. You can install them later:');
+                    $this->components->bulletList([
+                        'Codex: npm install -g @openai/codex',
+                        'Claude Code: see https://docs.anthropic.com/en/docs/claude-code',
+                    ]);
+                }
+            }
+            return;
+        }
+
+        foreach ($detected as $key => $agent) {
+            $this->components->twoColumnDetail(
+                "{$agent['name']} v{$agent['version']}",
+                "<fg=green>Available at {$agent['path']}</>"
+            );
+        }
+
+        $this->newLine();
+        $count = count($detected);
+        $this->components->info("Detected {$count} local agent(s). These can be assigned to skills and agents for local code generation, file editing, and multi-step task execution.");
+
+        if ($this->option('force')) {
+            $enable = true;
+        } else {
+            $enable = $this->components->confirm('Enable local agents?', true);
+        }
+
+        if ($enable) {
+            $this->setEnvValue('LOCAL_AGENTS_ENABLED', 'true');
+            $this->components->info('Local agents enabled.');
+        } else {
+            $this->setEnvValue('LOCAL_AGENTS_ENABLED', 'false');
+            $this->components->info('Local agents disabled. Enable later in Settings or .env.');
+        }
     }
 
     private function setEnvValue(string $key, string $value): void

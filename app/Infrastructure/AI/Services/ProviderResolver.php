@@ -5,6 +5,7 @@ namespace App\Infrastructure\AI\Services;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Models\Skill;
+use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 
 class ProviderResolver
 {
@@ -61,12 +62,43 @@ class ProviderResolver
 
     /**
      * Get all available providers and their models from config.
+     * Local agents are only included when enabled and detected on the system.
      *
      * @return array<string, array{name: string, models: array}>
      */
     public function availableProviders(): array
     {
-        return config('llm_providers', []);
+        $providers = config('llm_providers', []);
+
+        // Only include local agents when enabled and at least one is detected
+        if (isset($providers['local'])) {
+            if (! config('local_agents.enabled')) {
+                unset($providers['local']);
+            } else {
+                $discovery = app(LocalAgentDiscovery::class);
+                $detected = $discovery->detect();
+
+                if (empty($detected)) {
+                    unset($providers['local']);
+                } else {
+                    // Filter to only show detected local agents
+                    $filteredModels = [];
+                    foreach ($providers['local']['models'] as $key => $model) {
+                        if (isset($detected[$key])) {
+                            $filteredModels[$key] = $model;
+                        }
+                    }
+
+                    if (empty($filteredModels)) {
+                        unset($providers['local']);
+                    } else {
+                        $providers['local']['models'] = $filteredModels;
+                    }
+                }
+            }
+        }
+
+        return $providers;
     }
 
     /**

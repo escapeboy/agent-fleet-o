@@ -6,12 +6,25 @@ use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Skill\Models\Skill;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Livewire\Component;
 
 class AgentDetailPage extends Component
 {
     public Agent $agent;
     public string $activeTab = 'overview';
+
+    // Editing state
+    public bool $editing = false;
+    public string $editName = '';
+    public string $editRole = '';
+    public string $editGoal = '';
+    public string $editBackstory = '';
+    public string $editProvider = '';
+    public string $editModel = '';
+    public ?int $editBudgetCap = null;
+    public array $editFallbackChain = [];
+    public array $editSkillIds = [];
 
     public function mount(Agent $agent): void
     {
@@ -28,6 +41,102 @@ class AgentDetailPage extends Component
         $this->agent->refresh();
     }
 
+    public function startEdit(): void
+    {
+        $this->editName = $this->agent->name;
+        $this->editRole = $this->agent->role ?? '';
+        $this->editGoal = $this->agent->goal ?? '';
+        $this->editBackstory = $this->agent->backstory ?? '';
+        $this->editProvider = $this->agent->provider;
+        $this->editModel = $this->agent->model;
+        $this->editBudgetCap = $this->agent->budget_cap_credits;
+        $this->editFallbackChain = $this->agent->config['fallback_chain'] ?? [];
+        $this->editSkillIds = $this->agent->skills()->pluck('skills.id')->toArray();
+        $this->editing = true;
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->editing = false;
+        $this->resetValidation();
+    }
+
+    public function addFallback(): void
+    {
+        $this->editFallbackChain[] = ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'];
+    }
+
+    public function removeFallback(int $index): void
+    {
+        unset($this->editFallbackChain[$index]);
+        $this->editFallbackChain = array_values($this->editFallbackChain);
+    }
+
+    public function toggleSkill(string $skillId): void
+    {
+        if (in_array($skillId, $this->editSkillIds)) {
+            $this->editSkillIds = array_values(array_diff($this->editSkillIds, [$skillId]));
+        } else {
+            $this->editSkillIds[] = $skillId;
+        }
+    }
+
+    public function save(): void
+    {
+        $providerKeys = implode(',', array_keys(app(ProviderResolver::class)->availableProviders()));
+
+        $this->validate([
+            'editName' => 'required|min:2|max:255',
+            'editRole' => 'required|max:255',
+            'editGoal' => 'required|max:1000',
+            'editProvider' => "required|in:{$providerKeys}",
+            'editModel' => 'required|max:255',
+        ]);
+
+        $config = $this->agent->config ?? [];
+        $filteredChain = array_filter(
+            $this->editFallbackChain,
+            fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model'])
+        );
+
+        if (! empty($filteredChain)) {
+            $config['fallback_chain'] = array_values($filteredChain);
+        } else {
+            unset($config['fallback_chain']);
+        }
+
+        $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");
+
+        $this->agent->update([
+            'name' => $this->editName,
+            'role' => $this->editRole,
+            'goal' => $this->editGoal,
+            'backstory' => $this->editBackstory ?: null,
+            'provider' => $this->editProvider,
+            'model' => $this->editModel,
+            'budget_cap_credits' => $this->editBudgetCap,
+            'config' => $config,
+            'cost_per_1k_input' => $pricing['input'] ?? 0,
+            'cost_per_1k_output' => $pricing['output'] ?? 0,
+        ]);
+
+        // Sync skills
+        $this->agent->skills()->sync($this->editSkillIds);
+
+        $this->agent->refresh();
+        $this->editing = false;
+
+        session()->flash('message', 'Agent updated successfully.');
+    }
+
+    public function deleteAgent(): void
+    {
+        $this->agent->delete();
+
+        session()->flash('message', 'Agent deleted.');
+        $this->redirect(route('agents.index'));
+    }
+
     public function render()
     {
         $skills = $this->agent->skills()->get();
@@ -37,9 +146,14 @@ class AgentDetailPage extends Component
             ->limit(20)
             ->get();
 
+        $providers = app(ProviderResolver::class)->availableProviders();
+        $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
+
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
             'executions' => $executions,
+            'providers' => $providers,
+            'availableSkills' => $availableSkills,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }

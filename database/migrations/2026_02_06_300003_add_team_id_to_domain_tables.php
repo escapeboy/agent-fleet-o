@@ -35,6 +35,20 @@ return new class extends Migration
 
     public function up(): void
     {
+        $isSqlite = DB::getDriverName() === 'sqlite';
+
+        if ($isSqlite) {
+            // SQLite: add team_id as nullable with index (no column change support)
+            foreach ($this->tables as $table) {
+                Schema::table($table, function (Blueprint $t) {
+                    $t->uuid('team_id')->nullable()->after('id');
+                    $t->index('team_id');
+                });
+            }
+
+            return;
+        }
+
         // Step 1: Add nullable team_id to all domain tables
         foreach ($this->tables as $table) {
             Schema::table($table, function (Blueprint $t) {

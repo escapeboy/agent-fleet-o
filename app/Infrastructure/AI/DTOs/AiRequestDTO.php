@@ -36,6 +36,7 @@ final readonly class AiRequestDTO
             $this->systemPrompt,
             $this->userPrompt,
             $this->experimentId ?? '',
+            $this->experimentStageId ?? '',
             $this->purpose ?? '',
         ]));
     }

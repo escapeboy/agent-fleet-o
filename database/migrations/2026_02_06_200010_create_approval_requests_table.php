@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -22,11 +23,13 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['experiment_id', 'status']);
-            // Partial index for pending approvals
-            $table->rawIndex(
-                "(status = 'pending')",
-                'approval_requests_pending_idx'
-            );
+            // Partial index for pending approvals (PostgreSQL only)
+            if (DB::getDriverName() === 'pgsql') {
+                $table->rawIndex(
+                    "(status = 'pending')",
+                    'approval_requests_pending_idx'
+                );
+            }
         });
     }
 

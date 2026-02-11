@@ -14,16 +14,28 @@
             <x-form-textarea wire:model="backstory" label="Backstory (optional)" rows="3" placeholder="Background context for the agent..." />
 
             <div class="grid grid-cols-3 gap-4">
-                <x-form-select wire:model="provider" label="Provider">
-                    <option value="anthropic">Anthropic</option>
-                    <option value="openai">OpenAI</option>
-                    <option value="google">Google</option>
+                <x-form-select wire:model.live="provider" label="Provider">
+                    @foreach($providers as $key => $provider)
+                        <option value="{{ $key }}">{{ $provider['name'] }}</option>
+                    @endforeach
                 </x-form-select>
 
-                <x-form-input wire:model="model" label="Model" type="text" />
+                <x-form-select wire:model="model" label="Model">
+                    @if(isset($providers[$this->provider]['models']))
+                        @foreach($providers[$this->provider]['models'] as $modelKey => $modelConfig)
+                            <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                        @endforeach
+                    @endif
+                </x-form-select>
 
                 <x-form-input wire:model.number="budgetCapCredits" label="Budget Cap (credits)" type="number" min="0" placeholder="Leave empty for unlimited" />
             </div>
+
+            @if($this->provider === 'local')
+                <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                    Local agent — executes on the host machine using its own CLI process. No per-request API costs.
+                </div>
+            @endif
 
             {{-- Skill Assignment --}}
             <div>

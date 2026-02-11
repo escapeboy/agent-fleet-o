@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -32,11 +33,13 @@ return new class extends Migration
             $table->index('status');
             $table->index('track');
             $table->index('user_id');
-            // Partial index for active experiments
-            $table->rawIndex(
-                "((status NOT IN ('completed', 'killed', 'discarded', 'expired')))",
-                'experiments_active_idx'
-            );
+            // Partial index for active experiments (PostgreSQL only)
+            if (DB::getDriverName() === 'pgsql') {
+                $table->rawIndex(
+                    "((status NOT IN ('completed', 'killed', 'discarded', 'expired')))",
+                    'experiments_active_idx'
+                );
+            }
         });
     }
 

@@ -3,6 +3,7 @@
 namespace App\Domain\Experiment\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Models\Crew;
 use App\Domain\Experiment\Enums\ExecutionMode;
 use App\Domain\Skill\Models\Skill;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -17,6 +18,8 @@ class PlaybookStep extends Model
         'experiment_id',
         'agent_id',
         'skill_id',
+        'crew_id',
+        'workflow_node_id',
         'order',
         'execution_mode',
         'group_id',
@@ -26,6 +29,7 @@ class PlaybookStep extends Model
         'status',
         'duration_ms',
         'cost_credits',
+        'loop_count',
         'error_message',
         'started_at',
         'completed_at',
@@ -58,6 +62,11 @@ class PlaybookStep extends Model
     public function skill(): BelongsTo
     {
         return $this->belongsTo(Skill::class);
+    }
+
+    public function crew(): BelongsTo
+    {
+        return $this->belongsTo(Crew::class);
     }
 
     public function isPending(): bool

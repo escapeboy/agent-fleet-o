@@ -2,6 +2,7 @@
 
 namespace App\Domain\Workflow\Services;
 
+use App\Domain\Crew\Jobs\ExecuteCrewWorkflowNodeJob;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
@@ -212,7 +213,7 @@ class WorkflowGraphExecutor
             return;
         }
 
-        if ($type === 'agent') {
+        if ($type === 'agent' || $type === 'crew') {
             $step = $steps[$nodeId] ?? null;
 
             if (! $step) {
@@ -351,6 +352,7 @@ class WorkflowGraphExecutor
     {
         $jobs = [];
         $dispatchedNodeIds = [];
+        $nodeMap = collect($graph['nodes'])->keyBy('id')->toArray();
 
         foreach ($nodeIds as $nodeId) {
             $step = $steps[$nodeId] ?? null;
@@ -359,7 +361,14 @@ class WorkflowGraphExecutor
                 continue;
             }
 
-            $jobs[] = new ExecutePlaybookStepJob($step->id, $experiment->id, $experiment->team_id);
+            $nodeType = $nodeMap[$nodeId]['type'] ?? 'agent';
+
+            if ($nodeType === 'crew') {
+                $jobs[] = new ExecuteCrewWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
+            } else {
+                $jobs[] = new ExecutePlaybookStepJob($step->id, $experiment->id, $experiment->team_id);
+            }
+
             $dispatchedNodeIds[] = $nodeId;
         }
 

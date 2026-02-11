@@ -48,6 +48,17 @@ return [
                 'output' => 50,  // $5.00/1M tokens
             ],
         ],
+
+        'local' => [
+            'codex' => [
+                'input' => 0,
+                'output' => 0,
+            ],
+            'claude-code' => [
+                'input' => 0,
+                'output' => 0,
+            ],
+        ],
     ],
 
     // Default estimation multiplier for budget reservation

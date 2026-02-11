@@ -17,6 +17,7 @@
     @endif
 
     @livewireStyles
+    @stack('styles')
 </head>
 <body class="bg-gray-50 font-sans antialiased">
     <div class="flex h-screen overflow-hidden">
@@ -51,5 +52,6 @@
     </div>
 
     @livewireScripts
+    @stack('scripts')
 </body>
 </html>

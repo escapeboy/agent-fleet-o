@@ -15,7 +15,7 @@ class AgentHealthCheck extends Command
 
     public function handle(HealthCheckAction $action): int
     {
-        $agents = Agent::whereIn('status', [AgentStatus::Active, AgentStatus::Degraded])->get();
+        $agents = Agent::withoutGlobalScopes()->whereIn('status', [AgentStatus::Active, AgentStatus::Degraded])->get();
 
         if ($agents->isEmpty()) {
             $this->info('No active agents to check.');

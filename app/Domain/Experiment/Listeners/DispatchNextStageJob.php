@@ -2,6 +2,7 @@
 
 namespace App\Domain\Experiment\Listeners;
 
+use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Pipeline\CollectMetrics;
@@ -29,7 +30,6 @@ class DispatchNextStageJob
         'executing' => ExecuteOutbound::class,
         'collecting_metrics' => CollectMetrics::class,
         'evaluating' => RunEvaluationStage::class,
-        'iterating' => RunPlanningStage::class,
     ];
 
     public function handle(ExperimentTransitioned $event): void
@@ -58,6 +58,22 @@ class DispatchNextStageJob
             }
 
             return;
+        }
+
+        // Iterating needs to transition to planning first
+        if ($newState === 'iterating') {
+            Log::info('DispatchNextStageJob: Iterating → transitioning to planning', [
+                'experiment_id' => $experiment->id,
+                'iteration' => $experiment->current_iteration,
+            ]);
+
+            app(TransitionExperimentAction::class)->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::Planning,
+                reason: "Iteration {$experiment->current_iteration}: re-entering planning",
+            );
+
+            return; // The Planning transition will trigger this listener again
         }
 
         $jobClass = self::STATE_JOB_MAP[$newState] ?? null;

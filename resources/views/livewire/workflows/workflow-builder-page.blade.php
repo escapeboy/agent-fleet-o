@@ -1,4 +1,4 @@
-<div x-data="workflowBuilder(@js($nodes), @js($edges), @js($availableAgents), @js($availableSkills))" class="flex flex-col h-[calc(100vh-8rem)]">
+<div x-data="workflowBuilder(@js($nodes), @js($edges), @js($availableAgents), @js($availableSkills), @js($availableCrews))" class="flex flex-col h-[calc(100vh-8rem)]">
     {{-- Top Bar --}}
     <div class="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-3">
         <div class="flex-1 flex items-center gap-3">
@@ -50,6 +50,12 @@
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     </span>
                     Agent Node
+                </button>
+                <button @click="addNode('crew')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-teal-300 hover:bg-teal-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-teal-100 text-teal-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    </span>
+                    Crew Node
                 </button>
                 <button @click="addNode('conditional')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-yellow-300 hover:bg-yellow-50">
                     <span class="flex h-6 w-6 items-center justify-center rounded bg-yellow-100 text-yellow-600">
@@ -130,6 +136,7 @@
                                 'border-green-400': node.type === 'start',
                                 'border-red-400': node.type === 'end',
                                 'border-purple-400': node.type === 'agent' && selectedNodeId !== node.id,
+                                'border-teal-400': node.type === 'crew' && selectedNodeId !== node.id,
                                 'border-yellow-400': node.type === 'conditional' && selectedNodeId !== node.id,
                              }"
                              style="min-width: 160px;">
@@ -140,6 +147,7 @@
                                     'bg-green-50': node.type === 'start',
                                     'bg-red-50': node.type === 'end',
                                     'bg-purple-50': node.type === 'agent',
+                                    'bg-teal-50': node.type === 'crew',
                                     'bg-yellow-50': node.type === 'conditional',
                                  }">
                                 <span class="text-xs font-medium uppercase"
@@ -147,6 +155,7 @@
                                          'text-green-700': node.type === 'start',
                                          'text-red-700': node.type === 'end',
                                          'text-purple-700': node.type === 'agent',
+                                         'text-teal-700': node.type === 'crew',
                                          'text-yellow-700': node.type === 'conditional',
                                       }" x-text="node.type.charAt(0).toUpperCase() + node.type.slice(1)"></span>
                                 <button x-show="node.type !== 'start'" @click.stop="removeNode(node.id)"
@@ -159,6 +168,7 @@
                             <div class="px-3 py-2">
                                 <div class="text-sm font-medium text-gray-700" x-text="node.label"></div>
                                 <div x-show="node.type === 'agent' && node.agent_id" class="mt-0.5 text-xs text-gray-400" x-text="getAgentName(node.agent_id)"></div>
+                                <div x-show="node.type === 'crew' && node.crew_id" class="mt-0.5 text-xs text-teal-500" x-text="getCrewName(node.crew_id)"></div>
                             </div>
 
                             {{-- Input port (top center) --}}
@@ -230,6 +240,24 @@
                             </div>
                         </template>
 
+                        <template x-if="selectedNode.type === 'crew'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Crew</label>
+                                    <select x-model="selectedNode.crew_id" @change="syncToLivewire()"
+                                            class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                        <option value="">Select crew...</option>
+                                        <template x-for="crew in crews" :key="crew.id">
+                                            <option :value="crew.id" x-text="crew.name + ' (' + crew.process_type + ')'"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="rounded-lg bg-teal-50 p-3 text-xs text-teal-700">
+                                    The crew's coordinator will decompose incoming context into tasks and delegate to workers.
+                                </div>
+                            </div>
+                        </template>
+
                         <template x-if="selectedNode.type === 'conditional'">
                             <div class="rounded-lg bg-yellow-50 p-3 text-xs text-yellow-700">
                                 Configure conditions on the outgoing edges. Click an edge to set its condition.
@@ -266,11 +294,12 @@
 
 @script
 <script>
-Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills) => ({
+Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crews) => ({
     localNodes: initialNodes,
     localEdges: initialEdges,
     agents: agents,
     skills: skills,
+    crews: crews || [],
 
     // Selection state
     selectedNodeId: null,
@@ -308,7 +337,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills) => (
     addNode(type) {
         this.nodeCounter++;
         const id = 'node-' + Date.now() + '-' + this.nodeCounter;
-        const labels = { agent: 'Agent ' + this.nodeCounter, conditional: 'Condition', end: 'End' };
+        const labels = { agent: 'Agent ' + this.nodeCounter, crew: 'Crew ' + this.nodeCounter, conditional: 'Condition', end: 'End' };
 
         this.localNodes.push({
             id: id,
@@ -316,6 +345,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills) => (
             label: labels[type] || type,
             agent_id: null,
             skill_id: null,
+            crew_id: null,
             config: {},
             position_x: 250 + (this.nodeCounter * 20) % 200,
             position_y: 150 + Math.floor(this.nodeCounter / 3) * 100,
@@ -480,6 +510,11 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills) => (
     getAgentName(agentId) {
         const agent = this.agents.find(a => a.id === agentId);
         return agent ? agent.name : '';
+    },
+
+    getCrewName(crewId) {
+        const crew = this.crews.find(c => c.id === crewId);
+        return crew ? crew.name : '';
     },
 
     syncToLivewire() {

@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use App\Domain\Agent\Actions\DisableAgentAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\Blacklist;
 use App\Models\GlobalSetting;
 use Livewire\Component;
@@ -123,6 +124,15 @@ class GlobalSettingsPage extends Component
         session()->flash('message', 'Blacklist entry removed.');
     }
 
+    public function rescanLocalAgents(): void
+    {
+        $discovery = app(LocalAgentDiscovery::class);
+        $detected = $discovery->detect();
+        $count = count($detected);
+
+        session()->flash('message', "Local agent scan complete. Found {$count} agent(s).");
+    }
+
     public function toggleAgent(string $agentId): void
     {
         $agent = Agent::findOrFail($agentId);
@@ -138,9 +148,17 @@ class GlobalSettingsPage extends Component
 
     public function render()
     {
+        $discovery = app(LocalAgentDiscovery::class);
+        $bridgeMode = $discovery->isBridgeMode();
+
         return view('livewire.settings.global-settings-page', [
             'blacklistEntries' => Blacklist::orderByDesc('created_at')->get(),
             'agents' => Agent::with('circuitBreakerState')->orderBy('name')->get(),
+            'localAgentsEnabled' => config('local_agents.enabled'),
+            'detectedLocalAgents' => $discovery->detect(),
+            'allLocalAgents' => $discovery->allAgents(),
+            'bridgeMode' => $bridgeMode,
+            'bridgeConnected' => $bridgeMode ? $discovery->bridgeHealth() : false,
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

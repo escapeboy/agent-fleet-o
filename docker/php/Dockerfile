@@ -52,7 +52,11 @@ COPY . .
 
 RUN composer install --no-interaction --optimize-autoloader
 
+COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 EXPOSE 9000
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
 
 # ---------- Production stage ----------

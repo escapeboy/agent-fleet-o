@@ -59,14 +59,19 @@ class CreateOutboundProposals extends BaseStageJob
             $channel = OutboundChannel::tryFrom($channelSpec['channel'] ?? 'email') ?? OutboundChannel::Email;
             $artifact = $artifacts->first();
 
-            $proposal = OutboundProposal::create([
+            $proposal = OutboundProposal::withoutGlobalScopes()->create([
                 'experiment_id' => $experiment->id,
+                'team_id' => $experiment->team_id,
                 'channel' => $channel,
                 'target' => ['description' => $channelSpec['target_description'] ?? 'unknown'],
                 'content' => [
-                    'artifact_id' => $artifact?->id,
-                    'artifact_name' => $artifact?->name,
-                    'body' => $artifact?->versions()->latest()->value('content'),
+                    'type' => 'experiment_summary',
+                    'subject' => "Experiment Complete: {$experiment->title}",
+                    'experiment_id' => $experiment->id,
+                    'artifact_count' => $artifacts->count(),
+                    'artifact_names' => $artifacts->pluck('name', 'type')->toArray(),
+                    'thesis' => $experiment->thesis,
+                    'iteration' => $experiment->current_iteration,
                 ],
                 'risk_score' => 0.5,
                 'status' => OutboundProposalStatus::PendingApproval,
