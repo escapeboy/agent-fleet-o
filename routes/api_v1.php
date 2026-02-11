@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\CrewController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
 
@@ -73,6 +74,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/workflows/{workflow}/activate', [WorkflowController::class, 'activate']);
     Route::post('/workflows/{workflow}/duplicate', [WorkflowController::class, 'duplicate']);
     Route::get('/workflows/{workflow}/cost', [WorkflowController::class, 'estimateCost']);
+
+    // Crews
+    Route::apiResource('crews', CrewController::class);
+    Route::post('/crews/{crew}/execute', [CrewController::class, 'execute']);
+    Route::get('/crews/{crew}/executions', [CrewController::class, 'executions']);
+    Route::get('/crews/{crew}/executions/{execution}', [CrewController::class, 'showExecution']);
 
     // Marketplace
     Route::get('/marketplace', [MarketplaceController::class, 'index']);

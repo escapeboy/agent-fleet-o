@@ -8,6 +8,9 @@ use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Project\Enums\ProjectStatus;
+use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use Livewire\Component;
@@ -38,6 +41,10 @@ class DashboardPage extends Component
         $skillExecutions24h = SkillExecution::where('created_at', '>=', now()->subDay())->count();
         $agentRuns24h = AgentExecution::where('created_at', '>=', now()->subDay())->count();
 
+        // Projects KPIs
+        $activeProjects = Project::where('status', ProjectStatus::Active)->count();
+        $projectRuns24h = ProjectRun::where('created_at', '>=', now()->subDay())->count();
+
         // Active experiments (top 10)
         $activeExperiments = Experiment::whereNotIn('status', array_map(fn ($s) => $s->value, $terminalStatuses))
             ->where('status', '!=', ExperimentStatus::Draft)
@@ -59,6 +66,8 @@ class DashboardPage extends Component
             'activeAgents' => $activeAgents,
             'skillExecutions24h' => $skillExecutions24h,
             'agentRuns24h' => $agentRuns24h,
+            'activeProjects' => $activeProjects,
+            'projectRuns24h' => $projectRuns24h,
             'activeExperiments' => $activeExperiments,
             'alerts' => $alerts,
         ])->layout('layouts.app', ['header' => 'Dashboard']);
