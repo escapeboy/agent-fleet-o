@@ -10,13 +10,18 @@ Self-hosted AI Agent Mission Control platform. Build, orchestrate, and monitor A
 
 - **Experiment Pipeline** -- 20-state machine with automatic stage progression (scoring, planning, building, approval, execution, metrics collection)
 - **AI Agents** -- Configure agents with roles, goals, backstories, and skill assignments
+- **Agent Crews** -- Multi-agent teams with lead/member roles and shared context
 - **Skills** -- Reusable AI skill definitions (LLM, connector, rule, hybrid) with versioning and cost tracking
 - **Playbooks** -- Sequential or parallel multi-step workflows combining skills
+- **Workflows** -- Visual DAG builder for multi-agent pipelines with conditional branching
+- **Projects** -- One-shot and continuous long-running agent projects with cron scheduling, budget caps, milestones, and overlap policies
 - **Human-in-the-Loop** -- Approval queue with configurable timeouts for high-risk actions
 - **Multi-Channel Outbound** -- Email (SMTP), Telegram, Slack, and webhook delivery with rate limiting
 - **Signal Ingestion** -- Webhooks (HMAC-SHA256) and RSS polling for inbound data
-- **Budget Controls** -- Per-experiment credit ledger with pessimistic locking and auto-pause on overspend
-- **Marketplace** -- Browse, publish, and install shared skills and agents
+- **Budget Controls** -- Per-experiment and per-project credit ledger with pessimistic locking and auto-pause on overspend
+- **Marketplace** -- Browse, publish, and install shared skills, agents, and workflows
+- **REST API** -- 68 endpoints under `/api/v1/` with Sanctum auth, cursor pagination, and auto-generated OpenAPI 3.1 docs at `/docs/api`
+- **Local Agents** -- Run Codex and Claude Code as local execution backends (auto-detected, zero cost)
 - **Audit Trail** -- Full activity logging with searchable, filterable audit log
 - **AI Gateway** -- Provider-agnostic LLM access via PrismPHP with circuit breakers and fallback chains
 - **BYOK** -- Bring your own API keys for Anthropic, OpenAI, or Google
@@ -79,11 +84,11 @@ Additional LLM keys can be configured in **Settings > AI Provider Keys** after l
 
 ## Architecture
 
-Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 10 bounded contexts:
+Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 12 bounded contexts:
 
 | Domain | Purpose |
 |--------|---------|
-| Agent | AI agent configs, execution history |
+| Agent | AI agent configs, crews, execution history |
 | Experiment | Pipeline, state machine, playbooks |
 | Signal | Inbound data ingestion |
 | Outbound | Multi-channel delivery |
@@ -92,7 +97,9 @@ Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 1
 | Metrics | Measurement, revenue attribution |
 | Audit | Activity logging |
 | Skill | Reusable AI skill definitions |
-| Marketplace | Skill/agent sharing |
+| Workflow | Visual DAG builder, graph executor |
+| Project | Continuous/one-shot projects, scheduling |
+| Marketplace | Skill/agent/workflow sharing |
 
 ## Docker Services
 
@@ -104,6 +111,7 @@ Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 1
 | redis | Cache/Queue/Sessions | 6379 |
 | horizon | Queue workers | -- |
 | scheduler | Cron jobs | -- |
+| vite | Frontend dev server | 5173 |
 
 ## Common Commands
 
@@ -142,6 +150,7 @@ This pulls the latest code, rebuilds containers, runs migrations, and clears cac
 - **Queue:** Laravel Horizon
 - **Auth:** Laravel Fortify (2FA) + Sanctum (API tokens)
 - **Audit:** spatie/laravel-activitylog
+- **API Docs:** dedoc/scramble (OpenAPI 3.1)
 
 ## Contributing
 
