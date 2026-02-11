@@ -11,11 +11,13 @@
 - **Queue Manager:** Laravel Horizon
 - **Auth:** Laravel Fortify (with 2FA support), Laravel Sanctum (API tokens)
 - **Audit:** spatie/laravel-activitylog
+- **API Docs:** dedoc/scramble (OpenAPI 3.1 at `/docs/api`)
+- **API Filtering:** spatie/laravel-query-builder
 - **Docker:** PHP 8.4-fpm-alpine + Nginx 1.27 + PostgreSQL 17 + Redis 7
 
 ## Project Structure
 
-Domain-driven design with clear boundaries:
+Domain-driven design with 13 bounded contexts:
 
 ```
 app/
@@ -24,6 +26,12 @@ app/
       Actions/                   # CreateAgent, ExecuteAgent, GenerateAgentName, DisableAgent, HealthCheck
       Enums/                     # AgentStatus
       Models/                    # Agent (SoftDeletes, role/goal/backstory, skills), AiRun, AgentExecution
+    Crew/                        # Multi-agent teams
+      Actions/                   # CreateCrew, UpdateCrew, ExecuteCrew, DecomposeGoal, SynthesizeResult, ValidateTaskOutput
+      Enums/                     # CrewStatus, CrewMemberRole, CrewProcessType, CrewExecutionStatus, CrewTaskStatus
+      Jobs/                      # ExecuteCrewJob
+      Models/                    # Crew, CrewMember, CrewExecution, CrewTaskExecution
+      Services/                  # CrewOrchestrator
     Experiment/                  # Core experiment pipeline & state machine
       Actions/                   # Create, Transition, Kill, Pause, Resume
       Enums/                     # ExperimentStatus (20 states), ExperimentTrack, StageType, StageStatus, ExecutionMode
@@ -64,7 +72,7 @@ app/
       Models/                    # AuditEntry
     Skill/                       # Reusable AI skill definitions
       Actions/                   # CreateSkill, ExecuteSkill, UpdateSkill
-      Enums/                     # SkillType, SkillStatus, RiskLevel, ExecutionType
+      Enums/                     # SkillType (llm/connector/rule/hybrid), SkillStatus, RiskLevel, ExecutionType
       Models/                    # Skill, SkillVersion, SkillExecution
       Services/                  # SchemaValidator, SkillCostCalculator
     Workflow/                    # Reusable workflow templates (visual DAG builder)
@@ -72,6 +80,14 @@ app/
       Enums/                     # WorkflowNodeType (start/end/agent/conditional), WorkflowStatus (draft/active/archived)
       Models/                    # Workflow, WorkflowNode, WorkflowEdge
       Services/                  # WorkflowGraphExecutor, GraphValidator, ConditionEvaluator
+    Project/                     # Continuous & one-shot projects
+      Actions/                   # CreateProject, PauseProject, ResumeProject, ArchiveProject, TriggerProjectRun
+      Enums/                     # ProjectStatus, ProjectType (one_shot/continuous), ProjectRunStatus, ScheduleFrequency, OverlapPolicy, MilestoneStatus
+      Jobs/                      # DispatchScheduledProjectsJob, ExecuteProjectRunJob
+      Listeners/                 # SyncProjectStatusOnRunComplete, LogProjectActivity
+      Models/                    # Project, ProjectSchedule, ProjectRun, ProjectMilestone
+      Notifications/             # ProjectBudgetWarning, ProjectDigest, ProjectMilestoneReached, ProjectRunFailed
+      Services/                  # ProjectScheduler
     Marketplace/                 # Skill, agent & workflow marketplace
       Actions/                   # PublishToMarketplace, InstallFromMarketplace
       Enums/                     # MarketplaceStatus, ListingVisibility
@@ -86,11 +102,12 @@ app/
     AI/                          # Provider-agnostic LLM gateway
       Contracts/                 # AiGatewayInterface, AiMiddlewareInterface
       DTOs/                      # AiRequestDTO, AiResponseDTO, AiUsageDTO
-      Gateways/                  # PrismAiGateway (BYOK credentials), FallbackAiGateway
+      Gateways/                  # PrismAiGateway (BYOK credentials), FallbackAiGateway, LocalAgentGateway
       Middleware/                # RateLimiting, BudgetEnforcement, IdempotencyCheck, SchemaValidation, UsageTracking
       Models/                    # LlmRequestLog, CircuitBreakerState
-      Services/                  # CircuitBreaker, ProviderResolver
-  Http/Controllers/              # SignalWebhookController, TrackingController, Api controllers
+      Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
+  Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
+  Http/Controllers/Api/V1/      # 15 REST API controllers (68 endpoints)
   Http/Middleware/               # SetCurrentTeam
   Livewire/                      # Admin panel components
     Dashboard/                   # DashboardPage
@@ -101,11 +118,13 @@ app/
     Health/                      # HealthPage
     Skills/                      # List, Detail, Create
     Agents/                      # List, Detail, Create
+    Crews/                       # List, Detail, Create, ExecutionPage, ExecutionPanel
     Workflows/                   # List, Builder (visual DAG editor), Detail
+    Projects/                    # List, Detail, Create, ActivityTimeline, RunsTable
     Marketplace/                 # Browse, Detail, Publish
     Teams/                       # TeamSettingsPage (BYOK + API tokens)
   Console/Commands/              # AgentHealthCheck, AggregateMetrics, ExpireStaleApprovals, PollInputConnectors,
-                                 # SendWeeklyDigest, CleanupAuditEntries, InstallCommand
+                                 # SendWeeklyDigest, CleanupAuditEntries, CheckProjectBudgets, RecoverStuckTasks, InstallCommand
   Jobs/Middleware/               # CheckKillSwitch, CheckBudgetAvailable, TenantRateLimit
 ```
 
@@ -119,16 +138,19 @@ app/
 | `GET /dashboard` | DashboardPage | dashboard |
 | `GET /experiments` | ExperimentListPage | experiments.index |
 | `GET /experiments/{experiment}` | ExperimentDetailPage | experiments.show |
-| `GET /approvals` | ApprovalInboxPage | approvals.index |
-| `GET /health` | HealthPage | health |
-| `GET /audit` | AuditLogPage | audit |
-| `GET /settings` | GlobalSettingsPage | settings |
 | `GET /skills` | SkillListPage | skills.index |
 | `GET /skills/create` | CreateSkillForm | skills.create |
 | `GET /skills/{skill}` | SkillDetailPage | skills.show |
 | `GET /agents` | AgentListPage | agents.index |
 | `GET /agents/create` | CreateAgentForm | agents.create |
 | `GET /agents/{agent}` | AgentDetailPage | agents.show |
+| `GET /crews` | CrewListPage | crews.index |
+| `GET /crews/create` | CreateCrewForm | crews.create |
+| `GET /crews/{crew}` | CrewDetailPage | crews.show |
+| `GET /crews/{crew}/execute` | CrewExecutionPage | crews.execute |
+| `GET /projects` | ProjectListPage | projects.index |
+| `GET /projects/create` | CreateProjectForm | projects.create |
+| `GET /projects/{project}` | ProjectDetailPage | projects.show |
 | `GET /workflows` | WorkflowListPage | workflows.index |
 | `GET /workflows/create` | WorkflowBuilderPage | workflows.create |
 | `GET /workflows/{workflow}/edit` | WorkflowBuilderPage | workflows.edit |
@@ -136,19 +158,42 @@ app/
 | `GET /marketplace` | MarketplaceBrowsePage | marketplace.index |
 | `GET /marketplace/publish` | PublishForm | marketplace.publish |
 | `GET /marketplace/{listing:slug}` | MarketplaceDetailPage | marketplace.show |
+| `GET /artifacts/{artifact}/render/{version?}` | ArtifactPreviewController | artifacts.render |
+| `GET /approvals` | ApprovalInboxPage | approvals.index |
+| `GET /health` | HealthPage | health |
+| `GET /audit` | AuditLogPage | audit |
+| `GET /settings` | GlobalSettingsPage | settings |
 | `GET /team` | TeamSettingsPage | team.settings |
 
-### API Routes
+### API v1 Routes (`/api/v1/`)
+
+68 endpoints across 15 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
+
+| Group | Endpoints | Purpose |
+|-------|-----------|---------|
+| Auth | `POST token`, `POST refresh`, `DELETE token`, `GET devices`, `DELETE devices/{id}` | Token management |
+| Me | `GET /me`, `PUT /me` | Current user |
+| Experiments | `GET`, `GET {id}`, `POST`, `POST {id}/transition` | Experiment CRUD + transitions |
+| Agents | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `PATCH {id}/status` | Agent CRUD + toggle |
+| Skills | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `GET {id}/versions` | Skill CRUD + versions |
+| Crews | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/execute`, `GET {id}/executions`, `GET {id}/executions/{eid}` | Crew CRUD + execution |
+| Workflows | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `PUT {id}/graph`, `POST {id}/validate`, `POST {id}/activate`, `POST {id}/duplicate`, `GET {id}/cost` | Workflow CRUD + graph ops |
+| Signals | `GET`, `GET {id}`, `POST` | Signal CRUD |
+| Approvals | `GET`, `GET {id}`, `POST {id}/approve`, `POST {id}/reject` | Approval management |
+| Marketplace | `GET`, `GET {slug}`, `POST`, `POST {slug}/install`, `POST {slug}/reviews` | Marketplace browse + publish |
+| Team | `GET`, `PUT`, `GET members`, `DELETE members/{id}`, `GET credentials`, `POST credentials`, `DELETE credentials/{id}`, `GET tokens`, `POST tokens`, `DELETE tokens/{id}` | Team management + BYOK |
+| Dashboard | `GET /dashboard` | KPI summary |
+| Health | `GET /health` | System health |
+| Audit | `GET /audit` | Audit log |
+| Budget | `GET /budget` | Budget summary |
+
+### Legacy API Routes (`/api/`)
 
 | Method | Path | Controller | Auth | Purpose |
 |--------|------|------------|------|---------|
 | `POST` | `/api/signals/webhook` | SignalWebhookController | HMAC | Signal ingestion |
 | `GET` | `/api/track/click` | TrackingController | -- | Click tracking (302 redirect) |
 | `GET` | `/api/track/pixel` | TrackingController | -- | Open tracking (1x1 pixel) |
-| `GET` | `/api/experiments` | ExperimentApiController | Sanctum | List experiments |
-| `GET` | `/api/experiments/{id}` | ExperimentApiController | Sanctum | Show experiment |
-| `GET` | `/api/signals` | SignalApiController | Sanctum | List signals |
-| `POST` | `/api/signals` | SignalApiController | Sanctum | Create signal |
 
 ## Single-Team Architecture
 
@@ -182,7 +227,7 @@ Reusable form components in `resources/views/components/`:
 - JSONB columns with GIN indexes (PostgreSQL).
 - Partial indexes for frequently filtered statuses.
 - Budget operations use `lockForUpdate()` for pessimistic locking.
-- 47 migrations.
+- 61 migrations.
 
 ### State Machine
 - Custom implementation (NOT spatie/laravel-model-states).
@@ -192,12 +237,14 @@ Reusable form components in `resources/views/components/`:
 
 ### Pipeline
 - Event-driven advancement (NOT job chains).
-- `ExperimentTransitioned` event triggers 5 listeners:
-  1. `DispatchNextStageJob` -- advances to next pipeline stage
+- `ExperimentTransitioned` event triggers 7 listeners:
+  1. `DispatchNextStageJob` -- advances to next pipeline stage (supports playbooks)
   2. `RecordTransitionMetrics` -- records timing/metrics
   3. `NotifyOnCriticalTransition` -- alerts on failures
   4. `PauseOnBudgetExceeded` -- auto-pause on low budget
   5. `LogExperimentTransition` -- audit trail
+  6. `SyncProjectStatusOnRunComplete` -- syncs ProjectRun status when experiment finishes
+  7. `LogProjectActivity` -- logs project-level activity
 - All stage jobs extend `BaseStageJob`.
 - Job middleware: `CheckKillSwitch`, `CheckBudgetAvailable`, `TenantRateLimit`.
 
@@ -211,15 +258,22 @@ Reusable form components in `resources/views/components/`:
 - Circuit breaker per provider.
 - Fallback chains: anthropic -> openai, openai -> anthropic, google -> anthropic.
 - Supported: Anthropic (Claude), OpenAI (GPT-4o), Google (Gemini).
+- Local agents: Codex and Claude Code as execution backends (auto-detected via `LocalAgentDiscovery`).
+- `LocalAgentGateway` spawns CLI processes, zero cost, no API key required.
+- `ProviderResolver` hierarchy: skill -> agent -> team -> platform (filters local agents to only show detected ones).
 
 ### Scheduled Commands
 - `approvals:expire-stale` -- hourly
-- `agents:health-check` -- every 5 minutes
+- `agents:health-check` -- every 5 minutes (currently disabled)
 - `metrics:aggregate --period=hourly` -- hourly
 - `metrics:aggregate --period=daily` -- daily at 01:00
 - `connectors:poll --driver=rss` -- every 15 minutes
-- `digest:weekly` -- weekly
+- `digest:send-weekly` -- weekly on Monday at 09:00
 - `audit:cleanup` -- daily at 02:00 (default 90-day retention)
+- `sanctum:prune-expired --hours=48` -- daily
+- `tasks:recover-stuck` -- every 5 minutes
+- `projects:check-budgets` -- hourly
+- `DispatchScheduledProjectsJob` -- every minute (evaluates due continuous projects)
 
 ## Commands
 
@@ -269,4 +323,7 @@ SESSION_DRIVER=redis             # Redis-backed sessions
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
 GOOGLE_AI_API_KEY=
+
+# Local Agents (auto-detected, no keys needed)
+LOCAL_AGENTS_ENABLED=true
 ```
