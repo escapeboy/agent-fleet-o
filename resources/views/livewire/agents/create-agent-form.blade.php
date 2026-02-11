@@ -31,11 +31,40 @@
                 <x-form-input wire:model.number="budgetCapCredits" label="Budget Cap (credits)" type="number" min="0" placeholder="Leave empty for unlimited" />
             </div>
 
-            @if($this->provider === 'local')
+            @if(!empty($providers[$this->provider]['local']))
                 <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                     Local agent — executes on the host machine using its own CLI process. No per-request API costs.
                 </div>
             @endif
+
+            {{-- Fallback Chain --}}
+            <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700">Fallback Chain</label>
+                <p class="mb-3 text-xs text-gray-500">If the primary provider fails or is rate-limited, requests fall through to fallbacks in order.</p>
+
+                @foreach($fallbackChain as $index => $fallback)
+                    <div class="mb-2 flex items-center gap-2" wire:key="fallback-{{ $index }}">
+                        <span class="text-xs font-medium text-gray-400 w-6">{{ $index + 1 }}.</span>
+                        <select wire:model.live="fallbackChain.{{ $index }}.provider" class="rounded-lg border border-gray-300 py-1.5 px-3 text-sm focus:border-primary-500 focus:ring-primary-500">
+                            @foreach($providers as $key => $p)
+                                <option value="{{ $key }}">{{ $p['name'] }}</option>
+                            @endforeach
+                        </select>
+                        <select wire:model="fallbackChain.{{ $index }}.model" class="flex-1 rounded-lg border border-gray-300 py-1.5 px-3 text-sm focus:border-primary-500 focus:ring-primary-500">
+                            @foreach($providers[$fallbackChain[$index]['provider'] ?? 'anthropic']['models'] ?? [] as $modelKey => $modelInfo)
+                                <option value="{{ $modelKey }}">{{ $modelInfo['label'] }}</option>
+                            @endforeach
+                        </select>
+                        <button wire:click="removeFallback({{ $index }})" type="button" class="rounded p-1 text-red-500 hover:bg-red-50">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                @endforeach
+
+                <button wire:click="addFallback" type="button" class="mt-1 rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700">
+                    + Add Fallback
+                </button>
+            </div>
 
             {{-- Skill Assignment --}}
             <div>

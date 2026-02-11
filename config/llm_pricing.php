@@ -49,15 +49,16 @@ return [
             ],
         ],
 
-        'local' => [
-            'codex' => [
-                'input' => 0,
-                'output' => 0,
-            ],
-            'claude-code' => [
-                'input' => 0,
-                'output' => 0,
-            ],
+        'codex' => [
+            'gpt-5.3-codex' => ['input' => 0, 'output' => 0],
+            'gpt-5.2-codex' => ['input' => 0, 'output' => 0],
+            'gpt-5.1-codex-mini' => ['input' => 0, 'output' => 0],
+        ],
+
+        'claude-code' => [
+            'claude-sonnet-4-5' => ['input' => 0, 'output' => 0],
+            'claude-opus-4-6' => ['input' => 0, 'output' => 0],
+            'claude-haiku-4-5' => ['input' => 0, 'output' => 0],
         ],
     ],
 

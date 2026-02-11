@@ -62,7 +62,7 @@ class CreateCrewForm extends Component
                 maxTaskIterations: $this->maxTaskIterations,
                 qualityThreshold: $this->qualityThreshold,
                 workerAgentIds: $this->workerAgentIds,
-                teamId: auth()->user()->currentTeam()?->id,
+                teamId: auth()->user()->currentTeam?->id,
             );
 
             session()->flash('message', "Crew '{$crew->name}' created successfully.");

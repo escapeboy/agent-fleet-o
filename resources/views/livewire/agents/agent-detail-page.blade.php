@@ -47,7 +47,7 @@
                         hint="Leave empty for unlimited" />
                 </div>
 
-                @if($editProvider === 'local')
+                @if(!empty($providers[$editProvider]['local']))
                     <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                         Local agent — executes on the host machine using its own CLI process. No per-request API costs.
                     </div>
@@ -216,11 +216,11 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="rounded-xl border border-gray-200 bg-white p-4">
                         <h3 class="mb-2 text-sm font-semibold text-gray-700">Capabilities</h3>
-                        <pre class="max-h-32 overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($agent->capabilities ?? [], JSON_PRETTY_PRINT) }}</pre>
+                        <pre class="max-h-32 overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($agent->capabilities ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                     </div>
                     <div class="rounded-xl border border-gray-200 bg-white p-4">
                         <h3 class="mb-2 text-sm font-semibold text-gray-700">Constraints</h3>
-                        <pre class="max-h-32 overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($agent->constraints ?? [], JSON_PRETTY_PRINT) }}</pre>
+                        <pre class="max-h-32 overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($agent->constraints ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                     </div>
                 </div>
             </div>

@@ -20,7 +20,7 @@ class LocalAgentGateway implements AiGatewayInterface
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
-        $agentKey = $request->model;
+        $agentKey = $this->resolveAgentKey($request->provider);
         $config = config("local_agents.agents.{$agentKey}");
 
         if (! $config) {
@@ -38,12 +38,13 @@ class LocalAgentGateway implements AiGatewayInterface
         }
 
         $prompt = $this->buildPrompt($request);
-        $command = $this->buildCommand($agentKey, $binaryPath);
+        $command = $this->buildCommand($agentKey, $binaryPath, $request->model);
         $timeout = config('local_agents.timeout', 300);
         $workdir = config('local_agents.working_directory') ?? base_path();
 
         Log::debug("LocalAgentGateway: executing {$agentKey}", [
             'command' => $command,
+            'model' => $request->model,
             'prompt_length' => strlen($prompt),
             'timeout' => $timeout,
         ]);
@@ -81,8 +82,8 @@ class LocalAgentGateway implements AiGatewayInterface
                 completionTokens: $this->estimateTokens($parsed['content']),
                 costCredits: 0,
             ),
-            provider: 'local',
-            model: $agentKey,
+            provider: $request->provider,
+            model: $request->model,
             latencyMs: $latencyMs,
         );
     }
@@ -174,8 +175,8 @@ class LocalAgentGateway implements AiGatewayInterface
                 completionTokens: $this->estimateTokens($parsed['content']),
                 costCredits: 0,
             ),
-            provider: 'local',
-            model: $agentKey,
+            provider: $request->provider,
+            model: $request->model,
             latencyMs: $data['execution_time_ms'] ?? $latencyMs,
         );
     }
@@ -193,11 +194,13 @@ class LocalAgentGateway implements AiGatewayInterface
         return implode("\n\n", $parts);
     }
 
-    private function buildCommand(string $agentKey, string $binaryPath): string
+    private function buildCommand(string $agentKey, string $binaryPath, ?string $model = null): string
     {
+        $modelFlag = $model ? ' --model ' . escapeshellarg($model) : '';
+
         return match ($agentKey) {
-            'codex' => "{$binaryPath} --quiet --output-format json --approval-mode full-auto",
-            'claude-code' => "{$binaryPath} --print --output-format json --dangerously-skip-permissions",
+            'codex' => "{$binaryPath} --quiet --output-format json --approval-mode full-auto{$modelFlag}",
+            'claude-code' => "{$binaryPath} --print --output-format json --dangerously-skip-permissions{$modelFlag}",
             default => throw new RuntimeException("No command template for agent: {$agentKey}"),
         };
     }
@@ -289,6 +292,14 @@ class LocalAgentGateway implements AiGatewayInterface
             'content' => json_encode($json, JSON_PRETTY_PRINT),
             'structured' => $json,
         ];
+    }
+
+    /**
+     * Resolve the local_agents.php agent key from the llm_providers config.
+     */
+    private function resolveAgentKey(string $provider): string
+    {
+        return config("llm_providers.{$provider}.agent_key", $provider);
     }
 
     /**

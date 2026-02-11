@@ -38,6 +38,18 @@
             </x-form-select>
         </div>
 
+        <div class="sm:col-span-2">
+            <x-form-textarea wire:model="successCriteria" label="Success Criteria (optional)" id="successCriteria" rows="3"
+                placeholder="One criterion per line, e.g.&#10;Landing page has valid HTML with Tailwind CSS&#10;At least 3 affiliate product links included&#10;Page loads under 2 seconds"
+                hint="Helps the evaluator decide when the experiment is done. Leave empty for automatic evaluation."
+                :error="$errors->first('successCriteria')" />
+        </div>
+
+        <div class="mt-2">
+            <x-form-checkbox wire:model="autoApprove" id="autoApprove" label="Auto-approve outbound proposals" />
+            <p class="ml-6 mt-1 text-xs text-gray-500">Skip the approval gate and let the pipeline proceed automatically.</p>
+        </div>
+
         <div class="flex items-center gap-3 pt-2">
             <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                 Create Experiment

@@ -17,6 +17,8 @@ class CreateExperimentForm extends Component
     public int $maxIterations = 3;
     public int $maxOutboundCount = 100;
     public string $workflowId = '';
+    public bool $autoApprove = true;
+    public string $successCriteria = '';
 
     protected function rules(): array
     {
@@ -28,6 +30,7 @@ class CreateExperimentForm extends Component
             'maxIterations' => 'required|integer|min:1|max:20',
             'maxOutboundCount' => 'required|integer|min:1|max:10000',
             'workflowId' => 'nullable|uuid',
+            'successCriteria' => 'nullable|string|max:2000',
         ];
     }
 
@@ -46,11 +49,24 @@ class CreateExperimentForm extends Component
             budgetCapCredits: $this->budgetCapCredits,
             maxIterations: $this->maxIterations,
             maxOutboundCount: $this->maxOutboundCount,
+            constraints: ['auto_approve' => $this->autoApprove],
+            successCriteria: $this->parseSuccessCriteria(),
             teamId: $team?->id,
             workflowId: $this->workflowId ?: null,
         );
 
         $this->redirect(route('experiments.show', $experiment), navigate: true);
+    }
+
+    private function parseSuccessCriteria(): array
+    {
+        if (empty(trim($this->successCriteria))) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map('trim', explode("\n", $this->successCriteria))
+        ));
     }
 
     public function render()

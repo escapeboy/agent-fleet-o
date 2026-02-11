@@ -8,6 +8,7 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Project\Enums\ProjectRunStatus;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Project\Services\DependencyResolver;
 use Illuminate\Support\Facades\DB;
 
 class TriggerProjectRunAction
@@ -15,6 +16,7 @@ class TriggerProjectRunAction
     public function __construct(
         private CreateExperimentAction $createExperiment,
         private TransitionExperimentAction $transitionExperiment,
+        private DependencyResolver $dependencyResolver,
     ) {}
 
     public function execute(Project $project, string $trigger = 'manual', ?array $inputData = null): ProjectRun
@@ -37,11 +39,21 @@ class TriggerProjectRunAction
                 userId: $project->user_id,
                 title: $project->title . ' — Run #' . $runNumber,
                 thesis: $project->goal ?? $project->description ?? $project->title,
-                track: 'outbound',
+                track: 'growth',
                 budgetCapCredits: $project->budget_config['per_run_cap'] ?? 10000,
                 teamId: $project->team_id,
                 workflowId: $project->workflow_id,
             );
+
+            // Resolve dependencies and inject into experiment constraints
+            $dependencyContext = $this->dependencyResolver->resolve($project);
+            if (! empty($dependencyContext)) {
+                $experiment->update([
+                    'constraints' => array_merge($experiment->constraints ?? [], [
+                        'dependency_context' => $dependencyContext,
+                    ]),
+                ]);
+            }
 
             $run->update([
                 'experiment_id' => $experiment->id,

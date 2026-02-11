@@ -9,6 +9,7 @@ use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Project\Listeners\LogProjectActivity;
+use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -51,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
         // Project listeners (syncs run status when experiment completes)
         Event::listen(ExperimentTransitioned::class, SyncProjectStatusOnRunComplete::class);
         Event::listen(ExperimentTransitioned::class, LogProjectActivity::class);
+        Event::listen(ExperimentTransitioned::class, NotifyDependentsOnRunComplete::class);
 
         // API rate limiting
         RateLimiter::for('api', function (Request $request) {

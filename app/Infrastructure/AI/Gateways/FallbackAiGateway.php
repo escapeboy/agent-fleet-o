@@ -25,11 +25,11 @@ class FallbackAiGateway implements AiGatewayInterface
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
         // Route local agent requests directly — no fallback chain
-        if ($request->provider === 'local' && $this->localGateway) {
+        if ($this->isLocalProvider($request->provider) && $this->localGateway) {
             return $this->localGateway->complete($request);
         }
 
-        $chain = $this->getFallbackChain($request->provider, $request->model);
+        $chain = $this->getFallbackChain($request->provider, $request->model, $request->fallbackChain);
 
         $lastException = null;
 
@@ -58,6 +58,7 @@ class FallbackAiGateway implements AiGatewayInterface
                     idempotencyKey: $request->idempotencyKey,
                     temperature: $request->temperature,
                     teamId: $request->teamId,
+                    fallbackChain: $request->fallbackChain,
                 );
 
                 $response = $this->gateway->complete($adjustedRequest);
@@ -85,7 +86,7 @@ class FallbackAiGateway implements AiGatewayInterface
 
     public function estimateCost(AiRequestDTO $request): int
     {
-        if ($request->provider === 'local') {
+        if ($this->isLocalProvider($request->provider)) {
             return 0;
         }
 
@@ -95,16 +96,26 @@ class FallbackAiGateway implements AiGatewayInterface
     /**
      * @return list<array{provider: string, model: string}>
      */
-    private function getFallbackChain(string $provider, string $model): array
+    private function getFallbackChain(string $provider, string $model, ?array $requestChain = null): array
     {
-        $key = "{$provider}/{$model}";
-
         $chain = [['provider' => $provider, 'model' => $model]];
+
+        // Per-request fallback chain takes priority over global chains
+        if ($requestChain) {
+            return array_merge($chain, $requestChain);
+        }
+
+        $key = "{$provider}/{$model}";
 
         if (isset($this->fallbackChains[$key])) {
             $chain = array_merge($chain, $this->fallbackChains[$key]);
         }
 
         return $chain;
+    }
+
+    private function isLocalProvider(string $provider): bool
+    {
+        return (bool) config("llm_providers.{$provider}.local");
     }
 }

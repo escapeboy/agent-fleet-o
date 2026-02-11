@@ -5,19 +5,32 @@
             <div class="flex items-center gap-3">
                 <x-status-badge :status="$experiment->status->value" />
                 <span class="text-sm text-gray-500">{{ ucfirst($experiment->track->value) }}</span>
-                <span class="text-sm text-gray-500">Iteration {{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</span>
+                <span class="text-sm text-gray-500">Step {{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</span>
+                @if($experiment->constraints['auto_approve'] ?? false)
+                    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Auto-approve</span>
+                @endif
             </div>
             @if($experiment->thesis)
                 <p class="mt-2 max-w-2xl text-sm text-gray-600">{{ $experiment->thesis }}</p>
+            @endif
+            @if(!empty($experiment->success_criteria))
+                <div class="mt-2 max-w-2xl">
+                    <p class="text-xs font-medium text-gray-500">Success Criteria</p>
+                    <ul class="mt-1 list-inside list-disc text-sm text-gray-600">
+                        @foreach($experiment->success_criteria as $criterion)
+                            <li>{{ $criterion }}</li>
+                        @endforeach
+                    </ul>
+                </div>
             @endif
         </div>
 
         {{-- Actions --}}
         <div class="flex items-center gap-2">
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Draft)
-                <button wire:click="startExperiment" wire:confirm="Start this experiment? It will begin the scoring stage."
+                <button wire:click="startExperiment" wire:confirm="Start this run? It will begin the scoring stage."
                     class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                    Start Experiment
+                    Start Run
                 </button>
             @endif
 
@@ -38,7 +51,7 @@
             @if($experiment->status->isFailed())
                 @if($showRetryConfirm)
                     <div class="flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2">
-                        <span class="text-sm text-blue-700">Retry this experiment?</span>
+                        <span class="text-sm text-blue-700">Retry this run?</span>
                         <button wire:click="retryExperiment" class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700">Yes, retry</button>
                         <button wire:click="$set('showRetryConfirm', false)" class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">Cancel</button>
                     </div>
@@ -53,7 +66,7 @@
             @if(!$experiment->status->isTerminal())
                 @if($showKillConfirm)
                     <div class="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
-                        <span class="text-sm text-red-700">Kill this experiment?</span>
+                        <span class="text-sm text-red-700">Kill this run?</span>
                         <button wire:click="killExperiment" class="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700">Yes, kill</button>
                         <button wire:click="$set('showKillConfirm', false)" class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">Cancel</button>
                     </div>

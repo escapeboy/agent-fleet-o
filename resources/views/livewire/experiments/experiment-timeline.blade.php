@@ -22,7 +22,7 @@
 
             @if($expandedStageId === $stage->id && $stage->output_snapshot)
                 <div class="border-t border-gray-200 bg-gray-50 px-4 py-3">
-                    <pre class="max-h-96 overflow-auto rounded bg-gray-900 p-3 text-xs text-green-400">{{ json_encode($stage->output_snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                    <pre class="max-h-96 overflow-auto rounded bg-gray-900 p-3 text-xs text-green-400">{{ json_encode($stage->output_snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
                 </div>
             @endif
         </div>

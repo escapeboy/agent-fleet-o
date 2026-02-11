@@ -23,7 +23,7 @@ class MarketplaceDetailPage extends Component
 
     protected function checkInstallStatus(): void
     {
-        $team = auth()->user()?->currentTeam();
+        $team = auth()->user()?->currentTeam;
         if ($team) {
             $this->isInstalled = $this->listing->installations()
                 ->where('team_id', $team->id)
@@ -34,7 +34,7 @@ class MarketplaceDetailPage extends Component
     public function install(): void
     {
         $user = auth()->user();
-        $team = $user->currentTeam();
+        $team = $user->currentTeam;
 
         if (! $team) {
             session()->flash('error', 'You must belong to a team to install marketplace items.');
@@ -61,7 +61,7 @@ class MarketplaceDetailPage extends Component
         ]);
 
         $user = auth()->user();
-        $team = $user->currentTeam();
+        $team = $user->currentTeam;
 
         // Check if user already reviewed
         $existing = MarketplaceReview::where('listing_id', $this->listing->id)

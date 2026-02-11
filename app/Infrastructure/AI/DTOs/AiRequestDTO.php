@@ -21,6 +21,7 @@ final readonly class AiRequestDTO
         public ?string $purpose = null,
         public ?string $idempotencyKey = null,
         public float $temperature = 0.7,
+        public ?array $fallbackChain = null,
     ) {}
 
     public function isStructured(): bool

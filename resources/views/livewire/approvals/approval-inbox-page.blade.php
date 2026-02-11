@@ -60,7 +60,7 @@
                                 </div>
                                 @if($approval->outboundProposal->content)
                                     <div class="mt-2 max-h-32 overflow-auto text-xs text-gray-600">
-                                        <pre class="whitespace-pre-wrap">{{ is_string($approval->outboundProposal->content) ? $approval->outboundProposal->content : json_encode($approval->outboundProposal->content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                        <pre class="whitespace-pre-wrap">{{ is_string($approval->outboundProposal->content) ? $approval->outboundProposal->content : json_encode($approval->outboundProposal->content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
                                     </div>
                                 @endif
                             </div>

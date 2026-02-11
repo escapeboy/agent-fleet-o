@@ -19,7 +19,7 @@ class CreateExperimentAction
         string $thesis,
         string $track,
         int $budgetCapCredits = 10000,
-        int $maxIterations = 10,
+        int $maxIterations = 3,
         int $maxOutboundCount = 100,
         array $constraints = [],
         array $successCriteria = [],
@@ -35,6 +35,7 @@ class CreateExperimentAction
             'constraints' => array_merge([
                 'max_retries_per_stage' => 3,
                 'max_rejection_cycles' => 3,
+                'auto_approve' => true,
             ], $constraints),
             'success_criteria' => $successCriteria,
             'budget_cap_credits' => $budgetCapCredits,

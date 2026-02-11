@@ -58,6 +58,29 @@
             </form>
         </div>
 
+        {{-- Default Pipeline LLM --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 class="text-sm font-medium text-gray-500">Default Pipeline LLM</h3>
+            <p class="mt-1 text-xs text-gray-400">Used by experiment pipeline stages unless overridden per-experiment or per-agent.</p>
+            <form wire:submit="saveDefaultLlm" class="mt-4 space-y-4">
+                <x-form-select wire:model.live="defaultLlmProvider" label="Provider">
+                    @foreach($providers as $key => $p)
+                        <option value="{{ $key }}">{{ $p['name'] }}</option>
+                    @endforeach
+                </x-form-select>
+
+                <x-form-select wire:model="defaultLlmModel" label="Model">
+                    @foreach($providers[$defaultLlmProvider]['models'] ?? [] as $modelKey => $modelInfo)
+                        <option value="{{ $modelKey }}">{{ $modelInfo['label'] }}</option>
+                    @endforeach
+                </x-form-select>
+
+                <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    Save Default LLM
+                </button>
+            </form>
+        </div>
+
         {{-- Agent Management --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h3 class="text-sm font-medium text-gray-500">Agent Management</h3>

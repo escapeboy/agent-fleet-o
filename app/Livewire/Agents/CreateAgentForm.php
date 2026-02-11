@@ -17,6 +17,18 @@ class CreateAgentForm extends Component
     public string $model = 'claude-sonnet-4-5';
     public ?int $budgetCapCredits = null;
     public array $selectedSkillIds = [];
+    public array $fallbackChain = [];
+
+    public function addFallback(): void
+    {
+        $this->fallbackChain[] = ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'];
+    }
+
+    public function removeFallback(int $index): void
+    {
+        unset($this->fallbackChain[$index]);
+        $this->fallbackChain = array_values($this->fallbackChain);
+    }
 
     protected function rules(): array
     {
@@ -35,7 +47,13 @@ class CreateAgentForm extends Component
     {
         $this->validate();
 
-        $team = auth()->user()->currentTeam();
+        $team = auth()->user()->currentTeam;
+
+        $config = [];
+        $filteredChain = array_filter($this->fallbackChain, fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']));
+        if (! empty($filteredChain)) {
+            $config['fallback_chain'] = array_values($filteredChain);
+        }
 
         app(CreateAgentAction::class)->execute(
             name: $this->name,
@@ -47,6 +65,7 @@ class CreateAgentForm extends Component
             backstory: $this->backstory ?: null,
             budgetCapCredits: $this->budgetCapCredits,
             skillIds: $this->selectedSkillIds,
+            config: $config,
         );
 
         session()->flash('message', 'Agent created successfully!');

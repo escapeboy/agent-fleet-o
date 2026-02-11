@@ -6,6 +6,7 @@ use App\Domain\Project\Enums\MilestoneStatus;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
 use App\Domain\Project\Models\ProjectSchedule;
 use Illuminate\Support\Facades\DB;
@@ -30,12 +31,13 @@ class CreateProjectAction
         array $settings = [],
         ?array $schedule = null,
         array $milestones = [],
+        array $dependencies = [],
         ?string $teamId = null,
     ): Project {
         return DB::transaction(function () use (
             $userId, $title, $type, $description, $goal,
             $crewId, $workflowId, $agentConfig, $budgetConfig,
-            $notificationConfig, $settings, $schedule, $milestones, $teamId,
+            $notificationConfig, $settings, $schedule, $milestones, $dependencies, $teamId,
         ) {
             $notificationDefaults = [
                 'on_failure' => true,
@@ -95,6 +97,32 @@ class CreateProjectAction
                 ]);
             }
 
+            // Create dependencies
+            foreach ($dependencies as $index => $dep) {
+                $dependsOnId = $dep['depends_on_id'] ?? null;
+                if (! $dependsOnId) {
+                    continue;
+                }
+
+                // Circular dependency check
+                if ($this->wouldCreateCycle($project->id, $dependsOnId)) {
+                    throw new \InvalidArgumentException(
+                        "Adding dependency on project '{$dependsOnId}' would create a circular dependency."
+                    );
+                }
+
+                ProjectDependency::create([
+                    'project_id' => $project->id,
+                    'depends_on_id' => $dependsOnId,
+                    'team_id' => $teamId,
+                    'alias' => $dep['alias'] ?? 'dependency_' . $index,
+                    'reference_type' => $dep['reference_type'] ?? 'latest_run',
+                    'specific_run_id' => $dep['specific_run_id'] ?? null,
+                    'is_required' => $dep['is_required'] ?? true,
+                    'sort_order' => $index,
+                ]);
+            }
+
             // For one-shot projects, auto-start
             if ($type === ProjectType::OneShot->value) {
                 $project->update([
@@ -104,7 +132,39 @@ class CreateProjectAction
                 $this->triggerRunAction->execute($project, 'initial');
             }
 
-            return $project->fresh(['schedule', 'milestones', 'runs']);
+            return $project->fresh(['schedule', 'milestones', 'runs', 'dependencies']);
         });
+    }
+
+    private function wouldCreateCycle(string $projectId, string $dependsOnId): bool
+    {
+        if ($projectId === $dependsOnId) {
+            return true;
+        }
+
+        $visited = [];
+        $queue = [$dependsOnId];
+
+        while (! empty($queue)) {
+            $current = array_shift($queue);
+
+            if ($current === $projectId) {
+                return true;
+            }
+
+            if (in_array($current, $visited)) {
+                continue;
+            }
+
+            $visited[] = $current;
+
+            $upstreamIds = ProjectDependency::where('project_id', $current)
+                ->pluck('depends_on_id')
+                ->toArray();
+
+            $queue = array_merge($queue, $upstreamIds);
+        }
+
+        return false;
     }
 }

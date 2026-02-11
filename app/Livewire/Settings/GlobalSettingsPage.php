@@ -24,6 +24,10 @@ class GlobalSettingsPage extends Component
     public int $webhookRateLimit = 50;
     public int $targetCooldownDays = 7;
 
+    // Default pipeline LLM
+    public string $defaultLlmProvider = 'anthropic';
+    public string $defaultLlmModel = 'claude-sonnet-4-5';
+
     // Approval settings
     public int $approvalTimeoutHours = 48;
 
@@ -48,6 +52,9 @@ class GlobalSettingsPage extends Component
 
         $this->targetCooldownDays = GlobalSetting::get('target_cooldown_days', 7);
         $this->approvalTimeoutHours = GlobalSetting::get('approval_timeout_hours', 48);
+
+        $this->defaultLlmProvider = GlobalSetting::get('default_llm_provider', 'anthropic') ?? 'anthropic';
+        $this->defaultLlmModel = GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
     }
 
     public function saveBudgetSettings(): void
@@ -124,6 +131,19 @@ class GlobalSettingsPage extends Component
         session()->flash('message', 'Blacklist entry removed.');
     }
 
+    public function saveDefaultLlm(): void
+    {
+        $this->validate([
+            'defaultLlmProvider' => 'required|string',
+            'defaultLlmModel' => 'required|string',
+        ]);
+
+        GlobalSetting::set('default_llm_provider', $this->defaultLlmProvider);
+        GlobalSetting::set('default_llm_model', $this->defaultLlmModel);
+
+        session()->flash('message', 'Default pipeline LLM saved.');
+    }
+
     public function rescanLocalAgents(): void
     {
         $discovery = app(LocalAgentDiscovery::class);
@@ -159,6 +179,7 @@ class GlobalSettingsPage extends Component
             'allLocalAgents' => $discovery->allAgents(),
             'bridgeMode' => $bridgeMode,
             'bridgeConnected' => $bridgeMode ? $discovery->bridgeHealth() : false,
+            'providers' => config('llm_providers', []),
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

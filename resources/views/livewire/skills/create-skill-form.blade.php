@@ -121,7 +121,7 @@
                     @endif
                 </div>
 
-                @if($provider === 'local')
+                @if(!empty($providers[$provider]['local']))
                     <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                         Local agent — executes on the host machine using its own CLI process. No per-request API costs.
                     </div>

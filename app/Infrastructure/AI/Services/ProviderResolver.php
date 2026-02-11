@@ -70,31 +70,29 @@ class ProviderResolver
     {
         $providers = config('llm_providers', []);
 
-        // Only include local agents when enabled and at least one is detected
-        if (isset($providers['local'])) {
-            if (! config('local_agents.enabled')) {
-                unset($providers['local']);
-            } else {
-                $discovery = app(LocalAgentDiscovery::class);
-                $detected = $discovery->detect();
+        // Filter local agent providers based on enabled flag and detection
+        $localEnabled = config('local_agents.enabled');
+        $detected = null;
 
-                if (empty($detected)) {
-                    unset($providers['local']);
-                } else {
-                    // Filter to only show detected local agents
-                    $filteredModels = [];
-                    foreach ($providers['local']['models'] as $key => $model) {
-                        if (isset($detected[$key])) {
-                            $filteredModels[$key] = $model;
-                        }
-                    }
+        foreach ($providers as $key => $provider) {
+            if (empty($provider['local'])) {
+                continue;
+            }
 
-                    if (empty($filteredModels)) {
-                        unset($providers['local']);
-                    } else {
-                        $providers['local']['models'] = $filteredModels;
-                    }
-                }
+            if (! $localEnabled) {
+                unset($providers[$key]);
+                continue;
+            }
+
+            // Lazy-detect once
+            if ($detected === null) {
+                $detected = app(LocalAgentDiscovery::class)->detect();
+            }
+
+            $agentKey = $provider['agent_key'] ?? $key;
+
+            if (! isset($detected[$agentKey])) {
+                unset($providers[$key]);
             }
         }
 

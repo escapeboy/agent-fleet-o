@@ -7,6 +7,7 @@ use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Generic HTTP POST webhook connector.
@@ -39,7 +40,20 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
 
             $url = $target['url'] ?? null;
             if (!$url) {
-                throw new \InvalidArgumentException('No URL in webhook target');
+                // No actionable URL — simulate the send (dry-run)
+                Log::info('WebhookOutboundConnector: No URL in target, simulating send', [
+                    'proposal_id' => $proposal->id,
+                    'target' => $target,
+                ]);
+
+                $action->update([
+                    'status' => OutboundActionStatus::Sent,
+                    'external_id' => 'webhook-simulated-' . now()->timestamp,
+                    'response' => ['simulated' => true, 'reason' => 'No URL in webhook target'],
+                    'sent_at' => now(),
+                ]);
+
+                return $action;
             }
 
             $headers = $target['headers'] ?? [];
