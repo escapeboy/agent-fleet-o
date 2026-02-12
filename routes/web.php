@@ -21,6 +21,12 @@ use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
 use App\Livewire\Teams\TeamSettingsPage;
+use App\Livewire\Credentials\CreateCredentialForm;
+use App\Livewire\Credentials\CredentialDetailPage;
+use App\Livewire\Credentials\CredentialListPage;
+use App\Livewire\Tools\CreateToolForm;
+use App\Livewire\Tools\ToolDetailPage;
+use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\ProjectDetailPage;
 use App\Livewire\Projects\ProjectListPage;
@@ -55,6 +61,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
+
+    Route::get('/tools', ToolListPage::class)->name('tools.index');
+    Route::get('/tools/create', CreateToolForm::class)->name('tools.create');
+    Route::get('/tools/{tool}', ToolDetailPage::class)->name('tools.show');
+
+    Route::get('/credentials', CredentialListPage::class)->name('credentials.index');
+    Route::get('/credentials/create', CreateCredentialForm::class)->name('credentials.create');
+    Route::get('/credentials/{credential}', CredentialDetailPage::class)->name('credentials.show');
 
     Route::get('/crews', CrewListPage::class)->name('crews.index');
     Route::get('/crews/create', CreateCrewForm::class)->name('crews.create');

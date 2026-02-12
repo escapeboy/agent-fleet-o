@@ -13,5 +13,9 @@ final readonly class AiResponseDTO
         public int $latencyMs,
         public bool $schemaValid = true,
         public bool $cached = false,
+        public ?array $toolResults = null,
+        public ?array $steps = null,
+        public int $toolCallsCount = 0,
+        public int $stepsCount = 0,
     ) {}
 }

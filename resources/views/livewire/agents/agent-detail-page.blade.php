@@ -112,6 +112,33 @@
                     @endif
                 </div>
 
+                {{-- Tool Assignment --}}
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700">Assign Tools</label>
+                    <p class="mb-3 text-xs text-gray-500">When tools are assigned, the agent uses an agentic loop where the LLM decides which tools to call.</p>
+                    @if($availableTools->isNotEmpty())
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach($availableTools as $tool)
+                                <button wire:click="toggleTool('{{ $tool->id }}')" type="button"
+                                    class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition
+                                        {{ in_array($tool->id, $editToolIds) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300' }}">
+                                    <div class="flex h-5 w-5 items-center justify-center rounded border {{ in_array($tool->id, $editToolIds) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300' }}">
+                                        @if(in_array($tool->id, $editToolIds))
+                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">{{ $tool->name }}</div>
+                                        <div class="text-xs text-gray-500">{{ $tool->type->label() }}</div>
+                                    </div>
+                                </button>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-400">No active tools available. <a href="{{ route('tools.create') }}" class="text-primary-600 hover:underline">Create a tool first.</a></p>
+                    @endif
+                </div>
+
                 {{-- Actions --}}
                 <div class="flex items-center justify-between border-t border-gray-200 pt-4">
                     <button wire:click="deleteAgent" wire:confirm="Are you sure you want to delete this agent? This cannot be undone."
@@ -172,10 +199,14 @@
         </div>
 
         {{-- Stats --}}
-        <div class="mb-6 grid grid-cols-4 gap-4">
+        <div class="mb-6 grid grid-cols-5 gap-4">
             <div class="rounded-xl border border-gray-200 bg-white p-4">
                 <div class="text-2xl font-bold text-gray-900">{{ $skills->count() }}</div>
-                <div class="text-sm text-gray-500">Skills Assigned</div>
+                <div class="text-sm text-gray-500">Skills</div>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-4">
+                <div class="text-2xl font-bold text-gray-900">{{ $tools->count() }}</div>
+                <div class="text-sm text-gray-500">Tools</div>
             </div>
             <div class="rounded-xl border border-gray-200 bg-white p-4">
                 <div class="text-2xl font-bold text-gray-900">{{ $executions->count() }}</div>
@@ -194,7 +225,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8">
-                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'executions' => 'Executions'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -255,6 +286,38 @@
                 </table>
             </div>
 
+        @elseif($activeTab === 'tools')
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tool</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Functions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Priority</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @forelse($tools as $tool)
+                            <tr>
+                                <td class="px-6 py-4">
+                                    <a href="{{ route('tools.show', $tool) }}" class="font-medium text-primary-600 hover:text-primary-800">{{ $tool->name }}</a>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">{{ $tool->type->label() }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-500">{{ $tool->functionCount() }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-500">{{ $tool->pivot->priority }}</td>
+                                <td class="px-6 py-4"><x-status-badge :status="$tool->status->value" /></td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-400">No tools assigned. Tools enable the agent to take real-world actions.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
         @elseif($activeTab === 'executions')
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -271,7 +334,13 @@
                         @forelse($executions as $exec)
                             <tr>
                                 <td class="px-6 py-4"><x-status-badge :status="$exec->status" /></td>
-                                <td class="px-6 py-4 text-sm text-gray-500">{{ count($exec->skills_executed ?? []) }} skills</td>
+                                <td class="px-6 py-4 text-sm text-gray-500">
+                                    @if($exec->tool_calls_count > 0)
+                                        {{ $exec->tool_calls_count }} tool calls ({{ $exec->llm_steps_count }} steps)
+                                    @else
+                                        {{ count($exec->skills_executed ?? []) }} skills
+                                    @endif
+                                </td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $exec->duration_ms ? number_format($exec->duration_ms) . 'ms' : '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $exec->cost_credits }} credits</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $exec->created_at->diffForHumans() }}</td>

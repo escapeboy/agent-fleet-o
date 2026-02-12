@@ -10,8 +10,8 @@
             Dashboard
         </x-sidebar-link>
 
-        <x-sidebar-link href="{{ route('skills.index') }}" :active="request()->routeIs('skills.*')" icon="puzzle-piece">
-            Skills
+        <x-sidebar-link href="{{ route('projects.index') }}" :active="request()->routeIs('projects.*')" icon="folder">
+            Projects
         </x-sidebar-link>
 
         <x-sidebar-link href="{{ route('agents.index') }}" :active="request()->routeIs('agents.*')" icon="cpu-chip">
@@ -22,12 +22,20 @@
             Crews
         </x-sidebar-link>
 
-        <x-sidebar-link href="{{ route('projects.index') }}" :active="request()->routeIs('projects.*')" icon="folder">
-            Projects
-        </x-sidebar-link>
-
         <x-sidebar-link href="{{ route('workflows.index') }}" :active="request()->routeIs('workflows.*')" icon="arrow-path">
             Workflows
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('skills.index') }}" :active="request()->routeIs('skills.*')" icon="puzzle-piece">
+            Skills
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('tools.index') }}" :active="request()->routeIs('tools.*')" icon="wrench-screwdriver">
+            Tools
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('credentials.index') }}" :active="request()->routeIs('credentials.*')" icon="key">
+            Credentials
         </x-sidebar-link>
 
         <x-sidebar-link href="{{ route('marketplace.index') }}" :active="request()->routeIs('marketplace.*')" icon="shopping-bag">

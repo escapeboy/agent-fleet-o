@@ -151,6 +151,48 @@
         </div>
     @endif
 
+    {{-- Tools & Credentials --}}
+    @if($allowedTools->isNotEmpty() || $allowedCredentials->isNotEmpty())
+        <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4">
+            <h3 class="mb-3 text-sm font-semibold text-gray-700">Tools & Credentials</h3>
+            <div class="grid gap-4 {{ $allowedTools->isNotEmpty() && $allowedCredentials->isNotEmpty() ? 'grid-cols-2' : 'grid-cols-1' }}">
+                @if($allowedTools->isNotEmpty())
+                    <div>
+                        <div class="mb-2 text-xs font-medium uppercase tracking-wider text-gray-400">Tools</div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($allowedTools as $tool)
+                                <a href="{{ route('tools.show', $tool) }}"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-100 px-3 py-1.5 text-sm hover:bg-gray-50">
+                                    <span class="font-medium text-gray-700">{{ $tool->name }}</span>
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ match($tool->type->value) {
+                                        'mcp_stdio' => 'bg-blue-100 text-blue-800',
+                                        'mcp_http' => 'bg-cyan-100 text-cyan-800',
+                                        'built_in' => 'bg-amber-100 text-amber-800',
+                                        default => 'bg-gray-100 text-gray-800',
+                                    } }}">{{ $tool->type->label() }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                @if($allowedCredentials->isNotEmpty())
+                    <div>
+                        <div class="mb-2 text-xs font-medium uppercase tracking-wider text-gray-400">Credentials</div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($allowedCredentials as $credential)
+                                <a href="{{ route('credentials.show', $credential) }}"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-100 px-3 py-1.5 text-sm hover:bg-gray-50">
+                                    <span class="font-medium text-gray-700">{{ $credential->name }}</span>
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $credential->credential_type->color() }}">{{ $credential->credential_type->label() }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+
     {{-- Tabs --}}
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex space-x-8">

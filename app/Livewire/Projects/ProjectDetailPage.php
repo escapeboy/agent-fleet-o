@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Projects;
 
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Actions\ArchiveProjectAction;
 use App\Domain\Project\Actions\PauseProjectAction;
 use App\Domain\Project\Actions\ResumeProjectAction;
@@ -11,6 +12,7 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Tool\Models\Tool;
 use Livewire\Component;
 
 class ProjectDetailPage extends Component
@@ -77,6 +79,14 @@ class ProjectDetailPage extends Component
             ->with('project')
             ->get();
 
+        $allowedTools = ! empty($this->project->allowed_tool_ids)
+            ? Tool::withoutGlobalScopes()->whereIn('id', $this->project->allowed_tool_ids)->get()
+            : collect();
+
+        $allowedCredentials = ! empty($this->project->allowed_credential_ids)
+            ? Credential::withoutGlobalScopes()->whereIn('id', $this->project->allowed_credential_ids)->get()
+            : collect();
+
         return view('livewire.projects.project-detail-page', [
             'runs' => $runs,
             'milestones' => $milestones,
@@ -85,6 +95,8 @@ class ProjectDetailPage extends Component
             'failedRuns' => $failedRuns,
             'upstreamDeps' => $upstreamDeps,
             'downstreamDeps' => $downstreamDeps,
+            'allowedTools' => $allowedTools,
+            'allowedCredentials' => $allowedCredentials,
         ])->layout('layouts.app', ['header' => $this->project->title]);
     }
 }

@@ -12,7 +12,9 @@ use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\CredentialController;
 use App\Http\Controllers\Api\V1\CrewController;
+use App\Http\Controllers\Api\V1\ToolController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +57,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Skills
     Route::apiResource('skills', SkillController::class);
     Route::get('/skills/{skill}/versions', [SkillController::class, 'versions']);
+
+    // Tools
+    Route::apiResource('tools', ToolController::class);
+
+    // Credentials
+    Route::apiResource('credentials', CredentialController::class);
+    Route::post('/credentials/{credential}/rotate', [CredentialController::class, 'rotate']);
 
     // Signals
     Route::get('/signals', [SignalController::class, 'index']);

@@ -4,6 +4,7 @@ namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Livewire\Component;
 
@@ -17,6 +18,7 @@ class CreateAgentForm extends Component
     public string $model = 'claude-sonnet-4-5';
     public ?int $budgetCapCredits = null;
     public array $selectedSkillIds = [];
+    public array $selectedToolIds = [];
     public array $fallbackChain = [];
 
     public function addFallback(): void
@@ -65,6 +67,7 @@ class CreateAgentForm extends Component
             backstory: $this->backstory ?: null,
             budgetCapCredits: $this->budgetCapCredits,
             skillIds: $this->selectedSkillIds,
+            toolIds: $this->selectedToolIds,
             config: $config,
         );
 
@@ -82,13 +85,24 @@ class CreateAgentForm extends Component
         }
     }
 
+    public function toggleTool(string $toolId): void
+    {
+        if (in_array($toolId, $this->selectedToolIds)) {
+            $this->selectedToolIds = array_values(array_diff($this->selectedToolIds, [$toolId]));
+        } else {
+            $this->selectedToolIds[] = $toolId;
+        }
+    }
+
     public function render()
     {
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
+        $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
         $providers = app(ProviderResolver::class)->availableProviders();
 
         return view('livewire.agents.create-agent-form', [
             'availableSkills' => $availableSkills,
+            'availableTools' => $availableTools,
             'providers' => $providers,
             'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Create Agent']);
