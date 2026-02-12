@@ -22,11 +22,20 @@ final readonly class AiRequestDTO
         public ?string $idempotencyKey = null,
         public float $temperature = 0.7,
         public ?array $fallbackChain = null,
+        /** @var array<\Prism\Prism\Tool>|null */
+        public ?array $tools = null,
+        public int $maxSteps = 1,
+        public ?string $toolChoice = null,
     ) {}
 
     public function isStructured(): bool
     {
         return $this->outputSchema !== null;
+    }
+
+    public function hasTools(): bool
+    {
+        return ! empty($this->tools);
     }
 
     public function generateIdempotencyKey(): string

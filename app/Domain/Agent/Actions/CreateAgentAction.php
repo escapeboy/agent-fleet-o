@@ -21,6 +21,7 @@ class CreateAgentAction
         array $constraints = [],
         ?int $budgetCapCredits = null,
         array $skillIds = [],
+        array $toolIds = [],
     ): Agent {
         $pricing = config("llm_pricing.providers.{$provider}.{$model}");
 
@@ -50,6 +51,15 @@ class CreateAgentAction
                 $syncData[$skillId] = ['priority' => $index];
             }
             $agent->skills()->sync($syncData);
+        }
+
+        // Attach tools with priority based on array order
+        if (! empty($toolIds)) {
+            $syncData = [];
+            foreach ($toolIds as $index => $toolId) {
+                $syncData[$toolId] = ['priority' => $index];
+            }
+            $agent->tools()->sync($syncData);
         }
 
         return $agent;

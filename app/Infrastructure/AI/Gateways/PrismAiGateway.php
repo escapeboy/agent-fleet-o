@@ -90,17 +90,51 @@ class PrismAiGateway implements AiGatewayInterface
             );
         }
 
-        $response = Prism::text()
+        $builder = Prism::text()
             ->using($provider, $request->model)
             ->withSystemPrompt($request->systemPrompt)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
             ->usingTemperature($request->temperature)
             ->withClientOptions(['timeout' => 120])
-            ->withClientRetry(2, 500)
-            ->asText();
+            ->withClientRetry(2, 500);
+
+        // Add tool support when tools are provided
+        if ($request->hasTools()) {
+            $builder->withTools($request->tools)
+                ->withMaxSteps($request->maxSteps);
+
+            if ($request->toolChoice !== null) {
+                $builder->withToolChoice($request->toolChoice);
+            }
+        }
+
+        $response = $builder->asText();
 
         $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+        // Extract tool results from multi-step response
+        $toolResults = null;
+        $stepsData = null;
+        $toolCallsCount = 0;
+        $stepsCount = 0;
+
+        if ($request->hasTools() && $response->steps->isNotEmpty()) {
+            $stepsCount = $response->steps->count();
+            $toolResultsList = [];
+
+            foreach ($response->steps as $step) {
+                foreach ($step->toolCalls as $toolCall) {
+                    $toolResultsList[] = [
+                        'toolName' => $toolCall->name,
+                        'args' => $toolCall->arguments(),
+                    ];
+                }
+            }
+
+            $toolCallsCount = count($toolResultsList);
+            $toolResults = $toolCallsCount > 0 ? $toolResultsList : null;
+        }
 
         return new AiResponseDTO(
             content: $response->text,
@@ -118,6 +152,9 @@ class PrismAiGateway implements AiGatewayInterface
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
+            toolResults: $toolResults,
+            toolCallsCount: $toolCallsCount,
+            stepsCount: $stepsCount,
         );
     }
 

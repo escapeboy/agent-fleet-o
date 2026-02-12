@@ -5,6 +5,7 @@ namespace App\Domain\Agent\Models;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -72,6 +73,14 @@ class Agent extends Model
     public function skills(): BelongsToMany
     {
         return $this->belongsToMany(Skill::class, 'agent_skill')
+            ->withPivot('priority', 'overrides')
+            ->withTimestamps()
+            ->orderByPivot('priority');
+    }
+
+    public function tools(): BelongsToMany
+    {
+        return $this->belongsToMany(Tool::class, 'agent_tool')
             ->withPivot('priority', 'overrides')
             ->withTimestamps()
             ->orderByPivot('priority');
