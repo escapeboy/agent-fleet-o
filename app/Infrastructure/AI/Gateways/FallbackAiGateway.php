@@ -123,6 +123,11 @@ class FallbackAiGateway implements AiGatewayInterface
 
     private function isLocalProvider(string $provider): bool
     {
+        // Explicit "local" provider name (generic alias)
+        if ($provider === 'local') {
+            return true;
+        }
+
         return (bool) config("llm_providers.{$provider}.local");
     }
 }

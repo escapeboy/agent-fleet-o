@@ -296,9 +296,21 @@ class LocalAgentGateway implements AiGatewayInterface
 
     /**
      * Resolve the local_agents.php agent key from the llm_providers config.
+     * If the generic "local" provider is used, resolve to the first available local agent.
      */
     private function resolveAgentKey(string $provider): string
     {
+        if ($provider === 'local') {
+            $detected = $this->discovery->detect();
+            if (empty($detected)) {
+                throw new RuntimeException(
+                    'No local agents detected. Install Codex or Claude Code CLI.'
+                );
+            }
+
+            return array_key_first($detected);
+        }
+
         return config("llm_providers.{$provider}.agent_key", $provider);
     }
 
