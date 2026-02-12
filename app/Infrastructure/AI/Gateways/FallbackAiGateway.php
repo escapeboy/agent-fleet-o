@@ -25,7 +25,14 @@ class FallbackAiGateway implements AiGatewayInterface
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
         // Route local agent requests directly — no fallback chain
-        if ($this->isLocalProvider($request->provider) && $this->localGateway) {
+        if ($this->isLocalProvider($request->provider)) {
+            if (! $this->localGateway) {
+                throw new \RuntimeException(
+                    "Local agent provider '{$request->provider}' is not available. "
+                    . 'Enable local agents (LOCAL_AGENTS_ENABLED=true) and ensure the agent binary is installed.'
+                );
+            }
+
             return $this->localGateway->complete($request);
         }
 

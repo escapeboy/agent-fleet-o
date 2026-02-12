@@ -18,8 +18,8 @@ enum ProjectType: string
     public function icon(): string
     {
         return match ($this) {
-            self::OneShot => 'bolt',
-            self::Continuous => 'arrow-path',
+            self::OneShot => '⚡',
+            self::Continuous => '🔄',
         };
     }
 }
