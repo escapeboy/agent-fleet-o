@@ -1,7 +1,7 @@
 <div wire:poll.5s>
     {{-- KPI Cards --}}
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <x-stat-card label="Active Experiments" :value="$active" />
+        <x-stat-card label="Active Runs" :value="$active" />
         <x-stat-card label="Success Rate" :value="$successRate . '%'" :change="$completed . ' of ' . $total . ' completed'" changeType="neutral" />
         <x-stat-card label="Total Spend" :value="number_format($totalSpend) . ' credits'" />
         <x-stat-card label="Pending Approvals" :value="$pendingApprovals"
@@ -20,23 +20,23 @@
     </div>
 
     <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {{-- Active Experiments --}}
+        {{-- Active Runs --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium text-gray-500">Active Experiments</h3>
-                <a href="{{ route('experiments.index') }}" class="text-xs text-primary-600 hover:text-primary-800">View all</a>
+                <h3 class="text-sm font-medium text-gray-500">Active Runs</h3>
+                <a href="{{ route('projects.index') }}" class="text-xs text-primary-600 hover:text-primary-800">View all</a>
             </div>
             <div class="mt-4 space-y-3">
                 @forelse($activeExperiments as $experiment)
                     <a href="{{ route('experiments.show', $experiment) }}" class="flex items-center justify-between rounded-lg bg-gray-50 p-3 transition hover:bg-gray-100">
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-medium text-gray-900">{{ $experiment->title }}</p>
-                            <p class="mt-0.5 text-xs text-gray-500">Iteration {{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</p>
+                            <p class="mt-0.5 text-xs text-gray-500">Step {{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</p>
                         </div>
                         <x-status-badge :status="$experiment->status->value" class="ml-3 shrink-0" />
                     </a>
                 @empty
-                    <p class="text-sm text-gray-400">No active experiments.</p>
+                    <p class="text-sm text-gray-400">No active runs.</p>
                 @endforelse
             </div>
         </div>

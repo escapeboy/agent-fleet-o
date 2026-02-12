@@ -74,7 +74,7 @@ class CreateSkillForm extends Component
 
     public function save(): void
     {
-        $team = auth()->user()->currentTeam();
+        $team = auth()->user()->currentTeam;
 
         $inputSchema = $this->buildSchema($this->inputFields);
         $outputSchema = $this->buildSchema($this->outputFields);

@@ -14,6 +14,21 @@ use Tests\TestCase;
 
 class FallbackAiGatewayLocalTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Configure codex as a local provider
+        config(['llm_providers.codex' => [
+            'name' => 'Codex (Local)',
+            'local' => true,
+            'agent_key' => 'codex',
+            'models' => [
+                'gpt-5.3-codex' => ['label' => 'GPT-4o', 'input_cost' => 0, 'output_cost' => 0],
+            ],
+        ]]);
+    }
+
     public function test_routes_local_provider_to_local_gateway(): void
     {
         $prism = Mockery::mock(PrismAiGateway::class);
@@ -24,14 +39,14 @@ class FallbackAiGatewayLocalTest extends TestCase
             content: 'Hello from local',
             parsedOutput: null,
             usage: new AiUsageDTO(promptTokens: 10, completionTokens: 5, costCredits: 0),
-            provider: 'local',
-            model: 'codex',
+            provider: 'codex',
+            model: 'gpt-5.3-codex',
             latencyMs: 100,
         );
 
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'codex',
+            provider: 'codex',
+            model: 'gpt-5.3-codex',
             systemPrompt: 'test',
             userPrompt: 'test',
         );
@@ -53,8 +68,8 @@ class FallbackAiGatewayLocalTest extends TestCase
 
         $response = $gateway->complete($request);
 
-        $this->assertEquals('local', $response->provider);
-        $this->assertEquals('codex', $response->model);
+        $this->assertEquals('codex', $response->provider);
+        $this->assertEquals('gpt-5.3-codex', $response->model);
         $this->assertEquals('Hello from local', $response->content);
     }
 
@@ -72,8 +87,8 @@ class FallbackAiGatewayLocalTest extends TestCase
         );
 
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'codex',
+            provider: 'codex',
+            model: 'gpt-5.3-codex',
             systemPrompt: 'test',
             userPrompt: 'test',
         );

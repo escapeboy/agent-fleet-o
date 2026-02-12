@@ -57,7 +57,7 @@
                         <tr>
                             <td colspan="5" class="bg-gray-50 px-6 py-4">
                                 <div class="rounded-lg bg-gray-900 p-4">
-                                    <pre class="overflow-auto text-xs text-green-400">{{ json_encode($entry->properties, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                    <pre class="overflow-auto text-xs text-green-400">{{ json_encode($entry->properties, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
                                 </div>
                             </td>
                         </tr>

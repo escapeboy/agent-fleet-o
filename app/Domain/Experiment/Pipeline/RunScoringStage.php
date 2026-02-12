@@ -37,11 +37,28 @@ class RunScoringStage extends BaseStageJob
         $signal = $experiment->signals()->latest()->first();
         $signalPayload = $signal?->payload ?? ['thesis' => $experiment->thesis];
 
+        // Build user prompt with optional dependency context
+        $userPrompt = "Score this experiment thesis:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nSignal: " . json_encode($signalPayload, JSON_UNESCAPED_UNICODE);
+
+        $dependencyContext = $experiment->constraints['dependency_context'] ?? [];
+        if (! empty($dependencyContext)) {
+            $userPrompt .= "\n\n--- Context from predecessor projects ---";
+            foreach ($dependencyContext as $alias => $data) {
+                $userPrompt .= "\n\n[{$alias}] Project: {$data['project_title']} (Run #{$data['run_number']})";
+                foreach ($data['artifacts'] ?? [] as $artifact) {
+                    $userPrompt .= "\nArtifact [{$artifact['type']}] {$artifact['name']}:\n{$artifact['content']}";
+                }
+                if (! empty($data['stage_outputs'])) {
+                    $userPrompt .= "\nStage outputs: " . json_encode($data['stage_outputs'], JSON_UNESCAPED_UNICODE);
+                }
+            }
+        }
+
         $request = new AiRequestDTO(
             provider: $llm['provider'],
             model: $llm['model'],
-            systemPrompt: 'You are an experiment scoring agent. Evaluate the business potential of the given signal or thesis. Return ONLY a valid JSON object (no markdown, no code fences) with: score (0.0-1.0), reasoning (string, max 2 sentences), recommended_track (growth|retention|revenue|engagement), and key_metrics (array of max 5 short strings). Keep the response compact.',
-            userPrompt: "Score this experiment thesis:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nSignal: " . json_encode($signalPayload),
+            systemPrompt: 'You are an experiment scoring agent. Evaluate the business potential of the given signal or thesis. If context from predecessor projects is provided, factor it into your evaluation. Return ONLY a valid JSON object (no markdown, no code fences) with: score (0.0-1.0), reasoning (string, max 2 sentences), recommended_track (growth|retention|revenue|engagement), and key_metrics (array of max 5 short strings). Keep the response compact.',
+            userPrompt: $userPrompt,
             maxTokens: 1024,
             userId: $experiment->user_id,
             experimentId: $experiment->id,

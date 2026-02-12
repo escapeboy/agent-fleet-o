@@ -11,15 +11,39 @@ use Tests\TestCase;
 
 class LocalAgentGatewayTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Set up llm_providers config so resolveAgentKey works
+        config(['llm_providers.codex' => [
+            'name' => 'Codex (Local)',
+            'local' => true,
+            'agent_key' => 'codex',
+            'models' => [
+                'gpt-5.3-codex' => ['label' => 'GPT-4o', 'input_cost' => 0, 'output_cost' => 0],
+            ],
+        ]]);
+        config(['llm_providers.claude-code' => [
+            'name' => 'Claude Code (Local)',
+            'local' => true,
+            'agent_key' => 'claude-code',
+            'models' => [
+                'claude-sonnet-4-5' => ['label' => 'Claude Sonnet 4.5', 'input_cost' => 0, 'output_cost' => 0],
+            ],
+        ]]);
+    }
+
     public function test_complete_throws_for_unknown_agent(): void
     {
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
 
         $gateway = new LocalAgentGateway($discovery);
 
+        // Provider 'nonexistent' has no llm_providers config, so agent_key defaults to 'nonexistent'
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'nonexistent',
+            provider: 'nonexistent',
+            model: 'some-model',
             systemPrompt: 'test',
             userPrompt: 'test',
         );
@@ -52,8 +76,8 @@ class LocalAgentGatewayTest extends TestCase
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'codex',
+            provider: 'codex',
+            model: 'gpt-5.3-codex',
             systemPrompt: 'test',
             userPrompt: 'test',
         );
@@ -70,8 +94,8 @@ class LocalAgentGatewayTest extends TestCase
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'codex',
+            provider: 'codex',
+            model: 'gpt-5.3-codex',
             systemPrompt: 'test',
             userPrompt: 'test',
         );
@@ -81,7 +105,14 @@ class LocalAgentGatewayTest extends TestCase
 
     public function test_complete_with_echo_binary(): void
     {
-        // Use 'echo' as a fake local agent that outputs JSON
+        // Set up a provider with agent_key that maps to a non-standard agent
+        config(['llm_providers.echo-local' => [
+            'name' => 'Echo (Local)',
+            'local' => true,
+            'agent_key' => 'echo-agent',
+            'models' => [],
+        ]]);
+
         config(['local_agents.agents' => [
             'echo-agent' => [
                 'name' => 'Echo Agent',
@@ -105,8 +136,8 @@ class LocalAgentGatewayTest extends TestCase
         // The gateway will try to run a command built from buildCommand() which
         // matches only 'codex' and 'claude-code' — so this will throw
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'echo-agent',
+            provider: 'echo-local',
+            model: 'some-model',
             systemPrompt: 'test',
             userPrompt: 'test',
         );

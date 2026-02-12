@@ -106,6 +106,51 @@
         </div>
     @endif
 
+    {{-- Dependencies --}}
+    @if($upstreamDeps->isNotEmpty() || $downstreamDeps->isNotEmpty())
+        <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4">
+            <h3 class="mb-3 text-sm font-semibold text-gray-700">Dependencies</h3>
+            <div class="grid gap-4 {{ $upstreamDeps->isNotEmpty() && $downstreamDeps->isNotEmpty() ? 'grid-cols-2' : 'grid-cols-1' }}">
+                @if($upstreamDeps->isNotEmpty())
+                    <div>
+                        <div class="mb-2 text-xs font-medium uppercase tracking-wider text-gray-400">Uses results from</div>
+                        <div class="space-y-2">
+                            @foreach($upstreamDeps as $dep)
+                                <a href="{{ route('projects.show', $dep->dependsOn) }}"
+                                    class="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                                        <span class="text-sm font-medium text-gray-900">{{ $dep->dependsOn->title }}</span>
+                                        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{{ $dep->alias }}</span>
+                                    </div>
+                                    <span class="text-xs text-gray-400">{{ $dep->reference_type === 'latest_run' ? 'latest run' : 'pinned' }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                @if($downstreamDeps->isNotEmpty())
+                    <div>
+                        <div class="mb-2 text-xs font-medium uppercase tracking-wider text-gray-400">Provides results to</div>
+                        <div class="space-y-2">
+                            @foreach($downstreamDeps as $dep)
+                                <a href="{{ route('projects.show', $dep->project) }}"
+                                    class="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                                        <span class="text-sm font-medium text-gray-900">{{ $dep->project->title }}</span>
+                                        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{{ $dep->alias }}</span>
+                                    </div>
+                                    <x-status-badge :status="$dep->project->status->value" />
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+
     {{-- Tabs --}}
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex space-x-8">

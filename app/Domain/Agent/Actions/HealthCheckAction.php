@@ -18,7 +18,7 @@ class HealthCheckAction
 
     public function execute(Agent $agent): bool
     {
-        if ($agent->provider === 'local') {
+        if (config("llm_providers.{$agent->provider}.local")) {
             return $this->checkLocalAgent($agent);
         }
 
@@ -27,7 +27,7 @@ class HealthCheckAction
 
     private function checkLocalAgent(Agent $agent): bool
     {
-        $agentKey = $agent->model;
+        $agentKey = config("llm_providers.{$agent->provider}.agent_key", $agent->provider);
 
         if (! $this->discovery->isAvailable($agentKey)) {
             Log::warning("Local agent health check: binary not found for {$agent->name}", [

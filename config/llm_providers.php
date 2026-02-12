@@ -23,11 +23,24 @@ return [
             'gemini-2.5-pro' => ['label' => 'Gemini 2.5 Pro', 'input_cost' => 7, 'output_cost' => 21],
         ],
     ],
-    'local' => [
-        'name' => 'Local Agents',
+    'codex' => [
+        'name' => 'Codex (Local)',
+        'local' => true,
+        'agent_key' => 'codex',
         'models' => [
-            'codex' => ['label' => 'OpenAI Codex (local)', 'input_cost' => 0, 'output_cost' => 0],
-            'claude-code' => ['label' => 'Claude Code (local)', 'input_cost' => 0, 'output_cost' => 0],
+            'gpt-5.3-codex' => ['label' => 'GPT-5.3 Codex', 'input_cost' => 0, 'output_cost' => 0],
+            'gpt-5.2-codex' => ['label' => 'GPT-5.2 Codex', 'input_cost' => 0, 'output_cost' => 0],
+            'gpt-5.1-codex-mini' => ['label' => 'GPT-5.1 Codex Mini', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'claude-code' => [
+        'name' => 'Claude Code (Local)',
+        'local' => true,
+        'agent_key' => 'claude-code',
+        'models' => [
+            'claude-sonnet-4-5' => ['label' => 'Claude Sonnet 4.5', 'input_cost' => 0, 'output_cost' => 0],
+            'claude-opus-4-6' => ['label' => 'Claude Opus 4.6', 'input_cost' => 0, 'output_cost' => 0],
+            'claude-haiku-4-5' => ['label' => 'Claude Haiku 4.5', 'input_cost' => 0, 'output_cost' => 0],
         ],
     ],
 ];

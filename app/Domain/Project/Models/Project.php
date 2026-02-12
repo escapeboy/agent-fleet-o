@@ -19,6 +19,22 @@ class Project extends Model
 {
     use BelongsToTeam, HasUuids;
 
+    /**
+     * Projects this project depends on (upstream).
+     */
+    public function dependencies(): HasMany
+    {
+        return $this->hasMany(ProjectDependency::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Projects that depend on this project (downstream).
+     */
+    public function dependents(): HasMany
+    {
+        return $this->hasMany(ProjectDependency::class, 'depends_on_id');
+    }
+
     protected $fillable = [
         'team_id',
         'user_id',

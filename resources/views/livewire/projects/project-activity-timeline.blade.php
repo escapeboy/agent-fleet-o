@@ -34,7 +34,7 @@
                 </div>
 
                 <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                    @if($run->duration)
+                    @if($run->duration())
                         <span>Duration: {{ $run->durationForHumans() }}</span>
                     @endif
                     @if($run->cost_credits)
@@ -42,7 +42,7 @@
                     @endif
                     @if($run->experiment_id)
                         <a href="{{ route('experiments.show', $run->experiment_id) }}" class="text-primary-600 hover:underline">
-                            View experiment
+                            View run details
                         </a>
                     @endif
                 </div>

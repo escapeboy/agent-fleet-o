@@ -18,7 +18,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Duration</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Cost</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Experiment</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Pipeline</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Started</th>
                 </tr>
             </thead>
@@ -31,7 +31,7 @@
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $run->cost_credits ? $run->cost_credits . ' credits' : '--' }}</td>
                         <td class="px-6 py-4 text-sm">
                             @if($run->experiment_id)
-                                <a href="{{ route('experiments.show', $run->experiment_id) }}" class="text-primary-600 hover:underline">View</a>
+                                <a href="{{ route('experiments.show', $run->experiment_id) }}" class="text-primary-600 hover:underline">View details</a>
                             @else
                                 <span class="text-gray-400">--</span>
                             @endif

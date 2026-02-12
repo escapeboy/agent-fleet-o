@@ -87,7 +87,7 @@ class DashboardPage extends Component
             $pct = round(($exp->budget_spent_credits / $exp->budget_cap_credits) * 100);
             $alerts[] = [
                 'type' => 'warning',
-                'message' => "Experiment \"{$exp->title}\" at {$pct}% budget",
+                'message' => "Run \"{$exp->title}\" at {$pct}% budget",
                 'link' => route('experiments.show', $exp),
             ];
         }
@@ -106,7 +106,7 @@ class DashboardPage extends Component
         foreach ($recentFailed as $exp) {
             $alerts[] = [
                 'type' => 'error',
-                'message' => "Experiment \"{$exp->title}\" failed ({$exp->status->value})",
+                'message' => "Run \"{$exp->title}\" failed ({$exp->status->value})",
                 'link' => route('experiments.show', $exp),
             ];
         }

@@ -41,6 +41,23 @@ class HostBridgeTest extends TestCase
             'local_agents.bridge.secret' => 'test-secret-123',
             'local_agents.bridge.connect_timeout' => 5,
             'local_agents.timeout' => 300,
+            // Configure llm_providers for agent key resolution
+            'llm_providers.codex' => [
+                'name' => 'Codex (Local)',
+                'local' => true,
+                'agent_key' => 'codex',
+                'models' => [
+                    'gpt-5.3-codex' => ['label' => 'GPT-5.3 Codex', 'input_cost' => 0, 'output_cost' => 0],
+                ],
+            ],
+            'llm_providers.claude-code' => [
+                'name' => 'Claude Code (Local)',
+                'local' => true,
+                'agent_key' => 'claude-code',
+                'models' => [
+                    'claude-sonnet-4-5' => ['label' => 'Claude Sonnet 4.5', 'input_cost' => 0, 'output_cost' => 0],
+                ],
+            ],
         ]);
     }
 
@@ -152,6 +169,7 @@ class HostBridgeTest extends TestCase
                     ],
                 ],
             ]),
+            'host.docker.internal:8065/health' => Http::response(['status' => 'ok']),
             'host.docker.internal:8065/execute' => Http::response([
                 'success' => true,
                 'output' => '{"result": "Hello from codex"}',
@@ -165,8 +183,8 @@ class HostBridgeTest extends TestCase
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'codex',
+            provider: 'codex',
+            model: 'gpt-5.3-codex',
             systemPrompt: 'You are a helper.',
             userPrompt: 'Say hello',
         );
@@ -174,8 +192,8 @@ class HostBridgeTest extends TestCase
         $response = $gateway->complete($request);
 
         $this->assertEquals('Hello from codex', $response->content);
-        $this->assertEquals('local', $response->provider);
-        $this->assertEquals('codex', $response->model);
+        $this->assertEquals('codex', $response->provider);
+        $this->assertEquals('gpt-5.3-codex', $response->model);
         $this->assertEquals(0, $response->usage->costCredits);
         $this->assertEquals(1500, $response->latencyMs);
     }
@@ -194,6 +212,7 @@ class HostBridgeTest extends TestCase
                     ],
                 ],
             ]),
+            'host.docker.internal:8065/health' => Http::response(['status' => 'ok']),
             'host.docker.internal:8065/execute' => Http::response([
                 'success' => false,
                 'error' => 'Process exited with code 1',
@@ -206,8 +225,8 @@ class HostBridgeTest extends TestCase
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'codex',
+            provider: 'codex',
+            model: 'gpt-5.3-codex',
             systemPrompt: '',
             userPrompt: 'fail',
         );
@@ -232,6 +251,7 @@ class HostBridgeTest extends TestCase
                     ],
                 ],
             ]),
+            'host.docker.internal:8065/health' => Http::response(['status' => 'ok']),
             'host.docker.internal:8065/execute' => function () {
                 throw new \Illuminate\Http\Client\ConnectionException('Connection refused');
             },
@@ -241,8 +261,8 @@ class HostBridgeTest extends TestCase
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
-            provider: 'local',
-            model: 'codex',
+            provider: 'codex',
+            model: 'gpt-5.3-codex',
             systemPrompt: '',
             userPrompt: 'test',
         );

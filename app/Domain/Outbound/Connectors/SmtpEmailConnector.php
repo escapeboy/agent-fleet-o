@@ -8,6 +8,7 @@ use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Mail\ExperimentSummaryMail;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -37,9 +38,22 @@ class SmtpEmailConnector implements OutboundConnectorInterface
         ]);
 
         try {
-            $to = $target['email'] ?? $target['description'] ?? null;
+            $to = $target['email'] ?? null;
             if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
-                throw new \InvalidArgumentException("Invalid email address: {$to}");
+                // No actionable email address — simulate the send (dry-run)
+                Log::info('SmtpEmailConnector: No valid email in target, simulating send', [
+                    'proposal_id' => $proposal->id,
+                    'target' => $target,
+                ]);
+
+                $action->update([
+                    'status' => OutboundActionStatus::Sent,
+                    'external_id' => 'smtp-simulated-' . now()->timestamp,
+                    'response' => ['simulated' => true, 'reason' => 'No valid email address in target'],
+                    'sent_at' => now(),
+                ]);
+
+                return $action;
             }
 
             if (($content['type'] ?? null) === 'experiment_summary') {

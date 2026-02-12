@@ -74,6 +74,45 @@
                 </div>
             @endif
 
+            {{-- Dependencies (Based on) --}}
+            @if($availableProjects->isNotEmpty())
+                <div>
+                    <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Based on (optional)</h3>
+                    <p class="mb-3 text-xs text-gray-500">Use results from previous projects as input context. The predecessor's artifacts and outputs will be injected into this project's pipeline.</p>
+
+                    @foreach($dependencies as $index => $dep)
+                        <div class="mb-3 flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3" wire:key="dep-{{ $index }}">
+                            <div class="grid flex-1 grid-cols-3 gap-3">
+                                <x-form-select wire:model.live="dependencies.{{ $index }}.depends_on_id" label="Project" compact>
+                                    <option value="">Select project...</option>
+                                    @foreach($availableProjects as $proj)
+                                        <option value="{{ $proj->id }}">{{ $proj->title }}</option>
+                                    @endforeach
+                                </x-form-select>
+
+                                <x-form-input wire:model="dependencies.{{ $index }}.alias" label="Alias" type="text"
+                                    placeholder="e.g. research" compact />
+
+                                <x-form-select wire:model="dependencies.{{ $index }}.reference_type" label="Use results from" compact>
+                                    <option value="latest_run">Latest completed run</option>
+                                    <option value="specific_run">Specific run</option>
+                                </x-form-select>
+                            </div>
+
+                            <button wire:click="removeDependency({{ $index }})" type="button"
+                                class="mt-6 rounded p-1 text-red-500 hover:bg-red-50">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                    @endforeach
+
+                    <button wire:click="addDependency" type="button"
+                        class="mt-1 rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700">
+                        + Add Predecessor Project
+                    </button>
+                </div>
+            @endif
+
             {{-- Budget --}}
             <div>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Budget Caps (optional)</h3>

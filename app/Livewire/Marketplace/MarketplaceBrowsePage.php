@@ -54,7 +54,7 @@ class MarketplaceBrowsePage extends Component
     {
         $listing = MarketplaceListing::findOrFail($listingId);
         $user = auth()->user();
-        $team = $user->currentTeam();
+        $team = $user->currentTeam;
 
         if (! $team) {
             session()->flash('error', 'You must belong to a team to install marketplace items.');

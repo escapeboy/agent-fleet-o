@@ -3,6 +3,8 @@
 namespace App\Domain\Experiment\Pipeline;
 
 use App\Domain\Approval\Actions\CreateApprovalRequestAction;
+use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
@@ -25,7 +27,7 @@ class CreateOutboundProposals extends BaseStageJob
 
     protected function process(Experiment $experiment, ExperimentStage $stage): void
     {
-        $createApproval = app(CreateApprovalRequestAction::class);
+        $autoApprove = $experiment->constraints['auto_approve'] ?? false;
 
         // Get the building stage output for artifact/channel info
         $buildingStage = $experiment->stages()
@@ -74,7 +76,7 @@ class CreateOutboundProposals extends BaseStageJob
                     'iteration' => $experiment->current_iteration,
                 ],
                 'risk_score' => 0.5,
-                'status' => OutboundProposalStatus::PendingApproval,
+                'status' => $autoApprove ? OutboundProposalStatus::Approved : OutboundProposalStatus::PendingApproval,
                 'batch_index' => $index,
                 'batch_id' => $batchId,
             ]);
@@ -82,24 +84,51 @@ class CreateOutboundProposals extends BaseStageJob
             $proposals[] = $proposal;
         }
 
-        // Create a single approval request for the batch
-        $createApproval->execute(
+        // Create approval request (auto-approved or pending)
+        $createApproval = app(CreateApprovalRequestAction::class);
+        $approvalRequest = $createApproval->execute(
             experiment: $experiment,
             outboundProposal: $proposals[0] ?? null,
             context: [
                 'batch_id' => $batchId,
                 'proposal_count' => count($proposals),
                 'channels' => array_column($channels, 'channel'),
+                'auto_approved' => $autoApprove,
             ],
         );
+
+        if ($autoApprove) {
+            $approvalRequest->update([
+                'status' => ApprovalStatus::Approved,
+                'reviewed_at' => now(),
+                'reviewed_by' => null,
+                'reviewer_notes' => 'Auto-approved by experiment constraints',
+            ]);
+        }
 
         $stage->update([
             'output_snapshot' => [
                 'batch_id' => $batchId,
                 'proposal_count' => count($proposals),
+                'auto_approved' => $autoApprove,
             ],
         ]);
 
-        // No transition here — awaiting_approval is a human gate
+        // Auto-approve: transition through Approved → Executing automatically
+        if ($autoApprove) {
+            $transitionAction = app(TransitionExperimentAction::class);
+            $experiment = $transitionAction->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::Approved,
+                reason: 'Auto-approved by experiment constraints',
+            );
+            $transitionAction->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::Executing,
+                reason: 'Auto-approved — proceeding to execution',
+            );
+        }
+
+        // When not auto-approved, no transition — awaiting_approval is a human gate
     }
 }

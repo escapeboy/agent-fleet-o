@@ -54,17 +54,32 @@ class RunPlanningStage extends BaseStageJob
             "Thesis: {$experiment->thesis}",
             "Track: {$experiment->track->value}",
             "Iteration: {$experiment->current_iteration}",
-            "Scoring output: " . json_encode($scoringOutput),
+            "Scoring output: " . json_encode($scoringOutput, JSON_UNESCAPED_UNICODE),
         ];
 
         if ($rejectionFeedback) {
-            $contextParts[] = "Previous rejection feedback: " . json_encode($rejectionFeedback);
+            $contextParts[] = "Previous rejection feedback: " . json_encode($rejectionFeedback, JSON_UNESCAPED_UNICODE);
+        }
+
+        // Include dependency context from predecessor projects
+        $dependencyContext = $experiment->constraints['dependency_context'] ?? [];
+        if (! empty($dependencyContext)) {
+            $contextParts[] = "\n--- Context from predecessor projects ---";
+            foreach ($dependencyContext as $alias => $data) {
+                $contextParts[] = "[{$alias}] Project: {$data['project_title']} (Run #{$data['run_number']})";
+                foreach ($data['artifacts'] ?? [] as $artifact) {
+                    $contextParts[] = "Artifact [{$artifact['type']}] {$artifact['name']}:\n{$artifact['content']}";
+                }
+                if (! empty($data['stage_outputs'])) {
+                    $contextParts[] = "Stage outputs: " . json_encode($data['stage_outputs'], JSON_UNESCAPED_UNICODE);
+                }
+            }
         }
 
         $request = new AiRequestDTO(
             provider: $llm['provider'],
             model: $llm['model'],
-            systemPrompt: 'You are an experiment planning agent. Create an execution plan. Return ONLY a valid JSON object (no markdown, no code fences) with: plan_summary (string, max 3 sentences), artifacts_to_build (array of {type, name, description}), outbound_channels (array of {channel, target_description}), success_metrics (array of max 5 strings), estimated_timeline_hours (int). Keep compact.',
+            systemPrompt: 'You are an experiment planning agent. Create an execution plan. If context from predecessor projects is provided, incorporate their findings and artifacts into your plan. Return ONLY a valid JSON object (no markdown, no code fences) with: plan_summary (string, max 3 sentences), artifacts_to_build (array of {type, name, description}), outbound_channels (array of {channel, target_description}), success_metrics (array of max 5 strings), estimated_timeline_hours (int). Keep compact.',
             userPrompt: implode("\n\n", $contextParts),
             maxTokens: 2048,
             userId: $experiment->user_id,
