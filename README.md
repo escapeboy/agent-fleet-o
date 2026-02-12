@@ -6,6 +6,48 @@ Self-hosted AI Agent Mission Control platform. Build, orchestrate, and monitor A
 [![PHP](https://img.shields.io/badge/PHP-8.4-purple)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/Laravel-12-red)](https://laravel.com/)
 
+## Screenshots
+
+### Dashboard
+KPI overview with active experiments, success rate, budget spend, and pending approvals.
+
+![Dashboard](screenshots/dashboard-fixed.png)
+
+### Agent LLM Configuration
+Per-agent provider and model selection with fallback chains. Supports Anthropic, OpenAI, Google, and local agents (Codex, Claude Code).
+
+![Agent LLM Config](screenshots/agent-llm-edit-panel.png)
+
+### Crew Execution - Real-Time Task Tracking
+Live progress tracking during multi-agent crew execution. Each task shows its assigned skill, provider, and elapsed time.
+
+![Tasks Panel](screenshots/tasks-panel-building.png)
+
+### Task Output - Expanded Results
+Expand any completed task to inspect the AI-generated output, including structured JSON responses.
+
+![Task Output](screenshots/tasks-expanded-output.png)
+
+### Multi-Agent Crew - Parallel Execution
+A 7-agent crew executing in parallel: research, strategy, planning, SEO, design, frontend, and backend tasks running simultaneously with local agent backends.
+
+![Crew Execution](screenshots/affiliate-v4-tasks-open.png)
+
+### Internationalization Support
+Full i18n support with Cyrillic and other non-Latin character sets in AI outputs.
+
+![i18n Support](screenshots/affiliate-v4-cyrillic-fixed.png)
+
+### Error Handling
+Failed tasks display detailed error information including provider, error type, and request IDs for debugging.
+
+![Error Handling](screenshots/tasks-panel-error-expanded.png)
+
+### Build Failure States
+Build progress bar shows completed vs failed tasks at a glance with clear error indicators.
+
+![Failed Build](screenshots/tasks-panel-failed.png)
+
 ## Features
 
 - **Experiment Pipeline** -- 20-state machine with automatic stage progression (scoring, planning, building, approval, execution, metrics collection)
@@ -30,7 +72,7 @@ Self-hosted AI Agent Mission Control platform. Build, orchestrate, and monitor A
 ## Quick Start (Docker)
 
 ```bash
-git clone https://github.com/your-org/agent-fleet.git
+git clone https://github.com/escapeboy/agent-fleet-o.git
 cd agent-fleet
 make install
 ```
@@ -47,7 +89,7 @@ Visit **http://localhost:8080** when complete.
 Requirements: PHP 8.4+, PostgreSQL 17+, Redis 7+, Node.js 20+, Composer
 
 ```bash
-git clone https://github.com/your-org/agent-fleet.git
+git clone https://github.com/escapeboy/agent-fleet-o.git
 cd agent-fleet
 composer install
 npm install && npm run build
