@@ -8,6 +8,7 @@ use App\Domain\Experiment\Models\ExperimentTask;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -122,7 +123,7 @@ class BuildArtifactJob implements ShouldQueue
             );
 
             $response = $gateway->complete($request);
-            $output = $response->parsedOutput ?? json_decode($response->content, true);
+            $output = $this->parseAiResponse($response);
 
             // Create artifact and version
             $artifact = Artifact::withoutGlobalScopes()->create([
@@ -198,6 +199,47 @@ class BuildArtifactJob implements ShouldQueue
             'experiment_id' => $this->experimentId,
             'error' => $exception?->getMessage(),
         ]);
+    }
+
+    /**
+     * Parse the AI response, handling local agent wrapper formats.
+     * Local agents return {type: "result", result: "...json..."} in parsedOutput.
+     */
+    private function parseAiResponse(AiResponseDTO $response): ?array
+    {
+        $parsed = $response->parsedOutput;
+
+        // Handle local agent wrapper: {type: "result", result: "{...json...}"}
+        if (is_array($parsed) && ($parsed['type'] ?? '') === 'result' && isset($parsed['result']) && is_string($parsed['result'])) {
+            $inner = $parsed['result'];
+
+            // Strip markdown code fences
+            if (preg_match('/```(?:json)?\s*\n?(.*?)```/s', $inner, $matches)) {
+                $inner = trim($matches[1]);
+            }
+
+            $decoded = json_decode($inner, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+
+            // Not valid JSON — return the text as content
+            return ['content' => $parsed['result']];
+        }
+
+        // Standard parsedOutput with content/metadata keys
+        if (is_array($parsed) && (isset($parsed['content']) || isset($parsed['metadata']))) {
+            return $parsed;
+        }
+
+        // Fallback: try decoding response content as JSON
+        $decoded = json_decode($response->content, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        // Raw text fallback
+        return ['content' => $response->content];
     }
 
     /**

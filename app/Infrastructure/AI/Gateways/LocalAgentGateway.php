@@ -218,16 +218,21 @@ class LocalAgentGateway implements AiGatewayInterface
             return ['content' => '', 'structured' => null];
         }
 
-        // Try JSON parse first
+        // Try JSON parse first (single JSON object)
         $json = json_decode($rawOutput, true);
 
         if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
             return $this->extractFromJson($agentKey, $json);
         }
 
-        // Try line-by-line JSONL (Codex outputs JSONL events)
+        // JSONL: parse all lines and extract content from the event stream.
+        // Codex `exec --json` outputs JSONL events. The actual response text
+        // lives in `item.completed` events where item.type === "agent_message".
+        // The last line is typically `turn.completed` which only has usage stats.
         $lines = explode("\n", $rawOutput);
-        $lastResult = null;
+        $agentMessages = [];
+        $allEvents = [];
+        $usageEvent = null;
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -236,13 +241,45 @@ class LocalAgentGateway implements AiGatewayInterface
             }
 
             $decoded = json_decode($line, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $lastResult = $decoded;
+            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
+                continue;
+            }
+
+            $allEvents[] = $decoded;
+            $eventType = $decoded['type'] ?? '';
+
+            // Codex: collect agent_message text from item.completed events
+            if ($eventType === 'item.completed'
+                && ($decoded['item']['type'] ?? '') === 'agent_message'
+                && isset($decoded['item']['text'])) {
+                $agentMessages[] = $decoded['item']['text'];
+            }
+
+            // Codex: capture usage from turn.completed
+            if ($eventType === 'turn.completed') {
+                $usageEvent = $decoded;
             }
         }
 
-        if ($lastResult) {
-            return $this->extractFromJson($agentKey, $lastResult);
+        // If we found agent messages in the event stream, use them
+        if (! empty($agentMessages)) {
+            $content = implode("\n\n", $agentMessages);
+
+            return [
+                'content' => $content,
+                'structured' => [
+                    'type' => 'result',
+                    'result' => $content,
+                    'usage' => $usageEvent['usage'] ?? null,
+                ],
+            ];
+        }
+
+        // Fallback: use the last valid JSON event (for Claude Code or other formats)
+        $lastEvent = end($allEvents) ?: null;
+
+        if ($lastEvent) {
+            return $this->extractFromJson($agentKey, $lastEvent);
         }
 
         // Raw text fallback
