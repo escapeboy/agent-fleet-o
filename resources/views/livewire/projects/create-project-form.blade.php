@@ -113,6 +113,44 @@
                 </div>
             @endif
 
+            {{-- Tools & Credentials --}}
+            <div>
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Tools & Credentials (optional)</h3>
+                <p class="mb-3 text-xs text-gray-500">Select which tools and credentials agents in this project can access.</p>
+
+                @if($tools->isNotEmpty())
+                    <div class="mb-4">
+                        <label class="mb-2 block text-sm font-medium text-gray-700">Tools</label>
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            @foreach($tools as $tool)
+                                <label class="flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm transition
+                                    {{ in_array($tool->id, $selectedToolIds) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300' }}">
+                                    <input type="checkbox" wire:model.live="selectedToolIds" value="{{ $tool->id }}" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                    <span class="font-medium text-gray-700">{{ $tool->name }}</span>
+                                    <span class="text-xs text-gray-400">{{ $tool->type->label() }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if($credentials->isNotEmpty())
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700">Credentials</label>
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            @foreach($credentials as $credential)
+                                <label class="flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm transition
+                                    {{ in_array($credential->id, $selectedCredentialIds) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300' }}">
+                                    <input type="checkbox" wire:model.live="selectedCredentialIds" value="{{ $credential->id }}" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                    <span class="font-medium text-gray-700">{{ $credential->name }}</span>
+                                    <span class="text-xs text-gray-400">{{ $credential->credential_type->label() }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+
             {{-- Budget --}}
             <div>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Budget Caps (optional)</h3>

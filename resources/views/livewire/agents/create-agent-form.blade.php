@@ -92,6 +92,33 @@
                 @endif
             </div>
 
+            {{-- Tool Assignment --}}
+            <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700">Assign Tools</label>
+                <p class="mb-3 text-xs text-gray-500">When tools are assigned, the agent uses an agentic loop where the LLM decides which tools to call.</p>
+                @if($availableTools->isNotEmpty())
+                    <div class="grid grid-cols-2 gap-2">
+                        @foreach($availableTools as $tool)
+                            <button wire:click="toggleTool('{{ $tool->id }}')"
+                                class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition
+                                    {{ in_array($tool->id, $selectedToolIds) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300' }}">
+                                <div class="flex h-5 w-5 items-center justify-center rounded border {{ in_array($tool->id, $selectedToolIds) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300' }}">
+                                    @if(in_array($tool->id, $selectedToolIds))
+                                        <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                    @endif
+                                </div>
+                                <div>
+                                    <div class="font-medium">{{ $tool->name }}</div>
+                                    <div class="text-xs text-gray-500">{{ $tool->type->label() }}</div>
+                                </div>
+                            </button>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-gray-400">No active tools available. <a href="{{ route('tools.create') }}" class="text-primary-600 hover:underline">Create a tool first.</a></p>
+                @endif
+            </div>
+
             <div class="flex justify-end border-t border-gray-200 pt-4">
                 <button wire:click="save" class="rounded-lg bg-primary-600 px-6 py-2 text-sm font-medium text-white hover:bg-primary-700">
                     Create Agent

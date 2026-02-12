@@ -6,6 +6,7 @@ use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Livewire\Component;
 
@@ -25,6 +26,7 @@ class AgentDetailPage extends Component
     public ?int $editBudgetCap = null;
     public array $editFallbackChain = [];
     public array $editSkillIds = [];
+    public array $editToolIds = [];
 
     public function mount(Agent $agent): void
     {
@@ -52,6 +54,7 @@ class AgentDetailPage extends Component
         $this->editBudgetCap = $this->agent->budget_cap_credits;
         $this->editFallbackChain = $this->agent->config['fallback_chain'] ?? [];
         $this->editSkillIds = $this->agent->skills()->pluck('skills.id')->toArray();
+        $this->editToolIds = $this->agent->tools()->pluck('tools.id')->toArray();
         $this->editing = true;
     }
 
@@ -78,6 +81,15 @@ class AgentDetailPage extends Component
             $this->editSkillIds = array_values(array_diff($this->editSkillIds, [$skillId]));
         } else {
             $this->editSkillIds[] = $skillId;
+        }
+    }
+
+    public function toggleTool(string $toolId): void
+    {
+        if (in_array($toolId, $this->editToolIds)) {
+            $this->editToolIds = array_values(array_diff($this->editToolIds, [$toolId]));
+        } else {
+            $this->editToolIds[] = $toolId;
         }
     }
 
@@ -123,6 +135,13 @@ class AgentDetailPage extends Component
         // Sync skills
         $this->agent->skills()->sync($this->editSkillIds);
 
+        // Sync tools
+        $toolSyncData = [];
+        foreach ($this->editToolIds as $index => $toolId) {
+            $toolSyncData[$toolId] = ['priority' => $index];
+        }
+        $this->agent->tools()->sync($toolSyncData);
+
         $this->agent->refresh();
         $this->editing = false;
 
@@ -140,6 +159,7 @@ class AgentDetailPage extends Component
     public function render()
     {
         $skills = $this->agent->skills()->get();
+        $tools = $this->agent->tools()->get();
 
         $executions = AgentExecution::where('agent_id', $this->agent->id)
             ->orderByDesc('created_at')
@@ -148,12 +168,15 @@ class AgentDetailPage extends Component
 
         $providers = app(ProviderResolver::class)->availableProviders();
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
+        $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
 
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
+            'tools' => $tools,
             'executions' => $executions,
             'providers' => $providers,
             'availableSkills' => $availableSkills,
+            'availableTools' => $availableTools,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }

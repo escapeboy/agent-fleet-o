@@ -3,11 +3,13 @@
 namespace App\Livewire\Projects;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Actions\CreateProjectAction;
 use App\Domain\Project\Enums\OverlapPolicy;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Enums\ScheduleFrequency;
 use App\Domain\Project\Models\Project;
+use App\Domain\Tool\Models\Tool;
 use Livewire\Component;
 
 class CreateProjectForm extends Component
@@ -38,6 +40,10 @@ class CreateProjectForm extends Component
 
     // Dependencies (predecessor projects)
     public array $dependencies = [];
+
+    // Tools & Credentials
+    public array $selectedToolIds = [];
+    public array $selectedCredentialIds = [];
 
     protected function rules(): array
     {
@@ -132,7 +138,7 @@ class CreateProjectForm extends Component
             fn ($d) => ! empty($d['depends_on_id'])
         );
 
-        app(CreateProjectAction::class)->execute(
+        $project = app(CreateProjectAction::class)->execute(
             userId: auth()->id(),
             title: $this->title,
             type: $this->type,
@@ -144,6 +150,14 @@ class CreateProjectForm extends Component
             dependencies: array_values($dependencyData),
             teamId: $team->id,
         );
+
+        // Assign tools & credentials
+        if (! empty($this->selectedToolIds)) {
+            $project->update(['allowed_tool_ids' => array_values($this->selectedToolIds)]);
+        }
+        if (! empty($this->selectedCredentialIds)) {
+            $project->update(['allowed_credential_ids' => array_values($this->selectedCredentialIds)]);
+        }
 
         session()->flash('message', 'Project created successfully!');
         $this->redirect(route('projects.index'));
@@ -159,12 +173,16 @@ class CreateProjectForm extends Component
             ->orWhere('status', '!=', 'archived')
             ->orderBy('title')
             ->get(['id', 'title', 'type', 'status']);
+        $tools = Tool::where('status', 'active')->orderBy('name')->get(['id', 'name', 'type']);
+        $credentials = Credential::where('status', 'active')->orderBy('name')->get(['id', 'name', 'credential_type']);
 
         return view('livewire.projects.create-project-form', [
             'agents' => $agents,
             'frequencies' => $frequencies,
             'overlapPolicies' => $overlapPolicies,
             'availableProjects' => $availableProjects,
+            'tools' => $tools,
+            'credentials' => $credentials,
         ])->layout('layouts.app', ['header' => 'Create Project']);
     }
 }
