@@ -1,4 +1,4 @@
-<div x-data="workflowBuilder(@js($nodes), @js($edges), @js($availableAgents), @js($availableSkills), @js($availableCrews))" class="flex flex-col h-[calc(100vh-8rem)]">
+<div wire:ignore.self x-data="workflowBuilder(@js($nodes), @js($edges), @js($availableAgents), @js($availableSkills), @js($availableCrews))" class="flex flex-col h-[calc(100vh-8rem)]">
     {{-- Top Bar --}}
     <div class="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-3">
         <div class="flex-1 flex items-center gap-3">
@@ -81,21 +81,25 @@
             <div class="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">
                 <p class="font-medium">How to use:</p>
                 <ul class="mt-1 space-y-0.5 list-disc pl-4">
+                    <li>Drag empty space to pan</li>
+                    <li>Scroll to zoom in/out</li>
                     <li>Drag nodes to position</li>
-                    <li>Click a node output port, then click a target input port to connect</li>
+                    <li>Click output port → input port to connect</li>
                     <li>Click a node to configure it</li>
                     <li>Press Delete to remove selected</li>
                 </ul>
             </div>
         </div>
 
-        {{-- Canvas --}}
-        <div class="relative flex-1 overflow-hidden bg-gray-100"
-             @mousedown.self="startPan($event)"
+        {{-- Canvas (Alpine-managed: wire:ignore prevents Livewire morph from resetting x-for nodes) --}}
+        <div wire:ignore class="relative flex-1 overflow-hidden bg-gray-100"
+             :class="{ 'cursor-grabbing': isPanning, 'cursor-grab': !isPanning && !isDragging && !isConnecting }"
+             @mousedown="startPan($event)"
              @mousemove="onMouseMove($event)"
-             @mouseup="onMouseUp($event)">
+             @mouseup="onMouseUp($event)"
+             @wheel.prevent="onWheel($event)">
 
-            <svg class="absolute inset-0 h-full w-full" :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + ')'">
+            <svg class="absolute inset-0 h-full w-full" :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + '); transform-origin: 0 0;'">
                 {{-- Grid pattern --}}
                 <defs>
                     <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -104,17 +108,8 @@
                 </defs>
                 <rect width="5000" height="5000" x="-2500" y="-2500" fill="url(#grid)" />
 
-                {{-- Edges --}}
-                <template x-for="edge in localEdges" :key="edge.id">
-                    <g @click.stop="selectEdge(edge.id)">
-                        <path :d="getEdgePath(edge)" fill="none"
-                              :stroke="selectedEdgeId === edge.id ? '#3b82f6' : (edge.is_default ? '#9ca3af' : '#6b7280')"
-                              stroke-width="2" class="cursor-pointer hover:stroke-blue-400"
-                              :stroke-dasharray="edge.is_default ? '5,5' : 'none'" />
-                        <text x-show="edge.label" :x="getEdgeMidpoint(edge).x" :y="getEdgeMidpoint(edge).y - 8"
-                              text-anchor="middle" class="text-xs fill-gray-500 pointer-events-none" x-text="edge.label"></text>
-                    </g>
-                </template>
+                {{-- Edges (rendered programmatically — <template x-for> is invalid inside SVG) --}}
+                <g x-html="renderEdgesSvg()"></g>
 
                 {{-- Connection line (while dragging) --}}
                 <line x-show="isConnecting" :x1="connectFromX" :y1="connectFromY" :x2="connectToX" :y2="connectToY"
@@ -202,8 +197,8 @@
             </div>
         </div>
 
-        {{-- Right Panel: Node config --}}
-        <div x-show="selectedNodeId" x-cloak class="w-72 flex-shrink-0 overflow-y-auto border-l border-gray-200 bg-white p-4">
+        {{-- Right Panel: Node config (Alpine-managed: wire:ignore prevents morph from collapsing x-if) --}}
+        <div wire:ignore x-show="selectedNodeId || selectedEdgeId" x-cloak class="w-72 flex-shrink-0 overflow-y-auto border-l border-gray-200 bg-white p-4">
             <template x-if="selectedNode">
                 <div>
                     <h3 class="text-sm font-semibold text-gray-900 mb-3">Node Configuration</h3>
@@ -352,14 +347,14 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
             order: this.nodeCounter,
         });
 
-        this.syncToLivewire();
+        this.syncToLivewireNow();
     },
 
     removeNode(nodeId) {
         this.localNodes = this.localNodes.filter(n => n.id !== nodeId);
         this.localEdges = this.localEdges.filter(e => e.source_node_id !== nodeId && e.target_node_id !== nodeId);
         if (this.selectedNodeId === nodeId) this.selectedNodeId = null;
-        this.syncToLivewire();
+        this.syncToLivewireNow();
     },
 
     selectNode(nodeId) {
@@ -416,20 +411,36 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
                 is_default: false,
                 sort_order: this.localEdges.length,
             });
-            this.syncToLivewire();
+            this.syncToLivewireNow();
         }
 
         this.isConnecting = false;
         this.connectFromNodeId = null;
     },
 
-    // Pan canvas
+    // Pan canvas (only if not clicking on a node/port — those use @mousedown.stop)
     startPan(event) {
         this.isPanning = true;
         this.panStartX = event.clientX - this.panX;
         this.panStartY = event.clientY - this.panY;
         this.selectedNodeId = null;
         this.selectedEdgeId = null;
+    },
+
+    // Scroll-wheel zoom (centered on cursor)
+    onWheel(event) {
+        const delta = event.deltaY > 0 ? -0.05 : 0.05;
+        const newZoom = Math.min(2, Math.max(0.25, this.zoom + delta));
+        if (newZoom === this.zoom) return;
+
+        // Zoom toward cursor position
+        const rect = event.currentTarget.getBoundingClientRect();
+        const cx = event.clientX - rect.left;
+        const cy = event.clientY - rect.top;
+        const scale = newZoom / this.zoom;
+        this.panX = cx - (cx - this.panX) * scale;
+        this.panY = cy - (cy - this.panY) * scale;
+        this.zoom = newZoom;
     },
 
     onMouseMove(event) {
@@ -504,7 +515,31 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     removeEdge(edgeId) {
         this.localEdges = this.localEdges.filter(e => e.id !== edgeId);
         this.selectedEdgeId = null;
-        this.syncToLivewire();
+        this.syncToLivewireNow();
+    },
+
+    // Render edges as raw SVG (avoids <template x-for> inside <svg>)
+    renderEdgesSvg() {
+        return this.localEdges.map(edge => {
+            const path = this.getEdgePath(edge);
+            const mid = this.getEdgeMidpoint(edge);
+            const stroke = this.selectedEdgeId === edge.id ? '#3b82f6' : (edge.is_default ? '#9ca3af' : '#6b7280');
+            const dash = edge.is_default ? '5,5' : 'none';
+            const labelHtml = edge.label
+                ? `<text x="${mid.x}" y="${mid.y - 8}" text-anchor="middle" class="text-xs fill-gray-500 pointer-events-none">${this.escapeHtml(edge.label)}</text>`
+                : '';
+            return `<g data-edge-id="${edge.id}" style="cursor:pointer">
+                <path d="${path}" fill="none" stroke="${stroke}" stroke-width="2" stroke-dasharray="${dash}" />
+                <path d="${path}" fill="none" stroke="transparent" stroke-width="12" />
+                ${labelHtml}
+            </g>`;
+        }).join('');
+    },
+
+    escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     },
 
     getAgentName(agentId) {
@@ -518,10 +553,27 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     },
 
     syncToLivewire() {
+        clearTimeout(this._syncTimeout);
+        this._syncTimeout = setTimeout(() => {
+            $wire.saveGraph(this.localNodes, this.localEdges);
+        }, 500);
+    },
+
+    syncToLivewireNow() {
+        clearTimeout(this._syncTimeout);
         $wire.saveGraph(this.localNodes, this.localEdges);
     },
 
     init() {
+        // Delegate click events for programmatically rendered edges
+        this.$el.addEventListener('click', (e) => {
+            const edgeGroup = e.target.closest('[data-edge-id]');
+            if (edgeGroup) {
+                e.stopPropagation();
+                this.selectEdge(edgeGroup.dataset.edgeId);
+            }
+        });
+
         // Listen for keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Delete' || e.key === 'Backspace') {
