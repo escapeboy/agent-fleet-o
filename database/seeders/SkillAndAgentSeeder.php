@@ -30,7 +30,7 @@ class SkillAndAgentSeeder extends Seeder
         $this->command?->info('Seeding agents...');
         $this->seedAgents($team, $skills);
 
-        $this->command?->info("Done: {$skills->count()} skills, 8 agents.");
+        $this->command?->info("Done: {$skills->count()} skills, 9 agents.");
     }
 
     private function seedSkills(Team $team): \Illuminate\Support\Collection
@@ -893,6 +893,131 @@ PROMPT,
                 ],
                 'configuration' => ['max_tokens' => 4096, 'temperature' => 0.3],
             ],
+
+            // 16. Market Research
+            [
+                'name' => 'Market Research',
+                'slug' => 'market-research',
+                'description' => 'Analyze markets, competitors, and target audiences. Identifies opportunities, gaps, trends, and audience segments. Outputs structured reports with actionable positioning recommendations.',
+                'type' => SkillType::Llm,
+                'risk_level' => RiskLevel::Low,
+                'system_prompt' => <<<'PROMPT'
+You are a market research analyst who delivers actionable competitive intelligence.
+
+Research dimensions:
+1. Market Overview — size, growth rate, key players, trends, regulatory landscape
+2. Competitor Analysis — direct and indirect competitors, strengths/weaknesses, pricing, positioning, market share
+3. Audience Segmentation — demographics, psychographics, pain points, buying triggers, objections
+4. Opportunity Mapping — underserved segments, pricing gaps, feature gaps, positioning white space
+5. Channel Analysis — where the audience spends time, acquisition cost by channel, organic vs paid potential
+
+For each competitor provide:
+- Value proposition and positioning
+- Pricing model and tiers
+- Key differentiators
+- Weaknesses and gaps
+- Traffic sources (if inferable)
+
+Output structure:
+- Executive Summary (3-5 key findings)
+- Market Landscape (size, growth, trends)
+- Competitor Matrix (comparison table)
+- Audience Profiles (2-3 segments with personas)
+- Opportunities (ranked by impact and feasibility)
+- Recommended Positioning (how to differentiate)
+
+Be specific. Use numbers where possible. Flag assumptions explicitly.
+PROMPT,
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'market' => ['type' => 'string', 'description' => 'Market or niche to research'],
+                        'product' => ['type' => 'string', 'description' => 'Product or service being positioned'],
+                        'competitors' => ['type' => 'string', 'description' => 'Known competitors to analyze'],
+                        'region' => ['type' => 'string', 'description' => 'Geographic focus (e.g., Bulgaria, EU, global)'],
+                        'context' => ['type' => 'string', 'description' => 'Additional business context'],
+                    ],
+                    'required' => ['market'],
+                ],
+                'output_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'summary' => ['type' => 'string', 'description' => 'Executive summary of findings'],
+                        'competitors' => ['type' => 'array', 'description' => 'Competitor analysis entries'],
+                        'segments' => ['type' => 'array', 'description' => 'Audience segments with personas'],
+                        'opportunities' => ['type' => 'array', 'description' => 'Ranked opportunities'],
+                        'positioning' => ['type' => 'string', 'description' => 'Recommended positioning strategy'],
+                    ],
+                    'required' => ['summary', 'competitors', 'opportunities'],
+                ],
+                'configuration' => ['max_tokens' => 6144, 'temperature' => 0.4],
+            ],
+
+            // 17. Sales Strategy
+            [
+                'name' => 'Sales Strategy',
+                'slug' => 'sales-strategy',
+                'description' => 'Design comprehensive sales strategies — USP development, value propositions, conversion funnels, pricing tactics, traffic channel selection, and objection handling frameworks.',
+                'type' => SkillType::Llm,
+                'risk_level' => RiskLevel::Low,
+                'system_prompt' => <<<'PROMPT'
+You are a sales strategist who designs go-to-market and conversion strategies.
+
+Strategy components:
+1. USP & Value Proposition — what makes the offer unique, why should the customer care
+2. Positioning — how the product sits in the market relative to alternatives
+3. Conversion Funnel — awareness → interest → desire → action, with specific tactics at each stage
+4. Traffic Channels — organic (SEO, content, social), paid (PPC, social ads, retargeting), partnerships, referrals
+5. Pricing Strategy — anchoring, tiering, psychological pricing, competitor benchmarking
+6. Objection Handling — top 5-7 objections with response frameworks
+7. Copywriting Approach — headline formulas, social proof strategy, urgency/scarcity tactics, CTA design
+
+For each funnel stage provide:
+- Goal and KPI
+- Specific tactics and channels
+- Content/copy requirements
+- Expected conversion rate benchmark
+
+Output structure:
+- Strategy Summary (elevator pitch)
+- USP Statement (single compelling sentence)
+- Target Customer Profile (who, pain, desire)
+- Funnel Blueprint (stages with tactics)
+- Channel Prioritization (ranked by expected ROI)
+- Pricing Recommendation (with rationale)
+- Objection Framework (objection → response pairs)
+- Quick Wins (3 things to implement first)
+
+Focus on actionable recommendations, not theory. Be specific to the product and market.
+PROMPT,
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'product' => ['type' => 'string', 'description' => 'Product or service to strategize for'],
+                        'market' => ['type' => 'string', 'description' => 'Target market and region'],
+                        'audience' => ['type' => 'string', 'description' => 'Target audience description'],
+                        'budget' => ['type' => 'string', 'description' => 'Marketing budget range'],
+                        'competitors' => ['type' => 'string', 'description' => 'Key competitors and their positioning'],
+                        'goals' => ['type' => 'string', 'description' => 'Sales goals (revenue, conversions, leads)'],
+                        'constraints' => ['type' => 'string', 'description' => 'Any constraints or limitations'],
+                    ],
+                    'required' => ['product'],
+                ],
+                'output_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'usp' => ['type' => 'string', 'description' => 'Unique selling proposition'],
+                        'positioning' => ['type' => 'string', 'description' => 'Market positioning statement'],
+                        'funnel' => ['type' => 'array', 'description' => 'Conversion funnel stages with tactics'],
+                        'channels' => ['type' => 'array', 'description' => 'Prioritized traffic channels'],
+                        'pricing' => ['type' => 'string', 'description' => 'Pricing recommendation'],
+                        'objections' => ['type' => 'array', 'description' => 'Objection handling framework'],
+                        'quick_wins' => ['type' => 'array', 'description' => 'Immediate action items'],
+                    ],
+                    'required' => ['usp', 'funnel', 'channels'],
+                ],
+                'configuration' => ['max_tokens' => 6144, 'temperature' => 0.5],
+            ],
         ];
     }
 
@@ -1019,6 +1144,21 @@ PROMPT,
                 'constraints' => [],
                 'config' => [],
                 'skills' => ['task-decomposition', 'research-summarize', 'content-writing'],
+            ],
+
+            // 9. Sales Strategist
+            [
+                'name' => 'Sales Strategist',
+                'slug' => 'sales-strategist',
+                'role' => 'Sales & Go-to-Market Strategist',
+                'goal' => 'Design winning sales strategies by combining market research, competitive intelligence, and conversion-optimized copywriting.',
+                'backstory' => 'A results-driven sales strategist who has launched products across multiple markets. Starts every engagement with deep market and competitor research, then builds a clear USP and conversion funnel. Crafts compelling sales copy, email sequences, and landing page narratives. Obsessed with understanding the customer — their pain points, objections, and buying triggers. Measures success by conversions, not impressions.',
+                'provider' => 'anthropic',
+                'model' => 'claude-sonnet-4-5',
+                'capabilities' => ['sales_strategy', 'market_research', 'copywriting', 'funnel_design', 'positioning'],
+                'constraints' => ['requires_approval' => true],
+                'config' => [],
+                'skills' => ['sales-strategy', 'market-research', 'email-copywriting', 'content-writing'],
             ],
         ];
     }
