@@ -10,7 +10,7 @@ class ExperimentTransitionMap
      * Explicit forward transitions: from_state => [to_state, ...]
      */
     private const FORWARD_TRANSITIONS = [
-        'draft' => ['scoring', 'executing'],
+        'draft' => ['scoring', 'planning', 'executing'],
         'signal_detected' => ['scoring'],
         'scoring' => ['planning', 'scoring_failed', 'discarded'],
         'scoring_failed' => ['scoring', 'killed'],
