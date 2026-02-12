@@ -48,6 +48,17 @@
                     Resume
                 </button>
             @endif
+            @if(in_array($project->status, [
+                \App\Domain\Project\Enums\ProjectStatus::Completed,
+                \App\Domain\Project\Enums\ProjectStatus::Failed,
+                \App\Domain\Project\Enums\ProjectStatus::Paused,
+                \App\Domain\Project\Enums\ProjectStatus::Active,
+            ]))
+                <button wire:click="restart" wire:confirm="Restart this project from scratch? All counters and milestones will be reset."
+                    class="rounded-lg border border-indigo-300 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-50">
+                    Restart
+                </button>
+            @endif
             @if($project->status->canTransitionTo(\App\Domain\Project\Enums\ProjectStatus::Archived))
                 <button wire:click="archive" wire:confirm="Archive this project? It cannot be reactivated."
                     class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">

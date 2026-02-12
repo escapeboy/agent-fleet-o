@@ -5,6 +5,7 @@ namespace App\Livewire\Projects;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Actions\ArchiveProjectAction;
 use App\Domain\Project\Actions\PauseProjectAction;
+use App\Domain\Project\Actions\RestartProjectAction;
 use App\Domain\Project\Actions\ResumeProjectAction;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Enums\ProjectStatus;
@@ -65,6 +66,13 @@ class ProjectDetailPage extends Component
 
         $this->project->refresh();
         session()->flash('message', 'Project activated!');
+    }
+
+    public function restart(): void
+    {
+        app(RestartProjectAction::class)->execute($this->project);
+        $this->project->refresh();
+        session()->flash('message', 'Project restarted from scratch. New run triggered.');
     }
 
     public function triggerRun(): void
