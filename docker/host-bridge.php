@@ -137,7 +137,7 @@ function get_version(string $command): ?string
 function build_command(string $agentKey, string $binaryPath): ?string
 {
     return match ($agentKey) {
-        'codex'      => escapeshellarg($binaryPath) . ' --quiet --output-format json --approval-mode full-auto',
+        'codex'      => escapeshellarg($binaryPath) . ' exec --json --full-auto',
         'claude-code' => escapeshellarg($binaryPath) . ' --print --output-format json --dangerously-skip-permissions',
         default      => null,
     };

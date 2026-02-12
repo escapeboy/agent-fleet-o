@@ -37,7 +37,7 @@ AGENTS = {
         "name": "OpenAI Codex",
         "binary": "codex",
         "detect_command": "codex --version",
-        "command_template": "{binary} --quiet --output-format json --approval-mode full-auto",
+        "command_template": "{binary} exec --json --full-auto",
     },
     "claude-code": {
         "name": "Claude Code",

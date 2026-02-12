@@ -199,7 +199,7 @@ class LocalAgentGateway implements AiGatewayInterface
         $modelFlag = $model ? ' --model ' . escapeshellarg($model) : '';
 
         return match ($agentKey) {
-            'codex' => "{$binaryPath} --quiet --output-format json --approval-mode full-auto{$modelFlag}",
+            'codex' => "{$binaryPath} exec --json --full-auto{$modelFlag}",
             'claude-code' => "{$binaryPath} --print --output-format json --dangerously-skip-permissions{$modelFlag}",
             default => throw new RuntimeException("No command template for agent: {$agentKey}"),
         };
