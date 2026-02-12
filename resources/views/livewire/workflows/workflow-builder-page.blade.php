@@ -84,7 +84,7 @@
                     <li>Drag empty space to pan</li>
                     <li>Scroll to zoom in/out</li>
                     <li>Drag nodes to position</li>
-                    <li>Click output port → input port to connect</li>
+                    <li>Click any port → click another port to connect</li>
                     <li>Click a node to configure it</li>
                     <li>Press Delete to remove selected</li>
                 </ul>
@@ -93,7 +93,7 @@
 
         {{-- Canvas (Alpine-managed: wire:ignore prevents Livewire morph from resetting x-for nodes) --}}
         <div wire:ignore class="relative flex-1 overflow-hidden bg-gray-100"
-             :class="{ 'cursor-grabbing': isPanning, 'cursor-grab': !isPanning && !isDragging && !isConnecting }"
+             :class="{ 'cursor-grabbing': isPanning, 'cursor-crosshair': isConnecting, 'cursor-grab': !isPanning && !isDragging && !isConnecting }"
              @mousedown="startPan($event)"
              @mousemove="onMouseMove($event)"
              @mouseup="onMouseUp($event)"
@@ -117,9 +117,9 @@
             </svg>
 
             {{-- Nodes --}}
-            <div class="absolute inset-0" :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + '); transform-origin: 0 0;'">
+            <div class="absolute inset-0 pointer-events-none" :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + '); transform-origin: 0 0;'">
                 <template x-for="node in localNodes" :key="node.id">
-                    <div class="absolute cursor-move select-none"
+                    <div class="absolute cursor-move select-none pointer-events-auto"
                          :style="'left: ' + node.position_x + 'px; top: ' + node.position_y + 'px;'"
                          @mousedown.stop="startDragNode(node.id, $event)"
                          @click.stop="selectNode(node.id)">
@@ -168,14 +168,18 @@
 
                             {{-- Input port (top center) --}}
                             <div x-show="node.type !== 'start'"
-                                 class="absolute -top-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full border-2 border-gray-300 bg-white cursor-crosshair hover:border-blue-500 hover:bg-blue-50"
-                                 @mouseup.stop="completeConnection(node.id)">
+                                 class="absolute -top-3 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full border-2 border-gray-300 bg-white cursor-crosshair hover:border-blue-500 hover:bg-blue-50 hover:scale-125 transition-transform z-10"
+                                 :class="{ 'border-blue-500 bg-blue-50 scale-125': isConnecting }"
+                                 @mousedown.stop="handlePortClick(node.id, $event)"
+                                 @click.stop>
                             </div>
 
                             {{-- Output port (bottom center) --}}
                             <div x-show="node.type !== 'end'"
-                                 class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full border-2 border-gray-300 bg-white cursor-crosshair hover:border-blue-500 hover:bg-blue-50"
-                                 @mousedown.stop="startConnection(node.id, $event)">
+                                 class="absolute -bottom-3 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full border-2 border-gray-300 bg-white cursor-crosshair hover:border-blue-500 hover:bg-blue-50 hover:scale-125 transition-transform z-10"
+                                 :class="{ 'border-blue-500 bg-blue-50 scale-125': isConnecting }"
+                                 @mousedown.stop="handlePortClick(node.id, $event)"
+                                 @click.stop>
                             </div>
                         </div>
                     </div>
@@ -267,16 +271,109 @@
                 <div>
                     <h3 class="text-sm font-semibold text-gray-900 mb-3">Edge Configuration</h3>
                     <div class="space-y-3">
+                        {{-- Label --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Label</label>
                             <input type="text" :value="getSelectedEdge()?.label" @input="updateEdgeLabel($event.target.value)"
                                    class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
                         </div>
+
+                        {{-- Condition Editor (hidden when default) --}}
+                        <div x-show="!getSelectedEdge()?.is_default" x-transition>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Condition</label>
+
+                            {{-- Mode selector --}}
+                            <div class="flex gap-1 mb-2">
+                                <button @click="conditionMode = 'simple'; if (conditionRules.length > 1) conditionRules = [conditionRules[0]]; syncConditionToEdge()"
+                                        class="rounded px-2 py-1 text-xs font-medium"
+                                        :class="conditionMode === 'simple' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+                                    Single
+                                </button>
+                                <button @click="conditionMode = 'all'; syncConditionToEdge()"
+                                        class="rounded px-2 py-1 text-xs font-medium"
+                                        :class="conditionMode === 'all' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+                                    All (AND)
+                                </button>
+                                <button @click="conditionMode = 'any'; syncConditionToEdge()"
+                                        class="rounded px-2 py-1 text-xs font-medium"
+                                        :class="conditionMode === 'any' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+                                    Any (OR)
+                                </button>
+                            </div>
+
+                            {{-- Source node hint --}}
+                            <div x-show="getSourceNodeLabel()" class="mb-2 text-xs text-gray-400">
+                                From: <span class="font-medium text-gray-600" x-text="getSourceNodeLabel()"></span>
+                            </div>
+
+                            {{-- Rules --}}
+                            <div class="space-y-2">
+                                <template x-for="(rule, index) in conditionRules" :key="index">
+                                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-2 space-y-1.5">
+                                        <div class="flex items-center gap-1">
+                                            <input type="text" x-model="rule.field" @input="syncConditionToEdge()" placeholder="output.field"
+                                                   class="flex-1 rounded border border-gray-300 px-2 py-1 text-xs focus:border-primary-500 focus:ring-primary-500" />
+                                            <button x-show="conditionRules.length > 1" @click="removeConditionRule(index)"
+                                                    class="text-gray-400 hover:text-red-500 p-0.5">
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            </button>
+                                        </div>
+                                        <select x-model="rule.operator" @change="syncConditionToEdge()"
+                                                class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:border-primary-500 focus:ring-primary-500">
+                                            <template x-for="op in conditionOperators" :key="op.value">
+                                                <option :value="op.value" x-text="op.label"></option>
+                                            </template>
+                                        </select>
+                                        <div x-show="!nullOperators.includes(rule.operator)">
+                                            <input type="text" x-model="rule.value" @input="syncConditionToEdge()" placeholder="value"
+                                                   class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:border-primary-500 focus:ring-primary-500" />
+                                            <div x-show="rule.operator === 'in' || rule.operator === 'not_in'" class="mt-0.5 text-[10px] text-gray-400">
+                                                JSON array, e.g. ["a","b"]
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            {{-- Add rule / Clear --}}
+                            <div class="flex items-center gap-2 mt-2">
+                                <button x-show="conditionMode !== 'simple'" @click="addConditionRule()"
+                                        class="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
+                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    Add Rule
+                                </button>
+                                <button @click="conditionRules = [{field:'', operator:'==', value:''}]; syncConditionToEdge()"
+                                        class="text-xs text-gray-400 hover:text-gray-600">Clear</button>
+                            </div>
+
+                            {{-- Field reference help --}}
+                            <div class="mt-2 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-700">
+                                <p class="font-medium mb-0.5">Field reference:</p>
+                                <ul class="space-y-0.5">
+                                    <li><code class="bg-amber-100 px-0.5 rounded">output.field</code> — predecessor output</li>
+                                    <li><code class="bg-amber-100 px-0.5 rounded">node:&lbrace;id&rbrace;.output.field</code> — specific node</li>
+                                    <li><code class="bg-amber-100 px-0.5 rounded">experiment.field</code> — experiment data</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {{-- Default checkbox --}}
                         <div class="flex items-center gap-2">
                             <input type="checkbox" :checked="getSelectedEdge()?.is_default" @change="toggleEdgeDefault()"
                                    class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
                             <label class="text-xs text-gray-600">Default (fallback) edge</label>
                         </div>
+
+                        {{-- Sort order --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Priority (sort order)</label>
+                            <input type="number" :value="getSelectedEdge()?.sort_order"
+                                   @input="let e = getSelectedEdge(); if(e) { e.sort_order = parseInt($event.target.value) || 0; syncToLivewire(); }"
+                                   min="0" class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                            <p class="mt-0.5 text-[10px] text-gray-400">Lower = evaluated first</p>
+                        </div>
+
+                        {{-- Delete --}}
                         <button @click="removeEdge(selectedEdgeId)" class="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100">
                             Delete Edge
                         </button>
@@ -324,6 +421,25 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
 
     nodeCounter: initialNodes.length,
 
+    // Condition editor state
+    conditionMode: 'simple',
+    conditionRules: [],
+    conditionOperators: [
+        {value: '==', label: '== (equals)'},
+        {value: '!=', label: '!= (not equals)'},
+        {value: '>', label: '> (greater than)'},
+        {value: '<', label: '< (less than)'},
+        {value: '>=', label: '>= (greater or equal)'},
+        {value: '<=', label: '<= (less or equal)'},
+        {value: 'contains', label: 'contains'},
+        {value: 'not_contains', label: 'not contains'},
+        {value: 'in', label: 'in (list)'},
+        {value: 'not_in', label: 'not in (list)'},
+        {value: 'is_null', label: 'is null'},
+        {value: 'is_not_null', label: 'is not null'},
+    ],
+    nullOperators: ['is_null', 'is_not_null'],
+
     get selectedNode() {
         if (!this.selectedNodeId) return null;
         return this.localNodes.find(n => n.id === this.selectedNodeId) || null;
@@ -365,10 +481,16 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     selectEdge(edgeId) {
         this.selectedEdgeId = edgeId;
         this.selectedNodeId = null;
+        this.loadConditionFromEdge();
     },
 
     // Drag nodes
     startDragNode(nodeId, event) {
+        // If we're in connection mode, cancel it instead of dragging
+        if (this.isConnecting) {
+            this.cancelConnection();
+            return;
+        }
         const node = this.localNodes.find(n => n.id === nodeId);
         if (!node) return;
         this.isDragging = true;
@@ -377,49 +499,60 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
         this.dragOffsetY = (event.clientY / this.zoom) - node.position_y;
     },
 
-    // Connection
-    startConnection(nodeId, event) {
-        const node = this.localNodes.find(n => n.id === nodeId);
-        if (!node) return;
-        this.isConnecting = true;
-        this.connectFromNodeId = nodeId;
-        this.connectFromX = node.position_x + 80;
-        this.connectFromY = node.position_y + 60;
-        this.connectToX = this.connectFromX;
-        this.connectToY = this.connectFromY;
+    // Connection (click any port to start, click any other port to finish)
+    handlePortClick(nodeId, event) {
+        if (!this.isConnecting) {
+            // Start connection from this node
+            const node = this.localNodes.find(n => n.id === nodeId);
+            if (!node) return;
+            this.isConnecting = true;
+            this.connectFromNodeId = nodeId;
+            this.connectFromX = node.position_x + 80;
+            this.connectFromY = node.position_y + 60;
+            this.connectToX = this.connectFromX;
+            this.connectToY = this.connectFromY;
+        } else {
+            // Complete connection to this node
+            if (this.connectFromNodeId === nodeId) {
+                this.cancelConnection();
+                return;
+            }
+
+            // Don't duplicate (check both directions)
+            const exists = this.localEdges.some(e =>
+                (e.source_node_id === this.connectFromNodeId && e.target_node_id === nodeId) ||
+                (e.source_node_id === nodeId && e.target_node_id === this.connectFromNodeId)
+            );
+
+            if (!exists) {
+                this.localEdges.push({
+                    id: 'edge-' + Date.now(),
+                    source_node_id: this.connectFromNodeId,
+                    target_node_id: nodeId,
+                    condition: null,
+                    label: '',
+                    is_default: false,
+                    sort_order: this.localEdges.length,
+                });
+                this.syncToLivewireNow();
+            }
+
+            this.cancelConnection();
+        }
     },
 
-    completeConnection(targetNodeId) {
-        if (!this.isConnecting || !this.connectFromNodeId) return;
-        if (this.connectFromNodeId === targetNodeId) {
-            this.isConnecting = false;
-            return;
-        }
-
-        // Don't duplicate
-        const exists = this.localEdges.some(e =>
-            e.source_node_id === this.connectFromNodeId && e.target_node_id === targetNodeId
-        );
-
-        if (!exists) {
-            this.localEdges.push({
-                id: 'edge-' + Date.now(),
-                source_node_id: this.connectFromNodeId,
-                target_node_id: targetNodeId,
-                condition: null,
-                label: '',
-                is_default: false,
-                sort_order: this.localEdges.length,
-            });
-            this.syncToLivewireNow();
-        }
-
+    cancelConnection() {
         this.isConnecting = false;
         this.connectFromNodeId = null;
     },
 
     // Pan canvas (only if not clicking on a node/port — those use @mousedown.stop)
     startPan(event) {
+        // If we're in connection mode, cancel it instead of panning
+        if (this.isConnecting) {
+            this.cancelConnection();
+            return;
+        }
         this.isPanning = true;
         this.panStartX = event.clientX - this.panX;
         this.panStartY = event.clientY - this.panY;
@@ -450,12 +583,16 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
                 node.position_x = Math.round(((event.clientX - this.panX) / this.zoom) - this.dragOffsetX + (this.panX / this.zoom));
                 node.position_y = Math.round(((event.clientY - this.panY) / this.zoom) - this.dragOffsetY + (this.panY / this.zoom));
             }
-        } else if (this.isConnecting) {
-            this.connectToX = (event.clientX - this.panX) / this.zoom;
-            this.connectToY = (event.clientY - this.panY) / this.zoom;
         } else if (this.isPanning) {
             this.panX = event.clientX - this.panStartX;
             this.panY = event.clientY - this.panStartY;
+        }
+
+        // Always track connection line when in connecting mode (even without button held)
+        if (this.isConnecting) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            this.connectToX = (event.clientX - rect.left - this.panX) / this.zoom;
+            this.connectToY = (event.clientY - rect.top - this.panY) / this.zoom;
         }
     },
 
@@ -465,10 +602,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
             this.dragNodeId = null;
             this.syncToLivewire();
         }
-        if (this.isConnecting) {
-            this.isConnecting = false;
-            this.connectFromNodeId = null;
-        }
+        // Don't cancel connection on mouseup — connection uses click-to-start, click-to-finish
         this.isPanning = false;
     },
 
@@ -509,13 +643,113 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
 
     toggleEdgeDefault() {
         const edge = this.getSelectedEdge();
-        if (edge) { edge.is_default = !edge.is_default; this.syncToLivewire(); }
+        if (edge) {
+            edge.is_default = !edge.is_default;
+            if (edge.is_default) {
+                edge.condition = null;
+                this.conditionRules = [{field: '', operator: '==', value: ''}];
+                this.conditionMode = 'simple';
+            }
+            this.syncToLivewire();
+        }
     },
 
     removeEdge(edgeId) {
         this.localEdges = this.localEdges.filter(e => e.id !== edgeId);
         this.selectedEdgeId = null;
         this.syncToLivewireNow();
+    },
+
+    // Condition editor methods
+    loadConditionFromEdge() {
+        const edge = this.getSelectedEdge();
+        if (!edge || !edge.condition) {
+            this.conditionMode = 'simple';
+            this.conditionRules = [{field: '', operator: '==', value: ''}];
+            return;
+        }
+        const c = edge.condition;
+        if (c.all && Array.isArray(c.all)) {
+            this.conditionMode = 'all';
+            this.conditionRules = c.all.map(r => ({
+                field: r.field || '',
+                operator: r.operator || '==',
+                value: this.serializeValue(r.value),
+            }));
+        } else if (c.any && Array.isArray(c.any)) {
+            this.conditionMode = 'any';
+            this.conditionRules = c.any.map(r => ({
+                field: r.field || '',
+                operator: r.operator || '==',
+                value: this.serializeValue(r.value),
+            }));
+        } else if (c.field) {
+            this.conditionMode = 'simple';
+            this.conditionRules = [{
+                field: c.field || '',
+                operator: c.operator || '==',
+                value: this.serializeValue(c.value),
+            }];
+        } else {
+            this.conditionMode = 'simple';
+            this.conditionRules = [{field: '', operator: '==', value: ''}];
+        }
+    },
+
+    syncConditionToEdge() {
+        const edge = this.getSelectedEdge();
+        if (!edge) return;
+
+        const validRules = this.conditionRules.filter(r => r.field.trim() !== '');
+        if (validRules.length === 0) {
+            edge.condition = null;
+        } else if (this.conditionMode === 'simple' || validRules.length === 1) {
+            const r = validRules[0];
+            edge.condition = {field: r.field, operator: r.operator, value: this.parseValue(r.value)};
+        } else if (this.conditionMode === 'all') {
+            edge.condition = {all: validRules.map(r => ({field: r.field, operator: r.operator, value: this.parseValue(r.value)}))};
+        } else {
+            edge.condition = {any: validRules.map(r => ({field: r.field, operator: r.operator, value: this.parseValue(r.value)}))};
+        }
+        this.syncToLivewire();
+    },
+
+    parseValue(raw) {
+        if (raw === undefined || raw === null || raw === '') return null;
+        const trimmed = String(raw).trim();
+        if (trimmed === 'true') return true;
+        if (trimmed === 'false') return false;
+        if (trimmed === 'null') return null;
+        if (!isNaN(trimmed) && trimmed !== '') return Number(trimmed);
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {}
+        return trimmed;
+    },
+
+    serializeValue(val) {
+        if (val === null || val === undefined) return '';
+        if (typeof val === 'boolean') return String(val);
+        if (Array.isArray(val)) return JSON.stringify(val);
+        return String(val);
+    },
+
+    addConditionRule() {
+        this.conditionRules.push({field: '', operator: '==', value: ''});
+    },
+
+    removeConditionRule(index) {
+        if (this.conditionRules.length <= 1) return;
+        this.conditionRules.splice(index, 1);
+        this.syncConditionToEdge();
+    },
+
+    getSourceNodeLabel() {
+        const edge = this.getSelectedEdge();
+        if (!edge) return '';
+        const source = this.localNodes.find(n => n.id === edge.source_node_id);
+        return source ? source.label : '';
     },
 
     // Render edges as raw SVG (avoids <template x-for> inside <svg>)
@@ -528,10 +762,14 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
             const labelHtml = edge.label
                 ? `<text x="${mid.x}" y="${mid.y - 8}" text-anchor="middle" class="text-xs fill-gray-500 pointer-events-none">${this.escapeHtml(edge.label)}</text>`
                 : '';
+            const conditionHtml = edge.condition
+                ? `<text x="${mid.x + (edge.label ? 30 : 0)}" y="${mid.y - 6}" text-anchor="middle" font-size="12" class="pointer-events-none" fill="#d97706">\u26A1</text>`
+                : '';
             return `<g data-edge-id="${edge.id}" style="cursor:pointer">
                 <path d="${path}" fill="none" stroke="${stroke}" stroke-width="2" stroke-dasharray="${dash}" />
                 <path d="${path}" fill="none" stroke="transparent" stroke-width="12" />
                 ${labelHtml}
+                ${conditionHtml}
             </g>`;
         }).join('');
     },
