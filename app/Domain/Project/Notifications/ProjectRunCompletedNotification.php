@@ -8,7 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ProjectRunFailedNotification extends Notification
+class ProjectRunCompletedNotification extends Notification
 {
     use Queueable;
 
@@ -27,23 +27,20 @@ class ProjectRunFailedNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->error()
-            ->subject("Run #{$this->run->run_number} failed — {$this->project->title}")
-            ->line("Project \"{$this->project->title}\" — Run #{$this->run->run_number} has failed.")
-            ->line($this->run->error_message ? "Error: {$this->run->error_message}" : '')
+            ->subject("Run #{$this->run->run_number} completed — {$this->project->title}")
+            ->line("Project \"{$this->project->title}\" — Run #{$this->run->run_number} completed successfully.")
             ->action('View Project', route('projects.show', $this->project));
     }
 
     public function toArray(object $notifiable): array
     {
         return [
-            'type' => 'project.run.failed',
+            'type' => 'project.run.completed',
             'project_id' => $this->project->id,
             'project_title' => $this->project->title,
             'run_id' => $this->run->id,
             'run_number' => $this->run->run_number,
-            'error' => $this->run->error_message,
-            'message' => "Project \"{$this->project->title}\" — Run #{$this->run->run_number} failed",
+            'message' => "Project \"{$this->project->title}\" — Run #{$this->run->run_number} completed",
         ];
     }
 }

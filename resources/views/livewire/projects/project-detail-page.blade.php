@@ -22,7 +22,18 @@
             @endif
         </div>
         <div class="flex items-center gap-2">
-            @if($project->status === \App\Domain\Project\Enums\ProjectStatus::Active)
+            @if($project->status !== \App\Domain\Project\Enums\ProjectStatus::Archived)
+                <a href="{{ route('projects.edit', $project) }}"
+                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Edit
+                </a>
+            @endif
+            @if($project->status === \App\Domain\Project\Enums\ProjectStatus::Draft)
+                <button wire:click="activate"
+                    class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
+                    Activate
+                </button>
+            @elseif($project->status === \App\Domain\Project\Enums\ProjectStatus::Active)
                 <button wire:click="triggerRun"
                     class="rounded-lg border border-primary-300 px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-primary-50">
                     Trigger Run

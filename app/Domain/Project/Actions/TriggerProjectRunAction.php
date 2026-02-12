@@ -67,9 +67,15 @@ class TriggerProjectRunAction
             ]);
 
             // Start the experiment pipeline
+            // If the project has a workflow, skip directly to Executing (the workflow IS the plan)
+            // Otherwise, go through the full pipeline starting at Scoring
+            $targetState = $project->workflow_id
+                ? ExperimentStatus::Executing
+                : ExperimentStatus::Scoring;
+
             $this->transitionExperiment->execute(
                 experiment: $experiment,
-                toState: ExperimentStatus::Scoring,
+                toState: $targetState,
                 reason: "Triggered by project run #{$runNumber} ({$trigger})",
             );
 

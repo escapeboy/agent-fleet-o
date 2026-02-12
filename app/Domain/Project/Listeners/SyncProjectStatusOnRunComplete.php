@@ -8,6 +8,7 @@ use App\Domain\Project\Actions\PauseProjectAction;
 use App\Domain\Project\Enums\ProjectRunStatus;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
+use App\Domain\Project\Jobs\DeliverWorkflowResultsJob;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Project\Notifications\ProjectRunFailedNotification;
 use Illuminate\Support\Facades\Log;
@@ -64,6 +65,11 @@ class SyncProjectStatusOnRunComplete
 
         // Check milestones
         $this->evaluateMilestones($project, $run);
+
+        // Deliver workflow results via configured channel (email, Slack, etc.)
+        if (! empty($project->delivery_config)) {
+            DeliverWorkflowResultsJob::dispatch($run->id);
+        }
 
         Log::info("Project {$project->id} run #{$run->run_number} completed");
     }

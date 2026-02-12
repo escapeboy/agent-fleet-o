@@ -13,6 +13,7 @@ use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
 class ProjectDetailPage extends Component
@@ -46,8 +47,39 @@ class ProjectDetailPage extends Component
         session()->flash('message', 'Project archived.');
     }
 
+    public function activate(): void
+    {
+        if ($this->project->status !== ProjectStatus::Draft) {
+            return;
+        }
+
+        $this->project->update([
+            'status' => ProjectStatus::Active,
+            'started_at' => now(),
+        ]);
+
+        // If run_immediately is set, trigger the first run
+        if ($this->project->schedule?->run_immediately) {
+            app(TriggerProjectRunAction::class)->execute($this->project->fresh(), 'initial');
+        }
+
+        $this->project->refresh();
+        session()->flash('message', 'Project activated!');
+    }
+
     public function triggerRun(): void
     {
+        $key = 'trigger-run:' . $this->project->id;
+
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            $seconds = RateLimiter::availableIn($key);
+            session()->flash('message', "Too many triggers. Please wait {$seconds} seconds.");
+
+            return;
+        }
+
+        RateLimiter::hit($key, 60);
+
         app(TriggerProjectRunAction::class)->execute($this->project);
         $this->project->refresh();
         session()->flash('message', 'New run triggered.');

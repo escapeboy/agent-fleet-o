@@ -28,8 +28,10 @@ use App\Livewire\Tools\CreateToolForm;
 use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
+use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
 use App\Livewire\Projects\ProjectListPage;
+use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Livewire\Workflows\WorkflowDetailPage;
@@ -77,10 +79,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/projects', ProjectListPage::class)->name('projects.index');
     Route::get('/projects/create', CreateProjectFormPage::class)->name('projects.create');
+    Route::get('/projects/{project}/edit', EditProjectForm::class)->name('projects.edit');
     Route::get('/projects/{project}', ProjectDetailPage::class)->name('projects.show');
 
     Route::get('/workflows', WorkflowListPage::class)->name('workflows.index');
     Route::get('/workflows/create', WorkflowBuilderPage::class)->name('workflows.create');
+    Route::get('/workflows/{workflow}/schedule', ScheduleWorkflowForm::class)->name('workflows.schedule');
     Route::get('/workflows/{workflow}/edit', WorkflowBuilderPage::class)->name('workflows.edit');
     Route::get('/workflows/{workflow}', WorkflowDetailPage::class)->name('workflows.show');
 

@@ -25,6 +25,11 @@
             <button wire:click="duplicate" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Duplicate
             </button>
+            @if($workflow->isActive())
+                <a href="{{ route('workflows.schedule', $workflow) }}" class="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100">
+                    Schedule
+                </a>
+            @endif
             <a href="{{ route('workflows.edit', $workflow) }}" class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
                 Edit
             </a>
