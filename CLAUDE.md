@@ -117,7 +117,7 @@ app/
       Models/                    # LlmRequestLog, CircuitBreakerState
       Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
   Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
-  Http/Controllers/Api/V1/      # 18 REST API controllers (90+ endpoints)
+  Http/Controllers/Api/V1/      # 17 REST API controllers (95 endpoints)
   Http/Middleware/               # SetCurrentTeam
   Livewire/                      # Admin panel components
     Dashboard/                   # DashboardPage
@@ -187,7 +187,7 @@ app/
 
 ### API v1 Routes (`/api/v1/`)
 
-90+ endpoints across 18 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
+95 endpoints across 17 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
 
 | Group | Endpoints | Purpose |
 |-------|-----------|---------|
