@@ -121,13 +121,6 @@
         </div>
     </div>
 
-    {{-- Workflow Progress (shown when experiment uses a workflow) --}}
-    @if($experiment->hasWorkflow())
-        <div class="mb-6">
-            <livewire:experiments.workflow-progress-panel :experimentId="$experiment->id" :key="'workflow-progress-'.$experiment->id" />
-        </div>
-    @endif
-
     {{-- Tab Navigation --}}
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex gap-6">
