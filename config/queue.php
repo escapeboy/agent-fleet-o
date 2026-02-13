@@ -68,7 +68,7 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 1500), // Must exceed longest job timeout (1200s for AI calls)
             'block_for' => null,
             'after_commit' => false,
         ],

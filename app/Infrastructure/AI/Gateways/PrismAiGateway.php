@@ -13,8 +13,11 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use Closure;
 use Prism\Prism\Enums\Provider;
+use Prism\Prism\Enums\StreamEventType;
 use Prism\Prism\Exceptions\PrismException;
 use Prism\Prism\Facades\Prism;
+use Prism\Prism\Streaming\Events\StreamEndEvent;
+use Prism\Prism\Streaming\Events\TextDeltaEvent;
 
 class PrismAiGateway implements AiGatewayInterface
 {
@@ -41,12 +44,82 @@ class PrismAiGateway implements AiGatewayInterface
         return $pipeline($request);
     }
 
+    public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
+    {
+        // Structured output and tool calling don't support streaming — fall back
+        if ($request->isStructured() || $request->hasTools()) {
+            return $this->complete($request);
+        }
+
+        $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeStreamRequest($req, $onChunk));
+
+        return $pipeline($request);
+    }
+
     public function estimateCost(AiRequestDTO $request): int
     {
         return $this->costCalculator->estimateCost(
             provider: $request->provider,
             model: $request->model,
             maxTokens: $request->maxTokens,
+        );
+    }
+
+    private function executeStreamRequest(AiRequestDTO $request, ?callable $onChunk): AiResponseDTO
+    {
+        $provider = $this->resolveProvider($request->provider);
+        $this->applyTeamCredentials($request);
+        $startTime = hrtime(true);
+
+        $generator = Prism::text()
+            ->using($provider, $request->model)
+            ->withSystemPrompt($request->systemPrompt)
+            ->withPrompt($request->userPrompt)
+            ->withMaxTokens($request->maxTokens)
+            ->usingTemperature($request->temperature)
+            ->withClientOptions(['timeout' => 120])
+            ->asStream();
+
+        $accumulated = '';
+        $promptTokens = 0;
+        $completionTokens = 0;
+
+        foreach ($generator as $event) {
+            if ($event instanceof TextDeltaEvent) {
+                $accumulated .= $event->delta;
+
+                if ($onChunk) {
+                    $onChunk($event->delta);
+                }
+            } elseif ($event instanceof StreamEndEvent && $event->usage) {
+                $promptTokens = $event->usage->promptTokens;
+                $completionTokens = $event->usage->completionTokens;
+            }
+        }
+
+        $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+        // Estimate tokens if usage wasn't reported by the stream
+        if ($completionTokens === 0 && $accumulated !== '') {
+            $completionTokens = (int) ceil(strlen($accumulated) / 4);
+        }
+
+        return new AiResponseDTO(
+            content: $accumulated,
+            parsedOutput: null,
+            usage: new AiUsageDTO(
+                promptTokens: $promptTokens,
+                completionTokens: $completionTokens,
+                costCredits: $this->costCalculator->calculateCost(
+                    provider: $request->provider,
+                    model: $request->model,
+                    inputTokens: $promptTokens,
+                    outputTokens: $completionTokens,
+                ),
+            ),
+            provider: $request->provider,
+            model: $request->model,
+            latencyMs: $latencyMs,
         );
     }
 

@@ -21,8 +21,25 @@
             </button>
 
             @if($expandedStageId === $stage->id && $stage->output_snapshot)
-                <div class="border-t border-gray-200 bg-gray-50 px-4 py-3">
-                    <pre class="max-h-96 overflow-auto rounded bg-gray-900 p-3 text-xs text-green-400">{{ json_encode($stage->output_snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
+                <div x-data="{ showRaw: false }" class="border-t border-gray-200 bg-gray-50 px-4 py-3">
+                    <div class="mb-2 flex items-center justify-end">
+                        <button @click="showRaw = !showRaw" class="text-xs text-primary-600 hover:underline">
+                            <span x-text="showRaw ? 'Formatted' : 'Raw JSON'"></span>
+                        </button>
+                    </div>
+
+                    {{-- Formatted markdown view --}}
+                    <div x-show="!showRaw" class="prose prose-sm max-h-96 overflow-auto">
+                        @php
+                            $stageText = is_array($stage->output_snapshot)
+                                ? ($stage->output_snapshot['plan_summary'] ?? $stage->output_snapshot['result'] ?? json_encode($stage->output_snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
+                                : (string) $stage->output_snapshot;
+                        @endphp
+                        {!! \Illuminate\Support\Str::markdown($stageText) !!}
+                    </div>
+
+                    {{-- Raw JSON view --}}
+                    <pre x-show="showRaw" x-cloak class="max-h-96 overflow-auto rounded bg-gray-900 p-3 text-xs text-green-400">{{ json_encode($stage->output_snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
                 </div>
             @endif
         </div>

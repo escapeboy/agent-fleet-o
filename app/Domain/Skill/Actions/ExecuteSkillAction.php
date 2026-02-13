@@ -12,6 +12,7 @@ use App\Domain\Skill\Services\SkillCostCalculator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use InvalidArgumentException;
 
 class ExecuteSkillAction
@@ -22,6 +23,7 @@ class ExecuteSkillAction
         private readonly SkillCostCalculator $costCalculator,
         private readonly ReserveBudgetAction $reserveBudget,
         private readonly SettleBudgetAction $settleBudget,
+        private readonly ProviderResolver $providerResolver,
     ) {}
 
     /**
@@ -54,9 +56,17 @@ class ExecuteSkillAction
             }
         }
 
-        // 2. Resolve provider and model
-        $resolvedProvider = $provider ?? $skill->configuration['provider'] ?? config('llm_pricing.default_provider', 'anthropic');
-        $resolvedModel = $model ?? $skill->configuration['model'] ?? config('llm_pricing.default_model', 'claude-sonnet-4-5');
+        // 2. Resolve provider and model via ProviderResolver hierarchy
+        if ($provider && $model) {
+            $resolvedProvider = $provider;
+            $resolvedModel = $model;
+        } else {
+            $agent = $agentId ? \App\Domain\Agent\Models\Agent::find($agentId) : null;
+            $team = $teamId ? \App\Domain\Shared\Models\Team::find($teamId) : null;
+            $resolved = $this->providerResolver->resolve($skill, $agent, $team);
+            $resolvedProvider = $provider ?? $resolved['provider'];
+            $resolvedModel = $model ?? $resolved['model'];
+        }
 
         // 3. Estimate and reserve budget
         $estimatedCost = $this->costCalculator->estimate($skill, $resolvedProvider, $resolvedModel);

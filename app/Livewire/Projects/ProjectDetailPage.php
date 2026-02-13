@@ -9,6 +9,7 @@ use App\Domain\Project\Actions\RestartProjectAction;
 use App\Domain\Project\Actions\ResumeProjectAction;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Enums\ProjectStatus;
+use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
@@ -59,8 +60,11 @@ class ProjectDetailPage extends Component
             'started_at' => now(),
         ]);
 
-        // If run_immediately is set, trigger the first run
-        if ($this->project->schedule?->run_immediately) {
+        // One-shot projects always trigger immediately on activation
+        // Continuous projects trigger if schedule has run_immediately
+        if ($this->project->type === ProjectType::OneShot) {
+            app(TriggerProjectRunAction::class)->execute($this->project->fresh(), 'initial');
+        } elseif ($this->project->schedule?->run_immediately) {
             app(TriggerProjectRunAction::class)->execute($this->project->fresh(), 'initial');
         }
 

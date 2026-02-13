@@ -7,6 +7,9 @@ use App\Domain\Experiment\Enums\ExecutionMode;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
+use App\Domain\Project\Enums\ProjectType;
+use App\Domain\Project\Models\ProjectRun;
+use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +18,7 @@ class PlaybookExecutor
 {
     public function __construct(
         private readonly TransitionExperimentAction $transitionAction,
+        private readonly LocalAgentDiscovery $discovery,
     ) {}
 
     /**
@@ -30,7 +34,8 @@ class PlaybookExecutor
 
         if ($steps->isEmpty()) {
             Log::warning('PlaybookExecutor: No steps found', ['experiment_id' => $experiment->id]);
-            $this->transitionAction->execute($experiment, ExperimentStatus::CollectingMetrics, 'Playbook completed (no steps)');
+            [$state, $msg] = self::resolveCompletionState($experiment, 'Playbook completed (no steps)');
+            $this->transitionAction->execute($experiment, $state, $msg);
 
             return;
         }
@@ -38,17 +43,33 @@ class PlaybookExecutor
         // Group steps: sequential steps get their own group, parallel steps share a group_id
         $groups = $this->buildGroups($steps);
 
+        // Convert groups to serializable form (step IDs only) for batch callbacks
+        $groupStepIds = array_map(
+            fn (array $group) => array_map(fn (PlaybookStep $step) => $step->id, $group),
+            $groups,
+        );
+
         // Dispatch the first group, each group's completion triggers the next
-        $this->dispatchGroup($experiment, $groups, 0);
+        $this->dispatchGroup($experiment, $groupStepIds, 0);
     }
 
     /**
      * Build ordered groups of steps.
      * Steps with the same group_id are in one group (parallel).
      * Steps without group_id get individual groups (sequential).
+     *
+     * When the host bridge is active (single-threaded PHP server), all steps
+     * are forced into sequential single-step groups because the bridge can
+     * only process one agent request at a time. Parallel HTTP requests would
+     * queue at the TCP level and later requests would time out waiting.
      */
     private function buildGroups(Collection $steps): array
     {
+        // Single-threaded bridge cannot handle concurrent requests — serialize everything
+        if ($this->discovery->isBridgeMode()) {
+            return $steps->map(fn (PlaybookStep $step) => [$step])->values()->all();
+        }
+
         $groups = [];
         $currentGroup = [];
         $lastGroupId = null;
@@ -82,82 +103,178 @@ class PlaybookExecutor
      * Dispatch a group of steps.
      * If the group has multiple steps, use Bus::batch() for parallel execution.
      * Otherwise, dispatch a single job.
+     *
+     * IMPORTANT: Batch callbacks are serialized into the database. They must NOT
+     * capture `$this` (PlaybookExecutor) because its injected dependencies cannot
+     * be reliably deserialized by laravel/serializable-closure. Instead, callbacks
+     * resolve a fresh PlaybookExecutor from the container via static helper methods.
      */
-    private function dispatchGroup(Experiment $experiment, array $groups, int $groupIndex): void
+    private function dispatchGroup(Experiment $experiment, array $groupStepIds, int $groupIndex): void
     {
-        if ($groupIndex >= count($groups)) {
+        if ($groupIndex >= count($groupStepIds)) {
             // All groups done — transition to CollectingMetrics
-            try {
-                $this->transitionAction->execute(
-                    $experiment,
-                    ExperimentStatus::CollectingMetrics,
-                    'Playbook completed successfully',
-                );
-            } catch (\Throwable $e) {
-                Log::error('PlaybookExecutor: Failed to transition after playbook completion', [
-                    'experiment_id' => $experiment->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            self::transitionToCompleted($experiment->id);
 
             return;
         }
 
-        $group = $groups[$groupIndex];
+        $stepIds = $groupStepIds[$groupIndex];
 
         // Check for conditional steps that should be skipped
-        $group = array_filter($group, function (PlaybookStep $step) use ($experiment) {
-            if ($step->execution_mode === ExecutionMode::Conditional) {
+        $stepIds = array_values(array_filter($stepIds, function (string $stepId) use ($experiment) {
+            $step = PlaybookStep::find($stepId);
+
+            if ($step && $step->execution_mode === ExecutionMode::Conditional) {
                 return $this->evaluateCondition($step, $experiment);
             }
 
             return true;
-        });
+        }));
 
-        if (empty($group)) {
+        if (empty($stepIds)) {
             // Skip this group, move to next
-            $this->dispatchGroup($experiment, $groups, $groupIndex + 1);
+            $this->dispatchGroup($experiment, $groupStepIds, $groupIndex + 1);
 
             return;
         }
 
+        $experimentId = $experiment->id;
+        $teamId = $experiment->team_id;
+
         $jobs = array_map(
-            fn (PlaybookStep $step) => new ExecutePlaybookStepJob($step->id, $experiment->id, $experiment->team_id),
-            array_values($group),
+            fn (string $stepId) => new ExecutePlaybookStepJob($stepId, $experimentId, $teamId),
+            $stepIds,
         );
 
         if (count($jobs) === 1) {
-            // Single step — dispatch directly with completion callback
+            // Single step — dispatch with completion callback
             Bus::batch($jobs)
-                ->name("playbook:{$experiment->id}:group:{$groupIndex}")
-                ->onQueue('experiments')
-                ->then(function () use ($experiment, $groups, $groupIndex) {
-                    $this->dispatchGroup($experiment, $groups, $groupIndex + 1);
+                ->name("playbook:{$experimentId}:group:{$groupIndex}")
+                ->onQueue('ai-calls')
+                ->then(function () use ($experimentId, $groupStepIds, $groupIndex) {
+                    self::onGroupCompleted($experimentId, $groupStepIds, $groupIndex);
                 })
-                ->catch(function () use ($experiment) {
-                    $this->handleGroupFailure($experiment);
+                ->catch(function () use ($experimentId) {
+                    self::onGroupFailed($experimentId);
                 })
                 ->dispatch();
         } else {
             // Multiple steps — parallel batch
             Bus::batch($jobs)
-                ->name("playbook:{$experiment->id}:group:{$groupIndex}")
-                ->onQueue('experiments')
+                ->name("playbook:{$experimentId}:group:{$groupIndex}")
+                ->onQueue('ai-calls')
                 ->allowFailures()
-                ->then(function () use ($experiment, $groups, $groupIndex) {
-                    // Check if all steps in group succeeded
-                    $groupStepIds = array_map(fn ($j) => $j->stepId, array_values(
-                        array_filter($groups[$groupIndex], fn ($s) => $s instanceof PlaybookStep),
-                    ));
+                ->then(function () use ($experimentId, $groupStepIds, $groupIndex) {
+                    // Check if any step in this group actually failed
+                    $anyFailed = PlaybookStep::whereIn('id', $groupStepIds[$groupIndex])
+                        ->where('status', 'failed')
+                        ->exists();
 
-                    // Re-check from jobs instead
-                    $this->dispatchGroup($experiment, $groups, $groupIndex + 1);
+                    if ($anyFailed) {
+                        self::onGroupFailed($experimentId);
+                    } else {
+                        self::onGroupCompleted($experimentId, $groupStepIds, $groupIndex);
+                    }
                 })
-                ->catch(function () use ($experiment) {
-                    $this->handleGroupFailure($experiment);
+                ->catch(function () use ($experimentId) {
+                    // With allowFailures(), catch fires on first failure but batch continues.
+                    // The then() callback handles the final decision.
+                    Log::warning('PlaybookExecutor: step failure in parallel group', [
+                        'experiment_id' => $experimentId,
+                    ]);
                 })
                 ->dispatch();
         }
+    }
+
+    /**
+     * Static callback: dispatch next group after current group completes.
+     * Resolved from container to avoid serializing DI dependencies in closures.
+     */
+    private static function onGroupCompleted(string $experimentId, array $groupStepIds, int $completedGroupIndex): void
+    {
+        try {
+            $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
+
+            if (! $experiment || $experiment->status->isTerminal()) {
+                return;
+            }
+
+            $executor = app(self::class);
+            $executor->dispatchGroup($experiment, $groupStepIds, $completedGroupIndex + 1);
+        } catch (\Throwable $e) {
+            Log::error('PlaybookExecutor: onGroupCompleted failed', [
+                'experiment_id' => $experimentId,
+                'group_index' => $completedGroupIndex,
+                'error' => $e->getMessage(),
+            ]);
+
+            self::onGroupFailed($experimentId);
+        }
+    }
+
+    /**
+     * Static callback: handle group failure by transitioning experiment.
+     */
+    private static function onGroupFailed(string $experimentId): void
+    {
+        try {
+            $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
+
+            if ($experiment && ! $experiment->status->isTerminal()) {
+                app(TransitionExperimentAction::class)->execute(
+                    $experiment,
+                    ExperimentStatus::ExecutionFailed,
+                    'Playbook step failed',
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::error('PlaybookExecutor: onGroupFailed failed', [
+                'experiment_id' => $experimentId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Static callback: transition experiment when all groups done.
+     * One-shot projects complete directly; others go to CollectingMetrics.
+     */
+    private static function transitionToCompleted(string $experimentId): void
+    {
+        try {
+            $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
+
+            if (! $experiment || $experiment->status->isTerminal()) {
+                return;
+            }
+
+            [$state, $msg] = self::resolveCompletionState($experiment, 'Playbook completed successfully');
+            app(TransitionExperimentAction::class)->execute($experiment, $state, $msg);
+        } catch (\Throwable $e) {
+            Log::error('PlaybookExecutor: Failed to transition after playbook completion', [
+                'experiment_id' => $experimentId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Determine the completion state for an experiment.
+     * One-shot projects complete directly; others go through evaluation.
+     *
+     * @return array{ExperimentStatus, string}
+     */
+    private static function resolveCompletionState(Experiment $experiment, string $reason): array
+    {
+        $projectRun = ProjectRun::where('experiment_id', $experiment->id)->first();
+        $project = $projectRun?->project;
+
+        if ($project && $project->type === ProjectType::OneShot) {
+            return [ExperimentStatus::Completed, $reason . ' (one-shot project)'];
+        }
+
+        return [ExperimentStatus::CollectingMetrics, $reason];
     }
 
     private function evaluateCondition(PlaybookStep $step, Experiment $experiment): bool
@@ -205,25 +322,5 @@ class PlaybookExecutor
         }
 
         return true;
-    }
-
-    private function handleGroupFailure(Experiment $experiment): void
-    {
-        try {
-            $experiment = Experiment::withoutGlobalScopes()->find($experiment->id);
-
-            if ($experiment && ! $experiment->status->isTerminal()) {
-                $this->transitionAction->execute(
-                    $experiment,
-                    ExperimentStatus::ExecutionFailed,
-                    'Playbook step failed',
-                );
-            }
-        } catch (\Throwable $e) {
-            Log::error('PlaybookExecutor: Failed to handle group failure', [
-                'experiment_id' => $experiment->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 }

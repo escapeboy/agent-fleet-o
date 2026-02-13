@@ -21,11 +21,11 @@ class ExperimentTransitionMap
         'awaiting_approval' => ['approved', 'rejected', 'expired'],
         'rejected' => ['planning', 'killed'],
         'approved' => ['executing'],
-        'executing' => ['collecting_metrics', 'execution_failed'],
+        'executing' => ['collecting_metrics', 'completed', 'execution_failed'],
         'execution_failed' => ['executing', 'killed'],
         'collecting_metrics' => ['evaluating'],
         'evaluating' => ['iterating', 'completed', 'killed'],
-        'iterating' => ['planning'],
+        'iterating' => ['planning', 'executing'],
     ];
 
     /**

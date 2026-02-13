@@ -25,6 +25,11 @@ class ExperimentDetailPage extends Component
     {
         $this->experiment = $experiment;
 
+        // Workflow experiments don't have a Timeline tab — default to Tasks
+        if ($experiment->hasWorkflow()) {
+            $this->activeTab = 'tasks';
+        }
+
         // Auto-select Tasks tab when experiment has tasks and is building
         if ($experiment->tasks()->exists() && in_array($experiment->status, [
             ExperimentStatus::Building,
@@ -83,7 +88,7 @@ class ExperimentDetailPage extends Component
 
     public function render()
     {
-        $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions', 'tasks']);
+        $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions', 'tasks', 'playbookSteps']);
 
         return view('livewire.experiments.experiment-detail-page')
             ->layout('layouts.app', ['header' => $this->experiment->title]);

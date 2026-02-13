@@ -53,14 +53,24 @@ abstract class BaseStageJob implements ShouldQueue
 
     public function handle(): void
     {
+        Log::info('BaseStageJob: Starting', [
+            'experiment_id' => $this->experimentId,
+            'stage' => $this->stageType()->value,
+            'expected_state' => $this->expectedState()->value,
+            'attempt' => $this->attempts(),
+            'job' => class_basename(static::class),
+            'queue' => $this->queue,
+        ]);
+
         // Queue context: no auth user, so bypass global scope
         $experiment = Experiment::withoutGlobalScopes()->find($this->experimentId);
 
-        if (!$experiment) {
+        if (! $experiment) {
             Log::warning('BaseStageJob: Experiment not found', [
                 'experiment_id' => $this->experimentId,
                 'job' => static::class,
             ]);
+
             return;
         }
 
@@ -72,6 +82,7 @@ abstract class BaseStageJob implements ShouldQueue
                 'actual' => $experiment->status->value,
                 'job' => class_basename(static::class),
             ]);
+
             return;
         }
 
@@ -89,13 +100,36 @@ abstract class BaseStageJob implements ShouldQueue
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
-            $stage->update([
-                'status' => StageStatus::Completed,
+            // Only update if not already completed by process() — some stages
+            // (e.g. RunPlanningStage) mark themselves Completed before calling
+            // transitions to satisfy prerequisite validators.
+            $freshStage = $stage->fresh();
+            if ($freshStage->status !== StageStatus::Completed) {
+                $stage->update([
+                    'status' => StageStatus::Completed,
+                    'duration_ms' => $durationMs,
+                    'completed_at' => now(),
+                ]);
+            } elseif (! $freshStage->duration_ms) {
+                $stage->update(['duration_ms' => $durationMs]);
+            }
+
+            Log::info('BaseStageJob: Completed', [
+                'experiment_id' => $this->experimentId,
+                'stage' => $this->stageType()->value,
                 'duration_ms' => $durationMs,
-                'completed_at' => now(),
             ]);
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+            Log::error('BaseStageJob: Exception in process()', [
+                'experiment_id' => $this->experimentId,
+                'stage' => $this->stageType()->value,
+                'attempt' => $this->attempts(),
+                'duration_ms' => $durationMs,
+                'exception' => $e->getMessage(),
+                'class' => get_class($e),
+            ]);
 
             $stage->update([
                 'status' => StageStatus::Failed,
