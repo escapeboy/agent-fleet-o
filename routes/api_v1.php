@@ -5,15 +5,16 @@ use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BudgetController;
+use App\Http\Controllers\Api\V1\CredentialController;
+use App\Http\Controllers\Api\V1\CrewController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ExperimentController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
+use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\TeamController;
-use App\Http\Controllers\Api\V1\CredentialController;
-use App\Http\Controllers\Api\V1\CrewController;
 use App\Http\Controllers\Api\V1\ToolController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
@@ -49,6 +50,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/experiments/{experiment}', [ExperimentController::class, 'show']);
     Route::post('/experiments', [ExperimentController::class, 'store']);
     Route::post('/experiments/{experiment}/transition', [ExperimentController::class, 'transition']);
+    Route::post('/experiments/{experiment}/pause', [ExperimentController::class, 'pause']);
+    Route::post('/experiments/{experiment}/resume', [ExperimentController::class, 'resume']);
+    Route::post('/experiments/{experiment}/retry', [ExperimentController::class, 'retry']);
+    Route::post('/experiments/{experiment}/kill', [ExperimentController::class, 'kill']);
+    Route::post('/experiments/{experiment}/retry-from-step', [ExperimentController::class, 'retryFromStep']);
+    Route::get('/experiments/{experiment}/steps', [ExperimentController::class, 'steps']);
 
     // Agents
     Route::apiResource('agents', AgentController::class);
@@ -64,6 +71,15 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Credentials
     Route::apiResource('credentials', CredentialController::class);
     Route::post('/credentials/{credential}/rotate', [CredentialController::class, 'rotate']);
+
+    // Projects
+    Route::apiResource('projects', ProjectController::class);
+    Route::post('/projects/{project}/activate', [ProjectController::class, 'activate']);
+    Route::post('/projects/{project}/pause', [ProjectController::class, 'pause']);
+    Route::post('/projects/{project}/resume', [ProjectController::class, 'resume']);
+    Route::post('/projects/{project}/restart', [ProjectController::class, 'restart']);
+    Route::post('/projects/{project}/trigger', [ProjectController::class, 'triggerRun']);
+    Route::get('/projects/{project}/runs', [ProjectController::class, 'runs']);
 
     // Signals
     Route::get('/signals', [SignalController::class, 'index']);

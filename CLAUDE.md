@@ -117,7 +117,7 @@ app/
       Models/                    # LlmRequestLog, CircuitBreakerState
       Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
   Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
-  Http/Controllers/Api/V1/      # 17 REST API controllers (80+ endpoints)
+  Http/Controllers/Api/V1/      # 18 REST API controllers (90+ endpoints)
   Http/Middleware/               # SetCurrentTeam
   Livewire/                      # Admin panel components
     Dashboard/                   # DashboardPage
@@ -187,13 +187,14 @@ app/
 
 ### API v1 Routes (`/api/v1/`)
 
-80+ endpoints across 17 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
+90+ endpoints across 18 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
 
 | Group | Endpoints | Purpose |
 |-------|-----------|---------|
 | Auth | `POST token`, `POST refresh`, `DELETE token`, `GET devices`, `DELETE devices/{id}` | Token management |
 | Me | `GET /me`, `PUT /me` | Current user |
-| Experiments | `GET`, `GET {id}`, `POST`, `POST {id}/transition` | Experiment CRUD + transitions |
+| Experiments | `GET`, `GET {id}`, `POST`, `POST {id}/transition`, `POST {id}/pause`, `POST {id}/resume`, `POST {id}/retry`, `POST {id}/kill`, `POST {id}/retry-from-step`, `GET {id}/steps` | Experiment CRUD + transitions + actions |
+| Projects | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/activate`, `POST {id}/pause`, `POST {id}/resume`, `POST {id}/restart`, `POST {id}/trigger`, `GET {id}/runs` | Project CRUD + lifecycle + runs |
 | Agents | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `PATCH {id}/status` | Agent CRUD + toggle |
 | Skills | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `GET {id}/versions` | Skill CRUD + versions |
 | Tools | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}` | Tool CRUD |

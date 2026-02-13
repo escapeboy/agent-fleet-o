@@ -3,9 +3,15 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Experiment\Actions\CreateExperimentAction;
+use App\Domain\Experiment\Actions\KillExperimentAction;
+use App\Domain\Experiment\Actions\PauseExperimentAction;
+use App\Domain\Experiment\Actions\ResumeExperimentAction;
+use App\Domain\Experiment\Actions\RetryExperimentAction;
+use App\Domain\Experiment\Actions\RetryFromStepAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\PlaybookStep;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreExperimentRequest;
 use App\Http\Requests\Api\V1\TransitionExperimentRequest;
@@ -72,5 +78,75 @@ class ExperimentController extends Controller
         );
 
         return new ExperimentResource($experiment);
+    }
+
+    public function pause(Request $request, Experiment $experiment, PauseExperimentAction $action): ExperimentResource
+    {
+        $experiment = $action->execute(
+            experiment: $experiment,
+            actorId: $request->user()->id,
+            reason: $request->input('reason', 'Paused via API'),
+        );
+
+        return new ExperimentResource($experiment);
+    }
+
+    public function resume(Request $request, Experiment $experiment, ResumeExperimentAction $action): ExperimentResource
+    {
+        $experiment = $action->execute(
+            experiment: $experiment,
+            actorId: $request->user()->id,
+        );
+
+        return new ExperimentResource($experiment);
+    }
+
+    public function retry(Request $request, Experiment $experiment, RetryExperimentAction $action): ExperimentResource
+    {
+        $experiment = $action->execute(
+            experiment: $experiment,
+            actorId: $request->user()->id,
+        );
+
+        return new ExperimentResource($experiment);
+    }
+
+    public function kill(Request $request, Experiment $experiment, KillExperimentAction $action): ExperimentResource
+    {
+        $experiment = $action->execute(
+            experiment: $experiment,
+            actorId: $request->user()->id,
+            reason: $request->input('reason', 'Killed via API'),
+        );
+
+        return new ExperimentResource($experiment);
+    }
+
+    public function retryFromStep(Request $request, Experiment $experiment, RetryFromStepAction $action): JsonResponse
+    {
+        $request->validate([
+            'step_id' => ['required', 'uuid'],
+        ]);
+
+        $step = PlaybookStep::where('experiment_id', $experiment->id)
+            ->where('id', $request->step_id)
+            ->firstOrFail();
+
+        $action->execute($experiment, $step);
+
+        return response()->json(['message' => 'Retry from step initiated.'], 202);
+    }
+
+    public function steps(Experiment $experiment): JsonResponse
+    {
+        $steps = PlaybookStep::where('experiment_id', $experiment->id)
+            ->orderBy('order')
+            ->get([
+                'id', 'experiment_id', 'workflow_node_id', 'agent_id', 'skill_id', 'crew_id',
+                'order', 'status', 'input_prompt', 'output', 'error_message',
+                'duration_ms', 'cost_credits', 'started_at', 'completed_at',
+            ]);
+
+        return response()->json(['data' => $steps]);
     }
 }
