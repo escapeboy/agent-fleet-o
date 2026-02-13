@@ -138,7 +138,7 @@ class RunBuildingStage extends BaseStageJob
                     $stage->update([
                         'status' => StageStatus::Completed,
                         'completed_at' => now(),
-                        'duration_ms' => $stage->started_at ? (int) now()->diffInMilliseconds($stage->started_at) : null,
+                        'duration_ms' => $stage->started_at ? (int) $stage->started_at->diffInMilliseconds(now()) : null,
                         'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
                             'artifacts_built' => $builtArtifacts,
                         ]),
@@ -186,7 +186,7 @@ class RunBuildingStage extends BaseStageJob
                         $stage->update([
                             'status' => StageStatus::Failed,
                             'completed_at' => now(),
-                            'duration_ms' => $stage->started_at ? (int) now()->diffInMilliseconds($stage->started_at) : null,
+                            'duration_ms' => $stage->started_at ? (int) $stage->started_at->diffInMilliseconds(now()) : null,
                             'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
                                 'error' => "{$failedCount} artifact(s) failed to build",
                             ]),

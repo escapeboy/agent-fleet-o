@@ -285,7 +285,7 @@ class CrewOrchestrator
                 'status' => CrewExecutionStatus::Completed,
                 'completed_at' => now(),
                 'duration_ms' => $execution->started_at
-                    ? (int) (now()->diffInMilliseconds($execution->started_at))
+                    ? (int) $execution->started_at->diffInMilliseconds(now())
                     : null,
             ]);
 
@@ -336,7 +336,7 @@ class CrewOrchestrator
             'error_message' => $error,
             'completed_at' => now(),
             'duration_ms' => $execution->started_at
-                ? (int) (now()->diffInMilliseconds($execution->started_at))
+                ? (int) $execution->started_at->diffInMilliseconds(now())
                 : null,
         ]);
 
