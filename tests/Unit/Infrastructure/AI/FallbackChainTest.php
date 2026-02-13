@@ -181,7 +181,7 @@ class FallbackChainTest extends TestCase
         $this->assertEquals('openai', $response->provider);
     }
 
-    public function test_local_agent_bypasses_fallback_chain(): void
+    public function test_local_agent_without_gateway_throws(): void
     {
         // In open-source, local agents use provider names like 'codex' or 'claude-code'
         // with a 'local' => true flag in llm_providers config
@@ -189,17 +189,11 @@ class FallbackChainTest extends TestCase
 
         $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker);
 
-        $this->circuitBreaker->method('isAvailable')->willReturn(true);
-
-        // Local agent should never reach PrismAiGateway — it requires LocalAgentGateway
-        // Without LocalAgentGateway set, it falls through to the primary gateway
-        $this->gateway->method('complete')->willReturnCallback(function (AiRequestDTO $req) {
-            return $this->makeResponse('codex', 'gpt-5.3-codex');
-        });
-
         $request = $this->makeRequest(provider: 'codex', model: 'gpt-5.3-codex');
-        // Without localGateway, it goes through normal chain
-        $response = $fallbackGateway->complete($request);
-        $this->assertEquals('codex', $response->provider);
+
+        // Without localGateway, local provider requests throw
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage("Local agent provider 'codex' is not available");
+        $fallbackGateway->complete($request);
     }
 }

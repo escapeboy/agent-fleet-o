@@ -28,6 +28,7 @@ class CreateExperimentAction
     ): Experiment {
         $experiment = Experiment::create([
             'user_id' => $userId,
+            'team_id' => $teamId,
             'title' => $title,
             'thesis' => $thesis,
             'track' => $track,

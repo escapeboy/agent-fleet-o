@@ -7,12 +7,14 @@ use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Domain\Experiment\States\ExperimentStateMachine;
+use App\Domain\Experiment\States\TransitionPrerequisiteValidator;
 use Illuminate\Support\Facades\DB;
 
 class TransitionExperimentAction
 {
     public function __construct(
         private readonly ExperimentStateMachine $stateMachine,
+        private readonly TransitionPrerequisiteValidator $prerequisiteValidator,
     ) {}
 
     public function execute(
@@ -28,6 +30,12 @@ class TransitionExperimentAction
             $fromState = $experiment->status;
 
             $this->stateMachine->validate($experiment, $toState);
+
+            $prerequisiteError = $this->prerequisiteValidator->validate($experiment, $toState);
+
+            if ($prerequisiteError) {
+                throw new \InvalidArgumentException($prerequisiteError);
+            }
 
             $experiment->update([
                 'status' => $toState,

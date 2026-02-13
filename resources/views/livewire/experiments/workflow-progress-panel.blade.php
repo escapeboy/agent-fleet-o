@@ -1,4 +1,4 @@
-<div wire:poll.2s>
+<div wire:poll.{{ $running > 0 ? '3' : '10' }}s>
     @if($graph)
         <div class="rounded-lg border border-gray-200 bg-white">
             {{-- Header --}}
@@ -27,6 +27,9 @@
                             @endif
                             @if($failed > 0)
                                 <span class="text-red-600">&middot; {{ $failed }} failed</span>
+                            @endif
+                            @if($skipped > 0)
+                                <span class="text-gray-400">&middot; {{ $skipped }} skipped</span>
                             @endif
                         </span>
                     </div>
@@ -75,7 +78,7 @@
                                         @break
                                     @case('pending')
                                         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs text-gray-400">
-                                            {{ $node['order'] ?? '-' }}
+                                            {{ $loop->iteration }}
                                         </span>
                                         @break
                                     @case('running')
@@ -97,6 +100,13 @@
                                         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-red-100">
                                             <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </span>
+                                        @break
+                                    @case('skipped')
+                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
+                                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
                                             </svg>
                                         </span>
                                         @break
@@ -125,6 +135,8 @@
                             <div class="flex items-center gap-3">
                                 @if($node['step_duration_ms'])
                                     <span class="text-xs text-gray-500">{{ round($node['step_duration_ms'] / 1000) }}s</span>
+                                @elseif($node['step_status'] === 'running' && $node['step_started_at'])
+                                    <span class="text-xs text-blue-500">{{ $node['step_started_at']->diffForHumans(short: true, parts: 1) }}</span>
                                 @elseif($node['step_cost'])
                                     <span class="text-xs text-gray-500">{{ $node['step_cost'] }} cr</span>
                                 @endif
@@ -148,15 +160,52 @@
                                     </div>
                                 @endif
 
+                                @if($node['step_status'] === 'failed' && $node['step_id'])
+                                    <button wire:click="retryStep('{{ $node['step_id'] }}')"
+                                        wire:confirm="Retry from this step? This will reset this step and all subsequent steps."
+                                        class="mb-2 inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        </svg>
+                                        Retry from this step
+                                    </button>
+                                @endif
+
                                 @if($node['step_output'])
-                                    <div class="rounded bg-gray-50 p-2">
-                                        <p class="text-xs font-medium text-gray-600">Output</p>
-                                        <pre class="mt-1 max-h-48 overflow-auto text-xs text-gray-700">{{ is_array($node['step_output']) ? json_encode($node['step_output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : $node['step_output'] }}</pre>
+                                    <div x-data="{ showRaw: false }" class="rounded bg-gray-50 p-2">
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-xs font-medium text-gray-600">Output</p>
+                                            <button @click="showRaw = !showRaw" class="text-xs text-primary-600 hover:underline">
+                                                <span x-text="showRaw ? 'Formatted' : 'Raw JSON'"></span>
+                                            </button>
+                                        </div>
+
+                                        {{-- Formatted markdown view --}}
+                                        <div x-show="!showRaw" class="prose prose-sm mt-1 max-h-64 overflow-auto">
+                                            @php
+                                                $outputText = is_array($node['step_output'])
+                                                    ? ($node['step_output']['result'] ?? json_encode($node['step_output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
+                                                    : $node['step_output'];
+                                            @endphp
+                                            {!! \Illuminate\Support\Str::markdown($outputText) !!}
+                                        </div>
+
+                                        {{-- Raw JSON view --}}
+                                        <pre x-show="showRaw" x-cloak class="mt-1 max-h-64 overflow-auto text-xs text-gray-700">{{ is_array($node['step_output']) ? json_encode($node['step_output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : $node['step_output'] }}</pre>
                                     </div>
                                 @endif
 
-                                @if(!$node['step_error'] && !$node['step_output'] && $node['step_status'] === 'running')
-                                    <p class="text-xs text-blue-500">Node is currently executing...</p>
+                                @if($node['step_status'] === 'running')
+                                    <div class="rounded bg-blue-50 p-2">
+                                        <p class="text-xs font-medium text-blue-600">Live Output</p>
+                                        @if($node['step_stream_output'])
+                                            <div class="prose prose-sm mt-1 max-h-64 overflow-auto text-xs">
+                                                {!! \Illuminate\Support\Str::markdown($node['step_stream_output']) !!}
+                                            </div>
+                                        @else
+                                            <p class="mt-1 text-xs text-blue-400">Waiting for output...</p>
+                                        @endif
+                                    </div>
                                 @endif
 
                                 @if(!$node['step_error'] && !$node['step_output'] && $node['step_status'] === 'pending')

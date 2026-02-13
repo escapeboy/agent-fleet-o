@@ -60,20 +60,44 @@ class DispatchNextStageJob
             return;
         }
 
-        // Iterating needs to transition to planning first
+        // Iterating: workflow experiments re-execute, non-workflow re-plan
         if ($newState === 'iterating') {
-            Log::info('DispatchNextStageJob: Iterating → transitioning to planning', [
-                'experiment_id' => $experiment->id,
-                'iteration' => $experiment->current_iteration,
-            ]);
+            if ($experiment->hasWorkflow()) {
+                Log::info('DispatchNextStageJob: Iterating → re-executing workflow', [
+                    'experiment_id' => $experiment->id,
+                    'iteration' => $experiment->current_iteration,
+                ]);
 
-            app(TransitionExperimentAction::class)->execute(
-                experiment: $experiment,
-                toState: ExperimentStatus::Planning,
-                reason: "Iteration {$experiment->current_iteration}: re-entering planning",
-            );
+                // Reset all workflow steps for re-execution
+                $experiment->playbookSteps()->update([
+                    'status' => 'pending',
+                    'output' => null,
+                    'error_message' => null,
+                    'duration_ms' => null,
+                    'cost_credits' => null,
+                    'started_at' => null,
+                    'completed_at' => null,
+                ]);
 
-            return; // The Planning transition will trigger this listener again
+                app(TransitionExperimentAction::class)->execute(
+                    experiment: $experiment,
+                    toState: ExperimentStatus::Executing,
+                    reason: "Iteration {$experiment->current_iteration}: re-executing workflow",
+                );
+            } else {
+                Log::info('DispatchNextStageJob: Iterating → transitioning to planning', [
+                    'experiment_id' => $experiment->id,
+                    'iteration' => $experiment->current_iteration,
+                ]);
+
+                app(TransitionExperimentAction::class)->execute(
+                    experiment: $experiment,
+                    toState: ExperimentStatus::Planning,
+                    reason: "Iteration {$experiment->current_iteration}: re-entering planning",
+                );
+            }
+
+            return;
         }
 
         $jobClass = self::STATE_JOB_MAP[$newState] ?? null;

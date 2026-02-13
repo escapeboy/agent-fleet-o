@@ -8,6 +8,8 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Pipeline\ExecutePlaybookStepJob;
+use App\Domain\Project\Enums\ProjectType;
+use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -41,7 +43,8 @@ class WorkflowGraphExecutor
             Log::warning('WorkflowGraphExecutor: No workflow graph in experiment', [
                 'experiment_id' => $experiment->id,
             ]);
-            $this->transitionAction->execute($experiment, ExperimentStatus::CollectingMetrics, 'No workflow graph');
+            [$state, $msg] = $this->resolveCompletionState($experiment, 'No workflow graph');
+            $this->transitionAction->execute($experiment, $state, $msg);
 
             return;
         }
@@ -53,7 +56,8 @@ class WorkflowGraphExecutor
 
         if ($steps->isEmpty()) {
             Log::warning('WorkflowGraphExecutor: No playbook steps', ['experiment_id' => $experiment->id]);
-            $this->transitionAction->execute($experiment, ExperimentStatus::CollectingMetrics, 'Workflow completed (no steps)');
+            [$state, $msg] = $this->resolveCompletionState($experiment, 'Workflow completed (no steps)');
+            $this->transitionAction->execute($experiment, $state, $msg);
 
             return;
         }
@@ -74,14 +78,23 @@ class WorkflowGraphExecutor
         $nodeMap = collect($graph['nodes'])->keyBy('id')->toArray();
         $maxLoopIterations = $graph['max_loop_iterations'] ?? 10;
 
-        // Resolve first set of executable nodes from Start
+        // Resolve first set of executable nodes from Start.
+        // Use allowLoopReset=false so completed steps are traversed through
+        // (important for retry: we don't want to re-execute already-completed steps).
         $nextNodeIds = $adjacency[$startNode['id']] ?? [];
         $executableNodeIds = $this->resolveExecutableNodes(
-            $nextNodeIds, $nodeMap, $edgeMap, $adjacency, $steps, $experiment, $maxLoopIterations
+            $nextNodeIds, $nodeMap, $edgeMap, $adjacency, $steps, $experiment, $maxLoopIterations,
+            allowLoopReset: false,
         );
 
+        // Filter to nodes whose ALL predecessors are complete (join semantics).
+        // Without this, a retry on one branch could dispatch a downstream join node
+        // before the other branch's retried step finishes.
+        $executableNodeIds = $this->filterReadyNodes($executableNodeIds, $graph['edges'], $steps);
+
         if (empty($executableNodeIds)) {
-            $this->transitionAction->execute($experiment, ExperimentStatus::CollectingMetrics, 'Workflow completed');
+            [$state, $msg] = $this->resolveCompletionState($experiment, 'Workflow completed');
+            $this->transitionAction->execute($experiment, $state, $msg);
 
             return;
         }
@@ -140,10 +153,11 @@ class WorkflowGraphExecutor
 
             if ($pendingSteps->isEmpty()) {
                 try {
+                    [$state, $msg] = $this->resolveCompletionState($experiment, 'Workflow completed successfully');
                     $this->transitionAction->execute(
                         $experiment,
-                        ExperimentStatus::CollectingMetrics,
-                        'Workflow completed successfully',
+                        $state,
+                        $msg,
                     );
                 } catch (\Throwable $e) {
                     Log::error('WorkflowGraphExecutor: Transition failed', [
@@ -162,6 +176,10 @@ class WorkflowGraphExecutor
     /**
      * Resolve which nodes are actually executable from a set of candidate node IDs.
      * Traverses through conditional nodes to find agent/end nodes.
+     *
+     * @param bool $allowLoopReset When true, completed steps may be reset for loop re-execution.
+     *                             When false, completed steps are traversed through to find pending ones.
+     *                             Use false for initial/retry execution, true for back-edge loops.
      */
     private function resolveExecutableNodes(
         array $candidateNodeIds,
@@ -171,6 +189,7 @@ class WorkflowGraphExecutor
         $steps,
         Experiment $experiment,
         int $maxLoopIterations,
+        bool $allowLoopReset = true,
     ): array {
         $executable = [];
         $visited = [];
@@ -178,7 +197,7 @@ class WorkflowGraphExecutor
         foreach ($candidateNodeIds as $nodeId) {
             $this->resolveNode(
                 $nodeId, $nodeMap, $edgeMap, $adjacency, $steps, $experiment,
-                $maxLoopIterations, $executable, $visited,
+                $maxLoopIterations, $executable, $visited, $allowLoopReset,
             );
         }
 
@@ -195,6 +214,7 @@ class WorkflowGraphExecutor
         int $maxLoopIterations,
         array &$executable,
         array &$visited,
+        bool $allowLoopReset = true,
     ): void {
         if (isset($visited[$nodeId])) {
             return;
@@ -220,10 +240,9 @@ class WorkflowGraphExecutor
                 return;
             }
 
-            // Check loop: if step already completed, check if we should loop
             if ($step->isCompleted()) {
-                if ($step->loop_count < $maxLoopIterations) {
-                    // Reset for re-execution
+                if ($allowLoopReset && $step->loop_count < $maxLoopIterations) {
+                    // Back-edge loop: reset for re-execution
                     $step->update([
                         'status' => 'pending',
                         'output' => null,
@@ -235,6 +254,14 @@ class WorkflowGraphExecutor
                         'loop_count' => $step->loop_count + 1,
                     ]);
                     $executable[] = $nodeId;
+                } elseif (! $allowLoopReset) {
+                    // Initial/retry traversal: skip completed steps and continue to successors
+                    foreach ($adjacency[$nodeId] ?? [] as $successor) {
+                        $this->resolveNode(
+                            $successor, $nodeMap, $edgeMap, $adjacency,
+                            $steps, $experiment, $maxLoopIterations, $executable, $visited, $allowLoopReset,
+                        );
+                    }
                 } else {
                     // Max iterations reached — skip this path
                     Log::info('WorkflowGraphExecutor: Max loop iterations reached', [
@@ -346,7 +373,34 @@ class WorkflowGraphExecutor
     }
 
     /**
+     * Determine the completion state for a workflow experiment.
+     *
+     * One-shot projects complete directly after workflow finishes — they don't
+     * need the CollectingMetrics -> Evaluating -> Iterating loop which is
+     * designed for continuous/signal-driven experiments.
+     *
+     * @return array{ExperimentStatus, string} [status, reason]
+     */
+    private function resolveCompletionState(Experiment $experiment, string $reason): array
+    {
+        $projectRun = ProjectRun::where('experiment_id', $experiment->id)->first();
+        $project = $projectRun?->project;
+
+        if ($project && $project->type === ProjectType::OneShot) {
+            return [ExperimentStatus::Completed, $reason . ' (one-shot project)'];
+        }
+
+        return [ExperimentStatus::CollectingMetrics, $reason];
+    }
+
+    /**
      * Dispatch a batch of agent nodes for parallel execution.
+     *
+     * IMPORTANT: Batch callbacks are serialized into the database. They must NOT
+     * capture `$this` (WorkflowGraphExecutor) because its injected dependencies
+     * cannot be reliably deserialized by laravel/serializable-closure. Instead,
+     * callbacks resolve a fresh instance from the container via static helpers.
+     * Pass only scalar/array values (experiment ID, node IDs) — never Eloquent models.
      */
     private function dispatchNodeBatch(Experiment $experiment, array $nodeIds, array $graph, $steps): void
     {
@@ -376,21 +430,23 @@ class WorkflowGraphExecutor
             return;
         }
 
+        $experimentId = $experiment->id;
+
         Log::info('WorkflowGraphExecutor: Dispatching node batch', [
-            'experiment_id' => $experiment->id,
+            'experiment_id' => $experimentId,
             'node_count' => count($jobs),
             'node_ids' => $dispatchedNodeIds,
         ]);
 
         Bus::batch($jobs)
-            ->name("workflow:{$experiment->id}:batch:" . implode('-', array_slice($dispatchedNodeIds, 0, 3)))
+            ->name("workflow:{$experimentId}:batch:" . implode('-', array_slice($dispatchedNodeIds, 0, 3)))
             ->onQueue('experiments')
             ->allowFailures()
-            ->then(function () use ($experiment, $dispatchedNodeIds) {
-                app(self::class)->continueAfterBatch($experiment, $dispatchedNodeIds);
+            ->then(function () use ($experimentId, $dispatchedNodeIds) {
+                self::staticContinueAfterBatch($experimentId, $dispatchedNodeIds);
             })
-            ->catch(function () use ($experiment) {
-                $this->handleBatchFailure($experiment);
+            ->catch(function () use ($experimentId) {
+                self::staticHandleBatchFailure($experimentId);
             })
             ->dispatch();
     }
@@ -449,28 +505,58 @@ class WorkflowGraphExecutor
         return null;
     }
 
-    private function handleBatchFailure(Experiment $experiment): void
+    /**
+     * Static callback: continue execution after a batch completes.
+     * Resolved from container to avoid serializing DI dependencies in closures.
+     */
+    private static function staticContinueAfterBatch(string $experimentId, array $completedNodeIds): void
     {
         try {
-            $experiment = Experiment::withoutGlobalScopes()->find($experiment->id);
+            $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
 
-            if ($experiment && ! $experiment->status->isTerminal()) {
-                // Check if any step actually failed
-                $failedSteps = PlaybookStep::where('experiment_id', $experiment->id)
-                    ->where('status', 'failed')
-                    ->count();
+            if (! $experiment || $experiment->status->isTerminal()) {
+                return;
+            }
 
-                if ($failedSteps > 0) {
-                    $this->transitionAction->execute(
-                        $experiment,
-                        ExperimentStatus::ExecutionFailed,
-                        "Workflow step failed ({$failedSteps} failed step(s))",
-                    );
-                }
+            app(self::class)->continueAfterBatch($experiment, $completedNodeIds);
+        } catch (\Throwable $e) {
+            Log::error('WorkflowGraphExecutor: continueAfterBatch failed', [
+                'experiment_id' => $experimentId,
+                'error' => $e->getMessage(),
+            ]);
+
+            self::staticHandleBatchFailure($experimentId);
+        }
+    }
+
+    /**
+     * Static callback: handle batch failure by transitioning experiment.
+     * Resolved from container to avoid serializing DI dependencies in closures.
+     */
+    private static function staticHandleBatchFailure(string $experimentId): void
+    {
+        try {
+            $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
+
+            if (! $experiment || $experiment->status->isTerminal()) {
+                return;
+            }
+
+            // Check if any step actually failed
+            $failedSteps = PlaybookStep::where('experiment_id', $experimentId)
+                ->where('status', 'failed')
+                ->count();
+
+            if ($failedSteps > 0) {
+                app(TransitionExperimentAction::class)->execute(
+                    $experiment,
+                    ExperimentStatus::ExecutionFailed,
+                    "Workflow step failed ({$failedSteps} failed step(s))",
+                );
             }
         } catch (\Throwable $e) {
-            Log::error('WorkflowGraphExecutor: Failed to handle batch failure', [
-                'experiment_id' => $experiment->id,
+            Log::error('WorkflowGraphExecutor: handleBatchFailure failed', [
+                'experiment_id' => $experimentId,
                 'error' => $e->getMessage(),
             ]);
         }

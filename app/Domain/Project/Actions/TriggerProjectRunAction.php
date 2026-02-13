@@ -67,9 +67,16 @@ class TriggerProjectRunAction
             ]);
 
             // Start the experiment pipeline
+            // Projects have a defined goal/task — skip scoring (which is for signal-driven experiments).
+            // If the project has a workflow, skip directly to Executing (the workflow IS the plan).
+            // Otherwise, go to Planning so the AI can build an execution plan.
+            $targetState = $project->workflow_id
+                ? ExperimentStatus::Executing
+                : ExperimentStatus::Planning;
+
             $this->transitionExperiment->execute(
                 experiment: $experiment,
-                toState: ExperimentStatus::Scoring,
+                toState: $targetState,
                 reason: "Triggered by project run #{$runNumber} ({$trigger})",
             );
 

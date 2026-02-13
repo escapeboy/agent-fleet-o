@@ -9,6 +9,7 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
 use App\Domain\Project\Models\ProjectSchedule;
+use App\Domain\Workflow\Models\Workflow;
 use Illuminate\Support\Facades\DB;
 
 class CreateProjectAction
@@ -34,6 +35,14 @@ class CreateProjectAction
         array $dependencies = [],
         ?string $teamId = null,
     ): Project {
+        // Validate workflow is active before scheduling
+        if ($workflowId) {
+            $workflow = Workflow::find($workflowId);
+            if (! $workflow || ! $workflow->isActive()) {
+                throw new \InvalidArgumentException('The selected workflow must be active to create a scheduled project.');
+            }
+        }
+
         return DB::transaction(function () use (
             $userId, $title, $type, $description, $goal,
             $crewId, $workflowId, $agentConfig, $budgetConfig,

@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Experiment\Services\StepOutputBroadcaster;
 use App\Domain\Project\Models\Project;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Skill\Models\Skill;
@@ -11,6 +12,7 @@ use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Services\ProviderResolver;
 
 class ExecuteAgentAction
 {
@@ -19,12 +21,14 @@ class ExecuteAgentAction
         private readonly AiGatewayInterface $gateway,
         private readonly ResolveAgentToolsAction $resolveTools,
         private readonly ResolveProjectCredentialsAction $resolveCredentials,
+        private readonly ProviderResolver $providerResolver,
     ) {}
 
     /**
      * Execute an agent by running its assigned tools (agentic loop)
      * or skills (sequential chain) depending on configuration.
      *
+     * @param  string|null  $stepId  Playbook step ID — when provided, enables LLM output streaming
      * @return array{execution: AgentExecution, output: array|null}
      */
     public function execute(
@@ -34,9 +38,16 @@ class ExecuteAgentAction
         string $userId,
         ?string $experimentId = null,
         ?Project $project = null,
+        ?string $stepId = null,
     ): array {
         if (! $agent->hasBudgetRemaining()) {
             return $this->failExecution($agent, $teamId, $experimentId, $input, 'Agent budget cap reached');
+        }
+
+        // Workflow-driven execution: if input has a 'task' key (from workflow node prompt),
+        // execute directly with LLM instead of skill chain
+        if (! empty($input['task'])) {
+            return $this->executeDirectPrompt($agent, $input, $teamId, $userId, $experimentId, $stepId);
         }
 
         // Resolve tools for this agent (filtered by project restrictions)
@@ -69,10 +80,12 @@ class ExecuteAgentAction
 
         try {
             $systemPrompt = $this->buildAgentSystemPrompt($agent, $project);
+            $team = \App\Domain\Shared\Models\Team::find($teamId);
+            $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
 
             $request = new AiRequestDTO(
-                provider: $agent->provider,
-                model: $agent->model,
+                provider: $resolved['provider'],
+                model: $resolved['model'],
                 systemPrompt: $systemPrompt,
                 userPrompt: json_encode($input),
                 maxTokens: $agent->config['max_tokens'] ?? 4096,
@@ -102,6 +115,94 @@ class ExecuteAgentAction
                 'tools_used' => $response->toolResults ?? [],
                 'tool_calls_count' => $response->toolCallsCount,
                 'llm_steps_count' => $response->stepsCount,
+                'duration_ms' => $durationMs,
+                'cost_credits' => $costCredits,
+            ]);
+
+            return [
+                'execution' => $execution,
+                'output' => ['result' => $response->content],
+            ];
+        } catch (\Throwable $e) {
+            $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+            return $this->failExecution(
+                $agent, $teamId, $experimentId, $input,
+                $e->getMessage(), $durationMs,
+            );
+        }
+    }
+
+    /**
+     * Execute an agent by sending the workflow task prompt directly to the LLM.
+     * Used for workflow-driven steps where the node config provides the task.
+     * When $stepId is provided, streams output to Redis for real-time UI updates.
+     *
+     * @return array{execution: AgentExecution, output: array|null}
+     */
+    private function executeDirectPrompt(
+        Agent $agent,
+        array $input,
+        string $teamId,
+        string $userId,
+        ?string $experimentId,
+        ?string $stepId = null,
+    ): array {
+        $startTime = hrtime(true);
+
+        try {
+            $systemPrompt = $this->buildAgentSystemPrompt($agent);
+
+            // Build user prompt from task + goal + context
+            $userPromptParts = [];
+            if (! empty($input['task'])) {
+                $userPromptParts[] = "## Task\n" . $input['task'];
+            }
+            if (! empty($input['goal'])) {
+                $userPromptParts[] = "## Project Goal\n" . $input['goal'];
+            }
+            if (! empty($input['context'])) {
+                $userPromptParts[] = "## Context from Previous Steps\n" . json_encode($input['context'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            }
+
+            $team = \App\Domain\Shared\Models\Team::find($teamId);
+            $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
+
+            $request = new AiRequestDTO(
+                provider: $resolved['provider'],
+                model: $resolved['model'],
+                systemPrompt: $systemPrompt,
+                userPrompt: implode("\n\n", $userPromptParts),
+                maxTokens: $agent->config['max_tokens'] ?? 8192,
+                teamId: $teamId,
+                agentId: $agent->id,
+                experimentId: $experimentId,
+                purpose: 'agent.workflow_step',
+                temperature: $agent->config['temperature'] ?? 0.7,
+            );
+
+            // Use streaming when we have a step ID (enables real-time output in UI)
+            if ($stepId) {
+                $broadcaster = app(StepOutputBroadcaster::class);
+                $response = $this->gateway->stream($request, function (string $chunk) use ($broadcaster, $stepId) {
+                    $broadcaster->broadcastChunk($stepId, $chunk);
+                });
+            } else {
+                $response = $this->gateway->complete($request);
+            }
+
+            $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+            $costCredits = $response->usage->costCredits;
+
+            $agent->increment('budget_spent_credits', $costCredits);
+
+            $execution = AgentExecution::create([
+                'agent_id' => $agent->id,
+                'team_id' => $teamId,
+                'experiment_id' => $experimentId,
+                'status' => 'completed',
+                'input' => $input,
+                'output' => ['result' => $response->content],
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
             ]);

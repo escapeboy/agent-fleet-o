@@ -94,8 +94,20 @@ class RunPlanningStage extends BaseStageJob
 
         $parsedOutput = $this->parseJsonResponse($response);
 
+        if (! is_array($parsedOutput) || empty($parsedOutput['plan_summary'])) {
+            throw new \RuntimeException(
+                'Planning stage: LLM returned invalid plan (missing plan_summary). '
+                . 'Raw response: ' . substr($response->content ?? '', 0, 500)
+            );
+        }
+
+        // Mark stage Completed BEFORE transitioning — the TransitionPrerequisiteValidator
+        // checks for a completed planning stage when entering Building. If we leave it as
+        // Running and call transition first, the validator rejects the transition.
         $stage->update([
             'output_snapshot' => $parsedOutput,
+            'status' => \App\Domain\Experiment\Enums\StageStatus::Completed,
+            'completed_at' => now(),
         ]);
 
         $transition->execute(

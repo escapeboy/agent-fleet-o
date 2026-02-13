@@ -7,6 +7,7 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Experiment\Models\PlaybookStep;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 
@@ -45,11 +46,36 @@ class RunEvaluationStage extends BaseStageJob
                 'sum' => round($group->sum('value'), 4),
             ]);
 
+        // Enrich with workflow step data when available
+        $userPromptParts = [
+            "Evaluate this experiment:",
+            "",
+            "Title: {$experiment->title}",
+            "Thesis: {$experiment->thesis}",
+            "Iteration: {$experiment->current_iteration} of {$experiment->max_iterations}",
+            "Success criteria: " . json_encode($experiment->success_criteria),
+            "Metrics: " . json_encode($metrics),
+        ];
+
+        $steps = PlaybookStep::where('experiment_id', $experiment->id)->get();
+        if ($steps->isNotEmpty()) {
+            $stepSummary = $steps->map(fn (PlaybookStep $s) => [
+                'order' => $s->order,
+                'status' => $s->status,
+                'duration_ms' => $s->duration_ms,
+                'output_preview' => is_array($s->output)
+                    ? substr(json_encode($s->output), 0, 200)
+                    : substr((string) ($s->output ?? ''), 0, 200),
+            ]);
+
+            $userPromptParts[] = "Workflow steps: " . json_encode($stepSummary);
+        }
+
         $request = new AiRequestDTO(
             provider: $llm['provider'],
             model: $llm['model'],
             systemPrompt: 'You are an experiment evaluation agent. Analyze metrics and decide the outcome. Return ONLY a valid JSON object (no markdown, no code fences) with: verdict (completed|iterate|kill), reasoning (string, max 2 sentences), confidence (0.0-1.0), key_findings (array of max 5 strings), recommendations (array of max 3 strings). Keep compact.',
-            userPrompt: "Evaluate this experiment:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nIteration: {$experiment->current_iteration} of {$experiment->max_iterations}\nSuccess criteria: " . json_encode($experiment->success_criteria) . "\nMetrics: " . json_encode($metrics),
+            userPrompt: implode("\n", $userPromptParts),
             maxTokens: 1024,
             userId: $experiment->user_id,
             experimentId: $experiment->id,

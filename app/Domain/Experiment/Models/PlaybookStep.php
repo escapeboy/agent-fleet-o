@@ -83,4 +83,14 @@ class PlaybookStep extends Model
     {
         return $this->status === 'failed';
     }
+
+    public function isRunning(): bool
+    {
+        return $this->status === 'running';
+    }
+
+    public function isSkipped(): bool
+    {
+        return $this->status === 'skipped';
+    }
 }

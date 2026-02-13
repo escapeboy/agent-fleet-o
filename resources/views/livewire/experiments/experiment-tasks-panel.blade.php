@@ -1,4 +1,4 @@
-<div wire:poll.2s>
+<div wire:poll.10s>
     @if($total > 0)
         {{-- Progress Bar --}}
         <div class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
@@ -137,9 +137,24 @@
                             @endif
 
                             @if($task->output_data)
-                                <div class="rounded bg-gray-50 p-2">
-                                    <p class="text-xs font-medium text-gray-600">Output</p>
-                                    <pre class="mt-1 max-h-48 overflow-auto text-xs text-gray-700">{{ json_encode($task->output_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
+                                <div x-data="{ showRaw: false }" class="rounded bg-gray-50 p-2">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-xs font-medium text-gray-600">Output</p>
+                                        <button @click="showRaw = !showRaw" class="text-xs text-primary-600 hover:underline">
+                                            <span x-text="showRaw ? 'Formatted' : 'Raw JSON'"></span>
+                                        </button>
+                                    </div>
+
+                                    <div x-show="!showRaw" class="prose prose-sm mt-1 max-h-48 overflow-auto">
+                                        @php
+                                            $taskText = is_array($task->output_data)
+                                                ? ($task->output_data['result'] ?? json_encode($task->output_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
+                                                : (string) $task->output_data;
+                                        @endphp
+                                        {!! \Illuminate\Support\Str::markdown($taskText) !!}
+                                    </div>
+
+                                    <pre x-show="showRaw" x-cloak class="mt-1 max-h-48 overflow-auto text-xs text-gray-700">{{ json_encode($task->output_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
                                 </div>
                             @endif
 

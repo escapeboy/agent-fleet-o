@@ -1,11 +1,11 @@
-<div wire:poll.5s>
+<div wire:poll.10s>
     {{-- Header --}}
     <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
             <div class="flex items-center gap-3">
                 <x-status-badge :status="$experiment->status->value" />
                 <span class="text-sm text-gray-500">{{ ucfirst($experiment->track->value) }}</span>
-                <span class="text-sm text-gray-500">Step {{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</span>
+                <span class="text-sm text-gray-500">Iteration {{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</span>
                 @if($experiment->constraints['auto_approve'] ?? false)
                     <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Auto-approve</span>
                 @endif
@@ -95,8 +95,21 @@
             @endif
         </div>
         <div class="rounded-lg border border-gray-200 bg-white p-4">
-            <p class="text-xs font-medium text-gray-500">Stages</p>
-            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $experiment->stages_count }}</p>
+            @if($experiment->hasWorkflow())
+                @php
+                    $totalSteps = $experiment->playbook_steps_count;
+                    $completedSteps = $experiment->playbookSteps()->where('status', 'completed')->count();
+                    $stepPct = $totalSteps > 0 ? min(100, round(($completedSteps / $totalSteps) * 100)) : 0;
+                @endphp
+                <p class="text-xs font-medium text-gray-500">Steps</p>
+                <p class="mt-1 text-lg font-semibold text-gray-900">{{ $completedSteps }}/{{ $totalSteps }} completed</p>
+                <div class="mt-1 h-1.5 w-full rounded-full bg-gray-200">
+                    <div class="h-1.5 rounded-full bg-green-500" style="width: {{ $stepPct }}%"></div>
+                </div>
+            @else
+                <p class="text-xs font-medium text-gray-500">Stages</p>
+                <p class="mt-1 text-lg font-semibold text-gray-900">{{ $experiment->stages_count }}</p>
+            @endif
         </div>
         <div class="rounded-lg border border-gray-200 bg-white p-4">
             <p class="text-xs font-medium text-gray-500">Outbound</p>
@@ -119,7 +132,9 @@
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex gap-6">
             @php
-                $tabs = ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'transitions' => 'Transitions'];
+                $tabs = $experiment->hasWorkflow()
+                    ? ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions']
+                    : ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions'];
             @endphp
             @foreach($tabs as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
@@ -132,6 +147,10 @@
                         <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->artifacts_count }}</span>
                     @elseif($tab === 'outbound')
                         <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->outbound_proposals_count }}</span>
+                    @elseif($tab === 'metrics' && $experiment->metrics_count > 0)
+                        <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->metrics_count }}</span>
+                    @elseif($tab === 'transitions' && $experiment->state_transitions_count > 0)
+                        <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->state_transitions_count }}</span>
                     @endif
                 </button>
             @endforeach
@@ -149,6 +168,8 @@
         <livewire:experiments.outbound-log :experiment="$experiment" :key="'outbound-'.$experiment->id" />
     @elseif($activeTab === 'metrics')
         <livewire:experiments.metrics-panel :experiment="$experiment" :key="'metrics-'.$experiment->id" />
+    @elseif($activeTab === 'execution-log')
+        <livewire:experiments.execution-log-panel :experimentId="$experiment->id" :key="'execution-log-'.$experiment->id" />
     @elseif($activeTab === 'transitions')
         <livewire:experiments.transitions-log :experiment="$experiment" :key="'transitions-'.$experiment->id" />
     @endif

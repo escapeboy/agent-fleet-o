@@ -5,14 +5,17 @@ namespace App\Livewire\Projects;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Actions\ArchiveProjectAction;
 use App\Domain\Project\Actions\PauseProjectAction;
+use App\Domain\Project\Actions\RestartProjectAction;
 use App\Domain\Project\Actions\ResumeProjectAction;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Enums\ProjectStatus;
+use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
 class ProjectDetailPage extends Component
@@ -46,8 +49,49 @@ class ProjectDetailPage extends Component
         session()->flash('message', 'Project archived.');
     }
 
+    public function activate(): void
+    {
+        if ($this->project->status !== ProjectStatus::Draft) {
+            return;
+        }
+
+        $this->project->update([
+            'status' => ProjectStatus::Active,
+            'started_at' => now(),
+        ]);
+
+        // One-shot projects always trigger immediately on activation
+        // Continuous projects trigger if schedule has run_immediately
+        if ($this->project->type === ProjectType::OneShot) {
+            app(TriggerProjectRunAction::class)->execute($this->project->fresh(), 'initial');
+        } elseif ($this->project->schedule?->run_immediately) {
+            app(TriggerProjectRunAction::class)->execute($this->project->fresh(), 'initial');
+        }
+
+        $this->project->refresh();
+        session()->flash('message', 'Project activated!');
+    }
+
+    public function restart(): void
+    {
+        app(RestartProjectAction::class)->execute($this->project);
+        $this->project->refresh();
+        session()->flash('message', 'Project restarted from scratch. New run triggered.');
+    }
+
     public function triggerRun(): void
     {
+        $key = 'trigger-run:' . $this->project->id;
+
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            $seconds = RateLimiter::availableIn($key);
+            session()->flash('message', "Too many triggers. Please wait {$seconds} seconds.");
+
+            return;
+        }
+
+        RateLimiter::hit($key, 60);
+
         app(TriggerProjectRunAction::class)->execute($this->project);
         $this->project->refresh();
         session()->flash('message', 'New run triggered.');

@@ -10,6 +10,8 @@ use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Enums\ScheduleFrequency;
 use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Workflow\Enums\WorkflowStatus;
+use App\Domain\Workflow\Models\Workflow;
 use Livewire\Component;
 
 class CreateProjectForm extends Component
@@ -21,6 +23,7 @@ class CreateProjectForm extends Component
 
     // Team
     public string $agentId = '';
+    public string $workflowId = '';
 
     // Schedule (continuous only)
     public string $frequency = 'daily';
@@ -51,7 +54,8 @@ class CreateProjectForm extends Component
             'title' => 'required|min:2|max:255',
             'description' => 'required|max:2000',
             'type' => 'required|in:one_shot,continuous',
-            'agentId' => 'required|exists:agents,id',
+            'agentId' => $this->workflowId ? 'nullable' : 'required|exists:agents,id',
+            'workflowId' => 'nullable|exists:workflows,id',
         ];
 
         if ($this->type === 'continuous') {
@@ -143,6 +147,7 @@ class CreateProjectForm extends Component
             title: $this->title,
             type: $this->type,
             description: $this->description,
+            workflowId: $this->workflowId ?: null,
             agentConfig: $this->agentId ? ['lead_agent_id' => $this->agentId] : [],
             budgetConfig: $budgetConfig ?: [],
             schedule: $scheduleConfig,
@@ -166,6 +171,7 @@ class CreateProjectForm extends Component
     public function render()
     {
         $agents = Agent::where('status', 'active')->orderBy('name')->get();
+        $workflows = Workflow::where('status', WorkflowStatus::Active)->orderBy('name')->get(['id', 'name']);
         $frequencies = ScheduleFrequency::cases();
         $overlapPolicies = OverlapPolicy::cases();
         $availableProjects = Project::orderBy('title')
@@ -178,6 +184,7 @@ class CreateProjectForm extends Component
 
         return view('livewire.projects.create-project-form', [
             'agents' => $agents,
+            'workflows' => $workflows,
             'frequencies' => $frequencies,
             'overlapPolicies' => $overlapPolicies,
             'availableProjects' => $availableProjects,

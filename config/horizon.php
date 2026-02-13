@@ -215,7 +215,7 @@ return [
             'autoScalingStrategy' => 'time',
             'minProcesses' => 2,
             'maxProcesses' => 15,
-            'timeout' => 1020,
+            'timeout' => 1260, // Must exceed ExecutePlaybookStepJob timeout (1200s)
             'tries' => 2,
             'memory' => 256,
             'nice' => 0,
