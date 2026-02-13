@@ -10,6 +10,7 @@ use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
+use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -48,6 +49,10 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ExperimentTransitioned::class, NotifyOnCriticalTransition::class);
         Event::listen(ExperimentTransitioned::class, PauseOnBudgetExceeded::class);
         Event::listen(ExperimentTransitioned::class, LogExperimentTransition::class);
+
+        // Workflow artifact collection (must fire BEFORE SyncProjectStatusOnRunComplete
+        // so that artifacts exist when DeliverWorkflowResultsJob dispatches)
+        Event::listen(ExperimentTransitioned::class, CollectWorkflowArtifactsOnCompletion::class);
 
         // Project listeners (syncs run status when experiment completes)
         Event::listen(ExperimentTransitioned::class, SyncProjectStatusOnRunComplete::class);

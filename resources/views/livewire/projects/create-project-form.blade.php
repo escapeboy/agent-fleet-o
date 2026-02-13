@@ -179,6 +179,44 @@
                 <p class="mt-1.5 text-xs text-gray-500">Credits. Leave empty for unlimited. Project auto-pauses when a cap is hit and resumes when the period resets.</p>
             </div>
 
+            {{-- Delivery --}}
+            <div>
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Delivery (optional)</h3>
+                <p class="mb-3 text-xs text-gray-500">Automatically deliver workflow results when a run completes.</p>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-form-select wire:model.live="deliveryChannel" label="Delivery Channel">
+                            <option value="none">No delivery</option>
+                            <option value="email">Email</option>
+                            <option value="slack">Slack</option>
+                            <option value="telegram">Telegram</option>
+                            <option value="webhook">Webhook</option>
+                        </x-form-select>
+
+                        @if($deliveryChannel !== 'none')
+                            <x-form-input wire:model="deliveryTarget" label="Target"
+                                type="text"
+                                placeholder="{{ match($deliveryChannel) {
+                                    'email' => 'you@example.com',
+                                    'slack' => 'https://hooks.slack.com/services/...',
+                                    'telegram' => 'chat_id',
+                                    'webhook' => 'https://your-app.com/webhook',
+                                    default => '',
+                                } }}"
+                                :error="$errors->first('deliveryTarget')" />
+                        @endif
+                    </div>
+
+                    @if($deliveryChannel !== 'none')
+                        <x-form-select wire:model="deliveryFormat" label="Format">
+                            <option value="summary">Summary</option>
+                            <option value="full">Full Output</option>
+                            <option value="json">JSON</option>
+                        </x-form-select>
+                    @endif
+                </div>
+            </div>
+
             {{-- Milestones --}}
             <div>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Milestones (optional)</h3>

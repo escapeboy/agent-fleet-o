@@ -34,6 +34,7 @@ class CreateProjectAction
         array $milestones = [],
         array $dependencies = [],
         ?string $teamId = null,
+        ?array $deliveryConfig = null,
     ): Project {
         // Validate workflow is active before scheduling
         if ($workflowId) {
@@ -46,7 +47,7 @@ class CreateProjectAction
         return DB::transaction(function () use (
             $userId, $title, $type, $description, $goal,
             $crewId, $workflowId, $agentConfig, $budgetConfig,
-            $notificationConfig, $settings, $schedule, $milestones, $dependencies, $teamId,
+            $notificationConfig, $settings, $schedule, $milestones, $dependencies, $teamId, $deliveryConfig,
         ) {
             $notificationDefaults = [
                 'on_failure' => true,
@@ -69,6 +70,7 @@ class CreateProjectAction
                 'agent_config' => $agentConfig,
                 'budget_config' => $budgetConfig,
                 'notification_config' => array_merge($notificationDefaults, $notificationConfig),
+                'delivery_config' => $deliveryConfig,
                 'settings' => $settings,
             ]);
 

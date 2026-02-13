@@ -32,6 +32,11 @@ class CreateProjectForm extends Component
     public string $overlapPolicy = 'skip';
     public int $maxConsecutiveFailures = 3;
 
+    // Delivery
+    public string $deliveryChannel = 'none';
+    public string $deliveryTarget = '';
+    public string $deliveryFormat = 'summary';
+
     // Budget
     public ?int $dailyCap = null;
     public ?int $weeklyCap = null;
@@ -57,6 +62,10 @@ class CreateProjectForm extends Component
             'agentId' => $this->workflowId ? 'nullable' : 'required|exists:agents,id',
             'workflowId' => 'nullable|exists:workflows,id',
         ];
+
+        if ($this->deliveryChannel !== 'none') {
+            $rules['deliveryTarget'] = 'required|max:500';
+        }
 
         if ($this->type === 'continuous') {
             $rules['frequency'] = 'required|in:' . implode(',', array_column(ScheduleFrequency::cases(), 'value'));
@@ -142,6 +151,15 @@ class CreateProjectForm extends Component
             fn ($d) => ! empty($d['depends_on_id'])
         );
 
+        $deliveryConfig = null;
+        if ($this->deliveryChannel !== 'none') {
+            $deliveryConfig = [
+                'channel' => $this->deliveryChannel,
+                'target' => $this->deliveryTarget,
+                'format' => $this->deliveryFormat,
+            ];
+        }
+
         $project = app(CreateProjectAction::class)->execute(
             userId: auth()->id(),
             title: $this->title,
@@ -154,6 +172,7 @@ class CreateProjectForm extends Component
             milestones: array_values($milestoneData),
             dependencies: array_values($dependencyData),
             teamId: $team->id,
+            deliveryConfig: $deliveryConfig,
         );
 
         // Assign tools & credentials

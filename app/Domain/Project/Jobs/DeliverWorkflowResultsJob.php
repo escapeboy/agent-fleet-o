@@ -3,6 +3,7 @@
 namespace App\Domain\Project\Jobs;
 
 use App\Domain\Experiment\Models\PlaybookStep;
+use App\Models\Artifact;
 use App\Domain\Outbound\Actions\SendOutboundAction;
 use App\Domain\Outbound\Enums\OutboundChannel;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
@@ -140,14 +141,42 @@ class DeliverWorkflowResultsJob implements ShouldQueue
 
         $body = match ($format) {
             'full' => $summary,
+            'json' => $summary,
             default => $this->truncateSummary($summary, 2000),
         };
+
+        // Append artifact info if any exist
+        $artifactSection = $this->buildArtifactSection($run);
+        if ($artifactSection) {
+            $body .= "\n\n---\n\n" . $artifactSection;
+        }
 
         return [
             'subject' => $title,
             'body' => $body,
             'text' => $body,
         ];
+    }
+
+    private function buildArtifactSection(ProjectRun $run): ?string
+    {
+        $artifacts = Artifact::withoutGlobalScopes()
+            ->where('experiment_id', $run->experiment_id)
+            ->orderBy('created_at')
+            ->get();
+
+        if ($artifacts->isEmpty()) {
+            return null;
+        }
+
+        $lines = ["**Artifacts ({$artifacts->count()}):**"];
+
+        foreach ($artifacts as $artifact) {
+            $previewUrl = url("/artifacts/{$artifact->id}/render");
+            $lines[] = "- [{$artifact->name}]({$previewUrl}) ({$artifact->type})";
+        }
+
+        return implode("\n", $lines);
     }
 
     private function truncateSummary(string $text, int $maxLength): string
