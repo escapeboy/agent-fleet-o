@@ -39,7 +39,7 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
             $content = $proposal->content;
 
             $url = $target['url'] ?? null;
-            if (!$url) {
+            if (! $url) {
                 // No actionable URL — simulate the send (dry-run)
                 Log::info('WebhookOutboundConnector: No URL in target, simulating send', [
                     'proposal_id' => $proposal->id,
@@ -48,7 +48,7 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
 
                 $action->update([
                     'status' => OutboundActionStatus::Sent,
-                    'external_id' => 'webhook-simulated-' . now()->timestamp,
+                    'external_id' => 'webhook-simulated-'.now()->timestamp,
                     'response' => ['simulated' => true, 'reason' => 'No URL in webhook target'],
                     'sent_at' => now(),
                 ]);
@@ -78,7 +78,7 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
             if ($response->successful()) {
                 $action->update([
                     'status' => OutboundActionStatus::Sent,
-                    'external_id' => $response->header('X-Request-Id', 'webhook-' . now()->timestamp),
+                    'external_id' => $response->header('X-Request-Id', 'webhook-'.now()->timestamp),
                     'response' => $response->json() ?? ['body' => substr($response->body(), 0, 500)],
                     'sent_at' => now(),
                 ]);

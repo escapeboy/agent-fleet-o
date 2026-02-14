@@ -40,7 +40,7 @@ class CollectWorkflowArtifactsAction
             }
 
             if (mb_strlen($content) > self::MAX_CONTENT_BYTES) {
-                $content = mb_substr($content, 0, self::MAX_CONTENT_BYTES) . "\n\n[Content truncated — exceeded 1 MB limit]";
+                $content = mb_substr($content, 0, self::MAX_CONTENT_BYTES)."\n\n[Content truncated — exceeded 1 MB limit]";
             }
 
             $type = $this->detectContentType($content);

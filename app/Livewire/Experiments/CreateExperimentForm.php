@@ -11,13 +11,21 @@ use Livewire\Component;
 class CreateExperimentForm extends Component
 {
     public string $title = '';
+
     public string $thesis = '';
+
     public string $track = 'growth';
+
     public int $budgetCapCredits = 10000;
+
     public int $maxIterations = 3;
+
     public int $maxOutboundCount = 100;
+
     public string $workflowId = '';
+
     public bool $autoApprove = true;
+
     public string $successCriteria = '';
 
     protected function rules(): array
@@ -25,7 +33,7 @@ class CreateExperimentForm extends Component
         return [
             'title' => 'required|string|max:255',
             'thesis' => 'required|string|max:1000',
-            'track' => 'required|in:' . implode(',', array_column(ExperimentTrack::cases(), 'value')),
+            'track' => 'required|in:'.implode(',', array_column(ExperimentTrack::cases(), 'value')),
             'budgetCapCredits' => 'required|integer|min:100|max:1000000',
             'maxIterations' => 'required|integer|min:1|max:20',
             'maxOutboundCount' => 'required|integer|min:1|max:10000',
@@ -65,7 +73,7 @@ class CreateExperimentForm extends Component
         }
 
         return array_values(array_filter(
-            array_map('trim', explode("\n", $this->successCriteria))
+            array_map('trim', explode("\n", $this->successCriteria)),
         ));
     }
 

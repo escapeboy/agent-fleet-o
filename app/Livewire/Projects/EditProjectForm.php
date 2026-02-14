@@ -19,30 +19,43 @@ class EditProjectForm extends Component
 
     // Basics
     public string $title = '';
+
     public string $description = '';
+
     public string $agentId = '';
+
     public string $workflowId = '';
 
     // Schedule (continuous only)
     public string $frequency = 'daily';
+
     public string $cronExpression = '';
+
     public string $timezone = 'UTC';
+
     public string $overlapPolicy = 'skip';
+
     public int $maxConsecutiveFailures = 3;
 
     // Delivery
     public string $deliveryChannel = 'none';
+
     public string $deliveryTarget = '';
+
     public string $deliveryFormat = 'summary';
 
     // Budget
     public ?int $perRunCap = null;
+
     public ?int $dailyCap = null;
+
     public ?int $weeklyCap = null;
+
     public ?int $monthlyCap = null;
 
     // Tools & Credentials
     public array $selectedToolIds = [];
+
     public array $selectedCredentialIds = [];
 
     public function mount(Project $project): void
@@ -94,7 +107,7 @@ class EditProjectForm extends Component
         ];
 
         if ($this->project->isContinuous()) {
-            $rules['frequency'] = 'required|in:' . implode(',', array_column(ScheduleFrequency::cases(), 'value'));
+            $rules['frequency'] = 'required|in:'.implode(',', array_column(ScheduleFrequency::cases(), 'value'));
             $rules['timezone'] = 'required|timezone';
             if ($this->frequency === 'cron') {
                 $rules['cronExpression'] = 'required|max:100';
@@ -175,6 +188,6 @@ class EditProjectForm extends Component
             'overlapPolicies' => $overlapPolicies,
             'tools' => $tools,
             'credentials' => $credentials,
-        ])->layout('layouts.app', ['header' => 'Edit: ' . $this->project->title]);
+        ])->layout('layouts.app', ['header' => 'Edit: '.$this->project->title]);
     }
 }

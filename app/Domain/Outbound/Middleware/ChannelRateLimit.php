@@ -2,6 +2,7 @@
 
 namespace App\Domain\Outbound\Middleware;
 
+use App\Domain\Outbound\Exceptions\RateLimitExceededException;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Redis;
@@ -12,7 +13,7 @@ class ChannelRateLimit
      * Check if the channel rate limit has been exceeded.
      * Uses Redis sorted sets with timestamps for sliding window.
      *
-     * @throws \App\Domain\Outbound\Exceptions\RateLimitExceededException
+     * @throws RateLimitExceededException
      */
     public function check(OutboundProposal $proposal): bool
     {

@@ -23,6 +23,7 @@ class ExperimentListPage extends Component
     public string $trackFilter = '';
 
     public string $sortField = 'created_at';
+
     public string $sortDirection = 'desc';
 
     public bool $showCreateForm = false;
@@ -59,7 +60,7 @@ class ExperimentListPage extends Component
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('title', 'ilike', "%{$this->search}%")
-                  ->orWhere('thesis', 'ilike', "%{$this->search}%");
+                    ->orWhere('thesis', 'ilike', "%{$this->search}%");
             });
         }
 

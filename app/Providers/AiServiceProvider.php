@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Domain\Budget\Actions\ReserveBudgetAction;
-use App\Domain\Budget\Actions\SettleBudgetAction;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Gateways\FallbackAiGateway;

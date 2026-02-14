@@ -6,14 +6,21 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Models\User;
+use Database\Factories\Domain\Workflow\WorkflowFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Workflow extends Model
 {
-    use BelongsToTeam, HasUuids;
+    use BelongsToTeam, HasFactory, HasUuids;
+
+    protected static function newFactory()
+    {
+        return WorkflowFactory::new();
+    }
 
     protected $fillable = [
         'team_id',

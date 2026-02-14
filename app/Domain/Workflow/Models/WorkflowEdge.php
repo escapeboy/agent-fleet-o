@@ -2,13 +2,20 @@
 
 namespace App\Domain\Workflow\Models;
 
+use Database\Factories\Domain\Workflow\WorkflowEdgeFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorkflowEdge extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
+
+    protected static function newFactory()
+    {
+        return WorkflowEdgeFactory::new();
+    }
 
     protected $fillable = [
         'workflow_id',

@@ -13,19 +13,30 @@ use Livewire\Component;
 class AgentDetailPage extends Component
 {
     public Agent $agent;
+
     public string $activeTab = 'overview';
 
     // Editing state
     public bool $editing = false;
+
     public string $editName = '';
+
     public string $editRole = '';
+
     public string $editGoal = '';
+
     public string $editBackstory = '';
+
     public string $editProvider = '';
+
     public string $editModel = '';
+
     public ?int $editBudgetCap = null;
+
     public array $editFallbackChain = [];
+
     public array $editSkillIds = [];
+
     public array $editToolIds = [];
 
     public function mount(Agent $agent): void
@@ -108,7 +119,7 @@ class AgentDetailPage extends Component
         $config = $this->agent->config ?? [];
         $filteredChain = array_filter(
             $this->editFallbackChain,
-            fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model'])
+            fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']),
         );
 
         if (! empty($filteredChain)) {

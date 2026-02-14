@@ -3,6 +3,7 @@
 namespace App\Domain\Crew\Jobs;
 
 use App\Domain\Crew\Actions\ValidateTaskOutputAction;
+use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Crew\Services\CrewOrchestrator;
@@ -37,8 +38,8 @@ class ValidateCrewTaskJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new CheckKillSwitch(),
-            new CheckBudgetAvailable(),
+            new CheckKillSwitch,
+            new CheckBudgetAvailable,
             new TenantRateLimit('ai-calls', 30),
         ];
     }
@@ -79,7 +80,7 @@ class ValidateCrewTaskJob implements ShouldQueue
 
             // QA agent failure is serious — fail the task
             $taskExecution->update([
-                'status' => \App\Domain\Crew\Enums\CrewTaskStatus::Failed,
+                'status' => CrewTaskStatus::Failed,
                 'error_message' => 'QA validation error: '.$e->getMessage(),
             ]);
 

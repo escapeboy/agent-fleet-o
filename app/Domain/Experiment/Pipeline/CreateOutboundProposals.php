@@ -12,6 +12,7 @@ use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Outbound\Enums\OutboundChannel;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
 use App\Domain\Outbound\Models\OutboundProposal;
+use Illuminate\Support\Str;
 
 class CreateOutboundProposals extends BaseStageJob
 {
@@ -54,7 +55,7 @@ class CreateOutboundProposals extends BaseStageJob
             })
             ->get();
 
-        $batchId = (string) \Illuminate\Support\Str::uuid();
+        $batchId = (string) Str::uuid();
         $proposals = [];
 
         foreach ($channels as $index => $channelSpec) {

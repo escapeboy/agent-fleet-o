@@ -12,23 +12,31 @@ class CreateCredentialForm extends Component
 
     // Step 1: Basics
     public string $name = '';
+
     public string $description = '';
+
     public string $credentialType = 'basic_auth';
 
     // Step 2: Secret data (type-specific)
     // BasicAuth
     public string $username = '';
+
     public string $password = '';
+
     public string $loginUrl = '';
 
     // ApiToken
     public string $token = '';
+
     public string $tokenType = 'bearer';
+
     public string $headerName = 'Authorization';
 
     // SSH Key
     public string $privateKey = '';
+
     public string $passphrase = '';
+
     public string $sshHost = '';
 
     // Custom KV

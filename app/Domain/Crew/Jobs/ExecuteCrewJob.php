@@ -34,8 +34,8 @@ class ExecuteCrewJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new CheckKillSwitch(),
-            new CheckBudgetAvailable(),
+            new CheckKillSwitch,
+            new CheckBudgetAvailable,
             new TenantRateLimit('experiments', 30),
             (new WithoutOverlapping($this->crewExecutionId))->releaseAfter(600),
         ];

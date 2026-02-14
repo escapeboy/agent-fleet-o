@@ -38,12 +38,12 @@ enum ExperimentStatus: string
 
     public function isPausable(): bool
     {
-        return !$this->isTerminal() && $this !== self::Paused;
+        return ! $this->isTerminal() && $this !== self::Paused;
     }
 
     public function isActive(): bool
     {
-        return !$this->isTerminal() && $this !== self::Paused;
+        return ! $this->isTerminal() && $this !== self::Paused;
     }
 
     public function isFailed(): bool

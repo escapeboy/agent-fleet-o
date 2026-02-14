@@ -20,7 +20,7 @@ class RejectAction
     {
         if ($approvalRequest->status !== ApprovalStatus::Pending) {
             throw new InvalidArgumentException(
-                "Approval request [{$approvalRequest->id}] is not pending."
+                "Approval request [{$approvalRequest->id}] is not pending.",
             );
         }
 

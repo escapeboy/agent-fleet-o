@@ -8,6 +8,7 @@ use Livewire\Component;
 class ExperimentTimeline extends Component
 {
     public Experiment $experiment;
+
     public ?string $expandedStageId = null;
 
     public function toggleStage(string $stageId): void

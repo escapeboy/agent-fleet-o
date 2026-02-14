@@ -13,6 +13,7 @@ abstract class ApiTestCase extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Team $team;
 
     protected function setUp(): void

@@ -14,18 +14,25 @@ class GlobalSettingsPage extends Component
 {
     // Budget settings
     public int $globalBudgetCap = 100000;
+
     public int $defaultExperimentBudgetCap = 10000;
+
     public int $budgetAlertThresholdPct = 80;
 
     // Rate limit settings
     public int $emailRateLimit = 10;
+
     public int $telegramRateLimit = 20;
+
     public int $slackRateLimit = 20;
+
     public int $webhookRateLimit = 50;
+
     public int $targetCooldownDays = 7;
 
     // Default pipeline LLM
     public string $defaultLlmProvider = 'anthropic';
+
     public string $defaultLlmModel = 'claude-sonnet-4-5';
 
     // Approval settings
@@ -33,7 +40,9 @@ class GlobalSettingsPage extends Component
 
     // Blacklist form
     public string $blacklistType = 'email';
+
     public string $blacklistValue = '';
+
     public string $blacklistReason = '';
 
     public function mount(): void

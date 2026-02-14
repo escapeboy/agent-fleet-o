@@ -4,6 +4,7 @@ namespace App\Domain\Signal\Models;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Database\Factories\Domain\Signal\SignalFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +38,11 @@ class Signal extends Model
             'received_at' => 'datetime',
             'scored_at' => 'datetime',
         ];
+    }
+
+    protected static function newFactory()
+    {
+        return SignalFactory::new();
     }
 
     public function experiment(): BelongsTo

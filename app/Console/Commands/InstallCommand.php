@@ -110,7 +110,7 @@ class InstallCommand extends Command
 
         $this->newLine();
         $this->components->info('Installation complete!');
-        $this->components->info('Visit ' . config('app.url') . ' to get started.');
+        $this->components->info('Visit '.config('app.url').' to get started.');
 
         return self::SUCCESS;
     }
@@ -121,9 +121,9 @@ class InstallCommand extends Command
 
         // PHP version
         if (version_compare(PHP_VERSION, '8.4.0', '>=')) {
-            $this->components->twoColumnDetail('PHP ' . PHP_VERSION, '<fg=green>OK</>');
+            $this->components->twoColumnDetail('PHP '.PHP_VERSION, '<fg=green>OK</>');
         } else {
-            $this->components->twoColumnDetail('PHP ' . PHP_VERSION, '<fg=red>FAIL — PHP 8.4+ required</>');
+            $this->components->twoColumnDetail('PHP '.PHP_VERSION, '<fg=red>FAIL — PHP 8.4+ required</>');
             $ok = false;
         }
 
@@ -131,9 +131,9 @@ class InstallCommand extends Command
         try {
             DB::connection()->getPdo();
             $version = DB::connection()->getPdo()->getAttribute(\PDO::ATTR_SERVER_VERSION);
-            $this->components->twoColumnDetail('PostgreSQL ' . $version, '<fg=green>OK</>');
+            $this->components->twoColumnDetail('PostgreSQL '.$version, '<fg=green>OK</>');
         } catch (\Exception $e) {
-            $this->components->twoColumnDetail('PostgreSQL', '<fg=red>FAIL — ' . $e->getMessage() . '</>');
+            $this->components->twoColumnDetail('PostgreSQL', '<fg=red>FAIL — '.$e->getMessage().'</>');
             $ok = false;
         }
 
@@ -142,7 +142,7 @@ class InstallCommand extends Command
             Redis::connection()->ping();
             $this->components->twoColumnDetail('Redis', '<fg=green>OK</>');
         } catch (\Exception $e) {
-            $this->components->twoColumnDetail('Redis', '<fg=red>FAIL — ' . $e->getMessage() . '</>');
+            $this->components->twoColumnDetail('Redis', '<fg=red>FAIL — '.$e->getMessage().'</>');
             $ok = false;
         }
 
@@ -180,7 +180,7 @@ class InstallCommand extends Command
                     'name' => config('app.name', 'Agent Fleet'),
                     'owner_id' => $user->id,
                     'plan' => 'community',
-                ]
+                ],
             );
 
             // If team already existed, update owner
@@ -208,7 +208,7 @@ class InstallCommand extends Command
         $choice = $this->components->choice(
             'Select LLM provider',
             array_map(fn ($p) => $p['name'], $providers),
-            3
+            3,
         );
 
         $selected = null;
@@ -221,6 +221,7 @@ class InstallCommand extends Command
 
         if ($selected === 'skip' || $selected === null) {
             $this->components->info('You can add LLM API keys later in Settings or .env');
+
             return;
         }
 
@@ -228,6 +229,7 @@ class InstallCommand extends Command
 
         if (! $apiKey) {
             $this->components->warn('No key entered. You can configure it later in Settings.');
+
             return;
         }
 
@@ -268,13 +270,14 @@ class InstallCommand extends Command
                     ]);
                 }
             }
+
             return;
         }
 
         foreach ($detected as $key => $agent) {
             $this->components->twoColumnDetail(
                 "{$agent['name']} v{$agent['version']}",
-                "<fg=green>Available at {$agent['path']}</>"
+                "<fg=green>Available at {$agent['path']}</>",
             );
         }
 

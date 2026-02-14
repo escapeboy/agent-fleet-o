@@ -5,13 +5,20 @@ namespace App\Domain\Project\Models;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Enums\ProjectRunStatus;
+use Database\Factories\Domain\Project\ProjectRunFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProjectRun extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
+
+    protected static function newFactory()
+    {
+        return ProjectRunFactory::new();
+    }
 
     protected $fillable = [
         'project_id',
@@ -79,13 +86,13 @@ class ProjectRun extends Model
         }
 
         if ($seconds < 60) {
-            return $seconds . 's';
+            return $seconds.'s';
         }
 
         if ($seconds < 3600) {
-            return round($seconds / 60) . 'm';
+            return round($seconds / 60).'m';
         }
 
-        return round($seconds / 3600, 1) . 'h';
+        return round($seconds / 3600, 1).'h';
     }
 }

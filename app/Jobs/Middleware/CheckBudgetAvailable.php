@@ -11,15 +11,17 @@ class CheckBudgetAvailable
 {
     public function handle(object $job, Closure $next): void
     {
-        if (!property_exists($job, 'experimentId')) {
+        if (! property_exists($job, 'experimentId')) {
             $next($job);
+
             return;
         }
 
         $experiment = Experiment::find($job->experimentId);
 
-        if (!$experiment) {
+        if (! $experiment) {
             $next($job);
+
             return;
         }
 
@@ -32,6 +34,7 @@ class CheckBudgetAvailable
                 'cap' => $experiment->budget_cap_credits,
                 'job' => class_basename($job),
             ]);
+
             return;
         }
 
@@ -47,6 +50,7 @@ class CheckBudgetAvailable
                 'balance' => $balance,
                 'job' => class_basename($job),
             ]);
+
             return;
         }
 

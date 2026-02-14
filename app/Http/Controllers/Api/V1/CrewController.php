@@ -42,7 +42,7 @@ class CrewController extends Controller
     {
         return new CrewResource(
             $crew->load(['coordinator', 'qaAgent', 'members.agent'])
-                ->loadCount('executions')
+                ->loadCount('executions'),
         );
     }
 
@@ -148,7 +148,7 @@ class CrewController extends Controller
     public function executions(Request $request, Crew $crew): AnonymousResourceCollection
     {
         $executions = QueryBuilder::for(
-            CrewExecution::query()->where('crew_id', $crew->id)
+            CrewExecution::query()->where('crew_id', $crew->id),
         )
             ->allowedFilters([
                 AllowedFilter::exact('status'),

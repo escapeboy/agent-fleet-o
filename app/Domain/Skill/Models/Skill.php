@@ -8,7 +8,9 @@ use App\Domain\Skill\Enums\ExecutionType;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Enums\SkillType;
+use Database\Factories\Domain\Skill\SkillFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,7 +18,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Skill extends Model
 {
-    use BelongsToTeam, HasUuids, SoftDeletes;
+    use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
+
+    protected static function newFactory()
+    {
+        return SkillFactory::new();
+    }
 
     protected $fillable = [
         'team_id',

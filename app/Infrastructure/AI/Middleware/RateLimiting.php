@@ -5,6 +5,7 @@ namespace App\Infrastructure\AI\Middleware;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\Exceptions\RateLimitExceededException;
 use Closure;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -20,8 +21,8 @@ class RateLimiting implements AiMiddlewareInterface
         if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
             $retryAfter = RateLimiter::availableIn($key);
 
-            throw new \App\Infrastructure\AI\Exceptions\RateLimitExceededException(
-                "Rate limit exceeded for provider {$request->provider}. Retry after {$retryAfter}s."
+            throw new RateLimitExceededException(
+                "Rate limit exceeded for provider {$request->provider}. Retry after {$retryAfter}s.",
             );
         }
 

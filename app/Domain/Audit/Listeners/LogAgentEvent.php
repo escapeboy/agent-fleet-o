@@ -9,7 +9,7 @@ class LogAgentEvent
 {
     public function handle(object $event): void
     {
-        if (!isset($event->agent) || !$event->agent instanceof Agent) {
+        if (! isset($event->agent) || ! $event->agent instanceof Agent) {
             return;
         }
 

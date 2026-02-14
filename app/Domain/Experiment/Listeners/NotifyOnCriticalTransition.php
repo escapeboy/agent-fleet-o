@@ -2,7 +2,6 @@
 
 namespace App\Domain\Experiment\Listeners;
 
-use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use Illuminate\Support\Facades\Log;
 
@@ -17,7 +16,7 @@ class NotifyOnCriticalTransition
 
     public function handle(ExperimentTransitioned $event): void
     {
-        if (!in_array($event->toState->value, self::CRITICAL_STATES)) {
+        if (! in_array($event->toState->value, self::CRITICAL_STATES)) {
             return;
         }
 

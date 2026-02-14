@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\DTOs;
 
 use Prism\Prism\Schema\ObjectSchema;
+use Prism\Prism\Tool;
 
 final readonly class AiRequestDTO
 {
@@ -22,7 +23,7 @@ final readonly class AiRequestDTO
         public ?string $idempotencyKey = null,
         public float $temperature = 0.7,
         public ?array $fallbackChain = null,
-        /** @var array<\Prism\Prism\Tool>|null */
+        /** @var array<Tool>|null */
         public ?array $tools = null,
         public int $maxSteps = 1,
         public ?string $toolChoice = null,

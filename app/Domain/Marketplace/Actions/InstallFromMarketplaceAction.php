@@ -38,7 +38,7 @@ class InstallFromMarketplaceAction
                 $skill = Skill::create([
                     'team_id' => $teamId,
                     'name' => $listing->name,
-                    'slug' => Str::slug($listing->name) . '-' . Str::random(4),
+                    'slug' => Str::slug($listing->name).'-'.Str::random(4),
                     'description' => $listing->description,
                     'type' => SkillType::from($snapshot['type'] ?? 'llm'),
                     'execution_type' => ExecutionType::Sync,
@@ -56,7 +56,7 @@ class InstallFromMarketplaceAction
                 $agent = Agent::create([
                     'team_id' => $teamId,
                     'name' => $listing->name,
-                    'slug' => Str::slug($listing->name) . '-' . Str::random(4),
+                    'slug' => Str::slug($listing->name).'-'.Str::random(4),
                     'role' => $snapshot['role'] ?? null,
                     'goal' => $snapshot['goal'] ?? null,
                     'provider' => $snapshot['provider'] ?? 'anthropic',
@@ -96,7 +96,7 @@ class InstallFromMarketplaceAction
             'team_id' => $teamId,
             'user_id' => $userId,
             'name' => $listing->name,
-            'slug' => Str::slug($listing->name) . '-' . Str::random(6),
+            'slug' => Str::slug($listing->name).'-'.Str::random(6),
             'description' => $snapshot['description'] ?? $listing->description,
             'status' => WorkflowStatus::Draft,
             'version' => 1,

@@ -21,6 +21,7 @@ use Livewire\Component;
 class ProjectDetailPage extends Component
 {
     public Project $project;
+
     public string $activeTab = 'activity';
 
     public function mount(Project $project): void
@@ -81,7 +82,7 @@ class ProjectDetailPage extends Component
 
     public function triggerRun(): void
     {
-        $key = 'trigger-run:' . $this->project->id;
+        $key = 'trigger-run:'.$this->project->id;
 
         if (RateLimiter::tooManyAttempts($key, 3)) {
             $seconds = RateLimiter::availableIn($key);

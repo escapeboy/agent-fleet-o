@@ -10,7 +10,6 @@ use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Pipeline\ExecutePlaybookStepJob;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\ProjectRun;
-use App\Domain\Workflow\Enums\WorkflowNodeType;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
@@ -144,7 +143,7 @@ class WorkflowGraphExecutor
         $nextNodeIds = $this->filterReadyNodes($nextNodeIds, $graph['edges'], $steps);
 
         $executableNodeIds = $this->resolveExecutableNodes(
-            $nextNodeIds, $nodeMap, $edgeMap, $adjacency, $steps, $experiment, $maxLoopIterations
+            $nextNodeIds, $nodeMap, $edgeMap, $adjacency, $steps, $experiment, $maxLoopIterations,
         );
 
         if (empty($executableNodeIds)) {
@@ -177,9 +176,9 @@ class WorkflowGraphExecutor
      * Resolve which nodes are actually executable from a set of candidate node IDs.
      * Traverses through conditional nodes to find agent/end nodes.
      *
-     * @param bool $allowLoopReset When true, completed steps may be reset for loop re-execution.
-     *                             When false, completed steps are traversed through to find pending ones.
-     *                             Use false for initial/retry execution, true for back-edge loops.
+     * @param  bool  $allowLoopReset  When true, completed steps may be reset for loop re-execution.
+     *                                When false, completed steps are traversed through to find pending ones.
+     *                                Use false for initial/retry execution, true for back-edge loops.
      */
     private function resolveExecutableNodes(
         array $candidateNodeIds,
@@ -387,7 +386,7 @@ class WorkflowGraphExecutor
         $project = $projectRun?->project;
 
         if ($project && $project->type === ProjectType::OneShot) {
-            return [ExperimentStatus::Completed, $reason . ' (one-shot project)'];
+            return [ExperimentStatus::Completed, $reason.' (one-shot project)'];
         }
 
         return [ExperimentStatus::CollectingMetrics, $reason];
@@ -439,7 +438,7 @@ class WorkflowGraphExecutor
         ]);
 
         Bus::batch($jobs)
-            ->name("workflow:{$experimentId}:batch:" . implode('-', array_slice($dispatchedNodeIds, 0, 3)))
+            ->name("workflow:{$experimentId}:batch:".implode('-', array_slice($dispatchedNodeIds, 0, 3)))
             ->onQueue('experiments')
             ->allowFailures()
             ->then(function () use ($experimentId, $dispatchedNodeIds) {

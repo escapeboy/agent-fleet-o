@@ -37,7 +37,7 @@ class TriggerProjectRunAction
             // Create experiment for this run
             $experiment = $this->createExperiment->execute(
                 userId: $project->user_id,
-                title: $project->title . ' — Run #' . $runNumber,
+                title: $project->title.' — Run #'.$runNumber,
                 thesis: $project->goal ?? $project->description ?? $project->title,
                 track: 'growth',
                 budgetCapCredits: $project->budget_config['per_run_cap'] ?? 10000,

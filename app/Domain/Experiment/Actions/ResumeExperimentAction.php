@@ -16,7 +16,7 @@ class ResumeExperimentAction
     {
         if ($experiment->status !== ExperimentStatus::Paused) {
             throw new InvalidArgumentException(
-                "Cannot resume experiment [{$experiment->id}]: not in paused state."
+                "Cannot resume experiment [{$experiment->id}]: not in paused state.",
             );
         }
 

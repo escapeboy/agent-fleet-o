@@ -27,7 +27,7 @@ return new class extends Migration
             if (DB::getDriverName() === 'pgsql') {
                 $table->rawIndex(
                     "(status = 'pending')",
-                    'approval_requests_pending_idx'
+                    'approval_requests_pending_idx',
                 );
             }
         });

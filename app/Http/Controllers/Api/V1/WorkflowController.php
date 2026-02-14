@@ -7,7 +7,6 @@ use App\Domain\Workflow\Actions\DeleteWorkflowAction;
 use App\Domain\Workflow\Actions\EstimateWorkflowCostAction;
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
-use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\WorkflowResource;
@@ -138,7 +137,7 @@ class WorkflowController extends Controller
     {
         $newWorkflow = $action->execute(
             userId: request()->user()->id,
-            name: $workflow->name . ' (copy)',
+            name: $workflow->name.' (copy)',
             description: $workflow->description,
             nodes: $workflow->nodes->map(fn ($n) => [
                 'type' => $n->type->value,

@@ -12,6 +12,7 @@ class ProjectRunsTable extends Component
     use WithPagination;
 
     public Project $project;
+
     public string $statusFilter = '';
 
     public function mount(Project $project): void

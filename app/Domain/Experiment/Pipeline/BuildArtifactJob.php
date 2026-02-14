@@ -29,8 +29,11 @@ class BuildArtifactJob implements ShouldQueue
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 0;            // Unlimited — release() cycling for lock doesn't exhaust
+
     public int $maxExceptions = 2;    // Only 2 real failures cause permanent failure
+
     public int $timeout = 960;
+
     public int $backoff = 30;
 
     public function __construct(
@@ -52,8 +55,8 @@ class BuildArtifactJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new CheckKillSwitch(),
-            new CheckBudgetAvailable(),
+            new CheckKillSwitch,
+            new CheckBudgetAvailable,
             new TenantRateLimit('ai-calls', 30),
         ];
     }
@@ -113,7 +116,7 @@ class BuildArtifactJob implements ShouldQueue
                 provider: $llm['provider'],
                 model: $llm['model'],
                 systemPrompt: 'You are a content builder agent. Generate the requested artifact content. Return a JSON object with: content (string - the actual artifact content), metadata (object - any relevant metadata about the artifact).',
-                userPrompt: "Build this artifact:\n\nType: {$artifactSpec['type']}\nName: {$artifactSpec['name']}\nDescription: {$artifactSpec['description']}\n\nExperiment context:\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nPlan: " . json_encode($plan),
+                userPrompt: "Build this artifact:\n\nType: {$artifactSpec['type']}\nName: {$artifactSpec['name']}\nDescription: {$artifactSpec['description']}\n\nExperiment context:\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nPlan: ".json_encode($plan),
                 maxTokens: 2048,
                 userId: $experiment->user_id,
                 teamId: $experiment->team_id,

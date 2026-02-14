@@ -3,13 +3,20 @@
 namespace App\Domain\Skill\Models;
 
 use App\Models\User;
+use Database\Factories\Domain\Skill\SkillVersionFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SkillVersion extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
+
+    protected static function newFactory()
+    {
+        return SkillVersionFactory::new();
+    }
 
     protected $fillable = [
         'skill_id',

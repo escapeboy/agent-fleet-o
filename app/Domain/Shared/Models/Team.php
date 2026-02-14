@@ -4,6 +4,7 @@ namespace App\Domain\Shared\Models;
 
 use App\Domain\Shared\Enums\TeamRole;
 use App\Models\User;
+use Database\Factories\Domain\Shared\TeamFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,11 @@ class Team extends Model
         return [
             'settings' => 'array',
         ];
+    }
+
+    protected static function newFactory()
+    {
+        return TeamFactory::new();
     }
 
     public function owner(): BelongsTo

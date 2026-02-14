@@ -13,12 +13,19 @@ use Livewire\Component;
 class PublishForm extends Component
 {
     public string $itemType = 'skill';
+
     public string $itemId = '';
+
     public string $name = '';
+
     public string $description = '';
+
     public string $readme = '';
+
     public string $category = '';
+
     public string $tagsInput = '';
+
     public string $visibility = 'public';
 
     protected function rules(): array
@@ -63,6 +70,7 @@ class PublishForm extends Component
 
         if (! $team) {
             session()->flash('error', 'You must belong to a team to publish.');
+
             return;
         }
 

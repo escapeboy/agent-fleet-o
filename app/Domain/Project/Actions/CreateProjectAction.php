@@ -118,7 +118,7 @@ class CreateProjectAction
                 // Circular dependency check
                 if ($this->wouldCreateCycle($project->id, $dependsOnId)) {
                     throw new \InvalidArgumentException(
-                        "Adding dependency on project '{$dependsOnId}' would create a circular dependency."
+                        "Adding dependency on project '{$dependsOnId}' would create a circular dependency.",
                     );
                 }
 
@@ -126,7 +126,7 @@ class CreateProjectAction
                     'project_id' => $project->id,
                     'depends_on_id' => $dependsOnId,
                     'team_id' => $teamId,
-                    'alias' => $dep['alias'] ?? 'dependency_' . $index,
+                    'alias' => $dep['alias'] ?? 'dependency_'.$index,
                     'reference_type' => $dep['reference_type'] ?? 'latest_run',
                     'specific_run_id' => $dep['specific_run_id'] ?? null,
                     'is_required' => $dep['is_required'] ?? true,

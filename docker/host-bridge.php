@@ -33,11 +33,11 @@ if (! function_exists('env')) {
 
         // Cast common string booleans/nulls
         return match (strtolower($value)) {
-            'true', '(true)'   => true,
+            'true', '(true)' => true,
             'false', '(false)' => false,
-            'null', '(null)'   => null,
+            'null', '(null)' => null,
             'empty', '(empty)' => '',
-            default            => $value,
+            default => $value,
         };
     }
 }
@@ -47,7 +47,7 @@ if (! function_exists('env')) {
 // ---------------------------------------------------------------------------
 
 $bridgeSecret = getenv('LOCAL_AGENT_BRIDGE_SECRET') ?: '';
-$configPath   = __DIR__ . '/../config/local_agents.php';
+$configPath = __DIR__.'/../config/local_agents.php';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,7 +59,7 @@ function json_response(array $data, int $status = 200): void
 
     http_response_code($status);
     header('Content-Type: application/json');
-    header('Content-Length: ' . strlen($body));
+    header('Content-Length: '.strlen($body));
     header('Connection: close');
     echo $body;
 
@@ -79,6 +79,7 @@ function authenticate(string $secret): bool
 {
     if (empty($secret)) {
         json_response(['error' => 'Bridge secret not configured on host'], 500);
+
         return false;
     }
 
@@ -86,6 +87,7 @@ function authenticate(string $secret): bool
 
     if (! preg_match('/^Bearer\s+(.+)$/i', $header, $m) || ! hash_equals($secret, $m[1])) {
         json_response(['error' => 'Unauthorized'], 401);
+
         return false;
     }
 
@@ -100,7 +102,7 @@ function which(string $binary): ?string
         2 => ['pipe', 'w'],
     ];
 
-    $process = proc_open("which " . escapeshellarg($binary), $descriptors, $pipes);
+    $process = proc_open('which '.escapeshellarg($binary), $descriptors, $pipes);
 
     if (! is_resource($process)) {
         return null;
@@ -166,7 +168,7 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
     // to refuse to start.
     $cleanEnv = 'unset CLAUDECODE;';
 
-    $preamble = $closeInherited . ' ' . $cleanEnv . ' ';
+    $preamble = $closeInherited.' '.$cleanEnv.' ';
 
     // Use stream-json when streaming for real-time output, json otherwise.
     // stream-json emits NDJSON events (assistant, content_block_delta, result)
@@ -177,9 +179,9 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
     $ccStreamFlags = $streaming ? ' --include-partial-messages --verbose' : '';
 
     return match ($agentKey) {
-        'codex'       => $preamble . $bin . ' exec --json --full-auto',
-        'claude-code' => $preamble . $bin . " --print --output-format {$ccOutputFormat}{$ccStreamFlags} --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' --max-budget-usd 2.0",
-        default       => null,
+        'codex' => $preamble.$bin.' exec --json --full-auto',
+        'claude-code' => $preamble.$bin." --print --output-format {$ccOutputFormat}{$ccStreamFlags} --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' --max-budget-usd 2.0",
+        default => null,
     };
 }
 
@@ -188,7 +190,7 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
  */
 function stream_event(array $data): void
 {
-    echo json_encode($data, JSON_UNESCAPED_SLASHES) . "\n";
+    echo json_encode($data, JSON_UNESCAPED_SLASHES)."\n";
     flush();
 }
 
@@ -197,15 +199,16 @@ function stream_event(array $data): void
 // ---------------------------------------------------------------------------
 
 $method = $_SERVER['REQUEST_METHOD'];
-$path   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // --- GET /health (no auth) ------------------------------------------------
 if ($method === 'GET' && $path === '/health') {
     json_response([
-        'status'      => 'ok',
+        'status' => 'ok',
         'php_version' => PHP_VERSION,
-        'pid'         => getmypid(),
+        'pid' => getmypid(),
     ]);
+
     return true;
 }
 
@@ -217,6 +220,7 @@ if ($method === 'GET' && $path === '/discover') {
 
     if (! file_exists($configPath)) {
         json_response(['error' => 'local_agents.php config not found'], 500);
+
         return true;
     }
 
@@ -243,13 +247,14 @@ if ($method === 'GET' && $path === '/discover') {
         }
 
         $detected[$key] = [
-            'name'    => $agentConfig['name'] ?? $key,
+            'name' => $agentConfig['name'] ?? $key,
             'version' => $version,
-            'path'    => $path_found,
+            'path' => $path_found,
         ];
     }
 
     json_response(['agents' => $detected]);
+
     return true;
 }
 
@@ -263,18 +268,20 @@ if ($method === 'POST' && $path === '/execute') {
 
     if (! $body || empty($body['agent_key']) || ! isset($body['prompt'])) {
         json_response(['error' => 'Missing agent_key or prompt'], 400);
+
         return true;
     }
 
-    $agentKey  = $body['agent_key'];
-    $prompt    = $body['prompt'];
-    $timeout   = (int) ($body['timeout'] ?? 300);
-    $workdir   = $body['working_directory'] ?? null;
+    $agentKey = $body['agent_key'];
+    $prompt = $body['prompt'];
+    $timeout = (int) ($body['timeout'] ?? 300);
+    $workdir = $body['working_directory'] ?? null;
     $streaming = (bool) ($body['stream'] ?? false);
 
     // Validate agent_key against config
     if (! file_exists($configPath)) {
         json_response(['error' => 'local_agents.php config not found'], 500);
+
         return true;
     }
 
@@ -283,6 +290,7 @@ if ($method === 'POST' && $path === '/execute') {
 
     if (! isset($agents[$agentKey])) {
         json_response(['error' => "Unknown agent: {$agentKey}"], 400);
+
         return true;
     }
 
@@ -291,10 +299,11 @@ if ($method === 'POST' && $path === '/execute') {
 
     if (! $binaryPath) {
         json_response([
-            'success'   => false,
-            'error'     => "Agent binary '{$agentConfig['binary']}' not found on host",
+            'success' => false,
+            'error' => "Agent binary '{$agentConfig['binary']}' not found on host",
             'exit_code' => -1,
         ], 404);
+
         return true;
     }
 
@@ -302,14 +311,15 @@ if ($method === 'POST' && $path === '/execute') {
 
     if (! $command) {
         json_response([
-            'success'   => false,
-            'error'     => "No command template for agent: {$agentKey}",
+            'success' => false,
+            'error' => "No command template for agent: {$agentKey}",
             'exit_code' => -1,
         ], 400);
+
         return true;
     }
 
-    error_log("Bridge: executing [{$agentKey}] streaming=" . ($streaming ? 'yes' : 'no'));
+    error_log("Bridge: executing [{$agentKey}] streaming=".($streaming ? 'yes' : 'no'));
     error_log("Bridge: command = {$command}");
 
     // Resolve working directory
@@ -333,13 +343,15 @@ if ($method === 'POST' && $path === '/execute') {
         if ($streaming) {
             header('Content-Type: application/x-ndjson');
             stream_event(['type' => 'error', 'error' => 'Failed to spawn process']);
+
             return true;
         }
         json_response([
-            'success'   => false,
-            'error'     => 'Failed to spawn process',
+            'success' => false,
+            'error' => 'Failed to spawn process',
             'exit_code' => -1,
         ], 500);
+
         return true;
     }
 
@@ -435,14 +447,15 @@ if ($method === 'POST' && $path === '/execute') {
 
                 $elapsedMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
                 stream_event([
-                    'type'              => 'done',
-                    'success'           => false,
-                    'error'             => "Process timed out after {$timeout}s",
-                    'output'            => $stdout,
-                    'stderr'            => $stderr,
-                    'exit_code'         => -1,
+                    'type' => 'done',
+                    'success' => false,
+                    'error' => "Process timed out after {$timeout}s",
+                    'output' => $stdout,
+                    'stderr' => $stderr,
+                    'exit_code' => -1,
                     'execution_time_ms' => $elapsedMs,
                 ]);
+
                 return true;
             }
 
@@ -470,9 +483,9 @@ if ($method === 'POST' && $path === '/execute') {
         $exitCode = proc_close($process);
         $elapsedMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
-        error_log("Bridge: [{$agentKey}] exited code={$exitCode} stdout_len=" . strlen($stdout) . " stderr_len=" . strlen($stderr) . " elapsed={$elapsedMs}ms");
+        error_log("Bridge: [{$agentKey}] exited code={$exitCode} stdout_len=".strlen($stdout).' stderr_len='.strlen($stderr)." elapsed={$elapsedMs}ms");
         if ($stderr !== '') {
-            error_log("Bridge: [{$agentKey}] stderr: " . substr($stderr, 0, 500));
+            error_log("Bridge: [{$agentKey}] stderr: ".substr($stderr, 0, 500));
         }
         if ($stdout === '' && $exitCode !== 0) {
             error_log("Bridge: [{$agentKey}] WARNING: no stdout produced, exit code {$exitCode}");
@@ -483,17 +496,17 @@ if ($method === 'POST' && $path === '/execute') {
         if ($exitCode !== 0) {
             $errorMsg = $stderr ?: 'Process exited with non-zero code';
             if (empty($stderr) && ! empty($stdout)) {
-                $errorMsg .= ' | stdout: ' . substr($stdout, 0, 300);
+                $errorMsg .= ' | stdout: '.substr($stdout, 0, 300);
             }
         }
 
         stream_event([
-            'type'              => 'done',
-            'success'           => $exitCode === 0,
-            'output'            => $stdout,
-            'stderr'            => $stderr,
-            'error'             => $errorMsg,
-            'exit_code'         => $exitCode,
+            'type' => 'done',
+            'success' => $exitCode === 0,
+            'output' => $stdout,
+            'stderr' => $stderr,
+            'error' => $errorMsg,
+            'exit_code' => $exitCode,
             'execution_time_ms' => $elapsedMs,
         ]);
 
@@ -541,11 +554,12 @@ if ($method === 'POST' && $path === '/execute') {
 
             $elapsedMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
             json_response([
-                'success'           => false,
-                'error'             => "Process timed out after {$timeout}s",
-                'exit_code'         => -1,
+                'success' => false,
+                'error' => "Process timed out after {$timeout}s",
+                'exit_code' => -1,
                 'execution_time_ms' => $elapsedMs,
             ], 504);
+
             return true;
         }
 
@@ -568,41 +582,44 @@ if ($method === 'POST' && $path === '/execute') {
     $exitCode = proc_close($process);
     $elapsedMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
-    error_log("Bridge: [{$agentKey}] exited code={$exitCode} stdout_len=" . strlen($stdout) . " stderr_len=" . strlen($stderr) . " elapsed={$elapsedMs}ms");
+    error_log("Bridge: [{$agentKey}] exited code={$exitCode} stdout_len=".strlen($stdout).' stderr_len='.strlen($stderr)." elapsed={$elapsedMs}ms");
     if ($stderr !== '') {
-        error_log("Bridge: [{$agentKey}] stderr: " . substr($stderr, 0, 500));
+        error_log("Bridge: [{$agentKey}] stderr: ".substr($stderr, 0, 500));
     }
 
     if ($exitCode !== 0) {
         // When stderr is empty (common for Claude Code which reports errors in JSON stdout),
         // include a stdout snippet in the error for diagnostics
         $errorMsg = $stderr ?: 'Process exited with non-zero code';
-        if (empty($stderr) && !empty($stdout)) {
+        if (empty($stderr) && ! empty($stdout)) {
             $preview = substr($stdout, 0, 300);
-            $errorMsg .= ' | stdout: ' . $preview;
+            $errorMsg .= ' | stdout: '.$preview;
         }
 
         json_response([
-            'success'           => false,
-            'output'            => $stdout,
-            'stderr'            => $stderr,
-            'error'             => $errorMsg,
-            'exit_code'         => $exitCode,
+            'success' => false,
+            'output' => $stdout,
+            'stderr' => $stderr,
+            'error' => $errorMsg,
+            'exit_code' => $exitCode,
             'execution_time_ms' => $elapsedMs,
         ]);
+
         return true;
     }
 
     json_response([
-        'success'           => true,
-        'output'            => $stdout,
-        'stderr'            => $stderr,
-        'exit_code'         => 0,
+        'success' => true,
+        'output' => $stdout,
+        'stderr' => $stderr,
+        'exit_code' => 0,
         'execution_time_ms' => $elapsedMs,
     ]);
+
     return true;
 }
 
 // --- 404 fallback ---------------------------------------------------------
 json_response(['error' => 'Not found'], 404);
+
 return true;
