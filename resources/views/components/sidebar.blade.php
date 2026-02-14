@@ -42,6 +42,10 @@
             Credentials
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*')" icon="circle-stack">
+            Memory
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('marketplace.index') }}" :active="request()->routeIs('marketplace.*')" icon="shopping-bag">
             Marketplace
         </x-sidebar-link>
