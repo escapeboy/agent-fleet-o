@@ -27,10 +27,15 @@ return new class extends Migration
             $table->index(['agent_id', 'project_id']);
         });
 
-        // PostgreSQL-specific: vector column and indexes (skipped for SQLite in tests)
+        // PostgreSQL-specific: vector column and indexes (requires pgvector extension)
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement('ALTER TABLE memories ADD COLUMN embedding vector(1536)');
-            DB::statement('CREATE INDEX memories_embedding_idx ON memories USING hnsw (embedding vector_cosine_ops)');
+            try {
+                DB::statement('ALTER TABLE memories ADD COLUMN embedding vector(1536)');
+                DB::statement('CREATE INDEX memories_embedding_idx ON memories USING hnsw (embedding vector_cosine_ops)');
+            } catch (Throwable) {
+                // pgvector not available — embedding column skipped, memory search will use text-only fallback
+            }
+
             DB::statement('CREATE INDEX memories_metadata_idx ON memories USING gin (metadata)');
         }
     }
