@@ -36,6 +36,10 @@
                     <x-form-input wire:model="telegramRateLimit" label="Telegram (per hour)" type="number" min="1" />
                     <x-form-input wire:model="slackRateLimit" label="Slack (per hour)" type="number" min="1" />
                     <x-form-input wire:model="webhookRateLimit" label="Webhook (per hour)" type="number" min="1" />
+                    <x-form-input wire:model="discordRateLimit" label="Discord (per hour)" type="number" min="1" />
+                    <x-form-input wire:model="teamsRateLimit" label="Teams (per hour)" type="number" min="1" />
+                    <x-form-input wire:model="googleChatRateLimit" label="Google Chat (per hour)" type="number" min="1" />
+                    <x-form-input wire:model="whatsappRateLimit" label="WhatsApp (per hour)" type="number" min="1" />
                 </div>
                 <x-form-input wire:model="targetCooldownDays" label="Target Cooldown (days)" type="number" min="0" />
 
@@ -160,6 +164,53 @@
                     <p class="text-sm text-gray-400">Local agents are disabled. Set <code class="text-xs">LOCAL_AGENTS_ENABLED=true</code> in .env to enable.</p>
                 @endif
             </div>
+        </div>
+
+        {{-- Outbound Connectors Status --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 class="text-sm font-medium text-gray-500">Outbound Connectors</h3>
+            <p class="mt-1 text-xs text-gray-400">Status of configured outbound channels. Configure credentials via .env file.</p>
+            <div class="mt-4 space-y-2">
+                @php
+                    $connectors = [
+                        ['name' => 'Email (SMTP)', 'configured' => !empty(config('mail.mailers.smtp.host'))],
+                        ['name' => 'Telegram', 'configured' => !empty(config('services.telegram.bot_token', env('TELEGRAM_BOT_TOKEN')))],
+                        ['name' => 'Slack', 'configured' => !empty(config('services.slack.notifications.bot_user_oauth_token'))],
+                        ['name' => 'WhatsApp', 'configured' => !empty(config('services.whatsapp.access_token'))],
+                        ['name' => 'Discord', 'configured' => !empty(config('services.discord.bot_token'))],
+                        ['name' => 'Microsoft Teams', 'configured' => !empty(config('services.teams.webhook_url'))],
+                        ['name' => 'Google Chat', 'configured' => !empty(config('services.google_chat.webhook_url'))],
+                        ['name' => 'Webhook (generic)', 'configured' => true],
+                    ];
+                @endphp
+                @foreach($connectors as $connector)
+                    <div class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2">
+                        <span class="text-sm text-gray-900">{{ $connector['name'] }}</span>
+                        @if($connector['configured'])
+                            <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Configured</span>
+                        @else
+                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Not configured</span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Media Analysis --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 class="text-sm font-medium text-gray-500">Media Analysis</h3>
+            <p class="mt-1 text-xs text-gray-400">When enabled, signals with media attachments (images, PDFs) will be automatically analyzed using vision-capable LLMs.</p>
+            <form wire:submit="saveMediaAnalysisSettings" class="mt-4 space-y-4">
+                <label class="relative inline-flex cursor-pointer items-center gap-3">
+                    <input type="checkbox" wire:model="mediaAnalysisEnabled" class="peer sr-only" />
+                    <div class="peer h-6 w-11 shrink-0 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-primary-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300"></div>
+                    <span class="text-sm font-medium text-gray-700">Enable automatic media analysis</span>
+                </label>
+
+                <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    Save Media Analysis Settings
+                </button>
+            </form>
         </div>
 
         {{-- Blacklist Management --}}
