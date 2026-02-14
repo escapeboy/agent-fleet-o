@@ -24,8 +24,9 @@ class RssConnector implements InputConnectorInterface
     public function poll(array $config): array
     {
         $url = $config['url'] ?? null;
-        if (!$url) {
+        if (! $url) {
             Log::warning('RssConnector: No URL provided', $config);
+
             return [];
         }
 
@@ -35,17 +36,19 @@ class RssConnector implements InputConnectorInterface
         try {
             $response = Http::timeout(30)->get($url);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::warning('RssConnector: Failed to fetch feed', [
                     'url' => $url,
                     'status' => $response->status(),
                 ]);
+
                 return [];
             }
 
             $xml = @simplexml_load_string($response->body());
-            if (!$xml) {
+            if (! $xml) {
                 Log::warning('RssConnector: Invalid XML', ['url' => $url]);
+
                 return [];
             }
 
@@ -55,6 +58,7 @@ class RssConnector implements InputConnectorInterface
                 'url' => $url,
                 'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }

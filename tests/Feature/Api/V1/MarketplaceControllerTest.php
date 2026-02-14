@@ -12,7 +12,7 @@ class MarketplaceControllerTest extends ApiTestCase
         return Skill::create(array_merge([
             'team_id' => $this->team->id,
             'name' => 'Test Skill',
-            'slug' => 'test-skill-' . uniqid(),
+            'slug' => 'test-skill-'.uniqid(),
             'description' => 'A test skill',
             'type' => 'llm',
             'execution_type' => 'sync',
@@ -42,7 +42,7 @@ class MarketplaceControllerTest extends ApiTestCase
             'type' => 'skill',
             'listable_id' => $skill->id,
             'name' => 'Published Skill',
-            'slug' => 'published-skill-' . uniqid(),
+            'slug' => 'published-skill-'.uniqid(),
             'description' => 'A published skill listing',
             'status' => 'published',
             'visibility' => 'public',

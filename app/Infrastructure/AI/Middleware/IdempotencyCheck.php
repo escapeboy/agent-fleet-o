@@ -64,7 +64,7 @@ class IdempotencyCheck implements AiMiddlewareInterface
                 'experiment_stage_id' => $request->experimentStageId,
                 'provider' => $request->provider,
                 'model' => $request->model,
-                'prompt_hash' => hash('xxh128', $request->systemPrompt . $request->userPrompt),
+                'prompt_hash' => hash('xxh128', $request->systemPrompt.$request->userPrompt),
                 'status' => 'pending',
             ]);
         }

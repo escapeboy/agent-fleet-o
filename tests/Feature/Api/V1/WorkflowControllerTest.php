@@ -13,7 +13,7 @@ class WorkflowControllerTest extends ApiTestCase
             'team_id' => $this->team->id,
             'user_id' => $this->user->id,
             'name' => 'Test Workflow',
-            'slug' => 'test-workflow-' . uniqid(),
+            'slug' => 'test-workflow-'.uniqid(),
             'description' => 'A test workflow',
             'status' => 'draft',
             'version' => 1,

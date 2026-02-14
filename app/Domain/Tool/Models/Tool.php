@@ -3,17 +3,24 @@
 namespace App\Domain\Tool\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
-use App\Domain\Shared\Traits\BelongsToTeam;
+use Database\Factories\Domain\Tool\ToolFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tool extends Model
 {
-    use BelongsToTeam, HasUuids, SoftDeletes;
+    use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
+
+    protected static function newFactory()
+    {
+        return ToolFactory::new();
+    }
 
     protected $fillable = [
         'team_id',

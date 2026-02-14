@@ -2,8 +2,6 @@
 
 namespace App\Domain\Skill\Services;
 
-use InvalidArgumentException;
-
 class SchemaValidator
 {
     /**
@@ -56,7 +54,7 @@ class SchemaValidator
             $expectedType = $properties[$field]['type'] ?? null;
 
             if ($expectedType && ! $this->checkType($value, $expectedType)) {
-                $errors[] = "Field '{$field}' expected type '{$expectedType}', got '" . gettype($value) . "'";
+                $errors[] = "Field '{$field}' expected type '{$expectedType}', got '".gettype($value)."'";
             }
 
             // Validate enum constraints

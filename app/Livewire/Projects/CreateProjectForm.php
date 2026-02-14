@@ -6,7 +6,6 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Actions\CreateProjectAction;
 use App\Domain\Project\Enums\OverlapPolicy;
-use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Enums\ScheduleFrequency;
 use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Models\Tool;
@@ -18,29 +17,41 @@ class CreateProjectForm extends Component
 {
     // Basics
     public string $title = '';
+
     public string $description = '';
+
     public string $type = 'one_shot';
 
     // Team
     public string $agentId = '';
+
     public string $workflowId = '';
 
     // Schedule (continuous only)
     public string $frequency = 'daily';
+
     public string $cronExpression = '';
+
     public string $timezone = 'UTC';
+
     public string $overlapPolicy = 'skip';
+
     public int $maxConsecutiveFailures = 3;
 
     // Delivery
     public string $deliveryChannel = 'none';
+
     public string $deliveryTarget = '';
+
     public string $deliveryFormat = 'summary';
 
     // Budget
     public ?int $dailyCap = null;
+
     public ?int $weeklyCap = null;
+
     public ?int $monthlyCap = null;
+
     public ?int $perRunCap = null;
 
     // Milestones
@@ -51,6 +62,7 @@ class CreateProjectForm extends Component
 
     // Tools & Credentials
     public array $selectedToolIds = [];
+
     public array $selectedCredentialIds = [];
 
     protected function rules(): array
@@ -68,7 +80,7 @@ class CreateProjectForm extends Component
         }
 
         if ($this->type === 'continuous') {
-            $rules['frequency'] = 'required|in:' . implode(',', array_column(ScheduleFrequency::cases(), 'value'));
+            $rules['frequency'] = 'required|in:'.implode(',', array_column(ScheduleFrequency::cases(), 'value'));
             $rules['timezone'] = 'required|timezone';
             if ($this->frequency === 'cron') {
                 $rules['cronExpression'] = 'required|max:100';
@@ -143,12 +155,12 @@ class CreateProjectForm extends Component
 
         $milestoneData = array_filter(
             $this->milestones,
-            fn ($m) => ! empty($m['title'])
+            fn ($m) => ! empty($m['title']),
         );
 
         $dependencyData = array_filter(
             $this->dependencies,
-            fn ($d) => ! empty($d['depends_on_id'])
+            fn ($d) => ! empty($d['depends_on_id']),
         );
 
         $deliveryConfig = null;

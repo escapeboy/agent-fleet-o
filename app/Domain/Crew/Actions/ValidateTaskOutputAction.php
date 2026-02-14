@@ -38,7 +38,7 @@ class ValidateTaskOutputAction
         $systemPrompt = "You are {$qaAgent->role}. {$qaAgent->goal}\n\n"
             ."Evaluate the output of a completed task. Check for: accuracy, completeness, relevance to the task description, and quality.\n"
             ."The quality threshold is {$qualityThreshold} (0.0-1.0).\n\n"
-            ."Respond with valid JSON: { \"passed\": bool, \"score\": float (0.0-1.0), \"feedback\": string, \"issues\": [string] }";
+            .'Respond with valid JSON: { "passed": bool, "score": float (0.0-1.0), "feedback": string, "issues": [string] }';
 
         $expectedOutput = $taskExecution->input_context['expected_output'] ?? 'No specific format expected';
 
@@ -46,7 +46,7 @@ class ValidateTaskOutputAction
             ."Description: {$taskExecution->description}\n"
             ."Expected output: {$expectedOutput}\n\n"
             ."Actual output:\n".json_encode($taskExecution->output, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)."\n\n"
-            ."Evaluate this output.";
+            .'Evaluate this output.';
 
         $request = new AiRequestDTO(
             provider: $resolved['provider'],

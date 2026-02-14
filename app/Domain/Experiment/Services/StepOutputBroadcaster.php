@@ -15,7 +15,7 @@ class StepOutputBroadcaster
      */
     public function broadcastChunk(string $stepId, string $chunk): void
     {
-        $key = self::KEY_PREFIX . $stepId;
+        $key = self::KEY_PREFIX.$stepId;
         Redis::append($key, $chunk);
         Redis::expire($key, self::TTL);
     }
@@ -25,7 +25,7 @@ class StepOutputBroadcaster
      */
     public function getAccumulatedOutput(string $stepId): ?string
     {
-        return Redis::get(self::KEY_PREFIX . $stepId);
+        return Redis::get(self::KEY_PREFIX.$stepId);
     }
 
     /**
@@ -33,6 +33,6 @@ class StepOutputBroadcaster
      */
     public function clear(string $stepId): void
     {
-        Redis::del(self::KEY_PREFIX . $stepId);
+        Redis::del(self::KEY_PREFIX.$stepId);
     }
 }

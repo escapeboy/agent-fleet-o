@@ -4,15 +4,17 @@ namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
 use App\Domain\Project\Models\Project;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Actions\ResolveAgentToolsAction;
-use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Prism\Prism\Tool;
 
 class ExecuteAgentAction
 {
@@ -64,7 +66,7 @@ class ExecuteAgentAction
     /**
      * Agentic execution: LLM decides what to do using tools.
      *
-     * @param  array<\Prism\Prism\Tool>  $tools
+     * @param  array<Tool>  $tools
      * @return array{execution: AgentExecution, output: array|null}
      */
     private function executeWithTools(
@@ -80,7 +82,7 @@ class ExecuteAgentAction
 
         try {
             $systemPrompt = $this->buildAgentSystemPrompt($agent, $project);
-            $team = \App\Domain\Shared\Models\Team::find($teamId);
+            $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
 
             $request = new AiRequestDTO(
@@ -156,16 +158,16 @@ class ExecuteAgentAction
             // Build user prompt from task + goal + context
             $userPromptParts = [];
             if (! empty($input['task'])) {
-                $userPromptParts[] = "## Task\n" . $input['task'];
+                $userPromptParts[] = "## Task\n".$input['task'];
             }
             if (! empty($input['goal'])) {
-                $userPromptParts[] = "## Project Goal\n" . $input['goal'];
+                $userPromptParts[] = "## Project Goal\n".$input['goal'];
             }
             if (! empty($input['context'])) {
-                $userPromptParts[] = "## Context from Previous Steps\n" . json_encode($input['context'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                $userPromptParts[] = "## Context from Previous Steps\n".json_encode($input['context'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
             }
 
-            $team = \App\Domain\Shared\Models\Team::find($teamId);
+            $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
 
             $request = new AiRequestDTO(

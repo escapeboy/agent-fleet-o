@@ -35,8 +35,8 @@ class WorkflowDetailPage extends Component
     public function duplicate(): void
     {
         $newWorkflow = $this->workflow->replicate(['id', 'slug', 'created_at', 'updated_at']);
-        $newWorkflow->name = $this->workflow->name . ' (Copy)';
-        $newWorkflow->slug = $this->workflow->slug . '-copy-' . substr(uniqid(), -4);
+        $newWorkflow->name = $this->workflow->name.' (Copy)';
+        $newWorkflow->slug = $this->workflow->slug.'-copy-'.substr(uniqid(), -4);
         $newWorkflow->status = WorkflowStatus::Draft;
         $newWorkflow->version = 1;
         $newWorkflow->save();

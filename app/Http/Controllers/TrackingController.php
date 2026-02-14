@@ -21,7 +21,7 @@ class TrackingController extends Controller
         $experimentId = $request->query('exp');
         $outboundActionId = $request->query('oa');
 
-        if (!$url) {
+        if (! $url) {
             abort(422, 'Missing url parameter');
         }
 

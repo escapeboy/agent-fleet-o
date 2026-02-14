@@ -29,7 +29,7 @@ class CheckBudgetAction
             if ($pctUsed >= 80) {
                 return [
                     'ok' => true,
-                    'reason' => 'Budget warning: ' . round($pctUsed, 1) . '% used',
+                    'reason' => 'Budget warning: '.round($pctUsed, 1).'% used',
                     'pct_used' => $pctUsed,
                 ];
             }

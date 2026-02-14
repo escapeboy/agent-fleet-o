@@ -11,17 +11,19 @@ class CheckKillSwitch
 {
     public function handle(object $job, Closure $next): void
     {
-        if (!property_exists($job, 'experimentId')) {
+        if (! property_exists($job, 'experimentId')) {
             $next($job);
+
             return;
         }
 
         $experiment = Experiment::find($job->experimentId);
 
-        if (!$experiment) {
+        if (! $experiment) {
             Log::warning('CheckKillSwitch: Experiment not found', [
                 'experiment_id' => $job->experimentId,
             ]);
+
             return;
         }
 
@@ -30,6 +32,7 @@ class CheckKillSwitch
                 'experiment_id' => $experiment->id,
                 'job' => class_basename($job),
             ]);
+
             return;
         }
 
@@ -39,6 +42,7 @@ class CheckKillSwitch
                 'job' => class_basename($job),
             ]);
             $job->release(60);
+
             return;
         }
 

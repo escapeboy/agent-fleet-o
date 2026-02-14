@@ -32,6 +32,7 @@ class ExecuteCrewWorkflowNodeJob implements ShouldQueue
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 1;
+
     public int $timeout = 900; // 15 min — crew executions can be long
 
     public function __construct(
@@ -45,8 +46,8 @@ class ExecuteCrewWorkflowNodeJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new CheckKillSwitch(),
-            new CheckBudgetAvailable(),
+            new CheckKillSwitch,
+            new CheckBudgetAvailable,
             new TenantRateLimit('experiments', 30),
         ];
     }
@@ -181,7 +182,7 @@ class ExecuteCrewWorkflowNodeJob implements ShouldQueue
                     'output' => $execution->result,
                     'duration_ms' => $startTime->diffInMilliseconds(now()),
                     'cost_credits' => $execution->total_cost_credits,
-                    'error' => $execution->error ?? 'Crew execution ' . $execution->status->value,
+                    'error' => $execution->error ?? 'Crew execution '.$execution->status->value,
                 ];
             }
 

@@ -23,6 +23,7 @@ class MarketplaceBrowsePage extends Component
     public string $categoryFilter = '';
 
     public string $sortField = 'install_count';
+
     public string $sortDirection = 'desc';
 
     public function sortBy(string $field): void
@@ -58,6 +59,7 @@ class MarketplaceBrowsePage extends Component
 
         if (! $team) {
             session()->flash('error', 'You must belong to a team to install marketplace items.');
+
             return;
         }
 
@@ -68,6 +70,7 @@ class MarketplaceBrowsePage extends Component
 
         if ($alreadyInstalled) {
             session()->flash('error', 'This item is already installed in your workspace.');
+
             return;
         }
 
@@ -84,7 +87,7 @@ class MarketplaceBrowsePage extends Component
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('name', 'ilike', "%{$this->search}%")
-                  ->orWhere('description', 'ilike', "%{$this->search}%");
+                    ->orWhere('description', 'ilike', "%{$this->search}%");
             });
         }
 

@@ -30,6 +30,6 @@ class WelcomeNotification extends Notification
             ->line('2. Set up your first signal connector')
             ->line('3. Create your first experiment')
             ->action('Go to Dashboard', url('/dashboard'))
-            ->line('Need help? Check out our [API documentation](' . url('/docs') . ').');
+            ->line('Need help? Check out our [API documentation]('.url('/docs').').');
     }
 }

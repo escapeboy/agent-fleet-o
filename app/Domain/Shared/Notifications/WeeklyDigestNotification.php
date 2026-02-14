@@ -27,11 +27,11 @@ class WeeklyDigestNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $budgetFormatted = '$' . number_format($this->budgetSpentCents / 100, 2);
+        $budgetFormatted = '$'.number_format($this->budgetSpentCents / 100, 2);
 
         return (new MailMessage)
             ->subject("Weekly Digest — {$this->team->name}")
-            ->greeting("Your week in review")
+            ->greeting('Your week in review')
             ->line("Here's what happened on **{$this->team->name}** in the last 7 days:")
             ->line("- **{$this->experimentsCreated}** experiments created")
             ->line("- **{$this->experimentsCompleted}** experiments completed")

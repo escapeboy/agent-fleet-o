@@ -25,11 +25,11 @@ class SendOutboundAction
         private readonly TargetRateLimit $targetRateLimit,
     ) {
         $this->connectors = [
-            new SmtpEmailConnector(),
-            new TelegramConnector(),
-            new SlackConnector(),
-            new WebhookOutboundConnector(),
-            new DummyConnector(),  // Fallback — must be last
+            new SmtpEmailConnector,
+            new TelegramConnector,
+            new SlackConnector,
+            new WebhookOutboundConnector,
+            new DummyConnector,  // Fallback — must be last
         ];
     }
 
@@ -42,16 +42,16 @@ class SendOutboundAction
         }
 
         // Check channel rate limit
-        if (!$this->channelRateLimit->check($proposal)) {
+        if (! $this->channelRateLimit->check($proposal)) {
             throw new RateLimitExceededException(
-                "Channel rate limit exceeded for {$proposal->channel->value}"
+                "Channel rate limit exceeded for {$proposal->channel->value}",
             );
         }
 
         // Check target rate limit
-        if (!$this->targetRateLimit->check($proposal)) {
+        if (! $this->targetRateLimit->check($proposal)) {
             throw new RateLimitExceededException(
-                'Target rate limit exceeded — contact cooldown active'
+                'Target rate limit exceeded — contact cooldown active',
             );
         }
 
@@ -69,6 +69,6 @@ class SendOutboundAction
             }
         }
 
-        return new DummyConnector();
+        return new DummyConnector;
     }
 }

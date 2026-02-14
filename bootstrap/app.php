@@ -1,10 +1,20 @@
 <?php
 
+use App\Domain\Budget\Exceptions\InsufficientBudgetException;
+use App\Http\Middleware\SetCurrentTeam;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,7 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->appendToGroup('web', \App\Http\Middleware\SetCurrentTeam::class);
+        $middleware->appendToGroup('web', SetCurrentTeam::class);
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -36,15 +46,15 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             $status = match (true) {
-                $e instanceof \Illuminate\Validation\ValidationException => 422,
-                $e instanceof \Illuminate\Auth\AuthenticationException => 401,
-                $e instanceof \Illuminate\Auth\Access\AuthorizationException => 403,
-                $e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException => 404,
-                $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException => 404,
-                $e instanceof \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException => 405,
-                $e instanceof \Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException => 429,
-                $e instanceof \App\Domain\Budget\Exceptions\InsufficientBudgetException => 402,
-                $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface => $e->getStatusCode(),
+                $e instanceof ValidationException => 422,
+                $e instanceof AuthenticationException => 401,
+                $e instanceof AuthorizationException => 403,
+                $e instanceof ModelNotFoundException => 404,
+                $e instanceof NotFoundHttpException => 404,
+                $e instanceof MethodNotAllowedHttpException => 405,
+                $e instanceof TooManyRequestsHttpException => 429,
+                $e instanceof InsufficientBudgetException => 402,
+                $e instanceof HttpExceptionInterface => $e->getStatusCode(),
                 default => 500,
             };
 
@@ -65,7 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 },
             ];
 
-            if ($e instanceof \Illuminate\Validation\ValidationException) {
+            if ($e instanceof ValidationException) {
                 $response['errors'] = $e->errors();
             }
 

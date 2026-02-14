@@ -24,6 +24,7 @@ class PollInputConnectors extends Command
 
         if ($connectors->isEmpty()) {
             $this->info("No active {$driver} connectors found.");
+
             return self::SUCCESS;
         }
 

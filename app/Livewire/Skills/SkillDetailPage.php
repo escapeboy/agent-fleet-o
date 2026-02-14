@@ -15,19 +15,30 @@ use Livewire\Component;
 class SkillDetailPage extends Component
 {
     public Skill $skill;
+
     public string $activeTab = 'overview';
 
     // Editing state
     public bool $editing = false;
+
     public string $editName = '';
+
     public string $editDescription = '';
+
     public string $editType = 'llm';
+
     public string $editRiskLevel = 'low';
+
     public string $editSystemPrompt = '';
+
     public string $editProvider = '';
+
     public string $editModel = '';
+
     public int $editMaxTokens = 4096;
+
     public float $editTemperature = 0.7;
+
     public string $editPromptTemplate = '';
 
     public function mount(Skill $skill): void

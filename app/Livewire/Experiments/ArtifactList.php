@@ -58,7 +58,7 @@ class ArtifactList extends Component
 
         $extension = ArtifactContentResolver::extension($artifact->type);
         $mime = ArtifactContentResolver::mimeType($artifact->type);
-        $filename = Str::slug($artifact->name) . "-v{$version->version}.{$extension}";
+        $filename = Str::slug($artifact->name)."-v{$version->version}.{$extension}";
 
         $content = is_string($version->content)
             ? $version->content

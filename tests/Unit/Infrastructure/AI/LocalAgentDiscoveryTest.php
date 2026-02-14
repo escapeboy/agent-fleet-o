@@ -26,7 +26,7 @@ class LocalAgentDiscoveryTest extends TestCase
     {
         config(['local_agents.enabled' => false]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertEmpty($discovery->detect());
     }
@@ -35,7 +35,7 @@ class LocalAgentDiscoveryTest extends TestCase
     {
         config(['local_agents.enabled' => false]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertFalse($discovery->isAvailable('codex'));
         $this->assertFalse($discovery->isAvailable('claude-code'));
@@ -45,21 +45,21 @@ class LocalAgentDiscoveryTest extends TestCase
     {
         config(['local_agents.enabled' => true]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertFalse($discovery->isAvailable('nonexistent-agent'));
     }
 
     public function test_binary_path_returns_null_for_unknown_agent(): void
     {
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertNull($discovery->binaryPath('nonexistent-agent'));
     }
 
     public function test_version_returns_null_for_unknown_agent(): void
     {
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertNull($discovery->version('nonexistent-agent'));
     }
@@ -71,7 +71,7 @@ class LocalAgentDiscoveryTest extends TestCase
             'claude-code' => ['name' => 'Claude Code', 'binary' => 'claude'],
         ]]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $agents = $discovery->allAgents();
         $this->assertArrayHasKey('codex', $agents);
@@ -96,7 +96,7 @@ class LocalAgentDiscoveryTest extends TestCase
             ],
         ]]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
         $detected = $discovery->detect();
 
         $this->assertArrayHasKey('test-agent', $detected);
@@ -121,7 +121,7 @@ class LocalAgentDiscoveryTest extends TestCase
             ],
         ]]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
         $detected = $discovery->detect();
 
         $this->assertEmpty($detected);
@@ -143,7 +143,7 @@ class LocalAgentDiscoveryTest extends TestCase
             ],
         ]]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
         $version = $discovery->version('test-agent');
 
         $this->assertNotNull($version);

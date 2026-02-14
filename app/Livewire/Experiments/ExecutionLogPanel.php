@@ -30,7 +30,7 @@ class ExecutionLogPanel extends Component
             ->orderBy('created_at')
             ->get()
             ->map(fn ($t) => [
-                'id' => 'transition-' . $t->id,
+                'id' => 'transition-'.$t->id,
                 'type' => 'transition',
                 'time' => $t->created_at,
                 'summary' => "{$t->from_state} -> {$t->to_state}",
@@ -47,11 +47,11 @@ class ExecutionLogPanel extends Component
             ->orderBy('created_at')
             ->get()
             ->map(fn (ExperimentStage $s) => [
-                'id' => 'stage-' . $s->id,
+                'id' => 'stage-'.$s->id,
                 'type' => 'stage',
                 'time' => $s->started_at ?? $s->created_at,
                 'summary' => "Stage: {$s->stage->value} ({$s->status->value})",
-                'detail' => $s->duration_ms ? round($s->duration_ms / 1000, 1) . 's' : null,
+                'detail' => $s->duration_ms ? round($s->duration_ms / 1000, 1).'s' : null,
                 'metadata' => null,
                 'icon' => 'cog',
                 'color' => match ($s->status->value) {
@@ -69,11 +69,11 @@ class ExecutionLogPanel extends Component
             ->orderBy('started_at')
             ->get()
             ->map(fn (PlaybookStep $s) => [
-                'id' => 'step-' . $s->id,
+                'id' => 'step-'.$s->id,
                 'type' => 'step',
                 'time' => $s->started_at,
-                'summary' => "Step #{$s->order}: " . ($s->agent?->name ?? 'Unknown agent') . " ({$s->status})",
-                'detail' => $s->error_message ?? ($s->duration_ms ? round($s->duration_ms / 1000, 1) . 's, ' . ($s->cost_credits ?? 0) . ' credits' : null),
+                'summary' => "Step #{$s->order}: ".($s->agent?->name ?? 'Unknown agent')." ({$s->status})",
+                'detail' => $s->error_message ?? ($s->duration_ms ? round($s->duration_ms / 1000, 1).'s, '.($s->cost_credits ?? 0).' credits' : null),
                 'metadata' => null,
                 'icon' => 'play',
                 'color' => match ($s->status) {
@@ -91,7 +91,7 @@ class ExecutionLogPanel extends Component
             ->orderBy('created_at')
             ->get()
             ->map(fn (LlmRequestLog $l) => [
-                'id' => 'llm-' . $l->id,
+                'id' => 'llm-'.$l->id,
                 'type' => 'llm_call',
                 'time' => $l->created_at,
                 'summary' => "LLM: {$l->provider}/{$l->model} ({$l->status})",
@@ -99,7 +99,7 @@ class ExecutionLogPanel extends Component
                     $l->input_tokens ? "{$l->input_tokens} in" : null,
                     $l->output_tokens ? "{$l->output_tokens} out" : null,
                     $l->cost_credits ? "{$l->cost_credits} credits" : null,
-                    $l->latency_ms ? round($l->latency_ms / 1000, 1) . 's' : null,
+                    $l->latency_ms ? round($l->latency_ms / 1000, 1).'s' : null,
                 ])->filter()->implode(', '),
                 'metadata' => $l->error ? ['error' => $l->error] : null,
                 'icon' => 'chip',

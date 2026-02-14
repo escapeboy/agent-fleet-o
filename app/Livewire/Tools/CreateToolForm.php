@@ -13,23 +13,31 @@ class CreateToolForm extends Component
 
     // Step 1: Basics
     public string $name = '';
+
     public string $description = '';
+
     public string $type = 'mcp_stdio';
 
     // Step 2: Transport Configuration
     // MCP stdio
     public string $mcpCommand = '';
+
     public string $mcpArgs = '';
+
     public string $mcpEnv = '';
 
     // MCP HTTP
     public string $mcpUrl = '';
+
     public string $mcpHeaders = '';
 
     // Built-in
     public string $builtInKind = 'bash';
+
     public string $allowedCommands = 'curl, jq, python3, node, grep, awk, sed, cat, echo, ls, find, wc, head, tail, sort, uniq';
+
     public string $allowedPaths = '/tmp/agent-workspace';
+
     public bool $readOnly = false;
 
     // Credentials (optional)

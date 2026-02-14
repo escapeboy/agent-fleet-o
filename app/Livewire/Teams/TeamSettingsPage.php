@@ -3,24 +3,27 @@
 namespace App\Livewire\Teams;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
-use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
 {
     public string $teamName = '';
+
     public string $teamSlug = '';
 
     // Provider credentials form
     public string $credProvider = 'openai';
+
     public string $credApiKey = '';
 
     // LLM services defaults
     public string $defaultProvider = '';
+
     public string $defaultModel = '';
 
     // API token form
     public string $tokenName = '';
+
     public ?string $newToken = null;
 
     public function mount(): void
@@ -29,6 +32,7 @@ class TeamSettingsPage extends Component
 
         if (! $team) {
             $this->redirect(route('dashboard'), navigate: true);
+
             return;
         }
 
@@ -106,7 +110,7 @@ class TeamSettingsPage extends Component
         $user = auth()->user();
         $team = $user->currentTeam;
 
-        $token = $user->createToken($this->tokenName, ['team:' . $team->id]);
+        $token = $user->createToken($this->tokenName, ['team:'.$team->id]);
         $this->newToken = $token->plainTextToken;
         $this->tokenName = '';
 

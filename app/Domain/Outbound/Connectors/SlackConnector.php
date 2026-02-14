@@ -38,7 +38,7 @@ class SlackConnector implements OutboundConnectorInterface
             $content = $proposal->content;
 
             $webhookUrl = $target['webhook_url'] ?? config('services.slack.webhook_url');
-            if (!$webhookUrl) {
+            if (! $webhookUrl) {
                 throw new \RuntimeException('Slack webhook URL not configured');
             }
 
@@ -58,7 +58,7 @@ class SlackConnector implements OutboundConnectorInterface
             if ($response->successful()) {
                 $action->update([
                     'status' => OutboundActionStatus::Sent,
-                    'external_id' => 'slack-' . now()->timestamp,
+                    'external_id' => 'slack-'.now()->timestamp,
                     'sent_at' => now(),
                 ]);
             } else {

@@ -3,7 +3,6 @@
 namespace App\Domain\Tool\Services;
 
 use App\Domain\Tool\Enums\BuiltInToolKind;
-use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Process;
 use Prism\Prism\Facades\Tool as PrismTool;

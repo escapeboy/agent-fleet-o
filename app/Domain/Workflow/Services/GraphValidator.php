@@ -4,14 +4,15 @@ namespace App\Domain\Workflow\Services;
 
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Models\Workflow;
-use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
 use Illuminate\Support\Collection;
 
 class GraphValidator
 {
     private Collection $nodes;
+
     private Collection $edges;
+
     private array $errors = [];
 
     public function validate(Workflow $workflow): array
@@ -49,7 +50,7 @@ class GraphValidator
         } elseif ($startNodes->count() > 1) {
             $this->errors[] = [
                 'type' => 'multiple_starts',
-                'message' => 'Workflow must have exactly one Start node, found ' . $startNodes->count() . '.',
+                'message' => 'Workflow must have exactly one Start node, found '.$startNodes->count().'.',
                 'node_ids' => $startNodes->pluck('id')->toArray(),
             ];
         }

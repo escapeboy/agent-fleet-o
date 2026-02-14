@@ -6,14 +6,21 @@ use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
+use Database\Factories\Domain\Marketplace\MarketplaceListingFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MarketplaceListing extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
+
+    protected static function newFactory()
+    {
+        return MarketplaceListingFactory::new();
+    }
 
     protected $fillable = [
         'team_id',

@@ -8,7 +8,9 @@ use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\User;
+use Database\Factories\Domain\Crew\CrewFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,7 +18,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Crew extends Model
 {
-    use BelongsToTeam, HasUuids, SoftDeletes;
+    use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
+
+    protected static function newFactory()
+    {
+        return CrewFactory::new();
+    }
 
     protected $fillable = [
         'team_id',

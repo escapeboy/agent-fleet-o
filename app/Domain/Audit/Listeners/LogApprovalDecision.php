@@ -9,7 +9,7 @@ class LogApprovalDecision
 {
     public function handle(object $event): void
     {
-        if (!isset($event->approval) || !$event->approval instanceof ApprovalRequest) {
+        if (! isset($event->approval) || ! $event->approval instanceof ApprovalRequest) {
             return;
         }
 
@@ -17,7 +17,7 @@ class LogApprovalDecision
 
         AuditEntry::create([
             'user_id' => $approval->reviewed_by,
-            'event' => 'approval.' . $approval->status->value,
+            'event' => 'approval.'.$approval->status->value,
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approval->id,
             'properties' => [

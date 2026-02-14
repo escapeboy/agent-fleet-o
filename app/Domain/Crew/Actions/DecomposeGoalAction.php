@@ -92,7 +92,7 @@ class DecomposeGoalAction
             $taskExecution = CrewTaskExecution::create([
                 'crew_execution_id' => $execution->id,
                 'agent_id' => $assignedAgent?->id,
-                'title' => $task['title'] ?? "Task ".($index + 1),
+                'title' => $task['title'] ?? 'Task '.($index + 1),
                 'description' => $task['description'] ?? '',
                 'status' => CrewTaskStatus::Pending,
                 'input_context' => [

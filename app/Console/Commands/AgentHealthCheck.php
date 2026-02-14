@@ -19,6 +19,7 @@ class AgentHealthCheck extends Command
 
         if ($agents->isEmpty()) {
             $this->info('No active agents to check.');
+
             return self::SUCCESS;
         }
 

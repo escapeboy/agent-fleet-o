@@ -122,7 +122,7 @@ class SyncProjectStatusOnRunComplete
             'status' => ProjectRunStatus::Skipped,
             'completed_at' => now(),
             'spend_credits' => $run->experiment?->budget_spent_credits ?? 0,
-            'error_message' => "Experiment discarded after scoring",
+            'error_message' => 'Experiment discarded after scoring',
         ]);
 
         $project->update([
@@ -139,7 +139,7 @@ class SyncProjectStatusOnRunComplete
             'status' => ProjectRunStatus::Cancelled,
             'completed_at' => now(),
             'spend_credits' => $run->experiment?->budget_spent_credits ?? 0,
-            'error_message' => "Experiment expired (approval timeout)",
+            'error_message' => 'Experiment expired (approval timeout)',
         ]);
 
         $project->update([

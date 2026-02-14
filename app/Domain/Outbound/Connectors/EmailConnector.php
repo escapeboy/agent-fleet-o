@@ -38,7 +38,7 @@ class EmailConnector implements OutboundConnectorInterface
 
             if (($content['type'] ?? null) === 'experiment_summary') {
                 $experiment = Experiment::withoutGlobalScopes()->find($content['experiment_id']);
-                if (!$experiment) {
+                if (! $experiment) {
                     throw new \RuntimeException("Experiment {$content['experiment_id']} not found");
                 }
 

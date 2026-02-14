@@ -7,6 +7,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Enums\OutboundChannel;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Database\Factories\Domain\Outbound\OutboundProposalFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,6 +41,11 @@ class OutboundProposal extends Model
             'risk_score' => 'float',
             'batch_index' => 'integer',
         ];
+    }
+
+    protected static function newFactory()
+    {
+        return OutboundProposalFactory::new();
     }
 
     public function experiment(): BelongsTo

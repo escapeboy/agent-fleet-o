@@ -6,18 +6,17 @@ use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
-use RuntimeException;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use Closure;
 use Prism\Prism\Enums\Provider;
-use Prism\Prism\Enums\StreamEventType;
 use Prism\Prism\Exceptions\PrismException;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Streaming\Events\StreamEndEvent;
 use Prism\Prism\Streaming\Events\TextDeltaEvent;
+use RuntimeException;
 
 class PrismAiGateway implements AiGatewayInterface
 {
@@ -252,7 +251,7 @@ class PrismAiGateway implements AiGatewayInterface
             if ($team && ! $team->hasFeature('platform_llm_fallback')) {
                 throw new RuntimeException(
                     'Your plan does not include platform AI keys. '
-                    . 'Please add your own API key in Team Settings, or upgrade your plan.'
+                    .'Please add your own API key in Team Settings, or upgrade your plan.',
                 );
             }
 

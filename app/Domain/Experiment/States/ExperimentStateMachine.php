@@ -12,9 +12,9 @@ class ExperimentStateMachine
     {
         $fromState = $experiment->status;
 
-        if (!ExperimentTransitionMap::canTransition($fromState, $toState)) {
+        if (! ExperimentTransitionMap::canTransition($fromState, $toState)) {
             throw new InvalidArgumentException(
-                "Invalid transition from [{$fromState->value}] to [{$toState->value}] for experiment [{$experiment->id}]."
+                "Invalid transition from [{$fromState->value}] to [{$toState->value}] for experiment [{$experiment->id}].",
             );
         }
 
@@ -57,7 +57,7 @@ class ExperimentStateMachine
 
         if ($currentRetries >= $maxRetries) {
             throw new InvalidArgumentException(
-                "Max retries ({$maxRetries}) exceeded for stage [{$stageType}] on experiment [{$experiment->id}]."
+                "Max retries ({$maxRetries}) exceeded for stage [{$stageType}] on experiment [{$experiment->id}].",
             );
         }
     }
@@ -68,7 +68,7 @@ class ExperimentStateMachine
 
         if ($experiment->current_iteration >= $maxIterations) {
             throw new InvalidArgumentException(
-                "Max iterations ({$maxIterations}) exceeded for experiment [{$experiment->id}]."
+                "Max iterations ({$maxIterations}) exceeded for experiment [{$experiment->id}].",
             );
         }
     }
@@ -84,7 +84,7 @@ class ExperimentStateMachine
 
         if ($rejectionCount >= $maxCycles) {
             throw new InvalidArgumentException(
-                "Max rejection cycles ({$maxCycles}) exceeded for experiment [{$experiment->id}]."
+                "Max rejection cycles ({$maxCycles}) exceeded for experiment [{$experiment->id}].",
             );
         }
     }

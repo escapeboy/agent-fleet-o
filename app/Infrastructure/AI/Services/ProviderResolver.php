@@ -5,7 +5,6 @@ namespace App\Infrastructure\AI\Services;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Models\Skill;
-use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 
 class ProviderResolver
 {
@@ -81,6 +80,7 @@ class ProviderResolver
 
             if (! $localEnabled) {
                 unset($providers[$key]);
+
                 continue;
             }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Project\Jobs\DispatchScheduledProjectsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -21,4 +22,4 @@ Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
 
 // Project scheduling & budget enforcement
 Schedule::command('projects:check-budgets')->hourly();
-Schedule::job(new \App\Domain\Project\Jobs\DispatchScheduledProjectsJob)->everyMinute();
+Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();

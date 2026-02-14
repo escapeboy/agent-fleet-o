@@ -86,7 +86,7 @@ class LocalAgentGateway implements AiGatewayInterface
                         );
                     }
                 } catch (\Throwable $parseErr) {
-                    Log::debug("LocalAgentGateway: recovery parse failed", ['error' => $parseErr->getMessage()]);
+                    Log::debug('LocalAgentGateway: recovery parse failed', ['error' => $parseErr->getMessage()]);
                 }
             }
 
@@ -98,12 +98,12 @@ class LocalAgentGateway implements AiGatewayInterface
 
             $diagnosticMsg = $stderr ?: 'No error output';
             if (empty($stderr) && $stdout !== '') {
-                $diagnosticMsg = 'stdout: ' . substr($stdout, 0, 300);
+                $diagnosticMsg = 'stdout: '.substr($stdout, 0, 300);
             }
 
             throw new RuntimeException(
                 "Local agent '{$config['name']}' failed (exit code {$exitCode}): "
-                . substr($diagnosticMsg, 0, 500)
+                .substr($diagnosticMsg, 0, 500),
             );
         }
 
@@ -189,7 +189,7 @@ class LocalAgentGateway implements AiGatewayInterface
                     ],
                 ])
                 ->withToken($bridgeSecret)
-                ->post($bridgeUrl . '/execute', [
+                ->post($bridgeUrl.'/execute', [
                     'agent_key' => $agentKey,
                     'prompt' => $prompt,
                     'timeout' => $bridgeTimeout,
@@ -206,7 +206,7 @@ class LocalAgentGateway implements AiGatewayInterface
             ]);
 
             throw new RuntimeException(
-                "Bridge connection failed for '{$config['name']}' after {$elapsedMs}ms: " . $e->getMessage()
+                "Bridge connection failed for '{$config['name']}' after {$elapsedMs}ms: ".$e->getMessage(),
             );
         }
 
@@ -246,7 +246,7 @@ class LocalAgentGateway implements AiGatewayInterface
                         );
                     }
                 } catch (\Throwable $parseErr) {
-                    Log::debug("LocalAgentGateway: recovery parse failed", [
+                    Log::debug('LocalAgentGateway: recovery parse failed', [
                         'error' => $parseErr->getMessage(),
                     ]);
                 }
@@ -255,7 +255,7 @@ class LocalAgentGateway implements AiGatewayInterface
             // Build a diagnostic error message including stdout snippet if stderr was empty
             $diagnosticError = $error;
             if ($error === 'Process exited with non-zero code' && $stdout !== '') {
-                $diagnosticError .= ' | stdout: ' . substr($stdout, 0, 300);
+                $diagnosticError .= ' | stdout: '.substr($stdout, 0, 300);
             }
 
             Log::error("LocalAgentGateway: bridge execution failed for {$agentKey}", [
@@ -266,7 +266,7 @@ class LocalAgentGateway implements AiGatewayInterface
 
             throw new RuntimeException(
                 "Local agent '{$config['name']}' failed via bridge (code {$exitCode}): "
-                . substr($diagnosticError, 0, 500)
+                .substr($diagnosticError, 0, 500),
             );
         }
 
@@ -311,8 +311,8 @@ class LocalAgentGateway implements AiGatewayInterface
         $startTime = hrtime(true);
 
         try {
-            $client = new GuzzleClient();
-            $response = $client->post($bridgeUrl . '/execute', [
+            $client = new GuzzleClient;
+            $response = $client->post($bridgeUrl.'/execute', [
                 'json' => [
                     'agent_key' => $agentKey,
                     'prompt' => $prompt,
@@ -321,7 +321,7 @@ class LocalAgentGateway implements AiGatewayInterface
                     'working_directory' => config('local_agents.working_directory'),
                 ],
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $bridgeSecret,
+                    'Authorization' => 'Bearer '.$bridgeSecret,
                 ],
                 'stream' => true,
                 'connect_timeout' => 30,
@@ -345,7 +345,7 @@ class LocalAgentGateway implements AiGatewayInterface
             ]);
 
             throw new RuntimeException(
-                "Bridge stream failed for '{$config['name']}' after {$elapsedMs}ms: " . $e->getMessage()
+                "Bridge stream failed for '{$config['name']}' after {$elapsedMs}ms: ".$e->getMessage(),
             );
         }
 
@@ -359,6 +359,7 @@ class LocalAgentGateway implements AiGatewayInterface
 
             if ($chunk === '' || $chunk === false) {
                 usleep(10_000); // 10ms wait for more data
+
                 continue;
             }
 
@@ -382,7 +383,7 @@ class LocalAgentGateway implements AiGatewayInterface
 
                 if ($eventType === 'output') {
                     $data = $event['data'] ?? '';
-                    $fullOutput .= $data . "\n";
+                    $fullOutput .= $data."\n";
 
                     // Extract human-readable text from stream-json events
                     if ($onChunk) {
@@ -404,7 +405,7 @@ class LocalAgentGateway implements AiGatewayInterface
 
                 if ($eventType === 'error') {
                     throw new RuntimeException(
-                        "Local agent '{$config['name']}' stream error: " . ($event['error'] ?? 'Unknown')
+                        "Local agent '{$config['name']}' stream error: ".($event['error'] ?? 'Unknown'),
                     );
                 }
             }
@@ -479,7 +480,7 @@ class LocalAgentGateway implements AiGatewayInterface
                         );
                     }
                 } catch (\Throwable $parseErr) {
-                    Log::debug("LocalAgentGateway: stream recovery parse failed", [
+                    Log::debug('LocalAgentGateway: stream recovery parse failed', [
                         'error' => $parseErr->getMessage(),
                     ]);
                 }
@@ -490,13 +491,13 @@ class LocalAgentGateway implements AiGatewayInterface
             if (! $error) {
                 $error = $stderr ?: 'Process exited with non-zero code';
                 if (empty($stderr) && $recoveryOutput !== '') {
-                    $error .= ' | stdout: ' . substr($recoveryOutput, 0, 300);
+                    $error .= ' | stdout: '.substr($recoveryOutput, 0, 300);
                 }
             }
 
             throw new RuntimeException(
                 "Local agent '{$config['name']}' failed via bridge stream (code {$exitCode}): "
-                . substr($error, 0, 500)
+                .substr($error, 0, 500),
             );
         }
 
@@ -597,14 +598,14 @@ class LocalAgentGateway implements AiGatewayInterface
 
     private function buildCommand(string $agentKey, string $binaryPath, ?string $model = null): string
     {
-        $modelFlag = $model ? ' --model ' . escapeshellarg($model) : '';
+        $modelFlag = $model ? ' --model '.escapeshellarg($model) : '';
 
         // Unset CLAUDECODE to prevent "nested session" detection when spawning Claude Code
         $preamble = 'unset CLAUDECODE; ';
 
         return match ($agentKey) {
-            'codex' => $preamble . "{$binaryPath} exec --json --full-auto{$modelFlag}",
-            'claude-code' => $preamble . "{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config " . escapeshellarg('{"mcpServers":{}}') . $modelFlag,
+            'codex' => $preamble."{$binaryPath} exec --json --full-auto{$modelFlag}",
+            'claude-code' => $preamble."{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config ".escapeshellarg('{"mcpServers":{}}').$modelFlag,
             default => throw new RuntimeException("No command template for agent: {$agentKey}"),
         };
     }
@@ -781,7 +782,7 @@ class LocalAgentGateway implements AiGatewayInterface
             $detected = $this->discovery->detect();
             if (empty($detected)) {
                 throw new RuntimeException(
-                    'No local agents detected. Install Codex or Claude Code CLI.'
+                    'No local agents detected. Install Codex or Claude Code CLI.',
                 );
             }
 

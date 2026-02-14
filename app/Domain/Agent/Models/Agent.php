@@ -8,6 +8,7 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
 use App\Infrastructure\AI\Models\LlmRequestLog;
+use Database\Factories\Domain\Agent\AgentFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -89,6 +90,11 @@ class Agent extends Model
     public function executions(): HasMany
     {
         return $this->hasMany(AgentExecution::class)->orderByDesc('created_at');
+    }
+
+    protected static function newFactory()
+    {
+        return AgentFactory::new();
     }
 
     public function hasBudgetRemaining(): bool

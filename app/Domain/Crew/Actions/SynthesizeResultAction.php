@@ -45,7 +45,7 @@ class SynthesizeResultAction
 
         $systemPrompt = "You are {$coordinator->role}. {$coordinator->goal}\n\n"
             ."You have completed all tasks for the goal below. Now synthesize the individual task outputs into one cohesive final result.\n"
-            ."Output valid JSON with a \"result\" key containing the assembled output and a \"summary\" key with a brief overview.";
+            .'Output valid JSON with a "result" key containing the assembled output and a "summary" key with a brief overview.';
 
         $taskSummaries = collect($validatedOutputs)
             ->map(fn ($t, $i) => ($i + 1).". {$t['title']}:\n".json_encode($t['output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
@@ -53,7 +53,7 @@ class SynthesizeResultAction
 
         $userPrompt = "Goal: {$execution->goal}\n\n"
             ."Completed task outputs:\n{$taskSummaries}\n\n"
-            ."Synthesize these into a final result.";
+            .'Synthesize these into a final result.';
 
         $request = new AiRequestDTO(
             provider: $resolved['provider'],

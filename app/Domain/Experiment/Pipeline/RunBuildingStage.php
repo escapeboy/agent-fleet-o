@@ -44,6 +44,7 @@ class RunBuildingStage extends BaseStageJob
             Log::warning('RunBuildingStage: Experiment not found', [
                 'experiment_id' => $this->experimentId,
             ]);
+
             return;
         }
 
@@ -52,6 +53,7 @@ class RunBuildingStage extends BaseStageJob
                 'experiment_id' => $experiment->id,
                 'actual' => $experiment->status->value,
             ]);
+
             return;
         }
 
@@ -64,6 +66,7 @@ class RunBuildingStage extends BaseStageJob
                 'experiment_id' => $experiment->id,
                 'batch_id' => $stage->output_snapshot['batch_id'],
             ]);
+
             return;
         }
 
@@ -111,7 +114,7 @@ class RunBuildingStage extends BaseStageJob
                 taskId: $task->id,
                 teamId: $experiment->team_id,
             ),
-            $tasks
+            $tasks,
         );
 
         // Capture IDs for closures (closures can't use $this in serialized callbacks)

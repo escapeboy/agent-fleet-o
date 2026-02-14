@@ -48,13 +48,13 @@ class RunEvaluationStage extends BaseStageJob
 
         // Enrich with workflow step data when available
         $userPromptParts = [
-            "Evaluate this experiment:",
-            "",
+            'Evaluate this experiment:',
+            '',
             "Title: {$experiment->title}",
             "Thesis: {$experiment->thesis}",
             "Iteration: {$experiment->current_iteration} of {$experiment->max_iterations}",
-            "Success criteria: " . json_encode($experiment->success_criteria),
-            "Metrics: " . json_encode($metrics),
+            'Success criteria: '.json_encode($experiment->success_criteria),
+            'Metrics: '.json_encode($metrics),
         ];
 
         $steps = PlaybookStep::where('experiment_id', $experiment->id)->get();
@@ -68,7 +68,7 @@ class RunEvaluationStage extends BaseStageJob
                     : substr((string) ($s->output ?? ''), 0, 200),
             ]);
 
-            $userPromptParts[] = "Workflow steps: " . json_encode($stepSummary);
+            $userPromptParts[] = 'Workflow steps: '.json_encode($stepSummary);
         }
 
         $request = new AiRequestDTO(
@@ -117,6 +117,7 @@ class RunEvaluationStage extends BaseStageJob
                 toState: ExperimentStatus::Killed,
                 reason: "Max iterations ({$experiment->max_iterations}) reached",
             );
+
             return;
         }
 

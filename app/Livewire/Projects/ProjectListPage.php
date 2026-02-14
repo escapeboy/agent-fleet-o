@@ -26,6 +26,7 @@ class ProjectListPage extends Component
     public string $typeFilter = '';
 
     public string $sortField = 'created_at';
+
     public string $sortDirection = 'desc';
 
     public function sortBy(string $field): void
@@ -81,7 +82,7 @@ class ProjectListPage extends Component
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('title', 'ilike', "%{$this->search}%")
-                  ->orWhere('description', 'ilike', "%{$this->search}%");
+                    ->orWhere('description', 'ilike', "%{$this->search}%");
             });
         }
 

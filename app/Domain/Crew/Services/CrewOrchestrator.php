@@ -10,7 +10,6 @@ use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Jobs\CoordinatorDecisionJob;
 use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
-use App\Domain\Crew\Jobs\ValidateCrewTaskJob;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use Illuminate\Support\Facades\Bus;

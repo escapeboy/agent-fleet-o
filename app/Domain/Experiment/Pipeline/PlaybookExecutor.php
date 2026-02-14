@@ -271,7 +271,7 @@ class PlaybookExecutor
         $project = $projectRun?->project;
 
         if ($project && $project->type === ProjectType::OneShot) {
-            return [ExperimentStatus::Completed, $reason . ' (one-shot project)'];
+            return [ExperimentStatus::Completed, $reason.' (one-shot project)'];
         }
 
         return [ExperimentStatus::CollectingMetrics, $reason];

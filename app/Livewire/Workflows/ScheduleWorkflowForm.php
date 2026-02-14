@@ -15,29 +15,41 @@ class ScheduleWorkflowForm extends Component
 {
     // Basics
     public string $title = '';
+
     public string $workflowId = '';
+
     public string $description = '';
 
     // Schedule
     public string $frequency = 'daily';
+
     public string $cronExpression = '';
+
     public string $timezone = 'UTC';
+
     public string $overlapPolicy = 'skip';
+
     public int $maxConsecutiveFailures = 3;
 
     // Delivery
     public string $deliveryChannel = 'none';
+
     public string $deliveryTarget = '';
+
     public string $deliveryFormat = 'summary';
 
     // Budget
     public ?int $perRunCap = null;
+
     public ?int $dailyCap = null;
+
     public ?int $weeklyCap = null;
+
     public ?int $monthlyCap = null;
 
     // Options
     public bool $runImmediately = true;
+
     public bool $activateOnSave = true;
 
     public function mount(?string $workflow = null): void
@@ -67,9 +79,9 @@ class ScheduleWorkflowForm extends Component
         $rules = [
             'title' => 'required|min:2|max:255',
             'workflowId' => 'required|exists:workflows,id',
-            'frequency' => 'required|in:' . implode(',', array_column(ScheduleFrequency::cases(), 'value')),
+            'frequency' => 'required|in:'.implode(',', array_column(ScheduleFrequency::cases(), 'value')),
             'timezone' => 'required|timezone',
-            'overlapPolicy' => 'required|in:' . implode(',', array_column(OverlapPolicy::cases(), 'value')),
+            'overlapPolicy' => 'required|in:'.implode(',', array_column(OverlapPolicy::cases(), 'value')),
             'maxConsecutiveFailures' => 'required|integer|min:1|max:100',
             'deliveryChannel' => 'required|in:none,email,slack,telegram,webhook',
         ];
