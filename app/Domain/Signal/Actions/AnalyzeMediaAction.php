@@ -2,6 +2,7 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\ValueObjects\Media\Image;
@@ -16,6 +17,10 @@ class AnalyzeMediaAction
      */
     public function execute(Media $media): ?string
     {
+        if (! GlobalSetting::get('media_analysis_enabled', false)) {
+            return null;
+        }
+
         $mimeType = $media->mime_type;
 
         try {

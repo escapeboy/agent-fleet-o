@@ -20,6 +20,7 @@ use App\Livewire\Health\HealthPage;
 use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
+use App\Livewire\Memory\MemoryBrowserPage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
@@ -89,6 +90,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/workflows/{workflow}', WorkflowDetailPage::class)->name('workflows.show');
 
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
+
+    Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/health', HealthPage::class)->name('health');

@@ -28,7 +28,18 @@ class GlobalSettingsPage extends Component
 
     public int $webhookRateLimit = 50;
 
+    public int $discordRateLimit = 20;
+
+    public int $teamsRateLimit = 20;
+
+    public int $googleChatRateLimit = 20;
+
+    public int $whatsappRateLimit = 10;
+
     public int $targetCooldownDays = 7;
+
+    // Media analysis
+    public bool $mediaAnalysisEnabled = false;
 
     // Default pipeline LLM
     public string $defaultLlmProvider = 'anthropic';
@@ -58,8 +69,14 @@ class GlobalSettingsPage extends Component
         $this->telegramRateLimit = $rateLimits['telegram'] ?? 20;
         $this->slackRateLimit = $rateLimits['slack'] ?? 20;
         $this->webhookRateLimit = $rateLimits['webhook'] ?? 50;
+        $this->discordRateLimit = $rateLimits['discord'] ?? 20;
+        $this->teamsRateLimit = $rateLimits['teams'] ?? 20;
+        $this->googleChatRateLimit = $rateLimits['google_chat'] ?? 20;
+        $this->whatsappRateLimit = $rateLimits['whatsapp'] ?? 10;
 
         $this->targetCooldownDays = GlobalSetting::get('target_cooldown_days', 7);
+
+        $this->mediaAnalysisEnabled = (bool) GlobalSetting::get('media_analysis_enabled', false);
         $this->approvalTimeoutHours = GlobalSetting::get('approval_timeout_hours', 48);
 
         $this->defaultLlmProvider = GlobalSetting::get('default_llm_provider', 'anthropic') ?? 'anthropic';
@@ -88,6 +105,10 @@ class GlobalSettingsPage extends Component
             'telegramRateLimit' => 'required|integer|min:1',
             'slackRateLimit' => 'required|integer|min:1',
             'webhookRateLimit' => 'required|integer|min:1',
+            'discordRateLimit' => 'required|integer|min:1',
+            'teamsRateLimit' => 'required|integer|min:1',
+            'googleChatRateLimit' => 'required|integer|min:1',
+            'whatsappRateLimit' => 'required|integer|min:1',
             'targetCooldownDays' => 'required|integer|min:0',
         ]);
 
@@ -96,6 +117,10 @@ class GlobalSettingsPage extends Component
             'telegram' => $this->telegramRateLimit,
             'slack' => $this->slackRateLimit,
             'webhook' => $this->webhookRateLimit,
+            'discord' => $this->discordRateLimit,
+            'teams' => $this->teamsRateLimit,
+            'google_chat' => $this->googleChatRateLimit,
+            'whatsapp' => $this->whatsappRateLimit,
         ]);
         GlobalSetting::set('target_cooldown_days', $this->targetCooldownDays);
 
@@ -111,6 +136,13 @@ class GlobalSettingsPage extends Component
         GlobalSetting::set('approval_timeout_hours', $this->approvalTimeoutHours);
 
         session()->flash('message', 'Approval settings saved.');
+    }
+
+    public function saveMediaAnalysisSettings(): void
+    {
+        GlobalSetting::set('media_analysis_enabled', $this->mediaAnalysisEnabled);
+
+        session()->flash('message', 'Media analysis settings saved.');
     }
 
     public function addBlacklistEntry(): void
