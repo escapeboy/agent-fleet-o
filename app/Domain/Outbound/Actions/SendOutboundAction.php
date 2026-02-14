@@ -2,11 +2,15 @@
 
 namespace App\Domain\Outbound\Actions;
 
+use App\Domain\Outbound\Connectors\DiscordConnector;
 use App\Domain\Outbound\Connectors\DummyConnector;
+use App\Domain\Outbound\Connectors\GoogleChatConnector;
 use App\Domain\Outbound\Connectors\SlackConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
+use App\Domain\Outbound\Connectors\TeamsConnector;
 use App\Domain\Outbound\Connectors\TelegramConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
+use App\Domain\Outbound\Connectors\WhatsAppConnector;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Exceptions\BlacklistedException;
 use App\Domain\Outbound\Exceptions\RateLimitExceededException;
@@ -28,6 +32,10 @@ class SendOutboundAction
             new SmtpEmailConnector,
             new TelegramConnector,
             new SlackConnector,
+            new WhatsAppConnector,
+            new DiscordConnector,
+            new TeamsConnector,
+            new GoogleChatConnector,
             new WebhookOutboundConnector,
             new DummyConnector,  // Fallback — must be last
         ];

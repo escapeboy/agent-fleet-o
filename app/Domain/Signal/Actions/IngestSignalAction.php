@@ -2,17 +2,23 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Domain\Signal\Jobs\ProcessSignalMediaJob;
 use App\Domain\Signal\Models\Signal;
 use App\Models\Blacklist;
+use Illuminate\Http\UploadedFile;
 
 class IngestSignalAction
 {
+    /**
+     * @param  UploadedFile[]  $files  Optional file attachments for media processing
+     */
     public function execute(
         string $sourceType,
         string $sourceIdentifier,
         array $payload,
         array $tags = [],
         ?string $experimentId = null,
+        array $files = [],
     ): ?Signal {
         $contentHash = hash('sha256', json_encode($payload));
 
@@ -27,7 +33,7 @@ class IngestSignalAction
             return null;
         }
 
-        return Signal::create([
+        $signal = Signal::create([
             'experiment_id' => $experimentId,
             'source_type' => $sourceType,
             'source_identifier' => $sourceIdentifier,
@@ -36,6 +42,20 @@ class IngestSignalAction
             'tags' => $tags,
             'received_at' => now(),
         ]);
+
+        // Handle file attachments
+        foreach ($files as $file) {
+            if ($file instanceof UploadedFile && $file->isValid()) {
+                $signal->addMedia($file)->toMediaCollection('attachments');
+            }
+        }
+
+        // Dispatch media analysis if files were attached
+        if (! empty($files)) {
+            ProcessSignalMediaJob::dispatch($signal->id);
+        }
+
+        return $signal;
     }
 
     private function isBlacklisted(array $payload): bool

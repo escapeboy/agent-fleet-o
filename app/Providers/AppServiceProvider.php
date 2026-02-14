@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
+use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
@@ -59,6 +61,11 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ExperimentTransitioned::class, SyncProjectStatusOnRunComplete::class);
         Event::listen(ExperimentTransitioned::class, LogProjectActivity::class);
         Event::listen(ExperimentTransitioned::class, NotifyDependentsOnRunComplete::class);
+
+        // Agent memory: store execution output as memory after completion
+        AgentExecution::created(function (AgentExecution $execution) {
+            app(StoreExecutionMemory::class)->handle($execution);
+        });
 
         // API rate limiting
         RateLimiter::for('api', function (Request $request) {
