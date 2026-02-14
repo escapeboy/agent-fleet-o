@@ -4,6 +4,7 @@ namespace App\Domain\Signal\Actions;
 
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Prism;
+use Prism\Prism\ValueObjects\Media\Image;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AnalyzeMediaAction
@@ -49,8 +50,9 @@ class AnalyzeMediaAction
         $response = Prism::text()
             ->using('anthropic', 'claude-sonnet-4-20250514')
             ->withSystemPrompt('You are a helpful assistant that describes images accurately and concisely. Extract all relevant text, data, and visual information.')
-            ->withImage($path)
-            ->withPrompt('Describe this image in detail. Extract any text, numbers, charts, or data visible in the image.')
+            ->withPrompt('Describe this image in detail. Extract any text, numbers, charts, or data visible in the image.', [
+                Image::fromLocalPath($path),
+            ])
             ->asText();
 
         return $response->text;

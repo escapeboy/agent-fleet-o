@@ -10,7 +10,7 @@ use Illuminate\Http\UploadedFile;
 class IngestSignalAction
 {
     /**
-     * @param  UploadedFile[]  $files  Optional file attachments for media processing
+     * @param  array<int, UploadedFile|mixed>  $files  Optional file attachments for media processing
      */
     public function execute(
         string $sourceType,

@@ -4,6 +4,7 @@ namespace App\Domain\Memory\Listeners;
 
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Memory\Actions\StoreMemoryAction;
+use App\Domain\Project\Models\ProjectRun;
 use Illuminate\Support\Facades\Log;
 
 class StoreExecutionMemory
@@ -27,24 +28,30 @@ class StoreExecutionMemory
             return;
         }
 
+        /** @var array<string, mixed>|null $output */
         $output = $execution->output;
         if (empty($output)) {
             return;
         }
 
-        $content = is_array($output) ? ($output['result'] ?? json_encode($output)) : (string) $output;
+        $content = $output['result'] ?? json_encode($output);
 
-        if (empty(trim($content))) {
+        if (empty(trim((string) $content))) {
             return;
         }
 
         try {
+            // Resolve project ID through the ProjectRun join table
+            $projectId = $execution->experiment_id
+                ? ProjectRun::where('experiment_id', $execution->experiment_id)->value('project_id')
+                : null;
+
             $this->storeMemory->execute(
                 teamId: $execution->team_id,
                 agentId: $execution->agent_id,
-                content: $content,
+                content: (string) $content,
                 sourceType: 'execution',
-                projectId: $execution->experiment?->project_id ?? null,
+                projectId: $projectId,
                 sourceId: $execution->id,
                 metadata: [
                     'execution_id' => $execution->id,

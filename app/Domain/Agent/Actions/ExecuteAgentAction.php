@@ -271,7 +271,7 @@ class ExecuteAgentAction
 
         // Inject relevant memories from past executions
         if (config('memory.enabled', true) && ! empty($input)) {
-            $queryText = is_array($input) ? json_encode($input) : (string) $input;
+            $queryText = json_encode($input);
             $memories = $this->retrieveMemories->execute(
                 agentId: $agent->id,
                 query: $queryText,
