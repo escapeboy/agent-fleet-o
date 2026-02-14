@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
+use App\Domain\Memory\Actions\RetrieveRelevantMemoriesAction;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
@@ -24,6 +25,7 @@ class ExecuteAgentAction
         private readonly ResolveAgentToolsAction $resolveTools,
         private readonly ResolveProjectCredentialsAction $resolveCredentials,
         private readonly ProviderResolver $providerResolver,
+        private readonly RetrieveRelevantMemoriesAction $retrieveMemories,
     ) {}
 
     /**
@@ -81,7 +83,7 @@ class ExecuteAgentAction
         $startTime = hrtime(true);
 
         try {
-            $systemPrompt = $this->buildAgentSystemPrompt($agent, $project);
+            $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input);
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
 
@@ -153,7 +155,7 @@ class ExecuteAgentAction
         $startTime = hrtime(true);
 
         try {
-            $systemPrompt = $this->buildAgentSystemPrompt($agent);
+            $systemPrompt = $this->buildAgentSystemPrompt($agent, null, $input);
 
             // Build user prompt from task + goal + context
             $userPromptParts = [];
@@ -226,7 +228,7 @@ class ExecuteAgentAction
     /**
      * Build a rich system prompt that gives the agent its identity and context.
      */
-    private function buildAgentSystemPrompt(Agent $agent, ?Project $project = null): string
+    private function buildAgentSystemPrompt(Agent $agent, ?Project $project = null, array $input = []): string
     {
         $parts = [];
 
@@ -265,6 +267,21 @@ class ExecuteAgentAction
                 return "- {$c['name']} ({$c['type']}, id: {$c['id']}){$desc}";
             })->implode("\n");
             $parts[] = "## Available Credentials\nYou have access to the following credentials for authenticating with external services. Request a credential by its ID when you need to authenticate.\n\n{$credentialList}";
+        }
+
+        // Inject relevant memories from past executions
+        if (config('memory.enabled', true) && ! empty($input)) {
+            $queryText = json_encode($input);
+            $memories = $this->retrieveMemories->execute(
+                agentId: $agent->id,
+                query: $queryText,
+                projectId: $project?->id,
+            );
+
+            if ($memories->isNotEmpty()) {
+                $memoryList = $memories->map(fn ($m) => "- {$m->content}")->implode("\n");
+                $parts[] = "## Relevant Context from Past Executions\n{$memoryList}";
+            }
         }
 
         $parts[] = 'Use the available tools to accomplish the task. Be thorough but efficient.';

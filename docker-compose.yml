@@ -39,7 +39,7 @@ services:
       - app
 
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     # container_name removed
     restart: unless-stopped
     environment:

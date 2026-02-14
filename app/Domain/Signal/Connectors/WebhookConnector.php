@@ -26,6 +26,7 @@ class WebhookConnector implements InputConnectorInterface
         $source = $config['source'] ?? 'webhook';
         $experimentId = $config['experiment_id'] ?? null;
         $tags = $config['tags'] ?? ['webhook'];
+        $files = $config['files'] ?? [];
 
         if (empty($payload)) {
             Log::warning('WebhookConnector: Empty payload');
@@ -33,12 +34,19 @@ class WebhookConnector implements InputConnectorInterface
             return [];
         }
 
+        // Flatten nested file arrays from multipart uploads
+        $flatFiles = [];
+        array_walk_recursive($files, function ($file) use (&$flatFiles) {
+            $flatFiles[] = $file;
+        });
+
         $signal = $this->ingestAction->execute(
             sourceType: 'webhook',
             sourceIdentifier: $source,
             payload: $payload,
             tags: $tags,
             experimentId: $experimentId,
+            files: $flatFiles,
         );
 
         return $signal ? [$signal] : [];

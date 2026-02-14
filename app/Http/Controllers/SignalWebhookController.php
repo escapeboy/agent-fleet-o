@@ -43,6 +43,7 @@ class SignalWebhookController extends Controller
             'source' => $request->header('X-Webhook-Source', $request->ip()),
             'experiment_id' => $request->input('experiment_id'),
             'tags' => $request->input('tags', ['webhook']),
+            'files' => $request->allFiles(),
         ]);
 
         return response()->json([
