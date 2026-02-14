@@ -125,7 +125,7 @@ jobs:
         run: php artisan migrate --force
 
       - name: Run tests
-        run: php artisan test --parallel --processes=4
+        run: php artisan test
 
   # ─────────────────────────────────────────
   # Job 3: Frontend Build Verification
