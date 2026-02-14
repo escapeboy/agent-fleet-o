@@ -4,7 +4,6 @@ namespace App\Domain\Memory\Actions;
 
 use App\Domain\Memory\Models\Memory;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Prism;
 

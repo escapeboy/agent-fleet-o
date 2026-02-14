@@ -3,7 +3,6 @@
 namespace App\Domain\Signal\Actions;
 
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Enums\Provider;
 use Prism\Prism\Facades\Prism;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
