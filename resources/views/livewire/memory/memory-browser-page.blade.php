@@ -73,7 +73,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">
-                            {{ $memory->project?->name ?? '-' }}
+                            {{ $memory->project?->title ?? '-' }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">
                             {{ $memory->created_at->diffForHumans() }}

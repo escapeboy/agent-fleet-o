@@ -102,7 +102,7 @@ class MemoryBrowserPage extends Component
         return view('livewire.memory.memory-browser-page', [
             'memories' => $query->paginate(30),
             'agents' => Agent::orderBy('name')->pluck('name', 'id'),
-            'projects' => Project::orderBy('name')->pluck('name', 'id'),
+            'projects' => Project::orderBy('title')->pluck('title', 'id'),
             'sourceTypes' => Memory::distinct()->pluck('source_type')->sort()->values(),
         ])->layout('layouts.app', ['header' => 'Memory Browser']);
     }
