@@ -25,4 +25,5 @@ Schedule::command('projects:check-budgets')->hourly();
 
 // Agent memory pruning
 Schedule::command('memories:prune')->dailyAt('03:00');
+
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
