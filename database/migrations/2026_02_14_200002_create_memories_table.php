@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('agent_id');
             $table->uuid('project_id')->nullable();
             $table->text('content');
-            $table->json('metadata')->default('{}');
+            $table->jsonb('metadata')->default('{}');
             $table->string('source_type', 50);  // execution, manual, signal
             $table->uuid('source_id')->nullable();
             $table->timestamps();
