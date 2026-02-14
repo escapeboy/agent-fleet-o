@@ -22,7 +22,9 @@ class PlaybookExecutorBridgeModeTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Team $team;
+
     private Experiment $experiment;
 
     protected function setUp(): void

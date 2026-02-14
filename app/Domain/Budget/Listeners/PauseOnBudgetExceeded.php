@@ -39,7 +39,7 @@ class PauseOnBudgetExceeded
         try {
             $this->pause->execute(
                 experiment: $experiment,
-                reason: 'Auto-paused: ' . $result['reason'],
+                reason: 'Auto-paused: '.$result['reason'],
             );
         } catch (\Throwable $e) {
             Log::error('PauseOnBudgetExceeded: Failed to auto-pause', [

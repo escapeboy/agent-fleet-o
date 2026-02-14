@@ -10,7 +10,6 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Notifications\WeeklyDigestNotification;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Console\Command;
-use Illuminate\Database\Eloquent\Builder;
 
 class SendWeeklyDigest extends Command
 {

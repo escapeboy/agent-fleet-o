@@ -19,20 +19,26 @@ class WorkflowBuilderPage extends Component
 
     // Workflow metadata
     public string $name = '';
+
     public string $description = '';
+
     public int $maxLoopIterations = 10;
 
     // Graph state (synced with Alpine.js canvas)
     public array $nodes = [];
+
     public array $edges = [];
 
     // Validation
     public array $validationErrors = [];
+
     public bool $isValid = false;
 
     // Available resources for node config
     public array $availableAgents = [];
+
     public array $availableSkills = [];
+
     public array $availableCrews = [];
 
     public function mount(?Workflow $workflow = null): void

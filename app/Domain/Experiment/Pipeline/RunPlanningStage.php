@@ -4,6 +4,7 @@ namespace App\Domain\Experiment\Pipeline;
 
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
@@ -54,11 +55,11 @@ class RunPlanningStage extends BaseStageJob
             "Thesis: {$experiment->thesis}",
             "Track: {$experiment->track->value}",
             "Iteration: {$experiment->current_iteration}",
-            "Scoring output: " . json_encode($scoringOutput, JSON_UNESCAPED_UNICODE),
+            'Scoring output: '.json_encode($scoringOutput, JSON_UNESCAPED_UNICODE),
         ];
 
         if ($rejectionFeedback) {
-            $contextParts[] = "Previous rejection feedback: " . json_encode($rejectionFeedback, JSON_UNESCAPED_UNICODE);
+            $contextParts[] = 'Previous rejection feedback: '.json_encode($rejectionFeedback, JSON_UNESCAPED_UNICODE);
         }
 
         // Include dependency context from predecessor projects
@@ -71,7 +72,7 @@ class RunPlanningStage extends BaseStageJob
                     $contextParts[] = "Artifact [{$artifact['type']}] {$artifact['name']}:\n{$artifact['content']}";
                 }
                 if (! empty($data['stage_outputs'])) {
-                    $contextParts[] = "Stage outputs: " . json_encode($data['stage_outputs'], JSON_UNESCAPED_UNICODE);
+                    $contextParts[] = 'Stage outputs: '.json_encode($data['stage_outputs'], JSON_UNESCAPED_UNICODE);
                 }
             }
         }
@@ -97,7 +98,7 @@ class RunPlanningStage extends BaseStageJob
         if (! is_array($parsedOutput) || empty($parsedOutput['plan_summary'])) {
             throw new \RuntimeException(
                 'Planning stage: LLM returned invalid plan (missing plan_summary). '
-                . 'Raw response: ' . substr($response->content ?? '', 0, 500)
+                .'Raw response: '.substr($response->content ?? '', 0, 500),
             );
         }
 
@@ -106,7 +107,7 @@ class RunPlanningStage extends BaseStageJob
         // Running and call transition first, the validator rejects the transition.
         $stage->update([
             'output_snapshot' => $parsedOutput,
-            'status' => \App\Domain\Experiment\Enums\StageStatus::Completed,
+            'status' => StageStatus::Completed,
             'completed_at' => now(),
         ]);
 

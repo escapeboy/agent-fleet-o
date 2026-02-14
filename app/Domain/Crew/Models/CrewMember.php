@@ -4,13 +4,20 @@ namespace App\Domain\Crew\Models;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewMemberRole;
+use Database\Factories\Domain\Crew\CrewMemberFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CrewMember extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
+
+    protected static function newFactory()
+    {
+        return CrewMemberFactory::new();
+    }
 
     protected $fillable = [
         'crew_id',

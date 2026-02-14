@@ -5,18 +5,19 @@ namespace App\Providers;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
+use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
-use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -72,11 +73,11 @@ class AppServiceProvider extends ServiceProvider
 
         // Scramble API documentation — only document /api/v1 routes
         Scramble::configure()
-            ->routes(fn (\Illuminate\Routing\Route $route) => Str::startsWith($route->uri(), 'api/v1/'));
+            ->routes(fn (Route $route) => Str::startsWith($route->uri(), 'api/v1/'));
 
         Scramble::afterOpenApiGenerated(function (OpenApi $openApi) {
             $openApi->secure(
-                SecurityScheme::http('bearer', 'token')
+                SecurityScheme::http('bearer', 'token'),
             );
         });
     }

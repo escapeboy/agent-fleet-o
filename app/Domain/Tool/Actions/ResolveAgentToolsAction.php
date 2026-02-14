@@ -28,7 +28,7 @@ class ResolveAgentToolsAction
         // Apply project-level restrictions if set
         if ($project && ! empty($project->allowed_tool_ids)) {
             $agentTools = $agentTools->filter(
-                fn (Tool $tool) => in_array($tool->id, $project->allowed_tool_ids)
+                fn (Tool $tool) => in_array($tool->id, $project->allowed_tool_ids),
             );
         }
 

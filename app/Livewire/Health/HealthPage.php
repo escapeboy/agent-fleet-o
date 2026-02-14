@@ -4,9 +4,9 @@ namespace App\Livewire\Health;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Budget\Models\CreditLedger;
-use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redis;
 use Livewire\Component;
 
@@ -46,7 +46,7 @@ class HealthPage extends Component
         return $stats;
     }
 
-    private function getRecentErrors(): \Illuminate\Support\Collection
+    private function getRecentErrors(): Collection
     {
         return ExperimentStage::where('status', 'failed')
             ->with('experiment')

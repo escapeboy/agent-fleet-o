@@ -11,14 +11,23 @@ use Livewire\Component;
 class CreateAgentForm extends Component
 {
     public string $name = '';
+
     public string $role = '';
+
     public string $goal = '';
+
     public string $backstory = '';
+
     public string $provider = 'anthropic';
+
     public string $model = 'claude-sonnet-4-5';
+
     public ?int $budgetCapCredits = null;
+
     public array $selectedSkillIds = [];
+
     public array $selectedToolIds = [];
+
     public array $fallbackChain = [];
 
     public function addFallback(): void

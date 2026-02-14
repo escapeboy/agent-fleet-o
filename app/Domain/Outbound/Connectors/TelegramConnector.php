@@ -35,7 +35,7 @@ class TelegramConnector implements OutboundConnectorInterface
 
         try {
             $botToken = config('services.telegram.bot_token');
-            if (!$botToken) {
+            if (! $botToken) {
                 throw new \RuntimeException('Telegram bot token not configured');
             }
 
@@ -43,7 +43,7 @@ class TelegramConnector implements OutboundConnectorInterface
             $content = $proposal->content;
 
             $chatId = $target['chat_id'] ?? $target['id'] ?? null;
-            if (!$chatId) {
+            if (! $chatId) {
                 throw new \InvalidArgumentException('No chat_id in target');
             }
 

@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class GlobalSetting extends Model
 {
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $primaryKey = 'key';
+
     protected $keyType = 'string';
 
     protected $fillable = [

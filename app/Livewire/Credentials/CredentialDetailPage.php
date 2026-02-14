@@ -14,28 +14,42 @@ use Livewire\Component;
 class CredentialDetailPage extends Component
 {
     public Credential $credential;
+
     public string $activeTab = 'overview';
 
     // Editing state
     public bool $editing = false;
+
     public string $editName = '';
+
     public string $editDescription = '';
+
     public string $editExpiresAt = '';
 
     // Rotation state
     public bool $rotating = false;
+
     // BasicAuth
     public string $rotateUsername = '';
+
     public string $rotatePassword = '';
+
     public string $rotateLoginUrl = '';
+
     // ApiToken
     public string $rotateToken = '';
+
     public string $rotateTokenType = 'bearer';
+
     public string $rotateHeaderName = 'Authorization';
+
     // SSH Key
     public string $rotatePrivateKey = '';
+
     public string $rotatePassphrase = '';
+
     public string $rotateSshHost = '';
+
     // Custom KV
     public array $rotateCustomPairs = [['key' => '', 'value' => '']];
 

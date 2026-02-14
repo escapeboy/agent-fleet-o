@@ -193,7 +193,7 @@ class ProjectController extends Controller
     public function runs(Request $request, Project $project): AnonymousResourceCollection
     {
         $runs = QueryBuilder::for(
-            ProjectRun::query()->where('project_id', $project->id)
+            ProjectRun::query()->where('project_id', $project->id),
         )
             ->allowedFilters([
                 AllowedFilter::exact('status'),

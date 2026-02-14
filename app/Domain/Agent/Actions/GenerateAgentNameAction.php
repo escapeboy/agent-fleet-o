@@ -48,6 +48,6 @@ class GenerateAgentNameAction
         // Fallback: deterministic name
         $shortRole = ucfirst(strtolower(substr($role, 0, 20)));
 
-        return "{$shortRole} Agent #" . random_int(1000, 9999);
+        return "{$shortRole} Agent #".random_int(1000, 9999);
     }
 }

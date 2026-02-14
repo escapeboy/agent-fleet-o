@@ -8,7 +8,6 @@ use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Jobs\ExecuteProjectRunJob;
 use App\Domain\Project\Models\Project;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class ProjectScheduler

@@ -58,7 +58,7 @@ class EstimateWorkflowCostAction
 
         return (int) ceil(
             ($estimatedInputTokens / 1000 * $inputCostPer1k) +
-            ($estimatedOutputTokens / 1000 * $outputCostPer1k)
+            ($estimatedOutputTokens / 1000 * $outputCostPer1k),
         );
     }
 

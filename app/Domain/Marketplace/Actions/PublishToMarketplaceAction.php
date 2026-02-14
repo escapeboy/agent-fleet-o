@@ -34,7 +34,7 @@ class PublishToMarketplaceAction
 
         $version = match (true) {
             $item instanceof Skill => $item->current_version ?? '1.0.0',
-            $item instanceof Workflow => 'v' . $item->version,
+            $item instanceof Workflow => 'v'.$item->version,
             default => '1.0.0',
         };
 
@@ -64,7 +64,7 @@ class PublishToMarketplaceAction
             'type' => $type,
             'listable_id' => $item->id,
             'name' => $name,
-            'slug' => Str::slug($name) . '-' . Str::random(6),
+            'slug' => Str::slug($name).'-'.Str::random(6),
             'description' => $description,
             'readme' => $readme,
             'category' => $category,

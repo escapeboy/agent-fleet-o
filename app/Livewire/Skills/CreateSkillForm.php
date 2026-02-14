@@ -15,20 +15,29 @@ class CreateSkillForm extends Component
 
     // Step 1: Basics
     public string $name = '';
+
     public string $description = '';
+
     public string $type = 'llm';
+
     public string $riskLevel = 'low';
 
     // Step 2: Schema
     public array $inputFields = [];
+
     public array $outputFields = [];
 
     // Step 3: Configuration
     public string $provider = '';
+
     public string $model = '';
+
     public string $systemPrompt = '';
+
     public string $promptTemplate = '';
+
     public int $maxTokens = 4096;
+
     public float $temperature = 0.7;
 
     public function nextStep(): void

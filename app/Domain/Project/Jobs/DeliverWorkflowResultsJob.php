@@ -3,12 +3,11 @@
 namespace App\Domain\Project\Jobs;
 
 use App\Domain\Experiment\Models\PlaybookStep;
-use App\Models\Artifact;
 use App\Domain\Outbound\Actions\SendOutboundAction;
-use App\Domain\Outbound\Enums\OutboundChannel;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Project\Models\ProjectRun;
+use App\Models\Artifact;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
@@ -148,7 +147,7 @@ class DeliverWorkflowResultsJob implements ShouldQueue
         // Append artifact info if any exist
         $artifactSection = $this->buildArtifactSection($run);
         if ($artifactSection) {
-            $body .= "\n\n---\n\n" . $artifactSection;
+            $body .= "\n\n---\n\n".$artifactSection;
         }
 
         return [
@@ -185,6 +184,6 @@ class DeliverWorkflowResultsJob implements ShouldQueue
             return $text;
         }
 
-        return mb_substr($text, 0, $maxLength - 3) . '...';
+        return mb_substr($text, 0, $maxLength - 3).'...';
     }
 }

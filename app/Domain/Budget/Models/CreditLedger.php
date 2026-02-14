@@ -7,6 +7,7 @@ use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\User;
+use Database\Factories\Domain\Budget\CreditLedgerFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +37,11 @@ class CreditLedger extends Model
             'balance_after' => 'integer',
             'metadata' => 'array',
         ];
+    }
+
+    protected static function newFactory()
+    {
+        return CreditLedgerFactory::new();
     }
 
     public function user(): BelongsTo

@@ -41,8 +41,8 @@ class CoordinatorDecisionJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new CheckKillSwitch(),
-            new CheckBudgetAvailable(),
+            new CheckKillSwitch,
+            new CheckBudgetAvailable,
             new TenantRateLimit('ai-calls', 30),
         ];
     }
@@ -74,7 +74,7 @@ class CoordinatorDecisionJob implements ShouldQueue
                 ->count();
 
             if ($validatedCount > 0) {
-                app(CrewOrchestrator::class)->onTaskValidated($execution, new CrewTaskExecution());
+                app(CrewOrchestrator::class)->onTaskValidated($execution, new CrewTaskExecution);
             }
 
             return;
@@ -104,7 +104,7 @@ class CoordinatorDecisionJob implements ShouldQueue
             ->get();
 
         $completedSummary = $completedTasks->map(fn ($t) => "- {$t->title} [{$t->status->value}]: ".
-            ($t->output ? json_encode($t->output, JSON_UNESCAPED_UNICODE) : 'No output')
+            ($t->output ? json_encode($t->output, JSON_UNESCAPED_UNICODE) : 'No output'),
         )->implode("\n");
 
         $workerList = collect($config['workers'] ?? [])
@@ -117,7 +117,7 @@ class CoordinatorDecisionJob implements ShouldQueue
             ."Available actions:\n"
             ."- \"delegate\": Assign a task to a team member (or yourself if solo)\n"
             ."- \"complete\": The goal is achieved, provide a summary\n\n"
-            ."Respond with valid JSON: { \"action\": \"delegate\"|\"complete\", \"task\": { \"title\": string, \"description\": string }, \"assigned_to\": string, \"summary\": string }";
+            .'Respond with valid JSON: { "action": "delegate"|"complete", "task": { "title": string, "description": string }, "assigned_to": string, "summary": string }';
 
         $userPrompt = "Goal: {$execution->goal}\n\n"
             ."Completed tasks:\n".($completedSummary ?: 'None yet')."\n\n"

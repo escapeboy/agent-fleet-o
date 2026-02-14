@@ -8,8 +8,10 @@ use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Workflow\Models\Workflow;
 use App\Models\User;
+use Database\Factories\Domain\Project\ProjectFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,7 +19,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Project extends Model
 {
-    use BelongsToTeam, HasUuids;
+    use BelongsToTeam, HasFactory, HasUuids;
+
+    protected static function newFactory()
+    {
+        return ProjectFactory::new();
+    }
 
     /**
      * Projects this project depends on (upstream).
@@ -172,7 +179,7 @@ class Project extends Model
 
     public function isOverBudget(string $period = 'daily'): bool
     {
-        $cap = $this->budget_config[$period . '_cap'] ?? null;
+        $cap = $this->budget_config[$period.'_cap'] ?? null;
         if (! $cap) {
             return false;
         }

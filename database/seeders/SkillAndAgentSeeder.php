@@ -11,7 +11,7 @@ use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillVersion;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 
 class SkillAndAgentSeeder extends Seeder
 {
@@ -21,6 +21,7 @@ class SkillAndAgentSeeder extends Seeder
 
         if (! $team) {
             $this->command?->warn('No team found. Run app:install first.');
+
             return;
         }
 
@@ -33,7 +34,7 @@ class SkillAndAgentSeeder extends Seeder
         $this->command?->info("Done: {$skills->count()} skills, 9 agents.");
     }
 
-    private function seedSkills(Team $team): \Illuminate\Support\Collection
+    private function seedSkills(Team $team): Collection
     {
         $definitions = $this->skillDefinitions();
         $skills = collect();
@@ -54,7 +55,7 @@ class SkillAndAgentSeeder extends Seeder
                     'system_prompt' => $def['system_prompt'],
                     'requires_approval' => $def['risk_level']->requiresApproval(),
                     'current_version' => '1.0.0',
-                ]
+                ],
             );
 
             // Create initial version if none exists
@@ -75,7 +76,7 @@ class SkillAndAgentSeeder extends Seeder
         return $skills;
     }
 
-    private function seedAgents(Team $team, \Illuminate\Support\Collection $skills): void
+    private function seedAgents(Team $team, Collection $skills): void
     {
         $definitions = $this->agentDefinitions();
 
@@ -97,7 +98,7 @@ class SkillAndAgentSeeder extends Seeder
                     'constraints' => $def['constraints'] ?? [],
                     'cost_per_1k_input' => $pricing['input'] ?? 0,
                     'cost_per_1k_output' => $pricing['output'] ?? 0,
-                ]
+                ],
             );
 
             // Sync skills with priority

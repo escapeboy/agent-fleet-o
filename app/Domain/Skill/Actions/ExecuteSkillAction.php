@@ -2,8 +2,10 @@
 
 namespace App\Domain\Skill\Actions;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Budget\Actions\ReserveBudgetAction;
 use App\Domain\Budget\Actions\SettleBudgetAction;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
@@ -13,7 +15,6 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
-use InvalidArgumentException;
 
 class ExecuteSkillAction
 {
@@ -51,7 +52,7 @@ class ExecuteSkillAction
 
             if (! $validation['valid']) {
                 return $this->failExecution($skill, $teamId, $agentId, $experimentId, $input,
-                    'Input validation failed: ' . implode('; ', $validation['errors'])
+                    'Input validation failed: '.implode('; ', $validation['errors']),
                 );
             }
         }
@@ -61,8 +62,8 @@ class ExecuteSkillAction
             $resolvedProvider = $provider;
             $resolvedModel = $model;
         } else {
-            $agent = $agentId ? \App\Domain\Agent\Models\Agent::find($agentId) : null;
-            $team = $teamId ? \App\Domain\Shared\Models\Team::find($teamId) : null;
+            $agent = $agentId ? Agent::find($agentId) : null;
+            $team = $teamId ? Team::find($teamId) : null;
             $resolved = $this->providerResolver->resolve($skill, $agent, $team);
             $resolvedProvider = $provider ?? $resolved['provider'];
             $resolvedModel = $model ?? $resolved['model'];
@@ -194,7 +195,7 @@ class ExecuteSkillAction
         $connectorResult = json_encode($input);
 
         $systemPrompt = $skill->system_prompt ?? 'Process the following connector output and produce a structured result.';
-        $userPrompt = "Connector output:\n{$connectorResult}\n\nTask: " . ($skill->configuration['task'] ?? 'Summarize the data.');
+        $userPrompt = "Connector output:\n{$connectorResult}\n\nTask: ".($skill->configuration['task'] ?? 'Summarize the data.');
 
         $request = new AiRequestDTO(
             provider: $provider,
@@ -227,7 +228,7 @@ class ExecuteSkillAction
         $rules = json_encode($skill->configuration['rules'] ?? []);
 
         $systemPrompt = $skill->system_prompt ?? 'Evaluate the following rules against the input and return a JSON result.';
-        $userPrompt = "Rules:\n{$rules}\n\nInput:\n" . json_encode($input) . "\n\nEvaluate each rule and return the results.";
+        $userPrompt = "Rules:\n{$rules}\n\nInput:\n".json_encode($input)."\n\nEvaluate each rule and return the results.";
 
         $request = new AiRequestDTO(
             provider: $provider,

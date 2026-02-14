@@ -23,7 +23,7 @@ class RetryExperimentAction
             ExperimentStatus::BuildingFailed => ExperimentStatus::Building,
             ExperimentStatus::ExecutionFailed => ExperimentStatus::Executing,
             default => throw new InvalidArgumentException(
-                "Cannot retry experiment [{$experiment->id}]: not in a failed state ({$experiment->status->value})."
+                "Cannot retry experiment [{$experiment->id}]: not in a failed state ({$experiment->status->value}).",
             ),
         };
 

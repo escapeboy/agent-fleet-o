@@ -3,6 +3,7 @@
 namespace App\Domain\Budget\Actions;
 
 use App\Domain\Budget\Enums\LedgerType;
+use App\Domain\Budget\Exceptions\InsufficientBudgetException;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Experiment\Models\Experiment;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ class ReserveBudgetAction
      *
      * @return CreditLedger The reservation ledger entry
      *
-     * @throws \App\Domain\Budget\Exceptions\InsufficientBudgetException
+     * @throws InsufficientBudgetException
      */
     public function execute(
         string $userId,
@@ -33,8 +34,8 @@ class ReserveBudgetAction
                     $remaining = $experiment->budget_cap_credits - $experiment->budget_spent_credits;
 
                     if ($amount > $remaining) {
-                        throw new \App\Domain\Budget\Exceptions\InsufficientBudgetException(
-                            "Experiment budget exceeded. Remaining: {$remaining} credits, requested: {$amount} credits."
+                        throw new InsufficientBudgetException(
+                            "Experiment budget exceeded. Remaining: {$remaining} credits, requested: {$amount} credits.",
                         );
                     }
                 }
@@ -50,8 +51,8 @@ class ReserveBudgetAction
             $currentBalance = $lastEntry?->balance_after ?? 0;
 
             if ($amount > $currentBalance) {
-                throw new \App\Domain\Budget\Exceptions\InsufficientBudgetException(
-                    "Insufficient credits. Balance: {$currentBalance}, requested: {$amount}."
+                throw new InsufficientBudgetException(
+                    "Insufficient credits. Balance: {$currentBalance}, requested: {$amount}.",
                 );
             }
 

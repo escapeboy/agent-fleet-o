@@ -5,19 +5,22 @@ namespace App\Livewire\Tools;
 use App\Domain\Tool\Actions\DeleteToolAction;
 use App\Domain\Tool\Actions\UpdateToolAction;
 use App\Domain\Tool\Enums\ToolStatus;
-use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use Livewire\Component;
 
 class ToolDetailPage extends Component
 {
     public Tool $tool;
+
     public string $activeTab = 'overview';
 
     // Editing state
     public bool $editing = false;
+
     public string $editName = '';
+
     public string $editDescription = '';
+
     public int $editTimeout = 30;
 
     public function mount(Tool $tool): void

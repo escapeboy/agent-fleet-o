@@ -35,7 +35,7 @@ class PopularToolsSeeder extends Seeder
                     'transport_config' => $def['transport_config'],
                     'tool_definitions' => $def['tool_definitions'],
                     'settings' => $def['settings'],
-                ]
+                ],
             );
 
             if ($tool->wasRecentlyCreated) {

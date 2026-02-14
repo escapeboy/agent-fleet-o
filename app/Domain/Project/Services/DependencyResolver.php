@@ -41,7 +41,7 @@ class DependencyResolver
 
             if (! $run && $dependency->is_required) {
                 throw new \RuntimeException(
-                    "Required dependency '{$dependency->alias}' (project: {$dependency->dependsOn->title}) has no completed run."
+                    "Required dependency '{$dependency->alias}' (project: {$dependency->dependsOn->title}) has no completed run.",
                 );
             }
 
@@ -103,7 +103,7 @@ class DependencyResolver
 
                     // Truncate very large artifacts to prevent context overflow
                     if (strlen($content) > 5000) {
-                        $content = mb_substr($content, 0, 5000) . "\n\n[... truncated, full content available in artifact]";
+                        $content = mb_substr($content, 0, 5000)."\n\n[... truncated, full content available in artifact]";
                     }
 
                     return [

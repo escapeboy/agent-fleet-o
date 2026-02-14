@@ -98,6 +98,6 @@ class ExperimentTransitionMap
             $transitions[] = ExperimentStatus::Killed;
         }
 
-        return array_unique($transitions);
+        return array_unique($transitions, SORT_REGULAR);
     }
 }

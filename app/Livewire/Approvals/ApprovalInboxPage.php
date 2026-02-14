@@ -18,6 +18,7 @@ class ApprovalInboxPage extends Component
     public string $statusTab = 'pending';
 
     public ?string $rejectingId = null;
+
     public string $rejectionReason = '';
 
     public function approve(string $approvalId): void
@@ -38,7 +39,7 @@ class ApprovalInboxPage extends Component
 
     public function confirmReject(): void
     {
-        if (!$this->rejectingId) {
+        if (! $this->rejectingId) {
             return;
         }
 

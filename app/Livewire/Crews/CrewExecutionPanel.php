@@ -3,6 +3,7 @@
 namespace App\Livewire\Crews;
 
 use App\Domain\Crew\Enums\CrewExecutionStatus;
+use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use Livewire\Attributes\Reactive;
 use Livewire\Component;
@@ -50,7 +51,7 @@ class CrewExecutionPanel extends Component
             'progress' => $progress,
             'validatedCount' => $validated,
             'runningCount' => $tasks->filter(fn ($t) => $t->status->isActive())->count(),
-            'failedCount' => $tasks->filter(fn ($t) => $t->status === \App\Domain\Crew\Enums\CrewTaskStatus::QaFailed || $t->status === \App\Domain\Crew\Enums\CrewTaskStatus::Failed)->count(),
+            'failedCount' => $tasks->filter(fn ($t) => $t->status === CrewTaskStatus::QaFailed || $t->status === CrewTaskStatus::Failed)->count(),
         ]);
     }
 }

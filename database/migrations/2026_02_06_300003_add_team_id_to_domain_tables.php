@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -60,7 +61,7 @@ return new class extends Migration
         $adminUser = DB::table('users')->first();
 
         if ($adminUser) {
-            $teamId = (string) \Illuminate\Support\Str::uuid7();
+            $teamId = (string) Str::uuid7();
             $now = now();
 
             DB::table('teams')->insert([
@@ -106,8 +107,8 @@ return new class extends Migration
     {
         foreach (array_reverse($this->tables) as $table) {
             Schema::table($table, function (Blueprint $t) use ($table) {
-                $t->dropForeign([$table . '_team_id_foreign'] ?? ["{$table}_team_id_foreign"]);
-                $t->dropIndex([$table . '_team_id_index'] ?? ["{$table}_team_id_index"]);
+                $t->dropForeign([$table.'_team_id_foreign'] ?? ["{$table}_team_id_foreign"]);
+                $t->dropIndex([$table.'_team_id_index'] ?? ["{$table}_team_id_index"]);
                 $t->dropColumn('team_id');
             });
         }
@@ -115,7 +116,7 @@ return new class extends Migration
         // Remove default team (seeded data)
         DB::table('team_user')->where(
             'team_id',
-            DB::table('teams')->where('slug', 'default')->value('id')
+            DB::table('teams')->where('slug', 'default')->value('id'),
         )->delete();
         DB::table('teams')->where('slug', 'default')->delete();
     }

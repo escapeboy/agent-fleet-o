@@ -10,9 +10,13 @@ use Livewire\Component;
 class MarketplaceDetailPage extends Component
 {
     public MarketplaceListing $listing;
+
     public string $activeTab = 'overview';
+
     public int $reviewRating = 5;
+
     public string $reviewComment = '';
+
     public bool $isInstalled = false;
 
     public function mount(MarketplaceListing $listing): void
@@ -38,11 +42,13 @@ class MarketplaceDetailPage extends Component
 
         if (! $team) {
             session()->flash('error', 'You must belong to a team to install marketplace items.');
+
             return;
         }
 
         if ($this->isInstalled) {
             session()->flash('error', 'This item is already installed in your workspace.');
+
             return;
         }
 
@@ -70,6 +76,7 @@ class MarketplaceDetailPage extends Component
 
         if ($existing) {
             session()->flash('error', 'You have already reviewed this item.');
+
             return;
         }
 

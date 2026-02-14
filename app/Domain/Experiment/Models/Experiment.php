@@ -14,12 +14,12 @@ use App\Domain\Signal\Models\Signal;
 use App\Domain\Workflow\Models\Workflow;
 use App\Models\Artifact;
 use App\Models\User;
+use Database\Factories\Domain\Experiment\ExperimentFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Experiment extends Model
 {
@@ -66,6 +66,11 @@ class Experiment extends Model
             'workflow_version' => 'integer',
             'killed_at' => 'datetime',
         ];
+    }
+
+    protected static function newFactory()
+    {
+        return ExperimentFactory::new();
     }
 
     public function user(): BelongsTo

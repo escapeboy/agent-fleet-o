@@ -29,6 +29,7 @@ class WebhookConnector implements InputConnectorInterface
 
         if (empty($payload)) {
             Log::warning('WebhookConnector: Empty payload');
+
             return [];
         }
 

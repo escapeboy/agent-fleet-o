@@ -23,6 +23,7 @@ class CredentialListPage extends Component
     public string $statusFilter = '';
 
     public string $sortField = 'created_at';
+
     public string $sortDirection = 'desc';
 
     public function sortBy(string $field): void
@@ -57,7 +58,7 @@ class CredentialListPage extends Component
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('name', 'ilike', "%{$this->search}%")
-                  ->orWhere('description', 'ilike', "%{$this->search}%");
+                    ->orWhere('description', 'ilike', "%{$this->search}%");
             });
         }
 

@@ -24,6 +24,7 @@ class CollectWorkflowArtifactsTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Team $team;
 
     protected function setUp(): void
@@ -77,7 +78,7 @@ class CollectWorkflowArtifactsTest extends TestCase
         $this->createStep($experiment, ['order' => 1, 'output' => ['result' => '# Research Results']]);
         $this->createStep($experiment, ['order' => 2, 'output' => ['result' => '<html><body>Landing Page</body></html>']]);
 
-        $action = new CollectWorkflowArtifactsAction();
+        $action = new CollectWorkflowArtifactsAction;
         $artifacts = $action->execute($experiment);
 
         $this->assertCount(2, $artifacts);
@@ -93,7 +94,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             'output' => ['result' => '<!DOCTYPE html><html><body>Page</body></html>'],
         ]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertEquals('html', $artifacts->first()->type);
     }
@@ -106,7 +107,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             'output' => ['result' => '{"key": "value", "items": [1, 2, 3]}'],
         ]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertEquals('json', $artifacts->first()->type);
     }
@@ -119,7 +120,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             'output' => ['result' => "# Heading\n\nSome content here"],
         ]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertEquals('markdown', $artifacts->first()->type);
     }
@@ -132,7 +133,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             'output' => ['result' => 'Just some plain text without any special markers'],
         ]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertEquals('text', $artifacts->first()->type);
     }
@@ -152,7 +153,7 @@ class CollectWorkflowArtifactsTest extends TestCase
         // 'output' key
         $this->createStep($experiment, ['order' => 5, 'output' => ['output' => 'from output']]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertCount(5, $artifacts);
 
@@ -172,7 +173,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             'output' => ['custom_key' => 'value', 'nested' => ['a' => 1]],
         ]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertCount(1, $artifacts);
         $version = ArtifactVersion::withoutGlobalScopes()->first();
@@ -186,7 +187,7 @@ class CollectWorkflowArtifactsTest extends TestCase
         $this->createStep($experiment, ['order' => 1, 'output' => null]);
         $this->createStep($experiment, ['order' => 2, 'output' => ['result' => 'valid']]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertCount(1, $artifacts);
     }
@@ -202,7 +203,7 @@ class CollectWorkflowArtifactsTest extends TestCase
         $this->createStep($experiment, ['order' => 1, 'output' => null]);
         $this->createStep($experiment, ['order' => 2, 'output' => ['result' => 'valid']]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertCount(1, $artifacts);
     }
@@ -214,7 +215,7 @@ class CollectWorkflowArtifactsTest extends TestCase
         $this->createStep($experiment, ['order' => 2, 'status' => 'pending', 'output' => ['result' => 'pending output']]);
         $this->createStep($experiment, ['order' => 3, 'status' => 'completed', 'output' => ['result' => 'valid']]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertCount(1, $artifacts);
     }
@@ -223,7 +224,7 @@ class CollectWorkflowArtifactsTest extends TestCase
     {
         $experiment = $this->createExperiment();
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertCount(0, $artifacts);
         $this->assertEquals(0, Artifact::withoutGlobalScopes()->count());
@@ -235,7 +236,7 @@ class CollectWorkflowArtifactsTest extends TestCase
         $largeContent = str_repeat('x', 1_100_000);
         $this->createStep($experiment, ['order' => 1, 'output' => ['result' => $largeContent]]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertCount(1, $artifacts);
         $version = ArtifactVersion::withoutGlobalScopes()->first();
@@ -262,7 +263,7 @@ class CollectWorkflowArtifactsTest extends TestCase
         $this->createStep($experiment, ['order' => 1, 'agent_id' => $agent->id, 'output' => ['result' => 'Output A']]);
         $this->createStep($experiment, ['order' => 2, 'agent_id' => $agent->id, 'output' => ['result' => 'Output B']]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $names = $artifacts->pluck('name')->toArray();
         $this->assertCount(2, $names);
@@ -323,7 +324,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             'output' => ['result' => 'Written output'],
         ]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertEquals('Research Agent', $artifacts[0]->name);
         $this->assertEquals('Writer Agent', $artifacts[1]->name);
@@ -349,7 +350,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             'output' => ['result' => 'SEO analysis'],
         ]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertEquals('SEO Specialist', $artifacts->first()->name);
     }
@@ -364,7 +365,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             'cost_credits' => 12,
         ]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $artifact = $artifacts->first();
         $this->assertEquals('workflow_step', $artifact->metadata['source']);
@@ -386,7 +387,7 @@ class CollectWorkflowArtifactsTest extends TestCase
         // We can test extractContent via the action with an array that has 'result' key
         $this->createStep($experiment, ['order' => 1, 'output' => ['result' => 'direct string']]);
 
-        $artifacts = (new CollectWorkflowArtifactsAction())->execute($experiment);
+        $artifacts = (new CollectWorkflowArtifactsAction)->execute($experiment);
 
         $this->assertCount(1, $artifacts);
         $version = ArtifactVersion::withoutGlobalScopes()->first();
@@ -406,7 +407,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             toState: ExperimentStatus::Completed,
         );
 
-        $listener = new CollectWorkflowArtifactsOnCompletion();
+        $listener = new CollectWorkflowArtifactsOnCompletion;
         $listener->handle($event);
 
         $this->assertEquals(1, Artifact::withoutGlobalScopes()->where('experiment_id', $experiment->id)->count());
@@ -423,7 +424,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             toState: ExperimentStatus::CollectingMetrics,
         );
 
-        $listener = new CollectWorkflowArtifactsOnCompletion();
+        $listener = new CollectWorkflowArtifactsOnCompletion;
         $listener->handle($event);
 
         $this->assertEquals(1, Artifact::withoutGlobalScopes()->where('experiment_id', $experiment->id)->count());
@@ -440,7 +441,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             toState: ExperimentStatus::Executing,
         );
 
-        $listener = new CollectWorkflowArtifactsOnCompletion();
+        $listener = new CollectWorkflowArtifactsOnCompletion;
         $listener->handle($event);
 
         $this->assertEquals(0, Artifact::withoutGlobalScopes()->count());
@@ -457,7 +458,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             toState: ExperimentStatus::Completed,
         );
 
-        $listener = new CollectWorkflowArtifactsOnCompletion();
+        $listener = new CollectWorkflowArtifactsOnCompletion;
         $listener->handle($event);
 
         $this->assertEquals(0, Artifact::withoutGlobalScopes()->count());
@@ -474,7 +475,7 @@ class CollectWorkflowArtifactsTest extends TestCase
             toState: ExperimentStatus::Completed,
         );
 
-        $listener = new CollectWorkflowArtifactsOnCompletion();
+        $listener = new CollectWorkflowArtifactsOnCompletion;
 
         // First call creates artifacts
         $listener->handle($event);

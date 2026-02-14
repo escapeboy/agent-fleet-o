@@ -173,7 +173,7 @@ class CircuitBreaker
                 'success_count' => 0,
                 'cooldown_seconds' => 60,
                 'failure_threshold' => 5,
-            ]
+            ],
         );
     }
 }

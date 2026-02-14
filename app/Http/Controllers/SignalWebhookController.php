@@ -25,8 +25,9 @@ class SignalWebhookController extends Controller
         $secret = config('services.signal_webhook.secret');
         if ($secret) {
             $signature = $request->header('X-Webhook-Signature', '');
-            if (!WebhookConnector::validateSignature($request->getContent(), $signature, $secret)) {
+            if (! WebhookConnector::validateSignature($request->getContent(), $signature, $secret)) {
                 Log::warning('SignalWebhookController: Invalid signature');
+
                 return response()->json(['error' => 'Invalid signature'], 403);
             }
         }

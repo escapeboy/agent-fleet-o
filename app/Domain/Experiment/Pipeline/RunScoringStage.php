@@ -38,7 +38,7 @@ class RunScoringStage extends BaseStageJob
         $signalPayload = $signal?->payload ?? ['thesis' => $experiment->thesis];
 
         // Build user prompt with optional dependency context
-        $userPrompt = "Score this experiment thesis:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nSignal: " . json_encode($signalPayload, JSON_UNESCAPED_UNICODE);
+        $userPrompt = "Score this experiment thesis:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nSignal: ".json_encode($signalPayload, JSON_UNESCAPED_UNICODE);
 
         $dependencyContext = $experiment->constraints['dependency_context'] ?? [];
         if (! empty($dependencyContext)) {
@@ -49,7 +49,7 @@ class RunScoringStage extends BaseStageJob
                     $userPrompt .= "\nArtifact [{$artifact['type']}] {$artifact['name']}:\n{$artifact['content']}";
                 }
                 if (! empty($data['stage_outputs'])) {
-                    $userPrompt .= "\nStage outputs: " . json_encode($data['stage_outputs'], JSON_UNESCAPED_UNICODE);
+                    $userPrompt .= "\nStage outputs: ".json_encode($data['stage_outputs'], JSON_UNESCAPED_UNICODE);
                 }
             }
         }

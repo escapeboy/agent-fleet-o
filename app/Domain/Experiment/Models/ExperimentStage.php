@@ -5,6 +5,7 @@ namespace App\Domain\Experiment\Models;
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Database\Factories\Domain\Experiment\ExperimentStageFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -41,6 +42,11 @@ class ExperimentStage extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
+    }
+
+    protected static function newFactory()
+    {
+        return ExperimentStageFactory::new();
     }
 
     public function experiment(): BelongsTo

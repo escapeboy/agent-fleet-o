@@ -9,7 +9,7 @@ class LogBudgetEvent
 {
     public function handle(object $event): void
     {
-        if (!isset($event->ledgerEntry) || !$event->ledgerEntry instanceof CreditLedger) {
+        if (! isset($event->ledgerEntry) || ! $event->ledgerEntry instanceof CreditLedger) {
             return;
         }
 
@@ -17,7 +17,7 @@ class LogBudgetEvent
 
         AuditEntry::create([
             'user_id' => $entry->user_id,
-            'event' => 'budget.' . $entry->type->value,
+            'event' => 'budget.'.$entry->type->value,
             'subject_type' => CreditLedger::class,
             'subject_id' => $entry->id,
             'properties' => [

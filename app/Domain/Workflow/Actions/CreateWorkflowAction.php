@@ -2,7 +2,6 @@
 
 namespace App\Domain\Workflow\Actions;
 
-use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
@@ -30,7 +29,7 @@ class CreateWorkflowAction
                 'team_id' => $teamId,
                 'user_id' => $userId,
                 'name' => $name,
-                'slug' => Str::slug($name) . '-' . Str::random(6),
+                'slug' => Str::slug($name).'-'.Str::random(6),
                 'description' => $description,
                 'status' => WorkflowStatus::Draft,
                 'max_loop_iterations' => $maxLoopIterations,

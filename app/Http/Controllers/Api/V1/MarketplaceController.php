@@ -25,7 +25,7 @@ class MarketplaceController extends Controller
     {
         $listings = QueryBuilder::for(
             MarketplaceListing::where('status', MarketplaceStatus::Published)
-                ->where('visibility', ListingVisibility::Public)
+                ->where('visibility', ListingVisibility::Public),
         )
             ->allowedFilters([
                 AllowedFilter::exact('type'),

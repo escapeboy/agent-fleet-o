@@ -35,7 +35,7 @@ class ManualSignalConnector
             tags: ['manual', $track],
         );
 
-        if (!$signal) {
+        if (! $signal) {
             return ['signal' => null, 'experiment' => null];
         }
 

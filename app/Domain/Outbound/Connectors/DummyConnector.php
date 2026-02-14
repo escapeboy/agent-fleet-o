@@ -31,7 +31,7 @@ class DummyConnector implements OutboundConnectorInterface
             'team_id' => $proposal->team_id,
             'outbound_proposal_id' => $proposal->id,
             'status' => OutboundActionStatus::Sent,
-            'external_id' => 'dummy-' . Str::uuid()->toString(),
+            'external_id' => 'dummy-'.Str::uuid()->toString(),
             'response' => ['simulated' => true],
             'idempotency_key' => $idempotencyKey,
             'retry_count' => 0,

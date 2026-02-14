@@ -37,7 +37,7 @@ return new class extends Migration
             if (DB::getDriverName() === 'pgsql') {
                 $table->rawIndex(
                     "((status NOT IN ('completed', 'killed', 'discarded', 'expired')))",
-                    'experiments_active_idx'
+                    'experiments_active_idx',
                 );
             }
         });

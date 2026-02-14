@@ -5,6 +5,7 @@ namespace Tests\Unit\Infrastructure\AI;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -86,7 +87,7 @@ class HostBridgeTest extends TestCase
     {
         $this->simulateDocker();
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertTrue($discovery->isBridgeMode());
     }
@@ -95,7 +96,7 @@ class HostBridgeTest extends TestCase
     {
         $this->simulateNative();
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertFalse($discovery->isBridgeMode());
     }
@@ -105,7 +106,7 @@ class HostBridgeTest extends TestCase
         $this->simulateDocker();
         config(['local_agents.bridge.secret' => '']);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertFalse($discovery->isBridgeMode());
     }
@@ -131,7 +132,7 @@ class HostBridgeTest extends TestCase
             ]),
         ]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
         $detected = $discovery->detect();
 
         $this->assertCount(2, $detected);
@@ -149,7 +150,7 @@ class HostBridgeTest extends TestCase
             'host.docker.internal:8065/discover' => Http::response(null, 500),
         ]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
         $detected = $discovery->detect();
 
         $this->assertEmpty($detected);
@@ -179,7 +180,7 @@ class HostBridgeTest extends TestCase
             ]),
         ]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
@@ -221,7 +222,7 @@ class HostBridgeTest extends TestCase
             ]),
         ]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
@@ -253,11 +254,11 @@ class HostBridgeTest extends TestCase
             ]),
             'host.docker.internal:8065/health' => Http::response(['status' => 'ok']),
             'host.docker.internal:8065/execute' => function () {
-                throw new \Illuminate\Http\Client\ConnectionException('Connection refused');
+                throw new ConnectionException('Connection refused');
             },
         ]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
@@ -288,7 +289,7 @@ class HostBridgeTest extends TestCase
             'supported_modes' => ['sync'],
         ]]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         // Not in bridge mode — should use native detection
         $this->assertFalse($discovery->isBridgeMode());
@@ -310,7 +311,7 @@ class HostBridgeTest extends TestCase
             ]),
         ]);
 
-        $discovery = new LocalAgentDiscovery();
+        $discovery = new LocalAgentDiscovery;
 
         $this->assertTrue($discovery->bridgeHealth());
     }

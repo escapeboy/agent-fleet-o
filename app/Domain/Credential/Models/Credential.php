@@ -5,13 +5,20 @@ namespace App\Domain\Credential\Models;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Database\Factories\Domain\Credential\CredentialFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Credential extends Model
 {
-    use BelongsToTeam, HasUuids, SoftDeletes;
+    use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
+
+    protected static function newFactory()
+    {
+        return CredentialFactory::new();
+    }
 
     protected $fillable = [
         'team_id',

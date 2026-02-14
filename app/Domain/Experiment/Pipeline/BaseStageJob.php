@@ -9,6 +9,7 @@ use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Models\Team;
+use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -26,6 +27,7 @@ abstract class BaseStageJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $backoff = 60;
 
     public function __construct(
@@ -44,8 +46,8 @@ abstract class BaseStageJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new CheckKillSwitch(),
-            new CheckBudgetAvailable(),
+            new CheckKillSwitch,
+            new CheckBudgetAvailable,
             new TenantRateLimit('experiments', 30),
             (new WithoutOverlapping($this->experimentId))->releaseAfter(300),
         ];
@@ -154,7 +156,7 @@ abstract class BaseStageJob implements ShouldQueue
         ]);
 
         $experiment = Experiment::withoutGlobalScopes()->find($this->experimentId);
-        if (!$experiment || $experiment->status->isTerminal()) {
+        if (! $experiment || $experiment->status->isTerminal()) {
             return;
         }
 
@@ -207,10 +209,10 @@ abstract class BaseStageJob implements ShouldQueue
      * Parse a JSON response from the LLM, handling markdown code fences
      * and the {'text': '...'} wrapper from idempotency cache.
      */
-    protected function parseJsonResponse(\App\Infrastructure\AI\DTOs\AiResponseDTO $response): ?array
+    protected function parseJsonResponse(AiResponseDTO $response): ?array
     {
         // If parsedOutput is already a proper result (not a text wrapper), use it
-        if (is_array($response->parsedOutput) && !isset($response->parsedOutput['text'])) {
+        if (is_array($response->parsedOutput) && ! isset($response->parsedOutput['text'])) {
             $parsed = $response->parsedOutput;
 
             // Handle Claude Code / local agent output: {type: "result", result: "{...json...}"}

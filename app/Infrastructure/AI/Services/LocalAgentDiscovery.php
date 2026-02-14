@@ -180,7 +180,7 @@ class LocalAgentDiscovery
     {
         try {
             $response = Http::timeout(config('local_agents.bridge.connect_timeout', 5))
-                ->get($this->bridgeUrl() . '/health');
+                ->get($this->bridgeUrl().'/health');
 
             return $response->successful() && ($response->json('status') === 'ok');
         } catch (\Throwable $e) {
@@ -231,7 +231,7 @@ class LocalAgentDiscovery
         try {
             $response = Http::timeout(config('local_agents.bridge.connect_timeout', 5))
                 ->withToken($this->bridgeSecret())
-                ->get($this->bridgeUrl() . '/discover');
+                ->get($this->bridgeUrl().'/discover');
 
             if ($response->successful()) {
                 $this->bridgeCache = $response->json('agents') ?? [];

@@ -39,7 +39,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
 
         try {
             $to = $target['email'] ?? null;
-            if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            if (! $to || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
                 // No actionable email address — simulate the send (dry-run)
                 Log::info('SmtpEmailConnector: No valid email in target, simulating send', [
                     'proposal_id' => $proposal->id,
@@ -48,7 +48,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
 
                 $action->update([
                     'status' => OutboundActionStatus::Sent,
-                    'external_id' => 'smtp-simulated-' . now()->timestamp,
+                    'external_id' => 'smtp-simulated-'.now()->timestamp,
                     'response' => ['simulated' => true, 'reason' => 'No valid email address in target'],
                     'sent_at' => now(),
                 ]);
@@ -58,7 +58,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
 
             if (($content['type'] ?? null) === 'experiment_summary') {
                 $experiment = Experiment::withoutGlobalScopes()->find($content['experiment_id']);
-                if (!$experiment) {
+                if (! $experiment) {
                     throw new \RuntimeException("Experiment {$content['experiment_id']} not found");
                 }
 
@@ -72,7 +72,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 // Append tracking pixel if tracking base URL is configured
                 $trackingBaseUrl = config('services.tracking.base_url');
                 if ($trackingBaseUrl) {
-                    $pixelUrl = "{$trackingBaseUrl}/api/track/pixel?" . http_build_query([
+                    $pixelUrl = "{$trackingBaseUrl}/api/track/pixel?".http_build_query([
                         'oa' => $action->id,
                         'exp' => $proposal->experiment_id,
                     ]);
@@ -88,7 +88,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
 
             $action->update([
                 'status' => OutboundActionStatus::Sent,
-                'external_id' => 'smtp-' . now()->timestamp,
+                'external_id' => 'smtp-'.now()->timestamp,
                 'sent_at' => now(),
             ]);
         } catch (\Throwable $e) {

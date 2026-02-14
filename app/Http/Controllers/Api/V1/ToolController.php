@@ -58,10 +58,10 @@ class ToolController extends Controller
             teamId: $request->user()->current_team_id,
             name: $request->name,
             type: ToolType::from($request->type),
-            description: $request->input('description'),
-            transportConfig: $request->input('transport_config'),
-            credentials: $request->input('credentials'),
-            toolDefinitions: $request->input('tool_definitions'),
+            description: $request->input('description', ''),
+            transportConfig: $request->input('transport_config', []),
+            credentials: $request->input('credentials', []),
+            toolDefinitions: $request->input('tool_definitions', []),
             settings: $request->input('settings', []),
         );
 
@@ -88,12 +88,15 @@ class ToolController extends Controller
             $tool,
             name: $request->input('name'),
             description: $request->input('description'),
-            status: $request->has('status') ? ToolStatus::from($request->status) : null,
             transportConfig: $request->input('transport_config'),
             credentials: $request->input('credentials'),
             toolDefinitions: $request->input('tool_definitions'),
             settings: $request->input('settings'),
         );
+
+        if ($request->has('status')) {
+            $tool->update(['status' => ToolStatus::from($request->status)]);
+        }
 
         $tool->refresh()->loadCount('agents');
 

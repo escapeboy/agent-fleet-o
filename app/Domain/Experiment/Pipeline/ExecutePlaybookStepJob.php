@@ -21,8 +21,11 @@ class ExecutePlaybookStepJob implements ShouldQueue
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 2;          // Must match or exceed Horizon supervisor-ai-calls tries
+
     public int $timeout = 1200;     // 20 min — must be LONGER than HTTP timeout (~960s) but shorter than retry_after (1900s)
+
     public int $backoff = 10;       // Wait 10s before retry (gives bridge time to finish previous request)
+
     public int $maxExceptions = 2;  // Allow up to 2 exceptions before giving up
 
     public function __construct(
@@ -36,15 +39,15 @@ class ExecutePlaybookStepJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new CheckKillSwitch(),
-            new CheckBudgetAvailable(),
+            new CheckKillSwitch,
+            new CheckBudgetAvailable,
             new TenantRateLimit('experiments', 30),
         ];
     }
 
     public function handle(ExecuteAgentAction $executeAgent): void
     {
-        Log::info("ExecutePlaybookStepJob: starting", [
+        Log::info('ExecutePlaybookStepJob: starting', [
             'step_id' => $this->stepId,
             'attempt' => $this->attempts(),
         ]);
@@ -99,7 +102,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
         try {
             $input = $this->resolveInput($step, $experiment);
 
-            Log::info("ExecutePlaybookStepJob: calling executeAgent", [
+            Log::info('ExecutePlaybookStepJob: calling executeAgent', [
                 'step_id' => $this->stepId,
                 'agent' => $step->agent?->name,
                 'input_keys' => array_keys($input),
@@ -115,7 +118,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 stepId: $this->stepId,
             );
 
-            Log::info("ExecutePlaybookStepJob: completed", [
+            Log::info('ExecutePlaybookStepJob: completed', [
                 'step_id' => $this->stepId,
                 'success' => $result['output'] !== null,
                 'duration_ms' => $result['execution']->duration_ms ?? 0,
@@ -134,7 +137,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 throw new \RuntimeException("Step failed: {$result['execution']->error_message}");
             }
         } catch (\Throwable $e) {
-            Log::error("ExecutePlaybookStepJob: exception caught", [
+            Log::error('ExecutePlaybookStepJob: exception caught', [
                 'step_id' => $this->stepId,
                 'exception' => $e->getMessage(),
                 'class' => get_class($e),
@@ -158,7 +161,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
      */
     public function failed(?\Throwable $exception): void
     {
-        Log::error("ExecutePlaybookStepJob: job failed permanently", [
+        Log::error('ExecutePlaybookStepJob: job failed permanently', [
             'step_id' => $this->stepId,
             'exception' => $exception?->getMessage(),
         ]);
@@ -168,7 +171,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
         if ($step && ($step->isPending() || $step->isRunning())) {
             $step->update([
                 'status' => 'failed',
-                'error_message' => 'Job failed: ' . ($exception?->getMessage() ?? 'Unknown error'),
+                'error_message' => 'Job failed: '.($exception?->getMessage() ?? 'Unknown error'),
                 'completed_at' => now(),
             ]);
         }

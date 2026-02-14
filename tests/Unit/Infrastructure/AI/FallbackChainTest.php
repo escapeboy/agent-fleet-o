@@ -14,6 +14,7 @@ use Tests\TestCase;
 class FallbackChainTest extends TestCase
 {
     private PrismAiGateway $gateway;
+
     private CircuitBreaker $circuitBreaker;
 
     protected function setUp(): void

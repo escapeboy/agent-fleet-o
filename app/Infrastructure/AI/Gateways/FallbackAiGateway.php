@@ -29,7 +29,7 @@ class FallbackAiGateway implements AiGatewayInterface
             if (! $this->localGateway) {
                 throw new \RuntimeException(
                     "Local agent provider '{$request->provider}' is not available. "
-                    . 'Enable local agents (LOCAL_AGENTS_ENABLED=true) and ensure the agent binary is installed.'
+                    .'Enable local agents (LOCAL_AGENTS_ENABLED=true) and ensure the agent binary is installed.',
                 );
             }
 
@@ -46,6 +46,7 @@ class FallbackAiGateway implements AiGatewayInterface
 
             if (! $this->circuitBreaker->isAvailable($providerName)) {
                 Log::debug("CircuitBreaker: skipping {$providerName} (circuit open)");
+
                 continue;
             }
 
@@ -98,7 +99,7 @@ class FallbackAiGateway implements AiGatewayInterface
             if (! $this->localGateway) {
                 throw new \RuntimeException(
                     "Local agent provider '{$request->provider}' is not available. "
-                    . 'Enable local agents (LOCAL_AGENTS_ENABLED=true) and ensure the agent binary is installed.'
+                    .'Enable local agents (LOCAL_AGENTS_ENABLED=true) and ensure the agent binary is installed.',
                 );
             }
 
@@ -140,7 +141,7 @@ class FallbackAiGateway implements AiGatewayInterface
                 $this->circuitBreaker->recordSuccess($providerName);
 
                 return $response;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $lastException = $e;
                 $this->circuitBreaker->recordFailure($providerName);
             }

@@ -78,7 +78,7 @@ class ProjectSchedule extends Model
         $cron = new CronExpression($expression);
 
         $nextRun = Carbon::instance(
-            $cron->getNextRunDate($from->setTimezone($this->timezone))
+            $cron->getNextRunDate($from->setTimezone($this->timezone)),
         )->setTimezone('UTC');
 
         return $nextRun;

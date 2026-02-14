@@ -16,7 +16,7 @@ class TargetRateLimit
     {
         $target = $this->extractTargetKey($proposal);
 
-        if (!$target) {
+        if (! $target) {
             return true; // Can't rate limit without a target identifier
         }
 

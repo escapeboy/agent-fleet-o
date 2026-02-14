@@ -7,6 +7,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
+use App\Domain\Crew\Services\CrewOrchestrator;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -39,8 +40,8 @@ class ExecuteCrewTaskJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new CheckKillSwitch(),
-            new CheckBudgetAvailable(),
+            new CheckKillSwitch,
+            new CheckBudgetAvailable,
             new TenantRateLimit('ai-calls', 30),
         ];
     }
@@ -157,7 +158,7 @@ class ExecuteCrewTaskJob implements ShouldQueue
         ]);
 
         // Notify orchestrator of failure
-        app(\App\Domain\Crew\Services\CrewOrchestrator::class)
+        app(CrewOrchestrator::class)
             ->onTaskFailed($execution, $task->fresh());
     }
 

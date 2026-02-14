@@ -18,6 +18,7 @@ class TenantRateLimit
 
         if (! $teamId) {
             $next($job);
+
             return;
         }
 
@@ -34,10 +35,11 @@ class TenantRateLimit
         if ($currentCount >= $this->maxJobsPerMinute) {
             // Release back to queue with delay
             $job->release(10);
+
             return;
         }
 
-        $redis->zadd($key, $now, $now . ':' . uniqid());
+        $redis->zadd($key, $now, $now.':'.uniqid());
         $redis->expire($key, 120);
 
         $next($job);

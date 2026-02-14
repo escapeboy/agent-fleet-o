@@ -24,7 +24,7 @@ class RestartProjectAction
 
         if (! in_array($project->status, $allowed)) {
             throw new \InvalidArgumentException(
-                "Cannot restart a project in '{$project->status->value}' status."
+                "Cannot restart a project in '{$project->status->value}' status.",
             );
         }
 

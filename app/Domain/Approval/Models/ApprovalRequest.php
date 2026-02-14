@@ -7,6 +7,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\User;
+use Database\Factories\Domain\Approval\ApprovalRequestFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +38,11 @@ class ApprovalRequest extends Model
             'expires_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    protected static function newFactory()
+    {
+        return ApprovalRequestFactory::new();
     }
 
     public function experiment(): BelongsTo
