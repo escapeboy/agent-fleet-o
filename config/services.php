@@ -39,4 +39,25 @@ return [
         'domain' => env('PLAUSIBLE_DOMAIN'),
     ],
 
+    'whatsapp' => [
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+    ],
+
+    'discord' => [
+        'bot_token' => env('DISCORD_BOT_TOKEN'),
+        'public_key' => env('DISCORD_PUBLIC_KEY'),
+        'application_id' => env('DISCORD_APPLICATION_ID'),
+    ],
+
+    'teams' => [
+        'webhook_url' => env('TEAMS_WEBHOOK_URL'),
+    ],
+
+    'google_chat' => [
+        'webhook_url' => env('GOOGLE_CHAT_WEBHOOK_URL'),
+    ],
+
 ];
