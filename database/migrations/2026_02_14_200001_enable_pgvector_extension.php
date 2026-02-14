@@ -11,11 +11,11 @@ return new class extends Migration
             return;
         }
 
-        try {
+        // Only attempt to enable pgvector if the extension files are installed on the system
+        $available = DB::scalar("SELECT COUNT(*) FROM pg_available_extensions WHERE name = 'vector'") > 0;
+
+        if ($available) {
             DB::statement('CREATE EXTENSION IF NOT EXISTS vector');
-        } catch (Throwable $e) {
-            // pgvector not installed — memory embeddings will be disabled
-            report($e);
         }
     }
 
