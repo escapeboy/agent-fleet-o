@@ -3,7 +3,6 @@
 namespace App\Livewire\Assistant;
 
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
-use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;

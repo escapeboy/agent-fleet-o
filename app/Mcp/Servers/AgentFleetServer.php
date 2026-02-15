@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
 use App\Mcp\Tools\Agent\AgentListTool;
@@ -65,7 +66,6 @@ use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
-use App\Mcp\Concerns\BootstrapsMcpAuth;
 use Laravel\Mcp\Server;
 
 class AgentFleetServer extends Server

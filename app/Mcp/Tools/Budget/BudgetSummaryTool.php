@@ -34,7 +34,7 @@ class BudgetSummaryTool extends Tool
         $totalReserved = (int) abs(
             CreditLedger::query()
                 ->where('type', LedgerType::Reservation)
-                ->sum('amount')
+                ->sum('amount'),
         );
 
         $remaining = max(0, $globalBudgetCap - $totalSpent);

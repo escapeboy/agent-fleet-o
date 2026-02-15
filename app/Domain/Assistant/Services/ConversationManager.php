@@ -4,6 +4,7 @@ namespace App\Domain\Assistant\Services;
 
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
+use Illuminate\Database\Eloquent\Collection;
 
 class ConversationManager
 {
@@ -95,9 +96,9 @@ class ConversationManager
     /**
      * Get recent conversations for the sidebar list.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<AssistantConversation>
+     * @return Collection<AssistantConversation>
      */
-    public function getRecentConversations(string $userId, int $limit = 20): \Illuminate\Database\Eloquent\Collection
+    public function getRecentConversations(string $userId, int $limit = 20): Collection
     {
         return AssistantConversation::where('user_id', $userId)
             ->orderByDesc('last_message_at')

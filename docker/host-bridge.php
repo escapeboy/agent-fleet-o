@@ -435,7 +435,7 @@ if ($method === 'POST' && $path === '/execute') {
     $lastDataTime = time();       // When data was last received from stdout
     $hasReceivedData = false;     // Whether ANY output was received yet
     $inactivityLimit = 90;        // Kill process after 90s of no new output (once data was received).
-                                      // Must be generous: Codex reasoning phases can go silent for 30+ seconds.
+    // Must be generous: Codex reasoning phases can go silent for 30+ seconds.
 
     // ─── STREAMING MODE ──────────────────────────────────────────────
     // Send NDJSON events as stdout lines arrive, allowing the gateway

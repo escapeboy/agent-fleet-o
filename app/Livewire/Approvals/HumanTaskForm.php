@@ -4,7 +4,6 @@ namespace App\Livewire\Approvals;
 
 use App\Domain\Approval\Actions\CompleteHumanTaskAction;
 use App\Domain\Approval\Actions\RejectAction;
-use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use Livewire\Component;
 

@@ -27,7 +27,7 @@ class EscalateHumanTaskAction
             'escalation_level' => $nextLevel,
             'assigned_to' => $nextAssignee,
             'sla_deadline' => now()->addHours(
-                $this->escalationSlaHours($approvalRequest, $nextLevel)
+                $this->escalationSlaHours($approvalRequest, $nextLevel),
             ),
         ]);
 

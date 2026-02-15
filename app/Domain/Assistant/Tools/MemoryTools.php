@@ -2,8 +2,8 @@
 
 namespace App\Domain\Assistant\Tools;
 
-use App\Domain\Agent\Models\Agent;
 use App\Domain\Memory\Models\Memory;
+use Illuminate\Support\Str;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
 
@@ -47,7 +47,7 @@ class MemoryTools
                         'agent' => $m->agent?->name ?? 'N/A',
                         'project' => $m->project?->title ?? 'N/A',
                         'source_type' => $m->source_type,
-                        'content' => \Illuminate\Support\Str::limit($m->content, 300),
+                        'content' => Str::limit($m->content, 300),
                         'created' => $m->created_at->diffForHumans(),
                     ])->toArray(),
                 ]);
@@ -83,7 +83,7 @@ class MemoryTools
                         'agent' => $m->agent?->name ?? 'N/A',
                         'project' => $m->project?->title ?? 'N/A',
                         'source_type' => $m->source_type,
-                        'content' => \Illuminate\Support\Str::limit($m->content, 300),
+                        'content' => Str::limit($m->content, 300),
                         'created' => $m->created_at->diffForHumans(),
                     ])->toArray(),
                 ]);

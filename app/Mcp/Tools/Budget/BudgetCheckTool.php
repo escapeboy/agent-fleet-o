@@ -2,7 +2,6 @@
 
 namespace App\Mcp\Tools\Budget;
 
-use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;

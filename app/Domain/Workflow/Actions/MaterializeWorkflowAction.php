@@ -5,7 +5,6 @@ namespace App\Domain\Workflow\Actions;
 use App\Domain\Experiment\Enums\ExecutionMode;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
-use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Models\Workflow;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;

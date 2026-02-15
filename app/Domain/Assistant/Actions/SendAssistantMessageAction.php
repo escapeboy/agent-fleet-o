@@ -14,6 +14,7 @@ use App\Models\GlobalSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Tool as PrismToolObject;
+use Prism\Prism\ValueObjects\ToolOutput;
 
 class SendAssistantMessageAction
 {
@@ -284,7 +285,7 @@ class SendAssistantMessageAction
 
                 try {
                     $result = $toolMap[$toolName]->handle(...$args);
-                    $resultStr = $result instanceof \Prism\Prism\ValueObjects\ToolOutput ? $result->output : (string) $result;
+                    $resultStr = $result instanceof ToolOutput ? $result->output : (string) $result;
                     $allToolResults[] = [
                         'toolName' => $toolName,
                         'args' => $args,
@@ -316,7 +317,7 @@ class SendAssistantMessageAction
         if ($finalContent === '' && ! empty($allToolResults)) {
             $finalContent = 'Tool operations completed. Results: '.json_encode(
                 array_map(fn ($r) => ['tool' => $r['toolName'], 'result' => json_decode($r['result'], true)], $allToolResults),
-                JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+                JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT,
             );
         } elseif ($finalContent === '') {
             $finalContent = 'Sorry, the local agent did not produce a valid response. Please try again or switch to a cloud provider.';
