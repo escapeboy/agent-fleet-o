@@ -42,6 +42,14 @@ class AssistantPanel extends Component
         $providers = app(ProviderResolver::class)->availableProviders();
         $models = $providers[$this->selectedProvider]['models'] ?? [];
         $this->selectedModel = array_key_first($models) ?? '';
+
+        GlobalSetting::set('assistant_llm_provider', $this->selectedProvider);
+        GlobalSetting::set('assistant_llm_model', $this->selectedModel);
+    }
+
+    public function updatedSelectedModel(): void
+    {
+        GlobalSetting::set('assistant_llm_model', $this->selectedModel);
     }
 
     public function sendMessage(string $message): void

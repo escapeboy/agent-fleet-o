@@ -151,7 +151,7 @@ function get_version(string $command): ?string
     return strtok($stdout, "\n") ?: $stdout;
 }
 
-function build_command(string $agentKey, string $binaryPath, bool $streaming = false): ?string
+function build_command(string $agentKey, string $binaryPath, bool $streaming = false, ?string $purpose = null): ?string
 {
     $bin = escapeshellarg($binaryPath);
 
@@ -170,6 +170,13 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
 
     $preamble = $closeInherited.' '.$cleanEnv.' ';
 
+    $isAssistant = $purpose === 'platform_assistant';
+
+    // Codex assistant: disable --full-auto (prevents shell exploration) and
+    // disable MCP servers (prevents codex from trying chrome-devtools etc.)
+    $codexAutoFlag = $isAssistant ? '' : ' --full-auto';
+    $codexMcpFlag = $isAssistant ? " -c 'mcp_servers={}'" : '';
+
     // Use stream-json when streaming for real-time output, json otherwise.
     // stream-json emits NDJSON events (assistant, content_block_delta, result)
     // that the bridge forwards and the gateway extracts text from.
@@ -179,10 +186,45 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
     $ccStreamFlags = $streaming ? ' --include-partial-messages --verbose' : '';
 
     return match ($agentKey) {
-        'codex' => $preamble.$bin.' exec --json --full-auto',
+        'codex' => $preamble.$bin." exec --json{$codexAutoFlag}{$codexMcpFlag}",
         'claude-code' => $preamble.$bin." --print --output-format {$ccOutputFormat}{$ccStreamFlags} --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' --max-budget-usd 2.0",
         default => null,
     };
+}
+
+/**
+ * Build Claude Code assistant command as an array for proc_open.
+ *
+ * Uses --system-prompt and --tools "" for proper system/user prompt separation
+ * (avoids prompt injection detection when <tool_call> format is in system prompt).
+ *
+ * @return array{command: array, env: array}
+ */
+function build_claude_code_assistant_command(string $binaryPath, string $systemPrompt, bool $streaming = false): array
+{
+    $args = [
+        $binaryPath,
+        '--print',
+        '--output-format', $streaming ? 'stream-json' : 'json',
+        '--system-prompt', $systemPrompt,
+        '--tools', '',
+        '--dangerously-skip-permissions',
+        '--no-session-persistence',
+        '--strict-mcp-config',
+        '--mcp-config', '{"mcpServers":{}}',
+        '--max-budget-usd', '2.0',
+    ];
+
+    if ($streaming) {
+        $args[] = '--include-partial-messages';
+        $args[] = '--verbose';
+    }
+
+    // Build env without CLAUDECODE
+    $env = getenv();
+    unset($env['CLAUDECODE']);
+
+    return ['command' => $args, 'env' => $env];
 }
 
 /**
@@ -307,20 +349,8 @@ if ($method === 'POST' && $path === '/execute') {
         return true;
     }
 
-    $command = build_command($agentKey, $binaryPath, $streaming);
-
-    if (! $command) {
-        json_response([
-            'success' => false,
-            'error' => "No command template for agent: {$agentKey}",
-            'exit_code' => -1,
-        ], 400);
-
-        return true;
-    }
-
-    error_log("Bridge: executing [{$agentKey}] streaming=".($streaming ? 'yes' : 'no'));
-    error_log("Bridge: command = {$command}");
+    $purpose = $body['purpose'] ?? null;
+    $isAssistant = $purpose === 'platform_assistant';
 
     // Resolve working directory
     $cwd = $workdir ?: dirname(__DIR__);
@@ -328,7 +358,6 @@ if ($method === 'POST' && $path === '/execute') {
         $cwd = dirname(__DIR__);
     }
 
-    // Execute via proc_open with stdin for prompt (no shell interpolation)
     $descriptors = [
         0 => ['pipe', 'r'],  // stdin
         1 => ['pipe', 'w'],  // stdout
@@ -337,7 +366,37 @@ if ($method === 'POST' && $path === '/execute') {
 
     $startTime = hrtime(true);
 
-    $process = proc_open($command, $descriptors, $pipes, $cwd);
+    // Claude Code assistant: use array-based proc_open with --system-prompt
+    // flag for proper system/user prompt separation. This prevents Claude Code
+    // from treating <tool_call> format instructions as a prompt injection.
+    if ($agentKey === 'claude-code' && $isAssistant && ! empty($body['system_prompt'])) {
+        $ccAssistant = build_claude_code_assistant_command($binaryPath, $body['system_prompt'], $streaming);
+        $stdinContent = $body['user_prompt'] ?? $prompt;
+
+        error_log("Bridge: executing [{$agentKey}] assistant mode, streaming=".($streaming ? 'yes' : 'no'));
+        error_log('Bridge: command = '.implode(' ', array_map('escapeshellarg', $ccAssistant['command'])));
+
+        $process = proc_open($ccAssistant['command'], $descriptors, $pipes, $cwd, $ccAssistant['env']);
+    } else {
+        $command = build_command($agentKey, $binaryPath, $streaming, $purpose);
+
+        if (! $command) {
+            json_response([
+                'success' => false,
+                'error' => "No command template for agent: {$agentKey}",
+                'exit_code' => -1,
+            ], 400);
+
+            return true;
+        }
+
+        $stdinContent = $prompt;
+
+        error_log("Bridge: executing [{$agentKey}] streaming=".($streaming ? 'yes' : 'no'));
+        error_log("Bridge: command = {$command}");
+
+        $process = proc_open($command, $descriptors, $pipes, $cwd);
+    }
 
     if (! is_resource($process)) {
         if ($streaming) {
@@ -356,7 +415,7 @@ if ($method === 'POST' && $path === '/execute') {
     }
 
     // Write prompt to stdin then close
-    fwrite($pipes[0], $prompt);
+    fwrite($pipes[0], $stdinContent);
     fclose($pipes[0]);
 
     // Set non-blocking and read with timeout
@@ -368,7 +427,8 @@ if ($method === 'POST' && $path === '/execute') {
     $deadline = time() + $timeout;
     $lastDataTime = time();       // When data was last received from stdout
     $hasReceivedData = false;     // Whether ANY output was received yet
-    $inactivityLimit = 15;        // Kill process after 15s of no new output (once data was received)
+    $inactivityLimit = 90;        // Kill process after 90s of no new output (once data was received).
+                                      // Must be generous: Codex reasoning phases can go silent for 30+ seconds.
 
     // ─── STREAMING MODE ──────────────────────────────────────────────
     // Send NDJSON events as stdout lines arrive, allowing the gateway
