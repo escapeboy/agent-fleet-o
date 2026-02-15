@@ -28,6 +28,7 @@ class ProjectRunsTable extends Component
     public function render()
     {
         $query = ProjectRun::where('project_id', $this->project->id)
+            ->withCount('artifacts')
             ->orderByDesc('created_at');
 
         if ($this->statusFilter) {

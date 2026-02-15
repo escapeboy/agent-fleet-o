@@ -2,6 +2,7 @@
 
 namespace App\Domain\Crew\Services;
 
+use App\Domain\Crew\Actions\CollectCrewArtifactsAction;
 use App\Domain\Crew\Actions\DecomposeGoalAction;
 use App\Domain\Crew\Actions\SynthesizeResultAction;
 use App\Domain\Crew\Actions\ValidateTaskOutputAction;
@@ -22,6 +23,7 @@ class CrewOrchestrator
         private readonly SynthesizeResultAction $synthesizeResult,
         private readonly ValidateTaskOutputAction $validateTaskOutput,
         private readonly TaskDependencyResolver $dependencyResolver,
+        private readonly CollectCrewArtifactsAction $collectArtifacts,
     ) {}
 
     /**
@@ -287,6 +289,9 @@ class CrewOrchestrator
                     ? (int) $execution->started_at->diffInMilliseconds(now())
                     : null,
             ]);
+
+            // Collect artifacts from task outputs
+            $this->collectArtifacts->execute($execution);
 
             activity()
                 ->performedOn($execution)

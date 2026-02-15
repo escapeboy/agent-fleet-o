@@ -127,7 +127,7 @@ class CrewDetailPage extends Component
     {
         $agents = Agent::where('status', AgentStatus::Active)->orderBy('name')->get();
         $members = $this->crew->members()->with('agent')->orderBy('sort_order')->get();
-        $executions = $this->crew->executions()->with('taskExecutions')->limit(20)->get();
+        $executions = $this->crew->executions()->with(['taskExecutions', 'artifacts'])->latest()->limit(20)->get();
 
         return view('livewire.crews.crew-detail-page', [
             'agents' => $agents,

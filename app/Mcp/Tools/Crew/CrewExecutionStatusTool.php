@@ -24,30 +24,44 @@ class CrewExecutionStatusTool extends Tool
             'execution_id' => $schema->string()
                 ->description('The crew execution UUID')
                 ->required(),
+            'include_full_output' => $schema->boolean()
+                ->description('Include full final_output instead of 500-char preview (default false)'),
         ];
     }
 
     public function handle(Request $request): Response
     {
-        $validated = $request->validate(['execution_id' => 'required|string']);
+        $validated = $request->validate([
+            'execution_id' => 'required|string',
+            'include_full_output' => 'sometimes|boolean',
+        ]);
 
-        $execution = CrewExecution::find($validated['execution_id']);
+        $execution = CrewExecution::withCount('artifacts')->find($validated['execution_id']);
 
         if (! $execution) {
             return Response::error('Crew execution not found.');
         }
 
         $result = $execution->final_output;
-        $resultPreview = $result
-            ? mb_substr(is_array($result) ? json_encode($result) : (string) $result, 0, 500)
-            : null;
+        $includeFullOutput = $validated['include_full_output'] ?? false;
+
+        if ($includeFullOutput) {
+            $resultText = $result
+                ? (is_array($result) ? json_encode($result, JSON_PRETTY_PRINT) : (string) $result)
+                : null;
+        } else {
+            $resultText = $result
+                ? mb_substr(is_array($result) ? json_encode($result) : (string) $result, 0, 500)
+                : null;
+        }
 
         return Response::text(json_encode([
             'id' => $execution->id,
             'status' => $execution->status->value,
             'crew_id' => $execution->crew_id,
             'goal' => $execution->goal,
-            'result' => $resultPreview,
+            'result' => $resultText,
+            'artifacts_count' => $execution->artifacts_count,
             'created_at' => $execution->created_at?->toIso8601String(),
             'updated_at' => $execution->updated_at?->toIso8601String(),
         ]));

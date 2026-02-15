@@ -5,6 +5,7 @@ namespace App\Domain\Crew\Models;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Models\Artifact;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -61,6 +62,11 @@ class CrewExecution extends Model
     public function taskExecutions(): HasMany
     {
         return $this->hasMany(CrewTaskExecution::class)->orderBy('sort_order');
+    }
+
+    public function artifacts(): HasMany
+    {
+        return $this->hasMany(Artifact::class);
     }
 
     public function isRunning(): bool

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AgentController;
 use App\Http\Controllers\Api\V1\ApprovalController;
+use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BudgetController;
@@ -105,6 +106,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/crews/{crew}/execute', [CrewController::class, 'execute']);
     Route::get('/crews/{crew}/executions', [CrewController::class, 'executions']);
     Route::get('/crews/{crew}/executions/{execution}', [CrewController::class, 'showExecution']);
+
+    // Artifacts
+    Route::get('/artifacts', [ArtifactController::class, 'index']);
+    Route::get('/artifacts/{artifact}', [ArtifactController::class, 'show']);
+    Route::get('/artifacts/{artifact}/content', [ArtifactController::class, 'content']);
+    Route::get('/artifacts/{artifact}/download', [ArtifactController::class, 'download']);
 
     // Marketplace
     Route::get('/marketplace', [MarketplaceController::class, 'index']);

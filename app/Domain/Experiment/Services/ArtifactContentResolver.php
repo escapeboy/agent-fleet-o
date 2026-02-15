@@ -2,6 +2,8 @@
 
 namespace App\Domain\Experiment\Services;
 
+use Illuminate\Support\Str;
+
 class ArtifactContentResolver
 {
     private const HTML_TYPES = [
@@ -71,6 +73,95 @@ class ArtifactContentResolver
             'json' => 'json',
             default => 'plaintext',
         };
+    }
+
+    /**
+     * Extract human-readable text from a JSONB output value.
+     * Tries known keys (result, text, content, body, output), falls back to full JSON.
+     */
+    public static function extractReadableText(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (! is_array($value)) {
+            return (string) $value;
+        }
+
+        // Try common text keys in priority order
+        foreach (['result', 'text', 'content', 'body', 'output', 'summary'] as $key) {
+            if (isset($value[$key]) && is_string($value[$key])) {
+                return $value[$key];
+            }
+        }
+
+        return json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * Extract text from JSONB value and render as HTML via markdown.
+     * Handles pipe-delimited tables missing separator rows.
+     */
+    public static function renderAsHtml(mixed $value, int $limit = 5000): string
+    {
+        $text = self::extractReadableText($value);
+        $text = Str::limit($text, $limit);
+        $text = self::normalizeMarkdownTables($text);
+
+        return Str::markdown($text);
+    }
+
+    /**
+     * Fix pipe-delimited tables that are missing the CommonMark separator row.
+     * AI output often produces tables like:
+     *   | Metric | 2026 | 2027 |
+     *   | ARR    | 1.12 | 3.08 |
+     * without the required |---|---|---| separator after the header.
+     */
+    public static function normalizeMarkdownTables(string $text): string
+    {
+        $lines = explode("\n", $text);
+        $result = [];
+        $inTable = false;
+        $headerDone = false;
+        $headerColCount = 0;
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+
+            if (preg_match('/^\|.+\|$/', $trimmed)) {
+                if (! $inTable) {
+                    $inTable = true;
+                    $headerDone = false;
+                    $headerColCount = substr_count($trimmed, '|') - 1;
+                    $result[] = $trimmed;
+
+                    continue;
+                }
+
+                if (! $headerDone) {
+                    if (preg_match('/^\|[\s:\-|]+$/', $trimmed)) {
+                        $headerDone = true;
+                        $result[] = $trimmed;
+                    } else {
+                        $result[] = '|'.implode('|', array_fill(0, max($headerColCount, 1), ' --- ')).'|';
+                        $headerDone = true;
+                        $result[] = $trimmed;
+                    }
+
+                    continue;
+                }
+
+                $result[] = $trimmed;
+            } else {
+                $inTable = false;
+                $headerDone = false;
+                $result[] = $line;
+            }
+        }
+
+        return implode("\n", $result);
     }
 
     private static function sniffContent(string $content): string

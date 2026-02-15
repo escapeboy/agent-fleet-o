@@ -169,19 +169,45 @@
                             <livewire:crews.crew-execution-panel :execution-id="$execution->id" wire:key="exec-{{ $execution->id }}" wire:poll.2s />
                         @else
                             @foreach($execution->taskExecutions as $task)
-                                <div class="flex items-center gap-3 border-b border-gray-50 py-2 last:border-0">
-                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                                        bg-{{ $task->status->color() }}-100 text-{{ $task->status->color() }}-700">
-                                        {{ $task->status->label() }}
-                                    </span>
-                                    <span class="flex-1 text-sm text-gray-700">{{ $task->title }}</span>
-                                    <span class="text-xs text-gray-400">
-                                        {{ $task->agent?->name ?? 'Unassigned' }}
-                                        @if($task->duration_ms) &middot; {{ number_format($task->duration_ms / 1000, 1) }}s @endif
-                                        @if($task->qa_score) &middot; QA: {{ number_format($task->qa_score * 100) }}% @endif
-                                    </span>
+                                <div x-data="{ showTaskOutput: false }">
+                                    <div class="flex items-center gap-3 border-b border-gray-50 py-2 last:border-0">
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                                            bg-{{ $task->status->color() }}-100 text-{{ $task->status->color() }}-700">
+                                            {{ $task->status->label() }}
+                                        </span>
+                                        <button @click="showTaskOutput = !showTaskOutput" class="flex-1 text-left text-sm text-gray-700 hover:text-gray-900">
+                                            {{ $task->title }}
+                                        </button>
+                                        <span class="text-xs text-gray-400">
+                                            {{ $task->agent?->name ?? 'Unassigned' }}
+                                            @if($task->duration_ms) &middot; {{ number_format($task->duration_ms / 1000, 1) }}s @endif
+                                            @if($task->qa_score) &middot; QA: {{ number_format($task->qa_score * 100) }}% @endif
+                                        </span>
+                                    </div>
+                                    @if($task->output)
+                                        <div x-show="showTaskOutput" x-cloak class="ml-8 mb-2 rounded bg-gray-50 p-2 prose-output max-h-60 overflow-y-auto">
+                                            {!! \App\Domain\Experiment\Services\ArtifactContentResolver::renderAsHtml($task->output, 2000) !!}
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
+
+                            {{-- Final Output for completed executions --}}
+                            @if($execution->final_output)
+                                <div class="mt-3 border-t border-gray-100 pt-3">
+                                    <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Final Result</h4>
+                                    <div class="max-h-96 overflow-y-auto rounded-lg bg-gray-50 p-3 text-sm text-gray-700 prose-output">
+                                        {!! \App\Domain\Experiment\Services\ArtifactContentResolver::renderAsHtml($execution->final_output) !!}
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- Artifacts --}}
+                            @if($execution->artifacts->isNotEmpty())
+                                <div class="mt-3 border-t border-gray-100 pt-3">
+                                    <livewire:experiments.artifact-list :artifact-owner="$execution" wire:key="detail-artifacts-{{ $execution->id }}" />
+                                </div>
+                            @endif
                         @endif
 
                         @if($execution->error_message)

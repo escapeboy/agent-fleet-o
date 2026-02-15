@@ -5,13 +5,19 @@ namespace App\Livewire\Experiments;
 use App\Domain\Experiment\Enums\ExperimentTaskStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Services\ArtifactContentResolver;
+use App\Models\Artifact;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ArtifactList extends Component
 {
-    public Experiment $experiment;
+    /** The model that owns the artifacts (Experiment, CrewExecution, or ProjectRun) */
+    public Model $artifactOwner;
+
+    /** Whether to show failed experiment build tasks (only for Experiment owners) */
+    public bool $showFailedTasks = false;
 
     public ?string $selectedArtifactId = null;
 
@@ -21,10 +27,13 @@ class ArtifactList extends Component
 
     public bool $showFullscreen = false;
 
-    public function mount(): void
+    public function mount(Model $artifactOwner, bool $showFailedTasks = false): void
     {
+        $this->artifactOwner = $artifactOwner;
+        $this->showFailedTasks = $showFailedTasks && $artifactOwner instanceof Experiment;
+
         // Auto-select first artifact if any exist
-        $first = $this->experiment->artifacts()->orderBy('created_at')->first();
+        $first = $this->artifactOwner->artifacts()->orderBy('created_at')->first();
         if ($first) {
             $this->selectArtifact($first->id);
         }
@@ -50,7 +59,7 @@ class ArtifactList extends Component
 
     public function downloadArtifact(): StreamedResponse
     {
-        $artifact = $this->experiment->artifacts()->findOrFail($this->selectedArtifactId);
+        $artifact = $this->artifactOwner->artifacts()->findOrFail($this->selectedArtifactId);
 
         $version = $this->selectedVersion
             ? $artifact->versions()->where('version', $this->selectedVersion)->firstOrFail()
@@ -71,13 +80,53 @@ class ArtifactList extends Component
         ]);
     }
 
+    public function downloadAllAsZip(): StreamedResponse
+    {
+        $artifacts = $this->artifactOwner->artifacts()
+            ->with(['versions' => fn ($q) => $q->orderByDesc('version')->limit(1)])
+            ->get();
+
+        $ownerName = method_exists($this->artifactOwner, 'getRouteKey')
+            ? Str::slug(class_basename($this->artifactOwner).'-'.$this->artifactOwner->getRouteKey())
+            : 'artifacts';
+
+        return response()->streamDownload(function () use ($artifacts) {
+            $tmpFile = tempnam(sys_get_temp_dir(), 'artifacts_');
+            $zip = new \ZipArchive;
+            $zip->open($tmpFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+            foreach ($artifacts as $artifact) {
+                $version = $artifact->versions->first();
+                if (! $version) {
+                    continue;
+                }
+
+                $ext = ArtifactContentResolver::extension($artifact->type);
+                $content = is_string($version->content)
+                    ? $version->content
+                    : json_encode($version->content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+                $zip->addFromString(
+                    Str::slug($artifact->name)."-v{$version->version}.{$ext}",
+                    $content,
+                );
+            }
+
+            $zip->close();
+            readfile($tmpFile);
+            unlink($tmpFile);
+        }, $ownerName.'-artifacts.zip', [
+            'Content-Type' => 'application/zip',
+        ]);
+    }
+
     public function getSelectedArtifactProperty()
     {
         if (! $this->selectedArtifactId) {
             return null;
         }
 
-        return $this->experiment->artifacts()->find($this->selectedArtifactId);
+        return $this->artifactOwner->artifacts()->find($this->selectedArtifactId);
     }
 
     public function getContentCategoryProperty(): string
@@ -104,18 +153,19 @@ class ArtifactList extends Component
 
     public function render()
     {
-        // Load artifact metadata without content (performance: no eager-loading text blobs)
-        $artifacts = $this->experiment->artifacts()
+        $artifacts = $this->artifactOwner->artifacts()
             ->withCount('versions')
             ->with(['versions' => fn ($q) => $q->select('id', 'artifact_id', 'version', 'metadata', 'created_at')->orderByDesc('version')])
             ->orderBy('created_at')
             ->get();
 
-        // Failed build tasks (no artifact record created)
-        $failedTasks = $this->experiment->tasks()
-            ->where('stage', 'building')
-            ->where('status', ExperimentTaskStatus::Failed)
-            ->get();
+        $failedTasks = collect();
+        if ($this->showFailedTasks && $this->artifactOwner instanceof Experiment) {
+            $failedTasks = $this->artifactOwner->tasks()
+                ->where('stage', 'building')
+                ->where('status', ExperimentTaskStatus::Failed)
+                ->get();
+        }
 
         return view('livewire.experiments.artifact-list', [
             'artifacts' => $artifacts,
@@ -131,7 +181,7 @@ class ArtifactList extends Component
             return;
         }
 
-        $artifact = $this->experiment->artifacts()->find($this->selectedArtifactId);
+        $artifact = $this->artifactOwner->artifacts()->find($this->selectedArtifactId);
 
         if (! $artifact) {
             $this->previewContent = null;

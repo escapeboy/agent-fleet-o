@@ -105,6 +105,16 @@
 
                         {{-- Right: Actions --}}
                         <div class="flex items-center gap-1">
+                            @if($artifacts->count() > 1)
+                                <button wire:click="downloadAllAsZip"
+                                    class="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                                    title="Download all as ZIP">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                                    </svg>
+                                    ZIP
+                                </button>
+                            @endif
                             @if($category === 'html')
                                 <button wire:click="toggleFullscreen"
                                     class="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"

@@ -53,61 +53,71 @@
         {{-- Task list --}}
         <div class="space-y-1">
             @foreach($tasks as $task)
-                <div class="flex items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-gray-50"
+                <div class="rounded-lg px-3 py-2 transition hover:bg-gray-50"
                     x-data="{ showDetail: false }">
-                    {{-- Status icon --}}
-                    @switch($task->status->value)
-                        @case('validated')
-                            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-600">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            </span>
-                            @break
-                        @case('running')
-                        @case('assigned')
-                            <span class="flex h-5 w-5 items-center justify-center">
-                                <svg class="h-4 w-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
-                            </span>
-                            @break
-                        @case('failed')
-                        @case('qa_failed')
-                            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-600">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                            </span>
-                            @break
-                        @case('needs_revision')
-                            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                            </span>
-                            @break
-                        @default
-                            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-                                <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
-                            </span>
-                    @endswitch
+                    <div class="flex items-center gap-3">
+                        {{-- Status icon --}}
+                        @switch($task->status->value)
+                            @case('validated')
+                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-600">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                </span>
+                                @break
+                            @case('running')
+                            @case('assigned')
+                                <span class="flex h-5 w-5 items-center justify-center">
+                                    <svg class="h-4 w-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                </span>
+                                @break
+                            @case('failed')
+                            @case('qa_failed')
+                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-600">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </span>
+                                @break
+                            @case('needs_revision')
+                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                </span>
+                                @break
+                            @default
+                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                                    <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+                                </span>
+                        @endswitch
 
-                    {{-- Task info --}}
-                    <button @click="showDetail = !showDetail" class="flex flex-1 items-center gap-2 text-left">
-                        <span class="text-sm font-medium text-gray-700">{{ $task->title }}</span>
-                        @if($task->attempt_number > 1)
-                            <span class="text-xs text-amber-600">(attempt {{ $task->attempt_number }})</span>
+                        {{-- Task info --}}
+                        <button @click="showDetail = !showDetail" class="flex flex-1 items-center gap-2 text-left">
+                            <span class="text-sm font-medium text-gray-700">{{ $task->title }}</span>
+                            @if($task->attempt_number > 1)
+                                <span class="text-xs text-amber-600">(attempt {{ $task->attempt_number }})</span>
+                            @endif
+                        </button>
+
+                        {{-- Meta --}}
+                        <span class="text-xs text-gray-400">{{ $task->agent?->name ?? '—' }}</span>
+                        @if($task->duration_ms)
+                            <span class="text-xs text-gray-400">{{ number_format($task->duration_ms / 1000, 1) }}s</span>
                         @endif
-                    </button>
-
-                    {{-- Meta --}}
-                    <span class="text-xs text-gray-400">{{ $task->agent?->name ?? '—' }}</span>
-                    @if($task->duration_ms)
-                        <span class="text-xs text-gray-400">{{ number_format($task->duration_ms / 1000, 1) }}s</span>
-                    @endif
-                    @if($task->qa_score)
-                        <span class="text-xs {{ $task->qa_score >= 0.7 ? 'text-green-600' : 'text-amber-600' }}">
-                            {{ number_format($task->qa_score * 100) }}%
-                        </span>
-                    @endif
+                        @if($task->qa_score)
+                            <span class="text-xs {{ $task->qa_score >= 0.7 ? 'text-green-600' : 'text-amber-600' }}">
+                                {{ number_format($task->qa_score * 100) }}%
+                            </span>
+                        @endif
+                    </div>
 
                     {{-- Expandable detail --}}
-                    <div x-show="showDetail" x-cloak class="col-span-full mt-2 ml-8 rounded-lg bg-gray-50 p-3 text-xs">
+                    <div x-show="showDetail" x-cloak class="mt-2 ml-8 rounded-lg bg-gray-50 p-3 text-xs">
                         @if($task->description)
                             <p class="text-gray-600 mb-2">{{ $task->description }}</p>
+                        @endif
+                        @if($task->output && $task->status->value === 'validated')
+                            <div class="mb-2">
+                                <span class="font-medium text-gray-700">Output:</span>
+                                <div class="mt-1 max-h-60 overflow-y-auto rounded bg-white p-2 text-gray-600 border border-gray-200 prose-output">
+                                    {!! \App\Domain\Experiment\Services\ArtifactContentResolver::renderAsHtml($task->output, 2000) !!}
+                                </div>
+                            </div>
                         @endif
                         @if($task->qa_feedback)
                             <div class="mb-2">
@@ -122,5 +132,22 @@
                 </div>
             @endforeach
         </div>
+
+        {{-- Final Output --}}
+        @if($execution->final_output && $execution->status->value === 'completed')
+            <div class="mt-4 border-t border-gray-200 pt-4">
+                <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Final Result</h4>
+                <div class="max-h-96 overflow-y-auto rounded-lg bg-gray-50 p-3 text-sm text-gray-700 prose-output">
+                    {!! \App\Domain\Experiment\Services\ArtifactContentResolver::renderAsHtml($execution->final_output) !!}
+                </div>
+            </div>
+        @endif
+
+        {{-- Artifacts --}}
+        @if($execution->artifacts_count > 0)
+            <div class="mt-4 border-t border-gray-200 pt-4">
+                <livewire:experiments.artifact-list :artifact-owner="$execution" wire:key="exec-artifacts-{{ $execution->id }}" />
+            </div>
+        @endif
     @endif
 </div>
