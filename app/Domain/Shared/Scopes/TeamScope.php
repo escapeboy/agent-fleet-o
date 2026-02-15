@@ -10,7 +10,8 @@ class TeamScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
-        if (app()->runningInConsole() && ! app()->runningUnitTests()) {
+        // Skip scoping in console UNLESS MCP server is active or running tests
+        if (app()->runningInConsole() && ! app()->runningUnitTests() && ! app()->bound('mcp.active')) {
             return;
         }
 
