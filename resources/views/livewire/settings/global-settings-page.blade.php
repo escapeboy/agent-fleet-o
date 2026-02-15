@@ -92,9 +92,7 @@
             <form wire:submit="saveAssistantLlm" class="mt-4 space-y-4">
                 <x-form-select wire:model.live="assistantProvider" label="Provider">
                     @foreach($providers as $key => $p)
-                        @if(empty($p['local']))
-                            <option value="{{ $key }}">{{ $p['name'] }}</option>
-                        @endif
+                        <option value="{{ $key }}">{{ $p['name'] }}</option>
                     @endforeach
                 </x-form-select>
 

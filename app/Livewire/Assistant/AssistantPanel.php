@@ -5,48 +5,51 @@ namespace App\Livewire\Assistant;
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\Assistant\Services\ConversationManager;
+use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Models\GlobalSetting;
 use Livewire\Component;
 
 class AssistantPanel extends Component
 {
-    public string $userMessage = '';
-
     public string $conversationId = '';
 
     public array $messages = [];
-
-    public bool $isProcessing = false;
 
     public string $contextType = '';
 
     public string $contextId = '';
 
-    public string $streamedResponse = '';
-
     public array $conversations = [];
 
     public bool $showHistory = false;
 
+    public string $selectedProvider = '';
+
+    public string $selectedModel = '';
+
     public function mount(): void
     {
+        $this->selectedProvider = GlobalSetting::get('assistant_llm_provider')
+            ?? GlobalSetting::get('default_llm_provider', 'anthropic');
+        $this->selectedModel = GlobalSetting::get('assistant_llm_model')
+            ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
+
         $this->loadRecentConversations();
     }
 
-    public function sendMessage(): void
+    public function updatedSelectedProvider(): void
     {
-        $message = trim($this->userMessage);
-        if ($message === '' || $this->isProcessing) {
+        $providers = app(ProviderResolver::class)->availableProviders();
+        $models = $providers[$this->selectedProvider]['models'] ?? [];
+        $this->selectedModel = array_key_first($models) ?? '';
+    }
+
+    public function sendMessage(string $message): void
+    {
+        $message = trim($message);
+        if ($message === '') {
             return;
         }
-
-        $this->userMessage = '';
-        $this->isProcessing = true;
-
-        // Add user message to UI immediately
-        $this->messages[] = [
-            'role' => 'user',
-            'content' => $message,
-        ];
 
         try {
             $user = auth()->user();
@@ -64,16 +67,23 @@ class AssistantPanel extends Component
 
             $action = app(SendAssistantMessageAction::class);
 
-            // Use tool-calling (synchronous) path - handles both tools and text
             $response = $action->execute(
                 conversation: $conversation,
                 userMessage: $message,
                 user: $user,
                 contextType: $this->contextType ?: null,
                 contextId: $this->contextId ?: null,
+                provider: $this->selectedProvider ?: null,
+                model: $this->selectedModel ?: null,
             );
 
-            // Add assistant response to UI
+            // Add both user message and assistant response to the messages array.
+            // Alpine shows the user message optimistically during the request,
+            // and clears it when the server response arrives with both messages.
+            $this->messages[] = [
+                'role' => 'user',
+                'content' => $message,
+            ];
             $this->messages[] = [
                 'role' => 'assistant',
                 'content' => $response->content,
@@ -84,20 +94,20 @@ class AssistantPanel extends Component
             $this->loadRecentConversations();
         } catch (\Throwable $e) {
             $this->messages[] = [
+                'role' => 'user',
+                'content' => $message,
+            ];
+            $this->messages[] = [
                 'role' => 'assistant',
                 'content' => 'Sorry, an error occurred: '.$e->getMessage(),
             ];
         }
-
-        $this->isProcessing = false;
-        $this->dispatch('assistant-message-sent');
     }
 
     public function newConversation(): void
     {
         $this->conversationId = '';
         $this->messages = [];
-        $this->streamedResponse = '';
         $this->showHistory = false;
     }
 
@@ -161,6 +171,10 @@ class AssistantPanel extends Component
 
     public function render()
     {
-        return view('livewire.assistant.assistant-panel');
+        $providers = app(ProviderResolver::class)->availableProviders();
+
+        return view('livewire.assistant.assistant-panel', [
+            'providers' => $providers,
+        ]);
     }
 }

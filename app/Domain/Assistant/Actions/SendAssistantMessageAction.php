@@ -30,6 +30,8 @@ class SendAssistantMessageAction
         User $user,
         ?string $contextType = null,
         ?string $contextId = null,
+        ?string $provider = null,
+        ?string $model = null,
     ): AiResponseDTO {
         // Save user message
         $this->conversationManager->addMessage($conversation, 'user', $userMessage);
@@ -42,14 +44,18 @@ class SendAssistantMessageAction
         $history = $this->conversationManager->buildMessageHistory($conversation);
         $userPrompt = $this->buildUserPrompt($history, $userMessage);
 
-        // Resolve tools for user
-        $tools = $this->toolRegistry->getTools($user);
-
-        // Build AI request
-        $provider = GlobalSetting::get('assistant_llm_provider')
+        // Resolve provider/model
+        $provider = $provider
+            ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
-        $model = GlobalSetting::get('assistant_llm_model')
+        $model = $model
+            ?? GlobalSetting::get('assistant_llm_model')
             ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
+
+        // Local agents don't support PrismPHP tool calling — skip tools
+        $isLocal = (bool) config("llm_providers.{$provider}.local");
+        $tools = $isLocal ? null : $this->toolRegistry->getTools($user);
+        $maxSteps = $isLocal ? 1 : 5;
 
         $request = new AiRequestDTO(
             provider: $provider,
@@ -61,7 +67,7 @@ class SendAssistantMessageAction
             teamId: $user->current_team_id,
             purpose: 'platform_assistant',
             tools: $tools,
-            maxSteps: 5,
+            maxSteps: $maxSteps,
             temperature: 0.3,
         );
 
@@ -102,6 +108,8 @@ class SendAssistantMessageAction
         ?string $contextType = null,
         ?string $contextId = null,
         ?callable $onChunk = null,
+        ?string $provider = null,
+        ?string $model = null,
     ): AiResponseDTO {
         // Save user message
         $this->conversationManager->addMessage($conversation, 'user', $userMessage);
@@ -112,9 +120,11 @@ class SendAssistantMessageAction
         $history = $this->conversationManager->buildMessageHistory($conversation);
         $userPrompt = $this->buildUserPrompt($history, $userMessage);
 
-        $provider = GlobalSetting::get('assistant_llm_provider')
+        $provider = $provider
+            ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
-        $model = GlobalSetting::get('assistant_llm_model')
+        $model = $model
+            ?? GlobalSetting::get('assistant_llm_model')
             ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
 
         $request = new AiRequestDTO(

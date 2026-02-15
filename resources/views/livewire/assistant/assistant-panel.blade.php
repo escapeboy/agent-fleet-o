@@ -1,6 +1,9 @@
 <div
     x-data="{
         open: false,
+        inputText: '',
+        pendingMessage: null,
+        sending: false,
         init() {
             // Watch for Livewire navigation to detect page context
             document.addEventListener('livewire:navigated', () => {
@@ -31,9 +34,34 @@
                     container.scrollTop = container.scrollHeight;
                 }
             });
+        },
+        async send() {
+            const text = this.inputText.trim();
+            if (!text || this.sending) return;
+
+            this.inputText = '';
+            this.sending = true;
+            this.pendingMessage = text;
+            this.scrollToBottom();
+
+            // Reset textarea height
+            if (this.$refs.messageInput) {
+                this.$refs.messageInput.style.height = 'auto';
+            }
+
+            try {
+                await $wire.sendMessage(text);
+            } finally {
+                this.pendingMessage = null;
+                this.sending = false;
+                this.scrollToBottom();
+            }
+        },
+        quickSend(text) {
+            this.inputText = text;
+            this.send();
         }
     }"
-    x-on:assistant-message-sent.window="scrollToBottom()"
     class="relative z-50"
 >
     {{-- Toggle Button (FAB) --}}
@@ -84,6 +112,7 @@
                 {{-- New Conversation --}}
                 <button
                     wire:click="newConversation"
+                    x-on:click="pendingMessage = null; sending = false"
                     class="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                     title="New Conversation"
                 >
@@ -130,52 +159,62 @@
             class="flex-1 space-y-4 overflow-y-auto px-4 py-4"
         >
             @if(empty($messages))
-                <div class="flex h-full flex-col items-center justify-center text-center">
+                <div x-show="!pendingMessage" class="flex h-full flex-col items-center justify-center text-center">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="mb-3 h-12 w-12 text-gray-300">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
                     </svg>
                     <p class="text-sm font-medium text-gray-500">Agent Fleet Assistant</p>
                     <p class="mt-1 text-xs text-gray-400">Ask me anything about your projects,<br>experiments, agents, and more.</p>
                     <div class="mt-4 flex flex-wrap justify-center gap-2">
-                        <button wire:click="$set('userMessage', 'List my recent experiments')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
+                        <button x-on:click="quickSend('List my recent experiments')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
                             List experiments
                         </button>
-                        <button wire:click="$set('userMessage', 'Show dashboard KPIs')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
+                        <button x-on:click="quickSend('Show dashboard KPIs')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
                             Dashboard KPIs
                         </button>
-                        <button wire:click="$set('userMessage', 'What is my budget status?')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
+                        <button x-on:click="quickSend('What is my budget status?')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
                             Budget status
                         </button>
                     </div>
                 </div>
-            @else
-                @foreach($messages as $msg)
-                    <div class="{{ $msg['role'] === 'user' ? 'flex justify-end' : 'flex justify-start' }}">
-                        <div class="{{ $msg['role'] === 'user'
-                            ? 'max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 text-white'
-                            : 'max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-2.5 text-gray-900' }}">
-                            @if($msg['role'] === 'assistant')
-                                <div class="assistant-response prose prose-sm max-w-none">
-                                    {!! \Illuminate\Support\Str::markdown($msg['content']) !!}
-                                </div>
-                                @if(!empty($msg['tool_calls_count']))
-                                    <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-3 w-3">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
-                                        </svg>
-                                        {{ $msg['tool_calls_count'] }} tool call{{ $msg['tool_calls_count'] > 1 ? 's' : '' }}
-                                    </div>
-                                @endif
-                            @else
-                                <p class="text-sm whitespace-pre-wrap">{{ $msg['content'] }}</p>
-                            @endif
-                        </div>
-                    </div>
-                @endforeach
             @endif
 
-            {{-- Processing Indicator --}}
-            @if($isProcessing)
+            {{-- Server-side messages --}}
+            @foreach($messages as $msg)
+                <div class="{{ $msg['role'] === 'user' ? 'flex justify-end' : 'flex justify-start' }}">
+                    <div class="{{ $msg['role'] === 'user'
+                        ? 'max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 text-white'
+                        : 'max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-2.5 text-gray-900' }}">
+                        @if($msg['role'] === 'assistant')
+                            <div class="assistant-response prose prose-sm max-w-none">
+                                {!! \Illuminate\Support\Str::markdown($msg['content']) !!}
+                            </div>
+                            @if(!empty($msg['tool_calls_count']))
+                                <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-3 w-3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
+                                    </svg>
+                                    {{ $msg['tool_calls_count'] }} tool call{{ $msg['tool_calls_count'] > 1 ? 's' : '' }}
+                                </div>
+                            @endif
+                        @else
+                            <p class="text-sm whitespace-pre-wrap">{{ $msg['content'] }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+
+            {{-- Optimistic user message (shown immediately, before server responds) --}}
+            <template x-if="pendingMessage">
+                <div class="flex justify-end">
+                    <div class="max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 text-white">
+                        <p class="text-sm whitespace-pre-wrap" x-text="pendingMessage"></p>
+                    </div>
+                </div>
+            </template>
+
+            {{-- Thinking indicator --}}
+            <template x-if="sending">
                 <div class="flex justify-start">
                     <div class="max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3">
                         <div class="flex items-center gap-2">
@@ -188,34 +227,61 @@
                         </div>
                     </div>
                 </div>
-            @endif
+            </template>
         </div>
 
         {{-- Input Area --}}
         <div class="border-t border-gray-200 px-4 py-3">
-            <form wire:submit="sendMessage" class="flex items-end gap-2">
+            {{-- Model Selector --}}
+            <div class="mb-2 flex items-center gap-2">
+                <select
+                    wire:model.live="selectedProvider"
+                    class="h-7 rounded-lg border border-gray-200 bg-gray-50 px-2 text-xs text-gray-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                    :disabled="sending"
+                >
+                    @foreach($providers as $key => $provider)
+                        <option value="{{ $key }}">{{ $provider['name'] }}</option>
+                    @endforeach
+                </select>
+                <select
+                    wire:model="selectedModel"
+                    class="h-7 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 text-xs text-gray-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                    :disabled="sending"
+                >
+                    @if(isset($providers[$selectedProvider]['models']))
+                        @foreach($providers[$selectedProvider]['models'] as $modelKey => $modelConfig)
+                            <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                        @endforeach
+                    @endif
+                </select>
+                @if(!empty($providers[$selectedProvider]['local']))
+                    <span class="inline-flex items-center rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">Local</span>
+                @endif
+            </div>
+            <div class="flex items-end gap-2">
                 <div class="flex-1">
                     <textarea
                         x-ref="messageInput"
-                        wire:model="userMessage"
+                        x-model="inputText"
                         placeholder="Ask anything... (Cmd+K to toggle)"
                         rows="1"
                         class="block w-full resize-none rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                        x-on:keydown.enter.prevent="if (!$event.shiftKey) { $wire.sendMessage(); }"
+                        x-on:keydown.enter.prevent="if (!$event.shiftKey) send()"
                         x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
-                        :disabled="$wire.isProcessing"
+                        :disabled="sending"
                     ></textarea>
                 </div>
                 <button
-                    type="submit"
-                    :disabled="$wire.isProcessing"
+                    type="button"
+                    x-on:click="send()"
+                    :disabled="sending || !inputText.trim()"
                     class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
                     </svg>
                 </button>
-            </form>
+            </div>
             <p class="mt-1.5 text-center text-[10px] text-gray-400">
                 Press Enter to send, Shift+Enter for new line
             </p>
