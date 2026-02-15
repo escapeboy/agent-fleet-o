@@ -49,6 +49,12 @@ parameters:
 			path: app/Console/Commands/CheckProjectBudgets.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/RecoverStuckTasks.php
+
+		-
 			message: '#^Call to function in_array\(\) with string and array\{App\\Domain\\Experiment\\Enums\\ExperimentTaskStatus\:\:Completed, App\\Domain\\Experiment\\Enums\\ExperimentTaskStatus\:\:Failed, App\\Domain\\Experiment\\Enums\\ExperimentTaskStatus\:\:Skipped\} will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
@@ -151,6 +157,36 @@ parameters:
 			path: app/Domain/Approval/Actions/ApproveAction.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
+
+		-
+			message: '#^Method App\\Domain\\Approval\\Actions\\CompleteHumanTaskAction\:\:continueWorkflow\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
+
+		-
+			message: '#^Parameter \#1 \$experiment of method App\\Domain\\Workflow\\Services\\WorkflowGraphExecutor\:\:execute\(\) expects App\\Domain\\Experiment\\Models\\Experiment, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Approval\\Enums\\ApprovalStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -161,6 +197,42 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Approval/Actions/CreateApprovalRequestAction.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Method App\\Domain\\Approval\\Actions\\EscalateHumanTaskAction\:\:escalationSlaHours\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Approval/Actions/EscalateHumanTaskAction.php
+
+		-
+			message: '#^Offset ''sla_hours'' on array\{\}\|string in isset\(\) does not exist\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Domain/Approval/Actions/EscalateHumanTaskAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Approval\\Enums\\ApprovalStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Approval/Actions/EscalateHumanTaskAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Approval/Actions/EscalateHumanTaskAction.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -203,6 +275,222 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Approval/Actions/RejectAction.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Approval/Models/ApprovalRequest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Approval/Models/ApprovalRequest.php
+
+		-
+			message: '#^Access to an undefined property Prism\\Prism\\ValueObjects\\ToolOutput\:\:\$output\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Actions/SendAssistantMessageAction.php
+
+		-
+			message: '#^Parameter \#1 \$team of method App\\Models\\User\:\:teamRole\(\) expects App\\Domain\\Shared\\Models\\Team, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Assistant/Actions/SendAssistantMessageAction.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: app/Domain/Assistant/Actions/SendAssistantMessageAction.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Assistant/Actions/SendAssistantMessageAction.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Infrastructure\\AI\\DTOs\\AiResponseDTO\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Assistant/Actions/SendAssistantMessageAction.php
+
+		-
+			message: '#^Unknown parameter \$placeholderMessageId in call to method App\\Domain\\Assistant\\Actions\\SendAssistantMessageAction\:\:execute\(\)\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Domain/Assistant/Jobs/ProcessAssistantMessageJob.php
+
+		-
+			message: '#^Parameter \#1 \$team of method App\\Models\\User\:\:teamRole\(\) expects App\\Domain\\Shared\\Models\\Team, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Assistant/Services/AssistantToolRegistry.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 6
+			path: app/Domain/Assistant/Services/ContextResolver.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Domain/Assistant/Services/ConversationManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Services/ConversationManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 7
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 3
+			path: app/Domain/Assistant/Tools/GetEntityTools.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Approval\\Models\\ApprovalRequest\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 8
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Agent\\Models\\Agent\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Approval\\Models\\ApprovalRequest\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Crew\\Models\\Crew\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\Experiment\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Project\\Models\\Project\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Skill\\Models\\Skill\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Workflow\\Models\\Workflow\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Domain/Assistant/Tools/MemoryTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Domain/Assistant/Tools/MemoryTools.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Memory\\Models\\Memory\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Domain/Assistant/Tools/MemoryTools.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Domain/Assistant/Tools/MemoryTools.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>title" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Domain/Assistant/Tools/MemoryTools.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Domain/Assistant/Tools/MutationTools.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -1120,12 +1408,6 @@ parameters:
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 3
-			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
-
-		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 1
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
@@ -2593,6 +2875,12 @@ parameters:
 			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$case_value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$condition\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2608,6 +2896,12 @@ parameters:
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$crew_id\.$#'
 			identifier: property.notFound
 			count: 2
+			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$expression\.$#'
+			identifier: property.notFound
+			count: 1
 			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
 
 		-
@@ -2673,7 +2967,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 3
 			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
 
 		-
@@ -2737,13 +3031,37 @@ parameters:
 			path: app/Domain/Workflow/Models/WorkflowNode.php
 
 		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:DoWhile will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Workflow/Models/WorkflowNode.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:DynamicFork will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Workflow/Models/WorkflowNode.php
+
+		-
 			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:End will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Workflow/Models/WorkflowNode.php
 
 		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:HumanTask will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Workflow/Models/WorkflowNode.php
+
+		-
 			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:Start will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Workflow/Models/WorkflowNode.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:Switch will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Workflow/Models/WorkflowNode.php
@@ -4633,6 +4951,96 @@ parameters:
 			path: app/Livewire/Agents/CreateAgentForm.php
 
 		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 2
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Offset ''default'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Offset ''fields'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Offset ''max'' on \*NEVER\* in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Offset ''name'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Offset ''options'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Offset ''required'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Offset ''type'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_message_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tool_calls\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\),Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -5215,12 +5623,6 @@ parameters:
 			path: app/Livewire/Tools/ToolDetailPage.php
 
 		-
-			message: '#^Unknown parameter \$status in call to method App\\Domain\\Tool\\Actions\\UpdateToolAction\:\:execute\(\)\.$#'
-			identifier: argument.unknown
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -5345,6 +5747,486 @@ parameters:
 			identifier: assign.propertyType
 			count: 1
 			path: app/Livewire/Workflows/WorkflowDetailPage.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentCreateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Agent\\Models\\Agent\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Credential/CredentialCreateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Credential/CredentialGetTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Credential/CredentialGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Credential/CredentialListTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Credential/CredentialListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Credential\\Models\\Credential\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Credential/CredentialListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewCreateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewExecuteTool.php
+
+		-
+			message: '#^Call to function is_array\(\) with non\-falsy\-string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Crew/CrewGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Crew\\Models\\Crew\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentCreateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output_snapshot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$stage\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Experiment/ExperimentGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentKillTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Experiment/ExperimentListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\Experiment\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentPauseTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentResumeTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentRetryTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentValidTransitionsTool.php
+
+		-
+			message: '#^Parameter \#1 \$from of static method App\\Domain\\Experiment\\States\\ExperimentTransitionMap\:\:allowedTransitions\(\) expects App\\Domain\\Experiment\\Enums\\ExperimentStatus, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentValidTransitionsTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Marketplace/MarketplaceBrowseTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Marketplace\\Models\\MarketplaceListing\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Marketplace/MarketplaceBrowseTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Marketplace/MarketplacePublishTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryListRecentTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryListRecentTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Memory\\Models\\Memory\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryListRecentTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Memory/MemorySearchTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Memory/MemorySearchTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Memory\\Models\\Memory\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Memory/MemorySearchTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectArchiveTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectCreateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Project/ProjectGetTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Project/ProjectListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Project\\Models\\Project\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectPauseTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectResumeTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectTriggerRunTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillCreateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: app/Mcp/Tools/Skill/SkillGetTool.php
+
+		-
+			message: '#^Offset ''prompt_template'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillGetTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Mcp/Tools/Skill/SkillGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Skill/SkillListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Skill\\Models\\Skill\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillListTool.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/System/AuditLogTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Audit\\Models\\AuditEntry\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/System/AuditLogTool.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/System/AuditLogTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Tool/ToolCreateTool.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Mcp/Tools/Tool/ToolGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Tool/ToolGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Tool/ToolListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Tool\\Models\\Tool\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Tool/ToolListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Tool/ToolUpdateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowCreateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowGenerateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowGenerateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Workflow/WorkflowGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$source_node_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$target_node_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowGetTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Mcp/Tools/Workflow/WorkflowGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Workflow\\Models\\Workflow\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowListTool.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
