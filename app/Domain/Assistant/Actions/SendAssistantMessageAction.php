@@ -51,22 +51,23 @@ class SendAssistantMessageAction
         $isLocal = $provider === 'local' || (bool) config("llm_providers.{$provider}.local");
 
         // Resolve the local agent key to determine capabilities.
-        // Only claude-code supports the text-based <tool_call> format.
-        // Codex is shell-based and cannot follow tool call instructions.
+        // claude-code: supports text-based <tool_call> format (tool loop managed by us).
+        // codex: supports MCP natively — connect it to our Agent Fleet MCP server.
         $localAgentKey = $isLocal
             ? config("llm_providers.{$provider}.agent_key", $provider)
             : null;
         $supportsToolLoop = $localAgentKey === 'claude-code';
+        $supportsMcpNatively = $localAgentKey === 'codex';
 
         // Always resolve tools regardless of provider
         $tools = $this->toolRegistry->getTools($user);
 
         // Build system prompt with context and tool info.
-        // canExecuteTools: cloud providers use PrismPHP tools, claude-code uses <tool_call> format.
-        // Codex is shell-based and cannot call platform tools — it gets advisory-mode prompt.
-        $canExecuteTools = ! $isLocal || $supportsToolLoop;
+        // canExecuteTools: cloud providers use PrismPHP tools, claude-code uses <tool_call> format,
+        // codex uses MCP tools natively (our Agent Fleet MCP server is connected via config).
+        $canExecuteTools = ! $isLocal || $supportsToolLoop || $supportsMcpNatively;
         $context = $this->contextResolver->resolve($contextType, $contextId);
-        $systemPrompt = $this->buildSystemPrompt($context, $user, $supportsToolLoop, $canExecuteTools, $tools);
+        $systemPrompt = $this->buildSystemPrompt($context, $user, $supportsToolLoop, $canExecuteTools, $tools, $supportsMcpNatively);
 
         // Build conversation history
         $history = $this->conversationManager->buildMessageHistory($conversation);
@@ -169,11 +170,12 @@ class SendAssistantMessageAction
             ? config("llm_providers.{$provider}.agent_key", $provider)
             : null;
         $supportsToolLoop = $localAgentKey === 'claude-code';
+        $supportsMcpNatively = $localAgentKey === 'codex';
         $tools = $this->toolRegistry->getTools($user);
 
-        $canExecuteTools = ! $isLocal || $supportsToolLoop;
+        $canExecuteTools = ! $isLocal || $supportsToolLoop || $supportsMcpNatively;
         $context = $this->contextResolver->resolve($contextType, $contextId);
-        $systemPrompt = $this->buildSystemPrompt($context, $user, $supportsToolLoop, $canExecuteTools, $tools);
+        $systemPrompt = $this->buildSystemPrompt($context, $user, $supportsToolLoop, $canExecuteTools, $tools, $supportsMcpNatively);
 
         $history = $this->conversationManager->buildMessageHistory($conversation);
         $userPrompt = $this->buildUserPrompt($history, $userMessage);
@@ -414,15 +416,20 @@ class SendAssistantMessageAction
     /**
      * @param  array<PrismToolObject>  $tools
      */
-    private function buildSystemPrompt(string $context, User $user, bool $includeToolCallFormat, bool $canExecuteTools, array $tools = []): string
+    private function buildSystemPrompt(string $context, User $user, bool $includeToolCallFormat, bool $canExecuteTools, array $tools = [], bool $supportsMcpNatively = false): string
     {
         $role = $user->teamRole($user->currentTeam);
         $roleName = $role?->value ?? 'viewer';
 
-        $toolsSection = $this->buildToolsSection($role);
+        if ($supportsMcpNatively) {
+            // Codex uses MCP natively — tool names come from the MCP server, not the system prompt.
+            $toolsSection = $this->buildMcpToolsSection($role);
+        } else {
+            $toolsSection = $this->buildToolsSection($role);
 
-        if ($includeToolCallFormat && ! empty($tools)) {
-            $toolsSection .= "\n\n".$this->buildLocalToolCallingFormat($tools);
+            if ($includeToolCallFormat && ! empty($tools)) {
+                $toolsSection .= "\n\n".$this->buildLocalToolCallingFormat($tools);
+            }
         }
 
         $introLine = $canExecuteTools
@@ -541,6 +548,45 @@ class SendAssistantMessageAction
         }
 
         return "## Available Tools\n".implode("\n", $sections);
+    }
+
+    /**
+     * Build MCP tools section for agents that use MCP natively (e.g. Codex).
+     *
+     * Tool names and schemas come from the MCP server — we only describe capabilities
+     * at a high level so the model knows what it can do.
+     */
+    private function buildMcpToolsSection(?object $role): string
+    {
+        $sections = [
+            <<<'MCP'
+
+            You have MCP tools connected to the Agent Fleet platform. Use them to interact with the platform.
+            Tool names follow the pattern `{domain}_{action}` (e.g. `agent_list`, `experiment_create`, `project_get`).
+
+            ### Available MCP Tool Domains
+            - **agent_** — List, get, create, update, toggle status of AI agents
+            - **experiment_** — List, get, create, pause, resume, retry, kill experiments; check valid transitions
+            - **crew_** — List, get, create, update, execute crews; check execution status
+            - **skill_** — List, get, create, update skills
+            - **tool_** — List, get, create, update, delete tools
+            - **credential_** — List, get, create, update credentials
+            - **workflow_** — List, get, create, update, validate workflows
+            - **project_** — List, get, create, update, pause, resume, trigger runs, archive projects
+            - **approval_** — List approvals, approve or reject pending requests
+            - **signal_** — List signals, ingest new signals
+            - **budget_** — Get budget summary, check budget availability
+            - **marketplace_** — Browse, publish, install marketplace listings
+            - **memory_** — Search memories, list recent, get stats
+            - **dashboard_kpis** / **system_health** / **audit_log** — System observability
+            MCP,
+        ];
+
+        if (! $role?->canEdit()) {
+            $sections[] = "\n> **Note:** Your role is read-only. Write operations will be rejected.";
+        }
+
+        return "## MCP Tools\n".implode("\n", $sections);
     }
 
     /**

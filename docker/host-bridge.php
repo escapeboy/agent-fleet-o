@@ -172,10 +172,17 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
 
     $isAssistant = $purpose === 'platform_assistant';
 
-    // Codex assistant: disable --full-auto (prevents shell exploration) and
-    // disable MCP servers (prevents codex from trying chrome-devtools etc.)
-    $codexAutoFlag = $isAssistant ? '' : ' --full-auto';
-    $codexMcpFlag = $isAssistant ? " -c 'mcp_servers={}'" : '';
+    // Codex assistant: enable --full-auto for MCP tool execution and
+    // connect to our Agent Fleet MCP server (replaces advisory mode).
+    if ($isAssistant) {
+        $mcpServers = json_encode(['agent-fleet' => [
+            'command' => 'php',
+            'args' => ['artisan', 'mcp:start', 'agent-fleet'],
+        ]]);
+        $codexMcpFlag = ' -c '.escapeshellarg("mcp_servers={$mcpServers}");
+    } else {
+        $codexMcpFlag = '';
+    }
 
     // Use stream-json when streaming for real-time output, json otherwise.
     // stream-json emits NDJSON events (assistant, content_block_delta, result)
@@ -186,7 +193,7 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
     $ccStreamFlags = $streaming ? ' --include-partial-messages --verbose' : '';
 
     return match ($agentKey) {
-        'codex' => $preamble.$bin." exec --json{$codexAutoFlag}{$codexMcpFlag}",
+        'codex' => $preamble.$bin." exec --json --full-auto{$codexMcpFlag}",
         'claude-code' => $preamble.$bin." --print --output-format {$ccOutputFormat}{$ccStreamFlags} --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' --max-budget-usd 2.0",
         default => null,
     };

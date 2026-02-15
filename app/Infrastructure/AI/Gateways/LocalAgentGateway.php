@@ -632,13 +632,21 @@ class LocalAgentGateway implements AiGatewayInterface
 
         $isAssistant = $purpose === 'platform_assistant';
 
-        // Codex assistant: disable --full-auto (prevents shell exploration) and
-        // disable MCP servers (prevents codex from trying chrome-devtools etc.)
-        $codexAutoFlag = $isAssistant ? '' : ' --full-auto';
-        $codexMcpFlag = $isAssistant ? " -c 'mcp_servers={}'" : '';
+        // Codex assistant: enable --full-auto for MCP tool execution and
+        // connect to our Agent Fleet MCP server (replaces advisory mode).
+        // Non-assistant Codex: --full-auto, no MCP override.
+        if ($isAssistant) {
+            $mcpServers = json_encode(['agent-fleet' => [
+                'command' => 'php',
+                'args' => ['artisan', 'mcp:start', 'agent-fleet'],
+            ]]);
+            $codexMcpFlag = ' -c '.escapeshellarg("mcp_servers={$mcpServers}");
+        } else {
+            $codexMcpFlag = '';
+        }
 
         return match ($agentKey) {
-            'codex' => $preamble."{$binaryPath} exec --json{$codexAutoFlag}{$codexMcpFlag}{$modelFlag}",
+            'codex' => $preamble."{$binaryPath} exec --json --full-auto{$codexMcpFlag}{$modelFlag}",
             'claude-code' => $preamble."{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config ".escapeshellarg('{"mcpServers":{}}').$modelFlag,
             default => throw new RuntimeException("No command template for agent: {$agentKey}"),
         };

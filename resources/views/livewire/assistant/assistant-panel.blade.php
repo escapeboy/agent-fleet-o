@@ -4,6 +4,8 @@
         inputText: '',
         pendingMessage: null,
         sending: false,
+        panelWidth: parseInt(localStorage.getItem('assistant-panel-width')) || 420,
+        resizing: false,
         init() {
             // Watch for Livewire navigation to detect page context
             document.addEventListener('livewire:navigated', () => {
@@ -60,6 +62,27 @@
         quickSend(text) {
             this.inputText = text;
             this.send();
+        },
+        startResize(e) {
+            this.resizing = true;
+            const startX = e.clientX;
+            const startWidth = this.panelWidth;
+            const onMove = (ev) => {
+                const delta = startX - ev.clientX;
+                this.panelWidth = Math.max(320, Math.min(startWidth + delta, window.innerWidth * 0.8));
+            };
+            const onUp = () => {
+                this.resizing = false;
+                localStorage.setItem('assistant-panel-width', this.panelWidth);
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
         }
     }"
     class="relative z-50"
@@ -88,8 +111,16 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="translate-x-0"
         x-transition:leave-end="translate-x-full"
-        class="fixed inset-y-0 right-0 flex w-full flex-col border-l border-gray-200 bg-white shadow-2xl sm:w-[420px]"
+        class="fixed inset-y-0 right-0 flex flex-col border-l border-gray-200 bg-white shadow-2xl"
+        :style="'width: ' + (window.innerWidth < 640 ? '100%' : panelWidth + 'px')"
     >
+        {{-- Resize Handle --}}
+        <div
+            x-on:mousedown.prevent="startResize($event)"
+            class="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize transition-colors hover:bg-indigo-400"
+            :class="resizing ? 'bg-indigo-500' : 'bg-transparent'"
+        ></div>
+
         {{-- Panel Header --}}
         <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
             <div class="flex items-center gap-2">
