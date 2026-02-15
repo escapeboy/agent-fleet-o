@@ -103,6 +103,34 @@ class ConditionEvaluator
         return null;
     }
 
+    /**
+     * Evaluate a switch expression and return the matching case value.
+     *
+     * Resolves the expression field from context and compares against case values.
+     * Returns the matching case_value string, or null if no match (use default edge).
+     */
+    public function evaluateSwitch(string $expression, array $context, ?string $predecessorNodeId = null): ?string
+    {
+        $actual = $this->resolveField($expression, $context, $predecessorNodeId);
+
+        if ($actual === null) {
+            return null;
+        }
+
+        // Cast to string for case_value comparison
+        return (string) $actual;
+    }
+
+    /**
+     * Evaluate a break condition for do-while loops.
+     *
+     * Returns true if the loop should break (stop iterating).
+     */
+    public function evaluateBreakCondition(array $breakCondition, array $context, ?string $predecessorNodeId = null): bool
+    {
+        return $this->evaluate($breakCondition, $context, $predecessorNodeId);
+    }
+
     private function compare(mixed $actual, string $operator, mixed $expected): bool
     {
         // Null-safe: if actual is null, most comparisons return false

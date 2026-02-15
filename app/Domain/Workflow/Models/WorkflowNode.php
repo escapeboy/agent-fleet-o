@@ -32,6 +32,7 @@ class WorkflowNode extends Model
         'position_x',
         'position_y',
         'config',
+        'expression',
         'order',
     ];
 
@@ -99,6 +100,26 @@ class WorkflowNode extends Model
     public function isCrew(): bool
     {
         return $this->type === WorkflowNodeType::Crew;
+    }
+
+    public function isHumanTask(): bool
+    {
+        return $this->type === WorkflowNodeType::HumanTask;
+    }
+
+    public function isSwitch(): bool
+    {
+        return $this->type === WorkflowNodeType::Switch;
+    }
+
+    public function isDynamicFork(): bool
+    {
+        return $this->type === WorkflowNodeType::DynamicFork;
+    }
+
+    public function isDoWhile(): bool
+    {
+        return $this->type === WorkflowNodeType::DoWhile;
     }
 
     public function requiresAgent(): bool

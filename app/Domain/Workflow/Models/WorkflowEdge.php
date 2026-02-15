@@ -22,6 +22,7 @@ class WorkflowEdge extends Model
         'source_node_id',
         'target_node_id',
         'condition',
+        'case_value',
         'label',
         'is_default',
         'sort_order',

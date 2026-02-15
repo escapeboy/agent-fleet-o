@@ -2,6 +2,7 @@
 
 namespace App\Domain\Workflow\Services;
 
+use App\Domain\Approval\Actions\CreateHumanTaskAction;
 use App\Domain\Crew\Jobs\ExecuteCrewWorkflowNodeJob;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
@@ -10,6 +11,7 @@ use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Pipeline\ExecutePlaybookStepJob;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Workflow\Models\WorkflowNode;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
@@ -148,7 +150,7 @@ class WorkflowGraphExecutor
 
         if (empty($executableNodeIds)) {
             // Check if all steps are done
-            $pendingSteps = $steps->filter(fn (PlaybookStep $s) => $s->isPending() || $s->status === 'running');
+            $pendingSteps = $steps->filter(fn (PlaybookStep $s) => $s->isPending() || $s->status === 'running' || $s->isWaitingHuman());
 
             if ($pendingSteps->isEmpty()) {
                 try {
@@ -232,7 +234,7 @@ class WorkflowGraphExecutor
             return;
         }
 
-        if ($type === 'agent' || $type === 'crew') {
+        if ($type === 'agent' || $type === 'crew' || $type === 'human_task') {
             $step = $steps[$nodeId] ?? null;
 
             if (! $step) {
@@ -317,6 +319,131 @@ class WorkflowGraphExecutor
                 if ($defaultEdge) {
                     $this->resolveNode(
                         $defaultEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                    );
+                }
+            }
+
+            return;
+        }
+
+        if ($type === 'switch') {
+            $outgoingEdges = collect($edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+            $context = $this->buildNodeContext($steps, $experiment);
+            $predecessorNodeId = $this->findPredecessor($nodeId, $edgeMap);
+
+            $expressionField = $node['expression'] ?? null;
+
+            if ($expressionField) {
+                $switchValue = $this->conditionEvaluator->evaluateSwitch(
+                    $expressionField, $context, $predecessorNodeId,
+                );
+
+                // Find edge with matching case_value
+                $matchedEdge = $outgoingEdges->first(function ($edge) use ($switchValue) {
+                    return ! ($edge['is_default'] ?? false) && ($edge['case_value'] ?? null) === $switchValue;
+                });
+
+                if ($matchedEdge) {
+                    $this->resolveNode(
+                        $matchedEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                    );
+
+                    return;
+                }
+            }
+
+            // Fallback to default edge
+            $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
+            if ($defaultEdge) {
+                $this->resolveNode(
+                    $defaultEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                );
+            }
+
+            return;
+        }
+
+        if ($type === 'dynamic_fork') {
+            // Resolve the array to fork over from predecessor output
+            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+            $forkSource = $config['fork_source'] ?? null;
+            $context = $this->buildNodeContext($steps, $experiment);
+            $predecessorNodeId = $this->findPredecessor($nodeId, $edgeMap);
+
+            $arrayData = [];
+            if ($forkSource && $predecessorNodeId && isset($context[$predecessorNodeId])) {
+                $resolved = data_get($context[$predecessorNodeId], $forkSource);
+                if (is_array($resolved)) {
+                    $arrayData = $resolved;
+                }
+            }
+
+            // Get the single outgoing edge (the template path)
+            $outgoingEdge = collect($edgeMap[$nodeId] ?? [])->first();
+
+            if (! $outgoingEdge || empty($arrayData)) {
+                // Nothing to fork — traverse the template path once or skip
+                if ($outgoingEdge) {
+                    $this->resolveNode(
+                        $outgoingEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                    );
+                }
+
+                return;
+            }
+
+            // The template path's target is the node to execute N times
+            $templateNodeId = $outgoingEdge['target_node_id'];
+            $templateStep = $steps[$templateNodeId] ?? null;
+
+            if ($templateStep && $templateStep->isPending()) {
+                // Store fork data in the step's input mapping for the executor to use
+                $templateStep->update([
+                    'input_mapping' => array_merge($templateStep->input_mapping ?? [], [
+                        '_fork_items' => $arrayData,
+                        '_fork_source' => $forkSource,
+                    ]),
+                ]);
+                $executable[] = $templateNodeId;
+            }
+
+            return;
+        }
+
+        if ($type === 'do_while') {
+            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+            $breakCondition = $config['break_condition'] ?? null;
+            $context = $this->buildNodeContext($steps, $experiment);
+            $predecessorNodeId = $this->findPredecessor($nodeId, $edgeMap);
+
+            $shouldBreak = false;
+            if ($breakCondition) {
+                $shouldBreak = $this->conditionEvaluator->evaluateBreakCondition(
+                    $breakCondition, $context, $predecessorNodeId,
+                );
+            }
+
+            $outgoingEdges = collect($edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+
+            if ($shouldBreak) {
+                // Take the default/exit edge
+                $exitEdge = $outgoingEdges->firstWhere('is_default', true);
+                if ($exitEdge) {
+                    $this->resolveNode(
+                        $exitEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                    );
+                }
+            } else {
+                // Take the loop body edge (non-default)
+                $loopEdge = $outgoingEdges->first(fn ($e) => ! ($e['is_default'] ?? false));
+                if ($loopEdge) {
+                    $this->resolveNode(
+                        $loopEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
                         $steps, $experiment, $maxLoopIterations, $executable, $visited,
                     );
                 }
@@ -416,6 +543,14 @@ class WorkflowGraphExecutor
 
             $nodeType = $nodeMap[$nodeId]['type'] ?? 'agent';
 
+            if ($nodeType === 'human_task') {
+                // Human tasks create an approval request instead of dispatching a job
+                $this->dispatchHumanTask($step, $experiment, $nodeMap[$nodeId]);
+                $dispatchedNodeIds[] = $nodeId;
+
+                continue;
+            }
+
             if ($nodeType === 'crew') {
                 $jobs[] = new ExecuteCrewWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
             } else {
@@ -448,6 +583,45 @@ class WorkflowGraphExecutor
                 self::staticHandleBatchFailure($experimentId);
             })
             ->dispatch();
+    }
+
+    private function dispatchHumanTask(PlaybookStep $step, Experiment $experiment, array $nodeData): void
+    {
+        $workflowNode = WorkflowNode::find($step->workflow_node_id);
+
+        if (! $workflowNode) {
+            Log::warning('WorkflowGraphExecutor: Human task node not found', [
+                'step_id' => $step->id,
+                'workflow_node_id' => $step->workflow_node_id,
+            ]);
+            $step->update([
+                'status' => 'failed',
+                'error_message' => 'Workflow node not found for human task',
+                'completed_at' => now(),
+            ]);
+
+            return;
+        }
+
+        try {
+            app(CreateHumanTaskAction::class)->execute($experiment, $step, $workflowNode);
+
+            Log::info('WorkflowGraphExecutor: Human task created', [
+                'step_id' => $step->id,
+                'experiment_id' => $experiment->id,
+                'node_label' => $nodeData['label'] ?? 'unknown',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('WorkflowGraphExecutor: Failed to create human task', [
+                'step_id' => $step->id,
+                'error' => $e->getMessage(),
+            ]);
+            $step->update([
+                'status' => 'failed',
+                'error_message' => 'Failed to create human task: '.$e->getMessage(),
+                'completed_at' => now(),
+            ]);
+        }
     }
 
     private function buildAdjacencyMap(array $edges): array

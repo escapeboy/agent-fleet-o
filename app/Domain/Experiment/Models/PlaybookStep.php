@@ -26,6 +26,7 @@ class PlaybookStep extends Model
         'conditions',
         'input_mapping',
         'output',
+        'checkpoint_data',
         'status',
         'duration_ms',
         'cost_credits',
@@ -33,6 +34,10 @@ class PlaybookStep extends Model
         'error_message',
         'started_at',
         'completed_at',
+        'last_heartbeat_at',
+        'worker_id',
+        'idempotency_key',
+        'checkpoint_version',
     ];
 
     protected function casts(): array
@@ -42,10 +47,13 @@ class PlaybookStep extends Model
             'conditions' => 'array',
             'input_mapping' => 'array',
             'output' => 'array',
+            'checkpoint_data' => 'array',
             'duration_ms' => 'integer',
             'cost_credits' => 'integer',
+            'checkpoint_version' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'last_heartbeat_at' => 'datetime',
         ];
     }
 
@@ -92,5 +100,20 @@ class PlaybookStep extends Model
     public function isSkipped(): bool
     {
         return $this->status === 'skipped';
+    }
+
+    public function isWaitingHuman(): bool
+    {
+        return $this->status === 'waiting_human';
+    }
+
+    public function isTerminal(): bool
+    {
+        return in_array($this->status, ['completed', 'failed', 'skipped']);
+    }
+
+    public function hasCheckpoint(): bool
+    {
+        return ! empty($this->checkpoint_data);
     }
 }

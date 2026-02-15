@@ -8,6 +8,7 @@ use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
+use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
 use App\Mcp\Tools\Approval\ApprovalRejectTool;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
@@ -59,6 +60,7 @@ use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
+use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
@@ -126,12 +128,13 @@ class AgentFleetServer extends Server
         CredentialCreateTool::class,
         CredentialUpdateTool::class,
 
-        // Workflow (5)
+        // Workflow (6)
         WorkflowListTool::class,
         WorkflowGetTool::class,
         WorkflowCreateTool::class,
         WorkflowUpdateTool::class,
         WorkflowValidateTool::class,
+        WorkflowGenerateTool::class,
 
         // Project (8)
         ProjectListTool::class,
@@ -143,10 +146,11 @@ class AgentFleetServer extends Server
         ProjectTriggerRunTool::class,
         ProjectArchiveTool::class,
 
-        // Approval (3)
+        // Approval (4)
         ApprovalListTool::class,
         ApprovalApproveTool::class,
         ApprovalRejectTool::class,
+        ApprovalCompleteHumanTaskTool::class,
 
         // Signal (2)
         SignalListTool::class,
