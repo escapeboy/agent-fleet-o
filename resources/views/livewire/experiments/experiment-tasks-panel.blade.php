@@ -174,13 +174,8 @@
                                         </button>
                                     </div>
 
-                                    <div x-show="!showRaw" class="prose prose-sm mt-1 max-h-48 overflow-auto">
-                                        @php
-                                            $taskText = is_array($task->output)
-                                                ? ($task->output['result'] ?? json_encode($task->output, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
-                                                : (string) $task->output;
-                                        @endphp
-                                        {!! \Illuminate\Support\Str::markdown($taskText) !!}
+                                    <div x-show="!showRaw" class="prose-output mt-1 max-h-60 overflow-auto max-w-none">
+                                        {!! \App\Domain\Experiment\Services\ArtifactContentResolver::renderAsHtml($task->output) !!}
                                     </div>
 
                                     <pre x-show="showRaw" x-cloak class="mt-1 max-h-48 overflow-auto text-xs text-gray-700">{{ is_array($task->output) ? json_encode($task->output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : $task->output }}</pre>

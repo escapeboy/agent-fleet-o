@@ -49,11 +49,13 @@ class DeliverWorkflowResultsJob implements ShouldQueue
             return;
         }
 
-        // Collect outputs from completed playbook steps
-        $summary = $this->collectWorkflowOutput($experiment->id);
+        // Use pre-collected output summary (set by SyncProjectStatusOnRunComplete),
+        // fall back to collecting if not yet populated
+        $summary = $run->output_summary ?? $this->collectWorkflowOutput($experiment->id);
 
-        // Store summary on the run
-        $run->update(['output_summary' => $summary]);
+        if (! $run->output_summary) {
+            $run->update(['output_summary' => $summary]);
+        }
 
         // Build and send via outbound connector
         $channel = $deliveryConfig['channel'];

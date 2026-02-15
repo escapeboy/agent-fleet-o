@@ -11,6 +11,7 @@ use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Jobs\DeliverWorkflowResultsJob;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Project\Notifications\ProjectRunFailedNotification;
+use App\Domain\Project\Services\RunOutputCollector;
 use Illuminate\Support\Facades\Log;
 
 class SyncProjectStatusOnRunComplete
@@ -47,10 +48,17 @@ class SyncProjectStatusOnRunComplete
 
     private function handleRunCompleted(ProjectRun $run, $project): void
     {
+        // Always collect output summary for completed runs
+        $outputSummary = null;
+        if ($run->experiment_id) {
+            $outputSummary = app(RunOutputCollector::class)->collect($run->experiment_id);
+        }
+
         $run->update([
             'status' => ProjectRunStatus::Completed,
             'completed_at' => now(),
             'spend_credits' => $run->experiment?->budget_spent_credits ?? 0,
+            'output_summary' => $outputSummary,
         ]);
 
         $project->update([

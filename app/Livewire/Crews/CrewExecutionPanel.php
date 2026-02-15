@@ -29,6 +29,7 @@ class CrewExecutionPanel extends Component
     public function render()
     {
         $execution = CrewExecution::withoutGlobalScopes()
+            ->withCount('artifacts')
             ->with(['taskExecutions' => fn ($q) => $q->orderBy('sort_order'), 'taskExecutions.agent'])
             ->find($this->executionId);
 

@@ -5,11 +5,13 @@ namespace App\Domain\Project\Models;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Enums\ProjectRunStatus;
+use App\Models\Artifact;
 use Database\Factories\Domain\Project\ProjectRunFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProjectRun extends Model
 {
@@ -60,6 +62,11 @@ class ProjectRun extends Model
     public function crewExecution(): BelongsTo
     {
         return $this->belongsTo(CrewExecution::class);
+    }
+
+    public function artifacts(): HasMany
+    {
+        return $this->hasMany(Artifact::class);
     }
 
     public function isActive(): bool

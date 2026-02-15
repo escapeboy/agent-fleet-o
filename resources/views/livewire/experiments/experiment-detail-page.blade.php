@@ -156,7 +156,7 @@
     @elseif($activeTab === 'tasks')
         <livewire:experiments.experiment-tasks-panel :experiment="$experiment" :key="'tasks-'.$experiment->id" />
     @elseif($activeTab === 'artifacts')
-        <livewire:experiments.artifact-list :experiment="$experiment" :key="'artifacts-'.$experiment->id" />
+        <livewire:experiments.artifact-list :artifact-owner="$experiment" :show-failed-tasks="true" :key="'artifacts-'.$experiment->id" />
     @elseif($activeTab === 'outbound')
         <livewire:experiments.outbound-log :experiment="$experiment" :key="'outbound-'.$experiment->id" />
     @elseif($activeTab === 'metrics')

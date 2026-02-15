@@ -12,6 +12,8 @@ use App\Mcp\Tools\Approval\ApprovalApproveTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
 use App\Mcp\Tools\Approval\ApprovalRejectTool;
+use App\Mcp\Tools\Artifact\ArtifactGetTool;
+use App\Mcp\Tools\Artifact\ArtifactListTool;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
 use App\Mcp\Tools\Budget\BudgetSummaryTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
@@ -169,6 +171,10 @@ class AgentFleetServer extends Server
         MemorySearchTool::class,
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
+
+        // Artifact (2)
+        ArtifactListTool::class,
+        ArtifactGetTool::class,
 
         // System (3)
         DashboardKpisTool::class,

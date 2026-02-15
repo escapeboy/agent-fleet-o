@@ -23,3 +23,37 @@
     --color-sidebar: #111827;
     --color-sidebar-hover: #1f2937;
 }
+
+/* AI output rendering — lightweight prose replacement */
+.prose-output {
+    font-size: 0.875rem;
+    line-height: 1.625;
+    color: #374151;
+}
+.prose-output p { margin: 0.5em 0; }
+.prose-output h1, .prose-output h2, .prose-output h3,
+.prose-output h4, .prose-output h5, .prose-output h6 {
+    font-weight: 600;
+    margin: 1em 0 0.5em;
+    color: #111827;
+}
+.prose-output h1 { font-size: 1.25rem; }
+.prose-output h2 { font-size: 1.125rem; }
+.prose-output h3 { font-size: 1rem; }
+.prose-output ul, .prose-output ol { margin: 0.5em 0; padding-left: 1.5em; }
+.prose-output ul { list-style-type: disc; }
+.prose-output ol { list-style-type: decimal; }
+.prose-output li { margin: 0.25em 0; }
+.prose-output strong { font-weight: 600; }
+.prose-output code { font-size: 0.8125rem; background: #f3f4f6; padding: 0.125em 0.25em; border-radius: 0.25rem; }
+.prose-output pre { background: #f3f4f6; padding: 0.75rem; border-radius: 0.375rem; overflow-x: auto; margin: 0.5em 0; }
+.prose-output pre code { background: none; padding: 0; }
+.prose-output blockquote { border-left: 3px solid #d1d5db; padding-left: 0.75em; color: #6b7280; margin: 0.5em 0; }
+.prose-output hr { border: none; border-top: 1px solid #e5e7eb; margin: 1em 0; }
+/* Tables */
+.prose-output table { border-collapse: collapse; width: 100%; margin: 0.75em 0; font-size: 0.8125rem; }
+.prose-output th,
+.prose-output td { border: 1px solid #d1d5db; padding: 0.375rem 0.625rem; text-align: left; }
+.prose-output th { background-color: #f3f4f6; font-weight: 600; white-space: nowrap; }
+.prose-output tr:nth-child(even) td { background-color: #f9fafb; }
+.prose-output td:first-child { white-space: normal; }

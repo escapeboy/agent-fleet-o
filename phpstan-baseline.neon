@@ -319,6 +319,12 @@ parameters:
 			path: app/Domain/Assistant/Actions/SendAssistantMessageAction.php
 
 		-
+			message: '#^Unknown parameter \$placeholderMessageId in call to method App\\Domain\\Assistant\\Actions\\SendAssistantMessageAction\:\:execute\(\)\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Domain/Assistant/Jobs/ProcessAssistantMessageJob.php
+
+		-
 			message: '#^Parameter \#1 \$team of method App\\Models\\User\:\:teamRole\(\) expects App\\Domain\\Shared\\Models\\Team, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -581,6 +587,54 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Credential/Models/Credential.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cost_credits\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$duration_ms\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qa_score\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sort_order\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
 
 		-
 			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Agent\\Enums\\AgentStatus\:\:Active will always evaluate to true\.$#'
@@ -2635,6 +2689,30 @@ parameters:
 			path: app/Domain/Project/Services/ProjectScheduler.php
 
 		-
+			message: '#^Call to function is_array\(\) with non\-falsy\-string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Project/Services/RunOutputCollector.php
+
+		-
+			message: '#^Offset ''content'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Project/Services/RunOutputCollector.php
+
+		-
+			message: '#^Offset ''result'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Project/Services/RunOutputCollector.php
+
+		-
+			message: '#^Offset ''text'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Project/Services/RunOutputCollector.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Relations\\Pivot\:\:\$role\.$#'
 			identifier: property.notFound
 			count: 1
@@ -3133,6 +3211,18 @@ parameters:
 			path: app/Http/Controllers/Api/V1/AgentController.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/V1/ArtifactController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$version\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/V1/ArtifactController.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -3509,6 +3599,66 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Api/V1/ApprovalResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$crew_execution_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$current_version\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$experiment_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$project_run_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ArtifactResource\:\:\$versions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ArtifactResource.php
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\AuditEntryResource\:\:\$created_at\.$#'
@@ -5161,27 +5311,15 @@ parameters:
 			path: app/Livewire/Experiments/ArtifactList.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Livewire/Experiments/ArtifactList.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Livewire/Experiments/ArtifactList.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Livewire/Experiments/ArtifactList.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:versions\(\)\.$#'
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:artifacts\(\)\.$#'
 			identifier: method.notFound
-			count: 4
+			count: 6
+			path: app/Livewire/Experiments/ArtifactList.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Illuminate\\Database\\Eloquent\\Model and ''getRouteKey'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
 			path: app/Livewire/Experiments/ArtifactList.php
 
 		-
@@ -5767,6 +5905,24 @@ parameters:
 			path: app/Mcp/Tools/Agent/AgentListTool.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Artifact/ArtifactGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$version\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Artifact/ArtifactGetTool.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\JsonSchema\\Types\\IntegerType\:\:minimum\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Artifact/ArtifactListTool.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -5817,7 +5973,7 @@ parameters:
 		-
 			message: '#^Call to function is_array\(\) with non\-falsy\-string will always evaluate to false\.$#'
 			identifier: function.impossibleType
-			count: 1
+			count: 2
 			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
 
 		-
