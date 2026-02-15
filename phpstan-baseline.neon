@@ -319,12 +319,6 @@ parameters:
 			path: app/Domain/Assistant/Actions/SendAssistantMessageAction.php
 
 		-
-			message: '#^Unknown parameter \$placeholderMessageId in call to method App\\Domain\\Assistant\\Actions\\SendAssistantMessageAction\:\:execute\(\)\.$#'
-			identifier: argument.unknown
-			count: 1
-			path: app/Domain/Assistant/Jobs/ProcessAssistantMessageJob.php
-
-		-
 			message: '#^Parameter \#1 \$team of method App\\Models\\User\:\:teamRole\(\) expects App\\Domain\\Shared\\Models\\Team, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
 			identifier: argument.type
 			count: 1
