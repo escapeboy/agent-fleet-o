@@ -85,6 +85,31 @@
             </form>
         </div>
 
+        {{-- Assistant LLM --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 class="text-sm font-medium text-gray-500">Assistant LLM</h3>
+            <p class="mt-1 text-xs text-gray-400">The AI model used by the platform assistant chat. Falls back to the default pipeline LLM if not set.</p>
+            <form wire:submit="saveAssistantLlm" class="mt-4 space-y-4">
+                <x-form-select wire:model.live="assistantProvider" label="Provider">
+                    @foreach($providers as $key => $p)
+                        @if(empty($p['local']))
+                            <option value="{{ $key }}">{{ $p['name'] }}</option>
+                        @endif
+                    @endforeach
+                </x-form-select>
+
+                <x-form-select wire:model="assistantModel" label="Model">
+                    @foreach($providers[$assistantProvider]['models'] ?? [] as $modelKey => $modelInfo)
+                        <option value="{{ $modelKey }}">{{ $modelInfo['label'] }}</option>
+                    @endforeach
+                </x-form-select>
+
+                <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    Save Assistant LLM
+                </button>
+            </form>
+        </div>
+
         {{-- Agent Management --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h3 class="text-sm font-medium text-gray-500">Agent Management</h3>

@@ -51,6 +51,10 @@
         </div>
     </div>
 
+    @auth
+        <livewire:assistant.assistant-panel />
+    @endauth
+
     @livewireScripts
     @stack('scripts')
 </body>
