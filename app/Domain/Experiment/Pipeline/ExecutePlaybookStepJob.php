@@ -5,6 +5,7 @@ namespace App\Domain\Experiment\Pipeline;
 use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
+use App\Domain\Experiment\Services\CheckpointManager;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -47,6 +48,8 @@ class ExecutePlaybookStepJob implements ShouldQueue
 
     public function handle(ExecuteAgentAction $executeAgent): void
     {
+        $checkpointManager = app(CheckpointManager::class);
+
         Log::info('ExecutePlaybookStepJob: starting', [
             'step_id' => $this->stepId,
             'attempt' => $this->attempts(),
@@ -67,21 +70,34 @@ class ExecutePlaybookStepJob implements ShouldQueue
             return;
         }
 
-        // If step is "running", a previous attempt started but died without completing.
-        // Fail the step so the pipeline can handle the error properly.
+        // Skip human task steps — they're handled by the approval flow
+        if ($step->isWaitingHuman()) {
+            return;
+        }
+
+        // If step is "running", check for checkpoint data to resume
         if ($step->isRunning()) {
-            Log::warning("ExecutePlaybookStepJob: step found in 'running' state on attempt {$this->attempts()}, failing it", [
-                'step_id' => $this->stepId,
-                'attempt' => $this->attempts(),
-            ]);
+            if ($step->hasCheckpoint()) {
+                Log::info('ExecutePlaybookStepJob: resuming from checkpoint', [
+                    'step_id' => $this->stepId,
+                    'attempt' => $this->attempts(),
+                ]);
+                // Reset to pending so the execution flow below picks it up
+                $step->update(['status' => 'pending']);
+            } else {
+                Log::warning("ExecutePlaybookStepJob: step found in 'running' state without checkpoint, failing it", [
+                    'step_id' => $this->stepId,
+                    'attempt' => $this->attempts(),
+                ]);
 
-            $step->update([
-                'status' => 'failed',
-                'error_message' => 'Previous execution attempt timed out or was interrupted',
-                'completed_at' => now(),
-            ]);
+                $step->update([
+                    'status' => 'failed',
+                    'error_message' => 'Previous execution attempt timed out or was interrupted',
+                    'completed_at' => now(),
+                ]);
 
-            throw new \RuntimeException('Step execution timed out on previous attempt');
+                throw new \RuntimeException('Step execution timed out on previous attempt');
+            }
         }
 
         if (! $step->isPending()) {
@@ -94,10 +110,44 @@ class ExecutePlaybookStepJob implements ShouldQueue
             return;
         }
 
+        // Check idempotency — if we already have a result for this key, use it
+        $idempotencyKey = $checkpointManager->generateIdempotencyKey(
+            $this->experimentId,
+            $this->stepId,
+            $step->loop_count ?? 0,
+        );
+
+        $cachedResult = $checkpointManager->getIdempotentResult($idempotencyKey);
+        if ($cachedResult) {
+            Log::info('ExecutePlaybookStepJob: idempotency hit, using cached result', [
+                'step_id' => $this->stepId,
+                'idempotency_key' => $idempotencyKey,
+            ]);
+
+            $step->update([
+                'status' => 'completed',
+                'output' => $cachedResult,
+                'idempotency_key' => $idempotencyKey,
+                'completed_at' => now(),
+            ]);
+
+            return;
+        }
+
+        // Write initial checkpoint and start heartbeat
+        $checkpointManager->writeCheckpoint($this->stepId, [
+            'phase' => 'started',
+            'attempt' => $this->attempts(),
+            'started_at' => now()->toIso8601String(),
+        ]);
+
         $step->update([
             'status' => 'running',
             'started_at' => now(),
+            'idempotency_key' => $idempotencyKey,
         ]);
+
+        $stopHeartbeat = $checkpointManager->startHeartbeat($this->stepId);
 
         try {
             $input = $this->resolveInput($step, $experiment);
@@ -118,6 +168,11 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 stepId: $this->stepId,
             );
 
+            // Stop heartbeat
+            if ($stopHeartbeat) {
+                $stopHeartbeat();
+            }
+
             Log::info('ExecutePlaybookStepJob: completed', [
                 'step_id' => $this->stepId,
                 'success' => $result['output'] !== null,
@@ -133,18 +188,37 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 'completed_at' => now(),
             ]);
 
+            // Cache result for idempotency
+            if ($result['output'] !== null) {
+                $checkpointManager->storeIdempotentResult($idempotencyKey, $result['output']);
+                $checkpointManager->clearCheckpoint($this->stepId);
+            }
+
             if ($result['output'] === null) {
                 throw new \RuntimeException("Step failed: {$result['execution']->error_message}");
             }
         } catch (\Throwable $e) {
+            // Stop heartbeat on failure
+            if ($stopHeartbeat) {
+                $stopHeartbeat();
+            }
+
             Log::error('ExecutePlaybookStepJob: exception caught', [
                 'step_id' => $this->stepId,
                 'exception' => $e->getMessage(),
                 'class' => get_class($e),
             ]);
 
+            // Write failure checkpoint for recovery
+            $checkpointManager->writeCheckpoint($this->stepId, [
+                'phase' => 'failed',
+                'error' => $e->getMessage(),
+                'attempt' => $this->attempts(),
+                'failed_at' => now()->toIso8601String(),
+            ]);
+
             // Ensure step is marked as failed (may have already been updated above)
-            if ($step->isRunning()) {
+            if ($step->fresh()?->isRunning()) {
                 $step->update([
                     'status' => 'failed',
                     'error_message' => $e->getMessage(),

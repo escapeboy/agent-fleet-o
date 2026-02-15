@@ -9,7 +9,7 @@ return [
             'description' => 'AI coding agent by OpenAI',
             'detect_command' => 'codex --version',
             'requires_env' => 'OPENAI_API_KEY',
-            'capabilities' => ['code_generation', 'file_editing', 'shell_execution', 'git'],
+            'capabilities' => ['code_generation', 'file_editing', 'shell_execution', 'git', 'mcp'],
             'supported_modes' => ['sync', 'streaming'],
         ],
         'claude-code' => [

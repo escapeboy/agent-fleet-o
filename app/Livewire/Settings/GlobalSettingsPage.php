@@ -46,6 +46,11 @@ class GlobalSettingsPage extends Component
 
     public string $defaultLlmModel = 'claude-sonnet-4-5';
 
+    // Assistant LLM
+    public string $assistantProvider = 'anthropic';
+
+    public string $assistantModel = 'claude-sonnet-4-5';
+
     // Approval settings
     public int $approvalTimeoutHours = 48;
 
@@ -81,6 +86,9 @@ class GlobalSettingsPage extends Component
 
         $this->defaultLlmProvider = GlobalSetting::get('default_llm_provider', 'anthropic') ?? 'anthropic';
         $this->defaultLlmModel = GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
+
+        $this->assistantProvider = GlobalSetting::get('assistant_llm_provider', 'anthropic') ?? 'anthropic';
+        $this->assistantModel = GlobalSetting::get('assistant_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
     }
 
     public function saveBudgetSettings(): void
@@ -183,6 +191,19 @@ class GlobalSettingsPage extends Component
         GlobalSetting::set('default_llm_model', $this->defaultLlmModel);
 
         session()->flash('message', 'Default pipeline LLM saved.');
+    }
+
+    public function saveAssistantLlm(): void
+    {
+        $this->validate([
+            'assistantProvider' => 'required|string',
+            'assistantModel' => 'required|string',
+        ]);
+
+        GlobalSetting::set('assistant_llm_provider', $this->assistantProvider);
+        GlobalSetting::set('assistant_llm_model', $this->assistantModel);
+
+        session()->flash('message', 'Assistant LLM saved.');
     }
 
     public function rescanLocalAgents(): void

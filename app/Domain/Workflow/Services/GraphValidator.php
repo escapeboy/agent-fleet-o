@@ -26,6 +26,10 @@ class GraphValidator
         $this->validateOrphanNodes();
         $this->validateReachability();
         $this->validateConditionalNodes();
+        $this->validateSwitchNodes();
+        $this->validateDynamicForkNodes();
+        $this->validateDoWhileNodes();
+        $this->validateHumanTaskNodes();
         $this->validateLoopExits();
         $this->validateAgentNodes();
         $this->validateCrewNodes();
@@ -165,6 +169,124 @@ class GraphValidator
                 $this->errors[] = [
                     'type' => 'conditional_no_default',
                     'message' => "Conditional node '{$node->label}' must have a default (fallback) edge.",
+                    'node_id' => $node->id,
+                ];
+            }
+        }
+    }
+
+    private function validateSwitchNodes(): void
+    {
+        $switchNodes = $this->nodes->where('type', WorkflowNodeType::Switch);
+
+        foreach ($switchNodes as $node) {
+            $outgoing = $this->edges->where('source_node_id', $node->id);
+
+            if ($outgoing->count() < 2) {
+                $this->errors[] = [
+                    'type' => 'switch_insufficient_edges',
+                    'message' => "Switch node '{$node->label}' must have at least 2 outgoing edges.",
+                    'node_id' => $node->id,
+                ];
+            }
+
+            $hasDefault = $outgoing->where('is_default', true)->isNotEmpty();
+            if (! $hasDefault && $outgoing->isNotEmpty()) {
+                $this->errors[] = [
+                    'type' => 'switch_no_default',
+                    'message' => "Switch node '{$node->label}' must have a default edge.",
+                    'node_id' => $node->id,
+                ];
+            }
+
+            if (! $node->expression) {
+                $this->errors[] = [
+                    'type' => 'switch_no_expression',
+                    'message' => "Switch node '{$node->label}' requires an expression field.",
+                    'node_id' => $node->id,
+                ];
+            }
+
+            // Each non-default edge must have a case_value
+            $nonDefault = $outgoing->where('is_default', '!=', true);
+            foreach ($nonDefault as $edge) {
+                if (empty($edge->case_value)) {
+                    $this->errors[] = [
+                        'type' => 'switch_edge_no_case_value',
+                        'message' => "Switch node '{$node->label}' has an edge without a case_value.",
+                        'node_id' => $node->id,
+                        'edge_id' => $edge->id,
+                    ];
+                }
+            }
+        }
+    }
+
+    private function validateDynamicForkNodes(): void
+    {
+        $forkNodes = $this->nodes->where('type', WorkflowNodeType::DynamicFork);
+
+        foreach ($forkNodes as $node) {
+            $outgoing = $this->edges->where('source_node_id', $node->id);
+
+            if ($outgoing->count() !== 1) {
+                $this->errors[] = [
+                    'type' => 'dynamic_fork_wrong_edges',
+                    'message' => "Dynamic Fork node '{$node->label}' must have exactly 1 outgoing edge (the template path).",
+                    'node_id' => $node->id,
+                ];
+            }
+
+            $config = is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []);
+
+            if (empty($config['fork_source'])) {
+                $this->errors[] = [
+                    'type' => 'dynamic_fork_no_source',
+                    'message' => "Dynamic Fork node '{$node->label}' requires a 'fork_source' in config specifying the array field to iterate.",
+                    'node_id' => $node->id,
+                ];
+            }
+        }
+    }
+
+    private function validateDoWhileNodes(): void
+    {
+        $doWhileNodes = $this->nodes->where('type', WorkflowNodeType::DoWhile);
+
+        foreach ($doWhileNodes as $node) {
+            $outgoing = $this->edges->where('source_node_id', $node->id);
+
+            if ($outgoing->count() < 2) {
+                $this->errors[] = [
+                    'type' => 'do_while_insufficient_edges',
+                    'message' => "Do While node '{$node->label}' must have at least 2 outgoing edges (loop body + exit).",
+                    'node_id' => $node->id,
+                ];
+            }
+
+            $config = is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []);
+
+            if (empty($config['break_condition'])) {
+                $this->errors[] = [
+                    'type' => 'do_while_no_break_condition',
+                    'message' => "Do While node '{$node->label}' requires a 'break_condition' in config.",
+                    'node_id' => $node->id,
+                ];
+            }
+        }
+    }
+
+    private function validateHumanTaskNodes(): void
+    {
+        $humanTaskNodes = $this->nodes->where('type', WorkflowNodeType::HumanTask);
+
+        foreach ($humanTaskNodes as $node) {
+            $config = is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []);
+
+            if (empty($config['form_schema'])) {
+                $this->errors[] = [
+                    'type' => 'human_task_no_form_schema',
+                    'message' => "Human Task node '{$node->label}' requires a 'form_schema' in config.",
                     'node_id' => $node->id,
                 ];
             }

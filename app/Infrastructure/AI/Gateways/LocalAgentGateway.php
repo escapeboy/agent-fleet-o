@@ -38,22 +38,43 @@ class LocalAgentGateway implements AiGatewayInterface
             throw new RuntimeException("Local agent '{$config['name']}' is not available on this system.");
         }
 
-        $prompt = $this->buildPrompt($request);
-        $command = $this->buildCommand($agentKey, $binaryPath, $request->model);
+        $isAssistant = $request->purpose === 'platform_assistant';
         $timeout = config('local_agents.timeout', 300);
         $workdir = config('local_agents.working_directory') ?? base_path();
 
-        Log::debug("LocalAgentGateway: executing {$agentKey}", [
-            'command' => $command,
-            'model' => $request->model,
-            'prompt_length' => strlen($prompt),
-            'timeout' => $timeout,
-        ]);
+        // Claude Code assistant: use array-based Process for proper system prompt
+        // separation via --system-prompt flag (avoids prompt injection detection).
+        if ($agentKey === 'claude-code' && $isAssistant) {
+            $args = $this->buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model);
+            $prompt = $request->userPrompt;
+            $env = getenv();
+            unset($env['CLAUDECODE']);
 
-        $startTime = hrtime(true);
+            Log::debug("LocalAgentGateway: executing {$agentKey} (assistant mode)", [
+                'model' => $request->model,
+                'prompt_length' => strlen($prompt),
+                'system_prompt_length' => strlen($request->systemPrompt),
+                'timeout' => $timeout,
+            ]);
 
-        $process = Process::fromShellCommandline($command, $workdir, null, $prompt, $timeout);
-        $process->run();
+            $startTime = hrtime(true);
+            $process = new Process($args, $workdir, $env, $prompt, $timeout);
+            $process->run();
+        } else {
+            $prompt = $this->buildPrompt($request);
+            $command = $this->buildCommand($agentKey, $binaryPath, $request->model, $request->purpose);
+
+            Log::debug("LocalAgentGateway: executing {$agentKey}", [
+                'command' => $command,
+                'model' => $request->model,
+                'prompt_length' => strlen($prompt),
+                'timeout' => $timeout,
+            ]);
+
+            $startTime = hrtime(true);
+            $process = Process::fromShellCommandline($command, $workdir, null, $prompt, $timeout);
+            $process->run();
+        }
 
         $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
@@ -192,8 +213,11 @@ class LocalAgentGateway implements AiGatewayInterface
                 ->post($bridgeUrl.'/execute', [
                     'agent_key' => $agentKey,
                     'prompt' => $prompt,
+                    'system_prompt' => $request->systemPrompt,
+                    'user_prompt' => $request->userPrompt,
                     'timeout' => $bridgeTimeout,
                     'working_directory' => config('local_agents.working_directory'),
+                    'purpose' => $request->purpose,
                 ]);
         } catch (\Throwable $e) {
             $elapsedMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
@@ -316,9 +340,12 @@ class LocalAgentGateway implements AiGatewayInterface
                 'json' => [
                     'agent_key' => $agentKey,
                     'prompt' => $prompt,
+                    'system_prompt' => $request->systemPrompt,
+                    'user_prompt' => $request->userPrompt,
                     'timeout' => $bridgeTimeout,
                     'stream' => true,
                     'working_directory' => config('local_agents.working_directory'),
+                    'purpose' => $request->purpose,
                 ],
                 'headers' => [
                     'Authorization' => 'Bearer '.$bridgeSecret,
@@ -596,18 +623,64 @@ class LocalAgentGateway implements AiGatewayInterface
         return implode("\n\n", $parts);
     }
 
-    private function buildCommand(string $agentKey, string $binaryPath, ?string $model = null): string
+    private function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null): string
     {
         $modelFlag = $model ? ' --model '.escapeshellarg($model) : '';
 
         // Unset CLAUDECODE to prevent "nested session" detection when spawning Claude Code
         $preamble = 'unset CLAUDECODE; ';
 
+        $isAssistant = $purpose === 'platform_assistant';
+
+        // Codex assistant: enable --full-auto for MCP tool execution and
+        // connect to our Agent Fleet MCP server (replaces advisory mode).
+        // Non-assistant Codex: --full-auto, no MCP override.
+        if ($isAssistant) {
+            $mcpServers = json_encode(['agent-fleet' => [
+                'command' => 'php',
+                'args' => ['artisan', 'mcp:start', 'agent-fleet'],
+            ]]);
+            $codexMcpFlag = ' -c '.escapeshellarg("mcp_servers={$mcpServers}");
+        } else {
+            $codexMcpFlag = '';
+        }
+
         return match ($agentKey) {
-            'codex' => $preamble."{$binaryPath} exec --json --full-auto{$modelFlag}",
+            'codex' => $preamble."{$binaryPath} exec --json --full-auto{$codexMcpFlag}{$modelFlag}",
             'claude-code' => $preamble."{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config ".escapeshellarg('{"mcpServers":{}}').$modelFlag,
             default => throw new RuntimeException("No command template for agent: {$agentKey}"),
         };
+    }
+
+    /**
+     * Build Claude Code process arguments for assistant mode.
+     *
+     * Uses --system-prompt flag and --tools "" to ensure proper system/user
+     * prompt separation (avoids prompt injection detection) and disable
+     * built-in tools so the agent uses text-based <tool_call> format.
+     *
+     * @return array<string>
+     */
+    private function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null): array
+    {
+        $args = [
+            $binaryPath,
+            '--print',
+            '--output-format', 'json',
+            '--system-prompt', $systemPrompt,
+            '--tools', '',
+            '--dangerously-skip-permissions',
+            '--no-session-persistence',
+            '--strict-mcp-config',
+            '--mcp-config', '{"mcpServers":{}}',
+        ];
+
+        if ($model) {
+            $args[] = '--model';
+            $args[] = $model;
+        }
+
+        return $args;
     }
 
     /**

@@ -49,6 +49,9 @@
                                 {{ $approval->experiment->title }}
                             </a>
                             <x-status-badge :status="$approval->status->value" />
+                            @if($approval->isHumanTask())
+                                <span class="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Human Task</span>
+                            @endif
                         </div>
 
                         @if($approval->outboundProposal)
@@ -66,7 +69,11 @@
                             </div>
                         @endif
 
-                        @if($approval->context)
+                        @if($approval->isHumanTask())
+                            <div class="mt-3">
+                                <livewire:approvals.human-task-form :task="$approval" :key="'htf-'.$approval->id" />
+                            </div>
+                        @elseif($approval->context)
                             <div class="mt-2 text-xs text-gray-500">
                                 @if(isset($approval->context['proposal_count']))
                                     <span>{{ $approval->context['proposal_count'] }} proposal(s)</span>

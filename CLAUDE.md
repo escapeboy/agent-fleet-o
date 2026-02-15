@@ -13,6 +13,7 @@
 - **Audit:** spatie/laravel-activitylog
 - **API Docs:** dedoc/scramble (OpenAPI 3.1 at `/docs/api`)
 - **API Filtering:** spatie/laravel-query-builder
+- **MCP Server:** `laravel/mcp` ^0.5 (Model Context Protocol for LLM/agent access)
 - **Docker:** PHP 8.4-fpm-alpine + Nginx 1.27 + PostgreSQL 17 + Redis 7
 
 ## Project Structure
@@ -116,6 +117,24 @@ app/
       Middleware/                # RateLimiting, BudgetEnforcement, IdempotencyCheck, SchemaValidation, UsageTracking
       Models/                    # LlmRequestLog, CircuitBreakerState
       Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
+  Mcp/                           # MCP Server (Model Context Protocol)
+    Concerns/                    # BootstrapsMcpAuth (stdio auth bootstrap)
+    Servers/                     # AgentFleetServer (61 tools across 14 domains)
+    Tools/                       # MCP tool implementations
+      Agent/                     # agent_list, agent_get, agent_create, agent_update, agent_toggle_status
+      Experiment/                # experiment_list, experiment_get, experiment_create, experiment_pause, experiment_resume, experiment_retry, experiment_kill, experiment_valid_transitions
+      Crew/                      # crew_list, crew_get, crew_create, crew_update, crew_execute, crew_execution_status
+      Skill/                     # skill_list, skill_get, skill_create, skill_update
+      Tool/                      # tool_list, tool_get, tool_create, tool_update, tool_delete
+      Credential/                # credential_list, credential_get, credential_create, credential_update
+      Workflow/                   # workflow_list, workflow_get, workflow_create, workflow_update, workflow_validate
+      Project/                   # project_list, project_get, project_create, project_update, project_pause, project_resume, project_trigger_run, project_archive
+      Approval/                  # approval_list, approval_approve, approval_reject
+      Signal/                    # signal_list, signal_ingest
+      Budget/                    # budget_summary, budget_check
+      Marketplace/               # marketplace_browse, marketplace_publish, marketplace_install
+      Memory/                    # memory_search, memory_list_recent, memory_stats
+      System/                    # system_dashboard_kpis, system_health, system_audit_log
   Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
   Http/Controllers/Api/V1/      # 17 REST API controllers (95 endpoints)
   Http/Middleware/               # SetCurrentTeam
@@ -210,6 +229,15 @@ app/
 | Audit | `GET /audit` | Audit log |
 | Budget | `GET /budget` | Budget summary |
 
+### MCP Routes (`routes/ai.php`)
+
+| Transport | Path/Name | Server | Auth | Purpose |
+|-----------|-----------|--------|------|---------|
+| HTTP/SSE | `/mcp` | AgentFleetServer | Sanctum bearer token | Remote MCP clients (Cursor, etc.) |
+| stdio | `agent-fleet` | AgentFleetServer | Auto (default team owner) | Local CLI agents (Codex, Claude Code) |
+
+61 MCP tools across 14 domains. Start local server: `php artisan mcp:start agent-fleet`
+
 ### Legacy API Routes (`/api/`)
 
 | Method | Path | Controller | Auth | Purpose |
@@ -227,6 +255,43 @@ The community edition uses an "implicit single team" pattern:
 - All registered users are attached to the default team
 - No team switching, no invitations, no multi-tenancy UI
 - BYOK (Bring Your Own Key): API keys configured via Settings page or `.env`
+
+## MCP Server
+
+The platform exposes a Model Context Protocol (MCP) server via `laravel/mcp`, giving LLMs and agents full programmatic access.
+
+### Architecture
+- **Server:** `app/Mcp/Servers/AgentFleetServer.php` — registers 61 tools across 14 domains
+- **Auth (stdio):** `BootstrapsMcpAuth` trait auto-resolves default team owner, sets `mcp.active` flag
+- **Auth (HTTP):** Sanctum bearer token via `auth:sanctum` middleware
+- **TeamScope:** Console mode bypasses `TeamScope` unless `mcp.active` is bound in the container
+- **Routes:** `routes/ai.php` — `Mcp::web('/mcp')` + `Mcp::local('agent-fleet')`
+
+### Tool Pattern
+Each tool extends `Laravel\Mcp\Server\Tool`:
+```php
+#[IsReadOnly]  // or #[IsDestructive]
+#[IsIdempotent]
+class AgentListTool extends Tool
+{
+    protected string $name = 'agent_list';
+    protected string $description = '...';
+    public function schema(JsonSchema $schema): array { ... }
+    public function handle(Request $request): Response { ... }
+}
+```
+
+### Usage
+```bash
+# Local stdio (for Codex, Claude Code)
+php artisan mcp:start agent-fleet
+
+# HTTP/SSE (for Cursor, remote clients)
+# Endpoint: POST /mcp with Sanctum bearer token
+```
+
+### IMPORTANT: When adding/modifying features
+When any domain functionality is added or changed, the corresponding MCP tool(s) must also be created or updated in `app/Mcp/Tools/`. The MCP server must maintain 100% coverage of platform capabilities. Also update `AgentFleetServer.php` tool registration if adding new tools.
 
 ## Conventions
 

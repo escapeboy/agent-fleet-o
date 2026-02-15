@@ -9,6 +9,9 @@ use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentTask;
+use App\Domain\Experiment\Models\PlaybookStep;
+use App\Domain\Experiment\Pipeline\ExecutePlaybookStepJob;
+use App\Domain\Experiment\Services\CheckpointManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -26,8 +29,9 @@ class RecoverStuckTasks extends Command
 
         $recovered = $this->recoverStuckTasks($cutoff);
         $resolved = $this->resolveStuckStages();
+        $steps = $this->recoverStuckPlaybookSteps();
 
-        $this->info("Recovered {$recovered} stuck task(s), resolved {$resolved} stuck stage(s).");
+        $this->info("Recovered {$recovered} stuck task(s), resolved {$resolved} stuck stage(s), {$steps} stuck step(s).");
 
         return self::SUCCESS;
     }
@@ -185,6 +189,84 @@ class RecoverStuckTasks extends Command
         }
 
         return $resolved;
+    }
+
+    /**
+     * Find playbook steps stuck in "running" using heartbeat-aware detection.
+     *
+     * - Steps with stale heartbeat (>2 min) are considered stuck.
+     * - Steps with no heartbeat and old started_at (>5 min) are considered stuck.
+     * - Steps with a checkpoint are reset to "pending" and re-dispatched.
+     * - Steps without a checkpoint are marked as "failed".
+     */
+    private function recoverStuckPlaybookSteps(): int
+    {
+        $heartbeatStale = now()->subMinutes(2);
+        $noHeartbeatStale = now()->subMinutes(5);
+
+        $stuckSteps = PlaybookStep::withoutGlobalScopes()
+            ->where('status', 'running')
+            ->where(function ($query) use ($heartbeatStale, $noHeartbeatStale) {
+                $query
+                    // Has heartbeat but it's stale
+                    ->where(function ($q) use ($heartbeatStale) {
+                        $q->whereNotNull('last_heartbeat_at')
+                            ->where('last_heartbeat_at', '<', $heartbeatStale);
+                    })
+                    // No heartbeat and started long ago
+                    ->orWhere(function ($q) use ($noHeartbeatStale) {
+                        $q->whereNull('last_heartbeat_at')
+                            ->where('started_at', '<', $noHeartbeatStale);
+                    });
+            })
+            ->get();
+
+        $recovered = 0;
+        $checkpointManager = app(CheckpointManager::class);
+
+        foreach ($stuckSteps as $step) {
+            if ($step->hasCheckpoint()) {
+                // Has checkpoint — reset to pending for retry
+                $step->update([
+                    'status' => 'pending',
+                    'worker_id' => null,
+                ]);
+
+                $checkpointManager->writeCheckpoint($step->id, [
+                    'phase' => 'recovered',
+                    'recovered_at' => now()->toIso8601String(),
+                    'previous_worker' => $step->worker_id,
+                ]);
+
+                // Re-dispatch the step job
+                ExecutePlaybookStepJob::dispatch($step->id, $step->experiment_id, $step->experiment?->team_id)
+                    ->onQueue('ai-calls');
+
+                Log::info('RecoverStuckTasks: Re-dispatched stuck playbook step with checkpoint', [
+                    'step_id' => $step->id,
+                    'experiment_id' => $step->experiment_id,
+                    'last_heartbeat_at' => $step->last_heartbeat_at,
+                ]);
+            } else {
+                // No checkpoint — mark as failed
+                $step->update([
+                    'status' => 'failed',
+                    'error_message' => 'Recovered by tasks:recover-stuck — step exceeded timeout without heartbeat or checkpoint',
+                    'completed_at' => now(),
+                    'worker_id' => null,
+                ]);
+
+                Log::warning('RecoverStuckTasks: Marked stuck playbook step as failed (no checkpoint)', [
+                    'step_id' => $step->id,
+                    'experiment_id' => $step->experiment_id,
+                    'started_at' => $step->started_at,
+                ]);
+            }
+
+            $recovered++;
+        }
+
+        return $recovered;
     }
 
     private function transitionExperiment(string $experimentId, ExperimentStatus $toState, string $reason): void

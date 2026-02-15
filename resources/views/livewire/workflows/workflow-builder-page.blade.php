@@ -63,6 +63,24 @@
                     </span>
                     Condition
                 </button>
+                <button @click="addNode('human_task')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-indigo-300 hover:bg-indigo-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-indigo-100 text-indigo-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/></svg>
+                    </span>
+                    Human Task
+                </button>
+                <button @click="addNode('switch')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-orange-300 hover:bg-orange-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-orange-100 text-orange-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </span>
+                    Switch
+                </button>
+                <button @click="addNode('do_while')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-cyan-300 hover:bg-cyan-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-cyan-100 text-cyan-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </span>
+                    Do While
+                </button>
                 <button @click="addNode('end')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-red-300 hover:bg-red-50">
                     <span class="flex h-6 w-6 items-center justify-center rounded bg-red-100 text-red-600">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
@@ -133,6 +151,9 @@
                                 'border-purple-400': node.type === 'agent' && selectedNodeId !== node.id,
                                 'border-teal-400': node.type === 'crew' && selectedNodeId !== node.id,
                                 'border-yellow-400': node.type === 'conditional' && selectedNodeId !== node.id,
+                                'border-indigo-400': node.type === 'human_task' && selectedNodeId !== node.id,
+                                'border-orange-400': node.type === 'switch' && selectedNodeId !== node.id,
+                                'border-cyan-400': node.type === 'do_while' && selectedNodeId !== node.id,
                              }"
                              style="min-width: 160px;">
 
@@ -144,6 +165,9 @@
                                     'bg-purple-50': node.type === 'agent',
                                     'bg-teal-50': node.type === 'crew',
                                     'bg-yellow-50': node.type === 'conditional',
+                                    'bg-indigo-50': node.type === 'human_task',
+                                    'bg-orange-50': node.type === 'switch',
+                                    'bg-cyan-50': node.type === 'do_while',
                                  }">
                                 <span class="text-xs font-medium uppercase"
                                       :class="{
@@ -152,7 +176,10 @@
                                          'text-purple-700': node.type === 'agent',
                                          'text-teal-700': node.type === 'crew',
                                          'text-yellow-700': node.type === 'conditional',
-                                      }" x-text="node.type.charAt(0).toUpperCase() + node.type.slice(1)"></span>
+                                         'text-indigo-700': node.type === 'human_task',
+                                         'text-orange-700': node.type === 'switch',
+                                         'text-cyan-700': node.type === 'do_while',
+                                      }" x-text="nodeTypeLabel(node.type)"></span>
                                 <button x-show="node.type !== 'start'" @click.stop="removeNode(node.id)"
                                         class="ml-auto text-gray-400 hover:text-red-500">
                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -262,6 +289,48 @@
                                 Configure conditions on the outgoing edges. Click an edge to set its condition.
                             </div>
                         </template>
+
+                        <template x-if="selectedNode.type === 'human_task'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Instructions</label>
+                                    <textarea x-model="selectedNode.config.prompt" @input="syncToLivewire()" rows="3"
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                                              placeholder="Instructions for the human reviewer..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">SLA Hours</label>
+                                    <input type="number" x-model="selectedNode.config.sla_hours" @input="syncToLivewire()" min="1"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                                           placeholder="48" />
+                                </div>
+                                <div class="rounded-lg bg-indigo-50 p-3 text-xs text-indigo-700">
+                                    Human task pauses the workflow until a team member submits a form response. Configure the form_schema in JSON config.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'switch'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Expression</label>
+                                    <input type="text" x-model="selectedNode.config.expression" @input="syncToLivewire()"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                                           placeholder="output.category" />
+                                </div>
+                                <div class="rounded-lg bg-orange-50 p-3 text-xs text-orange-700">
+                                    The expression value is matched against case_value on each outgoing edge. Set case_value on edges and mark one as default.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'do_while'">
+                            <div class="space-y-3">
+                                <div class="rounded-lg bg-cyan-50 p-3 text-xs text-cyan-700">
+                                    Loop body runs until the break condition evaluates to true. Connect the loop body edge (non-default) and the exit edge (default). Configure break condition on outgoing edges.
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </template>
@@ -364,6 +433,16 @@
                             <label class="text-xs text-gray-600">Default (fallback) edge</label>
                         </div>
 
+                        {{-- Case value (for switch edges) --}}
+                        <div x-show="isSwitchEdge()">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Case Value</label>
+                            <input type="text" :value="getSelectedEdge()?.case_value"
+                                   @input="let e = getSelectedEdge(); if(e) { e.case_value = $event.target.value; syncToLivewire(); }"
+                                   placeholder="e.g. approved, rejected..."
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                            <p class="mt-0.5 text-[10px] text-gray-400">Matched against the switch expression value</p>
+                        </div>
+
                         {{-- Sort order --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Priority (sort order)</label>
@@ -448,7 +527,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     addNode(type) {
         this.nodeCounter++;
         const id = 'node-' + Date.now() + '-' + this.nodeCounter;
-        const labels = { agent: 'Agent ' + this.nodeCounter, crew: 'Crew ' + this.nodeCounter, conditional: 'Condition', end: 'End' };
+        const labels = { agent: 'Agent ' + this.nodeCounter, crew: 'Crew ' + this.nodeCounter, conditional: 'Condition', human_task: 'Human Task ' + this.nodeCounter, switch: 'Switch', do_while: 'Do While', dynamic_fork: 'Dynamic Fork', end: 'End' };
 
         this.localNodes.push({
             id: id,
@@ -745,6 +824,13 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
         this.syncConditionToEdge();
     },
 
+    isSwitchEdge() {
+        const edge = this.getSelectedEdge();
+        if (!edge) return false;
+        const source = this.localNodes.find(n => n.id === edge.source_node_id);
+        return source && source.type === 'switch';
+    },
+
     getSourceNodeLabel() {
         const edge = this.getSelectedEdge();
         if (!edge) return '';
@@ -788,6 +874,11 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     getCrewName(crewId) {
         const crew = this.crews.find(c => c.id === crewId);
         return crew ? crew.name : '';
+    },
+
+    nodeTypeLabel(type) {
+        const labels = { start: 'Start', end: 'End', agent: 'Agent', crew: 'Crew', conditional: 'Condition', human_task: 'Human Task', switch: 'Switch', dynamic_fork: 'Dynamic Fork', do_while: 'Do While' };
+        return labels[type] || type;
     },
 
     syncToLivewire() {
