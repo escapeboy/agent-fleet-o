@@ -49,6 +49,11 @@ Build progress bar shows completed vs failed tasks at a glance with clear error 
 
 ![Failed Build](screenshots/tasks-panel-failed.png)
 
+### AI Assistant Sidebar
+Context-aware AI chat embedded in every page. Supports cloud providers (Anthropic, OpenAI, Google) and local agents (Codex, Claude Code) with 28 built-in tools for querying and managing the platform.
+
+![Assistant Sidebar](screenshots/assistant-sidebar.png)
+
 ## Features
 
 - **Experiment Pipeline** -- 20-state machine with automatic stage progression (scoring, planning, building, approval, execution, metrics collection)
