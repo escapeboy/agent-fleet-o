@@ -18,7 +18,7 @@
 
 ## Project Structure
 
-Domain-driven design with 15 bounded contexts:
+Domain-driven design with 16 bounded contexts:
 
 ```
 app/
@@ -28,7 +28,7 @@ app/
       Enums/                     # AgentStatus
       Models/                    # Agent (SoftDeletes, role/goal/backstory, skills), AiRun, AgentExecution
     Crew/                        # Multi-agent teams
-      Actions/                   # CreateCrew, UpdateCrew, ExecuteCrew, DecomposeGoal, SynthesizeResult, ValidateTaskOutput
+      Actions/                   # CreateCrew, UpdateCrew, ExecuteCrew, DecomposeGoal, SynthesizeResult, ValidateTaskOutput, CollectCrewArtifacts
       Enums/                     # CrewStatus, CrewMemberRole, CrewProcessType, CrewExecutionStatus, CrewTaskStatus
       Jobs/                      # ExecuteCrewJob
       Models/                    # Crew, CrewMember, CrewExecution, CrewTaskExecution
@@ -40,7 +40,7 @@ app/
       Listeners/                 # DispatchNextStageJob, NotifyOnCriticalTransition, RecordTransitionMetrics, CollectWorkflowArtifactsOnCompletion
       Models/                    # Experiment, ExperimentStage, ExperimentStateTransition, PlaybookStep
       Pipeline/                  # BaseStageJob + 7 stage jobs, ExecutePlaybookStepJob, PlaybookExecutor
-      Services/                  # ArtifactContentResolver, StepOutputBroadcaster
+      Services/                  # ArtifactContentResolver, StepOutputBroadcaster, CheckpointManager
       States/                    # ExperimentStateMachine, ExperimentTransitionMap, TransitionPrerequisiteValidator
     Signal/                      # Inbound signal processing
       Actions/                   # IngestSignalAction
@@ -55,10 +55,10 @@ app/
       Exceptions/                # BlacklistedException, RateLimitExceededException
       Middleware/                # ChannelRateLimit, TargetRateLimit
       Models/                    # OutboundProposal, OutboundAction
-    Approval/                    # Human-in-the-loop
-      Actions/                   # CreateApprovalRequest, Approve, Reject, ExpireStaleApprovals
+    Approval/                    # Human-in-the-loop & human tasks
+      Actions/                   # CreateApprovalRequest, Approve, Reject, ExpireStaleApprovals, CreateHumanTask, CompleteHumanTask, EscalateHumanTask
       Enums/                     # ApprovalStatus
-      Models/                    # ApprovalRequest
+      Models/                    # ApprovalRequest (also serves as HumanTask when linked to workflow node)
     Budget/                      # Cost tracking & enforcement
       Actions/                   # ReserveBudget, SettleBudget, CheckBudget, AlertOnLowBudget
       Enums/                     # LedgerType
@@ -87,8 +87,8 @@ app/
       Enums/                     # CredentialType (api_key/oauth2/basic_auth/bearer_token/custom), CredentialStatus (active/disabled/expired/revoked)
       Models/                    # Credential (encrypted secrets, expiry tracking)
     Workflow/                    # Reusable workflow templates (visual DAG builder)
-      Actions/                   # CreateWorkflow, UpdateWorkflow, DeleteWorkflow, ValidateWorkflowGraph, EstimateWorkflowCost, MaterializeWorkflow
-      Enums/                     # WorkflowNodeType (start/end/agent/conditional), WorkflowStatus (draft/active/archived)
+      Actions/                   # CreateWorkflow, UpdateWorkflow, DeleteWorkflow, ValidateWorkflowGraph, EstimateWorkflowCost, MaterializeWorkflow, GenerateWorkflowFromPrompt
+      Enums/                     # WorkflowNodeType (start/end/agent/conditional/human_task/switch/dynamic_fork/do_while), WorkflowStatus (draft/active/archived)
       Models/                    # Workflow, WorkflowNode, WorkflowEdge
       Services/                  # WorkflowGraphExecutor, GraphValidator, ConditionEvaluator
     Project/                     # Continuous & one-shot projects
@@ -99,6 +99,12 @@ app/
       Models/                    # Project, ProjectSchedule, ProjectRun, ProjectMilestone
       Notifications/             # ProjectBudgetWarning, ProjectDigest, ProjectMilestoneReached, ProjectRunFailed, ProjectRunCompleted
       Services/                  # ProjectScheduler
+    Assistant/                   # AI-powered platform assistant chat
+      Actions/                   # SendAssistantMessageAction (sync tool-loop + streaming)
+      Jobs/                      # ProcessAssistantMessageJob
+      Models/                    # AssistantConversation (context-bound), AssistantMessage (with tool_calls/tool_results)
+      Services/                  # AssistantToolRegistry (28 PrismPHP tools, role-gated), ContextResolver, ConversationManager
+      Tools/                     # ListEntitiesTools, GetEntityTools, StatusTools, MemoryTools, MutationTools
     Marketplace/                 # Skill, agent & workflow marketplace
       Actions/                   # PublishToMarketplace, InstallFromMarketplace
       Enums/                     # MarketplaceStatus, ListingVisibility
@@ -119,7 +125,7 @@ app/
       Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
   Mcp/                           # MCP Server (Model Context Protocol)
     Concerns/                    # BootstrapsMcpAuth (stdio auth bootstrap)
-    Servers/                     # AgentFleetServer (61 tools across 14 domains)
+    Servers/                     # AgentFleetServer (65 tools across 15 domains)
     Tools/                       # MCP tool implementations
       Agent/                     # agent_list, agent_get, agent_create, agent_update, agent_toggle_status
       Experiment/                # experiment_list, experiment_get, experiment_create, experiment_pause, experiment_resume, experiment_retry, experiment_kill, experiment_valid_transitions
@@ -127,21 +133,22 @@ app/
       Skill/                     # skill_list, skill_get, skill_create, skill_update
       Tool/                      # tool_list, tool_get, tool_create, tool_update, tool_delete
       Credential/                # credential_list, credential_get, credential_create, credential_update
-      Workflow/                   # workflow_list, workflow_get, workflow_create, workflow_update, workflow_validate
+      Workflow/                   # workflow_list, workflow_get, workflow_create, workflow_update, workflow_validate, workflow_generate
       Project/                   # project_list, project_get, project_create, project_update, project_pause, project_resume, project_trigger_run, project_archive
-      Approval/                  # approval_list, approval_approve, approval_reject
+      Approval/                  # approval_list, approval_approve, approval_reject, approval_complete_human_task
+      Artifact/                  # artifact_list, artifact_get
       Signal/                    # signal_list, signal_ingest
       Budget/                    # budget_summary, budget_check
       Marketplace/               # marketplace_browse, marketplace_publish, marketplace_install
       Memory/                    # memory_search, memory_list_recent, memory_stats
       System/                    # system_dashboard_kpis, system_health, system_audit_log
   Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
-  Http/Controllers/Api/V1/      # 17 REST API controllers (95 endpoints)
+  Http/Controllers/Api/V1/      # 18 REST API controllers (99 endpoints)
   Http/Middleware/               # SetCurrentTeam
   Livewire/                      # Admin panel components
     Dashboard/                   # DashboardPage
     Experiments/                 # List, Detail, Create, Timeline, TasksPanel, ExecutionLog, Transitions, Outbound, Metrics, Artifacts, WorkflowProgress
-    Approvals/                   # ApprovalInboxPage
+    Approvals/                   # ApprovalInboxPage, HumanTaskForm
     Audit/                       # AuditLogPage
     Settings/                    # GlobalSettingsPage
     Health/                      # HealthPage
@@ -153,9 +160,11 @@ app/
     Workflows/                   # List, Builder (visual DAG editor), Detail, ScheduleWorkflowForm
     Projects/                    # List, Detail, Create, Edit, ActivityTimeline, RunsTable
     Marketplace/                 # Browse, Detail, Publish
+    Assistant/                   # AssistantPanel (embedded in layout, no dedicated route)
     Teams/                       # TeamSettingsPage (BYOK + API tokens)
   Console/Commands/              # AgentHealthCheck, AggregateMetrics, ExpireStaleApprovals, PollInputConnectors,
-                                 # SendWeeklyDigest, CleanupAuditEntries, CheckProjectBudgets, RecoverStuckTasks, InstallCommand
+                                 # SendWeeklyDigest, CleanupAuditEntries, CheckProjectBudgets, RecoverStuckTasks,
+                                 # CheckHumanTaskSla, InstallCommand
   Jobs/Middleware/               # CheckKillSwitch, CheckBudgetAvailable, TenantRateLimit
 ```
 
@@ -206,7 +215,7 @@ app/
 
 ### API v1 Routes (`/api/v1/`)
 
-95 endpoints across 17 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
+99 endpoints across 18 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
 
 | Group | Endpoints | Purpose |
 |-------|-----------|---------|
@@ -227,6 +236,7 @@ app/
 | Dashboard | `GET /dashboard` | KPI summary |
 | Health | `GET /health` | System health |
 | Audit | `GET /audit` | Audit log |
+| Artifacts | `GET`, `GET {id}`, `GET {id}/content`, `GET {id}/download` | Artifact CRUD + content + download |
 | Budget | `GET /budget` | Budget summary |
 
 ### MCP Routes (`routes/ai.php`)
@@ -236,7 +246,7 @@ app/
 | HTTP/SSE | `/mcp` | AgentFleetServer | Sanctum bearer token | Remote MCP clients (Cursor, etc.) |
 | stdio | `agent-fleet` | AgentFleetServer | Auto (default team owner) | Local CLI agents (Codex, Claude Code) |
 
-61 MCP tools across 14 domains. Start local server: `php artisan mcp:start agent-fleet`
+65 MCP tools across 15 domains. Start local server: `php artisan mcp:start agent-fleet`
 
 ### Legacy API Routes (`/api/`)
 
@@ -261,7 +271,7 @@ The community edition uses an "implicit single team" pattern:
 The platform exposes a Model Context Protocol (MCP) server via `laravel/mcp`, giving LLMs and agents full programmatic access.
 
 ### Architecture
-- **Server:** `app/Mcp/Servers/AgentFleetServer.php` — registers 61 tools across 14 domains
+- **Server:** `app/Mcp/Servers/AgentFleetServer.php` — registers 65 tools across 15 domains
 - **Auth (stdio):** `BootstrapsMcpAuth` trait auto-resolves default team owner, sets `mcp.active` flag
 - **Auth (HTTP):** Sanctum bearer token via `auth:sanctum` middleware
 - **TeamScope:** Console mode bypasses `TeamScope` unless `mcp.active` is bound in the container
@@ -315,7 +325,7 @@ Reusable form components in `resources/views/components/`:
 - JSONB columns with GIN indexes (PostgreSQL).
 - Partial indexes for frequently filtered statuses.
 - Budget operations use `lockForUpdate()` for pessimistic locking.
-- 70 migrations.
+- 74 migrations.
 
 ### State Machine
 - Custom implementation (NOT spatie/laravel-model-states).
@@ -339,6 +349,27 @@ Reusable form components in `resources/views/components/`:
 - Job middleware: `CheckKillSwitch`, `CheckBudgetAvailable`, `TenantRateLimit`.
 - Workflow experiments use `PlaybookExecutor` with `WorkflowGraphExecutor` for DAG traversal.
 - `RetryFromStepAction` supports graph-aware BFS reset (target + downstream steps only).
+- Checkpoint system: PlaybookSteps store `checkpoint_data`, `worker_id`, `idempotency_key` for resumable long-running steps.
+
+### Workflow DAG
+- 8 node types: `start`, `end`, `agent`, `conditional`, `human_task`, `switch`, `dynamic_fork`, `do_while`.
+- `HumanTask` nodes create `ApprovalRequest` with `form_schema`, wait for human completion via `CompleteHumanTaskAction`.
+- `Switch` nodes evaluate expressions and route via `case_value` on edges.
+- `GenerateWorkflowFromPromptAction` uses Claude Sonnet 4 to decompose natural language into workflow graphs.
+- SLA enforcement: `CheckHumanTaskSla` command escalates/expires overdue human tasks every 5 minutes.
+
+### Artifact System
+- Universal artifacts: `Artifact` model links to `Experiment`, `CrewExecution`, or `ProjectRun` (all nullable FKs).
+- Versioned: `ArtifactVersion` stores content with version number, created_by `AiRun`.
+- `ArtifactContentResolver` resolves category (code/document/data/media), file extension, MIME type.
+- `CollectCrewArtifactsAction` and `CollectWorkflowArtifactsOnCompletion` listener auto-collect artifacts.
+
+### Assistant
+- Context-aware AI chat embedded in layout (no dedicated route).
+- 28 PrismPHP tools role-gated: read (all users), write (Member+), destructive (Admin/Owner).
+- Supports cloud providers (via PrismPHP), local agents (Claude Code text-based tool loop, Codex MCP).
+- `ConversationManager` uses sliding window (max 30 messages, ~50k tokens).
+- Context binding: assistant auto-receives context from the current page (experiment, project, agent, crew, workflow).
 
 ### Tool System
 - Three tool types: `mcp_stdio` (local MCP servers), `mcp_http` (remote MCP), `built_in` (bash/filesystem/browser).
@@ -380,6 +411,7 @@ Reusable form components in `resources/views/components/`:
 - `sanctum:prune-expired --hours=48` -- daily
 - `tasks:recover-stuck` -- every 5 minutes
 - `projects:check-budgets` -- hourly
+- `human-tasks:check-sla` -- every 5 minutes (escalate/expire overdue human tasks)
 - `DispatchScheduledProjectsJob` -- every minute (evaluates due continuous projects)
 
 ### Seeders
