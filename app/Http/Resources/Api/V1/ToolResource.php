@@ -16,6 +16,7 @@ class ToolResource extends JsonResource
             'description' => $this->description,
             'type' => $this->type->value,
             'status' => $this->status->value,
+            'risk_level' => $this->risk_level?->value,
             'transport_config' => $this->transport_config,
             'tool_definitions' => $this->tool_definitions,
             'settings' => $this->settings,

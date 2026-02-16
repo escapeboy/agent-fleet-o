@@ -3,7 +3,9 @@
 namespace App\Domain\Tool\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentToolPivot;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use Database\Factories\Domain\Tool\ToolFactory;
@@ -29,6 +31,7 @@ class Tool extends Model
         'description',
         'type',
         'status',
+        'risk_level',
         'transport_config',
         'credentials',
         'tool_definitions',
@@ -44,6 +47,7 @@ class Tool extends Model
         return [
             'type' => ToolType::class,
             'status' => ToolStatus::class,
+            'risk_level' => ToolRiskLevel::class,
             'transport_config' => 'array',
             'credentials' => 'encrypted:array',
             'tool_definitions' => 'array',
@@ -55,6 +59,7 @@ class Tool extends Model
     public function agents(): BelongsToMany
     {
         return $this->belongsToMany(Agent::class, 'agent_tool')
+            ->using(AgentToolPivot::class)
             ->withPivot('priority', 'overrides')
             ->withTimestamps();
     }

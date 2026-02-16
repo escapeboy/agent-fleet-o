@@ -3,7 +3,9 @@
 namespace App\Domain\Tool\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Models\Project;
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolTranslator;
@@ -29,6 +31,15 @@ class ResolveAgentToolsAction
         if ($project && ! empty($project->allowed_tool_ids)) {
             $agentTools = $agentTools->filter(
                 fn (Tool $tool) => in_array($tool->id, $project->allowed_tool_ids),
+            );
+        }
+
+        // Filter by execution mode: watcher projects only get safe/read tools
+        if ($project && $project->execution_mode === ProjectExecutionMode::Watcher) {
+            $agentTools = $agentTools->filter(
+                fn (Tool $tool) => $tool->risk_level === null
+                    || $tool->risk_level === ToolRiskLevel::Safe
+                    || $tool->risk_level === ToolRiskLevel::Read,
             );
         }
 

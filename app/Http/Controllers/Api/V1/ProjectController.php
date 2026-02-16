@@ -9,6 +9,7 @@ use App\Domain\Project\Actions\RestartProjectAction;
 use App\Domain\Project\Actions\ResumeProjectAction;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Actions\UpdateProjectAction;
+use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
@@ -55,6 +56,7 @@ class ProjectController extends Controller
             'goal' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'workflow_id' => ['sometimes', 'nullable', 'uuid', 'exists:workflows,id'],
             'crew_id' => ['sometimes', 'nullable', 'uuid', 'exists:crews,id'],
+            'execution_mode' => ['sometimes', new Enum(ProjectExecutionMode::class)],
             'agent_config' => ['sometimes', 'array'],
             'budget_config' => ['sometimes', 'array'],
             'notification_config' => ['sometimes', 'array'],
@@ -88,6 +90,9 @@ class ProjectController extends Controller
             dependencies: $request->input('dependencies', []),
             teamId: $request->user()->current_team_id,
             deliveryConfig: $request->input('delivery_config'),
+            executionMode: $request->has('execution_mode')
+                ? ProjectExecutionMode::from($request->execution_mode)
+                : null,
         );
 
         if ($request->has('allowed_tool_ids')) {
@@ -111,6 +116,7 @@ class ProjectController extends Controller
             'agent_config' => ['sometimes', 'array'],
             'budget_config' => ['sometimes', 'array'],
             'notification_config' => ['sometimes', 'array'],
+            'execution_mode' => ['sometimes', new Enum(ProjectExecutionMode::class)],
             'delivery_config' => ['sometimes', 'nullable', 'array'],
             'schedule' => ['sometimes', 'nullable', 'array'],
             'allowed_tool_ids' => ['sometimes', 'array'],
@@ -120,7 +126,7 @@ class ProjectController extends Controller
         ]);
 
         $project = $action->execute($project, $request->only([
-            'title', 'description', 'workflow_id',
+            'title', 'description', 'execution_mode', 'workflow_id',
             'agent_config', 'budget_config', 'notification_config',
             'delivery_config', 'schedule',
         ]));

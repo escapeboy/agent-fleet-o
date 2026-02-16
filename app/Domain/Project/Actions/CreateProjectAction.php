@@ -3,6 +3,7 @@
 namespace App\Domain\Project\Actions;
 
 use App\Domain\Project\Enums\MilestoneStatus;
+use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
@@ -35,6 +36,7 @@ class CreateProjectAction
         array $dependencies = [],
         ?string $teamId = null,
         ?array $deliveryConfig = null,
+        ?ProjectExecutionMode $executionMode = null,
     ): Project {
         // Validate workflow is active before scheduling
         if ($workflowId) {
@@ -47,7 +49,7 @@ class CreateProjectAction
         return DB::transaction(function () use (
             $userId, $title, $type, $description, $goal,
             $crewId, $workflowId, $agentConfig, $budgetConfig,
-            $notificationConfig, $settings, $schedule, $milestones, $dependencies, $teamId, $deliveryConfig,
+            $notificationConfig, $settings, $schedule, $milestones, $dependencies, $teamId, $deliveryConfig, $executionMode,
         ) {
             $notificationDefaults = [
                 'on_failure' => true,
@@ -62,6 +64,7 @@ class CreateProjectAction
                 'user_id' => $userId,
                 'title' => $title,
                 'type' => $type,
+                'execution_mode' => $executionMode ?? ProjectExecutionMode::Autonomous,
                 'status' => ProjectStatus::Draft,
                 'description' => $description,
                 'goal' => $goal,

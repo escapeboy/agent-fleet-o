@@ -38,6 +38,25 @@
                         <span class="ml-1 text-xs font-semibold text-gray-700">{{ $project->type->label() }}</span>
                         <span class="ml-2 text-xs text-gray-400">(cannot be changed after creation)</span>
                     </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium text-gray-700">Execution Mode</label>
+                        <div class="flex gap-3">
+                            @foreach($executionModes as $mode)
+                                <button type="button" wire:click="$set('executionMode', '{{ $mode->value }}')"
+                                    class="flex-1 rounded-lg border p-3 text-center text-sm transition
+                                        {{ $executionMode === $mode->value ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600 hover:border-gray-300' }}">
+                                    <div class="text-lg">{{ $mode->icon() }}</div>
+                                    <div class="mt-1 font-medium">{{ $mode->label() }}</div>
+                                </button>
+                            @endforeach
+                        </div>
+                        @if($executionMode === 'watcher')
+                            <p class="mt-2 text-xs text-amber-600">Watcher mode restricts agents to safe/read-only tools. Write and destructive tools are filtered out at runtime.</p>
+                        @else
+                            <p class="mt-2 text-xs text-gray-500">Autonomous mode gives agents full access to all assigned tools.</p>
+                        @endif
+                    </div>
                 </div>
             </div>
 

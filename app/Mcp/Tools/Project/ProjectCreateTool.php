@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Actions\CreateProjectAction;
+use App\Domain\Project\Enums\ProjectExecutionMode;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -28,6 +29,10 @@ class ProjectCreateTool extends Tool
                 ->default('one_shot'),
             'goal' => $schema->string()
                 ->description('Project goal'),
+            'execution_mode' => $schema->string()
+                ->description('Execution mode: autonomous (full tool access) or watcher (read-only tools only). Default: autonomous')
+                ->enum(['autonomous', 'watcher'])
+                ->default('autonomous'),
         ];
     }
 
@@ -38,6 +43,7 @@ class ProjectCreateTool extends Tool
             'description' => 'nullable|string',
             'type' => 'nullable|string|in:one_shot,continuous',
             'goal' => 'nullable|string',
+            'execution_mode' => 'nullable|string|in:autonomous,watcher',
         ]);
 
         try {
@@ -48,6 +54,9 @@ class ProjectCreateTool extends Tool
                 description: $validated['description'] ?? null,
                 goal: $validated['goal'] ?? null,
                 teamId: auth()->user()->current_team_id,
+                executionMode: isset($validated['execution_mode'])
+                    ? ProjectExecutionMode::from($validated['execution_mode'])
+                    : null,
             );
 
             return Response::text(json_encode([
@@ -55,6 +64,7 @@ class ProjectCreateTool extends Tool
                 'project_id' => $project->id,
                 'title' => $project->title,
                 'status' => $project->status->value,
+                'execution_mode' => $project->execution_mode->value,
             ]));
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());

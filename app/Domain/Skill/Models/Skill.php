@@ -3,6 +3,7 @@
 namespace App\Domain\Skill\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentSkillPivot;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Skill\Enums\ExecutionType;
 use App\Domain\Skill\Enums\RiskLevel;
@@ -79,6 +80,7 @@ class Skill extends Model
     public function agents(): BelongsToMany
     {
         return $this->belongsToMany(Agent::class, 'agent_skill')
+            ->using(AgentSkillPivot::class)
             ->withPivot('priority', 'overrides')
             ->withTimestamps()
             ->orderByPivot('priority');

@@ -27,6 +27,9 @@ class ProjectUpdateTool extends Tool
                 ->description('New project description'),
             'goal' => $schema->string()
                 ->description('New project goal'),
+            'execution_mode' => $schema->string()
+                ->description('Execution mode: autonomous (full tool access) or watcher (read-only tools only)')
+                ->enum(['autonomous', 'watcher']),
         ];
     }
 
@@ -37,6 +40,7 @@ class ProjectUpdateTool extends Tool
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'goal' => 'nullable|string',
+            'execution_mode' => 'nullable|string|in:autonomous,watcher',
         ]);
 
         $project = Project::find($validated['project_id']);
@@ -49,10 +53,11 @@ class ProjectUpdateTool extends Tool
             'title' => $validated['title'] ?? null,
             'description' => $validated['description'] ?? null,
             'goal' => $validated['goal'] ?? null,
+            'execution_mode' => $validated['execution_mode'] ?? null,
         ], fn ($v) => $v !== null);
 
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: title, description, goal.');
+            return Response::error('No fields to update. Provide at least one of: title, description, goal, execution_mode.');
         }
 
         try {
@@ -65,6 +70,7 @@ class ProjectUpdateTool extends Tool
                 'success' => true,
                 'project_id' => $result->id,
                 'title' => $result->title,
+                'execution_mode' => $result->execution_mode->value,
                 'updated_fields' => array_keys($data),
             ]));
         } catch (\Throwable $e) {

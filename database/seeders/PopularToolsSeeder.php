@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Domain\Shared\Models\Team;
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
@@ -32,6 +33,7 @@ class PopularToolsSeeder extends Seeder
                     'description' => $def['description'],
                     'type' => $def['type'],
                     'status' => ToolStatus::Disabled,
+                    'risk_level' => $def['risk_level'],
                     'transport_config' => $def['transport_config'],
                     'tool_definitions' => $def['tool_definitions'],
                     'settings' => $def['settings'],
@@ -58,6 +60,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'bash-shell',
                 'description' => 'Execute shell commands in a sandboxed environment. Supports common CLI tools like curl, jq, python3, node, grep, awk, sed, and more. Commands are restricted to an allowed list and paths are sandboxed.',
                 'type' => ToolType::BuiltIn,
+                'risk_level' => ToolRiskLevel::Destructive,
                 'transport_config' => [
                     'kind' => 'bash',
                     'allowed_commands' => ['curl', 'jq', 'python3', 'node', 'grep', 'awk', 'sed', 'cat', 'echo', 'ls', 'find', 'wc', 'head', 'tail', 'sort', 'uniq', 'wget', 'tar', 'gzip', 'gunzip'],
@@ -85,6 +88,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'filesystem',
                 'description' => 'Read, write, and list files in allowed directories. Useful for agents that need to create or modify files as part of their work.',
                 'type' => ToolType::BuiltIn,
+                'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'kind' => 'filesystem',
                     'allowed_paths' => ['/tmp/agent-workspace'],
@@ -136,6 +140,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'web-fetch',
                 'description' => 'Fetch and read web pages, converting HTML to markdown. Useful for agents that need to retrieve information from URLs, read documentation, or scrape web content.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Read,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@anthropic-ai/mcp-server-fetch'],
@@ -165,6 +170,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'brave-search',
                 'description' => 'Search the web using Brave Search API. Returns relevant web results with titles, URLs, and descriptions. Requires a Brave Search API key (free tier available).',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@anthropic-ai/mcp-server-brave-search'],
@@ -204,6 +210,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'github',
                 'description' => 'Interact with GitHub repositories — create/read issues, pull requests, browse files, search code, and manage repos. Requires a GitHub personal access token.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@modelcontextprotocol/server-github'],
@@ -301,6 +308,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'memory',
                 'description' => 'Persistent key-value memory for agents. Store and retrieve information across conversations. Uses a knowledge graph to relate entities and observations.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@modelcontextprotocol/server-memory'],
@@ -368,6 +376,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'puppeteer',
                 'description' => 'Browser automation — navigate pages, take screenshots, click elements, fill forms, and execute JavaScript. Runs a headless Chromium browser for web scraping and testing.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@anthropic-ai/mcp-server-puppeteer'],
@@ -442,6 +451,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'slack',
                 'description' => 'Send messages, list channels, and interact with Slack workspaces. Requires a Slack Bot token with appropriate scopes.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@modelcontextprotocol/server-slack'],
@@ -504,6 +514,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'google-maps',
                 'description' => 'Search for places, get directions, geocode addresses, and retrieve place details using the Google Maps API. Requires a Google Maps API key.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@modelcontextprotocol/server-google-maps'],
@@ -568,6 +579,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'postgresql',
                 'description' => 'Execute read-only SQL queries against a PostgreSQL database. Useful for data analysis, reporting, and exploration. Connection string required.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Read,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@modelcontextprotocol/server-postgres', ''],
@@ -594,6 +606,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'sequential-thinking',
                 'description' => 'A tool for step-by-step reasoning and problem-solving. Helps agents think through complex problems by breaking them into sequential thoughts with revision capabilities.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@modelcontextprotocol/server-sequential-thinking'],
@@ -625,6 +638,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'exa-search',
                 'description' => 'AI-powered web search using Exa. Returns high-quality, semantically relevant results with full page content. Ideal for research tasks. Requires an Exa API key.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@anthropic-ai/mcp-server-exa'],
@@ -676,6 +690,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'filesystem-mcp',
                 'description' => 'Full filesystem access via MCP — read, write, move, search, and get file info. More capable than the built-in filesystem tool, with directory tree visualization and file search.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@modelcontextprotocol/server-filesystem', '/tmp/agent-workspace'],
@@ -771,6 +786,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'sentry',
                 'description' => 'Monitor and manage application errors via Sentry. List issues, get error details, and track error trends. Requires a Sentry auth token.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Read,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@sentry/mcp-server'],
@@ -810,6 +826,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'notion',
                 'description' => 'Read and write Notion pages and databases. Search content, create pages, update properties, and manage databases. Requires a Notion integration token.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@notionhq/notion-mcp-server'],
@@ -860,6 +877,7 @@ class PopularToolsSeeder extends Seeder
                 'slug' => 'linear',
                 'description' => 'Manage Linear issues, projects, and cycles. Create and update issues, search across projects, and track progress. Requires a Linear API key.',
                 'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@linear/mcp-server'],

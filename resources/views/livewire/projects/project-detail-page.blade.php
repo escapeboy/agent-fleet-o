@@ -16,6 +16,9 @@
                     {{ $project->type === \App\Domain\Project\Enums\ProjectType::Continuous ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700' }}">
                     {{ $project->type->label() }}
                 </span>
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $project->execution_mode->color() }}">
+                    {{ $project->execution_mode->icon() }} {{ $project->execution_mode->label() }}
+                </span>
             </div>
             @if($project->description)
                 <p class="mt-1 max-w-2xl text-sm text-gray-500">{{ $project->description }}</p>
