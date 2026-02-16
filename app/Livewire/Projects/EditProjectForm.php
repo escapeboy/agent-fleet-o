@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Actions\UpdateProjectAction;
 use App\Domain\Project\Enums\OverlapPolicy;
+use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ScheduleFrequency;
 use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Models\Tool;
@@ -38,6 +39,8 @@ class EditProjectForm extends Component
     public int $maxConsecutiveFailures = 3;
 
     // Delivery
+    public string $executionMode = 'autonomous';
+
     public string $deliveryChannel = 'none';
 
     public string $deliveryTarget = '';
@@ -65,6 +68,7 @@ class EditProjectForm extends Component
 
         $this->title = $project->title;
         $this->description = $project->description ?? '';
+        $this->executionMode = $project->execution_mode?->value ?? 'autonomous';
         $this->agentId = $project->agent_config['lead_agent_id'] ?? '';
         $this->workflowId = $project->workflow_id ?? '';
 
@@ -144,6 +148,7 @@ class EditProjectForm extends Component
         $data = [
             'title' => $this->title,
             'description' => $this->description ?: null,
+            'execution_mode' => ProjectExecutionMode::from($this->executionMode),
             'workflow_id' => $this->workflowId ?: null,
             'agent_config' => $this->agentId ? ['lead_agent_id' => $this->agentId] : $this->project->agent_config,
             'budget_config' => $budgetConfig ?: [],
@@ -188,6 +193,7 @@ class EditProjectForm extends Component
             'overlapPolicies' => $overlapPolicies,
             'tools' => $tools,
             'credentials' => $credentials,
+            'executionModes' => ProjectExecutionMode::cases(),
         ])->layout('layouts.app', ['header' => 'Edit: '.$this->project->title]);
     }
 }

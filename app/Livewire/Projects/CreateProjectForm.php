@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Actions\CreateProjectAction;
 use App\Domain\Project\Enums\OverlapPolicy;
+use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ScheduleFrequency;
 use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Models\Tool;
@@ -21,6 +22,8 @@ class CreateProjectForm extends Component
     public string $description = '';
 
     public string $type = 'one_shot';
+
+    public string $executionMode = 'autonomous';
 
     // Team
     public string $agentId = '';
@@ -185,6 +188,7 @@ class CreateProjectForm extends Component
             dependencies: array_values($dependencyData),
             teamId: $team->id,
             deliveryConfig: $deliveryConfig,
+            executionMode: ProjectExecutionMode::from($this->executionMode),
         );
 
         // Assign tools & credentials
@@ -221,6 +225,7 @@ class CreateProjectForm extends Component
             'availableProjects' => $availableProjects,
             'tools' => $tools,
             'credentials' => $credentials,
+            'executionModes' => ProjectExecutionMode::cases(),
         ])->layout('layouts.app', ['header' => 'Create Project']);
     }
 }

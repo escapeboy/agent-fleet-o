@@ -3,6 +3,7 @@
 namespace App\Domain\Project\Models;
 
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -48,6 +49,7 @@ class Project extends Model
         'title',
         'description',
         'type',
+        'execution_mode',
         'status',
         'paused_from_status',
         'goal',
@@ -75,6 +77,7 @@ class Project extends Model
     {
         return [
             'type' => ProjectType::class,
+            'execution_mode' => ProjectExecutionMode::class,
             'status' => ProjectStatus::class,
             'agent_config' => 'array',
             'budget_config' => 'array',

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tool\Actions;
 
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Str;
@@ -17,6 +18,7 @@ class UpdateToolAction
         ?array $toolDefinitions = null,
         ?array $settings = null,
         ?ToolStatus $status = null,
+        ?ToolRiskLevel $riskLevel = null,
     ): Tool {
         $data = array_filter([
             'name' => $name,
@@ -26,6 +28,7 @@ class UpdateToolAction
             'tool_definitions' => $toolDefinitions,
             'settings' => $settings,
             'status' => $status,
+            'risk_level' => $riskLevel,
         ], fn ($v) => $v !== null);
 
         // Credentials handled separately to avoid overwriting with null

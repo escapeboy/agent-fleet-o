@@ -2823,7 +2823,7 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Domain\\Tool\\Models\\Tool\)\: bool given\.$#'
 			identifier: argument.type
-			count: 1
+			count: 2
 			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
@@ -2835,6 +2835,30 @@ parameters:
 		-
 			message: '#^Parameter \#2 \$haystack of function in_array expects array, string given\.$#'
 			identifier: argument.type
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Project\\Enums\\ProjectExecutionMode\:\:Watcher will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolRiskLevel\:\:Read will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolRiskLevel\:\:Safe will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
@@ -4285,6 +4309,12 @@ parameters:
 			path: app/Http/Resources/Api/V1/ProjectResource.php
 
 		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ProjectResource\:\:\$execution_mode\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ProjectResource.php
+
+		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ProjectResource\:\:\$failed_runs\.$#'
 			identifier: property.notFound
 			count: 1
@@ -4730,6 +4760,12 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ToolResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ToolResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ToolResource\:\:\$risk_level\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Api/V1/ToolResource.php
@@ -5599,6 +5635,12 @@ parameters:
 			path: app/Livewire/Projects/EditProjectForm.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Livewire/Projects/EditProjectForm.php
+
+		-
 			message: '#^Offset ''channel'' on non\-falsy\-string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -5643,6 +5685,12 @@ parameters:
 		-
 			message: '#^Offset ''weekly_cap'' on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Projects/EditProjectForm.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Projects/EditProjectForm.php
 
@@ -5743,6 +5791,12 @@ parameters:
 			path: app/Livewire/Tools/CreateToolForm.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
 			message: '#^Offset ''timeout'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -5751,6 +5805,12 @@ parameters:
 		-
 			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolStatus\:\:Active will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Tools/ToolDetailPage.php
 
@@ -6153,7 +6213,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 1
+			count: 2
 			path: app/Mcp/Tools/Project/ProjectCreateTool.php
 
 		-
@@ -6220,6 +6280,12 @@ parameters:
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
+			path: app/Mcp/Tools/Project/ProjectUpdateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
 			path: app/Mcp/Tools/Skill/SkillCreateTool.php
 
 		-
@@ -6273,7 +6339,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 1
+			count: 2
 			path: app/Mcp/Tools/Tool/ToolCreateTool.php
 
 		-
@@ -6303,7 +6369,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 1
+			count: 2
 			path: app/Mcp/Tools/Tool/ToolUpdateTool.php
 
 		-

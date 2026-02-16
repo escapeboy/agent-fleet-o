@@ -74,6 +74,7 @@ class Agent extends Model
     public function skills(): BelongsToMany
     {
         return $this->belongsToMany(Skill::class, 'agent_skill')
+            ->using(AgentSkillPivot::class)
             ->withPivot('priority', 'overrides')
             ->withTimestamps()
             ->orderByPivot('priority');
@@ -82,6 +83,7 @@ class Agent extends Model
     public function tools(): BelongsToMany
     {
         return $this->belongsToMany(Tool::class, 'agent_tool')
+            ->using(AgentToolPivot::class)
             ->withPivot('priority', 'overrides')
             ->withTimestamps()
             ->orderByPivot('priority');

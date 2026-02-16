@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Tool\Actions\CreateToolAction;
 use App\Domain\Tool\Actions\DeleteToolAction;
 use App\Domain\Tool\Actions\UpdateToolAction;
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
@@ -52,6 +53,7 @@ class ToolController extends Controller
             'credentials' => ['sometimes', 'nullable', 'array'],
             'tool_definitions' => ['sometimes', 'nullable', 'array'],
             'settings' => ['sometimes', 'nullable', 'array'],
+            'risk_level' => ['sometimes', 'nullable', new Enum(ToolRiskLevel::class)],
         ]);
 
         $tool = $action->execute(
@@ -64,6 +66,10 @@ class ToolController extends Controller
             toolDefinitions: $request->input('tool_definitions', []),
             settings: $request->input('settings', []),
         );
+
+        if ($request->has('risk_level') && $request->risk_level) {
+            $tool->update(['risk_level' => ToolRiskLevel::from($request->risk_level)]);
+        }
 
         $tool->loadCount('agents');
 
@@ -82,6 +88,7 @@ class ToolController extends Controller
             'credentials' => ['sometimes', 'nullable', 'array'],
             'tool_definitions' => ['sometimes', 'nullable', 'array'],
             'settings' => ['sometimes', 'nullable', 'array'],
+            'risk_level' => ['sometimes', 'nullable', new Enum(ToolRiskLevel::class)],
         ]);
 
         $action->execute(
@@ -92,6 +99,9 @@ class ToolController extends Controller
             credentials: $request->input('credentials'),
             toolDefinitions: $request->input('tool_definitions'),
             settings: $request->input('settings'),
+            riskLevel: $request->has('risk_level') && $request->risk_level
+                ? ToolRiskLevel::from($request->risk_level)
+                : null,
         );
 
         if ($request->has('status')) {

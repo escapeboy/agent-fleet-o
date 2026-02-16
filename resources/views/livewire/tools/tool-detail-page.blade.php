@@ -20,6 +20,13 @@
 
                 <x-form-input wire:model.number="editTimeout" label="Timeout (seconds)" type="number" min="1" max="300"
                     :error="$errors->first('editTimeout')" />
+
+                <x-form-select wire:model="editRiskLevel" label="Risk Level" hint="Controls tool availability in Watcher mode projects">
+                    <option value="">Not classified</option>
+                    @foreach($riskLevels as $level)
+                        <option value="{{ $level->value }}">{{ $level->label() }}</option>
+                    @endforeach
+                </x-form-select>
             </div>
 
             <div class="mt-6 flex gap-3">
@@ -48,6 +55,11 @@
                         } }}">
                         {{ $tool->type->label() }}
                     </span>
+                    @if($tool->risk_level)
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $tool->risk_level->color() }}">
+                            {{ $tool->risk_level->label() }}
+                        </span>
+                    @endif
                 </div>
                 @if($tool->description)
                     <p class="mt-1 text-sm text-gray-500">{{ $tool->description }}</p>
@@ -98,6 +110,18 @@
                         <div class="flex justify-between">
                             <dt class="text-gray-500">Functions</dt>
                             <dd class="text-gray-700">{{ $tool->functionCount() }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-500">Risk Level</dt>
+                            <dd>
+                                @if($tool->risk_level)
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $tool->risk_level->color() }}">
+                                        {{ $tool->risk_level->label() }}
+                                    </span>
+                                @else
+                                    <span class="text-gray-400">Not classified</span>
+                                @endif
+                            </dd>
                         </div>
                         <div class="flex justify-between">
                             <dt class="text-gray-500">Timeout</dt>

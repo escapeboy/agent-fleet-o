@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Actions\UpdateToolAction;
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool as ToolModel;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -29,6 +30,9 @@ class ToolUpdateTool extends Tool
             'status' => $schema->string()
                 ->description('New status: active, disabled')
                 ->enum(['active', 'disabled']),
+            'risk_level' => $schema->string()
+                ->description('Risk classification: safe, read, write, destructive')
+                ->enum(['safe', 'read', 'write', 'destructive']),
         ];
     }
 
@@ -39,6 +43,7 @@ class ToolUpdateTool extends Tool
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'status' => 'nullable|string|in:active,disabled',
+            'risk_level' => 'nullable|string|in:safe,read,write,destructive',
         ]);
 
         $tool = ToolModel::find($validated['tool_id']);
@@ -57,6 +62,7 @@ class ToolUpdateTool extends Tool
                 tool: $tool,
                 name: $validated['name'] ?? null,
                 description: $validated['description'] ?? null,
+                riskLevel: isset($validated['risk_level']) ? ToolRiskLevel::from($validated['risk_level']) : null,
             );
 
             return Response::text(json_encode([
@@ -64,10 +70,12 @@ class ToolUpdateTool extends Tool
                 'tool_id' => $result->id,
                 'name' => $result->name,
                 'status' => $result->status->value,
+                'risk_level' => $result->risk_level?->value,
                 'updated_fields' => array_keys(array_filter([
                     'name' => $validated['name'] ?? null,
                     'description' => $validated['description'] ?? null,
                     'status' => $validated['status'] ?? null,
+                    'risk_level' => $validated['risk_level'] ?? null,
                 ], fn ($v) => $v !== null)),
             ]));
         } catch (\Throwable $e) {

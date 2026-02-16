@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Actions\CreateToolAction;
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -29,6 +30,9 @@ class ToolCreateTool extends Tool
                 ->default('mcp_stdio'),
             'transport_config' => $schema->object()
                 ->description('Transport configuration (command, args, env for stdio; url, headers for http)'),
+            'risk_level' => $schema->string()
+                ->description('Risk classification: safe, read, write, destructive')
+                ->enum(['safe', 'read', 'write', 'destructive']),
         ];
     }
 
@@ -39,6 +43,7 @@ class ToolCreateTool extends Tool
             'description' => 'nullable|string',
             'type' => 'nullable|string|in:mcp_stdio,mcp_http,built_in',
             'transport_config' => 'nullable|array',
+            'risk_level' => 'nullable|string|in:safe,read,write,destructive',
         ]);
 
         try {
@@ -50,11 +55,16 @@ class ToolCreateTool extends Tool
                 transportConfig: $validated['transport_config'] ?? [],
             );
 
+            if (! empty($validated['risk_level'])) {
+                $tool->update(['risk_level' => ToolRiskLevel::from($validated['risk_level'])]);
+            }
+
             return Response::text(json_encode([
                 'success' => true,
                 'tool_id' => $tool->id,
                 'name' => $tool->name,
                 'status' => $tool->status->value,
+                'risk_level' => $tool->risk_level?->value,
             ]));
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());

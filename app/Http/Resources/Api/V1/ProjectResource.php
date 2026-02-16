@@ -14,6 +14,7 @@ class ProjectResource extends JsonResource
             'title' => $this->title,
             'description' => $this->description,
             'type' => $this->type->value,
+            'execution_mode' => $this->execution_mode->value,
             'status' => $this->status->value,
             'goal' => $this->goal,
             'workflow_id' => $this->workflow_id,

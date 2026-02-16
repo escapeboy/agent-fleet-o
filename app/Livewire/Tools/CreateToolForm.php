@@ -4,6 +4,7 @@ namespace App\Livewire\Tools;
 
 use App\Domain\Tool\Actions\CreateToolAction;
 use App\Domain\Tool\Enums\BuiltInToolKind;
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolType;
 use Livewire\Component;
 
@@ -45,6 +46,9 @@ class CreateToolForm extends Component
 
     // Tool definitions (MCP - JSON)
     public string $toolDefinitionsJson = '';
+
+    // Risk Level
+    public string $riskLevel = '';
 
     // Settings
     public int $timeout = 30;
@@ -98,7 +102,7 @@ class CreateToolForm extends Component
         $toolDefinitions = $this->parseToolDefinitions();
         $settings = array_filter(['timeout' => $this->timeout]);
 
-        app(CreateToolAction::class)->execute(
+        $tool = app(CreateToolAction::class)->execute(
             teamId: $team->id,
             name: $this->name,
             type: $type,
@@ -108,6 +112,10 @@ class CreateToolForm extends Component
             toolDefinitions: $toolDefinitions ?: null,
             settings: $settings,
         );
+
+        if ($this->riskLevel) {
+            $tool->update(['risk_level' => ToolRiskLevel::from($this->riskLevel)]);
+        }
 
         session()->flash('message', 'Tool created successfully!');
 
@@ -176,6 +184,7 @@ class CreateToolForm extends Component
         return view('livewire.tools.create-tool-form', [
             'types' => ToolType::cases(),
             'builtInKinds' => BuiltInToolKind::cases(),
+            'riskLevels' => ToolRiskLevel::cases(),
         ])->layout('layouts.app', ['header' => 'Create Tool']);
     }
 }

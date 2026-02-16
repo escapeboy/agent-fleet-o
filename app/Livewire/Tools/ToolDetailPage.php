@@ -4,6 +4,7 @@ namespace App\Livewire\Tools;
 
 use App\Domain\Tool\Actions\DeleteToolAction;
 use App\Domain\Tool\Actions\UpdateToolAction;
+use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
 use Livewire\Component;
@@ -22,6 +23,8 @@ class ToolDetailPage extends Component
     public string $editDescription = '';
 
     public int $editTimeout = 30;
+
+    public string $editRiskLevel = '';
 
     public function mount(Tool $tool): void
     {
@@ -43,6 +46,7 @@ class ToolDetailPage extends Component
         $this->editName = $this->tool->name;
         $this->editDescription = $this->tool->description ?? '';
         $this->editTimeout = $this->tool->settings['timeout'] ?? 30;
+        $this->editRiskLevel = $this->tool->risk_level?->value ?? '';
         $this->editing = true;
     }
 
@@ -65,6 +69,7 @@ class ToolDetailPage extends Component
             name: $this->editName,
             description: $this->editDescription ?: null,
             settings: ['timeout' => $this->editTimeout],
+            riskLevel: $this->editRiskLevel ? ToolRiskLevel::from($this->editRiskLevel) : null,
         );
 
         $this->tool->refresh();
@@ -87,6 +92,7 @@ class ToolDetailPage extends Component
 
         return view('livewire.tools.tool-detail-page', [
             'agents' => $agents,
+            'riskLevels' => ToolRiskLevel::cases(),
         ])->layout('layouts.app', ['header' => $this->tool->name]);
     }
 }

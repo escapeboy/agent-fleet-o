@@ -40,6 +40,13 @@
                 @elseif($type === 'built_in')
                     <p class="text-sm text-gray-500">Use host machine capabilities (bash, filesystem) with sandboxing</p>
                 @endif
+
+                <x-form-select wire:model="riskLevel" label="Risk Level" hint="Controls tool availability in Watcher mode projects">
+                    <option value="">Not classified</option>
+                    @foreach($riskLevels as $level)
+                        <option value="{{ $level->value }}">{{ $level->label() }}</option>
+                    @endforeach
+                </x-form-select>
             </div>
         @endif
 
@@ -132,6 +139,15 @@
                     @if($description)
                         <div class="text-gray-500">Description</div>
                         <div>{{ $description }}</div>
+                    @endif
+
+                    @if($riskLevel)
+                        <div class="text-gray-500">Risk Level</div>
+                        <div>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ \App\Domain\Tool\Enums\ToolRiskLevel::from($riskLevel)->color() }}">
+                                {{ \App\Domain\Tool\Enums\ToolRiskLevel::from($riskLevel)->label() }}
+                            </span>
+                        </div>
                     @endif
 
                     <div class="text-gray-500">Timeout</div>
