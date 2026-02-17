@@ -2,6 +2,7 @@
 
 namespace App\Domain\Memory\Actions;
 
+use App\Domain\Memory\Models\Memory;
 use App\Domain\Memory\Services\DocumentTextExtractor;
 use Illuminate\Http\UploadedFile;
 
@@ -15,7 +16,7 @@ class UploadKnowledgeDocumentAction
     /**
      * Upload a document, extract text, chunk + embed, and store as Memory records.
      *
-     * @return \App\Domain\Memory\Models\Memory[]
+     * @return Memory[]
      */
     public function execute(
         string $teamId,

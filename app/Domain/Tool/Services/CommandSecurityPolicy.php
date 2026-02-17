@@ -240,7 +240,7 @@ class CommandSecurityPolicy
             if (! $pathAllowed) {
                 return new CommandValidationResult(
                     allowed: false,
-                    reason: "Working directory restricted by organization policy",
+                    reason: 'Working directory restricted by organization policy',
                     level: 'organization',
                 );
             }

@@ -37,7 +37,7 @@ class AgentTemplateGalleryPage extends Component
             $templates = $templates->filter(fn (array $t) => str_contains(mb_strtolower($t['name']), $search)
                 || str_contains(mb_strtolower($t['role'] ?? ''), $search)
                 || str_contains(mb_strtolower($t['goal'] ?? ''), $search)
-                || collect($t['capabilities'] ?? [])->contains(fn ($c) => str_contains(mb_strtolower($c), $search))
+                || collect($t['capabilities'] ?? [])->contains(fn ($c) => str_contains(mb_strtolower($c), $search)),
             );
         }
 

@@ -41,7 +41,7 @@ class AgentTemplatesTest extends TestCase
             $this->assertContains(
                 $template['category'],
                 $validCategories,
-                "Template '{$template['name']}' has invalid category '{$template['category']}'"
+                "Template '{$template['name']}' has invalid category '{$template['category']}'",
             );
         }
     }

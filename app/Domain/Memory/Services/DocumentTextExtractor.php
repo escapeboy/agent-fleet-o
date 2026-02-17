@@ -2,6 +2,8 @@
 
 namespace App\Domain\Memory\Services;
 
+use Smalot\PdfParser\Parser;
+
 class DocumentTextExtractor
 {
     /**
@@ -20,11 +22,11 @@ class DocumentTextExtractor
 
     private function extractPdf(string $filePath): string
     {
-        if (! class_exists(\Smalot\PdfParser\Parser::class)) {
+        if (! class_exists(Parser::class)) {
             throw new \RuntimeException('PDF parsing requires smalot/pdfparser. Install with: composer require smalot/pdfparser');
         }
 
-        $parser = new \Smalot\PdfParser\Parser;
+        $parser = new Parser;
         $pdf = $parser->parseFile($filePath);
 
         return $pdf->getText();

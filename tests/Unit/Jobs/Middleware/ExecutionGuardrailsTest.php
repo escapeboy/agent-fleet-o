@@ -3,9 +3,6 @@
 namespace Tests\Unit\Jobs\Middleware;
 
 use App\Domain\Agent\Models\Agent;
-use App\Domain\Experiment\Enums\ExperimentStatus;
-use App\Domain\Experiment\Models\Experiment;
-use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Models\Team;
 use App\Jobs\Middleware\EnforceConcurrencyLimit;
 use App\Jobs\Middleware\EnforceExecutionDepth;

@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Projects;
 
-use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
 use Livewire\Component;
@@ -69,7 +68,7 @@ class ProjectKanbanPage extends Component
         $columns = [];
         foreach (static::$columns as $key => $config) {
             $columns[$key] = $experiments->filter(
-                fn ($e) => in_array($e->status->value, $config['statuses'])
+                fn ($e) => in_array($e->status->value, $config['statuses']),
             )->values();
         }
 

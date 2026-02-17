@@ -3,6 +3,8 @@
 namespace Tests\Unit\Domain\Project;
 
 use App\Domain\Project\Actions\ExpandProjectGoalAction;
+use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use PHPUnit\Framework\TestCase;
 
 class ExpandProjectGoalTest extends TestCase
@@ -10,8 +12,8 @@ class ExpandProjectGoalTest extends TestCase
     public function test_validate_no_cycles_passes_for_valid_dag(): void
     {
         $action = new ExpandProjectGoalAction(
-            $this->createMock(\App\Infrastructure\AI\Contracts\AiGatewayInterface::class),
-            $this->createMock(\App\Infrastructure\AI\Services\ProviderResolver::class),
+            $this->createMock(AiGatewayInterface::class),
+            $this->createMock(ProviderResolver::class),
         );
 
         // Use reflection to test the private method
@@ -31,8 +33,8 @@ class ExpandProjectGoalTest extends TestCase
     public function test_validate_no_cycles_detects_cycle(): void
     {
         $action = new ExpandProjectGoalAction(
-            $this->createMock(\App\Infrastructure\AI\Contracts\AiGatewayInterface::class),
-            $this->createMock(\App\Infrastructure\AI\Services\ProviderResolver::class),
+            $this->createMock(AiGatewayInterface::class),
+            $this->createMock(ProviderResolver::class),
         );
 
         $method = new \ReflectionMethod($action, 'validateNoCycles');
@@ -51,8 +53,8 @@ class ExpandProjectGoalTest extends TestCase
     public function test_parse_features_from_json(): void
     {
         $action = new ExpandProjectGoalAction(
-            $this->createMock(\App\Infrastructure\AI\Contracts\AiGatewayInterface::class),
-            $this->createMock(\App\Infrastructure\AI\Services\ProviderResolver::class),
+            $this->createMock(AiGatewayInterface::class),
+            $this->createMock(ProviderResolver::class),
         );
 
         $method = new \ReflectionMethod($action, 'parseFeatures');
@@ -71,8 +73,8 @@ class ExpandProjectGoalTest extends TestCase
     public function test_parse_features_strips_code_fences(): void
     {
         $action = new ExpandProjectGoalAction(
-            $this->createMock(\App\Infrastructure\AI\Contracts\AiGatewayInterface::class),
-            $this->createMock(\App\Infrastructure\AI\Services\ProviderResolver::class),
+            $this->createMock(AiGatewayInterface::class),
+            $this->createMock(ProviderResolver::class),
         );
 
         $method = new \ReflectionMethod($action, 'parseFeatures');
@@ -88,8 +90,8 @@ class ExpandProjectGoalTest extends TestCase
     public function test_parse_features_throws_on_invalid_json(): void
     {
         $action = new ExpandProjectGoalAction(
-            $this->createMock(\App\Infrastructure\AI\Contracts\AiGatewayInterface::class),
-            $this->createMock(\App\Infrastructure\AI\Services\ProviderResolver::class),
+            $this->createMock(AiGatewayInterface::class),
+            $this->createMock(ProviderResolver::class),
         );
 
         $method = new \ReflectionMethod($action, 'parseFeatures');
@@ -101,8 +103,8 @@ class ExpandProjectGoalTest extends TestCase
     public function test_validate_no_cycles_handles_empty_features(): void
     {
         $action = new ExpandProjectGoalAction(
-            $this->createMock(\App\Infrastructure\AI\Contracts\AiGatewayInterface::class),
-            $this->createMock(\App\Infrastructure\AI\Services\ProviderResolver::class),
+            $this->createMock(AiGatewayInterface::class),
+            $this->createMock(ProviderResolver::class),
         );
 
         $method = new \ReflectionMethod($action, 'validateNoCycles');
