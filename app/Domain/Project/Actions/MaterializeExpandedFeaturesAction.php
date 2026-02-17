@@ -24,19 +24,20 @@ class MaterializeExpandedFeaturesAction
 
         foreach ($features as $index => $feature) {
             $experiment = $this->createExperiment->execute(
-                teamId: $project->team_id,
+                userId: $project->user_id,
                 title: $feature['title'] ?? 'Feature '.($index + 1),
-                thesis: $feature['description'] ?? null,
-                track: ExperimentTrack::Build,
-                projectId: $project->id,
+                thesis: $feature['description'] ?? 'No description',
+                track: ExperimentTrack::Growth->value,
+                teamId: $project->team_id,
+                budgetCapCredits: (int) ($feature['estimated_credits'] ?? 10000),
                 constraints: [
                     'expanded_feature_index' => $index,
                     'priority' => $feature['priority'] ?? 'medium',
                     'suggested_agent_role' => $feature['suggested_agent_role'] ?? null,
                     'estimated_credits' => $feature['estimated_credits'] ?? null,
                     'dependencies' => $feature['dependencies'] ?? [],
+                    'project_id' => $project->id,
                 ],
-                budgetCapCredits: $feature['estimated_credits'] ?? null,
             );
 
             $experiment->update(['sort_order' => $index]);

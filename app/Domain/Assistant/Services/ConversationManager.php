@@ -69,6 +69,7 @@ class ConversationManager
     public function buildMessageHistory(AssistantConversation $conversation): array
     {
         // Fetch 2x candidates to have a larger pool for scoring
+        /** @var Collection<int, AssistantMessage> $messages */
         $messages = $conversation->messages()
             ->whereIn('role', ['user', 'assistant'])
             ->orderByDesc('created_at')
@@ -155,7 +156,9 @@ class ConversationManager
         }
 
         // Pinned messages via metadata
-        if (! empty($message->metadata['pinned'])) {
+        /** @var array|null $metadata */
+        $metadata = $message->metadata;
+        if (! empty($metadata['pinned'])) {
             $score += 5.0;
         }
 

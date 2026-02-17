@@ -49,7 +49,10 @@ class TestRun extends Model
 
     public function isPassed(): bool
     {
-        return $this->status === TestStatus::Passed;
+        /** @var TestStatus $status */
+        $status = $this->status;
+
+        return $status === TestStatus::Passed;
     }
 
     public function recordResult(TestStatus $status, array $results, float $score, ?array $feedback = null): void

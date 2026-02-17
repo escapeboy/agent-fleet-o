@@ -25,7 +25,9 @@ class EnforceExecutionDepth
             return;
         }
 
-        $maxDepth = $experiment->constraints['max_execution_depth']
+        /** @var array|null $constraints */
+        $constraints = $experiment->constraints;
+        $maxDepth = $constraints['max_execution_depth']
             ?? config('experiments.default_max_depth', 50);
 
         $currentDepth = $experiment->stages()

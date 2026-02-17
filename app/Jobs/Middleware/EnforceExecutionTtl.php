@@ -25,7 +25,9 @@ class EnforceExecutionTtl
             return;
         }
 
-        $maxTtlMinutes = $experiment->constraints['max_ttl_minutes']
+        /** @var array|null $constraints */
+        $constraints = $experiment->constraints;
+        $maxTtlMinutes = $constraints['max_ttl_minutes']
             ?? config('experiments.default_ttl_minutes', 120);
 
         // Find the earliest running stage start time, or fall back to experiment updated_at

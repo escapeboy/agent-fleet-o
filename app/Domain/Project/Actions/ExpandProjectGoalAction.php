@@ -2,6 +2,7 @@
 
 namespace App\Domain\Project\Actions;
 
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -20,7 +21,8 @@ class ExpandProjectGoalAction
      */
     public function execute(string $goal, string $teamId, ?string $context = null): array
     {
-        $resolved = $this->providerResolver->resolveDefault($teamId);
+        $team = Team::find($teamId);
+        $resolved = $this->providerResolver->resolve(team: $team);
 
         $systemPrompt = <<<'PROMPT'
 You are an expert project planner for an AI agent platform. Given a project goal, decompose it into 3-15 individual features/experiments.

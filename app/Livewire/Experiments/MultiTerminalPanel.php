@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Experiments;
 
+use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
@@ -39,9 +40,11 @@ class MultiTerminalPanel extends Component
         $this->tabs = [];
 
         foreach ($stages as $stage) {
+            /** @var StageType $stageType */
+            $stageType = $stage->stage;
             $this->tabs[] = [
                 'id' => $stage->id,
-                'label' => str_replace('_', ' ', ucfirst($stage->stage->value)).' #'.$stage->iteration,
+                'label' => str_replace('_', ' ', ucfirst($stageType->value)).' #'.$stage->iteration,
             ];
         }
 

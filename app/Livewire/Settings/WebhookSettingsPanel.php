@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Settings;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Webhook\Enums\WebhookEvent;
 use App\Domain\Webhook\Models\WebhookEndpoint;
+use App\Models\User;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
@@ -45,7 +47,9 @@ class WebhookSettingsPanel extends Component
                 $this->secret = '';
                 $this->selectedEvents = $endpoint->events ?? [];
                 $this->customHeaders = $endpoint->headers ?? [];
-                $this->maxRetries = $endpoint->retry_config['max_retries'] ?? 3;
+                /** @var array $retryConfig */
+                $retryConfig = $endpoint->retry_config;
+                $this->maxRetries = $retryConfig['max_retries'] ?? 3;
             }
         } else {
             $this->resetForm();
@@ -58,8 +62,12 @@ class WebhookSettingsPanel extends Component
     {
         $this->validate();
 
+        /** @var User $user */
+        $user = auth()->user();
+        /** @var Team $currentTeam */
+        $currentTeam = $user->currentTeam;
         $data = [
-            'team_id' => auth()->user()->currentTeam->id,
+            'team_id' => $currentTeam->id,
             'name' => $this->name,
             'url' => $this->url,
             'events' => $this->selectedEvents,

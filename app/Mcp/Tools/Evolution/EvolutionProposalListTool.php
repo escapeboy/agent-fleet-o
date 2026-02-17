@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Evolution;
 
 use App\Domain\Evolution\Models\EvolutionProposal;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Collection;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -44,11 +45,12 @@ class EvolutionProposalListTool extends Tool
 
         $limit = min((int) ($request->get('limit', 10)), 50);
 
+        /** @var Collection<int, EvolutionProposal> $proposals */
         $proposals = $query->limit($limit)->get();
 
         return Response::text(json_encode([
             'count' => $proposals->count(),
-            'proposals' => $proposals->map(fn ($p) => [
+            'proposals' => $proposals->map(fn (EvolutionProposal $p) => [
                 'id' => $p->id,
                 'agent_id' => $p->agent_id,
                 'status' => $p->status->value,

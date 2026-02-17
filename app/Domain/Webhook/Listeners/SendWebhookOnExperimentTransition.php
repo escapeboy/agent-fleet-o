@@ -29,6 +29,9 @@ class SendWebhookOnExperimentTransition
             return;
         }
 
+        /** @var string $teamId */
+        $teamId = $experiment->team_id;
+
         $this->sendWebhook->execute(
             event: $webhookEvent,
             data: [
@@ -40,7 +43,7 @@ class SendWebhookOnExperimentTransition
                 'budget_spent_credits' => $experiment->budget_spent_credits,
                 'iteration' => $experiment->current_iteration,
             ],
-            teamId: $experiment->team_id,
+            teamId: $teamId,
         );
     }
 }

@@ -2,10 +2,18 @@
 
 namespace App\Domain\Testing\Actions;
 
+use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\StageStatus;
+use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Testing\Enums\TestStatus;
+use App\Domain\Testing\Enums\TestStrategy;
 use App\Domain\Testing\Models\TestRun;
 use App\Domain\Testing\Models\TestSuite;
+use Illuminate\Database\Eloquent\Collection;
 
 class RunRegressionTestsAction
 {
@@ -15,7 +23,9 @@ class RunRegressionTestsAction
 
     public function execute(Experiment $experiment): ?TestRun
     {
-        $project = $experiment->project;
+        $projectRun = ProjectRun::where('experiment_id', $experiment->id)->first();
+        /** @var Project|null $project */
+        $project = $projectRun?->project;
         if (! $project) {
             return null;
         }
@@ -29,7 +39,9 @@ class RunRegressionTestsAction
         }
 
         // Skip if YOLO mode and strategy isn't lint_only
-        if ($experiment->isYoloMode() && $suite->test_strategy->value !== 'lint_only') {
+        /** @var TestStrategy $testStrategy */
+        $testStrategy = $suite->test_strategy;
+        if ($experiment->isYoloMode() && $testStrategy->value !== 'lint_only') {
             return null;
         }
 
@@ -54,9 +66,9 @@ class RunRegressionTestsAction
 
         $testRun->recordResult(
             status: $status,
-            results: $evaluation['details'] ?? [],
-            score: $evaluation['score'] ?? 0.0,
-            feedback: $evaluation['feedback'] ?? null,
+            results: $evaluation['details'],
+            score: $evaluation['score'],
+            feedback: $evaluation['feedback'],
         );
 
         // Update suite stats
@@ -67,17 +79,28 @@ class RunRegressionTestsAction
 
     private function collectOutput(Experiment $experiment): array
     {
+        /** @var Collection<int, ExperimentStage> $stages */
         $stages = $experiment->stages()->orderBy('created_at')->get();
+
+        /** @var ExperimentStatus $status */
+        $status = $experiment->status;
 
         return [
             'experiment_id' => $experiment->id,
             'title' => $experiment->title,
-            'status' => $experiment->status->value,
-            'stages' => $stages->map(fn ($s) => [
-                'stage' => $s->stage->value,
-                'status' => $s->status->value,
-                'output_snapshot' => $s->output_snapshot,
-            ])->toArray(),
+            'status' => $status->value,
+            'stages' => $stages->map(function (ExperimentStage $s): array {
+                /** @var StageType $stage */
+                $stage = $s->stage;
+                /** @var StageStatus $stageStatus */
+                $stageStatus = $s->status;
+
+                return [
+                    'stage' => $stage->value,
+                    'status' => $stageStatus->value,
+                    'output_snapshot' => $s->output_snapshot,
+                ];
+            })->toArray(),
         ];
     }
 

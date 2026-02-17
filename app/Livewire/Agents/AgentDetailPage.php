@@ -75,6 +75,7 @@ class AgentDetailPage extends Component
         $this->editModel = $this->agent->model;
         $this->editBudgetCap = $this->agent->budget_cap_credits;
         $this->editFallbackChain = $this->agent->config['fallback_chain'] ?? [];
+        /** @var array<string, mixed> $personality */
         $personality = $this->agent->personality ?? [];
         $this->editPersonalityTone = $personality['tone'] ?? '';
         $this->editPersonalityCommunicationStyle = $personality['communication_style'] ?? '';

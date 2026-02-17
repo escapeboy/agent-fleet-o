@@ -41,7 +41,7 @@ class EvolutionApplyTool extends Tool
 
         $agent = app(ApplyEvolutionProposalAction::class)->execute(
             $proposal,
-            auth()->id() ?? $proposal->agent->team->owner?->id ?? '',
+            auth()->id() ?? $proposal->agent->team->owner->id ?? '',
         );
 
         return Response::text(json_encode([

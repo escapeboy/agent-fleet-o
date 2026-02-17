@@ -19,29 +19,31 @@ class EnforceConcurrencyLimit
 
         $experiment = Experiment::withoutGlobalScopes()->find($job->experimentId);
 
-        if (! $experiment || ! $experiment->agent_id) {
+        if (! $experiment || ! $experiment->user_id) {
             $next($job);
 
             return;
         }
 
-        $maxConcurrent = $experiment->constraints['max_concurrent_executions']
+        /** @var array|null $constraints */
+        $constraints = $experiment->constraints;
+        $maxConcurrent = $constraints['max_concurrent_executions']
             ?? config('experiments.default_max_concurrent', 5);
 
         $running = Experiment::withoutGlobalScopes()
-            ->where('agent_id', $experiment->agent_id)
+            ->where('user_id', $experiment->user_id)
             ->where('id', '!=', $experiment->id)
             ->whereIn('status', [
-                ExperimentStatus::Running,
-                ExperimentStatus::AiProcessing,
-                ExperimentStatus::ToolExecution,
+                ExperimentStatus::Executing,
+                ExperimentStatus::Building,
+                ExperimentStatus::Scoring,
             ])
             ->count();
 
         if ($running >= $maxConcurrent) {
-            Log::info('EnforceConcurrencyLimit: Agent at concurrency limit, delaying job', [
+            Log::info('EnforceConcurrencyLimit: User at concurrency limit, delaying job', [
                 'experiment_id' => $experiment->id,
-                'agent_id' => $experiment->agent_id,
+                'user_id' => $experiment->user_id,
                 'max_concurrent' => $maxConcurrent,
                 'current_running' => $running,
             ]);

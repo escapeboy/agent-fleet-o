@@ -248,6 +248,7 @@ class ExecuteAgentAction
 
         // Inject personality traits (SOUL.md)
         if (! empty($agent->personality)) {
+            /** @var array<string, mixed> $personality */
             $personality = $agent->personality;
             $personalityParts = [];
             if ($personality['tone'] ?? null) {

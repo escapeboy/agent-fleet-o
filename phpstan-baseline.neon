@@ -79,64 +79,16 @@ parameters:
 			path: app/Console/Commands/RecoverStuckTasks.php
 
 		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
-			count: 1
-			path: app/Console/Commands/RecoverStuckTasks.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Building will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Console/Commands/RecoverStuckTasks.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Console/Commands/RecoverStuckTasks.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:notify\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Console/Commands/SendWeeklyDigest.php
 
 		-
-			message: '#^Offset ''max_steps'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Agent/Actions/ExecuteAgentAction.php
-
-		-
-			message: '#^Offset ''max_tokens'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Agent/Actions/ExecuteAgentAction.php
-
-		-
-			message: '#^Offset ''temperature'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Agent/Actions/ExecuteAgentAction.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: non\-falsy\-string, Closure\(App\\Domain\\Skill\\Models\\Skill\)\: non\-falsy\-string given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Domain/Agent/Actions/ExecuteAgentAction.php
-
-		-
-			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\(int\|string\), mixed\>\|iterable\<\(int\|string\), mixed\>\|null, non\-falsy\-string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Agent/Actions/ExecuteAgentAction.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Agent\\Models\\Agent\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Agent/Actions/HealthCheckAction.php
 
 		-
 			message: '#^Property App\\Domain\\Approval\\Actions\\ApproveAction\:\:\$transition is never read, only written\.$#'
@@ -185,24 +137,6 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Approval/Actions/CreateApprovalRequestAction.php
-
-		-
-			message: '#^Offset ''approval_timeout…'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Approval/Actions/CreateApprovalRequestAction.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
 
 		-
 			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
@@ -333,19 +267,13 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 6
+			count: 3
 			path: app/Domain/Assistant/Services/ContextResolver.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
 			identifier: property.notFound
-			count: 4
-			path: app/Domain/Assistant/Services/ConversationManager.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$role\.$#'
-			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Domain/Assistant/Services/ConversationManager.php
 
 		-
@@ -393,7 +321,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 7
+			count: 4
 			path: app/Domain/Assistant/Tools/GetEntityTools.php
 
 		-
@@ -411,13 +339,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 8
-			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Agent\\Models\\Agent\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
+			count: 5
 			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
 
 		-
@@ -428,12 +350,6 @@ parameters:
 
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Crew\\Models\\Crew\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\Experiment\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
@@ -489,14 +405,8 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 2
-			path: app/Domain/Assistant/Tools/MutationTools.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
 			count: 1
-			path: app/Domain/Audit/Listeners/LogAgentEvent.php
+			path: app/Domain/Assistant/Tools/MutationTools.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -511,18 +421,6 @@ parameters:
 			path: app/Domain/Audit/Listeners/LogBudgetEvent.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Audit/Listeners/LogExperimentTransition.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Budget/Actions/CheckBudgetAction.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>balance_after" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -533,18 +431,6 @@ parameters:
 			identifier: property.notFound
 			count: 3
 			path: app/Domain/Budget/Actions/SettleBudgetAction.php
-
-		-
-			message: '#^Cannot call method isTerminal\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Domain/Budget/Listeners/PauseOnBudgetExceeded.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Paused will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Domain/Budget/Listeners/PauseOnBudgetExceeded.php
 
 		-
 			message: '#^Parameter \#1 \$array \(array\{\}\) to function array_values is empty, call has no effect\.$#'
@@ -635,18 +521,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Agent\\Enums\\AgentStatus\:\:Active will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Domain/Crew/Actions/CreateCrewAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Crew/Actions/CreateCrewAction.php
 
 		-
 			message: '#^Offset ''coordinator'' does not exist on string\.$#'
@@ -759,12 +633,6 @@ parameters:
 		-
 			message: '#^Property App\\Domain\\Crew\\Models\\Crew\:\:\$status \(string\) does not accept App\\Domain\\Crew\\Enums\\CrewStatus\.$#'
 			identifier: assign.propertyType
-			count: 1
-			path: app/Domain/Crew/Actions/UpdateCrewAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Agent\\Enums\\AgentStatus\:\:Active will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Domain/Crew/Actions/UpdateCrewAction.php
 
@@ -991,196 +859,16 @@ parameters:
 			path: app/Domain/Crew/Services/TaskDependencyResolver.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Domain/Experiment/Actions/CollectWorkflowArtifactsAction.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 3
 			path: app/Domain/Experiment/Actions/CollectWorkflowArtifactsAction.php
 
 		-
-			message: '#^Empty array passed to foreach\.$#'
-			identifier: foreach.emptyArray
-			count: 1
-			path: app/Domain/Experiment/Actions/CollectWorkflowArtifactsAction.php
-
-		-
-			message: '#^Offset ''id'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Actions/CollectWorkflowArtifactsAction.php
-
-		-
-			message: '#^Offset ''label'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Actions/CollectWorkflowArtifactsAction.php
-
-		-
-			message: '#^Offset ''workflow_graph'' on non\-falsy\-string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Actions/CollectWorkflowArtifactsAction.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Experiment/Actions/PauseExperimentAction.php
-
-		-
-			message: '#^Property App\\Domain\\Experiment\\Actions\\ResumeExperimentAction\:\:\$transition is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Experiment/Actions/ResumeExperimentAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Paused will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Domain/Experiment/Actions/ResumeExperimentAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Experiment/Actions/ResumeExperimentAction.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryExperimentAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:BuildingFailed is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryExperimentAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:ExecutionFailed is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryExperimentAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:PlanningFailed is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryExperimentAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:ScoringFailed is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryExperimentAction.php
-
-		-
-			message: '#^Method App\\Domain\\Experiment\\Actions\\RetryExperimentAction\:\:statusToStageKey\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryExperimentAction.php
-
-		-
-			message: '#^Property App\\Domain\\Experiment\\Actions\\RetryExperimentAction\:\:\$transition is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryExperimentAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryExperimentAction.php
-
-		-
-			message: '#^Method App\\Domain\\Experiment\\Actions\\RetryFromStepAction\:\:collectDownstreamNodeIds\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryFromStepAction.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryFromStepAction.php
-
-		-
-			message: '#^Offset ''workflow_graph'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryFromStepAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Executing will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryFromStepAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Experiment/Actions/RetryFromStepAction.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Actions/TransitionExperimentAction.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Experiment/Actions/TransitionExperimentAction.php
-
-		-
-			message: '#^Parameter \#1 \$from of method App\\Domain\\Experiment\\Actions\\TransitionExperimentAction\:\:shouldSetStartedAt\(\) expects App\\Domain\\Experiment\\Enums\\ExperimentStatus, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Experiment/Actions/TransitionExperimentAction.php
-
-		-
-			message: '#^Parameter \$fromState of class App\\Domain\\Experiment\\Events\\ExperimentTransitioned constructor expects App\\Domain\\Experiment\\Enums\\ExperimentStatus, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Experiment/Actions/TransitionExperimentAction.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Listeners/RecordTransitionMetrics.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Domain/Experiment/Listeners/RecordTransitionMetrics.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
-
-		-
-			message: '#^Cannot call method isTerminal\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
 
 		-
 			message: '#^Offset ''default_llm_model'' does not exist on array\{\}\|string\.$#'
@@ -1207,32 +895,14 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
 
 		-
-			message: '#^Offset ''llm'' does not exist on array\{\}\|string\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
-
-		-
-			message: '#^Offset ''llm'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 2
-			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
-
-		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
-			count: 2
-			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
 
 		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
+			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Experiment\\Enums\\StageStatus\:\:Completed will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
 
@@ -1241,12 +911,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Domain/Experiment/Pipeline/BuildArtifactJob.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$llm_model\.$#'
@@ -1309,18 +973,6 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/BuildArtifactJob.php
 
 		-
-			message: '#^Offset ''llm'' does not exist on array\{\}\|string\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: app/Domain/Experiment/Pipeline/BuildArtifactJob.php
-
-		-
-			message: '#^Offset ''llm'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 2
-			path: app/Domain/Experiment/Pipeline/BuildArtifactJob.php
-
-		-
 			message: '#^Offset ''name'' does not exist on array\{\}\.$#'
 			identifier: offsetAccess.notFound
 			count: 1
@@ -1353,7 +1005,7 @@ parameters:
 		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
-			count: 2
+			count: 1
 			path: app/Domain/Experiment/Pipeline/BuildArtifactJob.php
 
 		-
@@ -1381,44 +1033,14 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/BuildArtifactJob.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Domain/Experiment/Pipeline/CollectMetrics.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Support\\HigherOrderCollectionProxy\<string, Illuminate\\Database\\Eloquent\\Model, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\>\:\:\$outboundActions\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Domain/Experiment/Pipeline/CollectMetrics.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Pipeline/CreateOutboundProposals.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output_snapshot\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Pipeline/CreateOutboundProposals.php
-
-		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 2
-			path: app/Domain/Experiment/Pipeline/CreateOutboundProposals.php
-
-		-
-			message: '#^Offset ''auto_approve'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Pipeline/CreateOutboundProposals.php
-
-		-
-			message: '#^Ternary operator condition is always false\.$#'
-			identifier: ternary.alwaysFalse
 			count: 1
 			path: app/Domain/Experiment/Pipeline/CreateOutboundProposals.php
 
@@ -1433,12 +1055,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Domain/Experiment/Pipeline/ExecuteOutbound.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
@@ -1456,18 +1072,6 @@ parameters:
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 3
-			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
-
-		-
-			message: '#^Offset ''nodes'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
-
-		-
-			message: '#^Offset ''workflow_graph'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
@@ -1489,21 +1093,9 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Pipeline/PlaybookExecutor.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Domain/Experiment/Pipeline/PlaybookExecutor.php
-
-		-
-			message: '#^Cannot call method isTerminal\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 3
 			path: app/Domain/Experiment/Pipeline/PlaybookExecutor.php
 
 		-
@@ -1537,28 +1129,70 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/PlaybookExecutor.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
+			message: '#^Cannot call method diffInMilliseconds\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
+			message: '#^Offset ''artifacts_to_build'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
 
 		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
+			message: '#^Offset ''batch_id'' does not exist on string\.$#'
+			identifier: offsetAccess.notFound
 			count: 1
 			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
 
 		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
+			message: '#^Offset ''batch_id'' on string\|null in empty\(\) does not exist\.$#'
+			identifier: empty.offset
 			count: 1
 			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
+			message: '#^Offset ''description'' on array\{type\: ''email_template'', name\: ''outreach_email'', description\: ''Outreach email for…''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
 			count: 1
-			path: app/Domain/Experiment/Pipeline/RunEvaluationStage.php
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
+			message: '#^Offset ''name'' on array\{type\: ''email_template'', name\: ''outreach_email'', description\: ''Outreach email for…''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
+			message: '#^Offset ''plan'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
+			message: '#^Offset ''type'' on array\{type\: ''email_template'', name\: ''outreach_email'', description\: ''Outreach email for…''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 2
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Experiment\\Enums\\StageStatus\:\:Running will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>output_snapshot" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
 
 		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
@@ -1573,32 +1207,8 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/RunEvaluationStage.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunPlanningStage.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output_snapshot\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunPlanningStage.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunPlanningStage.php
-
-		-
-			message: '#^Offset ''artifacts'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunPlanningStage.php
-
-		-
-			message: '#^Offset ''dependency_context'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Experiment/Pipeline/RunPlanningStage.php
 
@@ -1609,38 +1219,8 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/RunPlanningStage.php
 
 		-
-			message: '#^Variable \$dependencyContext in empty\(\) always exists and is always falsy\.$#'
-			identifier: empty.variable
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunPlanningStage.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunScoringStage.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$payload\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunScoringStage.php
-
-		-
-			message: '#^Offset ''artifacts'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunScoringStage.php
-
-		-
-			message: '#^Offset ''dependency_context'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunScoringStage.php
-
-		-
-			message: '#^Offset ''score_threshold'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Experiment/Pipeline/RunScoringStage.php
 
@@ -1651,70 +1231,10 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/RunScoringStage.php
 
 		-
-			message: '#^Variable \$dependencyContext in empty\(\) always exists and is always falsy\.$#'
-			identifier: empty.variable
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunScoringStage.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Experiment/States/ExperimentStateMachine.php
-
-		-
-			message: '#^Offset ''max_rejection_cycles'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/States/ExperimentStateMachine.php
-
-		-
-			message: '#^Offset ''max_retries_per…'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Experiment/States/ExperimentStateMachine.php
-
-		-
-			message: '#^Parameter \#1 \$from of method App\\Domain\\Experiment\\States\\ExperimentStateMachine\:\:isRetryTransition\(\) expects App\\Domain\\Experiment\\Enums\\ExperimentStatus, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Experiment/States/ExperimentStateMachine.php
-
-		-
-			message: '#^Parameter \#1 \$from of static method App\\Domain\\Experiment\\States\\ExperimentTransitionMap\:\:canTransition\(\) expects App\\Domain\\Experiment\\Enums\\ExperimentStatus, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Experiment/States/ExperimentStateMachine.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Experiment/States/ExperimentStateMachine.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Rejected will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Domain/Experiment/States/ExperimentStateMachine.php
-
-		-
 			message: '#^Strict comparison using \!\=\= between App\\Domain\\Experiment\\Enums\\ExperimentStatus and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Killed will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Domain/Experiment/States/ExperimentTransitionMap.php
-
-		-
-			message: '#^Left side of && is always false\.$#'
-			identifier: booleanAnd.leftAlwaysFalse
-			count: 1
-			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
-
-		-
-			message: '#^Offset ''workflow_graph'' on string\|null in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
 
 		-
 			message: '#^Offset ''capabilities'' on string on left side of \?\? does not exist\.$#'
@@ -3163,76 +2683,10 @@ parameters:
 			path: app/Domain/Workflow/Models/WorkflowNode.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Cannot call method isTerminal\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 3
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Method App\\Domain\\Workflow\\Services\\WorkflowGraphExecutor\:\:buildAdjacencyMap\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Method App\\Domain\\Workflow\\Services\\WorkflowGraphExecutor\:\:buildEdgeMap\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Method App\\Domain\\Workflow\\Services\\WorkflowGraphExecutor\:\:dispatchNodeBatch\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Method App\\Domain\\Workflow\\Services\\WorkflowGraphExecutor\:\:filterReadyNodes\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Method App\\Domain\\Workflow\\Services\\WorkflowGraphExecutor\:\:resolveExecutableNodes\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 2
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Offset ''workflow_graph'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 2
-			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Agent\\Enums\\AgentStatus\:\:Active will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/Api/V1/AgentController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
@@ -4993,12 +4447,6 @@ parameters:
 			path: app/Infrastructure/AI/Middleware/IdempotencyCheck.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Agent\\Models\\Agent\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Infrastructure/AI/Services/CircuitBreaker.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$provider\.$#'
 			identifier: property.notFound
 			count: 1
@@ -5087,42 +4535,6 @@ parameters:
 			identifier: booleanAnd.alwaysFalse
 			count: 2
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Experiment\\Models\\Experiment\>\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Jobs/Middleware/CheckBudgetAvailable.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Killed will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Jobs/Middleware/CheckKillSwitch.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Paused will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Jobs/Middleware/CheckKillSwitch.php
-
-		-
-			message: '#^Cannot unset offset ''fallback_chain'' on array\{\}\|string\.$#'
-			identifier: unset.offset
-			count: 1
-			path: app/Livewire/Agents/AgentDetailPage.php
-
-		-
-			message: '#^Offset ''fallback_chain'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Agents/AgentDetailPage.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Agent\\Enums\\AgentStatus\:\:Active will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Livewire/Agents/AgentDetailPage.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -5323,12 +4735,6 @@ parameters:
 			path: app/Livewire/Dashboard/DashboardPage.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Livewire/Dashboard/DashboardPage.php
-
-		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -5381,30 +4787,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Experiments/ExecutionLogPanel.php
-
-		-
-			message: '#^Call to function in_array\(\) with string and array\{App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Building, App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:BuildingFailed\} will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Livewire/Experiments/ExperimentDetailPage.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Livewire/Experiments/ExperimentDetailPage.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Experiment\\Enums\\ExperimentStatus\:\:Draft will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Livewire/Experiments/ExperimentDetailPage.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Livewire/Experiments/ExperimentDetailPage.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$completed_at\.$#'
@@ -5491,48 +4873,6 @@ parameters:
 			path: app/Livewire/Experiments/ExperimentTasksPanel.php
 
 		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 1
-			path: app/Livewire/Experiments/ExperimentTasksPanel.php
-
-		-
-			message: '#^Offset ''config'' on null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Experiments/ExperimentTasksPanel.php
-
-		-
-			message: '#^Offset ''nodes'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Experiments/ExperimentTasksPanel.php
-
-		-
-			message: '#^Offset ''type'' on null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Experiments/ExperimentTasksPanel.php
-
-		-
-			message: '#^Offset ''workflow_graph'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Experiments/ExperimentTasksPanel.php
-
-		-
-			message: '#^Offset ''workflow_id'' on null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Experiments/ExperimentTasksPanel.php
-
-		-
-			message: '#^Offset non\-falsy\-string on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Experiments/ExperimentTasksPanel.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
@@ -5569,20 +4909,8 @@ parameters:
 			path: app/Livewire/Experiments/MetricsPanel.php
 
 		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Livewire/Experiments/WorkflowProgressPanel.php
-
-		-
-			message: '#^Offset ''workflow_graph'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Experiments/WorkflowProgressPanel.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
+			message: '#^Using nullsafe property access "\?\-\>status" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Experiments/WorkflowProgressPanel.php
 
@@ -5711,12 +5039,6 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Livewire/Projects/ProjectDetailPage.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Agent\\Enums\\AgentStatus\:\:Disabled will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Livewire/Settings/GlobalSettingsPage.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -5941,30 +5263,6 @@ parameters:
 			path: app/Livewire/Workflows/WorkflowDetailPage.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Agent/AgentCreateTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Agent/AgentGetTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Agent/AgentListTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Agent\\Models\\Agent\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/Agent/AgentListTool.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
 			identifier: property.notFound
 			count: 1
@@ -6073,12 +5371,6 @@ parameters:
 			path: app/Mcp/Tools/Crew/CrewListTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Experiment/ExperimentCreateTool.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output_snapshot\.$#'
 			identifier: property.notFound
 			count: 1
@@ -6095,60 +5387,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Experiment/ExperimentGetTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Mcp/Tools/Experiment/ExperimentGetTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Experiment/ExperimentKillTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Mcp/Tools/Experiment/ExperimentListTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\Experiment\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/Experiment/ExperimentListTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Experiment/ExperimentPauseTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Experiment/ExperimentResumeTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Experiment/ExperimentRetryTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Experiment/ExperimentValidTransitionsTool.php
-
-		-
-			message: '#^Parameter \#1 \$from of static method App\\Domain\\Experiment\\States\\ExperimentTransitionMap\:\:allowedTransitions\(\) expects App\\Domain\\Experiment\\Enums\\ExperimentStatus, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Mcp/Tools/Experiment/ExperimentValidTransitionsTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'

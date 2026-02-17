@@ -10,7 +10,25 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string $agent_id
+ * @property string|null $execution_id
+ * @property EvolutionProposalStatus $status
+ * @property string|null $analysis
+ * @property array|null $proposed_changes
+ * @property string|null $reasoning
+ * @property float|null $confidence_score
+ * @property string|null $reviewed_by
+ * @property Carbon|null $reviewed_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Agent $agent
+ * @property-read AgentExecution|null $execution
+ */
 class EvolutionProposal extends Model
 {
     use BelongsToTeam, HasUuids;

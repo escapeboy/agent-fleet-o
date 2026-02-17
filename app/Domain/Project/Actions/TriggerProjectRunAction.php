@@ -5,9 +5,11 @@ namespace App\Domain\Project\Actions;
 use App\Domain\Experiment\Actions\CreateExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ProjectRunStatus;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Project\Models\ProjectSchedule;
 use App\Domain\Project\Services\DependencyResolver;
 use Illuminate\Support\Facades\DB;
 
@@ -26,8 +28,14 @@ class TriggerProjectRunAction
 
             // Merge schedule overrides (from ProjectSchedule.overrides) if triggered by schedule
             $overrides = $scheduleOverrides ?? [];
-            if ($trigger === 'schedule' && $project->schedule?->overrides) {
-                $overrides = array_merge($project->schedule->overrides, $overrides);
+            if ($trigger === 'schedule') {
+                /** @var ProjectSchedule|null $schedule */
+                $schedule = $project->schedule;
+                /** @var array|null $schedOverrides */
+                $schedOverrides = $schedule?->overrides;
+                if ($schedOverrides) {
+                    $overrides = array_merge($schedOverrides, $overrides);
+                }
             }
 
             $runNumber = ($project->total_runs ?? 0) + 1;
@@ -60,7 +68,9 @@ class TriggerProjectRunAction
             $extraConstraints = [];
 
             // Execution mode: override > project default
-            $executionMode = $overrides['execution_mode'] ?? $project->execution_mode?->value;
+            /** @var ProjectExecutionMode|null $executionModeEnum */
+            $executionModeEnum = $project->execution_mode;
+            $executionMode = $overrides['execution_mode'] ?? $executionModeEnum?->value;
             if ($executionMode) {
                 $extraConstraints['execution_mode'] = $executionMode;
             }

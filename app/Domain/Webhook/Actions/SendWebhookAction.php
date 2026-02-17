@@ -40,13 +40,17 @@ class SendWebhookAction
         ];
 
         try {
+            /** @var array $retryConfig */
+            $retryConfig = $endpoint->retry_config;
+
             $call = WebhookCall::create()
                 ->url($endpoint->url)
                 ->payload($payload)
                 ->useSecret($endpoint->secret ?? '')
-                ->maximumTries($endpoint->retry_config['max_retries'] ?? 3);
+                ->maximumTries($retryConfig['max_retries'] ?? 3);
 
             // Add custom headers if configured
+            /** @var array<string, string> $headers */
             $headers = $endpoint->headers ?? [];
             if (! empty($headers)) {
                 $call->withHeaders($headers);

@@ -17,7 +17,27 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string|null $team_id
+ * @property string $name
+ * @property string|null $role
+ * @property string|null $goal
+ * @property string|null $backstory
+ * @property array|null $personality
+ * @property string $provider
+ * @property string $model
+ * @property AgentStatus $status
+ * @property array|null $config
+ * @property array|null $capabilities
+ * @property array|null $constraints
+ * @property int|null $budget_cap_credits
+ * @property int $budget_spent_credits
+ * @property int $cost_per_1k_input
+ * @property int $cost_per_1k_output
+ * @property Carbon|null $last_health_check
+ */
 class Agent extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;

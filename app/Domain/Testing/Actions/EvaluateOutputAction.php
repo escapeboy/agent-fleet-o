@@ -31,7 +31,7 @@ class EvaluateOutputAction
             $ruleCount = 1;
         }
 
-        $avgScore = $ruleCount > 0 ? $totalScore / $ruleCount : 0;
+        $avgScore = $totalScore / $ruleCount;
         $passed = $avgScore >= $qualityThreshold;
 
         return [

@@ -19,7 +19,7 @@ class ThemeSwitcher extends Component
 
     public function mount(): void
     {
-        $this->theme = auth()->user()?->theme ?? 'default';
+        $this->theme = auth()->user()->theme ?? 'default';
     }
 
     public function setTheme(string $theme): void

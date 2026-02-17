@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Projects;
 
+use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
 use Livewire\Component;
@@ -68,7 +69,12 @@ class ProjectKanbanPage extends Component
         $columns = [];
         foreach (static::$columns as $key => $config) {
             $columns[$key] = $experiments->filter(
-                fn ($e) => in_array($e->status->value, $config['statuses']),
+                function (Experiment $e) use ($config): bool {
+                    /** @var ExperimentStatus $status */
+                    $status = $e->status;
+
+                    return in_array($status->value, $config['statuses']);
+                },
             )->values();
         }
 
@@ -85,10 +91,12 @@ class ProjectKanbanPage extends Component
         $edges = [];
 
         foreach ($experiments as $exp) {
+            /** @var ExperimentStatus $expStatus */
+            $expStatus = $exp->status;
             $nodes[] = [
                 'id' => $exp->id,
                 'label' => $exp->title ?? 'Experiment',
-                'status' => $exp->status->value,
+                'status' => $expStatus->value,
                 'iteration' => $exp->current_iteration,
             ];
 
@@ -113,6 +121,6 @@ class ProjectKanbanPage extends Component
             'columns' => static::$columns,
             'experimentsByColumn' => $this->getExperimentsByColumn(),
             'graphData' => $this->viewMode === 'graph' ? $this->getGraphData() : [],
-        ])->layout('layouts.app', ['header' => $this->project->name.' — Board']);
+        ])->layout('layouts.app', ['header' => $this->project->title.' — Board']);
     }
 }

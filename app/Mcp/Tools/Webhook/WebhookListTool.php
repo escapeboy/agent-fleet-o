@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Webhook;
 
 use App\Domain\Webhook\Models\WebhookEndpoint;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -39,15 +40,20 @@ class WebhookListTool extends Tool
 
         return Response::text(json_encode([
             'count' => $endpoints->count(),
-            'endpoints' => $endpoints->map(fn ($e) => [
-                'id' => $e->id,
-                'name' => $e->name,
-                'url' => $e->url,
-                'events' => $e->events,
-                'is_active' => $e->is_active,
-                'failure_count' => $e->failure_count,
-                'last_triggered_at' => $e->last_triggered_at?->toIso8601String(),
-            ])->toArray(),
+            'endpoints' => $endpoints->map(function (WebhookEndpoint $e): array {
+                /** @var Carbon|null $lastTriggeredAt */
+                $lastTriggeredAt = $e->last_triggered_at;
+
+                return [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                    'url' => $e->url,
+                    'events' => $e->events,
+                    'is_active' => $e->is_active,
+                    'failure_count' => $e->failure_count,
+                    'last_triggered_at' => $lastTriggeredAt?->toIso8601String(),
+                ];
+            })->toArray(),
         ]));
     }
 }

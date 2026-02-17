@@ -3,6 +3,7 @@
 namespace App\Livewire\Evolution;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Evolution\Actions\AnalyzeExecutionForEvolutionAction;
 use App\Domain\Evolution\Actions\ApplyEvolutionProposalAction;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
@@ -25,6 +26,7 @@ class EvolutionProposalPanel extends Component
         $this->success = null;
 
         try {
+            /** @var AgentExecution|null $latestExecution */
             $latestExecution = $this->agent->executions()->latest()->first();
 
             app(AnalyzeExecutionForEvolutionAction::class)->execute(

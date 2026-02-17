@@ -19,11 +19,11 @@ class AnalyzeExecutionForEvolutionAction
     {
         $context = $this->buildAnalysisContext($agent, $execution);
 
-        $response = $this->gateway->send(new AiRequestDTO(
+        $response = $this->gateway->complete(new AiRequestDTO(
             provider: $agent->provider,
             model: $agent->model,
             systemPrompt: $this->buildSystemPrompt(),
-            userMessage: $context,
+            userPrompt: $context,
             teamId: $agent->team_id,
             maxTokens: 2000,
             temperature: 0.3,
@@ -87,11 +87,11 @@ PROMPT;
 
         if ($execution) {
             $parts[] = "Last execution status: {$execution->status}";
-            if ($execution->error) {
-                $parts[] = "Error: {$execution->error}";
+            if ($execution->error_message) {
+                $parts[] = "Error: {$execution->error_message}";
             }
             if ($execution->output) {
-                $output = is_array($execution->output) ? json_encode($execution->output) : $execution->output;
+                $output = json_encode($execution->output);
                 $parts[] = 'Output (truncated): '.mb_substr($output, 0, 500);
             }
         }

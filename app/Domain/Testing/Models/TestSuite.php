@@ -52,6 +52,7 @@ class TestSuite extends Model
 
     public function latestRun(): ?TestRun
     {
+        /** @var TestRun|null */
         return $this->testRuns()->latest()->first();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Evolution;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Evolution\Actions\AnalyzeExecutionForEvolutionAction;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -27,6 +28,7 @@ class EvolutionAnalyzeTool extends Tool
     public function handle(Request $request): Response
     {
         $agent = Agent::findOrFail($request->get('agent_id'));
+        /** @var AgentExecution|null $latestExecution */
         $latestExecution = $agent->executions()->latest()->first();
 
         $proposal = app(AnalyzeExecutionForEvolutionAction::class)->execute(
