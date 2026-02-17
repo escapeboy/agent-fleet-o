@@ -89,7 +89,7 @@ class ConnectorConfigTestTool extends Tool
         $response = Http::timeout(10)->get("https://api.telegram.org/bot{$token}/getMe");
 
         if ($response->successful() && $response->json('ok')) {
-            return 'Connected as @' . $response->json('result.username');
+            return 'Connected as @'.$response->json('result.username');
         }
 
         throw new \RuntimeException($response->json('description', 'Invalid bot token'));
@@ -108,7 +108,7 @@ class ConnectorConfigTestTool extends Tool
             return 'Message sent successfully';
         }
 
-        throw new \RuntimeException('Slack returned ' . $response->status() . ': ' . $response->body());
+        throw new \RuntimeException('Slack returned '.$response->status().': '.$response->body());
     }
 
     private function testDiscord(array $creds): string
@@ -118,13 +118,13 @@ class ConnectorConfigTestTool extends Tool
             throw new \RuntimeException('Webhook URL is required');
         }
 
-        $response = Http::timeout(10)->post($url . '?wait=true', ['content' => '[Test] Agent Fleet connectivity check']);
+        $response = Http::timeout(10)->post($url.'?wait=true', ['content' => '[Test] Agent Fleet connectivity check']);
 
         if ($response->successful()) {
             return 'Message sent successfully';
         }
 
-        throw new \RuntimeException('Discord returned ' . $response->status() . ': ' . substr($response->body(), 0, 200));
+        throw new \RuntimeException('Discord returned '.$response->status().': '.substr($response->body(), 0, 200));
     }
 
     private function testTeams(array $creds): string
@@ -158,7 +158,7 @@ class ConnectorConfigTestTool extends Tool
             return 'Card sent successfully';
         }
 
-        throw new \RuntimeException('Teams returned ' . $response->status());
+        throw new \RuntimeException('Teams returned '.$response->status());
     }
 
     private function testGoogleChat(array $creds): string
@@ -174,7 +174,7 @@ class ConnectorConfigTestTool extends Tool
             return 'Message sent successfully';
         }
 
-        throw new \RuntimeException('Google Chat returned ' . $response->status());
+        throw new \RuntimeException('Google Chat returned '.$response->status());
     }
 
     private function testWhatsApp(array $creds): string
@@ -212,7 +212,7 @@ class ConnectorConfigTestTool extends Tool
         $errno = 0;
         $errstr = '';
         $scheme = $encryption === 'ssl' ? 'ssl://' : '';
-        $fp = @fsockopen($scheme . $host, $port, $errno, $errstr, 10);
+        $fp = @fsockopen($scheme.$host, $port, $errno, $errstr, 10);
 
         if (! $fp) {
             throw new \RuntimeException("Cannot connect to {$host}:{$port} - {$errstr}");
@@ -222,7 +222,7 @@ class ConnectorConfigTestTool extends Tool
         fclose($fp);
 
         if (str_starts_with(trim($banner), '220')) {
-            return 'SMTP server responded: ' . trim(substr($banner, 4));
+            return 'SMTP server responded: '.trim(substr($banner, 4));
         }
 
         throw new \RuntimeException("Unexpected SMTP response: {$banner}");
@@ -246,9 +246,9 @@ class ConnectorConfigTestTool extends Tool
         $response = Http::timeout(10)->withHeaders($headers)->post($url, $payload);
 
         if ($response->successful()) {
-            return 'Webhook responded with ' . $response->status();
+            return 'Webhook responded with '.$response->status();
         }
 
-        throw new \RuntimeException('Webhook returned ' . $response->status() . ': ' . substr($response->body(), 0, 200));
+        throw new \RuntimeException('Webhook returned '.$response->status().': '.substr($response->body(), 0, 200));
     }
 }

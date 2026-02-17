@@ -35,7 +35,7 @@ class ConnectorConfigSaveTool extends Tool
         $validChannels = ['telegram', 'slack', 'discord', 'teams', 'google_chat', 'whatsapp', 'email', 'webhook'];
 
         if (! in_array($channel, $validChannels)) {
-            return Response::error('Invalid channel. Must be one of: ' . implode(', ', $validChannels));
+            return Response::error('Invalid channel. Must be one of: '.implode(', ', $validChannels));
         }
 
         $credentials = $request->get('credentials');
