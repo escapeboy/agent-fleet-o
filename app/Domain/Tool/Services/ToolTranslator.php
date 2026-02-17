@@ -135,36 +135,30 @@ class ToolTranslator
         array $allowedPaths,
         int $timeout,
         int $maxOutputChars,
+        ?array $projectCommandPolicy = null,
+        ?array $agentCommandPolicy = null,
     ): string {
-        // Validate command starts with an allowed binary
-        $binary = explode(' ', trim($command))[0];
-        $binary = basename($binary); // Strip path prefixes like /usr/bin/
-
-        if (! in_array($binary, $allowedCommands)) {
-            return "Error: Command '{$binary}' is not allowed. Allowed: ".implode(', ', $allowedCommands);
-        }
-
-        // Block dangerous patterns
-        $dangerousPatterns = ['| bash', '| sh', '| zsh', '$(', '`', '&& rm', '; rm', 'sudo ', 'chmod ', 'chown '];
-        foreach ($dangerousPatterns as $pattern) {
-            if (stripos($command, $pattern) !== false) {
-                return "Error: Command contains blocked pattern: '{$pattern}'";
-            }
-        }
-
-        // Validate working directory
         $cwd = $workingDirectory ?? $allowedPaths[0] ?? '/tmp';
-        $resolvedCwd = realpath($cwd) ?: $cwd;
-        $isAllowed = false;
-        foreach ($allowedPaths as $path) {
-            $resolvedPath = realpath($path) ?: $path;
-            if (str_starts_with($resolvedCwd, $resolvedPath)) {
-                $isAllowed = true;
-                break;
-            }
+
+        // Delegate security validation to CommandSecurityPolicy
+        $policy = app(CommandSecurityPolicy::class);
+        $validation = $policy->validate(
+            $command, $cwd, $allowedCommands, $allowedPaths,
+            $projectCommandPolicy, $agentCommandPolicy,
+        );
+
+        if (! $validation->allowed) {
+            return "Error: {$validation->reason}";
         }
-        if (! $isAllowed) {
-            return "Error: Working directory '{$cwd}' is outside allowed paths.";
+
+        if ($validation->requiresApproval) {
+            activity('tool_security')
+                ->withProperties([
+                    'command' => $command,
+                    'level' => $validation->level,
+                    'working_directory' => $cwd,
+                ])
+                ->log("Command requires approval: {$command}");
         }
 
         // Ensure the working directory exists

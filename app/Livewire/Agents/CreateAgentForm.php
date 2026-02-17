@@ -18,6 +18,17 @@ class CreateAgentForm extends Component
 
     public string $backstory = '';
 
+    // Personality traits
+    public string $personalityTone = '';
+
+    public string $personalityCommunicationStyle = '';
+
+    public string $personalityTraits = '';
+
+    public string $personalityBehavioralRules = '';
+
+    public string $personalityResponseFormat = '';
+
     public string $provider = 'anthropic';
 
     public string $model = 'claude-sonnet-4-5';
@@ -29,6 +40,27 @@ class CreateAgentForm extends Component
     public array $selectedToolIds = [];
 
     public array $fallbackChain = [];
+
+    public function mount(): void
+    {
+        $templateSlug = request('template');
+        if ($templateSlug) {
+            $template = collect(config('agent-templates', []))
+                ->firstWhere('slug', $templateSlug);
+            if ($template) {
+                $this->name = ($template['name'] ?? 'Agent').' (Copy)';
+                $this->role = $template['role'] ?? '';
+                $this->goal = $template['goal'] ?? '';
+                $this->backstory = $template['backstory'] ?? '';
+                $personality = $template['personality'] ?? [];
+                $this->personalityTone = $personality['tone'] ?? '';
+                $this->personalityCommunicationStyle = $personality['communication_style'] ?? '';
+                $this->personalityTraits = implode(', ', $personality['traits'] ?? []);
+                $this->personalityBehavioralRules = implode("\n", $personality['behavioral_rules'] ?? []);
+                $this->personalityResponseFormat = $personality['response_format_preference'] ?? '';
+            }
+        }
+    }
 
     public function addFallback(): void
     {
@@ -66,6 +98,9 @@ class CreateAgentForm extends Component
             $config['fallback_chain'] = array_values($filteredChain);
         }
 
+        // Build personality array from form fields
+        $personality = $this->buildPersonalityArray();
+
         app(CreateAgentAction::class)->execute(
             name: $this->name,
             provider: $this->provider,
@@ -78,6 +113,7 @@ class CreateAgentForm extends Component
             skillIds: $this->selectedSkillIds,
             toolIds: $this->selectedToolIds,
             config: $config,
+            personality: $personality,
         );
 
         session()->flash('message', 'Agent created successfully!');
@@ -101,6 +137,23 @@ class CreateAgentForm extends Component
         } else {
             $this->selectedToolIds[] = $toolId;
         }
+    }
+
+    private function buildPersonalityArray(): ?array
+    {
+        $personality = array_filter([
+            'tone' => $this->personalityTone ?: null,
+            'communication_style' => $this->personalityCommunicationStyle ?: null,
+            'traits' => $this->personalityTraits
+                ? array_map('trim', explode(',', $this->personalityTraits))
+                : null,
+            'behavioral_rules' => $this->personalityBehavioralRules
+                ? array_filter(array_map('trim', explode("\n", $this->personalityBehavioralRules)))
+                : null,
+            'response_format_preference' => $this->personalityResponseFormat ?: null,
+        ]);
+
+        return ! empty($personality) ? $personality : null;
     }
 
     public function render()

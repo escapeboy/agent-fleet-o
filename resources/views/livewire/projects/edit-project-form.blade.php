@@ -53,6 +53,8 @@
                         </div>
                         @if($executionMode === 'watcher')
                             <p class="mt-2 text-xs text-amber-600">Watcher mode restricts agents to safe/read-only tools. Write and destructive tools are filtered out at runtime.</p>
+                        @elseif($executionMode === 'yolo')
+                            <p class="mt-2 text-xs text-amber-600">YOLO mode skips automated testing and validation stages. Not available for critical-risk skills. Use for rapid prototyping.</p>
                         @else
                             <p class="mt-2 text-xs text-gray-500">Autonomous mode gives agents full access to all assigned tools.</p>
                         @endif

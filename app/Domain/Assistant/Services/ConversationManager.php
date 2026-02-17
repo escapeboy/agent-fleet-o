@@ -61,36 +61,108 @@ class ConversationManager
     }
 
     /**
-     * Build message history for LLM context, with sliding window truncation.
+     * Build message history for LLM context, using semantic scoring
+     * to prioritize high-value messages within the token budget.
      *
      * @return array<array{role: string, content: string}>
      */
     public function buildMessageHistory(AssistantConversation $conversation): array
     {
+        // Fetch 2x candidates to have a larger pool for scoring
+        /** @var Collection<int, AssistantMessage> $messages */
         $messages = $conversation->messages()
             ->whereIn('role', ['user', 'assistant'])
             ->orderByDesc('created_at')
-            ->limit(self::MAX_CONTEXT_MESSAGES)
+            ->limit(self::MAX_CONTEXT_MESSAGES * 2)
             ->get()
             ->reverse()
             ->values();
 
-        $estimatedTokens = 0;
-        $result = [];
-
-        foreach ($messages as $message) {
-            $messageTokens = (int) ceil(mb_strlen($message->content) / 4);
-            if ($estimatedTokens + $messageTokens > self::MAX_ESTIMATED_TOKENS) {
-                break;
-            }
-            $estimatedTokens += $messageTokens;
-            $result[] = [
-                'role' => $message->role,
-                'content' => $message->content,
-            ];
+        if ($messages->isEmpty()) {
+            return [];
         }
 
-        return $result;
+        $total = $messages->count();
+
+        // Score each message
+        $scored = $messages->map(fn (AssistantMessage $msg, int $idx) => [
+            'message' => $msg,
+            'index' => $idx,
+            'score' => $this->scoreMessage($msg, $idx, $total),
+        ]);
+
+        // Sort by score descending, then select within token budget
+        $sorted = $scored->sortByDesc('score');
+
+        $estimatedTokens = 0;
+        $selected = [];
+
+        foreach ($sorted as $item) {
+            $messageTokens = (int) ceil(mb_strlen($item['message']->content) / 4);
+
+            if ($estimatedTokens + $messageTokens > self::MAX_ESTIMATED_TOKENS) {
+                continue;
+            }
+
+            $estimatedTokens += $messageTokens;
+            $selected[] = $item;
+
+            if (count($selected) >= self::MAX_CONTEXT_MESSAGES) {
+                break;
+            }
+        }
+
+        // Re-sort by original chronological order
+        usort($selected, fn ($a, $b) => $a['index'] <=> $b['index']);
+
+        return array_map(fn ($item) => [
+            'role' => $item['message']->role,
+            'content' => $item['message']->content,
+        ], $selected);
+    }
+
+    /**
+     * Score a message based on information density and relevance.
+     * Higher scores = more likely to be kept in context.
+     */
+    public function scoreMessage(AssistantMessage $message, int $index, int $total): float
+    {
+        $score = 0.0;
+
+        // Recency bonus (0-3 points, linear scale)
+        $recencyRatio = $total > 1 ? $index / ($total - 1) : 1.0;
+        $score += 3.0 * $recencyRatio;
+
+        // Tool call/result messages are high-value
+        if (! empty($message->tool_calls)) {
+            $score += 2.0;
+        }
+        if (! empty($message->tool_results)) {
+            $score += 2.0;
+        }
+
+        // Length penalty for very long messages
+        $length = mb_strlen($message->content);
+        if ($length > 2000) {
+            $score -= 1.0;
+        }
+        if ($length > 5000) {
+            $score -= 1.0;
+        }
+
+        // First 3 and last 3 messages always high priority (context anchoring)
+        if ($index < 3 || $index >= $total - 3) {
+            $score += 3.0;
+        }
+
+        // Pinned messages via metadata
+        /** @var array|null $metadata */
+        $metadata = $message->metadata;
+        if (! empty($metadata['pinned'])) {
+            $score += 5.0;
+        }
+
+        return $score;
     }
 
     /**

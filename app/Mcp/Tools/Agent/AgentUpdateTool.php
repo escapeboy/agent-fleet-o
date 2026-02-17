@@ -28,6 +28,8 @@ class AgentUpdateTool extends Tool
                 ->description('New goal'),
             'backstory' => $schema->string()
                 ->description('New backstory'),
+            'personality' => $schema->object()
+                ->description('New personality traits: {tone, communication_style, traits[], behavioral_rules[], response_format_preference}'),
         ];
     }
 
@@ -39,6 +41,7 @@ class AgentUpdateTool extends Tool
             'role' => 'nullable|string',
             'goal' => 'nullable|string',
             'backstory' => 'nullable|string',
+            'personality' => 'nullable|array',
         ]);
 
         $agent = Agent::find($validated['agent_id']);
@@ -52,10 +55,11 @@ class AgentUpdateTool extends Tool
             'role' => $validated['role'] ?? null,
             'goal' => $validated['goal'] ?? null,
             'backstory' => $validated['backstory'] ?? null,
+            'personality' => $validated['personality'] ?? null,
         ], fn ($v) => $v !== null);
 
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory.');
+            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality.');
         }
 
         $agent->update($data);

@@ -6,7 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
-use App\Domain\Memory\Actions\RetrieveRelevantMemoriesAction;
+use App\Domain\Memory\Services\MemoryContextInjector;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
@@ -25,7 +25,7 @@ class ExecuteAgentAction
         private readonly ResolveAgentToolsAction $resolveTools,
         private readonly ResolveProjectCredentialsAction $resolveCredentials,
         private readonly ProviderResolver $providerResolver,
-        private readonly RetrieveRelevantMemoriesAction $retrieveMemories,
+        private readonly MemoryContextInjector $memoryInjector,
     ) {}
 
     /**
@@ -246,6 +246,31 @@ class ExecuteAgentAction
             $parts[] = "Background: {$agent->backstory}";
         }
 
+        // Inject personality traits (SOUL.md)
+        if (! empty($agent->personality)) {
+            /** @var array<string, mixed> $personality */
+            $personality = $agent->personality;
+            $personalityParts = [];
+            if ($personality['tone'] ?? null) {
+                $personalityParts[] = "Tone: {$personality['tone']}";
+            }
+            if ($personality['communication_style'] ?? null) {
+                $personalityParts[] = "Style: {$personality['communication_style']}";
+            }
+            if (! empty($personality['traits'])) {
+                $personalityParts[] = 'Traits: '.implode(', ', $personality['traits']);
+            }
+            if (! empty($personality['behavioral_rules'])) {
+                $personalityParts[] = "Rules:\n".implode("\n", array_map(fn ($r) => "- {$r}", $personality['behavioral_rules']));
+            }
+            if ($personality['response_format_preference'] ?? null) {
+                $personalityParts[] = "Response format: {$personality['response_format_preference']}";
+            }
+            if (! empty($personalityParts)) {
+                $parts[] = "## Personality & Communication Style\n".implode("\n", $personalityParts);
+            }
+        }
+
         // Include skill descriptions as context
         $skills = $agent->skills()->get();
         if ($skills->isNotEmpty()) {
@@ -270,18 +295,9 @@ class ExecuteAgentAction
         }
 
         // Inject relevant memories from past executions
-        if (config('memory.enabled', true) && ! empty($input)) {
-            $queryText = json_encode($input);
-            $memories = $this->retrieveMemories->execute(
-                agentId: $agent->id,
-                query: $queryText,
-                projectId: $project?->id,
-            );
-
-            if ($memories->isNotEmpty()) {
-                $memoryList = $memories->map(fn ($m) => "- {$m->content}")->implode("\n");
-                $parts[] = "## Relevant Context from Past Executions\n{$memoryList}";
-            }
+        $memoryContext = $this->memoryInjector->buildContext($agent->id, $input, $project?->id);
+        if ($memoryContext) {
+            $parts[] = $memoryContext;
         }
 
         $parts[] = 'Use the available tools to accomplish the task. Be thorough but efficient.';

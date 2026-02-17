@@ -16,6 +16,11 @@
             @endforeach
         </x-form-select>
 
+        <a href="{{ route('agents.templates') }}"
+            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Templates
+        </a>
+
         <a href="{{ route('agents.create') }}"
             class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
             New Agent
@@ -60,7 +65,10 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $agent->role ?? '-' }}</td>
                         <td class="px-6 py-4">
-                            <x-status-badge :status="$agent->status->value" />
+                            <div class="flex items-center gap-2">
+                                <x-agent-status-indicator :status="$agent->status->value" size="sm" />
+                                <x-status-badge :status="$agent->status->value" />
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $agent->provider }}/{{ $agent->model }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $agent->skills_count }}</td>

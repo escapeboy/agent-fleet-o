@@ -20,7 +20,31 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string|null $user_id
+ * @property string|null $workflow_id
+ * @property int|null $workflow_version
+ * @property string $title
+ * @property string|null $thesis
+ * @property ExperimentTrack|null $track
+ * @property ExperimentStatus $status
+ * @property string|null $paused_from_status
+ * @property array|null $constraints
+ * @property array|null $success_criteria
+ * @property int|null $budget_cap_credits
+ * @property int $budget_spent_credits
+ * @property int|null $max_iterations
+ * @property int $current_iteration
+ * @property int|null $max_outbound_count
+ * @property int $outbound_count
+ * @property Carbon|null $started_at
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $killed_at
+ */
 class Experiment extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids;
@@ -141,5 +165,10 @@ class Experiment extends Model
     public function hasWorkflow(): bool
     {
         return $this->workflow_id !== null;
+    }
+
+    public function isYoloMode(): bool
+    {
+        return ($this->constraints['execution_mode'] ?? null) === 'yolo';
     }
 }

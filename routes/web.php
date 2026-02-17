@@ -3,6 +3,7 @@
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
+use App\Livewire\Agents\AgentTemplateGalleryPage;
 use App\Livewire\Agents\CreateAgentForm;
 use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Livewire\Audit\AuditLogPage;
@@ -24,6 +25,7 @@ use App\Livewire\Memory\MemoryBrowserPage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
+use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Skills\CreateSkillForm;
@@ -62,6 +64,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/skills/{skill}', SkillDetailPage::class)->name('skills.show');
 
     Route::get('/agents', AgentListPage::class)->name('agents.index');
+    Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
 
@@ -81,6 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projects', ProjectListPage::class)->name('projects.index');
     Route::get('/projects/create', CreateProjectFormPage::class)->name('projects.create');
     Route::get('/projects/{project}/edit', EditProjectForm::class)->name('projects.edit');
+    Route::get('/projects/{project}/kanban', ProjectKanbanPage::class)->name('projects.kanban');
     Route::get('/projects/{project}', ProjectDetailPage::class)->name('projects.show');
 
     Route::get('/workflows', WorkflowListPage::class)->name('workflows.index');

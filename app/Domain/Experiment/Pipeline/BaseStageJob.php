@@ -12,6 +12,9 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
+use App\Jobs\Middleware\EnforceConcurrencyLimit;
+use App\Jobs\Middleware\EnforceExecutionDepth;
+use App\Jobs\Middleware\EnforceExecutionTtl;
 use App\Jobs\Middleware\TenantRateLimit;
 use App\Models\GlobalSetting;
 use Illuminate\Bus\Queueable;
@@ -48,6 +51,9 @@ abstract class BaseStageJob implements ShouldQueue
         return [
             new CheckKillSwitch,
             new CheckBudgetAvailable,
+            new EnforceExecutionTtl,
+            new EnforceExecutionDepth,
+            new EnforceConcurrencyLimit,
             new TenantRateLimit('experiments', 30),
             (new WithoutOverlapping($this->experimentId))->releaseAfter(300),
         ];
@@ -287,6 +293,15 @@ abstract class BaseStageJob implements ShouldQueue
             'provider' => $platformProvider,
             'model' => $platformModel,
         ];
+    }
+
+    /**
+     * Check if this stage should be skipped due to YOLO mode.
+     * Testing and validation stages use this to skip when YOLO is active.
+     */
+    protected function shouldSkipForYolo(Experiment $experiment): bool
+    {
+        return $experiment->isYoloMode();
     }
 
     protected function generateIdempotencyKey(string $suffix = ''): string

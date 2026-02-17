@@ -3,6 +3,7 @@
     <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
             <div class="flex items-center gap-3">
+                <x-agent-status-indicator :status="$experiment->status->value" size="sm" />
                 <x-status-badge :status="$experiment->status->value" />
                 <span class="text-sm text-gray-500">{{ ucfirst($experiment->track->value) }}</span>
                 <span class="text-sm text-gray-500">Iteration {{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</span>

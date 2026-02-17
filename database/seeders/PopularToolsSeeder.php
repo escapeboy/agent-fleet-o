@@ -926,6 +926,457 @@ class PopularToolsSeeder extends Seeder
                 ],
                 'settings' => ['timeout' => 15],
             ],
+
+            // ─── New MCP Tools (Phase 3) ──────────────────────────────
+
+            [
+                'name' => 'Playwright',
+                'slug' => 'playwright',
+                'description' => 'Browser automation with Playwright — navigate pages, take screenshots, click elements, fill forms, and run accessibility snapshots. More reliable than Puppeteer with auto-waiting and multi-browser support. No API key required.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@playwright/mcp@latest'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'browser_navigate',
+                        'description' => 'Navigate to a URL in the browser',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'url' => ['type' => 'string', 'description' => 'URL to navigate to'],
+                            ],
+                            'required' => ['url'],
+                        ],
+                    ],
+                    [
+                        'name' => 'browser_screenshot',
+                        'description' => 'Take a screenshot of the current page',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string', 'description' => 'Name for the screenshot'],
+                                'selector' => ['type' => 'string', 'description' => 'CSS selector to screenshot (optional)'],
+                                'fullPage' => ['type' => 'boolean', 'description' => 'Capture full scrollable page'],
+                            ],
+                            'required' => ['name'],
+                        ],
+                    ],
+                    [
+                        'name' => 'browser_click',
+                        'description' => 'Click an element on the page using accessibility ref',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'element' => ['type' => 'string', 'description' => 'Human-readable element description'],
+                                'ref' => ['type' => 'string', 'description' => 'Element reference from page snapshot'],
+                            ],
+                            'required' => ['element', 'ref'],
+                        ],
+                    ],
+                    [
+                        'name' => 'browser_snapshot',
+                        'description' => 'Capture an accessibility snapshot of the current page',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'browser_type',
+                        'description' => 'Type text into an editable element',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'ref' => ['type' => 'string', 'description' => 'Element reference'],
+                                'text' => ['type' => 'string', 'description' => 'Text to type'],
+                                'submit' => ['type' => 'boolean', 'description' => 'Press Enter after typing'],
+                            ],
+                            'required' => ['ref', 'text'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 60],
+            ],
+
+            [
+                'name' => 'Context7',
+                'slug' => 'context7',
+                'description' => 'Retrieve up-to-date documentation and code examples for any library or framework directly from source. Resolves library IDs and queries official docs. No API key required.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@upstash/context7-mcp@latest'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'resolve-library-id',
+                        'description' => 'Resolve a package name to a Context7 library ID',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'libraryName' => ['type' => 'string', 'description' => 'Library name to search for'],
+                            ],
+                            'required' => ['libraryName'],
+                        ],
+                    ],
+                    [
+                        'name' => 'get-library-docs',
+                        'description' => 'Query documentation for a specific library',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'context7CompatibleLibraryID' => ['type' => 'string', 'description' => 'Library ID from resolve-library-id'],
+                                'topic' => ['type' => 'string', 'description' => 'Topic or question to search for'],
+                            ],
+                            'required' => ['context7CompatibleLibraryID'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            [
+                'name' => 'Firecrawl',
+                'slug' => 'firecrawl',
+                'description' => 'Advanced web scraping and crawling — extract structured data from websites, crawl entire sites, and convert pages to clean markdown. Supports JavaScript rendering. Requires a Firecrawl API key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Read,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', 'firecrawl-mcp'],
+                    'env' => ['FIRECRAWL_API_KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'firecrawl_scrape',
+                        'description' => 'Scrape a single URL and return clean markdown content',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'url' => ['type' => 'string', 'description' => 'URL to scrape'],
+                                'formats' => ['type' => 'array', 'description' => 'Output formats: markdown, html, rawHtml'],
+                            ],
+                            'required' => ['url'],
+                        ],
+                    ],
+                    [
+                        'name' => 'firecrawl_crawl',
+                        'description' => 'Crawl an entire website from a starting URL',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'url' => ['type' => 'string', 'description' => 'Starting URL to crawl'],
+                                'limit' => ['type' => 'integer', 'description' => 'Maximum pages to crawl (default: 50)'],
+                            ],
+                            'required' => ['url'],
+                        ],
+                    ],
+                    [
+                        'name' => 'firecrawl_extract',
+                        'description' => 'Extract structured data from a URL using a schema',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'urls' => ['type' => 'array', 'description' => 'URLs to extract data from'],
+                                'prompt' => ['type' => 'string', 'description' => 'Extraction prompt describing what data to extract'],
+                            ],
+                            'required' => ['urls'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 60],
+            ],
+
+            [
+                'name' => 'YouTube Transcript',
+                'slug' => 'youtube-transcript',
+                'description' => 'Extract transcripts from YouTube videos. Useful for summarizing video content, extracting key information, or processing educational material. No API key required.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@kimtaeyoon83/mcp-server-youtube-transcript'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'get_transcript',
+                        'description' => 'Get the transcript of a YouTube video',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'url' => ['type' => 'string', 'description' => 'YouTube video URL or ID'],
+                                'lang' => ['type' => 'string', 'description' => 'Language code (default: en)'],
+                            ],
+                            'required' => ['url'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 30],
+            ],
+
+            [
+                'name' => 'Atlassian (Jira + Confluence)',
+                'slug' => 'atlassian',
+                'description' => 'Interact with Jira and Confluence — search and create issues, read and update wiki pages, manage projects. Requires Atlassian API token and site URL.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@anthropic-ai/mcp-server-atlassian'],
+                    'env' => [
+                        'ATLASSIAN_SITE_URL' => '',
+                        'ATLASSIAN_USER_EMAIL' => '',
+                        'ATLASSIAN_API_TOKEN' => '',
+                    ],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'jira_search_issues',
+                        'description' => 'Search Jira issues using JQL',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'jql' => ['type' => 'string', 'description' => 'JQL query string'],
+                                'maxResults' => ['type' => 'integer', 'description' => 'Max results (default: 50)'],
+                            ],
+                            'required' => ['jql'],
+                        ],
+                    ],
+                    [
+                        'name' => 'jira_create_issue',
+                        'description' => 'Create a new Jira issue',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'projectKey' => ['type' => 'string', 'description' => 'Project key (e.g., PROJ)'],
+                                'summary' => ['type' => 'string', 'description' => 'Issue summary'],
+                                'issueType' => ['type' => 'string', 'description' => 'Issue type (Bug, Task, Story)'],
+                                'description' => ['type' => 'string', 'description' => 'Issue description'],
+                            ],
+                            'required' => ['projectKey', 'summary', 'issueType'],
+                        ],
+                    ],
+                    [
+                        'name' => 'confluence_search',
+                        'description' => 'Search Confluence pages',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Search query (CQL)'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'confluence_get_page',
+                        'description' => 'Get a Confluence page by ID',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'pageId' => ['type' => 'string', 'description' => 'Page ID'],
+                            ],
+                            'required' => ['pageId'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            [
+                'name' => 'Figma',
+                'slug' => 'figma',
+                'description' => 'Read Figma design files — get file structure, component details, styles, and design tokens. Useful for design-to-code workflows. Requires a Figma access token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Read,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@anthropic-ai/mcp-server-figma'],
+                    'env' => ['FIGMA_ACCESS_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'figma_get_file',
+                        'description' => 'Get the structure and details of a Figma file',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'fileKey' => ['type' => 'string', 'description' => 'Figma file key (from URL)'],
+                                'nodeId' => ['type' => 'string', 'description' => 'Specific node ID to fetch (optional)'],
+                                'depth' => ['type' => 'integer', 'description' => 'Tree depth to fetch (optional)'],
+                            ],
+                            'required' => ['fileKey'],
+                        ],
+                    ],
+                    [
+                        'name' => 'figma_get_styles',
+                        'description' => 'Get all styles (colors, typography, effects) from a Figma file',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'fileKey' => ['type' => 'string', 'description' => 'Figma file key'],
+                            ],
+                            'required' => ['fileKey'],
+                        ],
+                    ],
+                    [
+                        'name' => 'figma_get_components',
+                        'description' => 'List all components in a Figma file',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'fileKey' => ['type' => 'string', 'description' => 'Figma file key'],
+                            ],
+                            'required' => ['fileKey'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 30],
+            ],
+
+            [
+                'name' => 'Pipedream Connect',
+                'slug' => 'pipedream',
+                'description' => 'Connect to 2400+ APIs and services via Pipedream — trigger workflows, make API calls, process webhooks. Acts as a universal integration bridge. Requires a Pipedream API key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@pipedream/mcp'],
+                    'env' => ['PIPEDREAM_API_KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'pipedream_list_apps',
+                        'description' => 'List available Pipedream app integrations',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Search query for apps'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'pipedream_run_action',
+                        'description' => 'Run a Pipedream action (API call to any connected service)',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'app' => ['type' => 'string', 'description' => 'App slug (e.g., google_sheets, stripe)'],
+                                'action' => ['type' => 'string', 'description' => 'Action to run'],
+                                'params' => ['type' => 'object', 'description' => 'Action parameters'],
+                            ],
+                            'required' => ['app', 'action'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 30],
+            ],
+
+            [
+                'name' => 'AWS',
+                'slug' => 'aws',
+                'description' => 'Interact with AWS services — manage S3 buckets, query DynamoDB, invoke Lambda functions, read CloudWatch logs, and more. Requires AWS credentials (access key + secret).',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Destructive,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@anthropic-ai/mcp-server-aws'],
+                    'env' => [
+                        'AWS_ACCESS_KEY_ID' => '',
+                        'AWS_SECRET_ACCESS_KEY' => '',
+                        'AWS_REGION' => 'us-east-1',
+                    ],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'aws_s3_list',
+                        'description' => 'List S3 buckets or objects in a bucket',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'bucket' => ['type' => 'string', 'description' => 'Bucket name (optional, lists all buckets if empty)'],
+                                'prefix' => ['type' => 'string', 'description' => 'Object key prefix filter'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'aws_s3_get',
+                        'description' => 'Get an object from S3',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'bucket' => ['type' => 'string', 'description' => 'Bucket name'],
+                                'key' => ['type' => 'string', 'description' => 'Object key'],
+                            ],
+                            'required' => ['bucket', 'key'],
+                        ],
+                    ],
+                    [
+                        'name' => 'aws_lambda_invoke',
+                        'description' => 'Invoke an AWS Lambda function',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'functionName' => ['type' => 'string', 'description' => 'Lambda function name or ARN'],
+                                'payload' => ['type' => 'object', 'description' => 'JSON payload to send'],
+                            ],
+                            'required' => ['functionName'],
+                        ],
+                    ],
+                    [
+                        'name' => 'aws_cloudwatch_logs',
+                        'description' => 'Query CloudWatch log groups',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'logGroupName' => ['type' => 'string', 'description' => 'Log group name'],
+                                'filterPattern' => ['type' => 'string', 'description' => 'Filter pattern'],
+                                'limit' => ['type' => 'integer', 'description' => 'Max log events to return'],
+                            ],
+                            'required' => ['logGroupName'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 30],
+            ],
+
+            [
+                'name' => 'Pollinations Image',
+                'slug' => 'pollinations-image',
+                'description' => 'Generate images from text prompts using Pollinations AI. Supports various styles, sizes, and models. Free, no API key required.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@pollinations/model-context-protocol'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'generate_image',
+                        'description' => 'Generate an image from a text prompt',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'prompt' => ['type' => 'string', 'description' => 'Text prompt describing the image to generate'],
+                                'width' => ['type' => 'integer', 'description' => 'Image width in pixels (default: 1024)'],
+                                'height' => ['type' => 'integer', 'description' => 'Image height in pixels (default: 1024)'],
+                                'model' => ['type' => 'string', 'description' => 'Model to use (default: flux)'],
+                                'seed' => ['type' => 'integer', 'description' => 'Random seed for reproducibility'],
+                            ],
+                            'required' => ['prompt'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 60],
+            ],
         ];
     }
 }

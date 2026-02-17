@@ -3,6 +3,7 @@
 namespace App\Domain\Agent\Models;
 
 use App\Domain\Agent\Enums\AgentStatus;
+use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
@@ -16,7 +17,27 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string|null $team_id
+ * @property string $name
+ * @property string|null $role
+ * @property string|null $goal
+ * @property string|null $backstory
+ * @property array|null $personality
+ * @property string $provider
+ * @property string $model
+ * @property AgentStatus $status
+ * @property array|null $config
+ * @property array|null $capabilities
+ * @property array|null $constraints
+ * @property int|null $budget_cap_credits
+ * @property int $budget_spent_credits
+ * @property int $cost_per_1k_input
+ * @property int $cost_per_1k_output
+ * @property Carbon|null $last_health_check
+ */
 class Agent extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
@@ -28,6 +49,7 @@ class Agent extends Model
         'role',
         'goal',
         'backstory',
+        'personality',
         'provider',
         'model',
         'status',
@@ -45,6 +67,7 @@ class Agent extends Model
     {
         return [
             'status' => AgentStatus::class,
+            'personality' => 'array',
             'config' => 'array',
             'capabilities' => 'array',
             'constraints' => 'array',
@@ -92,6 +115,11 @@ class Agent extends Model
     public function executions(): HasMany
     {
         return $this->hasMany(AgentExecution::class)->orderByDesc('created_at');
+    }
+
+    public function evolutionProposals(): HasMany
+    {
+        return $this->hasMany(EvolutionProposal::class)->orderByDesc('created_at');
     }
 
     protected static function newFactory()

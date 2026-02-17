@@ -20,6 +20,7 @@
         "spatie/laravel-activitylog": "^4.11",
         "spatie/laravel-medialibrary": "^11.19",
         "spatie/laravel-query-builder": "^6.4",
+        "spatie/laravel-webhook-server": "^3.9",
         "tpetry/laravel-postgresql-enhanced": "^3.5"
     },
     "require-dev": {

@@ -532,9 +532,20 @@ class WorkflowGraphExecutor
     {
         $jobs = [];
         $dispatchedNodeIds = [];
+        $adjacency = $this->buildAdjacencyMap($graph['edges']);
         $nodeMap = collect($graph['nodes'])->keyBy('id')->toArray();
 
-        foreach ($nodeIds as $nodeId) {
+        // Sort nodes by priority (highest first) so the most impactful nodes execute first
+        $priorities = $this->calculateNodePriorities($nodeIds, $adjacency, $nodeMap);
+        arsort($priorities);
+        $sortedNodeIds = array_keys($priorities);
+
+        Log::info('WorkflowGraphExecutor: Node priorities', [
+            'experiment_id' => $experiment->id,
+            'priorities' => $priorities,
+        ]);
+
+        foreach ($sortedNodeIds as $nodeId) {
             $step = $steps[$nodeId] ?? null;
 
             if (! $step || (! $step->isPending() && $step->status !== 'running')) {
@@ -622,6 +633,92 @@ class WorkflowGraphExecutor
                 'completed_at' => now(),
             ]);
         }
+    }
+
+    /**
+     * Calculate priority scores for nodes based on unblocking potential.
+     * Higher score = should execute first.
+     *
+     * Score = descendant_count * 2 + critical_path_depth + type_weight
+     */
+    private function calculateNodePriorities(array $nodeIds, array $adjacency, array $nodeMap): array
+    {
+        $priorities = [];
+
+        foreach ($nodeIds as $nodeId) {
+            $descendants = $this->countDescendants($nodeId, $adjacency);
+            $depth = $this->longestPathToEnd($nodeId, $adjacency, $nodeMap);
+
+            // Human tasks take longer — prioritize unblocking them first
+            $typeWeight = match ($nodeMap[$nodeId]['type'] ?? 'agent') {
+                'human_task' => 3,
+                'crew' => 2,
+                'agent' => 1,
+                default => 0,
+            };
+
+            $priorities[$nodeId] = ($descendants * 2) + $depth + $typeWeight;
+        }
+
+        return $priorities;
+    }
+
+    /**
+     * Count all transitive descendants of a node (BFS).
+     */
+    private function countDescendants(string $nodeId, array $adjacency): int
+    {
+        $visited = [];
+        $queue = $adjacency[$nodeId] ?? [];
+        $count = 0;
+
+        while (! empty($queue)) {
+            $current = array_shift($queue);
+            if (isset($visited[$current])) {
+                continue;
+            }
+            $visited[$current] = true;
+            $count++;
+            foreach ($adjacency[$current] ?? [] as $child) {
+                if (! isset($visited[$child])) {
+                    $queue[] = $child;
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Longest path from node to any end node (critical path approximation).
+     * Uses memoization and a visiting set to handle cycles safely.
+     */
+    private function longestPathToEnd(string $nodeId, array $adjacency, array $nodeMap, array &$memo = [], array &$visiting = []): int
+    {
+        if (isset($memo[$nodeId])) {
+            return $memo[$nodeId];
+        }
+
+        // Cycle detection: if we're already visiting this node, return 0
+        if (isset($visiting[$nodeId])) {
+            return 0;
+        }
+
+        if (($nodeMap[$nodeId]['type'] ?? '') === 'end') {
+            return $memo[$nodeId] = 0;
+        }
+
+        $visiting[$nodeId] = true;
+
+        $max = 0;
+        foreach ($adjacency[$nodeId] ?? [] as $child) {
+            $childDepth = $this->longestPathToEnd($child, $adjacency, $nodeMap, $memo, $visiting);
+            $max = max($max, $childDepth + 1);
+        }
+
+        unset($visiting[$nodeId]);
+
+        return $memo[$nodeId] = $max;
     }
 
     private function buildAdjacencyMap(array $edges): array

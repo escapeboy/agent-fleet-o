@@ -22,6 +22,7 @@ class CreateAgentAction
         ?int $budgetCapCredits = null,
         array $skillIds = [],
         array $toolIds = [],
+        ?array $personality = null,
     ): Agent {
         $pricing = config("llm_pricing.providers.{$provider}.{$model}");
 
@@ -32,6 +33,7 @@ class CreateAgentAction
             'role' => $role,
             'goal' => $goal,
             'backstory' => $backstory,
+            'personality' => $personality,
             'provider' => $provider,
             'model' => $model,
             'status' => AgentStatus::Active,

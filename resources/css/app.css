@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './themes.css';
+@import './agent-animations.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -22,6 +24,29 @@
 
     --color-sidebar: #111827;
     --color-sidebar-hover: #1f2937;
+
+    /* Theme-aware semantic colors (mapped from CSS variables in themes.css) */
+    --color-surface: var(--surface);
+    --color-surface-alt: var(--surface-alt);
+    --color-surface-raised: var(--surface-raised);
+    --color-on-surface: var(--on-surface);
+    --color-on-surface-muted: var(--on-surface-muted);
+    --color-theme-primary: var(--primary);
+    --color-theme-primary-hover: var(--primary-hover);
+    --color-theme-accent: var(--accent);
+    --color-theme-border: var(--border);
+    --color-theme-border-strong: var(--border-strong);
+    --color-theme-danger: var(--danger);
+    --color-theme-success: var(--success);
+    --color-theme-warning: var(--warning);
+    --color-sidebar: var(--sidebar-bg);
+    --color-sidebar-hover: var(--sidebar-hover);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-header-bg: var(--header-bg);
+    --color-header-border: var(--header-border);
+    --color-input-bg: var(--input-bg);
+    --color-input-border: var(--input-border);
+    --color-code-bg: var(--code-bg);
 }
 
 /* AI output rendering — lightweight prose replacement */

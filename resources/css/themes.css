@@ -1,0 +1,306 @@
+/*
+ * Theme System — 6 named themes × 2 modes (light/dark) = 12 color schemes.
+ * Uses CSS custom properties mapped to Tailwind's @theme directive in app.css.
+ * Theme is set via `data-theme` attribute on <html>.
+ */
+
+/* ─── Default (Blue) Light ─── */
+:root,
+[data-theme="default"] {
+    --surface: #ffffff;
+    --surface-alt: #f9fafb;
+    --surface-raised: #ffffff;
+    --on-surface: #111827;
+    --on-surface-muted: #6b7280;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --accent: #8b5cf6;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --sidebar-bg: #111827;
+    --sidebar-hover: #1f2937;
+    --sidebar-border: #374151;
+    --header-bg: #ffffff;
+    --header-border: #e5e7eb;
+    --input-bg: #ffffff;
+    --input-border: #d1d5db;
+    --code-bg: #f3f4f6;
+}
+
+/* ─── Default Dark ─── */
+[data-theme="default-dark"] {
+    --surface: #111827;
+    --surface-alt: #1f2937;
+    --surface-raised: #1f2937;
+    --on-surface: #f9fafb;
+    --on-surface-muted: #9ca3af;
+    --primary: #60a5fa;
+    --primary-hover: #3b82f6;
+    --accent: #a78bfa;
+    --border: #374151;
+    --border-strong: #4b5563;
+    --danger: #f87171;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --sidebar-bg: #0f172a;
+    --sidebar-hover: #1e293b;
+    --sidebar-border: #1e293b;
+    --header-bg: #1f2937;
+    --header-border: #374151;
+    --input-bg: #1f2937;
+    --input-border: #4b5563;
+    --code-bg: #1f2937;
+}
+
+/* ─── Catppuccin Mocha ─── */
+[data-theme="catppuccin"] {
+    --surface: #1e1e2e;
+    --surface-alt: #181825;
+    --surface-raised: #313244;
+    --on-surface: #cdd6f4;
+    --on-surface-muted: #a6adc8;
+    --primary: #cba6f7;
+    --primary-hover: #b4befe;
+    --accent: #f5c2e7;
+    --border: #313244;
+    --border-strong: #45475a;
+    --danger: #f38ba8;
+    --success: #a6e3a1;
+    --warning: #fab387;
+    --sidebar-bg: #11111b;
+    --sidebar-hover: #181825;
+    --sidebar-border: #313244;
+    --header-bg: #1e1e2e;
+    --header-border: #313244;
+    --input-bg: #313244;
+    --input-border: #45475a;
+    --code-bg: #181825;
+}
+
+/* ─── Catppuccin Latte (Light) ─── */
+[data-theme="catppuccin-light"] {
+    --surface: #eff1f5;
+    --surface-alt: #e6e9ef;
+    --surface-raised: #ffffff;
+    --on-surface: #4c4f69;
+    --on-surface-muted: #7c7f93;
+    --primary: #8839ef;
+    --primary-hover: #7287fd;
+    --accent: #ea76cb;
+    --border: #ccd0da;
+    --border-strong: #bcc0cc;
+    --danger: #d20f39;
+    --success: #40a02b;
+    --warning: #fe640b;
+    --sidebar-bg: #dce0e8;
+    --sidebar-hover: #ccd0da;
+    --sidebar-border: #bcc0cc;
+    --header-bg: #eff1f5;
+    --header-border: #ccd0da;
+    --input-bg: #ffffff;
+    --input-border: #bcc0cc;
+    --code-bg: #e6e9ef;
+}
+
+/* ─── Monokai ─── */
+[data-theme="monokai"] {
+    --surface: #272822;
+    --surface-alt: #1e1f1c;
+    --surface-raised: #3e3d32;
+    --on-surface: #f8f8f2;
+    --on-surface-muted: #75715e;
+    --primary: #e6db74;
+    --primary-hover: #f4e892;
+    --accent: #ae81ff;
+    --border: #3e3d32;
+    --border-strong: #49483e;
+    --danger: #f92672;
+    --success: #a6e22e;
+    --warning: #fd971f;
+    --sidebar-bg: #1e1f1c;
+    --sidebar-hover: #272822;
+    --sidebar-border: #3e3d32;
+    --header-bg: #272822;
+    --header-border: #3e3d32;
+    --input-bg: #3e3d32;
+    --input-border: #49483e;
+    --code-bg: #1e1f1c;
+}
+
+/* ─── Monokai Light ─── */
+[data-theme="monokai-light"] {
+    --surface: #fafafa;
+    --surface-alt: #f0f0f0;
+    --surface-raised: #ffffff;
+    --on-surface: #272822;
+    --on-surface-muted: #75715e;
+    --primary: #b8a600;
+    --primary-hover: #9a8b00;
+    --accent: #7c50c7;
+    --border: #e0e0e0;
+    --border-strong: #cccccc;
+    --danger: #d41a5d;
+    --success: #7ab620;
+    --warning: #d97a14;
+    --sidebar-bg: #272822;
+    --sidebar-hover: #3e3d32;
+    --sidebar-border: #3e3d32;
+    --header-bg: #fafafa;
+    --header-border: #e0e0e0;
+    --input-bg: #ffffff;
+    --input-border: #cccccc;
+    --code-bg: #f0f0f0;
+}
+
+/* ─── Dracula ─── */
+[data-theme="dracula"] {
+    --surface: #282a36;
+    --surface-alt: #21222c;
+    --surface-raised: #44475a;
+    --on-surface: #f8f8f2;
+    --on-surface-muted: #6272a4;
+    --primary: #bd93f9;
+    --primary-hover: #caa9fa;
+    --accent: #ff79c6;
+    --border: #44475a;
+    --border-strong: #6272a4;
+    --danger: #ff5555;
+    --success: #50fa7b;
+    --warning: #f1fa8c;
+    --sidebar-bg: #21222c;
+    --sidebar-hover: #282a36;
+    --sidebar-border: #44475a;
+    --header-bg: #282a36;
+    --header-border: #44475a;
+    --input-bg: #44475a;
+    --input-border: #6272a4;
+    --code-bg: #21222c;
+}
+
+/* ─── Dracula Light ─── */
+[data-theme="dracula-light"] {
+    --surface: #f8f8f2;
+    --surface-alt: #eee8d5;
+    --surface-raised: #ffffff;
+    --on-surface: #282a36;
+    --on-surface-muted: #6272a4;
+    --primary: #7c3aed;
+    --primary-hover: #6d28d9;
+    --accent: #db2777;
+    --border: #d8d6cb;
+    --border-strong: #c8c6bb;
+    --danger: #dc2626;
+    --success: #16a34a;
+    --warning: #ca8a04;
+    --sidebar-bg: #282a36;
+    --sidebar-hover: #44475a;
+    --sidebar-border: #44475a;
+    --header-bg: #f8f8f2;
+    --header-border: #d8d6cb;
+    --input-bg: #ffffff;
+    --input-border: #c8c6bb;
+    --code-bg: #eee8d5;
+}
+
+/* ─── Nord ─── */
+[data-theme="nord"] {
+    --surface: #2e3440;
+    --surface-alt: #3b4252;
+    --surface-raised: #434c5e;
+    --on-surface: #eceff4;
+    --on-surface-muted: #d8dee9;
+    --primary: #88c0d0;
+    --primary-hover: #8fbcbb;
+    --accent: #b48ead;
+    --border: #3b4252;
+    --border-strong: #434c5e;
+    --danger: #bf616a;
+    --success: #a3be8c;
+    --warning: #ebcb8b;
+    --sidebar-bg: #2e3440;
+    --sidebar-hover: #3b4252;
+    --sidebar-border: #3b4252;
+    --header-bg: #2e3440;
+    --header-border: #3b4252;
+    --input-bg: #3b4252;
+    --input-border: #434c5e;
+    --code-bg: #3b4252;
+}
+
+/* ─── Nord Light (Snow Storm) ─── */
+[data-theme="nord-light"] {
+    --surface: #eceff4;
+    --surface-alt: #e5e9f0;
+    --surface-raised: #ffffff;
+    --on-surface: #2e3440;
+    --on-surface-muted: #4c566a;
+    --primary: #5e81ac;
+    --primary-hover: #81a1c1;
+    --accent: #b48ead;
+    --border: #d8dee9;
+    --border-strong: #c8cfd8;
+    --danger: #bf616a;
+    --success: #a3be8c;
+    --warning: #ebcb8b;
+    --sidebar-bg: #2e3440;
+    --sidebar-hover: #3b4252;
+    --sidebar-border: #3b4252;
+    --header-bg: #eceff4;
+    --header-border: #d8dee9;
+    --input-bg: #ffffff;
+    --input-border: #d8dee9;
+    --code-bg: #e5e9f0;
+}
+
+/* ─── Solarized Dark ─── */
+[data-theme="solarized"] {
+    --surface: #002b36;
+    --surface-alt: #073642;
+    --surface-raised: #073642;
+    --on-surface: #fdf6e3;
+    --on-surface-muted: #839496;
+    --primary: #2aa198;
+    --primary-hover: #268bd2;
+    --accent: #d33682;
+    --border: #073642;
+    --border-strong: #586e75;
+    --danger: #dc322f;
+    --success: #859900;
+    --warning: #b58900;
+    --sidebar-bg: #002b36;
+    --sidebar-hover: #073642;
+    --sidebar-border: #073642;
+    --header-bg: #002b36;
+    --header-border: #073642;
+    --input-bg: #073642;
+    --input-border: #586e75;
+    --code-bg: #073642;
+}
+
+/* ─── Solarized Light ─── */
+[data-theme="solarized-light"] {
+    --surface: #fdf6e3;
+    --surface-alt: #eee8d5;
+    --surface-raised: #ffffff;
+    --on-surface: #073642;
+    --on-surface-muted: #586e75;
+    --primary: #2aa198;
+    --primary-hover: #268bd2;
+    --accent: #d33682;
+    --border: #eee8d5;
+    --border-strong: #93a1a1;
+    --danger: #dc322f;
+    --success: #859900;
+    --warning: #b58900;
+    --sidebar-bg: #073642;
+    --sidebar-hover: #002b36;
+    --sidebar-border: #002b36;
+    --header-bg: #fdf6e3;
+    --header-border: #eee8d5;
+    --input-bg: #ffffff;
+    --input-border: #93a1a1;
+    --code-bg: #eee8d5;
+}

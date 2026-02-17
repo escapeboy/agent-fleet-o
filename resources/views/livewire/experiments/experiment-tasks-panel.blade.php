@@ -182,6 +182,21 @@
                                 </div>
                             @endif
 
+                            @if($task->status === 'running' && $task->is_step)
+                                <div x-data="{ showTerminal: false }" class="mb-2">
+                                    <button @click="showTerminal = !showTerminal"
+                                        class="inline-flex items-center gap-1 rounded bg-gray-800 px-2 py-1 text-xs font-medium text-green-400 hover:bg-gray-700 transition">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        <span x-text="showTerminal ? 'Hide Terminal' : 'Show Terminal'"></span>
+                                    </button>
+                                    <div x-show="showTerminal" x-cloak class="mt-2">
+                                        <livewire:experiments.step-terminal-panel :step-id="$task->id" :key="'term-'.$task->id" />
+                                    </div>
+                                </div>
+                            @endif
+
                             @if(!$task->error && !$task->output && $task->status === 'running')
                                 <p class="text-xs text-blue-500">Task is currently running...</p>
                             @endif

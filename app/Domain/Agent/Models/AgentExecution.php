@@ -7,7 +7,26 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $agent_id
+ * @property string|null $experiment_id
+ * @property string|null $team_id
+ * @property string $status
+ * @property array|null $input
+ * @property array|null $output
+ * @property array|null $skills_executed
+ * @property array|null $tools_used
+ * @property int $tool_calls_count
+ * @property int $llm_steps_count
+ * @property int $duration_ms
+ * @property int $cost_credits
+ * @property string|null $error_message
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class AgentExecution extends Model
 {
     use BelongsToTeam, HasUuids;
