@@ -79,6 +79,7 @@ class CreateProjectAction
 
             // Create schedule for continuous projects
             if ($schedule && $type === ProjectType::Continuous->value) {
+                $overrides = array_filter($schedule['overrides'] ?? []);
                 $projectSchedule = ProjectSchedule::create([
                     'project_id' => $project->id,
                     'frequency' => $schedule['frequency'] ?? 'daily',
@@ -89,6 +90,7 @@ class CreateProjectAction
                     'max_consecutive_failures' => $schedule['max_consecutive_failures'] ?? 3,
                     'catchup_missed' => $schedule['catchup_missed'] ?? false,
                     'run_immediately' => $schedule['run_immediately'] ?? true,
+                    'overrides' => ! empty($overrides) ? $overrides : null,
                 ]);
 
                 // Calculate first next_run_at

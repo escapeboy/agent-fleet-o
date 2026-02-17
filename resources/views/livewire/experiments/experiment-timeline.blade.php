@@ -4,6 +4,7 @@
             <button wire:click="toggleStage('{{ $stage->id }}')"
                 class="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-gray-50">
                 <div class="flex items-center gap-3">
+                    <x-agent-status-indicator :status="$stage->status->value" size="sm" />
                     <x-status-badge :status="$stage->status->value" />
                     <span class="text-sm font-medium text-gray-900">{{ str_replace('_', ' ', ucfirst($stage->stage->value)) }}</span>
                     <span class="text-xs text-gray-400">Iteration {{ $stage->iteration }}</span>

@@ -25,6 +25,10 @@
             @endif
         </div>
         <div class="flex items-center gap-2">
+            <a href="{{ route('projects.kanban', $project) }}"
+                class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Board
+            </a>
             @if($project->status !== \App\Domain\Project\Enums\ProjectStatus::Archived)
                 <a href="{{ route('projects.edit', $project) }}"
                     class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
@@ -277,4 +281,9 @@
     @elseif($activeTab === 'runs')
         <livewire:projects.project-runs-table :project="$project" :key="'runs-' . $project->id" />
     @endif
+
+    {{-- AI Expansion Panel --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6">
+        <livewire:projects.project-expansion-panel :project="$project" :key="'expansion-' . $project->id" />
+    </div>
 </div>

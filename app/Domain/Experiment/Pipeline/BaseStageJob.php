@@ -289,6 +289,15 @@ abstract class BaseStageJob implements ShouldQueue
         ];
     }
 
+    /**
+     * Check if this stage should be skipped due to YOLO mode.
+     * Testing and validation stages use this to skip when YOLO is active.
+     */
+    protected function shouldSkipForYolo(Experiment $experiment): bool
+    {
+        return $experiment->isYoloMode();
+    }
+
     protected function generateIdempotencyKey(string $suffix = ''): string
     {
         return hash('xxh128', implode('|', [

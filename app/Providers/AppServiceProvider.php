@@ -14,6 +14,8 @@ use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
+use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
+use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -61,6 +63,10 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ExperimentTransitioned::class, SyncProjectStatusOnRunComplete::class);
         Event::listen(ExperimentTransitioned::class, LogProjectActivity::class);
         Event::listen(ExperimentTransitioned::class, NotifyDependentsOnRunComplete::class);
+
+        // Webhook notifications
+        Event::listen(ExperimentTransitioned::class, SendWebhookOnExperimentTransition::class);
+        Event::listen(ExperimentTransitioned::class, SendWebhookOnProjectRunComplete::class);
 
         // Agent memory: store execution output as memory after completion
         AgentExecution::created(function (AgentExecution $execution) {

@@ -60,7 +60,10 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $agent->role ?? '-' }}</td>
                         <td class="px-6 py-4">
-                            <x-status-badge :status="$agent->status->value" />
+                            <div class="flex items-center gap-2">
+                                <x-agent-status-indicator :status="$agent->status->value" size="sm" />
+                                <x-status-badge :status="$agent->status->value" />
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $agent->provider }}/{{ $agent->model }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $agent->skills_count }}</td>

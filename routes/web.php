@@ -24,6 +24,7 @@ use App\Livewire\Memory\MemoryBrowserPage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
+use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Skills\CreateSkillForm;
@@ -81,6 +82,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projects', ProjectListPage::class)->name('projects.index');
     Route::get('/projects/create', CreateProjectFormPage::class)->name('projects.create');
     Route::get('/projects/{project}/edit', EditProjectForm::class)->name('projects.edit');
+    Route::get('/projects/{project}/kanban', ProjectKanbanPage::class)->name('projects.kanban');
     Route::get('/projects/{project}', ProjectDetailPage::class)->name('projects.show');
 
     Route::get('/workflows', WorkflowListPage::class)->name('workflows.index');

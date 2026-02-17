@@ -58,9 +58,10 @@ class CommandSecurityPolicy
      *
      * Hierarchy (most restrictive wins):
      * 1. Platform-level: always-blocked commands and patterns
-     * 2. Tool-level: transport_config['allowed_commands']
-     * 3. Project-level: settings['command_policy'] (restrict only)
-     * 4. Agent-level: pivot overrides['command_policy'] (restrict only)
+     * 2. Organization-level: team-wide security policy (GlobalSettings)
+     * 3. Tool-level: transport_config['allowed_commands']
+     * 4. Project-level: settings['command_policy'] (restrict only)
+     * 5. Agent-level: pivot overrides['command_policy'] (restrict only)
      */
     public function validate(
         string $command,
@@ -69,6 +70,7 @@ class CommandSecurityPolicy
         array $toolAllowedPaths = [],
         ?array $projectCommandPolicy = null,
         ?array $agentCommandPolicy = null,
+        ?array $orgSecurityPolicy = null,
     ): CommandValidationResult {
         $binary = basename(explode(' ', trim($command))[0]);
 
@@ -106,7 +108,15 @@ class CommandSecurityPolicy
             }
         }
 
-        // 4. Tool-level: allowed commands whitelist
+        // 4. Organization-level: team-wide security policy
+        if ($orgSecurityPolicy) {
+            $result = $this->applyOrgPolicy($command, $binary, $workingDirectory, $orgSecurityPolicy);
+            if ($result !== null) {
+                return $result;
+            }
+        }
+
+        // 5. Tool-level: allowed commands whitelist
         if (! empty($toolAllowedCommands) && ! in_array($binary, $toolAllowedCommands)) {
             return new CommandValidationResult(
                 allowed: false,
@@ -115,7 +125,7 @@ class CommandSecurityPolicy
             );
         }
 
-        // 5. Tool-level: path validation
+        // 6. Tool-level: path validation
         if (! empty($toolAllowedPaths) && $workingDirectory) {
             $resolvedCwd = realpath($workingDirectory) ?: $workingDirectory;
             $pathAllowed = false;
@@ -135,7 +145,7 @@ class CommandSecurityPolicy
             }
         }
 
-        // 6. Project-level: additional restrictions (can only restrict, not expand)
+        // 7. Project-level: additional restrictions (can only restrict, not expand)
         if ($projectCommandPolicy) {
             $result = $this->applyPolicy($command, $binary, $workingDirectory, $projectCommandPolicy, 'project');
             if ($result !== null) {
@@ -143,7 +153,7 @@ class CommandSecurityPolicy
             }
         }
 
-        // 7. Agent-level: additional restrictions (can only restrict, not expand)
+        // 8. Agent-level: additional restrictions (can only restrict, not expand)
         if ($agentCommandPolicy) {
             $result = $this->applyPolicy($command, $binary, $workingDirectory, $agentCommandPolicy, 'agent');
             if ($result !== null) {
@@ -151,8 +161,17 @@ class CommandSecurityPolicy
             }
         }
 
-        // Check if command requires approval
+        // Check if command requires approval (platform + org level)
         $requiresApproval = in_array($binary, self::REQUIRES_APPROVAL);
+        if (! $requiresApproval && $orgSecurityPolicy) {
+            $orgApproval = $orgSecurityPolicy['require_approval_for'] ?? [];
+            foreach ($orgApproval as $pattern) {
+                if (stripos($command, $pattern) !== false) {
+                    $requiresApproval = true;
+                    break;
+                }
+            }
+        }
 
         return new CommandValidationResult(
             allowed: true,
@@ -160,6 +179,81 @@ class CommandSecurityPolicy
             level: 'tool',
             requiresApproval: $requiresApproval,
         );
+    }
+
+    /**
+     * Apply the organization-level security policy.
+     * Organization policy sits between Platform and Tool levels.
+     * It can block commands and restrict paths.
+     * If it has an allowed_commands list, only those commands pass through.
+     */
+    private function applyOrgPolicy(
+        string $command,
+        string $binary,
+        ?string $workingDirectory,
+        array $policy,
+    ): ?CommandValidationResult {
+        // Org blocked commands
+        $blockedCommands = $policy['blocked_commands'] ?? [];
+        if (in_array($binary, $blockedCommands)) {
+            return new CommandValidationResult(
+                allowed: false,
+                reason: "Command '{$binary}' is blocked by organization policy",
+                level: 'organization',
+            );
+        }
+
+        // Org blocked patterns
+        $blockedPatterns = $policy['blocked_patterns'] ?? [];
+        foreach ($blockedPatterns as $pattern) {
+            if (stripos($command, $pattern) !== false) {
+                return new CommandValidationResult(
+                    allowed: false,
+                    reason: "Command matches blocked pattern '{$pattern}' in organization policy",
+                    level: 'organization',
+                );
+            }
+        }
+
+        // Org allowed commands (whitelist — if set, only these pass)
+        $allowedCommands = $policy['allowed_commands'] ?? [];
+        if (! empty($allowedCommands) && ! in_array($binary, $allowedCommands)) {
+            return new CommandValidationResult(
+                allowed: false,
+                reason: "Command '{$binary}' is not in organization allowlist",
+                level: 'organization',
+            );
+        }
+
+        // Org allowed paths restriction
+        $allowedPaths = $policy['allowed_paths'] ?? [];
+        if (! empty($allowedPaths) && $workingDirectory) {
+            $resolvedCwd = realpath($workingDirectory) ?: $workingDirectory;
+            $pathAllowed = false;
+            foreach ($allowedPaths as $path) {
+                $resolvedPath = realpath($path) ?: $path;
+                if (str_starts_with($resolvedCwd, $resolvedPath)) {
+                    $pathAllowed = true;
+                    break;
+                }
+            }
+            if (! $pathAllowed) {
+                return new CommandValidationResult(
+                    allowed: false,
+                    reason: "Working directory restricted by organization policy",
+                    level: 'organization',
+                );
+            }
+        }
+
+        // Org max command timeout
+        $maxTimeout = $policy['max_command_timeout'] ?? null;
+        if ($maxTimeout !== null) {
+            // Timeout is enforced at execution time, not here.
+            // Store it for downstream use.
+        }
+
+        return null;
     }
 
     /**

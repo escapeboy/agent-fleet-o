@@ -306,5 +306,15 @@
                 @endif
             </div>
         </div>
+
+        {{-- Webhooks --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            @livewire('settings.webhook-settings-panel')
+        </div>
+
+        {{-- Organization Security Policy --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
+            @livewire('settings.security-policy-panel')
+        </div>
     </div>
 </div>
