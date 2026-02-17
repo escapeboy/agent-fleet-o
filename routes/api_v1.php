@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ToolController;
+use App\Http\Controllers\Api\V1\WebhookEndpointController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
 
@@ -131,6 +132,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/team/tokens', [TeamController::class, 'tokens']);
     Route::post('/team/tokens', [TeamController::class, 'createToken']);
     Route::delete('/team/tokens/{tokenId}', [TeamController::class, 'revokeToken']);
+
+    // Webhooks
+    Route::apiResource('webhooks', WebhookEndpointController::class)->parameters(['webhooks' => 'webhookEndpoint']);
 
     // Dashboard & Health
     Route::get('/dashboard', [DashboardController::class, 'index']);

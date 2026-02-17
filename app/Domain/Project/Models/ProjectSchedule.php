@@ -24,6 +24,7 @@ class ProjectSchedule extends Model
         'max_consecutive_failures',
         'catchup_missed',
         'run_immediately',
+        'overrides',
         'enabled',
         'last_run_at',
         'next_run_at',
@@ -38,10 +39,16 @@ class ProjectSchedule extends Model
             'max_consecutive_failures' => 'integer',
             'catchup_missed' => 'boolean',
             'run_immediately' => 'boolean',
+            'overrides' => 'array',
             'enabled' => 'boolean',
             'last_run_at' => 'datetime',
             'next_run_at' => 'datetime',
         ];
+    }
+
+    public function getOverride(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->overrides, $key, $default);
     }
 
     public function project(): BelongsTo

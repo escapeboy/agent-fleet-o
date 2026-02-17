@@ -66,6 +66,8 @@ use App\Mcp\Tools\Tool\ToolDeleteTool;
 use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
+use App\Mcp\Tools\Webhook\WebhookCreateTool;
+use App\Mcp\Tools\Webhook\WebhookListTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
@@ -185,6 +187,10 @@ class AgentFleetServer extends Server
         // Artifact (2)
         ArtifactListTool::class,
         ArtifactGetTool::class,
+
+        // Webhook (2)
+        WebhookListTool::class,
+        WebhookCreateTool::class,
 
         // System (3)
         DashboardKpisTool::class,

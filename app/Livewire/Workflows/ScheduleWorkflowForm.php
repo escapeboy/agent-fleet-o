@@ -47,6 +47,13 @@ class ScheduleWorkflowForm extends Component
 
     public ?int $monthlyCap = null;
 
+    // Schedule Overrides
+    public string $overrideExecutionMode = '';
+
+    public string $overrideModel = '';
+
+    public ?int $overrideTimeoutMinutes = null;
+
     // Options
     public bool $runImmediately = true;
 
@@ -148,6 +155,11 @@ class ScheduleWorkflowForm extends Component
                 'overlap_policy' => $this->overlapPolicy,
                 'max_consecutive_failures' => $this->maxConsecutiveFailures,
                 'run_immediately' => $this->runImmediately,
+                'overrides' => array_filter([
+                    'execution_mode' => $this->overrideExecutionMode ?: null,
+                    'model_override' => $this->overrideModel ?: null,
+                    'timeout_minutes' => $this->overrideTimeoutMinutes,
+                ]),
             ],
             teamId: $team->id,
         );

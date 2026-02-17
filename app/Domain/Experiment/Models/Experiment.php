@@ -142,4 +142,9 @@ class Experiment extends Model
     {
         return $this->workflow_id !== null;
     }
+
+    public function isYoloMode(): bool
+    {
+        return ($this->constraints['execution_mode'] ?? null) === 'yolo';
+    }
 }
