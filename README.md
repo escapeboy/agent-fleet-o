@@ -9,66 +9,138 @@ Self-hosted AI Agent Mission Control platform. Build, orchestrate, and monitor A
 
 ## Screenshots
 
-### Dashboard
+<table>
+<tr>
+<td width="50%">
+
+**Dashboard**
 KPI overview with active experiments, success rate, budget spend, and pending approvals.
 
-![Dashboard](screenshots/dashboard-fixed.png)
+<img src="screenshots/qa-dashboard.png" width="100%" alt="Dashboard">
 
-### Agent LLM Configuration
-Per-agent provider and model selection with fallback chains. Supports Anthropic, OpenAI, Google, and local agents (Codex, Claude Code).
+</td>
+<td width="50%">
 
-![Agent LLM Config](screenshots/agent-llm-edit-panel.png)
+**Agent Template Gallery**
+Browse 14 pre-built agent templates across 5 categories. Search, filter by category, and deploy with one click.
 
-### Crew Execution - Real-Time Task Tracking
+<img src="screenshots/qa-agent-templates.png" width="100%" alt="Agent Templates">
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Agent LLM Configuration**
+Per-agent provider and model selection with fallback chains. Supports Anthropic, OpenAI, Google, and local agents.
+
+<img src="screenshots/agent-llm-edit-panel.png" width="100%" alt="Agent LLM Config">
+
+</td>
+<td>
+
+**Agent Evolution**
+AI-driven agent self-improvement. Analyze execution history, propose personality and config changes, and apply with one click.
+
+<img src="screenshots/qa-evolution-tab.png" width="100%" alt="Agent Evolution">
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Crew Execution**
 Live progress tracking during multi-agent crew execution. Each task shows its assigned skill, provider, and elapsed time.
 
-![Tasks Panel](screenshots/tasks-panel-building.png)
+<img src="screenshots/tasks-panel-building.png" width="100%" alt="Crew Execution">
 
-### Task Output - Expanded Results
+</td>
+<td>
+
+**Task Output**
 Expand any completed task to inspect the AI-generated output, including structured JSON responses.
 
-![Task Output](screenshots/tasks-expanded-output.png)
+<img src="screenshots/tasks-expanded-output.png" width="100%" alt="Task Output">
 
-### Multi-Agent Crew - Parallel Execution
-A 7-agent crew executing in parallel: research, strategy, planning, SEO, design, frontend, and backend tasks running simultaneously with local agent backends.
+</td>
+</tr>
+<tr>
+<td>
 
-![Crew Execution](screenshots/affiliate-v4-tasks-open.png)
+**Visual Workflow Builder**
+DAG-based workflow editor with conditional branching, human tasks, switch nodes, and dynamic forks.
 
-### Internationalization Support
-Full i18n support with Cyrillic and other non-Latin character sets in AI outputs.
+<img src="screenshots/qa-workflows.png" width="100%" alt="Workflows">
 
-![i18n Support](screenshots/affiliate-v4-cyrillic-fixed.png)
+</td>
+<td>
 
-### Error Handling
+**Tool Management**
+Manage MCP servers, built-in tools, and external integrations with risk classification and per-agent assignment.
+
+<img src="screenshots/qa-tools.png" width="100%" alt="Tools">
+
+</td>
+</tr>
+<tr>
+<td>
+
+**AI Assistant Sidebar**
+Context-aware AI chat embedded in every page with 28 built-in tools for querying and managing the platform.
+
+<img src="screenshots/assistant-sidebar.png" width="100%" alt="Assistant Sidebar">
+
+</td>
+<td>
+
+**Experiment Detail**
+Full experiment lifecycle view with timeline, tasks, transitions, artifacts, metrics, and outbound delivery.
+
+<img src="screenshots/qa-experiment-detail.png" width="100%" alt="Experiment Detail">
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Settings & Webhooks**
+Global platform settings, AI provider keys (BYOK), outbound connectors, and webhook configuration.
+
+<img src="screenshots/settings-page-full.png" width="100%" alt="Settings">
+
+</td>
+<td>
+
+**Error Handling**
 Failed tasks display detailed error information including provider, error type, and request IDs for debugging.
 
-![Error Handling](screenshots/tasks-panel-error-expanded.png)
+<img src="screenshots/tasks-panel-error-expanded.png" width="100%" alt="Error Handling">
 
-### Build Failure States
-Build progress bar shows completed vs failed tasks at a glance with clear error indicators.
-
-![Failed Build](screenshots/tasks-panel-failed.png)
-
-### AI Assistant Sidebar
-Context-aware AI chat embedded in every page. Supports cloud providers (Anthropic, OpenAI, Google) and local agents (Codex, Claude Code) with 28 built-in tools for querying and managing the platform.
-
-![Assistant Sidebar](screenshots/assistant-sidebar.png)
+</td>
+</tr>
+</table>
 
 ## Features
 
 - **Experiment Pipeline** -- 20-state machine with automatic stage progression (scoring, planning, building, approval, execution, metrics collection)
-- **AI Agents** -- Configure agents with roles, goals, backstories, and skill assignments
+- **AI Agents** -- Configure agents with roles, goals, backstories, personality traits, and skill assignments
+- **Agent Templates** -- 14 pre-built templates across 5 categories (engineering, content, business, design, research)
+- **Agent Evolution** -- AI-driven self-improvement: analyze execution history, propose config changes, and apply improvements
 - **Agent Crews** -- Multi-agent teams with lead/member roles and shared context
 - **Skills** -- Reusable AI skill definitions (LLM, connector, rule, hybrid) with versioning and cost tracking
 - **Playbooks** -- Sequential or parallel multi-step workflows combining skills
-- **Workflows** -- Visual DAG builder for multi-agent pipelines with conditional branching
+- **Workflows** -- Visual DAG builder with 8 node types: agent, conditional, human task, switch, dynamic fork, do-while loops
 - **Projects** -- One-shot and continuous long-running agent projects with cron scheduling, budget caps, milestones, and overlap policies
-- **Human-in-the-Loop** -- Approval queue with configurable timeouts for high-risk actions
+- **Human-in-the-Loop** -- Approval queue and human task forms with SLA enforcement and escalation
 - **Multi-Channel Outbound** -- Email (SMTP), Telegram, Slack, and webhook delivery with rate limiting
-- **Signal Ingestion** -- Webhooks (HMAC-SHA256) and RSS polling for inbound data
+- **Webhooks** -- Inbound signal ingestion (HMAC-SHA256) and outbound webhook delivery with retry and event filtering
 - **Budget Controls** -- Per-experiment and per-project credit ledger with pessimistic locking and auto-pause on overspend
 - **Marketplace** -- Browse, publish, and install shared skills, agents, and workflows
-- **REST API** -- 68 endpoints under `/api/v1/` with Sanctum auth, cursor pagination, and auto-generated OpenAPI 3.1 docs at `/docs/api`
+- **REST API** -- 99 endpoints under `/api/v1/` with Sanctum auth, cursor pagination, and auto-generated OpenAPI 3.1 docs at `/docs/api`
+- **MCP Server** -- 65 Model Context Protocol tools across 15 domains for LLM/agent access (stdio + HTTP/SSE)
+- **Tool Management** -- MCP servers (stdio/HTTP), built-in tools (bash/filesystem/browser), risk classification, per-agent assignment
+- **Credentials** -- Encrypted credential vault for external services with rotation, expiry tracking, and per-project injection
+- **Testing** -- Regression test suites for agent outputs with automated evaluation
 - **Local Agents** -- Run Codex and Claude Code as local execution backends (auto-detected, zero cost)
 - **Audit Trail** -- Full activity logging with searchable, filterable audit log
 - **AI Gateway** -- Provider-agnostic LLM access via PrismPHP with circuit breakers and fallback chains
@@ -132,21 +204,25 @@ Additional LLM keys can be configured in **Settings > AI Provider Keys** after l
 
 ## Architecture
 
-Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 12 bounded contexts:
+Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 16 bounded contexts:
 
 | Domain | Purpose |
 |--------|---------|
-| Agent | AI agent configs, crews, execution history |
+| Agent | AI agent configs, execution, personality, evolution |
+| Crew | Multi-agent teams with lead/member roles |
 | Experiment | Pipeline, state machine, playbooks |
 | Signal | Inbound data ingestion |
 | Outbound | Multi-channel delivery |
-| Approval | Human-in-the-loop reviews |
+| Approval | Human-in-the-loop reviews and human tasks |
 | Budget | Credit ledger, cost enforcement |
 | Metrics | Measurement, revenue attribution |
 | Audit | Activity logging |
 | Skill | Reusable AI skill definitions |
+| Tool | MCP servers, built-in tools, risk classification |
+| Credential | Encrypted external service credentials |
 | Workflow | Visual DAG builder, graph executor |
 | Project | Continuous/one-shot projects, scheduling |
+| Assistant | Context-aware AI chat with 28 tools |
 | Marketplace | Skill/agent/workflow sharing |
 
 ## Docker Services
@@ -199,6 +275,7 @@ This pulls the latest code, rebuilds containers, runs migrations, and clears cac
 - **Auth:** Laravel Fortify (2FA) + Sanctum (API tokens)
 - **Audit:** spatie/laravel-activitylog
 - **API Docs:** dedoc/scramble (OpenAPI 3.1)
+- **MCP:** laravel/mcp (Model Context Protocol)
 
 ## Contributing
 
