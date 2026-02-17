@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ToolController;
+use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
@@ -135,6 +136,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Webhooks
     Route::apiResource('webhooks', WebhookEndpointController::class)->parameters(['webhooks' => 'webhookEndpoint']);
+
+    // Outbound Connectors
+    Route::apiResource('outbound-connectors', OutboundConnectorConfigController::class)
+        ->parameters(['outbound-connectors' => 'outboundConnectorConfig']);
+    Route::post('/outbound-connectors/{outboundConnectorConfig}/test', [OutboundConnectorConfigController::class, 'test']);
 
     // Dashboard & Health
     Route::get('/dashboard', [DashboardController::class, 'index']);
