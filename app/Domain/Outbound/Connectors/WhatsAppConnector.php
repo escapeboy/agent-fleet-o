@@ -6,6 +6,7 @@ use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -34,8 +35,11 @@ class WhatsAppConnector implements OutboundConnectorInterface
         ]);
 
         try {
-            $phoneNumberId = config('services.whatsapp.phone_number_id');
-            $accessToken = config('services.whatsapp.access_token');
+            $resolver = app(OutboundCredentialResolver::class);
+            $creds = $resolver->resolve('whatsapp', $proposal->target, $proposal->team_id);
+
+            $phoneNumberId = $creds['phone_number_id'] ?? null;
+            $accessToken = $creds['access_token'] ?? null;
 
             if (! $phoneNumberId || ! $accessToken) {
                 throw new \RuntimeException('WhatsApp Cloud API credentials not configured');

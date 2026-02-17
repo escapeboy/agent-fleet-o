@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Outbound;
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -46,13 +47,16 @@ class ConnectorConfigGetTool extends Tool
 
         $resolver = app(OutboundCredentialResolver::class);
 
+        /** @var Carbon|null $lastTestedAt */
+        $lastTestedAt = $config->last_tested_at;
+
         return Response::text(json_encode([
             'id' => $config->id,
             'channel' => $config->channel,
             'is_active' => $config->is_active,
             'source' => $resolver->getSource($config->channel),
             'masked_key' => $config->masked_key,
-            'last_tested_at' => $config->last_tested_at?->toIso8601String(),
+            'last_tested_at' => $lastTestedAt?->toIso8601String(),
             'last_test_status' => $config->last_test_status,
             'created_at' => $config->created_at->toIso8601String(),
             'updated_at' => $config->updated_at->toIso8601String(),
