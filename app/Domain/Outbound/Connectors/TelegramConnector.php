@@ -6,6 +6,7 @@ use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -34,7 +35,10 @@ class TelegramConnector implements OutboundConnectorInterface
         ]);
 
         try {
-            $botToken = config('services.telegram.bot_token');
+            $resolver = app(OutboundCredentialResolver::class);
+            $creds = $resolver->resolve('telegram', $proposal->target, $proposal->team_id);
+
+            $botToken = $creds['bot_token'] ?? null;
             if (! $botToken) {
                 throw new \RuntimeException('Telegram bot token not configured');
             }
@@ -42,7 +46,7 @@ class TelegramConnector implements OutboundConnectorInterface
             $target = $proposal->target;
             $content = $proposal->content;
 
-            $chatId = $target['chat_id'] ?? $target['id'] ?? null;
+            $chatId = $creds['chat_id'] ?? $target['chat_id'] ?? $target['id'] ?? null;
             if (! $chatId) {
                 throw new \InvalidArgumentException('No chat_id in target');
             }

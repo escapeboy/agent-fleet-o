@@ -6,6 +6,7 @@ use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -34,12 +35,15 @@ class DiscordConnector implements OutboundConnectorInterface
         ]);
 
         try {
+            $resolver = app(OutboundCredentialResolver::class);
+            $creds = $resolver->resolve('discord', $proposal->target, $proposal->team_id);
+
             $target = $proposal->target;
             $content = $proposal->content;
 
-            $webhookUrl = $target['webhook_url'] ?? null;
+            $webhookUrl = $creds['webhook_url'] ?? null;
             if (! $webhookUrl) {
-                throw new \RuntimeException('Discord webhook URL not configured in target');
+                throw new \RuntimeException('Discord webhook URL not configured');
             }
 
             $text = $content['body'] ?? $content['text'] ?? 'No content generated.';

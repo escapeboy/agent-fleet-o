@@ -6,6 +6,7 @@ use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -34,10 +35,13 @@ class GoogleChatConnector implements OutboundConnectorInterface
         ]);
 
         try {
+            $resolver = app(OutboundCredentialResolver::class);
+            $creds = $resolver->resolve('google_chat', $proposal->target, $proposal->team_id);
+
             $target = $proposal->target;
             $content = $proposal->content;
 
-            $webhookUrl = $target['webhook_url'] ?? config('services.google_chat.webhook_url');
+            $webhookUrl = $creds['webhook_url'] ?? null;
             if (! $webhookUrl) {
                 throw new \RuntimeException('Google Chat webhook URL not configured');
             }

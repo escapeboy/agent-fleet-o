@@ -5,13 +5,18 @@ namespace App\Livewire\Settings;
 use App\Domain\Agent\Actions\DisableAgentAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\Blacklist;
 use App\Models\GlobalSetting;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class GlobalSettingsPage extends Component
 {
+    // Active tab
+    public string $activeTab = 'general';
+
     // Budget settings
     public int $globalBudgetCap = 100000;
 
@@ -206,6 +211,12 @@ class GlobalSettingsPage extends Component
         session()->flash('message', 'Assistant LLM saved.');
     }
 
+    #[On('connector-saved')]
+    public function refreshConnectors(): void
+    {
+        // Re-render triggers fresh connector data from render()
+    }
+
     public function rescanLocalAgents(): void
     {
         $discovery = app(LocalAgentDiscovery::class);
@@ -233,6 +244,32 @@ class GlobalSettingsPage extends Component
         $discovery = app(LocalAgentDiscovery::class);
         $bridgeMode = $discovery->isBridgeMode();
 
+        $resolver = app(OutboundCredentialResolver::class);
+        $channels = [
+            'telegram' => ['label' => 'Telegram',         'icon' => 'paper-airplane'],
+            'slack' => ['label' => 'Slack',            'icon' => 'chat-bubble-left-right'],
+            'discord' => ['label' => 'Discord',          'icon' => 'chat-bubble-oval-left'],
+            'teams' => ['label' => 'Microsoft Teams',  'icon' => 'building-office'],
+            'google_chat' => ['label' => 'Google Chat',      'icon' => 'chat-bubble-left'],
+            'whatsapp' => ['label' => 'WhatsApp',         'icon' => 'phone'],
+            'email' => ['label' => 'Email (SMTP)',     'icon' => 'envelope'],
+            'webhook' => ['label' => 'Webhook',          'icon' => 'globe-alt'],
+        ];
+
+        $connectorStatuses = [];
+        foreach ($channels as $key => $meta) {
+            $source = $resolver->getSource($key);
+            $dbConfig = $resolver->getDbConfig($key);
+            $connectorStatuses[$key] = [
+                'label' => $meta['label'],
+                'icon' => $meta['icon'],
+                'configured' => $resolver->isConfigured($key),
+                'source' => $source,
+                'lastTestedAt' => $dbConfig?->last_tested_at,
+                'lastTestStatus' => $dbConfig?->last_test_status,
+            ];
+        }
+
         return view('livewire.settings.global-settings-page', [
             'blacklistEntries' => Blacklist::orderByDesc('created_at')->get(),
             'agents' => Agent::with('circuitBreakerState')->orderBy('name')->get(),
@@ -242,6 +279,7 @@ class GlobalSettingsPage extends Component
             'bridgeMode' => $bridgeMode,
             'bridgeConnected' => $bridgeMode ? $discovery->bridgeHealth() : false,
             'providers' => config('llm_providers', []),
+            'connectorStatuses' => $connectorStatuses,
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

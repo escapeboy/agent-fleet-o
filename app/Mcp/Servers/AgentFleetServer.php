@@ -44,6 +44,11 @@ use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
+use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
+use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
+use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
+use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
+use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
 use App\Mcp\Tools\Project\ProjectArchiveTool;
 use App\Mcp\Tools\Project\ProjectCreateTool;
 use App\Mcp\Tools\Project\ProjectGetTool;
@@ -187,6 +192,13 @@ class AgentFleetServer extends Server
         // Artifact (2)
         ArtifactListTool::class,
         ArtifactGetTool::class,
+
+        // Outbound (5)
+        ConnectorConfigListTool::class,
+        ConnectorConfigGetTool::class,
+        ConnectorConfigSaveTool::class,
+        ConnectorConfigDeleteTool::class,
+        ConnectorConfigTestTool::class,
 
         // Webhook (2)
         WebhookListTool::class,

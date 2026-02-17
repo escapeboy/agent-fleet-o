@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Mcp\Tools\Outbound;
+
+use App\Domain\Outbound\Models\OutboundConnectorConfig;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+
+#[IsDestructive]
+class ConnectorConfigDeleteTool extends Tool
+{
+    protected string $name = 'connector_config_delete';
+
+    protected string $description = 'Delete an outbound connector config. The channel will fall back to .env configuration.';
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'id' => $schema->string()->description('Config UUID to delete')->required(),
+        ];
+    }
+
+    public function handle(Request $request): Response
+    {
+        $config = OutboundConnectorConfig::find($request->get('id'));
+
+        if (! $config) {
+            return Response::error('Connector config not found');
+        }
+
+        $channel = $config->channel;
+        $config->delete();
+
+        return Response::text(json_encode([
+            'deleted' => true,
+            'channel' => $channel,
+            'message' => "Config removed. {$channel} will fall back to .env configuration.",
+        ]));
+    }
+}
