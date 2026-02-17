@@ -3,6 +3,7 @@
 namespace App\Domain\Agent\Models;
 
 use App\Domain\Agent\Enums\AgentStatus;
+use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
@@ -28,6 +29,7 @@ class Agent extends Model
         'role',
         'goal',
         'backstory',
+        'personality',
         'provider',
         'model',
         'status',
@@ -45,6 +47,7 @@ class Agent extends Model
     {
         return [
             'status' => AgentStatus::class,
+            'personality' => 'array',
             'config' => 'array',
             'capabilities' => 'array',
             'constraints' => 'array',
@@ -92,6 +95,11 @@ class Agent extends Model
     public function executions(): HasMany
     {
         return $this->hasMany(AgentExecution::class)->orderByDesc('created_at');
+    }
+
+    public function evolutionProposals(): HasMany
+    {
+        return $this->hasMany(EvolutionProposal::class)->orderByDesc('created_at');
     }
 
     protected static function newFactory()

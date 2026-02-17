@@ -6,6 +6,7 @@ use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
 use App\Mcp\Tools\Agent\AgentListTool;
+use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
@@ -26,6 +27,9 @@ use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
+use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
+use App\Mcp\Tools\Evolution\EvolutionApplyTool;
+use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
 use App\Mcp\Tools\Experiment\ExperimentGetTool;
 use App\Mcp\Tools\Experiment\ExperimentKillTool;
@@ -86,12 +90,18 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
-        // Agent (5)
+        // Agent (6)
         AgentListTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
         AgentUpdateTool::class,
         AgentToggleStatusTool::class,
+        AgentTemplatesListTool::class,
+
+        // Evolution (3)
+        EvolutionProposalListTool::class,
+        EvolutionAnalyzeTool::class,
+        EvolutionApplyTool::class,
 
         // Crew (6)
         CrewListTool::class,

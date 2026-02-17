@@ -16,6 +16,11 @@
             @endforeach
         </x-form-select>
 
+        <a href="{{ route('agents.templates') }}"
+            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Templates
+        </a>
+
         <a href="{{ route('agents.create') }}"
             class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
             New Agent

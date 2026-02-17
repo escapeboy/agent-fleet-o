@@ -38,6 +38,11 @@
         </x-form-select>
     </div>
 
+    {{-- Knowledge Upload --}}
+    <div class="mb-6">
+        <livewire:memory.knowledge-upload-panel />
+    </div>
+
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
         <table class="min-w-full divide-y divide-gray-200">

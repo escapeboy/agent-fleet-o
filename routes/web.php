@@ -3,6 +3,7 @@
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
+use App\Livewire\Agents\AgentTemplateGalleryPage;
 use App\Livewire\Agents\CreateAgentForm;
 use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Livewire\Audit\AuditLogPage;
@@ -62,6 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/skills/{skill}', SkillDetailPage::class)->name('skills.show');
 
     Route::get('/agents', AgentListPage::class)->name('agents.index');
+    Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
 

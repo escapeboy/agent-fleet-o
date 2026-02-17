@@ -32,6 +32,8 @@ class AgentCreateTool extends Tool
                 ->default('anthropic'),
             'model' => $schema->string()
                 ->description('LLM model name (default: claude-sonnet-4-5)'),
+            'personality' => $schema->object()
+                ->description('Agent personality traits: {tone, communication_style, traits[], behavioral_rules[], response_format_preference}'),
         ];
     }
 
@@ -44,6 +46,7 @@ class AgentCreateTool extends Tool
             'backstory' => 'nullable|string',
             'provider' => 'nullable|string|in:anthropic,openai,google',
             'model' => 'nullable|string|max:100',
+            'personality' => 'nullable|array',
         ]);
 
         try {
@@ -55,6 +58,7 @@ class AgentCreateTool extends Tool
                 goal: $validated['goal'] ?? null,
                 backstory: $validated['backstory'] ?? null,
                 teamId: auth()->user()->current_team_id,
+                personality: $validated['personality'] ?? null,
             );
 
             return Response::text(json_encode([

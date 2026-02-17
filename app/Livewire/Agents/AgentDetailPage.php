@@ -35,6 +35,17 @@ class AgentDetailPage extends Component
 
     public array $editFallbackChain = [];
 
+    // Personality editing
+    public string $editPersonalityTone = '';
+
+    public string $editPersonalityCommunicationStyle = '';
+
+    public string $editPersonalityTraits = '';
+
+    public string $editPersonalityBehavioralRules = '';
+
+    public string $editPersonalityResponseFormat = '';
+
     public array $editSkillIds = [];
 
     public array $editToolIds = [];
@@ -64,6 +75,12 @@ class AgentDetailPage extends Component
         $this->editModel = $this->agent->model;
         $this->editBudgetCap = $this->agent->budget_cap_credits;
         $this->editFallbackChain = $this->agent->config['fallback_chain'] ?? [];
+        $personality = $this->agent->personality ?? [];
+        $this->editPersonalityTone = $personality['tone'] ?? '';
+        $this->editPersonalityCommunicationStyle = $personality['communication_style'] ?? '';
+        $this->editPersonalityTraits = implode(', ', $personality['traits'] ?? []);
+        $this->editPersonalityBehavioralRules = implode("\n", $personality['behavioral_rules'] ?? []);
+        $this->editPersonalityResponseFormat = $personality['response_format_preference'] ?? '';
         $this->editSkillIds = $this->agent->skills()->pluck('skills.id')->toArray();
         $this->editToolIds = $this->agent->tools()->pluck('tools.id')->toArray();
         $this->editing = true;
@@ -130,11 +147,25 @@ class AgentDetailPage extends Component
 
         $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");
 
+        // Build personality array
+        $personality = array_filter([
+            'tone' => $this->editPersonalityTone ?: null,
+            'communication_style' => $this->editPersonalityCommunicationStyle ?: null,
+            'traits' => $this->editPersonalityTraits
+                ? array_map('trim', explode(',', $this->editPersonalityTraits))
+                : null,
+            'behavioral_rules' => $this->editPersonalityBehavioralRules
+                ? array_filter(array_map('trim', explode("\n", $this->editPersonalityBehavioralRules)))
+                : null,
+            'response_format_preference' => $this->editPersonalityResponseFormat ?: null,
+        ]);
+
         $this->agent->update([
             'name' => $this->editName,
             'role' => $this->editRole,
             'goal' => $this->editGoal,
             'backstory' => $this->editBackstory ?: null,
+            'personality' => ! empty($personality) ? $personality : null,
             'provider' => $this->editProvider,
             'model' => $this->editModel,
             'budget_cap_credits' => $this->editBudgetCap,
