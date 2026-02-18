@@ -127,16 +127,7 @@ class CommandSecurityPolicy
 
         // 6. Tool-level: path validation
         if (! empty($toolAllowedPaths) && $workingDirectory) {
-            $resolvedCwd = realpath($workingDirectory) ?: $workingDirectory;
-            $pathAllowed = false;
-            foreach ($toolAllowedPaths as $path) {
-                $resolvedPath = realpath($path) ?: $path;
-                if (str_starts_with($resolvedCwd, $resolvedPath)) {
-                    $pathAllowed = true;
-                    break;
-                }
-            }
-            if (! $pathAllowed) {
+            if (! $this->isPathAllowed($workingDirectory, $toolAllowedPaths)) {
                 return new CommandValidationResult(
                     allowed: false,
                     reason: "Working directory '{$workingDirectory}' is outside allowed paths",
@@ -228,16 +219,7 @@ class CommandSecurityPolicy
         // Org allowed paths restriction
         $allowedPaths = $policy['allowed_paths'] ?? [];
         if (! empty($allowedPaths) && $workingDirectory) {
-            $resolvedCwd = realpath($workingDirectory) ?: $workingDirectory;
-            $pathAllowed = false;
-            foreach ($allowedPaths as $path) {
-                $resolvedPath = realpath($path) ?: $path;
-                if (str_starts_with($resolvedCwd, $resolvedPath)) {
-                    $pathAllowed = true;
-                    break;
-                }
-            }
-            if (! $pathAllowed) {
+            if (! $this->isPathAllowed($workingDirectory, $allowedPaths)) {
                 return new CommandValidationResult(
                     allowed: false,
                     reason: 'Working directory restricted by organization policy',
@@ -254,6 +236,35 @@ class CommandSecurityPolicy
         }
 
         return null;
+    }
+
+    /**
+     * Check if a working directory is within any of the allowed paths.
+     * Handles symlinks correctly by comparing both raw and resolved paths.
+     */
+    private function isPathAllowed(string $workingDirectory, array $allowedPaths): bool
+    {
+        $cwdVariants = array_unique(array_filter([
+            $workingDirectory,
+            realpath($workingDirectory),
+        ]));
+
+        foreach ($allowedPaths as $path) {
+            $pathVariants = array_unique(array_filter([
+                $path,
+                realpath($path),
+            ]));
+
+            foreach ($cwdVariants as $cwd) {
+                foreach ($pathVariants as $allowed) {
+                    if (str_starts_with($cwd, $allowed)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -292,16 +303,7 @@ class CommandSecurityPolicy
         // Allowed paths restriction (further restricts, not expands)
         $allowedPaths = $policy['allowed_paths'] ?? [];
         if (! empty($allowedPaths) && $workingDirectory) {
-            $resolvedCwd = realpath($workingDirectory) ?: $workingDirectory;
-            $pathAllowed = false;
-            foreach ($allowedPaths as $path) {
-                $resolvedPath = realpath($path) ?: $path;
-                if (str_starts_with($resolvedCwd, $resolvedPath)) {
-                    $pathAllowed = true;
-                    break;
-                }
-            }
-            if (! $pathAllowed) {
+            if (! $this->isPathAllowed($workingDirectory, $allowedPaths)) {
                 return new CommandValidationResult(
                     allowed: false,
                     reason: "Working directory restricted by {$level} policy",
