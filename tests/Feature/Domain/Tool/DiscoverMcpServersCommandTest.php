@@ -3,6 +3,7 @@
 namespace Tests\Feature\Domain\Tool;
 
 use App\Domain\Shared\Models\Team;
+use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpConfigDiscovery;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -120,7 +121,7 @@ class DiscoverMcpServersCommandTest extends TestCase
             ->expectsOutputToContain('1 server(s) would be imported')
             ->assertSuccessful();
 
-        $this->assertEquals(0, \App\Domain\Tool\Models\Tool::withoutGlobalScopes()->count());
+        $this->assertEquals(0, Tool::withoutGlobalScopes()->count());
     }
 
     public function test_import_creates_tools(): void
@@ -133,7 +134,7 @@ class DiscoverMcpServersCommandTest extends TestCase
         $this->artisan('tools:discover --import --no-interaction')
             ->assertSuccessful();
 
-        $this->assertEquals(1, \App\Domain\Tool\Models\Tool::withoutGlobalScopes()->where('team_id', $this->team->id)->count());
+        $this->assertEquals(1, Tool::withoutGlobalScopes()->where('team_id', $this->team->id)->count());
     }
 
     public function test_import_fails_without_team(): void

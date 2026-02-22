@@ -65,7 +65,7 @@ class DiscoverMcpServersCommand extends Command
         foreach ($sources as $sourceKey => $info) {
             $this->components->twoColumnDetail(
                 $info['label'],
-                "<fg=cyan>{$info['count']} server(s)</>"
+                "<fg=cyan>{$info['count']} server(s)</>",
             );
         }
 
@@ -172,7 +172,7 @@ class DiscoverMcpServersCommand extends Command
         if ($result->hasCredentialPlaceholders()) {
             $this->newLine();
             $this->components->warn(
-                "{$result->credentialCount()} server(s) have imported credentials. Review them in Settings > Tools."
+                "{$result->credentialCount()} server(s) have imported credentials. Review them in Settings > Tools.",
             );
         }
 

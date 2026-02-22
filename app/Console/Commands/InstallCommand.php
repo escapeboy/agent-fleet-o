@@ -336,7 +336,7 @@ class InstallCommand extends Command
         foreach ($result['sources'] as $sourceKey => $info) {
             $this->components->twoColumnDetail(
                 $info['label'],
-                "<fg=cyan>{$info['count']} server(s)</>"
+                "<fg=cyan>{$info['count']} server(s)</>",
             );
         }
 
@@ -363,7 +363,7 @@ class InstallCommand extends Command
 
         if ($importResult->hasCredentialPlaceholders()) {
             $this->components->warn(
-                "{$importResult->credentialCount()} server(s) have credentials. Review them in Settings > Tools."
+                "{$importResult->credentialCount()} server(s) have credentials. Review them in Settings > Tools.",
             );
         }
     }
