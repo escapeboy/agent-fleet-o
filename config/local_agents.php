@@ -40,4 +40,10 @@ return [
     // Enable/disable local agent support
     'enabled' => (bool) env('LOCAL_AGENTS_ENABLED', true),
 
+    // MCP server discovery from host IDE configs
+    'mcp_discovery' => [
+        'enabled' => (bool) env('MCP_DISCOVERY_ENABLED', true),
+        'additional_paths' => array_filter(explode(',', env('MCP_DISCOVERY_EXTRA_PATHS', ''))),
+    ],
+
 ];

@@ -6,14 +6,20 @@ use App\Domain\Agent\Actions\DisableAgentAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
+use App\Domain\Tool\Actions\ImportMcpServersAction;
+use App\Domain\Tool\DTOs\ImportResult;
+use App\Domain\Tool\Services\McpConfigDiscovery;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\Blacklist;
 use App\Models\GlobalSetting;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class GlobalSettingsPage extends Component
 {
+    use WithFileUploads;
+
     // Active tab
     public string $activeTab = 'general';
 
@@ -65,6 +71,17 @@ class GlobalSettingsPage extends Component
     public string $blacklistValue = '';
 
     public string $blacklistReason = '';
+
+    // MCP Import
+    public string $mcpJsonInput = '';
+
+    public $mcpUploadFile;
+
+    public array $discoveredServers = [];
+
+    public array $selectedServers = [];
+
+    public ?array $mcpImportResult = null;
 
     public function mount(): void
     {
@@ -224,6 +241,97 @@ class GlobalSettingsPage extends Component
         $count = count($detected);
 
         session()->flash('message', "Local agent scan complete. Found {$count} agent(s).");
+    }
+
+    public function parseMcpJson(): void
+    {
+        $this->validate([
+            'mcpJsonInput' => 'required|string|max:1048576',
+        ]);
+
+        $discovery = app(McpConfigDiscovery::class);
+        $this->discoveredServers = $discovery->parseJsonInput($this->mcpJsonInput);
+        $this->selectedServers = array_keys($this->discoveredServers);
+        $this->mcpImportResult = null;
+
+        if (empty($this->discoveredServers)) {
+            session()->flash('mcp-error', 'No MCP servers found in the provided JSON. Ensure it contains a "mcpServers" or "servers" key.');
+        }
+    }
+
+    public function parseMcpUpload(): void
+    {
+        $this->validate([
+            'mcpUploadFile' => 'required|file|max:1024|mimes:json,txt',
+        ]);
+
+        $content = $this->mcpUploadFile->get();
+        $discovery = app(McpConfigDiscovery::class);
+        $this->discoveredServers = $discovery->parseJsonInput($content);
+        $this->selectedServers = array_keys($this->discoveredServers);
+        $this->mcpImportResult = null;
+
+        if (empty($this->discoveredServers)) {
+            session()->flash('mcp-error', 'No MCP servers found in the uploaded file.');
+        }
+    }
+
+    public function scanHostMcpServers(): void
+    {
+        $discovery = app(McpConfigDiscovery::class);
+        $result = $discovery->scanAllSources();
+        $this->discoveredServers = $result['servers'];
+        $this->selectedServers = array_keys($this->discoveredServers);
+        $this->mcpImportResult = null;
+
+        if (empty($this->discoveredServers)) {
+            session()->flash('mcp-error', 'No MCP servers found on this machine. Configure them in your IDE first.');
+        }
+    }
+
+    public function importSelectedServers(): void
+    {
+        if (empty($this->selectedServers)) {
+            session()->flash('mcp-error', 'No servers selected for import.');
+
+            return;
+        }
+
+        $serversToImport = [];
+        foreach ($this->selectedServers as $index) {
+            if (isset($this->discoveredServers[$index])) {
+                $serversToImport[] = $this->discoveredServers[$index];
+            }
+        }
+
+        $teamId = auth()->user()->currentTeam?->id ?? auth()->user()->current_team_id;
+
+        $importer = app(ImportMcpServersAction::class);
+        $result = $importer->execute($teamId, $serversToImport);
+
+        $this->mcpImportResult = [
+            'imported' => $result->imported,
+            'skipped' => $result->skipped,
+            'failed' => $result->failed,
+            'details' => $result->details,
+            'has_credentials' => $result->hasCredentialPlaceholders(),
+            'credential_count' => $result->credentialCount(),
+        ];
+
+        // Clear discovered servers after import
+        $this->discoveredServers = [];
+        $this->selectedServers = [];
+        $this->mcpJsonInput = '';
+
+        session()->flash('message', "Imported {$result->imported} MCP server(s), skipped {$result->skipped}.");
+    }
+
+    public function clearMcpDiscovery(): void
+    {
+        $this->discoveredServers = [];
+        $this->selectedServers = [];
+        $this->mcpImportResult = null;
+        $this->mcpJsonInput = '';
     }
 
     public function toggleAgent(string $agentId): void

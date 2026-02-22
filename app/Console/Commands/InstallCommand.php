@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Domain\Shared\Models\Team;
+use App\Domain\Tool\Actions\ImportMcpServersAction;
+use App\Domain\Tool\Services\McpConfigDiscovery;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\User;
 use Illuminate\Console\Command;
@@ -23,7 +25,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 1: Check requirements
-        $this->components->twoColumnDetail('Step 1/7', 'System Requirements');
+        $this->components->twoColumnDetail('Step 1/8', 'System Requirements');
 
         if (! $this->checkRequirements()) {
             return self::FAILURE;
@@ -32,7 +34,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 2: Database
-        $this->components->twoColumnDetail('Step 2/7', 'Database');
+        $this->components->twoColumnDetail('Step 2/8', 'Database');
 
         $alreadyInstalled = false;
         try {
@@ -56,7 +58,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 3: Admin account
-        $this->components->twoColumnDetail('Step 3/7', 'Admin Account');
+        $this->components->twoColumnDetail('Step 3/8', 'Admin Account');
 
         $usersExist = false;
         try {
@@ -74,7 +76,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 4: LLM Provider
-        $this->components->twoColumnDetail('Step 4/7', 'LLM Provider (optional)');
+        $this->components->twoColumnDetail('Step 4/8', 'LLM Provider (optional)');
 
         if ($this->option('force')) {
             $this->components->info('Skipping LLM configuration (--force). Configure later in Settings or .env.');
@@ -85,22 +87,28 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 5: Local Agents
-        $this->components->twoColumnDetail('Step 5/7', 'Local Agents (optional)');
+        $this->components->twoColumnDetail('Step 5/8', 'Local Agents (optional)');
         $this->detectLocalAgents();
 
         $this->newLine();
 
         // Step 6: Seed default skills & agents
-        $this->components->twoColumnDetail('Step 6/7', 'Default Skills & Agents');
+        $this->components->twoColumnDetail('Step 6/8', 'Default Skills & Agents');
         $this->components->info('Seeding default skills and agents...');
         Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\SkillAndAgentSeeder', '--force' => true], $this->output);
 
         $this->newLine();
 
         // Step 7: Seed popular tools
-        $this->components->twoColumnDetail('Step 7/7', 'Popular Tools');
+        $this->components->twoColumnDetail('Step 7/8', 'Popular Tools');
         $this->components->info('Seeding popular tools (disabled by default)...');
         Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\PopularToolsSeeder', '--force' => true], $this->output);
+
+        $this->newLine();
+
+        // Step 8: Discover host MCP servers
+        $this->components->twoColumnDetail('Step 8/8', 'Host MCP Servers (optional)');
+        $this->discoverHostMcpServers();
 
         $this->newLine();
 
@@ -297,6 +305,66 @@ class InstallCommand extends Command
         } else {
             $this->setEnvValue('LOCAL_AGENTS_ENABLED', 'false');
             $this->components->info('Local agents disabled. Enable later in Settings or .env.');
+        }
+    }
+
+    private function discoverHostMcpServers(): void
+    {
+        if ($this->option('force')) {
+            $this->components->info('Skipping MCP discovery (--force).');
+
+            return;
+        }
+
+        if (! $this->components->confirm('Scan for MCP servers configured on this machine?', true)) {
+            $this->components->info('Skipped. Run php artisan tools:discover later.');
+
+            return;
+        }
+
+        $discovery = app(McpConfigDiscovery::class);
+        $result = $discovery->scanAllSources();
+        $servers = $result['servers'];
+
+        if (empty($servers)) {
+            $this->components->info('No MCP servers found. Configure them in your IDE first, or import later via Settings.');
+
+            return;
+        }
+
+        // Show summary per source
+        foreach ($result['sources'] as $sourceKey => $info) {
+            $this->components->twoColumnDetail(
+                $info['label'],
+                "<fg=cyan>{$info['count']} server(s)</>"
+            );
+        }
+
+        $activeCount = count(array_filter($servers, fn ($s) => ! $s['disabled']));
+        $this->newLine();
+
+        if (! $this->components->confirm("Import {$activeCount} active server(s)?", true)) {
+            $this->components->info('Skipped. Run php artisan tools:discover --import later.');
+
+            return;
+        }
+
+        $team = Team::first();
+        if (! $team) {
+            $this->components->warn('No team found. Skipping import.');
+
+            return;
+        }
+
+        $importer = app(ImportMcpServersAction::class);
+        $importResult = $importer->execute($team->id, $servers);
+
+        $this->components->info("Imported {$importResult->imported} server(s), skipped {$importResult->skipped}.");
+
+        if ($importResult->hasCredentialPlaceholders()) {
+            $this->components->warn(
+                "{$importResult->credentialCount()} server(s) have credentials. Review them in Settings > Tools."
+            );
         }
     }
 
