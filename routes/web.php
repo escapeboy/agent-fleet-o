@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\MarketplacePageController;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
@@ -41,17 +42,33 @@ use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
 use Illuminate\Support\Facades\Route;
 
-// Root — redirect to dashboard or login
+// Root — landing page for guests, dashboard for authenticated users
 Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return view('landing');
 })->name('home');
 
-// Marketplace: browse is public, publish requires auth, detail (slug) must be last
-Route::get('/marketplace', MarketplaceBrowsePage::class)->name('marketplace.index');
-Route::get('/marketplace/publish', PublishForm::class)->middleware(['auth', 'verified'])->name('marketplace.publish');
-Route::get('/marketplace/{listing:slug}', MarketplaceDetailPage::class)->name('marketplace.show');
+// Legal pages (public)
+Route::get('/privacy', fn () => view('legal.privacy'))->name('legal.privacy');
+Route::get('/cookies', fn () => view('legal.cookies'))->name('legal.cookies');
+Route::get('/terms', fn () => view('legal.terms'))->name('legal.terms');
+
+// Public marketplace storefront (Blade + Alpine.js, no auth)
+Route::controller(MarketplacePageController::class)->prefix('marketplace')->name('marketplace.')->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/category/{category}', 'category')->name('category');
+    Route::get('/{listing:slug}', 'show')->name('show');
+});
+
+// In-app marketplace (Livewire, auth required)
+Route::middleware(['auth', 'verified'])->prefix('app/marketplace')->name('app.marketplace.')->group(function () {
+    Route::get('/', MarketplaceBrowsePage::class)->name('index');
+    Route::get('/publish', PublishForm::class)->name('publish');
+    Route::get('/{listing:slug}', MarketplaceDetailPage::class)->name('show');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardPage::class)->name('dashboard');

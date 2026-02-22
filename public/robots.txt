@@ -1,2 +1,9 @@
 User-agent: *
-Disallow:
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /email/verify
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /livewire/

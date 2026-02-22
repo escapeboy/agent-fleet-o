@@ -97,7 +97,7 @@ class PublishForm extends Component
         );
 
         session()->flash('success', "{$this->name} published to marketplace!");
-        $this->redirect(route('marketplace.show', $listing), navigate: true);
+        $this->redirect(route('app.marketplace.show', $listing), navigate: true);
     }
 
     public function render()

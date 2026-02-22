@@ -73,6 +73,14 @@ class AppServiceProvider extends ServiceProvider
             app(StoreExecutionMemory::class)->handle($execution);
         });
 
+        // Public marketplace API rate limiting
+        RateLimiter::for('marketplace-public', function (Request $request) {
+            return [
+                Limit::perMinute(30)->by('min:'.$request->ip()),
+                Limit::perHour(500)->by('hour:'.$request->ip()),
+            ];
+        });
+
         // API rate limiting
         RateLimiter::for('api', function (Request $request) {
             $user = $request->user();

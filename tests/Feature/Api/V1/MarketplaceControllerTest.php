@@ -63,11 +63,10 @@ class MarketplaceControllerTest extends ApiTestCase
 
     public function test_can_browse_marketplace(): void
     {
-        $this->actingAsApiUser();
         $this->createListing(['name' => 'Listing One']);
         $this->createListing(['name' => 'Listing Two']);
 
-        $response = $this->getJson('/api/v1/marketplace');
+        $response = $this->getJson('/api/v1/marketplace/listings');
 
         $response->assertOk()
             ->assertJsonCount(2, 'data')
@@ -78,11 +77,10 @@ class MarketplaceControllerTest extends ApiTestCase
 
     public function test_can_filter_marketplace_by_type(): void
     {
-        $this->actingAsApiUser();
         $this->createListing(['name' => 'Skill Listing', 'type' => 'skill']);
         $this->createListing(['name' => 'Agent Listing', 'type' => 'agent']);
 
-        $response = $this->getJson('/api/v1/marketplace?filter[type]=skill');
+        $response = $this->getJson('/api/v1/marketplace/listings?filter[type]=skill');
 
         $response->assertOk()
             ->assertJsonCount(1, 'data')
@@ -91,10 +89,9 @@ class MarketplaceControllerTest extends ApiTestCase
 
     public function test_can_show_listing(): void
     {
-        $this->actingAsApiUser();
         $listing = $this->createListing();
 
-        $response = $this->getJson("/api/v1/marketplace/{$listing->slug}");
+        $response = $this->getJson("/api/v1/marketplace/listings/{$listing->slug}");
 
         $response->assertOk()
             ->assertJsonPath('data.id', $listing->id)
@@ -166,10 +163,61 @@ class MarketplaceControllerTest extends ApiTestCase
             ->assertJsonValidationErrors(['rating']);
     }
 
-    public function test_unauthenticated_cannot_browse_marketplace(): void
+    public function test_public_can_browse_marketplace_without_auth(): void
     {
-        $response = $this->getJson('/api/v1/marketplace');
+        $this->createListing(['name' => 'Public Listing']);
+
+        $response = $this->getJson('/api/v1/marketplace/listings');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function test_unauthenticated_cannot_publish_to_marketplace(): void
+    {
+        $response = $this->postJson('/api/v1/marketplace', [
+            'type' => 'skill',
+            'item_id' => 'fake-id',
+            'name' => 'Test',
+            'description' => 'Test',
+        ]);
 
         $response->assertStatus(401);
+    }
+
+    public function test_can_download_listing(): void
+    {
+        $listing = $this->createListing();
+
+        $response = $this->getJson("/api/v1/marketplace/listings/{$listing->slug}/download");
+
+        $response->assertOk()
+            ->assertJsonPath('data.name', 'Published Skill')
+            ->assertJsonPath('data.type', 'skill')
+            ->assertJsonStructure([
+                'data' => ['name', 'type', 'version', 'configuration', 'checksum'],
+            ]);
+    }
+
+    public function test_can_get_categories(): void
+    {
+        $this->createListing(['category' => 'productivity']);
+        $this->createListing(['category' => 'productivity']);
+        $this->createListing(['category' => 'analytics']);
+
+        $response = $this->getJson('/api/v1/marketplace/categories');
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    public function test_can_get_reviews_publicly(): void
+    {
+        $listing = $this->createListing();
+
+        $response = $this->getJson("/api/v1/marketplace/listings/{$listing->slug}/reviews");
+
+        $response->assertOk()
+            ->assertJsonStructure(['data']);
     }
 }

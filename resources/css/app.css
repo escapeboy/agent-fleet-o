@@ -50,40 +50,41 @@
 }
 
 /* ─── Global Theme Overrides ───
- * Remap hardcoded Tailwind utilities inside the main content area
- * so that ALL pages automatically inherit the active theme.
+ * Remap hardcoded Tailwind utilities inside the app content area
+ * so that authenticated pages automatically inherit the active theme.
+ * Scoped to [data-theme-scope] to avoid breaking the public landing page.
  */
 
 /* Backgrounds */
-main .bg-white    { background-color: var(--surface-raised) !important; }
-main .bg-gray-50  { background-color: var(--surface-alt) !important; }
-main .bg-gray-100 { background-color: var(--surface-alt) !important; }
+[data-theme-scope] .bg-white    { background-color: var(--surface-raised) !important; }
+[data-theme-scope] .bg-gray-50  { background-color: var(--surface-alt) !important; }
+[data-theme-scope] .bg-gray-100 { background-color: var(--surface-alt) !important; }
 
 /* Text */
-main .text-gray-900 { color: var(--on-surface) !important; }
-main .text-gray-800 { color: var(--on-surface) !important; }
-main .text-gray-700 { color: var(--on-surface) !important; }
-main .text-gray-600 { color: var(--on-surface-muted) !important; }
-main .text-gray-500 { color: var(--on-surface-muted) !important; }
-main .text-gray-400 { color: var(--on-surface-muted) !important; }
+[data-theme-scope] .text-gray-900 { color: var(--on-surface) !important; }
+[data-theme-scope] .text-gray-800 { color: var(--on-surface) !important; }
+[data-theme-scope] .text-gray-700 { color: var(--on-surface) !important; }
+[data-theme-scope] .text-gray-600 { color: var(--on-surface-muted) !important; }
+[data-theme-scope] .text-gray-500 { color: var(--on-surface-muted) !important; }
+[data-theme-scope] .text-gray-400 { color: var(--on-surface-muted) !important; }
 
 /* Borders */
-main .border-gray-200 { border-color: var(--border) !important; }
-main .border-gray-300 { border-color: var(--border-strong) !important; }
-main .divide-gray-200 > :not(:last-child) { border-color: var(--border) !important; }
+[data-theme-scope] .border-gray-200 { border-color: var(--border) !important; }
+[data-theme-scope] .border-gray-300 { border-color: var(--border-strong) !important; }
+[data-theme-scope] .divide-gray-200 > :not(:last-child) { border-color: var(--border) !important; }
 
 /* Table header backgrounds */
-main thead .bg-gray-50,
-main .bg-gray-50.thead { background-color: var(--surface-alt) !important; }
+[data-theme-scope] thead .bg-gray-50,
+[data-theme-scope] .bg-gray-50.thead { background-color: var(--surface-alt) !important; }
 
 /* Disabled inputs */
-main .disabled\:bg-gray-100:disabled { background-color: var(--surface-alt) !important; }
+[data-theme-scope] .disabled\:bg-gray-100:disabled { background-color: var(--surface-alt) !important; }
 
 /* Hover states */
-main .hover\:bg-gray-50:hover { background-color: var(--surface-alt) !important; }
+[data-theme-scope] .hover\:bg-gray-50:hover { background-color: var(--surface-alt) !important; }
 
 /* Placeholder */
-main .placeholder-gray-400::placeholder { color: var(--on-surface-muted) !important; }
+[data-theme-scope] .placeholder-gray-400::placeholder { color: var(--on-surface-muted) !important; }
 
 /* AI output rendering — lightweight prose replacement */
 .prose-output {
@@ -118,3 +119,18 @@ main .placeholder-gray-400::placeholder { color: var(--on-surface-muted) !import
 .prose-output th { background-color: var(--surface-alt, #f3f4f6); font-weight: 600; white-space: nowrap; }
 .prose-output tr:nth-child(even) td { background-color: var(--surface-alt, #f9fafb); }
 .prose-output td:first-child { white-space: normal; }
+
+/* ─── Landing page ─── */
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

@@ -46,7 +46,7 @@
             Memory
         </x-sidebar-link>
 
-        <x-sidebar-link href="{{ route('marketplace.index') }}" :active="request()->routeIs('marketplace.*')" icon="shopping-bag">
+        <x-sidebar-link href="{{ route('app.marketplace.index') }}" :active="request()->routeIs('app.marketplace.*')" icon="shopping-bag">
             Marketplace
         </x-sidebar-link>
 

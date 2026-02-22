@@ -67,14 +67,14 @@ class ToolControllerTest extends ApiTestCase
 
         $response = $this->postJson('/api/v1/tools', [
             'name' => 'New MCP Tool',
-            'type' => 'mcp_stdio',
+            'type' => 'mcp_http',
             'description' => 'A test tool',
-            'transport_config' => ['command' => 'node', 'args' => ['server.js']],
+            'transport_config' => ['url' => 'https://mcp.example.com'],
         ]);
 
         $response->assertStatus(201)
             ->assertJsonPath('data.name', 'New MCP Tool')
-            ->assertJsonPath('data.type', 'mcp_stdio');
+            ->assertJsonPath('data.type', 'mcp_http');
 
         $this->assertDatabaseHas('tools', ['name' => 'New MCP Tool']);
     }

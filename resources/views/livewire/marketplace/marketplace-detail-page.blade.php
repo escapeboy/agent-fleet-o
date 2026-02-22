@@ -22,7 +22,7 @@
             <p class="mt-1 text-xs text-gray-400">Published by {{ $listing->team?->name ?? 'Unknown' }}</p>
         </div>
         <div class="flex items-center gap-3">
-            <a href="{{ route('marketplace.index') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+            <a href="{{ route('app.marketplace.index') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
                 Back
             </a>
             @auth

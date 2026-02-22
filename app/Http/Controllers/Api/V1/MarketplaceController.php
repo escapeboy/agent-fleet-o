@@ -21,6 +21,9 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class MarketplaceController extends Controller
 {
+    /**
+     * @unauthenticated
+     */
     public function index(Request $request): AnonymousResourceCollection
     {
         $listings = QueryBuilder::for(
@@ -39,11 +42,66 @@ class MarketplaceController extends Controller
         return MarketplaceListingResource::collection($listings);
     }
 
+    /**
+     * @unauthenticated
+     */
     public function show(MarketplaceListing $listing): MarketplaceListingResource
     {
         $listing->load('reviews');
 
         return new MarketplaceListingResource($listing);
+    }
+
+    /**
+     * @unauthenticated
+     */
+    public function download(MarketplaceListing $listing): JsonResponse
+    {
+        abort_unless($listing->isPublished(), 404);
+
+        return response()->json([
+            'data' => [
+                'slug' => $listing->slug,
+                'type' => $listing->type,
+                'name' => $listing->name,
+                'version' => $listing->version,
+                'configuration' => $listing->configuration_snapshot,
+                'checksum' => hash('sha256', json_encode($listing->configuration_snapshot)),
+            ],
+        ]);
+    }
+
+    /**
+     * @unauthenticated
+     */
+    public function categories(): JsonResponse
+    {
+        $categories = MarketplaceListing::query()
+            ->where('status', MarketplaceStatus::Published)
+            ->where('visibility', ListingVisibility::Public)
+            ->whereNotNull('category')
+            ->select('category')
+            ->selectRaw('count(*) as count')
+            ->groupBy('category')
+            ->orderByDesc('count')
+            ->get();
+
+        return response()->json(['data' => $categories]);
+    }
+
+    /**
+     * @unauthenticated
+     */
+    public function reviews(MarketplaceListing $listing): JsonResponse
+    {
+        abort_unless($listing->isPublished(), 404);
+
+        $reviews = $listing->reviews()
+            ->with('user:id,name')
+            ->orderByDesc('created_at')
+            ->paginate(15);
+
+        return response()->json($reviews);
     }
 
     public function publish(Request $request, PublishToMarketplaceAction $action): JsonResponse

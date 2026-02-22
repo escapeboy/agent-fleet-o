@@ -16,18 +16,13 @@ jobs:
   # ─────────────────────────────────────────
   quality:
     name: Code Quality
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: mbstring, dom, fileinfo, pgsql, pdo_pgsql, redis, pcntl, bcmath, intl, zip
-          tools: composer:v2
-          coverage: none
+      - name: Verify PHP
+        run: php -v && composer --version
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -46,49 +41,17 @@ jobs:
         run: vendor/bin/phpstan analyse --memory-limit=512M
 
   # ─────────────────────────────────────────
-  # Job 2: Test Suite (PostgreSQL + Redis)
+  # Job 2: Test Suite (SQLite in-memory)
   # ─────────────────────────────────────────
   tests:
     name: Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: quality
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: testing
-          POSTGRES_PASSWORD: testing
-          POSTGRES_DB: agent_fleet_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     env:
       APP_ENV: testing
-      DB_CONNECTION: pgsql
-      DB_HOST: localhost
-      DB_PORT: 5432
-      DB_DATABASE: agent_fleet_test
-      DB_USERNAME: testing
-      DB_PASSWORD: testing
-      REDIS_HOST: localhost
-      REDIS_PORT: 6379
-      REDIS_CLIENT: predis
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
       CACHE_STORE: array
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: array
@@ -96,13 +59,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: mbstring, dom, fileinfo, pgsql, pdo_pgsql, redis, pcntl, bcmath, intl, zip
-          tools: composer:v2
-          coverage: pcov
+      - name: Verify PHP
+        run: php -v && php -m | grep -E '(sqlite3|pcov|pgsql|redis)'
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -119,19 +77,17 @@ jobs:
           cp .env.example .env
           php artisan key:generate
           php artisan config:clear
-
-      - name: Run migrations
-        run: php artisan migrate --force
+          mkdir -p storage/framework/{cache,sessions,views} storage/logs
 
       - name: Run tests
-        run: php artisan test
+        run: vendor/bin/phpunit
 
   # ─────────────────────────────────────────
   # Job 3: Frontend Build Verification
   # ─────────────────────────────────────────
   build:
     name: Build Assets
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
