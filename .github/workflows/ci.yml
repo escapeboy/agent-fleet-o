@@ -16,7 +16,7 @@ jobs:
   # ─────────────────────────────────────────
   quality:
     name: Code Quality
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
   # ─────────────────────────────────────────
   tests:
     name: Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: quality
 
     services:
@@ -131,7 +131,7 @@ jobs:
   # ─────────────────────────────────────────
   build:
     name: Build Assets
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
