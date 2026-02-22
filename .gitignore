@@ -27,3 +27,19 @@ Thumbs.db
 /.claude
 /*.png
 /*.jpg
+
+# Playwright MCP screenshots
+/.playwright-mcp
+
+# Development screenshots
+/screenshots
+
+# Unrelated project artifacts
+/AIPS_*
+/PRESENTATION_DESIGN_GUIDE.md
+/WORKFLOW_ORCHESTRATION_PATTERNS.md
+/database/schemas
+/packages
+/services
+/phpstan-filter.php
+/public/presentations

@@ -41,11 +41,13 @@ use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
 use Illuminate\Support\Facades\Route;
 
-// Root — redirect to dashboard or login
+// Root — landing page for guests, dashboard for authenticated users
 Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return view('landing');
 })->name('home');
 
 // Marketplace: browse is public, publish requires auth, detail (slug) must be last
