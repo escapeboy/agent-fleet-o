@@ -79,10 +79,16 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                     $body .= "\n\n<img src=\"{$pixelUrl}\" width=\"1\" height=\"1\" alt=\"\" />";
                 }
 
-                Mail::html($body, function ($message) use ($to, $subject, $fromName, $fromAddress) {
+                $unsubscribeEmail = config('mail.from.address', $fromAddress);
+                $listUnsubscribe = "<mailto:{$unsubscribeEmail}?subject=unsubscribe>";
+
+                Mail::html($body, function ($message) use ($to, $subject, $fromName, $fromAddress, $listUnsubscribe) {
                     $message->to($to)
                         ->subject($subject)
                         ->from($fromAddress, $fromName);
+
+                    $message->getHeaders()->addTextHeader('List-Unsubscribe', $listUnsubscribe);
+                    $message->getHeaders()->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
                 });
             }
 

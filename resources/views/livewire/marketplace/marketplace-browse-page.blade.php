@@ -47,7 +47,7 @@
         </div>
 
         @auth
-            <a href="{{ route('marketplace.publish') }}"
+            <a href="{{ route('app.marketplace.publish') }}"
                 class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                 Publish
             </a>
@@ -60,7 +60,7 @@
             <div class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 transition hover:shadow-md">
                 <div class="mb-3 flex items-start justify-between">
                     <div>
-                        <a href="{{ route('marketplace.show', $listing) }}" class="text-lg font-semibold text-gray-900 hover:text-primary-600">
+                        <a href="{{ route('app.marketplace.show', $listing) }}" class="text-lg font-semibold text-gray-900 hover:text-primary-600">
                             {{ $listing->name }}
                         </a>
                         <span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium

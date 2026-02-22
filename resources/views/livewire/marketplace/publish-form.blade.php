@@ -72,7 +72,7 @@
 
             {{-- Submit --}}
             <div class="flex items-center justify-between border-t border-gray-200 pt-4">
-                <a href="{{ route('marketplace.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
+                <a href="{{ route('app.marketplace.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
                 <button type="submit"
                     wire:loading.attr="disabled"
                     class="rounded-lg bg-primary-600 px-6 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">

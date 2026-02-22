@@ -35,6 +35,17 @@ use Illuminate\Support\Facades\Route;
 // Auth (public — no auth required)
 Route::post('/auth/token', [AuthController::class, 'token']);
 
+// Public marketplace API (no auth, rate-limited)
+Route::prefix('marketplace')
+    ->middleware('throttle:marketplace-public')
+    ->group(function () {
+        Route::get('/listings', [MarketplaceController::class, 'index']);
+        Route::get('/listings/{listing:slug}', [MarketplaceController::class, 'show']);
+        Route::get('/listings/{listing:slug}/download', [MarketplaceController::class, 'download']);
+        Route::get('/listings/{listing:slug}/reviews', [MarketplaceController::class, 'reviews']);
+        Route::get('/categories', [MarketplaceController::class, 'categories']);
+    });
+
 // Authenticated routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
@@ -115,9 +126,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/artifacts/{artifact}/content', [ArtifactController::class, 'content']);
     Route::get('/artifacts/{artifact}/download', [ArtifactController::class, 'download']);
 
-    // Marketplace
-    Route::get('/marketplace', [MarketplaceController::class, 'index']);
-    Route::get('/marketplace/{listing:slug}', [MarketplaceController::class, 'show']);
+    // Marketplace (authenticated write operations)
     Route::post('/marketplace', [MarketplaceController::class, 'publish']);
     Route::post('/marketplace/{listing:slug}/install', [MarketplaceController::class, 'install']);
     Route::post('/marketplace/{listing:slug}/reviews', [MarketplaceController::class, 'review']);

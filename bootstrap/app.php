@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetCurrentTeam;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(SecurityHeaders::class);
         $middleware->appendToGroup('web', SetCurrentTeam::class);
         $middleware->statefulApi();
     })

@@ -86,6 +86,109 @@ class InstallFromMarketplaceAction
         });
     }
 
+    /**
+     * Install from a remote marketplace manifest (configuration snapshot).
+     * Used by community edition to install from cloud marketplace API.
+     */
+    public function executeFromManifest(
+        string $type,
+        array $configuration,
+        string $name,
+        string $version,
+        string $teamId,
+        string $userId,
+    ): \Illuminate\Database\Eloquent\Model {
+        return DB::transaction(function () use ($type, $configuration, $name, $version, $teamId, $userId) {
+            return match ($type) {
+                'skill' => Skill::create([
+                    'team_id' => $teamId,
+                    'name' => $name,
+                    'slug' => Str::slug($name).'-'.Str::random(4),
+                    'description' => $configuration['description'] ?? $name,
+                    'type' => SkillType::from($configuration['type'] ?? 'llm'),
+                    'execution_type' => ExecutionType::Sync,
+                    'status' => SkillStatus::Active,
+                    'risk_level' => RiskLevel::from($configuration['risk_level'] ?? 'low'),
+                    'input_schema' => $configuration['input_schema'] ?? [],
+                    'output_schema' => $configuration['output_schema'] ?? [],
+                    'configuration' => $configuration['configuration'] ?? [],
+                    'system_prompt' => $configuration['system_prompt'] ?? null,
+                    'current_version' => $version,
+                ]),
+                'agent' => Agent::create([
+                    'team_id' => $teamId,
+                    'name' => $name,
+                    'slug' => Str::slug($name).'-'.Str::random(4),
+                    'role' => $configuration['role'] ?? null,
+                    'goal' => $configuration['goal'] ?? null,
+                    'provider' => $configuration['provider'] ?? 'anthropic',
+                    'model' => $configuration['model'] ?? 'claude-sonnet-4-5',
+                    'status' => 'active',
+                    'capabilities' => $configuration['capabilities'] ?? [],
+                    'constraints' => $configuration['constraints'] ?? [],
+                ]),
+                'workflow' => $this->cloneWorkflowFromManifest($configuration, $name, $teamId, $userId),
+                default => throw new \InvalidArgumentException("Unsupported marketplace item type: {$type}"),
+            };
+        });
+    }
+
+    private function cloneWorkflowFromManifest(
+        array $snapshot,
+        string $name,
+        string $teamId,
+        string $userId,
+    ): Workflow {
+        $workflow = Workflow::create([
+            'team_id' => $teamId,
+            'user_id' => $userId,
+            'name' => $name,
+            'slug' => Str::slug($name).'-'.Str::random(6),
+            'description' => $snapshot['description'] ?? $name,
+            'status' => WorkflowStatus::Draft,
+            'version' => 1,
+            'max_loop_iterations' => $snapshot['max_loop_iterations'] ?? 5,
+            'estimated_cost_credits' => $snapshot['estimated_cost_credits'] ?? null,
+            'settings' => $snapshot['settings'] ?? [],
+        ]);
+
+        $nodeIdMap = [];
+
+        foreach ($snapshot['nodes'] ?? [] as $nodeData) {
+            $newNode = WorkflowNode::create([
+                'workflow_id' => $workflow->id,
+                'agent_id' => null,
+                'skill_id' => null,
+                'type' => $nodeData['type'],
+                'label' => $nodeData['label'],
+                'position_x' => $nodeData['position_x'] ?? 0,
+                'position_y' => $nodeData['position_y'] ?? 0,
+                'config' => $nodeData['config'] ?? [],
+                'order' => $nodeData['order'] ?? 0,
+            ]);
+            $nodeIdMap[$nodeData['id']] = $newNode->id;
+        }
+
+        foreach ($snapshot['edges'] ?? [] as $edgeData) {
+            $sourceId = $nodeIdMap[$edgeData['source_node_id']] ?? null;
+            $targetId = $nodeIdMap[$edgeData['target_node_id']] ?? null;
+
+            if ($sourceId && $targetId) {
+                WorkflowEdge::create([
+                    'workflow_id' => $workflow->id,
+                    'source_node_id' => $sourceId,
+                    'target_node_id' => $targetId,
+                    'condition' => $edgeData['condition'] ?? null,
+                    'label' => $edgeData['label'] ?? null,
+                    'is_default' => $edgeData['is_default'] ?? false,
+                    'sort_order' => $edgeData['sort_order'] ?? 0,
+                ]);
+            }
+        }
+
+        return $workflow;
+    }
+
     private function cloneWorkflowFromSnapshot(
         MarketplaceListing $listing,
         array $snapshot,

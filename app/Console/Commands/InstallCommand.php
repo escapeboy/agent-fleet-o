@@ -308,6 +308,14 @@ class InstallCommand extends Command
             return;
         }
 
+        // Sanitize: strip newlines and null bytes to prevent env injection
+        $value = str_replace(["\n", "\r", "\0"], '', $value);
+
+        // Quote values containing spaces, #, or special characters
+        if (preg_match('/[\s#"\'\\\\]/', $value)) {
+            $value = '"'.addslashes($value).'"';
+        }
+
         $content = file_get_contents($envPath);
 
         // Replace existing key or append

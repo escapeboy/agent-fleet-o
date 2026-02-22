@@ -3,6 +3,7 @@
 namespace App\Livewire\Marketplace;
 
 use App\Domain\Marketplace\Actions\InstallFromMarketplaceAction;
+use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use Livewire\Attributes\Url;
@@ -82,7 +83,8 @@ class MarketplaceBrowsePage extends Component
     public function render()
     {
         $query = MarketplaceListing::query()
-            ->where('status', MarketplaceStatus::Published);
+            ->where('status', MarketplaceStatus::Published)
+            ->where('visibility', ListingVisibility::Public);
 
         if ($this->search) {
             $query->where(function ($q) {
@@ -103,6 +105,7 @@ class MarketplaceBrowsePage extends Component
 
         $categories = MarketplaceListing::query()
             ->where('status', MarketplaceStatus::Published)
+            ->where('visibility', ListingVisibility::Public)
             ->whereNotNull('category')
             ->distinct()
             ->pluck('category');
