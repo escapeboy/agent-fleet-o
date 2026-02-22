@@ -14,6 +14,7 @@ use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -97,7 +98,7 @@ class InstallFromMarketplaceAction
         string $version,
         string $teamId,
         string $userId,
-    ): \Illuminate\Database\Eloquent\Model {
+    ): Model {
         return DB::transaction(function () use ($type, $configuration, $name, $version, $teamId, $userId) {
             return match ($type) {
                 'skill' => Skill::create([
