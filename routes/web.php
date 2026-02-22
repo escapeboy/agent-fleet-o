@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\MarketplacePageController;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
@@ -39,7 +40,6 @@ use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
-use App\Http\Controllers\MarketplacePageController;
 use Illuminate\Support\Facades\Route;
 
 // Root — landing page for guests, dashboard for authenticated users
