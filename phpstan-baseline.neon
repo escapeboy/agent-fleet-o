@@ -2647,6 +2647,12 @@ parameters:
 			path: app/Domain/Signal/Connectors/CalendarConnector.php
 
 		-
+			message: '#^Negated boolean expression is always false\.$#'
+			identifier: booleanNot.alwaysFalse
+			count: 1
+			path: app/Domain/Signal/Connectors/CalendarConnector.php
+
+		-
 			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
 			identifier: class.notFound
 			count: 1
@@ -2655,6 +2661,12 @@ parameters:
 		-
 			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
 			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
+			message: '#^Method Webklex\\PHPIMAP\\Query\\WhereQuery\:\:whereUid\(\) invoked with 2 parameters, 1 required\.$#'
+			identifier: arguments.count
 			count: 1
 			path: app/Domain/Signal/Connectors/ImapConnector.php
 
