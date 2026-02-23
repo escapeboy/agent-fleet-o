@@ -4,11 +4,11 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Workflow\Actions\SuggestWorkflowAction;
-use Illuminate\Http\Request;
-use Laravel\Mcp\Attributes\IsReadOnly;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
-use Laravel\Mcp\Server\Tool\JsonSchema;
-use Laravel\Mcp\Server\Tool\Response;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 class WorkflowSuggestionTool extends Tool
@@ -31,17 +31,17 @@ class WorkflowSuggestionTool extends Tool
         $experiment = Experiment::find($experimentId);
 
         if (! $experiment) {
-            return $this->error("Experiment '{$experimentId}' not found.");
+            return Response::error("Experiment '{$experimentId}' not found.");
         }
 
         if (! $experiment->hasWorkflow()) {
-            return $this->error('This experiment does not use a workflow. Suggestions are only available for workflow experiments.');
+            return Response::error('This experiment does not use a workflow. Suggestions are only available for workflow experiments.');
         }
 
         $suggestions = app(SuggestWorkflowAction::class)->execute($experiment);
 
         if (empty($suggestions)) {
-            return $this->text('No optimization suggestions found. The workflow appears to be well-optimized, or there is not enough execution data yet.');
+            return Response::text('No optimization suggestions found. The workflow appears to be well-optimized, or there is not enough execution data yet.');
         }
 
         $lines = ['Found '.count($suggestions)." optimization suggestion(s) for \"{$experiment->title}\":\n"];
@@ -56,6 +56,6 @@ class WorkflowSuggestionTool extends Tool
             $lines[] = '';
         }
 
-        return $this->text(implode("\n", $lines));
+        return Response::text(implode("\n", $lines));
     }
 }
