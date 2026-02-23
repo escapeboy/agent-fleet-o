@@ -52,7 +52,7 @@ class SentryAlertConnector implements InputConnectorInterface
 
         $defaultTags = $config['default_tags'] ?? [];
         $tags = array_values(array_unique(
-            array_merge(['sentry', 'alert', $dto->severity, $dto->status], $defaultTags)
+            array_merge(['sentry', 'alert', $dto->severity, $dto->status], $defaultTags),
         ));
 
         $signal = $this->ingestAction->execute(

@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ApprovalRequest extends Model
 {
@@ -94,7 +95,7 @@ class ApprovalRequest extends Model
      * The WorktreeExecution that triggered this approval (CodeExecution skill).
      * Inverse of WorktreeExecution::$approval_request_id.
      */
-    public function worktreeExecution(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function worktreeExecution(): HasOne
     {
         return $this->hasOne(WorktreeExecution::class);
     }

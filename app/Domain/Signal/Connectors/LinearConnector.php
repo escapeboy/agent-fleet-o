@@ -102,7 +102,7 @@ class LinearConnector implements InputConnectorInterface
         ];
 
         $tags = array_values(array_unique(
-            array_merge(['linear', 'ticket'], $labels, $defaultTags)
+            array_merge(['linear', 'ticket'], $labels, $defaultTags),
         ));
 
         $signal = $this->ingestAction->execute(

@@ -58,7 +58,7 @@ class DatadogAlertConnector implements InputConnectorInterface
 
         $defaultTags = $config['default_tags'] ?? [];
         $tags = array_values(array_unique(
-            array_merge(['datadog', 'alert', $dto->severity, $dto->status], $defaultTags)
+            array_merge(['datadog', 'alert', $dto->severity, $dto->status], $defaultTags),
         ));
 
         $signal = $this->ingestAction->execute(

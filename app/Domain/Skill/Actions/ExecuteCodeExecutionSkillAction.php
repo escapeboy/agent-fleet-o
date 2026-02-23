@@ -12,7 +12,6 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Skill\Models\WorktreeExecution;
 use Illuminate\Support\Str;
-use RuntimeException;
 
 /**
  * Executes a CodeExecution skill via the Git worktree + Docker sandbox pipeline:

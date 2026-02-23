@@ -94,7 +94,7 @@ class MultiModelConsensusService
      * Model names are NEVER revealed (prevents self-model bias).
      *
      * @param  array<array{label: string, provider: string, model: string, response: AiResponseDTO}>  $generations
-     * @return array<string, string>  label => review text
+     * @return array<string, string> label => review text
      */
     private function stagePeerReview(
         string $originalPrompt,
@@ -114,7 +114,7 @@ class MultiModelConsensusService
             $otherResponses = array_filter($generations, fn ($g) => $g['label'] !== $reviewerLabel);
             $otherText = implode("\n\n", array_map(
                 fn ($g) => "### {$g['label']}\n{$g['response']->content}",
-                $otherResponses
+                $otherResponses,
             ));
 
             $reviewPrompt = "Original question:\n{$originalPrompt}\n\nReview these responses:\n\n{$otherText}\n\nFor each response, provide:\n1. A score from 1-10\n2. Key strengths\n3. Key weaknesses or factual errors\n4. Missing information";
@@ -159,13 +159,13 @@ class MultiModelConsensusService
     ): array {
         $allResponses = implode("\n\n", array_map(
             fn ($g) => "### {$g['label']}\n{$g['response']->content}",
-            $generations
+            $generations,
         ));
 
         $allReviews = implode("\n\n", array_map(
             fn ($label, $review) => "### Peer reviews by the model that produced {$label}:\n{$review}",
             array_keys($peerReviews),
-            $peerReviews
+            $peerReviews,
         ));
 
         $judgePrompt = "Original question:\n{$originalPrompt}\n\n"
@@ -175,7 +175,7 @@ class MultiModelConsensusService
             ."- confidence_score: a number from 0.0 to 1.0 (1.0 = all models agreed perfectly)\n"
             ."- consensus_level: 'strong' (all agree), 'moderate' (mostly agree), or 'weak' (significant disagreement)\n"
             ."- dissenting_view: if there was a notable minority view worth preserving, summarize it (or null)\n\n"
-            ."Respond in JSON with keys: answer, confidence_score, consensus_level, dissenting_view";
+            .'Respond in JSON with keys: answer, confidence_score, consensus_level, dissenting_view';
 
         $judgeResponse = $this->gateway->complete(new AiRequestDTO(
             provider: $judgeModel['provider'],

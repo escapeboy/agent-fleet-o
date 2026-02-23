@@ -2,9 +2,6 @@
 
 namespace App\Mcp\Tools\Signal;
 
-use App\Domain\Signal\Connectors\GitHubIssuesConnector;
-use App\Domain\Signal\Connectors\JiraConnector;
-use App\Domain\Signal\Connectors\LinearConnector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Attributes\IsReadOnly;
 use Laravel\Mcp\Request;

@@ -3,9 +3,9 @@
 namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\WorktreeExecution;
-use App\Domain\Skill\Enums\SkillType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;

@@ -84,7 +84,7 @@ class JiraConnector implements InputConnectorInterface
         ];
 
         $tags = array_values(array_unique(
-            array_merge(['jira', 'ticket'], $issueLabels, $defaultTags)
+            array_merge(['jira', 'ticket'], $issueLabels, $defaultTags),
         ));
 
         $signal = $this->ingestAction->execute(

@@ -84,7 +84,7 @@ class GitHubIssuesConnector implements InputConnectorInterface
         ];
 
         $tags = array_values(array_unique(
-            array_merge(['github_issues', 'ticket'], $issueLabels, $defaultTags)
+            array_merge(['github_issues', 'ticket'], $issueLabels, $defaultTags),
         ));
 
         $signal = $this->ingestAction->execute(

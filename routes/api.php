@@ -1,10 +1,10 @@
 <?php
 
+use App\Http\Controllers\DatadogAlertWebhookController;
 use App\Http\Controllers\DiscordWebhookController;
 use App\Http\Controllers\GitHubIssueWebhookController;
 use App\Http\Controllers\JiraWebhookController;
 use App\Http\Controllers\LinearWebhookController;
-use App\Http\Controllers\DatadogAlertWebhookController;
 use App\Http\Controllers\PagerDutyWebhookController;
 use App\Http\Controllers\SentryAlertWebhookController;
 use App\Http\Controllers\SignalWebhookController;
