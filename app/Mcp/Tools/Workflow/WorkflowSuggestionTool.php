@@ -20,13 +20,16 @@ class WorkflowSuggestionTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            $schema->string('experiment_id', 'ID of the completed or evaluating workflow experiment to analyze.'),
+            'experiment_id' => $schema->string()
+                ->description('ID of the completed or evaluating workflow experiment to analyze.')
+                ->required(),
         ];
     }
 
     public function handle(Request $request): Response
     {
-        $experimentId = $request->input('experiment_id');
+        $validated = $request->validate(['experiment_id' => 'required|string']);
+        $experimentId = $validated['experiment_id'];
 
         $experiment = Experiment::find($experimentId);
 

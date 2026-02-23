@@ -52,6 +52,7 @@ class GuardrailTool extends Tool
                 $validated['guardrail_skill_id'] ?? null,
             ),
             'remove_node_guardrail' => $this->removeNodeGuardrail($validated['workflow_node_id'] ?? null),
+            default => Response::error('Unknown action.'),
         };
     }
 
@@ -103,7 +104,7 @@ class GuardrailTool extends Tool
         }
 
         $skill = Skill::find($guardrailSkillId);
-        if (! $skill || $skill->type !== SkillType::Guardrail) {
+        if (! $skill || $skill->type->value !== SkillType::Guardrail->value) {
             return Response::error('Skill not found or is not a guardrail type.');
         }
 
