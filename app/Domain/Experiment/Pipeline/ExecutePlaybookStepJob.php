@@ -6,6 +6,8 @@ use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Services\CheckpointManager;
+use App\Domain\Skill\Actions\ExecuteGuardrailAction;
+use App\Domain\Workflow\Models\WorkflowNode;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -151,6 +153,38 @@ class ExecutePlaybookStepJob implements ShouldQueue
 
         try {
             $input = $this->resolveInput($step, $experiment);
+
+            // Run guardrail check if a guardrail skill is configured on this workflow node
+            if ($step->workflow_node_id) {
+                $workflowNode = WorkflowNode::find($step->workflow_node_id);
+
+                if ($workflowNode?->guardrail_skill_id) {
+                    $guardrailSkill = $workflowNode->guardrailSkill;
+
+                    if ($guardrailSkill) {
+                        $guardrailResult = app(ExecuteGuardrailAction::class)->execute(
+                            guardrailSkill: $guardrailSkill,
+                            input: $input,
+                            teamId: $experiment->team_id,
+                            userId: $experiment->user_id,
+                            experimentId: $experiment->id,
+                        );
+
+                        $step->update(['guardrail_result' => $guardrailResult]);
+
+                        if (! $guardrailResult['safe'] && in_array($guardrailResult['risk_level'], ['high', 'critical'])) {
+                            $stopHeartbeat();
+                            $step->update([
+                                'status' => 'failed',
+                                'error_message' => "Guardrail blocked: {$guardrailResult['reason']}",
+                                'completed_at' => now(),
+                            ]);
+
+                            throw new \RuntimeException("Guardrail blocked execution: {$guardrailResult['reason']}");
+                        }
+                    }
+                }
+            }
 
             Log::info('ExecutePlaybookStepJob: calling executeAgent', [
                 'step_id' => $this->stepId,

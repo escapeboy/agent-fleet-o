@@ -62,12 +62,47 @@
             </div>
 
             {{-- Visibility --}}
-            <div class="mb-6">
+            <div class="mb-4">
                 <label class="mb-1 block text-sm font-medium text-gray-700">Visibility</label>
                 <div class="flex gap-4">
                     <x-form-radio wire:model="visibility" value="public" label="Public" />
                     <x-form-radio wire:model="visibility" value="unlisted" label="Unlisted" />
                 </div>
+            </div>
+
+            {{-- Provider Requirements (skills only) --}}
+            @if($itemType === 'skill')
+                <div class="mb-4">
+                    <label class="mb-1 block text-sm font-medium text-gray-700">Required Providers</label>
+                    <p class="mb-2 text-xs text-gray-500">Select providers this skill needs. Marketplace will show a compatibility badge to users.</p>
+                    <div class="flex flex-wrap gap-3">
+                        @foreach(['anthropic' => 'Anthropic (Claude)', 'openai' => 'OpenAI (GPT)', 'google' => 'Google (Gemini)'] as $key => $label)
+                            <label class="flex cursor-pointer items-center gap-2">
+                                <input type="checkbox" wire:model="requiredProviders" value="{{ $key }}"
+                                    class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                <span class="text-sm text-gray-700">{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            {{-- Monetization --}}
+            <div class="mb-6 rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Pay-Per-Run Monetization</label>
+                        <p class="text-xs text-gray-500">Charge consumers per execution (platform takes 20%)</p>
+                    </div>
+                    <x-form-checkbox wire:model.live="monetizationEnabled" label="" />
+                </div>
+                @if($monetizationEnabled)
+                    <div class="mt-3">
+                        <x-form-input wire:model="pricePerRun" label="Price per run (credits)" type="number" min="0" step="0.0001"
+                            :error="$errors->first('pricePerRun')" />
+                        <p class="mt-1 text-xs text-gray-400">You receive {{ $pricePerRun > 0 ? number_format((float) $pricePerRun * 0.8, 2) : '0' }} credits per run after 20% platform fee.</p>
+                    </div>
+                @endif
             </div>
 
             {{-- Submit --}}

@@ -31,6 +31,12 @@
             @endforeach
         </x-form-select>
 
+        <x-form-select wire:model.live="pricingFilter">
+            <option value="">All Pricing</option>
+            <option value="free">Free</option>
+            <option value="paid">Paid</option>
+        </x-form-select>
+
         <div class="flex items-center gap-2">
             <button wire:click="sortBy('install_count')"
                 class="rounded-lg border px-3 py-2 text-sm {{ $sortField === 'install_count' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-300 text-gray-600' }}">
@@ -67,9 +73,34 @@
                             {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') }}">
                             {{ ucfirst($listing->type) }}
                         </span>
+                        @if($listing->isPaid())
+                            <span class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                {{ number_format($listing->price_per_run_credits, 0) }} cr/run
+                            </span>
+                        @else
+                            <span class="ml-1 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Free</span>
+                        @endif
                     </div>
                     <span class="text-xs text-gray-400">v{{ $listing->version }}</span>
                 </div>
+
+                {{-- Compatibility badge for skills with requirements --}}
+                @php
+                    $snapshot = $listing->configuration_snapshot ?? [];
+                    $reqProviders = $snapshot['provider_requirements']['required_providers'] ?? [];
+                    $compatible = empty($reqProviders) || !empty(array_intersect($reqProviders, $availableProviders));
+                @endphp
+                @if(!empty($reqProviders) && !$compatible)
+                    <div class="mb-2 flex items-center gap-1 text-xs text-amber-600">
+                        <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                        Requires {{ implode(', ', $reqProviders) }}
+                    </div>
+                @elseif(!empty($reqProviders))
+                    <div class="mb-2 flex items-center gap-1 text-xs text-green-600">
+                        <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        Compatible with your providers
+                    </div>
+                @endif
 
                 <p class="mb-4 flex-1 text-sm text-gray-500 line-clamp-3">{{ $listing->description }}</p>
 

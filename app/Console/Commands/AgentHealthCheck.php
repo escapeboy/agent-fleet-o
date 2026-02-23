@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Domain\Agent\Actions\HealthCheckAction;
+use App\Domain\Agent\Actions\UpdateAgentRiskProfileAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use Illuminate\Console\Command;
@@ -13,7 +14,7 @@ class AgentHealthCheck extends Command
 
     protected $description = 'Run health checks against all active AI agents';
 
-    public function handle(HealthCheckAction $action): int
+    public function handle(HealthCheckAction $action, UpdateAgentRiskProfileAction $riskAction): int
     {
         $agents = Agent::withoutGlobalScopes()->whereIn('status', [AgentStatus::Active, AgentStatus::Degraded])->get();
 
@@ -35,6 +36,13 @@ class AgentHealthCheck extends Command
             } else {
                 $failed++;
                 $this->warn("  [FAIL] {$agent->name} ({$agent->provider}/{$agent->model})");
+            }
+
+            // Compute risk profile for every checked agent
+            try {
+                $riskAction->execute($agent->fresh());
+            } catch (\Throwable $e) {
+                $this->warn("  [RISK] Failed to update risk profile for {$agent->name}: {$e->getMessage()}");
             }
         }
 

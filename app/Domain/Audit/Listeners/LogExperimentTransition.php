@@ -10,8 +10,19 @@ class LogExperimentTransition
 {
     public function handle(ExperimentTransitioned $event): void
     {
+        $userId = $event->experiment->user_id;
+        $triggeredBy = $userId ? 'user:' . $userId : 'agent';
+
+        // Transitions triggered by the pipeline executor (AI-driven stages)
+        $aiDrivenStates = ['scoring', 'planning', 'building', 'executing', 'collecting_metrics', 'evaluating', 'iterating'];
+        if (!$userId && in_array($event->toState->value, $aiDrivenStates)) {
+            $triggeredBy = 'agent';
+        } elseif (!$userId) {
+            $triggeredBy = 'scheduler';
+        }
+
         AuditEntry::withoutGlobalScopes()->create([
-            'user_id' => $event->experiment->user_id,
+            'user_id' => $userId,
             'team_id' => $event->experiment->team_id,
             'event' => 'experiment.transitioned',
             'subject_type' => Experiment::class,
@@ -21,6 +32,7 @@ class LogExperimentTransition
                 'to_state' => $event->toState->value,
                 'title' => $event->experiment->title,
             ],
+            'triggered_by' => $triggeredBy,
             'created_at' => now(),
         ]);
     }

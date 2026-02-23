@@ -24,6 +24,8 @@ class AuditEntry extends Model
         'properties',
         'ip_address',
         'created_at',
+        'decision_context',
+        'triggered_by',
     ];
 
     protected function casts(): array

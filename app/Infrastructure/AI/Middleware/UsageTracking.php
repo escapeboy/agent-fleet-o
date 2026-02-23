@@ -18,6 +18,8 @@ class UsageTracking implements AiMiddlewareInterface
             return $response; // Don't track cached responses as new runs
         }
 
+        $hasReasoning = !empty($response->reasoningChain);
+
         AiRun::withoutGlobalScopes()->create([
             'team_id' => $request->teamId,
             'agent_id' => $request->agentId,
@@ -39,6 +41,8 @@ class UsageTracking implements AiMiddlewareInterface
             'cost_credits' => $response->usage->costCredits,
             'latency_ms' => $response->latencyMs,
             'status' => 'completed',
+            'reasoning_chain' => $response->reasoningChain,
+            'has_reasoning' => $hasReasoning,
         ]);
 
         return $response;

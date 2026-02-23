@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Experiments;
 
+use App\Domain\Agent\Models\AiRun;
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
@@ -9,6 +10,7 @@ use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Workflow\Actions\SuggestWorkflowAction;
 use Livewire\Component;
 
 class ExperimentDetailPage extends Component
@@ -20,6 +22,21 @@ class ExperimentDetailPage extends Component
     public bool $showKillConfirm = false;
 
     public bool $showRetryConfirm = false;
+
+    public bool $showShareModal = false;
+
+    public bool $shareShowCosts = false;
+
+    public bool $shareShowStages = true;
+
+    public bool $shareShowOutputs = true;
+
+    public string $shareExpiresAt = '';
+
+    /** @var array<int, array> */
+    public array $workflowSuggestions = [];
+
+    public bool $loadingSuggestions = false;
 
     public function mount(Experiment $experiment): void
     {
@@ -86,14 +103,102 @@ class ExperimentDetailPage extends Component
         $this->showKillConfirm = false;
     }
 
+    public function openShareModal(): void
+    {
+        $config = $this->experiment->share_config ?? [];
+        $this->shareShowCosts = (bool) ($config['show_costs'] ?? false);
+        $this->shareShowStages = (bool) ($config['show_stages'] ?? true);
+        $this->shareShowOutputs = (bool) ($config['show_outputs'] ?? true);
+        $this->shareExpiresAt = $config['expires_at'] ?? '';
+        $this->showShareModal = true;
+    }
+
+    public function generateShareToken(): void
+    {
+        $this->experiment->generateShareToken();
+        $this->experiment = $this->experiment->fresh();
+        $this->updateShareConfig();
+    }
+
+    public function updateShareConfig(): void
+    {
+        $this->experiment->update([
+            'share_config' => [
+                'show_costs' => $this->shareShowCosts,
+                'show_stages' => $this->shareShowStages,
+                'show_outputs' => $this->shareShowOutputs,
+                'expires_at' => $this->shareExpiresAt ?: null,
+            ],
+        ]);
+        $this->experiment = $this->experiment->fresh();
+        session()->flash('share_saved', true);
+    }
+
+    public function revokeShare(): void
+    {
+        $this->experiment->update([
+            'share_token' => null,
+            'share_enabled' => false,
+        ]);
+        $this->experiment = $this->experiment->fresh();
+        $this->showShareModal = false;
+    }
+
+    public function analyzeSuggestions(): void
+    {
+        $this->loadingSuggestions = true;
+        $this->workflowSuggestions = [];
+
+        try {
+            $this->workflowSuggestions = app(SuggestWorkflowAction::class)->execute($this->experiment);
+        } finally {
+            $this->loadingSuggestions = false;
+        }
+    }
+
+    public function dismissSuggestion(int $index): void
+    {
+        unset($this->workflowSuggestions[$index]);
+        $this->workflowSuggestions = array_values($this->workflowSuggestions);
+    }
+
+    public function createProposalFromSuggestion(int $index): void
+    {
+        $suggestion = $this->workflowSuggestions[$index] ?? null;
+
+        if (!$suggestion) {
+            return;
+        }
+
+        app(SuggestWorkflowAction::class)->createProposal($this->experiment, $suggestion, auth()->id());
+
+        $this->dismissSuggestion($index);
+        session()->flash('message', 'Evolution proposal created successfully.');
+    }
+
     public function render()
     {
         $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions', 'tasks', 'playbookSteps', 'children']);
 
         $hasOrchestration = $this->experiment->parent_experiment_id !== null || $this->experiment->children_count > 0;
 
+        $reasoningRuns = $this->activeTab === 'reasoning'
+            ? AiRun::withoutGlobalScopes()
+                ->where('experiment_id', $this->experiment->id)
+                ->where('has_reasoning', true)
+                ->orderByDesc('created_at')
+                ->get()
+            : collect();
+
+        $reasoningCount = AiRun::withoutGlobalScopes()
+            ->where('experiment_id', $this->experiment->id)
+            ->where('has_reasoning', true)
+            ->count();
+
         return view('livewire.experiments.experiment-detail-page', [
             'hasOrchestration' => $hasOrchestration,
+            'reasoningRuns' => $reasoningRuns,
+            'reasoningCount' => $reasoningCount,
         ])->layout('layouts.app', ['header' => $this->experiment->title]);
     }
 }

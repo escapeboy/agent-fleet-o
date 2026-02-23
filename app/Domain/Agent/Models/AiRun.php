@@ -32,6 +32,8 @@ class AiRun extends Model
         'cost_credits',
         'latency_ms',
         'status',
+        'reasoning_chain',
+        'has_reasoning',
     ];
 
     protected function casts(): array
@@ -46,6 +48,8 @@ class AiRun extends Model
             'output_tokens' => 'integer',
             'cost_credits' => 'integer',
             'latency_ms' => 'integer',
+            'reasoning_chain' => 'array',
+            'has_reasoning' => 'boolean',
         ];
     }
 

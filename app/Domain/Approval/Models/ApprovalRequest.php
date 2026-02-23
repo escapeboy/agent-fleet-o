@@ -37,6 +37,10 @@ class ApprovalRequest extends Model
         'escalation_chain',
         'escalation_level',
         'reviewed_at',
+        'callback_url',
+        'callback_secret',
+        'callback_fired_at',
+        'callback_status',
     ];
 
     protected function casts(): array
@@ -51,6 +55,7 @@ class ApprovalRequest extends Model
             'expires_at' => 'datetime',
             'sla_deadline' => 'datetime',
             'reviewed_at' => 'datetime',
+            'callback_fired_at' => 'datetime',
         ];
     }
 

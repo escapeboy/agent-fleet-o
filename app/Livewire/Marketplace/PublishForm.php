@@ -28,6 +28,12 @@ class PublishForm extends Component
 
     public string $visibility = 'public';
 
+    public bool $monetizationEnabled = false;
+
+    public string $pricePerRun = '0';
+
+    public array $requiredProviders = [];
+
     protected function rules(): array
     {
         return [
@@ -39,6 +45,10 @@ class PublishForm extends Component
             'category' => 'nullable|string|max:50',
             'tagsInput' => 'nullable|string|max:200',
             'visibility' => 'required|in:public,unlisted',
+            'monetizationEnabled' => 'boolean',
+            'pricePerRun' => 'required_if:monetizationEnabled,true|numeric|min:0|max:10000',
+            'requiredProviders' => 'array',
+            'requiredProviders.*' => 'in:anthropic,openai,google',
         ];
     }
 
@@ -95,6 +105,19 @@ class PublishForm extends Component
             tags: $tags,
             visibility: ListingVisibility::from($this->visibility),
         );
+
+        // Apply monetization settings
+        $listing->update([
+            'monetization_enabled' => $this->monetizationEnabled,
+            'price_per_run_credits' => $this->monetizationEnabled ? (float) $this->pricePerRun : 0,
+        ]);
+
+        // Apply provider requirements to the skill
+        if ($this->itemType === 'skill' && ! empty($this->requiredProviders)) {
+            $item->update([
+                'provider_requirements' => ['required_providers' => $this->requiredProviders],
+            ]);
+        }
 
         session()->flash('success', "{$this->name} published to marketplace!");
         $this->redirect(route('app.marketplace.show', $listing), navigate: true);

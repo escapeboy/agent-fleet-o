@@ -20,7 +20,22 @@ class MarketplaceInstallation extends Model
         'installed_skill_id',
         'installed_agent_id',
         'installed_workflow_id',
+        'total_credits_spent',
+        'total_revenue_earned',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'total_credits_spent' => 'decimal:6',
+            'total_revenue_earned' => 'decimal:6',
+        ];
+    }
+
+    public function usageRecords(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(MarketplaceUsageRecord::class, 'installation_id');
+    }
 
     public function listing(): BelongsTo
     {

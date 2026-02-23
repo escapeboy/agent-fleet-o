@@ -76,6 +76,9 @@ class Experiment extends Model
         'started_at',
         'completed_at',
         'killed_at',
+        'share_token',
+        'share_enabled',
+        'share_config',
     ];
 
     protected function casts(): array
@@ -97,6 +100,8 @@ class Experiment extends Model
             'completed_at' => 'datetime',
             'workflow_version' => 'integer',
             'killed_at' => 'datetime',
+            'share_enabled' => 'boolean',
+            'share_config' => 'array',
         ];
     }
 
@@ -198,5 +203,29 @@ class Experiment extends Model
     public function hasChildren(): bool
     {
         return $this->children()->exists();
+    }
+
+    public function isShareExpired(): bool
+    {
+        $expiresAt = $this->share_config['expires_at'] ?? null;
+
+        return $expiresAt && now()->isAfter($expiresAt);
+    }
+
+    public function generateShareToken(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->update([
+            'share_token' => $token,
+            'share_enabled' => true,
+            'share_config' => array_merge($this->share_config ?? [], [
+                'show_costs' => false,
+                'show_stages' => true,
+                'show_outputs' => true,
+                'expires_at' => null,
+            ]),
+        ]);
+
+        return $token;
     }
 }

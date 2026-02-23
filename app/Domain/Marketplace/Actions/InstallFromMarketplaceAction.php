@@ -38,6 +38,7 @@ class InstallFromMarketplaceAction
             if ($listing->type === 'skill') {
                 $skill = Skill::create([
                     'team_id' => $teamId,
+                    'source_listing_id' => $listing->id,
                     'name' => $listing->name,
                     'slug' => Str::slug($listing->name).'-'.Str::random(4),
                     'description' => $listing->description,

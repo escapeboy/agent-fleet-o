@@ -28,6 +28,7 @@ class Skill extends Model
 
     protected $fillable = [
         'team_id',
+        'source_listing_id',
         'name',
         'slug',
         'description',
@@ -50,6 +51,7 @@ class Skill extends Model
         'execution_count',
         'success_count',
         'avg_latency_ms',
+        'provider_requirements',
     ];
 
     protected function casts(): array
@@ -71,6 +73,7 @@ class Skill extends Model
             'execution_count' => 'integer',
             'success_count' => 'integer',
             'avg_latency_ms' => 'decimal:2',
+            'provider_requirements' => 'array',
         ];
     }
 

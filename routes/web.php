@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
@@ -34,6 +35,7 @@ use App\Livewire\Signals\EntityBrowserPage;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
 use App\Livewire\Skills\SkillListPage;
+use App\Livewire\Shared\NotificationInboxPage;
 use App\Livewire\Teams\TeamSettingsPage;
 use App\Livewire\Tools\CreateToolForm;
 use App\Livewire\Tools\ToolDetailPage;
@@ -43,6 +45,9 @@ use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
 use Illuminate\Support\Facades\Route;
+
+// Public experiment share (no auth)
+Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 
 // Root — landing page for guests, dashboard for authenticated users
 Route::get('/', function () {
@@ -125,4 +130,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
+
+    Route::get('/notifications', NotificationInboxPage::class)->name('notifications.index');
 });

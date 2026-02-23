@@ -43,7 +43,7 @@
     </div>
 
     {{-- Stats --}}
-    <div class="mb-6 grid grid-cols-3 gap-4">
+    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div class="rounded-xl border border-gray-200 bg-white p-4">
             <div class="text-2xl font-bold text-gray-900">{{ number_format($listing->install_count) }}</div>
             <div class="text-sm text-gray-500">Installs</div>
@@ -58,22 +58,52 @@
             <div class="text-sm text-gray-500">Rating ({{ $listing->review_count }} reviews)</div>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-4">
-            <div class="flex flex-wrap gap-1">
-                @if($listing->category)
-                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{{ $listing->category }}</span>
-                @endif
-                @foreach(($listing->tags ?? []) as $tag)
-                    <span class="rounded-full bg-gray-50 px-2 py-0.5 text-xs text-gray-500">{{ $tag }}</span>
-                @endforeach
-            </div>
-            <div class="mt-1 text-sm text-gray-500">Tags</div>
+            @if($listing->run_count > 0)
+                <div class="text-2xl font-bold text-gray-900">{{ number_format($listing->run_count) }}</div>
+                <div class="text-sm text-gray-500">
+                    Total Runs
+                    @if($listing->run_count > 0)
+                        <span class="text-green-600">({{ round(($listing->success_count / $listing->run_count) * 100, 1) }}% success)</span>
+                    @endif
+                </div>
+            @else
+                <div class="text-2xl font-bold text-gray-400">—</div>
+                <div class="text-sm text-gray-500">Total Runs</div>
+            @endif
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4">
+            @if($listing->isPaid())
+                <div class="text-2xl font-bold text-amber-600">{{ number_format($listing->price_per_run_credits, 0) }}</div>
+                <div class="text-sm text-gray-500">credits / run</div>
+            @else
+                <div class="text-2xl font-bold text-green-600">Free</div>
+                <div class="text-sm text-gray-500">Price per run</div>
+            @endif
         </div>
     </div>
+
+    {{-- Tags --}}
+    @if($listing->category || !empty($listing->tags))
+        <div class="mb-4 flex flex-wrap gap-1">
+            @if($listing->category)
+                <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{{ $listing->category }}</span>
+            @endif
+            @foreach(($listing->tags ?? []) as $tag)
+                <span class="rounded-full bg-gray-50 px-2 py-0.5 text-xs text-gray-500">{{ $tag }}</span>
+            @endforeach
+        </div>
+    @endif
 
     {{-- Tabs --}}
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex space-x-8">
-            @foreach(['overview' => 'Overview', 'configuration' => 'Configuration', 'reviews' => 'Reviews'] as $tab => $label)
+            @php
+                $tabs = ['overview' => 'Overview', 'configuration' => 'Configuration', 'reviews' => 'Reviews'];
+                if ($isPublisher) {
+                    $tabs['analytics'] = 'Analytics';
+                }
+            @endphp
+            @foreach($tabs as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
                     class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                     {{ $label }}
@@ -208,6 +238,70 @@
                         </div>
                     </div>
                 @endif
+            @endif
+        </div>
+
+    @elseif($activeTab === 'analytics' && $isPublisher && $publisherStats)
+        <div class="space-y-6">
+            {{-- Summary KPIs --}}
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <p class="text-xs text-gray-400">Total Runs</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900">{{ number_format($publisherStats['run_count']) }}</p>
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <p class="text-xs text-gray-400">Success Rate</p>
+                    <p class="mt-1 text-2xl font-bold {{ ($publisherStats['success_rate'] ?? 100) >= 90 ? 'text-green-600' : 'text-yellow-600' }}">
+                        {{ $publisherStats['success_rate'] !== null ? $publisherStats['success_rate'].'%' : '—' }}
+                    </p>
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <p class="text-xs text-gray-400">Avg Cost / Run</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900">
+                        {{ $publisherStats['avg_cost_credits'] !== null ? number_format($publisherStats['avg_cost_credits'], 1) : '—' }}
+                    </p>
+                    @if($publisherStats['avg_cost_credits'] !== null)<p class="text-xs text-gray-400">credits</p>@endif
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <p class="text-xs text-gray-400">Last 30d Runs</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900">{{ number_format($publisherStats['last_30d_runs']) }}</p>
+                    @if($publisherStats['last_30d_failures'] > 0)
+                        <p class="text-xs text-red-500">{{ $publisherStats['last_30d_failures'] }} failures</p>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Monthly trend spark chart --}}
+            @if(!empty($publisherStats['usage_trend']))
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <h3 class="mb-4 text-sm font-medium text-gray-500">Monthly Usage Trend</h3>
+                    @php
+                        $maxRuns = max(array_column($publisherStats['usage_trend'], 'runs')) ?: 1;
+                    @endphp
+                    <div class="flex h-16 items-end gap-1">
+                        @foreach($publisherStats['usage_trend'] as $month)
+                            @php $barH = max(($month['runs'] / $maxRuns) * 100, $month['runs'] > 0 ? 4 : 0); @endphp
+                            <div class="group relative flex-1" title="{{ $month['period'] }}: {{ number_format($month['runs']) }} runs">
+                                <div class="w-full rounded-sm bg-primary-200 hover:bg-primary-400 transition-all" style="height: {{ $barH }}%"></div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-1 flex justify-between text-xs text-gray-400">
+                        <span>{{ $publisherStats['usage_trend'][0]['period'] ?? '' }}</span>
+                        <span>{{ end($publisherStats['usage_trend'])['period'] ?? '' }}</span>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Monetization --}}
+            @if($publisherStats['monetization_enabled'])
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-6">
+                    <h3 class="mb-2 text-sm font-medium text-amber-800">Monetization Active</h3>
+                    <p class="text-sm text-amber-700">
+                        Price: <strong>{{ number_format($publisherStats['price_per_run'], 2) }} credits / run</strong>
+                        (platform takes 20%, you receive {{ number_format($publisherStats['price_per_run'] * 0.8, 2) }} credits per run)
+                    </p>
+                </div>
             @endif
         </div>
 

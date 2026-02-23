@@ -41,6 +41,7 @@
                 </h1>
                 <div class="flex items-center gap-4">
                     @auth
+                        <livewire:shared.notification-bell />
                         <livewire:components.theme-switcher />
                     @endauth
                     <span class="text-sm text-gray-500">{{ auth()->user()?->name ?? 'Admin' }}</span>

@@ -65,6 +65,9 @@ class Agent extends Model
         'cost_per_1k_input',
         'cost_per_1k_output',
         'last_health_check',
+        'risk_score',
+        'risk_profile',
+        'risk_profile_updated_at',
     ];
 
     protected function casts(): array
@@ -83,6 +86,9 @@ class Agent extends Model
             'evaluation_sample_rate' => 'float',
             'evaluation_criteria' => 'array',
             'last_health_check' => 'datetime',
+            'risk_score' => 'decimal:2',
+            'risk_profile' => 'array',
+            'risk_profile_updated_at' => 'datetime',
         ];
     }
 

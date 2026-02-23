@@ -191,25 +191,54 @@ class PrismAiGateway implements AiGatewayInterface
         $toolCallsCount = 0;
         $stepsCount = 0;
 
+        $reasoningChain = null;
+
         if ($request->hasTools() && $response->steps->isNotEmpty()) {
             $stepsCount = $response->steps->count();
             $toolResultsList = [];
+            $reasoningSteps = [];
 
-            foreach ($response->steps as $step) {
+            foreach ($response->steps as $stepIndex => $step) {
                 foreach ($step->toolCalls as $toolCall) {
                     $toolResultsList[] = [
                         'toolName' => $toolCall->name,
                         'args' => $toolCall->arguments(),
+                    ];
+                    $reasoningSteps[] = [
+                        'step' => $stepIndex + 1,
+                        'thought' => "Calling tool: {$toolCall->name}",
+                        'action' => $toolCall->name,
+                        'result' => $toolCall->arguments(),
                     ];
                 }
             }
 
             $toolCallsCount = count($toolResultsList);
             $toolResults = $toolCallsCount > 0 ? $toolResultsList : null;
+
+            if (!empty($reasoningSteps)) {
+                $reasoningChain = $reasoningSteps;
+            }
+        }
+
+        // Extract <thinking> blocks from Anthropic extended thinking responses
+        $text = $response->text;
+        if (str_contains($text, '<thinking>')) {
+            preg_match_all('/<thinking>(.*?)<\/thinking>/s', $text, $matches);
+            if (!empty($matches[1])) {
+                $existingSteps = $reasoningChain ?? [];
+                $thinkingSteps = array_map(fn ($thought, $i) => [
+                    'step' => count($existingSteps) + $i + 1,
+                    'thought' => trim($thought),
+                    'action' => 'thinking',
+                    'result' => null,
+                ], $matches[1], array_keys($matches[1]));
+                $reasoningChain = array_merge($thinkingSteps, $existingSteps);
+            }
         }
 
         return new AiResponseDTO(
-            content: $response->text,
+            content: $text,
             parsedOutput: null,
             usage: new AiUsageDTO(
                 promptTokens: $response->usage->promptTokens,
@@ -227,6 +256,7 @@ class PrismAiGateway implements AiGatewayInterface
             toolResults: $toolResults,
             toolCallsCount: $toolCallsCount,
             stepsCount: $stepsCount,
+            reasoningChain: $reasoningChain,
         );
     }
 
