@@ -7,6 +7,7 @@ use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
+use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
 use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
@@ -70,6 +71,9 @@ class AppServiceProvider extends ServiceProvider
         // Webhook notifications
         Event::listen(ExperimentTransitioned::class, SendWebhookOnExperimentTransition::class);
         Event::listen(ExperimentTransitioned::class, SendWebhookOnProjectRunComplete::class);
+
+        // Sub-experiment orchestration: check parent when child reaches terminal state
+        Event::listen(ExperimentTransitioned::class, CheckParentExperimentCompletion::class);
 
         // Memory: extract learnings from completed experiments
         Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);

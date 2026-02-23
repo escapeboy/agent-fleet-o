@@ -44,6 +44,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $started_at
  * @property Carbon|null $completed_at
  * @property Carbon|null $killed_at
+ * @property string|null $parent_experiment_id
+ * @property int $nesting_depth
+ * @property array|null $orchestration_config
  */
 class Experiment extends Model
 {
@@ -52,6 +55,8 @@ class Experiment extends Model
     protected $fillable = [
         'team_id',
         'user_id',
+        'parent_experiment_id',
+        'nesting_depth',
         'workflow_id',
         'workflow_version',
         'title',
@@ -60,6 +65,7 @@ class Experiment extends Model
         'status',
         'paused_from_status',
         'constraints',
+        'orchestration_config',
         'success_criteria',
         'budget_cap_credits',
         'budget_spent_credits',
@@ -78,7 +84,9 @@ class Experiment extends Model
             'status' => ExperimentStatus::class,
             'track' => ExperimentTrack::class,
             'constraints' => 'array',
+            'orchestration_config' => 'array',
             'success_criteria' => 'array',
+            'nesting_depth' => 'integer',
             'budget_cap_credits' => 'integer',
             'budget_spent_credits' => 'integer',
             'max_iterations' => 'integer',
@@ -100,6 +108,16 @@ class Experiment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_experiment_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_experiment_id');
     }
 
     public function stages(): HasMany
@@ -170,5 +188,15 @@ class Experiment extends Model
     public function isYoloMode(): bool
     {
         return ($this->constraints['execution_mode'] ?? null) === 'yolo';
+    }
+
+    public function isSubExperiment(): bool
+    {
+        return $this->parent_experiment_id !== null;
+    }
+
+    public function hasChildren(): bool
+    {
+        return $this->children()->exists();
     }
 }

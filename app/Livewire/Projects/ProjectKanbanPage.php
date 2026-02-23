@@ -28,7 +28,7 @@ class ProjectKanbanPage extends Component
         'running' => [
             'label' => 'Running',
             'color' => 'blue',
-            'statuses' => ['building', 'executing', 'collecting_metrics', 'evaluating', 'iterating'],
+            'statuses' => ['building', 'executing', 'awaiting_children', 'collecting_metrics', 'evaluating', 'iterating'],
         ],
         'completed' => [
             'label' => 'Completed',

@@ -63,4 +63,20 @@ return [
         'pause_after_attempts' => 4,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Sub-Experiment Orchestration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for parent/child experiment orchestration. Controls
+    | nesting limits, child count, failure policies, and budget allocation.
+    |
+    */
+    'orchestration' => [
+        'max_nesting_depth' => (int) env('EXPERIMENT_MAX_NESTING_DEPTH', 2),
+        'max_children' => (int) env('EXPERIMENT_MAX_CHILDREN', 5),
+        'default_failure_policy' => env('EXPERIMENT_FAILURE_POLICY', 'continue_on_partial'),
+        'budget_allocation_strategy' => env('EXPERIMENT_BUDGET_STRATEGY', 'on_demand'),
+    ],
+
 ];

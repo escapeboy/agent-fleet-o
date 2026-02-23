@@ -88,9 +88,12 @@ class ExperimentDetailPage extends Component
 
     public function render()
     {
-        $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions', 'tasks', 'playbookSteps']);
+        $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions', 'tasks', 'playbookSteps', 'children']);
 
-        return view('livewire.experiments.experiment-detail-page')
-            ->layout('layouts.app', ['header' => $this->experiment->title]);
+        $hasOrchestration = $this->experiment->parent_experiment_id !== null || $this->experiment->children_count > 0;
+
+        return view('livewire.experiments.experiment-detail-page', [
+            'hasOrchestration' => $hasOrchestration,
+        ])->layout('layouts.app', ['header' => $this->experiment->title]);
     }
 }

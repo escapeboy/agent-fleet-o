@@ -81,6 +81,24 @@
         </div>
     </div>
 
+    {{-- Parent experiment link --}}
+    @if($experiment->parent_experiment_id)
+        <div class="mb-4 flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm">
+            <span class="text-purple-600">Sub-experiment of</span>
+            <a href="{{ route('experiments.show', $experiment->parent_experiment_id) }}" class="font-medium text-purple-700 hover:underline">
+                {{ $experiment->parent?->title ?? 'Parent Experiment' }}
+            </a>
+            <span class="text-purple-400">Depth: {{ $experiment->nesting_depth }}</span>
+        </div>
+    @endif
+
+    {{-- Orchestration tree (shown above stats when experiment is part of a tree) --}}
+    @if($hasOrchestration)
+        <div class="mb-6">
+            <livewire:experiments.orchestration-tree :experiment="$experiment" :key="'orch-'.$experiment->id" />
+        </div>
+    @endif
+
     {{-- Stats Row --}}
     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div class="rounded-lg border border-gray-200 bg-white p-4">

@@ -21,7 +21,8 @@ class ExperimentTransitionMap
         'awaiting_approval' => ['approved', 'rejected', 'expired'],
         'rejected' => ['planning', 'killed'],
         'approved' => ['executing'],
-        'executing' => ['collecting_metrics', 'completed', 'execution_failed'],
+        'executing' => ['collecting_metrics', 'completed', 'execution_failed', 'awaiting_children'],
+        'awaiting_children' => ['executing'],
         'execution_failed' => ['executing', 'killed'],
         'collecting_metrics' => ['evaluating'],
         'evaluating' => ['iterating', 'completed', 'killed'],
@@ -32,7 +33,7 @@ class ExperimentTransitionMap
      * States that can be paused (all non-terminal, non-paused).
      */
     private const PAUSABLE_STATES = [
-        'scoring', 'planning', 'building', 'executing',
+        'scoring', 'planning', 'building', 'executing', 'awaiting_children',
         'collecting_metrics', 'evaluating', 'iterating',
     ];
 
@@ -42,7 +43,7 @@ class ExperimentTransitionMap
     private const KILLABLE_STATES = [
         'draft', 'signal_detected', 'scoring', 'scoring_failed',
         'planning', 'planning_failed', 'building', 'building_failed',
-        'awaiting_approval', 'approved', 'rejected', 'executing',
+        'awaiting_approval', 'approved', 'rejected', 'executing', 'awaiting_children',
         'execution_failed', 'collecting_metrics', 'evaluating',
         'iterating', 'paused',
     ];
