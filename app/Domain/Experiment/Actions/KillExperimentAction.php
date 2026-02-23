@@ -27,6 +27,7 @@ class KillExperimentAction
             ->get();
 
         foreach ($activeChildren as $child) {
+            /** @var Experiment $child */
             Log::info('KillExperimentAction: Cascading kill to child', [
                 'parent_id' => $experiment->id,
                 'child_id' => $child->id,

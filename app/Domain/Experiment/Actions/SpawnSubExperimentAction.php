@@ -2,7 +2,6 @@
 
 namespace App\Domain\Experiment\Actions;
 
-use App\Domain\Budget\Actions\ReserveBudgetAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +12,6 @@ class SpawnSubExperimentAction
     public function __construct(
         private readonly CreateExperimentAction $createExperiment,
         private readonly TransitionExperimentAction $transition,
-        private readonly ReserveBudgetAction $reserveBudget,
     ) {}
 
     public function execute(

@@ -260,10 +260,17 @@ class CoordinatorDecisionJob implements ShouldQueue
             ]);
 
             // Fall back to delegation if spawn fails (e.g. nesting depth exceeded)
-            $this->createAndDispatchTask($execution, $decision, $execution->config_snapshot,
-                Agent::withoutGlobalScopes()->find($execution->config_snapshot['coordinator']['id']),
-                empty($execution->config_snapshot['workers']),
-            );
+            /** @var array<string, mixed> $fallbackConfig */
+            $fallbackConfig = $execution->config_snapshot ?? [];
+            /** @var Agent|null $fallbackCoordinator */
+            $fallbackCoordinator = Agent::withoutGlobalScopes()->find($fallbackConfig['coordinator']['id'] ?? null);
+
+            if ($fallbackCoordinator) {
+                $this->createAndDispatchTask($execution, $decision, $fallbackConfig,
+                    $fallbackCoordinator,
+                    empty($fallbackConfig['workers']),
+                );
+            }
         }
     }
 

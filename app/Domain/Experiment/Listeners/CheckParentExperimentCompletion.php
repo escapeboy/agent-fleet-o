@@ -6,6 +6,7 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\ExperimentStage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -58,7 +59,8 @@ class CheckParentExperimentCompletion
         ]);
 
         // Aggregate child outputs into parent metadata
-        $childOutputs = $siblings->mapWithKeys(function (Experiment $sibling) {
+        $childOutputs = $siblings->mapWithKeys(function (Experiment $sibling): array {
+            /** @var ExperimentStage|null $lastStage */
             $lastStage = $sibling->stages()->latest()->first();
 
             return [$sibling->id => [
