@@ -9,6 +9,8 @@ enum SkillType: string
     case Rule = 'rule';
     case Hybrid = 'hybrid';
     case Guardrail = 'guardrail';
+    case MultiModelConsensus = 'multi_model_consensus';
+    case CodeExecution = 'code_execution';
 
     public function label(): string
     {
@@ -18,6 +20,8 @@ enum SkillType: string
             self::Rule => 'Rule-Based',
             self::Hybrid => 'Hybrid',
             self::Guardrail => 'Guardrail',
+            self::MultiModelConsensus => 'Multi-Model Consensus',
+            self::CodeExecution => 'Code Execution',
         };
     }
 }
