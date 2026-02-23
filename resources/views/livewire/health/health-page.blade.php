@@ -130,6 +130,38 @@
             @endif
         </div>
 
+        {{-- Connector Health --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 class="text-sm font-medium text-gray-500">Connector Health</h3>
+            <div class="mt-4 space-y-3">
+                @forelse($connectorStats as $conn)
+                    <div class="flex items-center justify-between rounded-lg {{ $conn->is_healthy ? 'bg-gray-50' : 'bg-red-50' }} p-3">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ $conn->name }}</p>
+                            <p class="text-xs text-gray-500">
+                                {{ $conn->driver }}
+                                @if($conn->last_success_at)
+                                    &middot; Last poll {{ $conn->last_success_at->diffForHumans() }}
+                                @else
+                                    &middot; Never polled
+                                @endif
+                                @if($conn->last_error_message)
+                                    &middot; <span class="text-red-500">{{ Str::limit($conn->last_error_message, 60) }}</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-medium text-gray-700">{{ $conn->signals_24h }}</span>
+                            <span class="text-xs text-gray-400">24h</span>
+                            <span class="inline-flex h-2 w-2 rounded-full {{ $conn->is_healthy ? 'bg-green-400' : 'bg-red-400' }}"></span>
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-sm text-gray-400">No active connectors.</p>
+                @endforelse
+            </div>
+        </div>
+
         {{-- Recent Errors --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h3 class="text-sm font-medium text-gray-500">Recent Errors</h3>

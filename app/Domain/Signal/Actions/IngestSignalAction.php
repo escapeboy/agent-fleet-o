@@ -2,6 +2,7 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Domain\Signal\Jobs\ExtractSignalEntitiesJob;
 use App\Domain\Signal\Jobs\ProcessSignalMediaJob;
 use App\Domain\Signal\Models\Signal;
 use App\Models\Blacklist;
@@ -25,7 +26,7 @@ class IngestSignalAction
         // Dedup: check if signal with same content_hash already exists
         $existing = Signal::where('content_hash', $contentHash)->first();
         if ($existing) {
-            return null;
+            return $this->mergeIntoExisting($existing, $tags, $payload, $sourceIdentifier);
         }
 
         // Check blacklist
@@ -55,7 +56,42 @@ class IngestSignalAction
             ProcessSignalMediaJob::dispatch($signal->id);
         }
 
+        // Dispatch entity extraction for new signals
+        ExtractSignalEntitiesJob::dispatch($signal->id);
+
         return $signal;
+    }
+
+    /**
+     * Merge a duplicate signal into the existing one instead of discarding.
+     */
+    private function mergeIntoExisting(Signal $existing, array $tags, array $payload, string $sourceIdentifier): Signal
+    {
+        $mergedTags = array_values(array_unique(
+            array_merge($existing->tags ?? [], $tags)
+        ));
+
+        $mergedPayload = array_merge($existing->payload ?? [], $payload);
+
+        $updates = [
+            'tags' => $mergedTags,
+            'payload' => $mergedPayload,
+            'duplicate_count' => ($existing->duplicate_count ?? 0) + 1,
+            'last_received_at' => now(),
+        ];
+
+        // Track additional sources
+        if ($sourceIdentifier !== $existing->source_identifier) {
+            $sources = $mergedPayload['_additional_sources'] ?? [];
+            if (! in_array($sourceIdentifier, $sources, true)) {
+                $sources[] = $sourceIdentifier;
+                $updates['payload'] = array_merge($mergedPayload, ['_additional_sources' => $sources]);
+            }
+        }
+
+        $existing->update($updates);
+
+        return $existing;
     }
 
     private function isBlacklisted(array $payload): bool

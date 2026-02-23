@@ -8,6 +8,8 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Signal\Models\Signal;
+use App\Models\Connector;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redis;
 use Livewire\Component;
@@ -22,6 +24,7 @@ class HealthPage extends Component
             'recentErrors' => $this->getRecentErrors(),
             'spendStats' => $this->getSpendStats(),
             'stuckExperiments' => $this->getStuckExperiments(),
+            'connectorStats' => $this->getConnectorStats(),
         ])->layout('layouts.app', ['header' => 'System Health']);
     }
 
@@ -133,6 +136,31 @@ class HealthPage extends Component
         }
 
         return $stuck->sortByDesc('recovery_attempts');
+    }
+
+    private function getConnectorStats(): Collection
+    {
+        $connectors = Connector::where('type', 'input')
+            ->where('status', 'active')
+            ->get();
+
+        return $connectors->map(function (Connector $connector) {
+            $signalsToday = Signal::where('source_type', $connector->driver)
+                ->where('created_at', '>=', now()->subDay())
+                ->count();
+
+            return (object) [
+                'id' => $connector->id,
+                'name' => $connector->name,
+                'driver' => $connector->driver,
+                'last_success_at' => $connector->last_success_at,
+                'last_error_at' => $connector->last_error_at,
+                'last_error_message' => $connector->last_error_message,
+                'signals_24h' => $signalsToday,
+                'is_healthy' => ! $connector->last_error_at
+                    || ($connector->last_success_at && $connector->last_success_at > $connector->last_error_at),
+            ];
+        });
     }
 
     private function getSpendStats(): array

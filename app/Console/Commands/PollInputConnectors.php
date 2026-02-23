@@ -2,68 +2,109 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Signal\Connectors\ApiPollingConnector;
+use App\Domain\Signal\Connectors\CalendarConnector;
+use App\Domain\Signal\Connectors\ImapConnector;
 use App\Domain\Signal\Connectors\RssConnector;
+use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Models\Connector;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class PollInputConnectors extends Command
 {
-    protected $signature = 'connectors:poll {--driver=rss : Driver to poll (rss)}';
+    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar). Polls all if omitted.}';
 
     protected $description = 'Poll active input connectors for new signals';
 
-    public function handle(RssConnector $rssConnector): int
+    /** @var array<string, class-string<InputConnectorInterface>> */
+    private array $driverMap = [
+        'rss' => RssConnector::class,
+        'imap' => ImapConnector::class,
+        'api_polling' => ApiPollingConnector::class,
+        'calendar' => CalendarConnector::class,
+    ];
+
+    public function handle(): int
     {
         $driver = $this->option('driver');
-
-        $connectors = Connector::where('type', 'input')
-            ->where('driver', $driver)
-            ->where('status', 'active')
-            ->get();
-
-        if ($connectors->isEmpty()) {
-            $this->info("No active {$driver} connectors found.");
-
-            return self::SUCCESS;
-        }
+        $drivers = $driver ? [$driver] : array_keys($this->driverMap);
 
         $totalSignals = 0;
+        $totalConnectors = 0;
 
-        foreach ($connectors as $connector) {
-            $this->info("Polling: {$connector->name} ({$connector->driver})");
+        foreach ($drivers as $driverName) {
+            if (! isset($this->driverMap[$driverName])) {
+                $this->warn("Unknown driver: {$driverName}");
 
-            try {
-                $config = $connector->config ?? [];
-                $signals = $rssConnector->poll($config);
+                continue;
+            }
 
-                $count = count($signals);
-                $totalSignals += $count;
+            $connectors = Connector::where('type', 'input')
+                ->where('driver', $driverName)
+                ->where('status', 'active')
+                ->get();
 
-                $connector->update([
-                    'last_success_at' => now(),
-                    'last_error_message' => null,
-                ]);
+            if ($connectors->isEmpty()) {
+                continue;
+            }
 
-                $this->info("  → {$count} new signal(s) ingested");
-            } catch (\Throwable $e) {
-                $connector->update([
-                    'last_error_at' => now(),
-                    'last_error_message' => $e->getMessage(),
-                ]);
+            /** @var InputConnectorInterface $connectorInstance */
+            $connectorInstance = app($this->driverMap[$driverName]);
 
-                Log::error('PollInputConnectors: Error polling connector', [
-                    'connector_id' => $connector->id,
-                    'driver' => $connector->driver,
-                    'error' => $e->getMessage(),
-                ]);
+            foreach ($connectors as $connector) {
+                $this->info("Polling: {$connector->name} ({$connector->driver})");
+                $totalConnectors++;
 
-                $this->error("  → Error: {$e->getMessage()}");
+                try {
+                    $config = $connector->config ?? [];
+                    $signals = $connectorInstance->poll($config);
+
+                    $count = count($signals);
+                    $totalSignals += $count;
+
+                    // Update connector config with state tracking (UIDs, cursors, etc.)
+                    $updatedConfig = $this->getUpdatedConfig($connectorInstance, $config, $signals);
+
+                    $connector->update([
+                        'config' => $updatedConfig,
+                        'last_success_at' => now(),
+                        'last_error_message' => null,
+                    ]);
+
+                    $this->info("  → {$count} new signal(s) ingested");
+                } catch (\Throwable $e) {
+                    $connector->update([
+                        'last_error_at' => now(),
+                        'last_error_message' => mb_substr($e->getMessage(), 0, 500),
+                    ]);
+
+                    Log::error('PollInputConnectors: Error polling connector', [
+                        'connector_id' => $connector->id,
+                        'driver' => $connector->driver,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    $this->error("  → Error: {$e->getMessage()}");
+                }
             }
         }
 
-        $this->info("Total: {$totalSignals} new signal(s) across {$connectors->count()} connector(s).");
+        if ($totalConnectors === 0) {
+            $this->info('No active input connectors found.');
+        } else {
+            $this->info("Total: {$totalSignals} new signal(s) across {$totalConnectors} connector(s).");
+        }
 
         return self::SUCCESS;
+    }
+
+    private function getUpdatedConfig(InputConnectorInterface $connector, array $config, array $signals): array
+    {
+        if (method_exists($connector, 'getUpdatedConfig')) {
+            return $connector->getUpdatedConfig($config, $signals);
+        }
+
+        return $config;
     }
 }
