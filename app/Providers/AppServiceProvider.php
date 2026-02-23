@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
@@ -11,6 +12,8 @@ use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
+use App\Domain\Memory\Listeners\StoreExperimentLearnings;
+use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
 use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
@@ -68,9 +71,30 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ExperimentTransitioned::class, SendWebhookOnExperimentTransition::class);
         Event::listen(ExperimentTransitioned::class, SendWebhookOnProjectRunComplete::class);
 
+        // Memory: extract learnings from completed experiments
+        Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);
+
         // Agent memory: store execution output as memory after completion
         AgentExecution::created(function (AgentExecution $execution) {
             app(StoreExecutionMemory::class)->handle($execution);
+
+            // Quality evaluation: dispatch async job if evaluation is enabled and passes sampling
+            if ($execution->status === 'completed' && $execution->agent) {
+                $agent = $execution->agent;
+                if ($agent->evaluation_enabled && mt_rand(1, 100) <= ($agent->evaluation_sample_rate * 100)) {
+                    EvaluateExecutionJob::dispatch('agent', $execution->id);
+                }
+            }
+        });
+
+        // Skill execution quality evaluation
+        SkillExecution::created(function (SkillExecution $execution) {
+            if ($execution->status === 'completed' && $execution->skill) {
+                $skill = $execution->skill;
+                if ($skill->evaluation_enabled && mt_rand(1, 100) <= ($skill->evaluation_sample_rate * 100)) {
+                    EvaluateExecutionJob::dispatch('skill', $execution->id);
+                }
+            }
         });
 
         // Public marketplace API rate limiting

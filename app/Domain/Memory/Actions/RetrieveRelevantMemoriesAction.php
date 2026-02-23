@@ -10,8 +10,9 @@ use Prism\Prism\Facades\Prism;
 class RetrieveRelevantMemoriesAction
 {
     /**
-     * Retrieve top-K relevant memories for an agent using cosine similarity.
+     * Retrieve top-K relevant memories using cosine similarity.
      *
+     * @param  string  $scope  'agent' (default), 'team', or 'project'
      * @return Collection<int, Memory>
      */
     public function execute(
@@ -20,6 +21,8 @@ class RetrieveRelevantMemoriesAction
         ?string $projectId = null,
         ?int $topK = null,
         ?float $threshold = null,
+        string $scope = 'agent',
+        ?string $teamId = null,
     ): Collection {
         if (! config('memory.enabled', true)) {
             return collect();
@@ -31,24 +34,36 @@ class RetrieveRelevantMemoriesAction
         try {
             $queryEmbedding = $this->generateEmbedding($query);
 
-            $query = Memory::withoutGlobalScopes()
+            $builder = Memory::withoutGlobalScopes()
                 ->select('memories.*')
                 ->selectRaw('1 - (embedding <=> ?) as similarity', [$queryEmbedding])
-                ->where('agent_id', $agentId)
                 ->havingRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
                 ->orderByRaw('embedding <=> ?', [$queryEmbedding]);
 
-            if ($projectId) {
-                $query->where(function ($q) use ($projectId) {
-                    $q->where('project_id', $projectId)
-                        ->orWhereNull('project_id');
-                });
-            }
+            // Apply scope filtering
+            match ($scope) {
+                'team' => $builder->when($teamId, fn ($q) => $q->where('team_id', $teamId)),
+                'project' => $builder->where(function ($q) use ($agentId, $projectId) {
+                    $q->where('agent_id', $agentId);
+                    if ($projectId) {
+                        $q->orWhere(function ($sub) use ($projectId) {
+                            $sub->where('source_type', 'experiment')
+                                ->where('project_id', $projectId);
+                        });
+                    }
+                }),
+                default => $builder->where('agent_id', $agentId)
+                    ->when($projectId, fn ($q) => $q->where(function ($sub) use ($projectId) {
+                        $sub->where('project_id', $projectId)
+                            ->orWhereNull('project_id');
+                    })),
+            };
 
-            return $query->limit($topK)->get();
+            return $builder->limit($topK)->get();
         } catch (\Throwable $e) {
             Log::warning('RetrieveRelevantMemoriesAction: Failed to retrieve memories', [
                 'agent_id' => $agentId,
+                'scope' => $scope,
                 'error' => $e->getMessage(),
             ]);
 

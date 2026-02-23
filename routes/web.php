@@ -23,6 +23,7 @@ use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
 use App\Livewire\Memory\MemoryBrowserPage;
+use App\Livewire\Metrics\ModelComparisonPage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
@@ -113,6 +114,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
+
+    Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/health', HealthPage::class)->name('health');

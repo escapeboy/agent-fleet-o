@@ -23,6 +23,10 @@ class SkillExecution extends Model
         'output',
         'duration_ms',
         'cost_credits',
+        'quality_score',
+        'quality_details',
+        'evaluation_method',
+        'judge_model',
         'error_message',
     ];
 
@@ -33,6 +37,8 @@ class SkillExecution extends Model
             'output' => 'array',
             'duration_ms' => 'integer',
             'cost_credits' => 'integer',
+            'quality_score' => 'float',
+            'quality_details' => 'array',
         ];
     }
 
