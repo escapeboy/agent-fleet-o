@@ -28,6 +28,9 @@ class SkillExecution extends Model
         'evaluation_method',
         'judge_model',
         'error_message',
+        'confidence_score',
+        'consensus_level',
+        'peer_reviews',
     ];
 
     protected function casts(): array
@@ -39,6 +42,8 @@ class SkillExecution extends Model
             'cost_credits' => 'integer',
             'quality_score' => 'float',
             'quality_details' => 'array',
+            'confidence_score' => 'float',
+            'peer_reviews' => 'array',
         ];
     }
 

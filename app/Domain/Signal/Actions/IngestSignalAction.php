@@ -7,11 +7,17 @@ use App\Domain\Signal\Jobs\ProcessSignalMediaJob;
 use App\Domain\Signal\Models\Signal;
 use App\Models\Blacklist;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 class IngestSignalAction
 {
     /**
      * @param  array<int, UploadedFile|mixed>  $files  Optional file attachments for media processing
+     * @param  string|null  $sourceNativeId  Stable provider-assigned ID (e.g. "ISSUE-123" from Sentry).
+     *                                       When provided, dedup by (source_type + source_native_id) takes
+     *                                       priority over content_hash, preventing repeated webhooks for the
+     *                                       same upstream event from creating duplicate signals.
      */
     public function execute(
         string $sourceType,
@@ -20,7 +26,33 @@ class IngestSignalAction
         array $tags = [],
         ?string $experimentId = null,
         array $files = [],
+        ?string $sourceNativeId = null,
     ): ?Signal {
+        // Alert storm protection: limit signals per source_type to prevent runaway alert floods.
+        // Default: 60 signals/minute per source_type. Configurable via config('signals.rate_limit').
+        $rateKey = 'signal_ingest:'.$sourceType;
+        $maxPerMinute = (int) config('signals.storm_rate_limit', 60);
+
+        if (! RateLimiter::attempt($rateKey, $maxPerMinute, fn () => null)) {
+            Log::warning('IngestSignalAction: alert storm rate limit exceeded', [
+                'source_type' => $sourceType,
+                'source_identifier' => $sourceIdentifier,
+                'limit' => $maxPerMinute,
+            ]);
+
+            return null;
+        }
+
+        // Dedup by stable provider ID first (Sentry issue ID, Datadog alert ID, PagerDuty incident ID)
+        if ($sourceNativeId) {
+            $existing = Signal::where('source_type', $sourceType)
+                ->where('source_native_id', $sourceNativeId)
+                ->first();
+            if ($existing) {
+                return $this->mergeIntoExisting($existing, $tags, $payload, $sourceIdentifier);
+            }
+        }
+
         $contentHash = hash('sha256', json_encode($payload));
 
         // Dedup: check if signal with same content_hash already exists
@@ -38,6 +70,7 @@ class IngestSignalAction
             'experiment_id' => $experimentId,
             'source_type' => $sourceType,
             'source_identifier' => $sourceIdentifier,
+            'source_native_id' => $sourceNativeId,
             'payload' => $payload,
             'content_hash' => $contentHash,
             'tags' => $tags,
