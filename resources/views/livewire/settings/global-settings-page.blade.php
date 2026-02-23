@@ -14,6 +14,7 @@
                     'general'    => 'General',
                     'budget'     => 'Budget & Limits',
                     'agents'     => 'Agents',
+                    'tools'      => 'Tools',
                     'connectors' => 'Connectors',
                     'security'   => 'Security',
                 ];
@@ -241,6 +242,11 @@
                 </div>
             </div>
         </div>
+    @endif
+
+    {{-- ═══ Tools Tab ═══ --}}
+    @if($activeTab === 'tools')
+        @include('livewire.settings.partials.mcp-import-section')
     @endif
 
     {{-- ═══ Connectors Tab ═══ --}}

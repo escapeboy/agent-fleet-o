@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "remote-server": {
+      "url": "https://mcp.example.com/sse",
+      "headers": {
+        "Authorization": "Bearer secret-token-123",
+        "X-Custom-Header": "custom-value"
+      }
+    }
+  }
+}
