@@ -2,10 +2,10 @@
 
 namespace App\Domain\Signal\Connectors;
 
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Models\Signal;
-use App\Domain\Shared\Models\TeamProviderCredential;
 use Illuminate\Support\Facades\Log;
 use Webklex\PHPIMAP\ClientManager;
 

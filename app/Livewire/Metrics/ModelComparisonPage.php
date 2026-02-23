@@ -61,7 +61,7 @@ class ModelComparisonPage extends Component
                 DB::raw('AVG(agent_executions.duration_ms) as avg_duration'),
                 DB::raw('AVG(agent_executions.cost_credits) as avg_cost'),
                 DB::raw('SUM(agent_executions.cost_credits) as total_cost'),
-                DB::raw("COUNT(agent_executions.quality_score) as evaluated_count"),
+                DB::raw('COUNT(agent_executions.quality_score) as evaluated_count'),
             )
             ->groupBy('model_key')
             ->get()
@@ -80,7 +80,7 @@ class ModelComparisonPage extends Component
                 DB::raw('AVG(skill_executions.duration_ms) as avg_duration'),
                 DB::raw('AVG(skill_executions.cost_credits) as avg_cost'),
                 DB::raw('SUM(skill_executions.cost_credits) as total_cost'),
-                DB::raw("COUNT(skill_executions.quality_score) as evaluated_count"),
+                DB::raw('COUNT(skill_executions.quality_score) as evaluated_count'),
             )
             ->groupBy('model_key')
             ->get()

@@ -18,6 +18,8 @@ use App\Domain\Experiment\Pipeline\RunPlanningStage;
 use App\Domain\Experiment\Pipeline\RunScoringStage;
 use App\Domain\Experiment\Services\CheckpointManager;
 use App\Domain\Shared\Enums\TeamRole;
+use App\Domain\Shared\Models\Team;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -338,7 +340,7 @@ class RecoverStuckTasks extends Command
         int $pauseAfter,
     ): int {
         // Use lockForUpdate to prevent race conditions with normal pipeline
-        return DB::transaction(function () use ($experiment, $state, $maxAttempts, $notifyAfter, $pauseAfter) {
+        return DB::transaction(function () use ($experiment, $state, $notifyAfter, $pauseAfter) {
             $fresh = Experiment::withoutGlobalScopes()->lockForUpdate()->find($experiment->id);
             if (! $fresh || $fresh->status !== $state) {
                 return 0; // State changed since detection
@@ -422,12 +424,12 @@ class RecoverStuckTasks extends Command
 
         // Notify experiment creator
         if ($experiment->user_id) {
-            $creator = \App\Models\User::find($experiment->user_id);
+            $creator = User::find($experiment->user_id);
             $creator?->notify($notification);
         }
 
         // Notify team admins and owner
-        $team = $experiment->team ?? \App\Domain\Shared\Models\Team::find($experiment->team_id);
+        $team = $experiment->team ?? Team::find($experiment->team_id);
         if ($team) {
             $admins = $team->users()
                 ->wherePivotIn('role', [TeamRole::Owner->value, TeamRole::Admin->value])

@@ -2,7 +2,6 @@
 
 namespace App\Domain\Experiment\Listeners;
 
-use App\Domain\Budget\Actions\SettleBudgetAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Events\ExperimentTransitioned;

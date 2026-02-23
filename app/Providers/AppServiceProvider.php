@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Domain\Agent\Models\AgentExecution;
-use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
@@ -18,6 +17,7 @@ use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
 use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
+use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use Dedoc\Scramble\Scramble;

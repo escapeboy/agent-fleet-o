@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Experiments;
 
-use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use Livewire\Component;
 

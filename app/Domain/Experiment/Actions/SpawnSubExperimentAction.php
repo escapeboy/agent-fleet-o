@@ -28,7 +28,7 @@ class SpawnSubExperimentAction
 
         if ($parent->nesting_depth >= $maxDepth) {
             throw new \InvalidArgumentException(
-                "Max nesting depth ({$maxDepth}) reached. Cannot spawn sub-experiment."
+                "Max nesting depth ({$maxDepth}) reached. Cannot spawn sub-experiment.",
             );
         }
 
@@ -38,11 +38,11 @@ class SpawnSubExperimentAction
 
         if ($activeChildCount >= $maxChildren) {
             throw new \InvalidArgumentException(
-                "Max children ({$maxChildren}) reached. Cannot spawn more sub-experiments."
+                "Max children ({$maxChildren}) reached. Cannot spawn more sub-experiments.",
             );
         }
 
-        return DB::transaction(function () use ($parent, $goal, $agentId, $budgetAllocation) {
+        return DB::transaction(function () use ($parent, $goal, $budgetAllocation) {
             // Allocate budget from parent if requested
             if ($budgetAllocation > 0 && $parent->budget_cap_credits) {
                 $remaining = $parent->budget_cap_credits - $parent->budget_spent_credits;

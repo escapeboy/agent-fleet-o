@@ -68,7 +68,7 @@ class IngestSignalAction
     private function mergeIntoExisting(Signal $existing, array $tags, array $payload, string $sourceIdentifier): Signal
     {
         $mergedTags = array_values(array_unique(
-            array_merge($existing->tags ?? [], $tags)
+            array_merge($existing->tags ?? [], $tags),
         ));
 
         $mergedPayload = array_merge($existing->payload ?? [], $payload);

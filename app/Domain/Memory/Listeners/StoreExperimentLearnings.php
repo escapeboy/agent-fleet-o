@@ -69,7 +69,7 @@ class StoreExperimentLearnings
                 );
             }
 
-            Log::info("StoreExperimentLearnings: Stored ".count($learnings)." learnings from experiment {$experiment->id}");
+            Log::info('StoreExperimentLearnings: Stored '.count($learnings)." learnings from experiment {$experiment->id}");
         } catch (\Throwable $e) {
             Log::warning('StoreExperimentLearnings: Failed to extract learnings', [
                 'experiment_id' => $experiment->id,
