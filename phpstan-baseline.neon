@@ -2641,10 +2641,22 @@ parameters:
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
 
 		-
+			message: '#^Negated boolean expression is always false\.$#'
+			identifier: booleanNot.alwaysFalse
+			count: 1
+			path: app/Domain/Signal/Connectors/CalendarConnector.php
+
+		-
 			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
 			identifier: class.notFound
 			count: 1
 			path: app/Domain/Signal/Connectors/CalendarConnector.php
+
+		-
+			message: '#^Method Webklex\\PHPIMAP\\Query\\WhereQuery\:\:whereUid\(\) invoked with 2 parameters, 1 required\.$#'
+			identifier: arguments.count
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
 
 		-
 			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
