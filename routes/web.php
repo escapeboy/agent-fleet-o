@@ -49,14 +49,8 @@ use Illuminate\Support\Facades\Route;
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 
-// Root — landing page for guests, dashboard for authenticated users
-Route::get('/', function () {
-    if (auth()->check()) {
-        return redirect()->route('dashboard');
-    }
-
-    return view('landing');
-})->name('home');
+// Root — landing page (always visible, even when authenticated)
+Route::get('/', fn () => view('landing'))->name('home');
 
 // Legal pages (public)
 Route::get('/privacy', fn () => view('legal.privacy'))->name('legal.privacy');
