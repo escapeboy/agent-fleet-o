@@ -40,7 +40,7 @@ class MarketplaceAnalyticsTool extends Tool
         $recent = MarketplaceUsageRecord::withoutGlobalScopes()
             ->where('listing_id', $listing->id)
             ->where('executed_at', '>=', now()->subDays(30))
-            ->selectRaw("status, COUNT(*) as count, SUM(cost_credits) as total_cost")
+            ->selectRaw('status, COUNT(*) as count, SUM(cost_credits) as total_cost')
             ->groupBy('status')
             ->get()
             ->keyBy('status');

@@ -30,7 +30,7 @@ class SuggestWorkflowAction
     {
         // Find the agent linked to the suggested step
         $agentId = null;
-        if (!empty($suggestion['step_id'])) {
+        if (! empty($suggestion['step_id'])) {
             $step = $experiment->playbookSteps()
                 ->where('id', $suggestion['step_id'])
                 ->first();
@@ -38,7 +38,7 @@ class SuggestWorkflowAction
         }
 
         // Fall back to the experiment's primary agent
-        if (!$agentId) {
+        if (! $agentId) {
             $agentId = $experiment->agent_id ?? $experiment->playbookSteps()->value('agent_id');
         }
 

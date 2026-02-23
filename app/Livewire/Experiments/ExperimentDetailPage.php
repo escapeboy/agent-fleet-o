@@ -166,7 +166,7 @@ class ExperimentDetailPage extends Component
     {
         $suggestion = $this->workflowSuggestions[$index] ?? null;
 
-        if (!$suggestion) {
+        if (! $suggestion) {
             return;
         }
 

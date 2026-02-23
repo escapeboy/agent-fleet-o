@@ -11,13 +11,13 @@ class LogExperimentTransition
     public function handle(ExperimentTransitioned $event): void
     {
         $userId = $event->experiment->user_id;
-        $triggeredBy = $userId ? 'user:' . $userId : 'agent';
+        $triggeredBy = $userId ? 'user:'.$userId : 'agent';
 
         // Transitions triggered by the pipeline executor (AI-driven stages)
         $aiDrivenStates = ['scoring', 'planning', 'building', 'executing', 'collecting_metrics', 'evaluating', 'iterating'];
-        if (!$userId && in_array($event->toState->value, $aiDrivenStates)) {
+        if (! $userId && in_array($event->toState->value, $aiDrivenStates)) {
             $triggeredBy = 'agent';
-        } elseif (!$userId) {
+        } elseif (! $userId) {
             $triggeredBy = 'scheduler';
         }
 

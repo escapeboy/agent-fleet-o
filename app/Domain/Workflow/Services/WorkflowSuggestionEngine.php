@@ -106,8 +106,8 @@ Rules:
 - Respond with valid JSON array only, no markdown
 SYSTEM;
 
-        $prompt = 'Analyze this workflow and return optimization suggestions as a JSON array:' .
-            "\n\n" . json_encode($context, JSON_PRETTY_PRINT);
+        $prompt = 'Analyze this workflow and return optimization suggestions as a JSON array:'.
+            "\n\n".json_encode($context, JSON_PRETTY_PRINT);
 
         $response = Prism::text()
             ->using('anthropic', 'claude-sonnet-4-20250514')
@@ -128,7 +128,7 @@ SYSTEM;
 
         $decoded = json_decode(trim($text), true);
 
-        if (!is_array($decoded)) {
+        if (! is_array($decoded)) {
             return [];
         }
 
@@ -151,7 +151,7 @@ SYSTEM;
                     'node_id' => $step->workflow_node_id,
                     'current_value' => $step->agent?->model ?? 'unknown',
                     'suggested_value' => 'claude-haiku-4-5-20251001',
-                    'reason' => "Step costs {$step->cost_credits} credits — " . round($step->cost_credits / $teamAvgCost, 1) . '× the team average.',
+                    'reason' => "Step costs {$step->cost_credits} credits — ".round($step->cost_credits / $teamAvgCost, 1).'× the team average.',
                     'expected_improvement' => 'Estimated 60–80% cost reduction by switching to a lighter model.',
                 ];
             }
@@ -172,7 +172,7 @@ SYSTEM;
                     'current_value' => 'sequential',
                     'suggested_value' => 'parallel',
                     'reason' => "Steps \"{$a->skill?->name}\" and \"{$b->skill?->name}\" have no output dependencies and could run simultaneously.",
-                    'expected_improvement' => 'Reduce total duration by ~' . round(min($a->duration_ms, $b->duration_ms) / 1000, 1) . 's.',
+                    'expected_improvement' => 'Reduce total duration by ~'.round(min($a->duration_ms, $b->duration_ms) / 1000, 1).'s.',
                 ];
                 break; // One parallelization suggestion is enough
             }

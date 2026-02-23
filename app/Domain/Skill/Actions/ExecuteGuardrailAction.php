@@ -2,7 +2,6 @@
 
 namespace App\Domain\Skill\Actions;
 
-use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Skill\Models\Skill;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;

@@ -46,7 +46,7 @@ class FireApprovalWebhookJob implements ShouldQueue
             Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'X-Signature-SHA256' => $signature,
-                'User-Agent' => config('app.name') . '/webhook',
+                'User-Agent' => config('app.name').'/webhook',
             ])
                 ->timeout(15)
                 ->post($approval->callback_url, $payload)

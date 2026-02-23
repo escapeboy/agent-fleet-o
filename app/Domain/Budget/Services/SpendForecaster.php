@@ -4,7 +4,6 @@ namespace App\Domain\Budget\Services;
 
 use App\Domain\Budget\Models\CreditLedger;
 use App\Models\GlobalSetting;
-use Illuminate\Support\Carbon;
 
 class SpendForecaster
 {
@@ -33,8 +32,8 @@ class SpendForecaster
         $dailySeries = CreditLedger::withoutGlobalScopes()
             ->where('type', 'spend')
             ->where('created_at', '>=', $since30)
-            ->selectRaw("DATE(created_at) as day, ABS(SUM(amount)) as spend")
-            ->groupByRaw("DATE(created_at)")
+            ->selectRaw('DATE(created_at) as day, ABS(SUM(amount)) as spend')
+            ->groupByRaw('DATE(created_at)')
             ->orderBy('day')
             ->get()
             ->keyBy('day');

@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MarketplaceInstallation extends Model
 {
@@ -32,7 +33,7 @@ class MarketplaceInstallation extends Model
         ];
     }
 
-    public function usageRecords(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function usageRecords(): HasMany
     {
         return $this->hasMany(MarketplaceUsageRecord::class, 'installation_id');
     }

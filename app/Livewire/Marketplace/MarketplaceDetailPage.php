@@ -4,8 +4,8 @@ namespace App\Livewire\Marketplace;
 
 use App\Domain\Marketplace\Actions\InstallFromMarketplaceAction;
 use App\Domain\Marketplace\Models\MarketplaceListing;
-use App\Domain\Marketplace\Models\MarketplaceUsageRecord;
 use App\Domain\Marketplace\Models\MarketplaceReview;
+use App\Domain\Marketplace\Models\MarketplaceUsageRecord;
 use Livewire\Component;
 
 class MarketplaceDetailPage extends Component
@@ -117,7 +117,7 @@ class MarketplaceDetailPage extends Component
             $recent = MarketplaceUsageRecord::withoutGlobalScopes()
                 ->where('listing_id', $this->listing->id)
                 ->where('executed_at', '>=', now()->subDays(30))
-                ->selectRaw("status, COUNT(*) as count, SUM(cost_credits) as total_cost")
+                ->selectRaw('status, COUNT(*) as count, SUM(cost_credits) as total_cost')
                 ->groupBy('status')
                 ->get()
                 ->keyBy('status');

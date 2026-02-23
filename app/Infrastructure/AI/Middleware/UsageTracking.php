@@ -18,7 +18,7 @@ class UsageTracking implements AiMiddlewareInterface
             return $response; // Don't track cached responses as new runs
         }
 
-        $hasReasoning = !empty($response->reasoningChain);
+        $hasReasoning = ! empty($response->reasoningChain);
 
         AiRun::withoutGlobalScopes()->create([
             'team_id' => $request->teamId,

@@ -30,11 +30,11 @@ class WorkflowSuggestionTool extends Tool
 
         $experiment = Experiment::find($experimentId);
 
-        if (!$experiment) {
+        if (! $experiment) {
             return $this->error("Experiment '{$experimentId}' not found.");
         }
 
-        if (!$experiment->hasWorkflow()) {
+        if (! $experiment->hasWorkflow()) {
             return $this->error('This experiment does not use a workflow. Suggestions are only available for workflow experiments.');
         }
 
@@ -44,13 +44,13 @@ class WorkflowSuggestionTool extends Tool
             return $this->text('No optimization suggestions found. The workflow appears to be well-optimized, or there is not enough execution data yet.');
         }
 
-        $lines = ["Found " . count($suggestions) . " optimization suggestion(s) for \"{$experiment->title}\":\n"];
+        $lines = ['Found '.count($suggestions)." optimization suggestion(s) for \"{$experiment->title}\":\n"];
 
         foreach ($suggestions as $i => $s) {
-            $lines[] = ($i + 1) . ". [{$s['type']}] {$s['reason']}";
+            $lines[] = ($i + 1).". [{$s['type']}] {$s['reason']}";
             $lines[] = "   Current: {$s['current_value']} → Suggested: {$s['suggested_value']}";
             $lines[] = "   Expected improvement: {$s['expected_improvement']}";
-            if (!empty($s['step_id'])) {
+            if (! empty($s['step_id'])) {
                 $lines[] = "   Step ID: {$s['step_id']}";
             }
             $lines[] = '';

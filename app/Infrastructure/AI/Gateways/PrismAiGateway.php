@@ -216,7 +216,7 @@ class PrismAiGateway implements AiGatewayInterface
             $toolCallsCount = count($toolResultsList);
             $toolResults = $toolCallsCount > 0 ? $toolResultsList : null;
 
-            if (!empty($reasoningSteps)) {
+            if (! empty($reasoningSteps)) {
                 $reasoningChain = $reasoningSteps;
             }
         }
@@ -225,7 +225,7 @@ class PrismAiGateway implements AiGatewayInterface
         $text = $response->text;
         if (str_contains($text, '<thinking>')) {
             preg_match_all('/<thinking>(.*?)<\/thinking>/s', $text, $matches);
-            if (!empty($matches[1])) {
+            if (! empty($matches[1])) {
                 $existingSteps = $reasoningChain ?? [];
                 $thinkingSteps = array_map(fn ($thought, $i) => [
                     'step' => count($existingSteps) + $i + 1,

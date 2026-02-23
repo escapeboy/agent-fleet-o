@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Skill;
 
+use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Models\WorkflowNode;
@@ -78,7 +79,7 @@ class GuardrailTool extends Tool
             return Response::error('step_id is required for get_result action.');
         }
 
-        $step = \App\Domain\Experiment\Models\PlaybookStep::find($stepId);
+        $step = PlaybookStep::find($stepId);
 
         if (! $step) {
             return Response::error('Playbook step not found.');
