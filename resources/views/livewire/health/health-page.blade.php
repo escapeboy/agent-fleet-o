@@ -1,4 +1,45 @@
 <div wire:poll.5s>
+    {{-- Stuck Experiments --}}
+    @if($stuckExperiments->isNotEmpty())
+        <div class="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-6">
+            <h3 class="text-sm font-medium text-yellow-800">Stuck Experiments ({{ $stuckExperiments->count() }})</h3>
+            <div class="mt-4 space-y-3">
+                @foreach($stuckExperiments as $stuck)
+                    <div class="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm">
+                        <div class="min-w-0 flex-1">
+                            <a href="{{ route('experiments.show', $stuck->experiment) }}"
+                                class="text-sm font-medium text-gray-900 hover:text-primary-600">
+                                {{ Str::limit($stuck->experiment->title, 50) }}
+                            </a>
+                            <p class="mt-0.5 text-xs text-gray-500">
+                                Stuck in <span class="font-medium text-yellow-700">{{ str_replace('_', ' ', $stuck->state) }}</span>
+                                for {{ $stuck->stuck_duration }}
+                                @if($stuck->recovery_attempts > 0)
+                                    &middot; {{ $stuck->recovery_attempts }} recovery attempt(s)
+                                @endif
+                                @if($stuck->last_recovery_at)
+                                    &middot; Last recovery {{ $stuck->last_recovery_at->diffForHumans() }}
+                                @endif
+                            </p>
+                        </div>
+                        <div class="ml-4 flex items-center gap-2">
+                            <button wire:click="retryExperiment('{{ $stuck->experiment->id }}')"
+                                wire:confirm="Re-trigger recovery for this experiment?"
+                                class="rounded-md bg-yellow-100 px-2.5 py-1.5 text-xs font-medium text-yellow-800 hover:bg-yellow-200">
+                                Retry
+                            </button>
+                            <button wire:click="killExperiment('{{ $stuck->experiment->id }}')"
+                                wire:confirm="Kill this stuck experiment? This cannot be undone."
+                                class="rounded-md bg-red-100 px-2.5 py-1.5 text-xs font-medium text-red-800 hover:bg-red-200">
+                                Kill
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
         {{-- Queue Health --}}

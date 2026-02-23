@@ -36,4 +36,31 @@ return [
     */
     'default_max_concurrent' => (int) env('EXPERIMENT_MAX_CONCURRENT', 5),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Stalled Experiment Recovery
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for detecting and recovering experiments stuck in
+    | processing states with no active jobs. Timeouts are in seconds.
+    |
+    */
+    'recovery' => [
+        'enabled' => env('EXPERIMENT_RECOVERY_ENABLED', true),
+
+        'timeouts' => [
+            'scoring' => 300,            // 5 minutes
+            'planning' => 600,           // 10 minutes
+            'building' => 900,           // 15 minutes
+            'awaiting_approval' => 259200, // 72 hours
+            'executing' => 1800,         // 30 minutes
+            'collecting_metrics' => 900, // 15 minutes
+            'evaluating' => 600,         // 10 minutes
+        ],
+
+        'max_recovery_attempts' => 4,
+        'notify_after_attempts' => 3,
+        'pause_after_attempts' => 4,
+    ],
+
 ];

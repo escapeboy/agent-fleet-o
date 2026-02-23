@@ -177,6 +177,15 @@ class EditProjectForm extends Component
         $this->redirect(route('projects.show', $this->project));
     }
 
+    public function getSchedulePreviewProperty(): array
+    {
+        if (! $this->project->isContinuous() || ! $this->project->schedule) {
+            return [];
+        }
+
+        return $this->project->schedule->getNextRunTimes(5);
+    }
+
     public function render()
     {
         $agents = Agent::where('status', 'active')->orderBy('name')->get();
@@ -194,6 +203,7 @@ class EditProjectForm extends Component
             'tools' => $tools,
             'credentials' => $credentials,
             'executionModes' => ProjectExecutionMode::cases(),
+            'schedulePreview' => $this->schedulePreview,
         ])->layout('layouts.app', ['header' => 'Edit: '.$this->project->title]);
     }
 }
