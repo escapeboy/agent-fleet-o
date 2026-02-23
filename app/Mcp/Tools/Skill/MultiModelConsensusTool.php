@@ -57,14 +57,18 @@ class MultiModelConsensusTool extends Tool
 
         return Response::text(json_encode([
             'count' => $skills->count(),
-            'skills' => $skills->map(fn ($s) => [
-                'id' => $s->id,
-                'name' => $s->name,
-                'slug' => $s->slug,
-                'description' => $s->description,
-                'models' => $s->configuration['models'] ?? [],
-                'judge_model' => $s->configuration['judge_model'] ?? null,
-            ]),
+            'skills' => $skills->map(function ($s) {
+                $cfg = is_array($s->configuration) ? $s->configuration : [];
+
+                return [
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'slug' => $s->slug,
+                    'description' => $s->description,
+                    'models' => $cfg['models'] ?? [],
+                    'judge_model' => $cfg['judge_model'] ?? null,
+                ];
+            }),
         ]));
     }
 
@@ -110,7 +114,7 @@ class MultiModelConsensusTool extends Tool
         if ($skillId) {
             $skill = Skill::find($skillId);
             if ($skill) {
-                $exampleConfig = $skill->configuration ?? $exampleConfig;
+                $exampleConfig = is_array($skill->configuration) ? $skill->configuration : $exampleConfig;
             }
         }
 

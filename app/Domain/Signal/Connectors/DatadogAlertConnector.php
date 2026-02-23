@@ -48,10 +48,6 @@ class DatadogAlertConnector implements InputConnectorInterface
 
         $dto = $this->normalize($payload);
 
-        if (! $dto) {
-            return [];
-        }
-
         if (! $this->meetsSeverityThreshold($dto->severity, $config['severity_threshold'] ?? 'info')) {
             return [];
         }
@@ -94,7 +90,7 @@ class DatadogAlertConnector implements InputConnectorInterface
         return $driver === 'datadog';
     }
 
-    private function normalize(array $payload): ?AlertSignalDTO
+    private function normalize(array $payload): AlertSignalDTO
     {
         // Datadog custom payload template variables
         $alertId = (string) ($payload['alert_id'] ?? uniqid('dd_', true));

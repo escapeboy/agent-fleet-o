@@ -59,7 +59,7 @@ class ExecuteCodeExecutionSkillAction
             );
         }
 
-        $config = $skill->configuration ?? [];
+        $config = is_array($skill->configuration) ? $skill->configuration : [];
         $repoPath = $config['git_repo_path'] ?? null;
         $script = $input['script'] ?? $config['script'] ?? null;
         $baseBranch = $config['base_branch'] ?? 'main';

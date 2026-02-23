@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Skill;
 
+use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
@@ -63,16 +64,20 @@ class CodeExecutionTool extends Tool
 
         return Response::text(json_encode([
             'count' => $skills->count(),
-            'skills' => $skills->map(fn ($s) => [
-                'id' => $s->id,
-                'name' => $s->name,
-                'slug' => $s->slug,
-                'description' => $s->description,
-                'git_repo_path' => $s->configuration['git_repo_path'] ?? null,
-                'base_branch' => $s->configuration['base_branch'] ?? 'main',
-                'script' => $s->configuration['script'] ?? null,
-                'timeout_seconds' => $s->configuration['timeout_seconds'] ?? 300,
-            ]),
+            'skills' => $skills->map(function ($s) {
+                $cfg = is_array($s->configuration) ? $s->configuration : [];
+
+                return [
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'slug' => $s->slug,
+                    'description' => $s->description,
+                    'git_repo_path' => $cfg['git_repo_path'] ?? null,
+                    'base_branch' => $cfg['base_branch'] ?? 'main',
+                    'script' => $cfg['script'] ?? null,
+                    'timeout_seconds' => $cfg['timeout_seconds'] ?? 300,
+                ];
+            }),
         ]));
     }
 
@@ -118,7 +123,11 @@ class CodeExecutionTool extends Tool
         $approvalStatus = null;
         if ($execution->approval_request_id) {
             $approval = ApprovalRequest::find($execution->approval_request_id);
-            $approvalStatus = $approval?->status?->value;
+            if ($approval !== null) {
+                $approvalStatus = $approval->status instanceof ApprovalStatus
+                    ? $approval->status->value
+                    : null;
+            }
         }
 
         return Response::text(json_encode([

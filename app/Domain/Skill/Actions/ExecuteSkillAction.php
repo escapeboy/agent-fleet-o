@@ -55,7 +55,7 @@ class ExecuteSkillAction
         ?string $model = null,
     ): array {
         // CodeExecution has its own full pipeline (worktree + Docker sandbox + approval)
-        if ($skill->type === SkillType::CodeExecution) {
+        if ($skill->type === SkillType::CodeExecution->value) {
             return $this->executeCodeExecution->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
@@ -134,14 +134,15 @@ class ExecuteSkillAction
                 'cost_credits' => $response->usage->costCredits,
             ];
 
-            if ($skill->type === SkillType::MultiModelConsensus && is_array($output)) {
+            if ($skill->type === SkillType::MultiModelConsensus->value && is_array($output)) {
                 $executionData['confidence_score'] = $output['confidence_score'] ?? null;
                 $executionData['consensus_level'] = $output['consensus_level'] ?? null;
                 $executionData['peer_reviews'] = $output['peer_reviews'] ?? null;
                 $executionData['evaluation_method'] = 'multi_model_consensus';
-                $executionData['judge_model'] = ($skill->configuration['judge_model']['provider'] ?? 'anthropic')
+                $config = is_array($skill->configuration) ? $skill->configuration : [];
+                $executionData['judge_model'] = ($config['judge_model']['provider'] ?? 'anthropic')
                     .'/'
-                    .($skill->configuration['judge_model']['model'] ?? 'claude-sonnet-4-5');
+                    .($config['judge_model']['model'] ?? 'claude-sonnet-4-5');
                 // Store only the synthesized answer in output, not the metadata columns
                 $executionData['output'] = [
                     'answer' => $output['answer'] ?? $response->content,
@@ -312,7 +313,7 @@ class ExecuteSkillAction
         ?string $agentId,
         ?string $experimentId,
     ): AiResponseDTO {
-        $config = $skill->configuration ?? [];
+        $config = is_array($skill->configuration) ? $skill->configuration : [];
         $models = $config['models'] ?? [
             ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
             ['provider' => 'openai', 'model' => 'gpt-4o'],
