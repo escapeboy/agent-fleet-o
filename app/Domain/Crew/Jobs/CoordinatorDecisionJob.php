@@ -8,6 +8,8 @@ use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Crew\Services\CrewOrchestrator;
+use App\Domain\Experiment\Actions\SpawnSubExperimentAction;
+use App\Domain\Experiment\Models\Experiment;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -113,11 +115,16 @@ class CoordinatorDecisionJob implements ShouldQueue
 
         $isCoordinatorOnly = empty($config['workers']);
 
+        $hasExperimentContext = $execution->experiment_id !== null;
+
         $systemPrompt = "You are {$coordinator->role} managing a team. Decide the next action.\n\n"
             ."Available actions:\n"
             ."- \"delegate\": Assign a task to a team member (or yourself if solo)\n"
-            ."- \"complete\": The goal is achieved, provide a summary\n\n"
-            .'Respond with valid JSON: { "action": "delegate"|"complete", "task": { "title": string, "description": string }, "assigned_to": string, "summary": string }';
+            ."- \"complete\": The goal is achieved, provide a summary\n"
+            .($hasExperimentContext
+                ? "- \"spawn_sub_experiment\": Launch a sub-experiment for complex research/analysis that needs its own pipeline\n\n"
+                  .'Respond with valid JSON: { "action": "delegate"|"complete"|"spawn_sub_experiment", "task": { "title": string, "description": string }, "assigned_to": string, "summary": string, "goal": string, "budget_allocation": number }'
+                : "\n".'Respond with valid JSON: { "action": "delegate"|"complete", "task": { "title": string, "description": string }, "assigned_to": string, "summary": string }');
 
         $userPrompt = "Goal: {$execution->goal}\n\n"
             ."Completed tasks:\n".($completedSummary ?: 'None yet')."\n\n"
@@ -151,6 +158,12 @@ class CoordinatorDecisionJob implements ShouldQueue
             if ($decision['action'] === 'complete') {
                 // Coordinator says work is done — synthesize
                 app(CrewOrchestrator::class)->synthesizeAndComplete($execution->fresh());
+
+                return;
+            }
+
+            if ($decision['action'] === 'spawn_sub_experiment' && $execution->experiment_id) {
+                $this->spawnSubExperiment($execution, $decision);
 
                 return;
             }
@@ -219,6 +232,46 @@ class CoordinatorDecisionJob implements ShouldQueue
             taskExecutionId: $task->id,
             teamId: $execution->team_id,
         );
+    }
+
+    private function spawnSubExperiment(CrewExecution $execution, array $decision): void
+    {
+        $experiment = Experiment::withoutGlobalScopes()->find($execution->experiment_id);
+
+        if (! $experiment) {
+            Log::warning('CoordinatorDecisionJob: Cannot spawn sub-experiment — parent experiment not found', [
+                'execution_id' => $execution->id,
+                'experiment_id' => $execution->experiment_id,
+            ]);
+
+            return;
+        }
+
+        try {
+            app(SpawnSubExperimentAction::class)->execute(
+                parent: $experiment,
+                goal: $decision['goal'] ?? $decision['task']['description'] ?? 'Sub-experiment',
+                budgetAllocation: (int) ($decision['budget_allocation'] ?? 0),
+            );
+        } catch (\Throwable $e) {
+            Log::warning('CoordinatorDecisionJob: Sub-experiment spawn failed, falling back to delegation', [
+                'execution_id' => $execution->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            // Fall back to delegation if spawn fails (e.g. nesting depth exceeded)
+            /** @var array<string, mixed> $fallbackConfig */
+            $fallbackConfig = $execution->config_snapshot ?? [];
+            /** @var Agent|null $fallbackCoordinator */
+            $fallbackCoordinator = Agent::withoutGlobalScopes()->find($fallbackConfig['coordinator']['id'] ?? null);
+
+            if ($fallbackCoordinator) {
+                $this->createAndDispatchTask($execution, $decision, $fallbackConfig,
+                    $fallbackCoordinator,
+                    empty($fallbackConfig['workers']),
+                );
+            }
+        }
     }
 
     private function parseDecision(string $content): array

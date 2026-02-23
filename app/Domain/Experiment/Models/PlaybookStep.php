@@ -38,6 +38,7 @@ class PlaybookStep extends Model
         'worker_id',
         'idempotency_key',
         'checkpoint_version',
+        'guardrail_result',
     ];
 
     protected function casts(): array
@@ -51,6 +52,7 @@ class PlaybookStep extends Model
             'duration_ms' => 'integer',
             'cost_credits' => 'integer',
             'checkpoint_version' => 'integer',
+            'guardrail_result' => 'array',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'last_heartbeat_at' => 'datetime',

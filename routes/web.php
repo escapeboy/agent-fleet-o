@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\MarketplacePageController;
+use App\Http\Controllers\PublicExperimentController;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
@@ -23,12 +24,15 @@ use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
 use App\Livewire\Memory\MemoryBrowserPage;
+use App\Livewire\Metrics\ModelComparisonPage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
 use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
+use App\Livewire\Shared\NotificationInboxPage;
+use App\Livewire\Signals\EntityBrowserPage;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
 use App\Livewire\Skills\SkillListPage;
@@ -41,6 +45,9 @@ use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
 use Illuminate\Support\Facades\Route;
+
+// Public experiment share (no auth)
+Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 
 // Root — landing page for guests, dashboard for authenticated users
 Route::get('/', function () {
@@ -114,9 +121,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
 
+    Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
+
+    Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
+
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/health', HealthPage::class)->name('health');
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
+
+    Route::get('/notifications', NotificationInboxPage::class)->name('notifications.index');
 });

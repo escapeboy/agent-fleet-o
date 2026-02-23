@@ -46,6 +46,7 @@
                     </th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Provider</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Skills</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Risk</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Budget</th>
                     <th wire:click="sortBy('created_at')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Created {!! $sortIcon('created_at') !!}
@@ -73,6 +74,21 @@
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $agent->provider }}/{{ $agent->model }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $agent->skills_count }}</td>
                         <td class="px-6 py-4">
+                            @if($agent->risk_score !== null)
+                                @php
+                                    $score = (float) $agent->risk_score;
+                                    $color = $score > 60 ? 'red' : ($score > 40 ? 'yellow' : 'green');
+                                    $label = $score > 60 ? 'High' : ($score > 40 ? 'Medium' : 'Low');
+                                @endphp
+                                <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium
+                                    {{ $color === 'red' ? 'bg-red-100 text-red-700' : ($color === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700') }}">
+                                    {{ $label }} ({{ number_format($score, 0) }})
+                                </span>
+                            @else
+                                <span class="text-xs text-gray-400">—</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4">
                             @if($agent->budget_cap_credits)
                                 @php $pct = min(100, round(($agent->budget_spent_credits / $agent->budget_cap_credits) * 100)); @endphp
                                 <div class="flex items-center gap-2">
@@ -89,7 +105,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-400">
+                        <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-400">
                             No agents found. Create your first one!
                         </td>
                     </tr>

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Marketplace\Actions\AggregateMarketplaceStatsAction;
 use App\Domain\Metrics\Models\Metric;
 use App\Domain\Metrics\Models\MetricAggregation;
 use Illuminate\Console\Command;
@@ -58,6 +59,12 @@ class AggregateMetrics extends Command
         }
 
         $this->info("Aggregated {$created} metric group(s) for {$period} period starting {$periodStart}.");
+
+        // Aggregate marketplace stats on daily run
+        if ($period === 'daily') {
+            $marketplaceUpdated = app(AggregateMarketplaceStatsAction::class)->execute();
+            $this->info("Updated marketplace stats for {$marketplaceUpdated} listing(s).");
+        }
 
         return self::SUCCESS;
     }

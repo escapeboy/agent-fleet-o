@@ -13,10 +13,14 @@ use App\Mcp\Tools\Approval\ApprovalApproveTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
 use App\Mcp\Tools\Approval\ApprovalRejectTool;
+use App\Mcp\Tools\Approval\ApprovalWebhookTool;
 use App\Mcp\Tools\Artifact\ArtifactGetTool;
 use App\Mcp\Tools\Artifact\ArtifactListTool;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
+use App\Mcp\Tools\Budget\BudgetForecastTool;
 use App\Mcp\Tools\Budget\BudgetSummaryTool;
+use App\Mcp\Tools\Cache\SemanticCachePurgeTool;
+use App\Mcp\Tools\Cache\SemanticCacheStatsTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
 use App\Mcp\Tools\Credential\CredentialListTool;
@@ -30,6 +34,7 @@ use App\Mcp\Tools\Crew\CrewUpdateTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
+use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
 use App\Mcp\Tools\Experiment\ExperimentGetTool;
 use App\Mcp\Tools\Experiment\ExperimentKillTool;
@@ -38,6 +43,7 @@ use App\Mcp\Tools\Experiment\ExperimentPauseTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
+use App\Mcp\Tools\Marketplace\MarketplaceAnalyticsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
@@ -57,8 +63,10 @@ use App\Mcp\Tools\Project\ProjectPauseTool;
 use App\Mcp\Tools\Project\ProjectResumeTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
+use App\Mcp\Tools\Shared\NotificationTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
 use App\Mcp\Tools\Skill\SkillListTool;
@@ -79,6 +87,7 @@ use App\Mcp\Tools\Workflow\WorkflowCreateTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
+use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
 use Laravel\Mcp\Server;
@@ -120,7 +129,7 @@ class AgentFleetServer extends Server
         CrewExecuteTool::class,
         CrewExecutionStatusTool::class,
 
-        // Experiment (8)
+        // Experiment (9)
         ExperimentListTool::class,
         ExperimentGetTool::class,
         ExperimentCreateTool::class,
@@ -129,12 +138,14 @@ class AgentFleetServer extends Server
         ExperimentRetryTool::class,
         ExperimentKillTool::class,
         ExperimentValidTransitionsTool::class,
+        ExperimentCostTool::class,
 
-        // Skill (4)
+        // Skill (5)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
         SkillUpdateTool::class,
+        GuardrailTool::class,
 
         // Tool (7)
         ToolListTool::class,
@@ -158,6 +169,7 @@ class AgentFleetServer extends Server
         WorkflowUpdateTool::class,
         WorkflowValidateTool::class,
         WorkflowGenerateTool::class,
+        WorkflowSuggestionTool::class,
 
         // Project (8)
         ProjectListTool::class,
@@ -169,24 +181,31 @@ class AgentFleetServer extends Server
         ProjectTriggerRunTool::class,
         ProjectArchiveTool::class,
 
-        // Approval (4)
+        // Approval (5)
         ApprovalListTool::class,
         ApprovalApproveTool::class,
         ApprovalRejectTool::class,
         ApprovalCompleteHumanTaskTool::class,
+        ApprovalWebhookTool::class,
 
         // Signal (2)
         SignalListTool::class,
         SignalIngestTool::class,
 
-        // Budget (2)
+        // Budget (3)
         BudgetSummaryTool::class,
         BudgetCheckTool::class,
+        BudgetForecastTool::class,
 
-        // Marketplace (3)
+        // Cache (2)
+        SemanticCacheStatsTool::class,
+        SemanticCachePurgeTool::class,
+
+        // Marketplace (4)
         MarketplaceBrowseTool::class,
         MarketplacePublishTool::class,
         MarketplaceInstallTool::class,
+        MarketplaceAnalyticsTool::class,
 
         // Memory (3)
         MemorySearchTool::class,
@@ -207,6 +226,9 @@ class AgentFleetServer extends Server
         // Webhook (2)
         WebhookListTool::class,
         WebhookCreateTool::class,
+
+        // Shared (1)
+        NotificationTool::class,
 
         // System (3)
         DashboardKpisTool::class,

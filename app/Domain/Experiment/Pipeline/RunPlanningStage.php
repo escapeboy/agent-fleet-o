@@ -8,6 +8,8 @@ use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Memory\Services\MemoryContextInjector;
+use App\Domain\Project\Models\ProjectRun;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 
@@ -57,6 +59,21 @@ class RunPlanningStage extends BaseStageJob
             "Iteration: {$experiment->current_iteration}",
             'Scoring output: '.json_encode($scoringOutput, JSON_UNESCAPED_UNICODE),
         ];
+
+        // Inject relevant memories from past experiments
+        $projectId = ProjectRun::where('experiment_id', $experiment->id)->value('project_id');
+        if ($projectId) {
+            $injector = app(MemoryContextInjector::class);
+            $memory = $injector->buildContext(
+                agentId: $experiment->agent_id ?? 'team-knowledge',
+                input: $experiment->thesis ?? $experiment->title,
+                projectId: $projectId,
+                teamId: $experiment->team_id,
+            );
+            if ($memory) {
+                $contextParts[] = "--- Past Learnings ---\n{$memory}";
+            }
+        }
 
         if ($rejectionFeedback) {
             $contextParts[] = 'Previous rejection feedback: '.json_encode($rejectionFeedback, JSON_UNESCAPED_UNICODE);

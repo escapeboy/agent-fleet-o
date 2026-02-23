@@ -9,4 +9,7 @@ enum LedgerType: string
     case Refund = 'refund';
     case Reservation = 'reservation';
     case Release = 'release';
+    case MarketplacePurchase = 'marketplace_purchase';
+    case MarketplaceRevenue = 'marketplace_revenue';
+    case PlatformFee = 'platform_fee';
 }

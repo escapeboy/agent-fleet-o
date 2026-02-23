@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Budget\Models\CreditLedger;
+use App\Domain\Budget\Services\SpendForecaster;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Enums\ProjectStatus;
@@ -55,6 +56,9 @@ class DashboardPage extends Component
         // Alerts
         $alerts = $this->gatherAlerts();
 
+        // Spend forecast
+        $spendForecast = app(SpendForecaster::class)->forecast();
+
         return view('livewire.dashboard.dashboard-page', [
             'active' => $active,
             'completed' => $completed,
@@ -70,6 +74,7 @@ class DashboardPage extends Component
             'projectRuns24h' => $projectRuns24h,
             'activeExperiments' => $activeExperiments,
             'alerts' => $alerts,
+            'spendForecast' => $spendForecast,
         ])->layout('layouts.app', ['header' => 'Dashboard']);
     }
 

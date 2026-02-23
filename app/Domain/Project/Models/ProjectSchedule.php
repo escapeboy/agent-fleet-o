@@ -28,6 +28,7 @@ class ProjectSchedule extends Model
         'enabled',
         'last_run_at',
         'next_run_at',
+        'queued_run_at',
     ];
 
     protected function casts(): array
@@ -43,6 +44,7 @@ class ProjectSchedule extends Model
             'enabled' => 'boolean',
             'last_run_at' => 'datetime',
             'next_run_at' => 'datetime',
+            'queued_run_at' => 'datetime',
         ];
     }
 

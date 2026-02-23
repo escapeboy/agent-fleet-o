@@ -27,6 +27,7 @@ class WorkflowNode extends Model
         'agent_id',
         'skill_id',
         'crew_id',
+        'guardrail_skill_id',
         'type',
         'label',
         'position_x',
@@ -65,6 +66,11 @@ class WorkflowNode extends Model
     public function crew(): BelongsTo
     {
         return $this->belongsTo(Crew::class);
+    }
+
+    public function guardrailSkill(): BelongsTo
+    {
+        return $this->belongsTo(Skill::class, 'guardrail_skill_id');
     }
 
     public function outgoingEdges(): HasMany

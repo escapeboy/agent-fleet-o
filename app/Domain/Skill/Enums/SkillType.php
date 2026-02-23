@@ -8,6 +8,7 @@ enum SkillType: string
     case Connector = 'connector';
     case Rule = 'rule';
     case Hybrid = 'hybrid';
+    case Guardrail = 'guardrail';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum SkillType: string
             self::Connector => 'Connector',
             self::Rule => 'Rule-Based',
             self::Hybrid => 'Hybrid',
+            self::Guardrail => 'Guardrail',
         };
     }
 }

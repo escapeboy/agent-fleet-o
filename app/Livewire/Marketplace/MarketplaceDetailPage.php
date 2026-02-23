@@ -5,6 +5,7 @@ namespace App\Livewire\Marketplace;
 use App\Domain\Marketplace\Actions\InstallFromMarketplaceAction;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Marketplace\Models\MarketplaceReview;
+use App\Domain\Marketplace\Models\MarketplaceUsageRecord;
 use Livewire\Component;
 
 class MarketplaceDetailPage extends Component
@@ -108,8 +109,39 @@ class MarketplaceDetailPage extends Component
     {
         $reviews = $this->listing->reviews()->with('user')->latest()->get();
 
+        // Publisher analytics (visible to listing owner's team)
+        $isPublisher = auth()->user()?->currentTeam?->id === $this->listing->team_id;
+
+        $publisherStats = null;
+        if ($isPublisher) {
+            $recent = MarketplaceUsageRecord::withoutGlobalScopes()
+                ->where('listing_id', $this->listing->id)
+                ->where('executed_at', '>=', now()->subDays(30))
+                ->selectRaw('status, COUNT(*) as count, SUM(cost_credits) as total_cost')
+                ->groupBy('status')
+                ->get()
+                ->keyBy('status');
+
+            $publisherStats = [
+                'run_count' => $this->listing->run_count,
+                'success_count' => $this->listing->success_count,
+                'success_rate' => $this->listing->run_count > 0
+                    ? round(($this->listing->success_count / $this->listing->run_count) * 100, 1)
+                    : null,
+                'avg_cost_credits' => $this->listing->avg_cost_credits,
+                'avg_duration_ms' => $this->listing->avg_duration_ms,
+                'usage_trend' => $this->listing->usage_trend ?? [],
+                'last_30d_runs' => (int) ($recent->get('completed')?->count ?? 0),
+                'last_30d_failures' => (int) ($recent->get('failed')?->count ?? 0),
+                'price_per_run' => $this->listing->price_per_run_credits,
+                'monetization_enabled' => $this->listing->monetization_enabled,
+            ];
+        }
+
         return view('livewire.marketplace.marketplace-detail-page', [
             'reviews' => $reviews,
+            'isPublisher' => $isPublisher,
+            'publisherStats' => $publisherStats,
         ])->layout('layouts.app', ['header' => $this->listing->name]);
     }
 }

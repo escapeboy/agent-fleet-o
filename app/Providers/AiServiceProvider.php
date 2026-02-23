@@ -11,6 +11,7 @@ use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
+use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
@@ -39,6 +40,7 @@ class AiServiceProvider extends ServiceProvider
                 $app->make(RateLimiting::class),
                 $app->make(BudgetEnforcement::class),
                 $app->make(IdempotencyCheck::class),
+                $app->make(SemanticCache::class),
                 $app->make(SchemaValidation::class),
                 $app->make(UsageTracking::class),
             ]);

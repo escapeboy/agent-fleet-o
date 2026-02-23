@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MarketplaceInstallation extends Model
 {
@@ -20,7 +21,22 @@ class MarketplaceInstallation extends Model
         'installed_skill_id',
         'installed_agent_id',
         'installed_workflow_id',
+        'total_credits_spent',
+        'total_revenue_earned',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'total_credits_spent' => 'decimal:6',
+            'total_revenue_earned' => 'decimal:6',
+        ];
+    }
+
+    public function usageRecords(): HasMany
+    {
+        return $this->hasMany(MarketplaceUsageRecord::class, 'installation_id');
+    }
 
     public function listing(): BelongsTo
     {

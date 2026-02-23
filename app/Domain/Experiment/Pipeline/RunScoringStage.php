@@ -7,6 +7,8 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Memory\Services\MemoryContextInjector;
+use App\Domain\Project\Models\ProjectRun;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 
@@ -37,8 +39,24 @@ class RunScoringStage extends BaseStageJob
         $signal = $experiment->signals()->latest()->first();
         $signalPayload = $signal?->payload ?? ['thesis' => $experiment->thesis];
 
+        // Inject relevant memories from past experiments
+        $memoryContext = '';
+        $projectId = ProjectRun::where('experiment_id', $experiment->id)->value('project_id');
+        if ($projectId) {
+            $injector = app(MemoryContextInjector::class);
+            $memory = $injector->buildContext(
+                agentId: $experiment->agent_id ?? 'team-knowledge',
+                input: $experiment->thesis ?? $experiment->title,
+                projectId: $projectId,
+                teamId: $experiment->team_id,
+            );
+            if ($memory) {
+                $memoryContext = "\n\n--- Past Learnings ---\n{$memory}";
+            }
+        }
+
         // Build user prompt with optional dependency context
-        $userPrompt = "Score this experiment thesis:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nSignal: ".json_encode($signalPayload, JSON_UNESCAPED_UNICODE);
+        $userPrompt = "Score this experiment thesis:\n\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nSignal: ".json_encode($signalPayload, JSON_UNESCAPED_UNICODE).$memoryContext;
 
         $dependencyContext = $experiment->constraints['dependency_context'] ?? [];
         if (! empty($dependencyContext)) {

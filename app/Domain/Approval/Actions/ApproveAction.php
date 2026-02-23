@@ -3,6 +3,7 @@
 namespace App\Domain\Approval\Actions;
 
 use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Approval\Jobs\FireApprovalWebhookJob;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
@@ -66,5 +67,11 @@ class ApproveAction
             toState: ExperimentStatus::Executing,
             reason: 'Outbound dispatched after approval',
         );
+
+        // Fire webhook callback if configured
+        if ($approvalRequest->callback_url) {
+            $approvalRequest->update(['callback_status' => 'pending']);
+            FireApprovalWebhookJob::dispatch($approvalRequest->id);
+        }
     }
 }

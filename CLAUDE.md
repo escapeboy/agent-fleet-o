@@ -16,6 +16,14 @@
 - **MCP Server:** `laravel/mcp` ^0.5 (Model Context Protocol for LLM/agent access)
 - **Docker:** PHP 8.4-fpm-alpine + Nginx 1.27 + PostgreSQL 17 + Redis 7
 
+## Git Branching Strategy
+
+- **Default branch:** `develop` — all day-to-day work happens here.
+- **Production branch:** `main` — stable releases only, synced from `develop`.
+- **Feature branches:** Create from `develop`, open PRs into `develop`.
+  - Naming: `feat/<short-description>`, `fix/<short-description>`, `chore/<short-description>`.
+- **Hotfix branches:** Create from `main`, open PRs into `main`. Then sync `main` back into `develop`.
+
 ## Project Structure
 
 Domain-driven design with 16 bounded contexts:

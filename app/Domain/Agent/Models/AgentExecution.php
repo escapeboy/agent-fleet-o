@@ -44,6 +44,10 @@ class AgentExecution extends Model
         'llm_steps_count',
         'duration_ms',
         'cost_credits',
+        'quality_score',
+        'quality_details',
+        'evaluation_method',
+        'judge_model',
         'error_message',
     ];
 
@@ -58,6 +62,8 @@ class AgentExecution extends Model
             'llm_steps_count' => 'integer',
             'duration_ms' => 'integer',
             'cost_credits' => 'integer',
+            'quality_score' => 'float',
+            'quality_details' => 'array',
         ];
     }
 

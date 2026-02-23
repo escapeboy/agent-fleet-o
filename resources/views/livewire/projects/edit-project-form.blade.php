@@ -95,6 +95,21 @@
 
                         <x-form-input wire:model.number="maxConsecutiveFailures" label="Max Consecutive Failures" type="number"
                             min="1" max="100" hint="Auto-pause after this many consecutive failures" />
+
+                        @if(!empty($schedulePreview))
+                            <div class="rounded-lg border border-blue-200 bg-white p-3">
+                                <p class="mb-2 text-xs font-medium text-gray-500">Next 5 Scheduled Runs</p>
+                                <div class="space-y-1">
+                                    @foreach($schedulePreview as $runTime)
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span class="text-gray-400">{{ $loop->iteration }}.</span>
+                                            <span class="font-mono text-gray-700">{{ $runTime->format('Y-m-d H:i') }} UTC</span>
+                                            <span class="text-gray-400">({{ $runTime->diffForHumans() }})</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
             @endif

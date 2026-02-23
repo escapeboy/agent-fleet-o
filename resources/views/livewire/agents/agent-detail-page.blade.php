@@ -225,7 +225,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8">
-                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'evolution' => 'Evolution'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'risk' => 'Risk Profile', 'evolution' => 'Evolution'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -353,6 +353,154 @@
                     </tbody>
                 </table>
             </div>
+        @elseif($activeTab === 'risk')
+            @php
+                $riskScore = (float) ($agent->risk_score ?? 0);
+                $riskColor = $riskScore > 60 ? 'red' : ($riskScore > 40 ? 'yellow' : 'green');
+                $riskLabel = $riskScore > 60 ? 'High' : ($riskScore > 40 ? 'Medium' : 'Low');
+                $profile = $agent->risk_profile ?? [];
+                $riskFactors = $profile['risk_factors'] ?? [];
+            @endphp
+            <div class="space-y-4">
+                {{-- Score card --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700">Overall Risk Score</h3>
+                            @if($agent->risk_profile_updated_at)
+                                <p class="mt-0.5 text-xs text-gray-400">Last updated {{ $agent->risk_profile_updated_at->diffForHumans() }}</p>
+                            @else
+                                <p class="mt-0.5 text-xs text-gray-400">Not yet computed — run health check to calculate</p>
+                            @endif
+                        </div>
+                        <div class="text-right">
+                            <span class="text-4xl font-bold {{ $riskColor === 'red' ? 'text-red-600' : ($riskColor === 'yellow' ? 'text-yellow-600' : 'text-green-600') }}">
+                                {{ $agent->risk_score !== null ? number_format($riskScore, 0) : '—' }}
+                            </span>
+                            @if($agent->risk_score !== null)
+                                <span class="ml-1 text-lg text-gray-400">/ 100</span>
+                                <div class="mt-1">
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                                        {{ $riskColor === 'red' ? 'bg-red-100 text-red-700' : ($riskColor === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700') }}">
+                                        {{ $riskLabel }} Risk
+                                    </span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Score bar --}}
+                    @if($agent->risk_score !== null)
+                        <div class="mt-4">
+                            <div class="h-3 w-full rounded-full bg-gray-100">
+                                <div class="h-3 rounded-full transition-all
+                                    {{ $riskColor === 'red' ? 'bg-red-500' : ($riskColor === 'yellow' ? 'bg-yellow-500' : 'bg-green-500') }}"
+                                    style="width: {{ min(100, $riskScore) }}%"></div>
+                            </div>
+                            <div class="mt-1 flex justify-between text-xs text-gray-400">
+                                <span>Low (0)</span>
+                                <span>Medium (40)</span>
+                                <span>High (60)</span>
+                                <span>Critical (80+)</span>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                @if(!empty($riskFactors))
+                    {{-- Risk factors --}}
+                    <div class="rounded-xl border border-red-100 bg-red-50 p-4">
+                        <h3 class="mb-2 text-sm font-semibold text-red-800">Active Risk Factors</h3>
+                        <ul class="space-y-1">
+                            @foreach($riskFactors as $factor)
+                                @php
+                                    $factorLabels = [
+                                        'high_failure_rate' => 'High failure rate in the last 7 days',
+                                        'high_cost' => 'Cost in top 20% of team agents',
+                                        'high_cost_variance' => 'Highly unpredictable cost (CV > 50%)',
+                                        'frequent_guardrail_blocks' => 'Frequent guardrail blocks (> 10%)',
+                                        'pii_exposure_risk' => 'PII exposure incidents detected',
+                                    ];
+                                @endphp
+                                <li class="flex items-center gap-2 text-sm text-red-700">
+                                    <svg class="h-4 w-4 flex-shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    {{ $factorLabels[$factor] ?? ucwords(str_replace('_', ' ', $factor)) }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @elseif($agent->risk_score !== null)
+                    <div class="rounded-xl border border-green-100 bg-green-50 p-4">
+                        <p class="text-sm text-green-700">No active risk factors. Agent is operating within normal parameters.</p>
+                    </div>
+                @endif
+
+                {{-- Breakdown metrics --}}
+                @if(!empty($profile))
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="rounded-xl border border-gray-200 bg-white p-4">
+                            <h3 class="mb-3 text-sm font-semibold text-gray-700">7-Day Metrics</h3>
+                            <dl class="space-y-2">
+                                <div class="flex justify-between text-sm">
+                                    <dt class="text-gray-500">Failure Rate</dt>
+                                    <dd class="font-medium text-gray-900">{{ number_format(($profile['failure_rate_7d'] ?? 0) * 100, 1) }}%</dd>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <dt class="text-gray-500">Avg Cost / Run</dt>
+                                    <dd class="font-medium text-gray-900">{{ number_format($profile['avg_cost_per_run'] ?? 0) }} credits</dd>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <dt class="text-gray-500">Cost Volatility</dt>
+                                    <dd class="font-medium {{ ($profile['cost_volatility'] ?? 'low') === 'high' ? 'text-red-600' : (($profile['cost_volatility'] ?? 'low') === 'medium' ? 'text-yellow-600' : 'text-green-600') }}">
+                                        {{ ucfirst($profile['cost_volatility'] ?? 'low') }}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-white p-4">
+                            <h3 class="mb-3 text-sm font-semibold text-gray-700">Safety Metrics</h3>
+                            <dl class="space-y-2">
+                                <div class="flex justify-between text-sm">
+                                    <dt class="text-gray-500">Guardrail Block Rate</dt>
+                                    <dd class="font-medium text-gray-900">{{ number_format(($profile['guardrail_block_rate'] ?? 0) * 100, 1) }}%</dd>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <dt class="text-gray-500">PII Detection Rate</dt>
+                                    <dd class="font-medium text-gray-900">{{ number_format(($profile['pii_detection_rate'] ?? 0) * 100, 1) }}%</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    {{-- Score formula breakdown --}}
+                    <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <h3 class="mb-3 text-sm font-semibold text-gray-700">Score Breakdown</h3>
+                        <div class="space-y-2">
+                            @php
+                                $components = [
+                                    ['Failure Rate (×30)', ($profile['failure_rate_7d'] ?? 0) * 30],
+                                    ['Cost Percentile (×25)', 0],  // not stored separately, shown as reference
+                                    ['PII Rate (×25)', ($profile['pii_detection_rate'] ?? 0) * 25],
+                                    ['Guardrail Blocks (×20)', ($profile['guardrail_block_rate'] ?? 0) * 20],
+                                ];
+                            @endphp
+                            @foreach($components as [$label, $value])
+                                <div class="flex items-center gap-3 text-sm">
+                                    <span class="w-44 text-gray-500">{{ $label }}</span>
+                                    <div class="flex-1 rounded-full bg-gray-100 h-2">
+                                        <div class="h-2 rounded-full bg-primary-400" style="width: {{ min(100, $value) }}%"></div>
+                                    </div>
+                                    <span class="w-12 text-right font-mono text-xs text-gray-700">{{ number_format($value, 1) }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                        <p class="mt-3 text-xs text-gray-400">Formula: failure_rate×30 + cost_percentile×25 + pii_rate×25 + guardrail_block_rate×20 = total risk score (0–100)</p>
+                    </div>
+                @endif
+            </div>
+
         @elseif($activeTab === 'evolution')
             <div class="rounded-xl border border-gray-200 bg-white p-6">
                 <livewire:evolution.evolution-proposal-panel :agent="$agent" />

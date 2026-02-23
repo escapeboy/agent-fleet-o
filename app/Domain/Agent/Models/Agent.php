@@ -58,9 +58,16 @@ class Agent extends Model
         'constraints',
         'budget_cap_credits',
         'budget_spent_credits',
+        'evaluation_enabled',
+        'evaluation_sample_rate',
+        'evaluation_model',
+        'evaluation_criteria',
         'cost_per_1k_input',
         'cost_per_1k_output',
         'last_health_check',
+        'risk_score',
+        'risk_profile',
+        'risk_profile_updated_at',
     ];
 
     protected function casts(): array
@@ -75,7 +82,13 @@ class Agent extends Model
             'cost_per_1k_output' => 'integer',
             'budget_cap_credits' => 'integer',
             'budget_spent_credits' => 'integer',
+            'evaluation_enabled' => 'boolean',
+            'evaluation_sample_rate' => 'float',
+            'evaluation_criteria' => 'array',
             'last_health_check' => 'datetime',
+            'risk_score' => 'decimal:2',
+            'risk_profile' => 'array',
+            'risk_profile_updated_at' => 'datetime',
         ];
     }
 

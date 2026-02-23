@@ -17,5 +17,6 @@ final readonly class AiResponseDTO
         public ?array $steps = null,
         public int $toolCallsCount = 0,
         public int $stepsCount = 0,
+        public ?array $reasoningChain = null,
     ) {}
 }

@@ -40,6 +40,13 @@ class MarketplaceListing extends Model
         'install_count',
         'avg_rating',
         'review_count',
+        'run_count',
+        'success_count',
+        'avg_cost_credits',
+        'avg_duration_ms',
+        'usage_trend',
+        'price_per_run_credits',
+        'monetization_enabled',
     ];
 
     protected function casts(): array
@@ -49,10 +56,27 @@ class MarketplaceListing extends Model
             'visibility' => ListingVisibility::class,
             'tags' => 'array',
             'configuration_snapshot' => 'array',
+            'usage_trend' => 'array',
             'install_count' => 'integer',
+            'run_count' => 'integer',
+            'success_count' => 'integer',
             'avg_rating' => 'decimal:2',
+            'avg_cost_credits' => 'decimal:4',
+            'avg_duration_ms' => 'decimal:2',
+            'price_per_run_credits' => 'decimal:4',
+            'monetization_enabled' => 'boolean',
             'review_count' => 'integer',
         ];
+    }
+
+    public function usageRecords(): HasMany
+    {
+        return $this->hasMany(MarketplaceUsageRecord::class, 'listing_id');
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->monetization_enabled && $this->price_per_run_credits > 0;
     }
 
     public function team(): BelongsTo

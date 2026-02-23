@@ -16,6 +16,7 @@ enum ExperimentStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Executing = 'executing';
+    case AwaitingChildren = 'awaiting_children';
     case ExecutionFailed = 'execution_failed';
     case CollectingMetrics = 'collecting_metrics';
     case Evaluating = 'evaluating';

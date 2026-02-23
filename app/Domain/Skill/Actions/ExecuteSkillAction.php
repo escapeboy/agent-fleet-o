@@ -5,11 +5,14 @@ namespace App\Domain\Skill\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Budget\Actions\ReserveBudgetAction;
 use App\Domain\Budget\Actions\SettleBudgetAction;
+use App\Domain\Marketplace\Actions\RecordMarketplaceUsageAction;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Enums\SkillType;
+use App\Domain\Skill\Exceptions\SkillProviderIncompatibleException;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Skill\Services\SchemaValidator;
+use App\Domain\Skill\Services\SkillCompatibilityChecker;
 use App\Domain\Skill\Services\SkillCostCalculator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -25,6 +28,8 @@ class ExecuteSkillAction
         private readonly ReserveBudgetAction $reserveBudget,
         private readonly SettleBudgetAction $settleBudget,
         private readonly ProviderResolver $providerResolver,
+        private readonly SkillCompatibilityChecker $compatibilityChecker,
+        private readonly RecordMarketplaceUsageAction $recordMarketplaceUsage,
     ) {}
 
     /**
@@ -46,6 +51,18 @@ class ExecuteSkillAction
         ?string $provider = null,
         ?string $model = null,
     ): array {
+        // 0. Check provider compatibility (if requirements declared)
+        if (! empty($skill->provider_requirements)) {
+            $team = Team::withoutGlobalScopes()->find($teamId);
+            if ($team) {
+                try {
+                    $this->compatibilityChecker->assertCompatible($skill, $team);
+                } catch (SkillProviderIncompatibleException $e) {
+                    return $this->failExecution($skill, $teamId, $agentId, $experimentId, $input, $e->getMessage());
+                }
+            }
+        }
+
         // 1. Validate input against schema
         if (! empty($skill->input_schema)) {
             $validation = $this->schemaValidator->validate($input, $skill->input_schema);
@@ -115,6 +132,11 @@ class ExecuteSkillAction
             // 8. Settle budget
             $this->settleBudget->execute($reservation, $response->usage->costCredits);
 
+            // 9. Record marketplace usage (no-op if not from marketplace)
+            if ($skill->source_listing_id) {
+                $this->recordMarketplaceUsage->execute($execution);
+            }
+
             return [
                 'execution' => $execution,
                 'output' => $output,
@@ -128,7 +150,14 @@ class ExecuteSkillAction
             // Record failed execution
             $skill->recordExecution(false, $durationMs);
 
-            return $this->failExecution($skill, $teamId, $agentId, $experimentId, $input, $e->getMessage(), $durationMs);
+            $failResult = $this->failExecution($skill, $teamId, $agentId, $experimentId, $input, $e->getMessage(), $durationMs);
+
+            // Record failed marketplace usage
+            if ($skill->source_listing_id) {
+                $this->recordMarketplaceUsage->execute($failResult['execution']);
+            }
+
+            return $failResult;
         }
     }
 
@@ -146,6 +175,7 @@ class ExecuteSkillAction
             SkillType::Llm, SkillType::Hybrid => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Connector => $this->executeConnectorSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Rule => $this->executeRuleSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
+            SkillType::Guardrail => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
         };
     }
 

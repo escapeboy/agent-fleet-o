@@ -37,6 +37,16 @@ class DispatchNextStageJob
         $newState = $event->toState->value;
         $experiment = $event->experiment;
 
+        // AwaitingChildren: no job to dispatch — waiting for child experiments to complete
+        if ($newState === 'awaiting_children') {
+            Log::info('DispatchNextStageJob: Experiment awaiting children', [
+                'experiment_id' => $experiment->id,
+                'children_count' => $experiment->children()->count(),
+            ]);
+
+            return;
+        }
+
         // Workflow/Playbook mode: if experiment enters Executing and has playbook steps,
         // use graph executor for workflow experiments or flat executor for legacy playbooks
         if ($newState === 'executing' && $experiment->playbookSteps()->exists()) {

@@ -6,6 +6,7 @@ use App\Domain\Marketplace\Actions\InstallFromMarketplaceAction;
 use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Marketplace\Models\MarketplaceListing;
+use App\Domain\Skill\Services\SkillCompatibilityChecker;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -22,6 +23,9 @@ class MarketplaceBrowsePage extends Component
 
     #[Url]
     public string $categoryFilter = '';
+
+    #[Url]
+    public string $pricingFilter = '';
 
     public string $sortField = 'install_count';
 
@@ -48,6 +52,11 @@ class MarketplaceBrowsePage extends Component
     }
 
     public function updatedCategoryFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPricingFilter(): void
     {
         $this->resetPage();
     }
@@ -101,6 +110,14 @@ class MarketplaceBrowsePage extends Component
             $query->where('category', $this->categoryFilter);
         }
 
+        if ($this->pricingFilter === 'free') {
+            $query->where(function ($q) {
+                $q->where('monetization_enabled', false)->orWhere('price_per_run_credits', 0);
+            });
+        } elseif ($this->pricingFilter === 'paid') {
+            $query->where('monetization_enabled', true)->where('price_per_run_credits', '>', 0);
+        }
+
         $query->orderBy($this->sortField, $this->sortDirection);
 
         $categories = MarketplaceListing::query()
@@ -110,9 +127,20 @@ class MarketplaceBrowsePage extends Component
             ->distinct()
             ->pluck('category');
 
+        // Build compatibility map for skill listings
+        $team = auth()->user()?->currentTeam;
+        $compatibilityMap = [];
+        if ($team) {
+            $checker = app(SkillCompatibilityChecker::class);
+            $availableProviders = $checker->getAvailableProviders($team);
+        } else {
+            $availableProviders = [];
+        }
+
         return view('livewire.marketplace.marketplace-browse-page', [
             'listings' => $query->paginate(12),
             'categories' => $categories,
+            'availableProviders' => $availableProviders,
         ])->layout('layouts.app', ['header' => 'Marketplace']);
     }
 }

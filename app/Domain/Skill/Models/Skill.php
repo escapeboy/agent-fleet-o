@@ -28,12 +28,17 @@ class Skill extends Model
 
     protected $fillable = [
         'team_id',
+        'source_listing_id',
         'name',
         'slug',
         'description',
         'type',
         'execution_type',
         'status',
+        'evaluation_enabled',
+        'evaluation_sample_rate',
+        'evaluation_model',
+        'evaluation_criteria',
         'risk_level',
         'input_schema',
         'output_schema',
@@ -46,6 +51,7 @@ class Skill extends Model
         'execution_count',
         'success_count',
         'avg_latency_ms',
+        'provider_requirements',
     ];
 
     protected function casts(): array
@@ -61,9 +67,13 @@ class Skill extends Model
             'cost_profile' => 'array',
             'safety_flags' => 'array',
             'requires_approval' => 'boolean',
+            'evaluation_enabled' => 'boolean',
+            'evaluation_sample_rate' => 'float',
+            'evaluation_criteria' => 'array',
             'execution_count' => 'integer',
             'success_count' => 'integer',
             'avg_latency_ms' => 'decimal:2',
+            'provider_requirements' => 'array',
         ];
     }
 
