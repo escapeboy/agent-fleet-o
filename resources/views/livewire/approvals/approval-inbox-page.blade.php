@@ -69,6 +69,67 @@
                             </div>
                         @endif
 
+                        @if($approval->worktreeExecution)
+                            @php $wt = $approval->worktreeExecution @endphp
+                            <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                <div class="flex items-center gap-3 text-xs font-medium text-amber-800">
+                                    <span>Code Execution</span>
+                                    <span class="font-mono text-gray-600">{{ $wt->branch_name }}</span>
+                                    @if($wt->exit_code !== null)
+                                        <span class="rounded px-1.5 py-0.5 {{ $wt->exit_code === 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                            exit {{ $wt->exit_code }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                @if($wt->diff)
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
+                                            View diff
+                                        </summary>
+                                        <div class="mt-2 max-h-64 overflow-auto rounded border border-gray-200 bg-gray-900 p-2 text-xs">
+                                            @foreach(explode("\n", $wt->diff) as $line)
+                                                @php
+                                                    $class = match(true) {
+                                                        str_starts_with($line, '+') && !str_starts_with($line, '+++') => 'text-green-400',
+                                                        str_starts_with($line, '-') && !str_starts_with($line, '---') => 'text-red-400',
+                                                        str_starts_with($line, '@@') => 'text-blue-400',
+                                                        str_starts_with($line, 'diff ') || str_starts_with($line, 'index ') => 'text-yellow-400',
+                                                        default => 'text-gray-300',
+                                                    };
+                                                @endphp
+                                                <div class="{{ $class }} whitespace-pre font-mono">{{ $line }}</div>
+                                            @endforeach
+                                        </div>
+                                    </details>
+                                @else
+                                    <p class="mt-1 text-xs text-amber-700">No file changes produced.</p>
+                                @endif
+
+                                @if($wt->stdout)
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
+                                            stdout
+                                        </summary>
+                                        <div class="mt-1 max-h-32 overflow-auto rounded bg-gray-100 p-2 font-mono text-xs text-gray-700">
+                                            <pre class="whitespace-pre-wrap">{{ $wt->stdout }}</pre>
+                                        </div>
+                                    </details>
+                                @endif
+
+                                @if($wt->stderr)
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-xs font-medium text-red-600 hover:text-red-800">
+                                            stderr
+                                        </summary>
+                                        <div class="mt-1 max-h-32 overflow-auto rounded bg-red-50 p-2 font-mono text-xs text-red-700">
+                                            <pre class="whitespace-pre-wrap">{{ $wt->stderr }}</pre>
+                                        </div>
+                                    </details>
+                                @endif
+                            </div>
+                        @endif
+
                         @if($approval->isHumanTask())
                             <div class="mt-3">
                                 <livewire:approvals.human-task-form :task="$approval" :key="'htf-'.$approval->id" />

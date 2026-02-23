@@ -74,6 +74,7 @@ class PagerDutyConnector implements InputConnectorInterface
                     'raw' => $dto->rawPayload,
                 ],
                 tags: $tags,
+                sourceNativeId: 'pd:'.$dto->alertId,
             );
 
             if (! $signal) {
@@ -176,7 +177,7 @@ class PagerDutyConnector implements InputConnectorInterface
                 userId: $config['user_id'],
                 title: $title,
                 thesis: "Auto-triggered from PagerDuty incident: {$dto->title}",
-                track: 'analysis',
+                track: 'debug',
                 budgetCapCredits: $config['budget_cap_credits'] ?? 10000,
             );
 

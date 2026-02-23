@@ -22,6 +22,7 @@ class Signal extends Model implements HasMedia
         'experiment_id',
         'source_type',
         'source_identifier',
+        'source_native_id',
         'payload',
         'score',
         'scoring_details',

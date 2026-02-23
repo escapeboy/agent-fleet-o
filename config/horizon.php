@@ -256,6 +256,18 @@ return [
             'memory' => 128,
             'nice' => 0,
         ],
+        'supervisor-code-execution' => [
+            'connection' => 'redis',
+            'queue' => ['code-execution'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'size',
+            'minProcesses' => 1,
+            'maxProcesses' => 3,
+            'timeout' => 660, // Docker sandbox max (300s) + overhead; must exceed sandbox timeout_seconds config
+            'tries' => 1,    // No retries — code execution side-effects are not idempotent
+            'memory' => 256,
+            'nice' => 5,     // Lower priority than LLM calls
+        ],
         'supervisor-default' => [
             'connection' => 'redis',
             'queue' => ['default'],
@@ -277,6 +289,7 @@ return [
             'supervisor-experiments' => [],
             'supervisor-outbound' => [],
             'supervisor-metrics' => [],
+            'supervisor-code-execution' => [],
             'supervisor-default' => [],
         ],
 
@@ -298,6 +311,10 @@ return [
                 'maxProcesses' => 2,
             ],
             'supervisor-metrics' => [
+                'minProcesses' => 1,
+                'maxProcesses' => 1,
+            ],
+            'supervisor-code-execution' => [
                 'minProcesses' => 1,
                 'maxProcesses' => 1,
             ],

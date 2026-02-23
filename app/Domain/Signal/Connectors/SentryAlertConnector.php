@@ -69,6 +69,7 @@ class SentryAlertConnector implements InputConnectorInterface
                 'raw' => $dto->rawPayload,
             ],
             tags: $tags,
+            sourceNativeId: 'sentry:'.$dto->alertId,
         );
 
         if (! $signal) {
@@ -182,7 +183,7 @@ class SentryAlertConnector implements InputConnectorInterface
                 userId: $config['user_id'],
                 title: $title,
                 thesis: "Auto-triggered from Sentry alert: {$dto->title}",
-                track: 'analysis',
+                track: 'debug',
                 budgetCapCredits: $config['budget_cap_credits'] ?? 10000,
             );
 

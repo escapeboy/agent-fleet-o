@@ -27,6 +27,10 @@ use RuntimeException;
  *
  * Code execution costs 0 credits (no LLM calls). The RiskLevel for all
  * CodeExecution skills is always High — approval cannot be skipped.
+ *
+ * Queue: callers that wrap this action in a queued job should dispatch to the
+ * 'code-execution' queue (see config/horizon.php: supervisor-code-execution)
+ * which has a 660s timeout — well above the max Docker sandbox timeout (300s).
  */
 class ExecuteCodeExecutionSkillAction
 {

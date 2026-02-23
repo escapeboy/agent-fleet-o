@@ -75,6 +75,7 @@ class DatadogAlertConnector implements InputConnectorInterface
                 'raw' => $dto->rawPayload,
             ],
             tags: $tags,
+            sourceNativeId: 'dd:'.$dto->alertId,
         );
 
         if (! $signal) {
@@ -159,7 +160,7 @@ class DatadogAlertConnector implements InputConnectorInterface
                 userId: $config['user_id'],
                 title: $title,
                 thesis: "Auto-triggered from Datadog alert: {$dto->title}",
-                track: 'analysis',
+                track: 'debug',
                 budgetCapCredits: $config['budget_cap_credits'] ?? 10000,
             );
 
