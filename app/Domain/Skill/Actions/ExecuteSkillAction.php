@@ -11,6 +11,7 @@ use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Exceptions\SkillProviderIncompatibleException;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Domain\Skill\Services\MultiModelConsensusService;
 use App\Domain\Skill\Services\SchemaValidator;
 use App\Domain\Skill\Services\SkillCompatibilityChecker;
 use App\Domain\Skill\Services\SkillCostCalculator;
@@ -30,6 +31,8 @@ class ExecuteSkillAction
         private readonly ProviderResolver $providerResolver,
         private readonly SkillCompatibilityChecker $compatibilityChecker,
         private readonly RecordMarketplaceUsageAction $recordMarketplaceUsage,
+        private readonly MultiModelConsensusService $consensusService,
+        private readonly ExecuteCodeExecutionSkillAction $executeCodeExecution,
     ) {}
 
     /**
@@ -51,6 +54,11 @@ class ExecuteSkillAction
         ?string $provider = null,
         ?string $model = null,
     ): array {
+        // CodeExecution has its own full pipeline (worktree + Docker sandbox + approval)
+        if ($skill->type === SkillType::CodeExecution->value) {
+            return $this->executeCodeExecution->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
+        }
+
         // 0. Check provider compatibility (if requirements declared)
         if (! empty($skill->provider_requirements)) {
             $team = Team::withoutGlobalScopes()->find($teamId);
@@ -114,7 +122,7 @@ class ExecuteSkillAction
             }
 
             // 6. Create execution record
-            $execution = SkillExecution::create([
+            $executionData = [
                 'skill_id' => $skill->id,
                 'agent_id' => $agentId,
                 'experiment_id' => $experimentId,
@@ -124,7 +132,25 @@ class ExecuteSkillAction
                 'output' => $output,
                 'duration_ms' => $durationMs,
                 'cost_credits' => $response->usage->costCredits,
-            ]);
+            ];
+
+            if ($skill->type === SkillType::MultiModelConsensus->value && is_array($output)) {
+                $executionData['confidence_score'] = $output['confidence_score'] ?? null;
+                $executionData['consensus_level'] = $output['consensus_level'] ?? null;
+                $executionData['peer_reviews'] = $output['peer_reviews'] ?? null;
+                $executionData['evaluation_method'] = 'multi_model_consensus';
+                $config = is_array($skill->configuration) ? $skill->configuration : [];
+                $executionData['judge_model'] = ($config['judge_model']['provider'] ?? 'anthropic')
+                    .'/'
+                    .($config['judge_model']['model'] ?? 'claude-sonnet-4-5');
+                // Store only the synthesized answer in output, not the metadata columns
+                $executionData['output'] = [
+                    'answer' => $output['answer'] ?? $response->content,
+                    'dissenting_view' => $output['dissenting_view'] ?? null,
+                ];
+            }
+
+            $execution = SkillExecution::create($executionData);
 
             // 7. Update skill stats
             $skill->recordExecution(true, $durationMs);
@@ -176,6 +202,8 @@ class ExecuteSkillAction
             SkillType::Connector => $this->executeConnectorSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Rule => $this->executeRuleSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Guardrail => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
+            SkillType::MultiModelConsensus => $this->executeMultiModelConsensusSkill($skill, $input, $teamId, $userId, $agentId, $experimentId),
+            SkillType::CodeExecution => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
         };
     }
 
@@ -275,6 +303,49 @@ class ExecuteSkillAction
         );
 
         return $this->gateway->complete($request);
+    }
+
+    private function executeMultiModelConsensusSkill(
+        Skill $skill,
+        array $input,
+        string $teamId,
+        string $userId,
+        ?string $agentId,
+        ?string $experimentId,
+    ): AiResponseDTO {
+        $config = is_array($skill->configuration) ? $skill->configuration : [];
+        $models = $config['models'] ?? [
+            ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
+            ['provider' => 'openai', 'model' => 'gpt-4o'],
+            ['provider' => 'google', 'model' => 'gemini-2.5-flash'],
+        ];
+        $judgeModel = $config['judge_model'] ?? ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'];
+
+        $result = $this->consensusService->run(
+            prompt: $this->buildUserPrompt($skill, $input),
+            systemPrompt: $skill->system_prompt ?? '',
+            models: $models,
+            judgeModel: $judgeModel,
+            teamId: $teamId,
+            userId: $userId,
+            experimentId: $experimentId,
+            agentId: $agentId,
+        );
+
+        /** @var AiResponseDTO $response */
+        $response = $result['response'];
+
+        // Enrich parsedOutput with peer_reviews so the execution record can persist it
+        return new AiResponseDTO(
+            content: $response->content,
+            parsedOutput: array_merge($response->parsedOutput ?? [], [
+                'peer_reviews' => $result['peer_reviews'],
+            ]),
+            usage: $response->usage,
+            provider: $response->provider,
+            model: $response->model,
+            latencyMs: $response->latencyMs,
+        );
     }
 
     private function buildUserPrompt(Skill $skill, array $input): string

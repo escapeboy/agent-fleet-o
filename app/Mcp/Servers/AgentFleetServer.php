@@ -64,9 +64,13 @@ use App\Mcp\Tools\Project\ProjectResumeTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\Shared\NotificationTool;
+use App\Mcp\Tools\Signal\AlertConnectorTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use App\Mcp\Tools\Signal\TicketConnectorTool;
+use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
+use App\Mcp\Tools\Skill\MultiModelConsensusTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
 use App\Mcp\Tools\Skill\SkillListTool;
@@ -140,12 +144,14 @@ class AgentFleetServer extends Server
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
 
-        // Skill (5)
+        // Skill (7)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
         SkillUpdateTool::class,
         GuardrailTool::class,
+        MultiModelConsensusTool::class,
+        CodeExecutionTool::class,
 
         // Tool (7)
         ToolListTool::class,
@@ -188,9 +194,11 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (2)
+        // Signal (4)
         SignalListTool::class,
         SignalIngestTool::class,
+        TicketConnectorTool::class,
+        AlertConnectorTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,

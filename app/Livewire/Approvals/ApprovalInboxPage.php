@@ -62,7 +62,7 @@ class ApprovalInboxPage extends Component
 
     public function render()
     {
-        $query = ApprovalRequest::with(['experiment', 'outboundProposal', 'reviewer'])
+        $query = ApprovalRequest::with(['experiment', 'outboundProposal', 'reviewer', 'worktreeExecution'])
             ->where('status', $this->statusTab)
             ->latest();
 

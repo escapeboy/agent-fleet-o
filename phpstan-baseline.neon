@@ -2641,16 +2641,22 @@ parameters:
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
 
 		-
+			message: '#^Negated boolean expression is always false\.$#'
+			identifier: booleanNot.alwaysFalse
+			count: 1
+			path: app/Domain/Signal/Connectors/CalendarConnector.php
+
+		-
 			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
 			identifier: class.notFound
 			count: 1
 			path: app/Domain/Signal/Connectors/CalendarConnector.php
 
 		-
-			message: '#^Negated boolean expression is always false\.$#'
-			identifier: booleanNot.alwaysFalse
+			message: '#^Method Webklex\\PHPIMAP\\Query\\WhereQuery\:\:whereUid\(\) invoked with 2 parameters, 1 required\.$#'
+			identifier: arguments.count
 			count: 1
-			path: app/Domain/Signal/Connectors/CalendarConnector.php
+			path: app/Domain/Signal/Connectors/ImapConnector.php
 
 		-
 			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
@@ -2661,12 +2667,6 @@ parameters:
 		-
 			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
 			identifier: class.notFound
-			count: 1
-			path: app/Domain/Signal/Connectors/ImapConnector.php
-
-		-
-			message: '#^Method Webklex\\PHPIMAP\\Query\\WhereQuery\:\:whereUid\(\) invoked with 2 parameters, 1 required\.$#'
-			identifier: arguments.count
 			count: 1
 			path: app/Domain/Signal/Connectors/ImapConnector.php
 
@@ -2713,8 +2713,92 @@ parameters:
 			path: app/Domain/Signal/Jobs/ExtractSignalEntitiesJob.php
 
 		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Offset ''base_branch'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Offset ''git_repo_path'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Offset ''sandbox'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Offset ''script'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Offset ''timeout_seconds'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteCodeExecutionSkillAction\:\:\$filesystemGuard is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteCodeExecutionSkillAction\:\:\$sandbox is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteCodeExecutionSkillAction\:\:\$worktreeManager is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 2
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution is always false\.$#'
+			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
@@ -2743,6 +2827,12 @@ parameters:
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
+			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
 			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Rule is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
@@ -2755,9 +2845,21 @@ parameters:
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
+			message: '#^Offset ''judge_model'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 3
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
 			message: '#^Offset ''max_tokens'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 3
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
+			message: '#^Offset ''models'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
@@ -6529,10 +6631,64 @@ parameters:
 			path: app/Mcp/Tools/Shared/NotificationTool.php
 
 		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
+
+		-
+			message: '#^Instanceof between string and App\\Domain\\Approval\\Enums\\ApprovalStatus will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 1
+			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
+
+		-
+			message: '#^Offset ''base_branch'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
+
+		-
+			message: '#^Offset ''git_repo_path'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
+
+		-
+			message: '#^Offset ''script'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
+
+		-
+			message: '#^Offset ''timeout_seconds'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
 			path: app/Mcp/Tools/Skill/GuardrailTool.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 2
+			path: app/Mcp/Tools/Skill/MultiModelConsensusTool.php
+
+		-
+			message: '#^Offset ''judge_model'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/MultiModelConsensusTool.php
+
+		-
+			message: '#^Offset ''models'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/MultiModelConsensusTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'

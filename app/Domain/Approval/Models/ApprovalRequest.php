@@ -6,6 +6,7 @@ use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Skill\Models\WorktreeExecution;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Models\User;
 use Database\Factories\Domain\Approval\ApprovalRequestFactory;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ApprovalRequest extends Model
 {
@@ -87,6 +89,20 @@ class ApprovalRequest extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * The WorktreeExecution that triggered this approval (CodeExecution skill).
+     * Inverse of WorktreeExecution::$approval_request_id.
+     */
+    public function worktreeExecution(): HasOne
+    {
+        return $this->hasOne(WorktreeExecution::class);
+    }
+
+    public function isCodeExecution(): bool
+    {
+        return $this->worktreeExecution()->exists();
     }
 
     public function isHumanTask(): bool
