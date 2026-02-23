@@ -40,6 +40,9 @@ return [
     // Enable/disable local agent support
     'enabled' => (bool) env('LOCAL_AGENTS_ENABLED', true),
 
+    // Whether running inside Docker container
+    'running_in_docker' => (bool) env('RUNNING_IN_DOCKER', false),
+
     // MCP server discovery from host IDE configs
     'mcp_discovery' => [
         'enabled' => (bool) env('MCP_DISCOVERY_ENABLED', true),

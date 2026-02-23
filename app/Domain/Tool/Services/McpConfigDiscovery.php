@@ -155,10 +155,6 @@ class McpConfigDiscovery
 
         $normalized = [];
         foreach ($servers as $name => $config) {
-            if (! is_array($config)) {
-                continue;
-            }
-
             $normalized[] = $this->normalizer->normalize($name, $config, $sourceLabel);
         }
 
@@ -260,10 +256,8 @@ class McpConfigDiscovery
 
     private function isRunningInDocker(): bool
     {
-        $env = env('RUNNING_IN_DOCKER');
-
-        if ($env !== null) {
-            return filter_var($env, FILTER_VALIDATE_BOOLEAN);
+        if (config('local_agents.running_in_docker')) {
+            return true;
         }
 
         return file_exists('/.dockerenv');

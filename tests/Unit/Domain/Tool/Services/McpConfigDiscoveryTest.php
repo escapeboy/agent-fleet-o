@@ -17,14 +17,10 @@ class McpConfigDiscoveryTest extends TestCase
         $this->discovery = new McpConfigDiscovery(new McpConfigNormalizer);
 
         // Ensure tests run in native mode (not bridge)
-        putenv('RUNNING_IN_DOCKER=false');
-        config(['local_agents.bridge.secret' => '']);
-    }
-
-    protected function tearDown(): void
-    {
-        putenv('RUNNING_IN_DOCKER');
-        parent::tearDown();
+        config([
+            'local_agents.running_in_docker' => false,
+            'local_agents.bridge.secret' => '',
+        ]);
     }
 
     // --- parseJsonInput ---
@@ -172,8 +168,8 @@ class McpConfigDiscoveryTest extends TestCase
 
     public function test_bridge_mode_true_when_docker_with_secret(): void
     {
-        putenv('RUNNING_IN_DOCKER=true');
         config([
+            'local_agents.running_in_docker' => true,
             'local_agents.bridge.auto_detect' => true,
             'local_agents.bridge.secret' => 'test-secret',
         ]);

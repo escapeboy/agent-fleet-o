@@ -11,6 +11,7 @@ use App\Domain\Tool\Services\McpConfigDiscovery;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\Blacklist;
 use App\Models\GlobalSetting;
+use App\Models\User;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -303,7 +304,9 @@ class GlobalSettingsPage extends Component
             }
         }
 
-        $teamId = auth()->user()->currentTeam?->id ?? auth()->user()->current_team_id;
+        /** @var User $user */
+        $user = auth()->user();
+        $teamId = $user->current_team_id;
 
         $importer = app(ImportMcpServersAction::class);
         $result = $importer->execute($teamId, $serversToImport);

@@ -8,7 +8,7 @@ readonly class ImportResult
         public int $imported,
         public int $skipped,
         public int $failed,
-        /** @var array<int, array{name: string, status: string, reason: string|null}> */
+        /** @var array<int, array{name: string, status: string, reason: string|null, has_credentials?: bool}> */
         public array $details,
     ) {}
 
