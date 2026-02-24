@@ -1,0 +1,80 @@
+<?php
+
+namespace App\Mcp\Tools\Webhook;
+
+use App\Domain\Webhook\Enums\WebhookEvent;
+use App\Domain\Webhook\Models\WebhookEndpoint;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
+
+class WebhookUpdateTool extends Tool
+{
+    protected string $name = 'webhook_update';
+
+    protected string $description = 'Update a webhook endpoint. You can change name, URL, subscribed events, active status, or headers.';
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'webhook_id' => $schema->string()
+                ->description('The webhook endpoint UUID')
+                ->required(),
+            'name' => $schema->string()
+                ->description('New display name'),
+            'url' => $schema->string()
+                ->description('New destination URL'),
+            'events' => $schema->array()
+                ->description('Event types to subscribe to (replaces current list)')
+                ->items($schema->string()),
+            'is_active' => $schema->boolean()
+                ->description('Enable or disable the webhook'),
+        ];
+    }
+
+    public function handle(Request $request): Response
+    {
+        $validated = $request->validate(['webhook_id' => 'required|string']);
+
+        $endpoint = WebhookEndpoint::find($validated['webhook_id']);
+
+        if (! $endpoint) {
+            return Response::error('Webhook endpoint not found.');
+        }
+
+        $updates = array_filter([
+            'name' => $request->get('name'),
+            'url' => $request->get('url'),
+            'events' => $request->get('events'),
+            'is_active' => $request->get('is_active'),
+        ], fn ($v) => $v !== null);
+
+        if (empty($updates)) {
+            return Response::error('No fields to update. Provide name, url, events, or is_active.');
+        }
+
+        // Validate event values if provided
+        if (isset($updates['events'])) {
+            $validEvents = array_column(WebhookEvent::cases(), 'value');
+            foreach ($updates['events'] as $event) {
+                if ($event !== '*' && ! in_array($event, $validEvents)) {
+                    return Response::error("Invalid event: {$event}. Valid events: ".implode(', ', $validEvents).', *');
+                }
+            }
+        }
+
+        $endpoint->update($updates);
+        $endpoint->refresh();
+
+        return Response::text(json_encode([
+            'success' => true,
+            'id' => $endpoint->id,
+            'name' => $endpoint->name,
+            'url' => $endpoint->url,
+            'events' => $endpoint->events,
+            'is_active' => $endpoint->is_active,
+            'updated_at' => $endpoint->updated_at->toIso8601String(),
+        ]));
+    }
+}

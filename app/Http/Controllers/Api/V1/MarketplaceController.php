@@ -12,6 +12,7 @@ use App\Domain\Marketplace\Models\MarketplaceReview;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Models\Workflow;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\StoreMarketplaceReviewRequest;
 use App\Http\Resources\Api\V1\MarketplaceListingResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -160,13 +161,8 @@ class MarketplaceController extends Controller
         ], 201);
     }
 
-    public function review(Request $request, MarketplaceListing $listing): JsonResponse
+    public function review(StoreMarketplaceReviewRequest $request, MarketplaceListing $listing): JsonResponse
     {
-        $request->validate([
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'comment' => ['sometimes', 'nullable', 'string', 'max:1000'],
-        ]);
-
         $review = MarketplaceReview::create([
             'listing_id' => $listing->id,
             'user_id' => $request->user()->id,

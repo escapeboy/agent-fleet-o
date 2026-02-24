@@ -133,23 +133,25 @@ app/
       Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
   Mcp/                           # MCP Server (Model Context Protocol)
     Concerns/                    # BootstrapsMcpAuth (stdio auth bootstrap)
-    Servers/                     # AgentFleetServer (65 tools across 15 domains)
+    Servers/                     # AgentFleetServer (112 tools across 16 domains)
     Tools/                       # MCP tool implementations
       Agent/                     # agent_list, agent_get, agent_create, agent_update, agent_toggle_status
-      Experiment/                # experiment_list, experiment_get, experiment_create, experiment_pause, experiment_resume, experiment_retry, experiment_kill, experiment_valid_transitions
-      Crew/                      # crew_list, crew_get, crew_create, crew_update, crew_execute, crew_execution_status
-      Skill/                     # skill_list, skill_get, skill_create, skill_update
+      Experiment/                # experiment_list, experiment_get, experiment_create, experiment_pause, experiment_resume, experiment_retry, experiment_kill, experiment_valid_transitions, experiment_retry_from_step, experiment_steps
+      Crew/                      # crew_list, crew_get, crew_create, crew_update, crew_execute, crew_execution_status, crew_executions_list
+      Skill/                     # skill_list, skill_get, skill_create, skill_update, skill_versions
       Tool/                      # tool_list, tool_get, tool_create, tool_update, tool_delete
-      Credential/                # credential_list, credential_get, credential_create, credential_update
-      Workflow/                   # workflow_list, workflow_get, workflow_create, workflow_update, workflow_validate, workflow_generate
+      Credential/                # credential_list, credential_get, credential_create, credential_update, credential_rotate
+      Workflow/                   # workflow_list, workflow_get, workflow_create, workflow_update, workflow_validate, workflow_generate, workflow_activate, workflow_duplicate, workflow_save_graph, workflow_estimate_cost
       Project/                   # project_list, project_get, project_create, project_update, project_pause, project_resume, project_trigger_run, project_archive
-      Approval/                  # approval_list, approval_approve, approval_reject, approval_complete_human_task
-      Artifact/                  # artifact_list, artifact_get
-      Signal/                    # signal_list, signal_ingest
-      Budget/                    # budget_summary, budget_check
-      Marketplace/               # marketplace_browse, marketplace_publish, marketplace_install
+      Approval/                  # approval_list, approval_approve, approval_reject, approval_complete_human_task, approval_webhook_config
+      Artifact/                  # artifact_list, artifact_get, artifact_content, artifact_download_info
+      Signal/                    # signal_list, signal_ingest, signal_get
+      Budget/                    # budget_summary, budget_check, budget_forecast
+      Marketplace/               # marketplace_browse, marketplace_publish, marketplace_install, marketplace_review, marketplace_categories
       Memory/                    # memory_search, memory_list_recent, memory_stats
       System/                    # system_dashboard_kpis, system_health, system_audit_log
+      Webhook/                   # webhook_list, webhook_create, webhook_update, webhook_delete
+      Shared/                    # notification_manage, team_get, team_update, team_members
   Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
   Http/Controllers/Api/V1/      # 18 REST API controllers (99 endpoints)
   Http/Middleware/               # SetCurrentTeam
@@ -254,7 +256,7 @@ app/
 | HTTP/SSE | `/mcp` | AgentFleetServer | Sanctum bearer token | Remote MCP clients (Cursor, etc.) |
 | stdio | `agent-fleet` | AgentFleetServer | Auto (default team owner) | Local CLI agents (Codex, Claude Code) |
 
-65 MCP tools across 15 domains. Start local server: `php artisan mcp:start agent-fleet`
+112 MCP tools across 16 domains. Start local server: `php artisan mcp:start agent-fleet`
 
 ### Legacy API Routes (`/api/`)
 

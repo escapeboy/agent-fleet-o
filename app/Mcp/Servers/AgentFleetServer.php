@@ -14,6 +14,8 @@ use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
 use App\Mcp\Tools\Approval\ApprovalRejectTool;
 use App\Mcp\Tools\Approval\ApprovalWebhookTool;
+use App\Mcp\Tools\Artifact\ArtifactContentTool;
+use App\Mcp\Tools\Artifact\ArtifactDownloadTool;
 use App\Mcp\Tools\Artifact\ArtifactGetTool;
 use App\Mcp\Tools\Artifact\ArtifactListTool;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
@@ -24,10 +26,12 @@ use App\Mcp\Tools\Cache\SemanticCacheStatsTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
 use App\Mcp\Tools\Credential\CredentialListTool;
+use App\Mcp\Tools\Credential\CredentialRotateTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
+use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
@@ -41,12 +45,16 @@ use App\Mcp\Tools\Experiment\ExperimentKillTool;
 use App\Mcp\Tools\Experiment\ExperimentListTool;
 use App\Mcp\Tools\Experiment\ExperimentPauseTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
+use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
+use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceAnalyticsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
+use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
+use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
@@ -64,7 +72,11 @@ use App\Mcp\Tools\Project\ProjectResumeTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\Shared\NotificationTool;
+use App\Mcp\Tools\Shared\TeamGetTool;
+use App\Mcp\Tools\Shared\TeamMembersTool;
+use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
+use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
@@ -75,6 +87,7 @@ use App\Mcp\Tools\Skill\SkillCreateTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
 use App\Mcp\Tools\Skill\SkillListTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
+use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\SystemHealthTool;
@@ -86,11 +99,17 @@ use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Webhook\WebhookCreateTool;
+use App\Mcp\Tools\Webhook\WebhookDeleteTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
+use App\Mcp\Tools\Webhook\WebhookUpdateTool;
+use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
+use App\Mcp\Tools\Workflow\WorkflowDuplicateTool;
+use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
+use App\Mcp\Tools\Workflow\WorkflowSaveGraphTool;
 use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
@@ -102,9 +121,9 @@ class AgentFleetServer extends Server
 
     protected string $name = 'Agent Fleet';
 
-    protected string $version = '1.0.0';
+    protected string $version = '1.1.0';
 
-    protected string $instructions = 'Agent Fleet MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, and budgets.';
+    protected string $instructions = 'Agent Fleet MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, and team settings.';
 
     protected function boot(): void
     {
@@ -125,30 +144,34 @@ class AgentFleetServer extends Server
         EvolutionAnalyzeTool::class,
         EvolutionApplyTool::class,
 
-        // Crew (6)
+        // Crew (7)
         CrewListTool::class,
         CrewGetTool::class,
         CrewCreateTool::class,
         CrewUpdateTool::class,
         CrewExecuteTool::class,
         CrewExecutionStatusTool::class,
+        CrewExecutionsListTool::class,
 
-        // Experiment (9)
+        // Experiment (11)
         ExperimentListTool::class,
         ExperimentGetTool::class,
         ExperimentCreateTool::class,
         ExperimentPauseTool::class,
         ExperimentResumeTool::class,
         ExperimentRetryTool::class,
+        ExperimentRetryFromStepTool::class,
         ExperimentKillTool::class,
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
+        ExperimentStepsTool::class,
 
-        // Skill (7)
+        // Skill (8)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
         SkillUpdateTool::class,
+        SkillVersionsTool::class,
         GuardrailTool::class,
         MultiModelConsensusTool::class,
         CodeExecutionTool::class,
@@ -162,18 +185,23 @@ class AgentFleetServer extends Server
         ToolDiscoverMcpTool::class,
         ToolImportMcpTool::class,
 
-        // Credential (4)
+        // Credential (5)
         CredentialListTool::class,
         CredentialGetTool::class,
         CredentialCreateTool::class,
         CredentialUpdateTool::class,
+        CredentialRotateTool::class,
 
-        // Workflow (6)
+        // Workflow (11)
         WorkflowListTool::class,
         WorkflowGetTool::class,
         WorkflowCreateTool::class,
         WorkflowUpdateTool::class,
         WorkflowValidateTool::class,
+        WorkflowActivateTool::class,
+        WorkflowDuplicateTool::class,
+        WorkflowSaveGraphTool::class,
+        WorkflowEstimateCostTool::class,
         WorkflowGenerateTool::class,
         WorkflowSuggestionTool::class,
 
@@ -194,8 +222,9 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (4)
+        // Signal (5)
         SignalListTool::class,
+        SignalGetTool::class,
         SignalIngestTool::class,
         TicketConnectorTool::class,
         AlertConnectorTool::class,
@@ -209,20 +238,24 @@ class AgentFleetServer extends Server
         SemanticCacheStatsTool::class,
         SemanticCachePurgeTool::class,
 
-        // Marketplace (4)
+        // Marketplace (6)
         MarketplaceBrowseTool::class,
         MarketplacePublishTool::class,
         MarketplaceInstallTool::class,
         MarketplaceAnalyticsTool::class,
+        MarketplaceReviewTool::class,
+        MarketplaceCategoriesListTool::class,
 
         // Memory (3)
         MemorySearchTool::class,
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
 
-        // Artifact (2)
+        // Artifact (4)
         ArtifactListTool::class,
         ArtifactGetTool::class,
+        ArtifactContentTool::class,
+        ArtifactDownloadTool::class,
 
         // Outbound (5)
         ConnectorConfigListTool::class,
@@ -231,12 +264,17 @@ class AgentFleetServer extends Server
         ConnectorConfigDeleteTool::class,
         ConnectorConfigTestTool::class,
 
-        // Webhook (2)
+        // Webhook (4)
         WebhookListTool::class,
         WebhookCreateTool::class,
+        WebhookUpdateTool::class,
+        WebhookDeleteTool::class,
 
-        // Shared (1)
+        // Shared (4)
         NotificationTool::class,
+        TeamGetTool::class,
+        TeamUpdateTool::class,
+        TeamMembersTool::class,
 
         // System (3)
         DashboardKpisTool::class,

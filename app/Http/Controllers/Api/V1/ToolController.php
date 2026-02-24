@@ -10,11 +10,12 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\StoreToolRequest;
+use App\Http\Requests\Api\V1\UpdateToolRequest;
 use App\Http\Resources\Api\V1\ToolResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rules\Enum;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -43,19 +44,8 @@ class ToolController extends Controller
         return new ToolResource($tool);
     }
 
-    public function store(Request $request, CreateToolAction $action): JsonResponse
+    public function store(StoreToolRequest $request, CreateToolAction $action): JsonResponse
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', new Enum(ToolType::class)],
-            'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
-            'transport_config' => ['required', 'array'],
-            'credentials' => ['sometimes', 'nullable', 'array'],
-            'tool_definitions' => ['sometimes', 'nullable', 'array'],
-            'settings' => ['sometimes', 'nullable', 'array'],
-            'risk_level' => ['sometimes', 'nullable', new Enum(ToolRiskLevel::class)],
-        ]);
-
         $tool = $action->execute(
             teamId: $request->user()->current_team_id,
             name: $request->name,
@@ -78,18 +68,8 @@ class ToolController extends Controller
             ->setStatusCode(201);
     }
 
-    public function update(Request $request, Tool $tool, UpdateToolAction $action): ToolResource
+    public function update(UpdateToolRequest $request, Tool $tool, UpdateToolAction $action): ToolResource
     {
-        $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
-            'status' => ['sometimes', new Enum(ToolStatus::class)],
-            'transport_config' => ['sometimes', 'array'],
-            'credentials' => ['sometimes', 'nullable', 'array'],
-            'tool_definitions' => ['sometimes', 'nullable', 'array'],
-            'settings' => ['sometimes', 'nullable', 'array'],
-            'risk_level' => ['sometimes', 'nullable', new Enum(ToolRiskLevel::class)],
-        ]);
 
         $action->execute(
             $tool,
