@@ -58,6 +58,10 @@
             @endif
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('signals.connectors') }}" :active="request()->routeIs('signals.connectors')" icon="plug">
+            Signal Sources
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">
             Health
         </x-sidebar-link>

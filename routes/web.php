@@ -36,6 +36,7 @@ use App\Livewire\Shared\NotificationPreferencesPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
 use App\Livewire\Signals\EntityBrowserPage;
+use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
 use App\Livewire\Skills\SkillListPage;
@@ -119,6 +120,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
 
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
+    Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
 
     Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
 
