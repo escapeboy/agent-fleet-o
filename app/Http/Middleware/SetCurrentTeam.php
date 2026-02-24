@@ -19,7 +19,11 @@ class SetCurrentTeam
             if ($firstTeam) {
                 $user->update(['current_team_id' => $firstTeam->id]);
                 $user->load('currentTeam');
+            } elseif (! config('cloud.mode', false)) {
+                // Self-hosted: no team exists at all — installer was not run
+                abort(503, 'No workspace configured. Run `php artisan app:install` to set up the application.');
             }
+            // Cloud: no team yet — EnsureTeamExists middleware will redirect to onboarding
         }
 
         return $next($request);

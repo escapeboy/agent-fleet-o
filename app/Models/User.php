@@ -13,11 +13,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasUuids, Notifiable;
+    use HasApiTokens, HasFactory, HasUuids, HasPushSubscriptions, Notifiable;
 
     protected $fillable = [
         'name',
@@ -25,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'current_team_id',
         'theme',
+        'notification_preferences',
     ];
 
     protected $hidden = [
@@ -41,7 +43,21 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    public function getPreferences(): array
+    {
+        $defaults = \App\Domain\Shared\Services\NotificationPreferencesService::defaults();
+        $saved = $this->notification_preferences ?? [];
+
+        return array_merge($defaults, $saved);
+    }
+
+    public function prefersChannel(string $type, string $channel): bool
+    {
+        return in_array($channel, $this->getPreferences()[$type] ?? []);
     }
 
     public function teams(): BelongsToMany
