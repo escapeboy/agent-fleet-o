@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DatadogAlertWebhookController;
+use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\DiscordWebhookController;
 use App\Http\Controllers\GitHubIssueWebhookController;
 use App\Http\Controllers\JiraWebhookController;
@@ -31,6 +32,9 @@ Route::post('/signals/linear', LinearWebhookController::class)->name('signals.li
 Route::post('/signals/sentry', SentryAlertWebhookController::class)->name('signals.sentry');
 Route::post('/signals/datadog/{secret}', DatadogAlertWebhookController::class)->name('signals.datadog');
 Route::post('/signals/pagerduty', PagerDutyWebhookController::class)->name('signals.pagerduty');
+
+// Telegram webhook (optional push-mode alternative to polling)
+Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
 
 // Tracking endpoints (public, no auth)
 Route::get('/track/click', [TrackingController::class, 'click'])->name('track.click');

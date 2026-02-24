@@ -325,6 +325,30 @@ parameters:
 			path: app/Domain/Assistant/Services/ConversationManager.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/DelegationTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/DelegationTools.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Assistant/Tools/DelegationTools.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Domain/Assistant/Tools/DelegationTools.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent\.$#'
 			identifier: property.notFound
 			count: 1
@@ -929,6 +953,12 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Experiment/Models/Experiment.php
+
+		-
+			message: '#^Call to an undefined static method NotificationChannels\\WebPush\\WebPushMessage\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Domain/Experiment/Notifications/StuckExperimentNotification.php
 
 		-
 			message: '#^Offset ''default_llm_model'' does not exist on array\{\}\|string\.$#'
@@ -1861,6 +1891,12 @@ parameters:
 			path: app/Domain/Outbound/Connectors/SmtpEmailConnector.php
 
 		-
+			message: '#^Method App\\Domain\\Outbound\\Connectors\\SmtpEmailConnector\:\:buildTransport\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Outbound/Connectors/SmtpEmailConnector.php
+
+		-
 			message: '#^Negated boolean expression is always true\.$#'
 			identifier: booleanNot.alwaysTrue
 			count: 2
@@ -1869,6 +1905,12 @@ parameters:
 		-
 			message: '#^Offset ''email'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/SmtpEmailConnector.php
+
+		-
+			message: '#^Property App\\Domain\\Outbound\\Connectors\\SmtpEmailConnector\:\:\$resolver is never read, only written\.$#'
+			identifier: property.onlyWritten
 			count: 1
 			path: app/Domain/Outbound/Connectors/SmtpEmailConnector.php
 
@@ -2295,6 +2337,18 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
+			count: 1
+			path: app/Domain/Project/Listeners/NotifyAssistantOnProjectComplete.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>team_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Project/Listeners/NotifyAssistantOnProjectComplete.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
 			count: 3
 			path: app/Domain/Project/Listeners/NotifyDependentsOnRunComplete.php
 
@@ -2431,6 +2485,12 @@ parameters:
 			path: app/Domain/Project/Notifications/ProjectRunCompletedNotification.php
 
 		-
+			message: '#^Call to an undefined static method NotificationChannels\\WebPush\\WebPushMessage\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Domain/Project/Notifications/ProjectRunFailedNotification.php
+
+		-
 			message: '#^Offset ''channels'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -2563,6 +2623,12 @@ parameters:
 			path: app/Domain/Project/Services/RunOutputCollector.php
 
 		-
+			message: '#^Call to an undefined static method NotificationChannels\\WebPush\\WebPushMessage\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Domain/Shared/Jobs/SendPushNotificationJob.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Relations\\Pivot\:\:\$role\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2641,22 +2707,10 @@ parameters:
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
 
 		-
-			message: '#^Negated boolean expression is always false\.$#'
-			identifier: booleanNot.alwaysFalse
-			count: 1
-			path: app/Domain/Signal/Connectors/CalendarConnector.php
-
-		-
 			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
 			identifier: class.notFound
 			count: 1
 			path: app/Domain/Signal/Connectors/CalendarConnector.php
-
-		-
-			message: '#^Method Webklex\\PHPIMAP\\Query\\WhereQuery\:\:whereUid\(\) invoked with 2 parameters, 1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Domain/Signal/Connectors/ImapConnector.php
 
 		-
 			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
@@ -2965,6 +3019,18 @@ parameters:
 			path: app/Domain/Skill/Services/SkillCostCalculator.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Telegram/Actions/ProcessTelegramMessageAction.php
+
+		-
+			message: '#^Instanceof between string and BackedEnum will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 1
+			path: app/Domain/Telegram/Actions/ProcessTelegramMessageAction.php
+
+		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Domain\\Tool\\Models\\Tool\)\: bool given\.$#'
 			identifier: argument.type
 			count: 2
@@ -3077,6 +3143,36 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Signal\\Models\\Signal\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Trigger/Actions/EvaluateTriggerRulesAction.php
+
+		-
+			message: '#^Parameter \#1 \$conditions of method App\\Domain\\Trigger\\Services\\TriggerConditionEvaluator\:\:evaluate\(\) expects array\<string, mixed\>\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Trigger/Actions/EvaluateTriggerRulesAction.php
+
+		-
+			message: '#^Parameter \#1 \$inputMapping of method App\\Domain\\Trigger\\Services\\SignalInputMapper\:\:map\(\) expects array\<string, string\>\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Trigger/Actions/ExecuteTriggerRuleAction.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Trigger/Services/SignalInputMapper.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Trigger/Services/SignalInputMapper.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$condition\.$#'
@@ -4609,6 +4705,96 @@ parameters:
 			path: app/Http/Resources/Api/V1/OutboundConnectorConfigResource.php
 
 		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$agent_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$completed_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$cost_credits\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$crew_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$duration_ms\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$error_message\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$experiment_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$input_prompt\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$output\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$skill_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$started_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\PlaybookStepResource\:\:\$workflow_node_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/PlaybookStepResource.php
+
+		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ProjectResource\:\:\$agent_config\.$#'
 			identifier: property.notFound
 			count: 1
@@ -5213,6 +5399,72 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Api/V1/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$events\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$failure_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$headers\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$last_triggered_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$retry_config\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WebhookEndpointResource\:\:\$url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/WebhookEndpointResource.php
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\WorkflowResource\:\:\$created_at\.$#'
@@ -6093,7 +6345,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 6
 			path: app/Livewire/Teams/TeamSettingsPage.php
 
 		-
@@ -6137,6 +6389,12 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
+			message: '#^Cannot call method isActive\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Livewire/Triggers/TriggerRulesPage.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -6280,6 +6538,30 @@ parameters:
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
 			identifier: property.notFound
 			count: 1
+			path: app/Mcp/Tools/Artifact/ArtifactContentTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$version\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Artifact/ArtifactContentTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Artifact/ArtifactDownloadTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$version\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Mcp/Tools/Artifact/ArtifactDownloadTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 1
 			path: app/Mcp/Tools/Artifact/ArtifactGetTool.php
 
 		-
@@ -6363,6 +6645,18 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Credential/CredentialRotateTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Credential/CredentialRotateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
 			count: 1
 			path: app/Mcp/Tools/Crew/CrewCreateTool.php
 
@@ -6383,6 +6677,24 @@ parameters:
 			identifier: property.nonObject
 			count: 1
 			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewExecutionsListTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Crew/CrewExecutionsListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Crew\\Models\\CrewExecution\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewExecutionsListTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent\.$#'
@@ -6457,6 +6769,18 @@ parameters:
 			path: app/Mcp/Tools/Experiment/ExperimentGetTool.php
 
 		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Experiment/ExperimentStepsTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentStepsTool.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Marketplace\\Models\\MarketplaceUsageRecord\:\:\$count\.$#'
 			identifier: property.notFound
 			count: 2
@@ -6499,10 +6823,34 @@ parameters:
 			path: app/Mcp/Tools/Marketplace/MarketplaceBrowseTool.php
 
 		-
+			message: '#^Access to an undefined property App\\Domain\\Marketplace\\Models\\MarketplaceListing\:\:\$count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Marketplace/MarketplaceCategoriesListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Marketplace\\Models\\MarketplaceListing\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Marketplace/MarketplaceCategoriesListTool.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
 			path: app/Mcp/Tools/Marketplace/MarketplacePublishTool.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Marketplace\\Enums\\MarketplaceStatus\:\:Published will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Mcp/Tools/Marketplace/MarketplaceReviewTool.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Mcp/Tools/Marketplace/MarketplaceReviewTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
@@ -6631,6 +6979,42 @@ parameters:
 			path: app/Mcp/Tools/Shared/NotificationTool.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Shared/TeamMembersTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Shared/TeamMembersTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Shared/TeamMembersTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Shared/TeamMembersTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Shared/TeamMembersTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalGetTool.php
+
+		-
 			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
@@ -6727,6 +7111,42 @@ parameters:
 			path: app/Mcp/Tools/Skill/SkillListTool.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$changelog\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillVersionsTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillVersionsTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_by\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillVersionsTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillVersionsTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$version\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillVersionsTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Skill/SkillVersionsTool.php
+
+		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -6743,6 +7163,12 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/System/AuditLogTool.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Telegram/TelegramBotTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -6784,7 +7210,151 @@ parameters:
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleCreateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleListTool.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Trigger\\Models\\TriggerRule\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleListTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleTestTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleUpdateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowActivateTool.php
+
+		-
+			message: '#^Offset ''errors'' on array\{valid\: false, errors\: array, activated\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowActivateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
 			path: app/Mcp/Tools/Workflow/WorkflowCreateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$condition\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$config\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_default\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$position_x\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$position_y\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$skill_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sort_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$source_node_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$target_node_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Mcp/Tools/Workflow/WorkflowDuplicateTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -6851,6 +7421,12 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Workflow/WorkflowListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowSaveGraphTool.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'

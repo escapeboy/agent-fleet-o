@@ -61,7 +61,7 @@ class SendAssistantMessageAction
         $supportsMcpNatively = $localAgentKey === 'codex';
 
         // Always resolve tools regardless of provider
-        $tools = $this->toolRegistry->getTools($user);
+        $tools = $this->toolRegistry->getTools($user, $conversation);
 
         // Build system prompt with context and tool info.
         // canExecuteTools: cloud providers use PrismPHP tools, claude-code uses <tool_call> format,

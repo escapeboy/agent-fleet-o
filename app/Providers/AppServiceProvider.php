@@ -15,6 +15,7 @@ use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
 use App\Domain\Project\Listeners\LogProjectActivity;
+use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use App\Domain\Shared\Services\DeploymentMode;
@@ -80,6 +81,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ExperimentTransitioned::class, SyncProjectStatusOnRunComplete::class);
         Event::listen(ExperimentTransitioned::class, LogProjectActivity::class);
         Event::listen(ExperimentTransitioned::class, NotifyDependentsOnRunComplete::class);
+
+        // Delegation loop: notify assistant/Telegram when delegated run completes
+        Event::listen(ExperimentTransitioned::class, NotifyAssistantOnProjectComplete::class);
 
         // Webhook notifications
         Event::listen(ExperimentTransitioned::class, SendWebhookOnExperimentTransition::class);

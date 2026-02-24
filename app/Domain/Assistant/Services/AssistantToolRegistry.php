@@ -2,6 +2,8 @@
 
 namespace App\Domain\Assistant\Services;
 
+use App\Domain\Assistant\Models\AssistantConversation;
+use App\Domain\Assistant\Tools\DelegationTools;
 use App\Domain\Assistant\Tools\GetEntityTools;
 use App\Domain\Assistant\Tools\ListEntitiesTools;
 use App\Domain\Assistant\Tools\MemoryTools;
@@ -17,7 +19,7 @@ class AssistantToolRegistry
      *
      * @return array<PrismToolObject>
      */
-    public function getTools(User $user): array
+    public function getTools(User $user, ?AssistantConversation $conversation = null): array
     {
         $tools = [];
 
@@ -31,6 +33,11 @@ class AssistantToolRegistry
         $role = $user->teamRole($user->currentTeam);
         if ($role?->canEdit()) {
             $tools = array_merge($tools, MutationTools::writeTools());
+
+            // Delegation tools (fire-and-forget async project runs)
+            if ($conversation) {
+                $tools = array_merge($tools, DelegationTools::tools($conversation->id));
+            }
         }
 
         // DESTRUCTIVE tools - available to Owner/Admin only

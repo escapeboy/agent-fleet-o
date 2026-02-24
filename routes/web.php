@@ -33,6 +33,8 @@ use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Shared\NotificationInboxPage;
 use App\Livewire\Shared\NotificationPreferencesPage;
+use App\Livewire\Triggers\CreateTriggerRuleForm;
+use App\Livewire\Triggers\TriggerRulesPage;
 use App\Livewire\Signals\EntityBrowserPage;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
@@ -128,4 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/notifications', NotificationInboxPage::class)->name('notifications.index');
     Route::get('/notifications/preferences', NotificationPreferencesPage::class)->name('notifications.preferences');
+
+    Route::get('/triggers', TriggerRulesPage::class)->name('triggers.index');
+    Route::get('/triggers/create', CreateTriggerRuleForm::class)->name('triggers.create');
 });

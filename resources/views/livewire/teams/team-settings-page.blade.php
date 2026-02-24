@@ -117,4 +117,50 @@
             </button>
         </div>
     </div>
+
+    {{-- Telegram Bot --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Telegram Bot</h2>
+        <p class="mb-4 text-sm text-gray-500">Connect a Telegram bot to receive messages as signals and chat with your AI assistant from Telegram.</p>
+
+        @if($telegramBot)
+            {{-- Connected bot info --}}
+            <div class="mb-4 rounded-lg bg-green-50 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium text-green-900">
+                            Connected: <span class="font-mono">@{{ $telegramBot->bot_username ?? $telegramBot->bot_name }}</span>
+                        </p>
+                        <p class="mt-0.5 text-sm text-green-700">
+                            Routing: {{ ucwords(str_replace('_', ' ', $telegramBot->routing_mode)) }}
+                            @if($telegramBot->last_message_at)
+                                · Last message: {{ $telegramBot->last_message_at->diffForHumans() }}
+                            @endif
+                        </p>
+                    </div>
+                    <button wire:click="removeTelegramBot" wire:confirm="Disconnect the Telegram bot?"
+                        class="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50">
+                        Disconnect
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500">To receive messages as signals, the platform polls this bot every minute. You can also <a href="{{ route('triggers.index') }}" class="text-primary-600 hover:underline">configure trigger rules</a> to auto-run projects when Telegram messages arrive.</p>
+        @else
+            <div class="space-y-3">
+                <x-form-input wire:model="telegramBotToken" label="Bot Token" type="password"
+                    placeholder="123456789:ABC..." hint="Create a bot via @BotFather on Telegram and paste the token here."
+                    :error="$errors->first('telegramBotToken')" />
+                <x-form-select wire:model="telegramRoutingMode" label="Routing Mode">
+                    <option value="assistant">Route messages to AI Assistant</option>
+                    <option value="project">Route messages to a Project</option>
+                    <option value="trigger_rules">Match Trigger Rules only</option>
+                </x-form-select>
+                <div>
+                    <button wire:click="saveTelegramBot" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                        Connect Bot
+                    </button>
+                </div>
+            </div>
+        @endif
+    </div>
 </div>

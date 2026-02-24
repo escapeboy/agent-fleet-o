@@ -3,6 +3,8 @@
 namespace App\Livewire\Teams;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
+use App\Domain\Telegram\Models\TelegramBot;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -125,6 +127,38 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'API token revoked.');
     }
 
+    // Telegram bot settings
+    public string $telegramBotToken = '';
+
+    public string $telegramRoutingMode = 'assistant';
+
+    public function saveTelegramBot(RegisterTelegramBotAction $action): void
+    {
+        $this->validate([
+            'telegramBotToken' => 'required|string|min:20',
+            'telegramRoutingMode' => 'required|in:assistant,project,trigger_rules',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+
+        $action->execute(
+            teamId: $team->id,
+            botToken: $this->telegramBotToken,
+            routingMode: $this->telegramRoutingMode,
+        );
+
+        $this->telegramBotToken = '';
+        session()->flash('message', 'Telegram bot connected successfully.');
+    }
+
+    public function removeTelegramBot(): void
+    {
+        $team = auth()->user()->currentTeam;
+        TelegramBot::where('team_id', $team->id)->delete();
+
+        session()->flash('message', 'Telegram bot disconnected.');
+    }
+
     public function render()
     {
         $team = auth()->user()->currentTeam;
@@ -140,6 +174,7 @@ class TeamSettingsPage extends Component
             'providers' => ['openai', 'anthropic', 'google'],
             'llmProviders' => config('llm_providers', []),
             'apiTokens' => $apiTokens,
+            'telegramBot' => $team ? TelegramBot::where('team_id', $team->id)->first() : null,
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

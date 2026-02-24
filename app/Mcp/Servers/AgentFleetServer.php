@@ -98,6 +98,12 @@ use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
+use App\Mcp\Tools\Telegram\TelegramBotTool;
+use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
+use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
+use App\Mcp\Tools\Trigger\TriggerRuleListTool;
+use App\Mcp\Tools\Trigger\TriggerRuleTestTool;
+use App\Mcp\Tools\Trigger\TriggerRuleUpdateTool;
 use App\Mcp\Tools\Webhook\WebhookCreateTool;
 use App\Mcp\Tools\Webhook\WebhookDeleteTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
@@ -275,6 +281,16 @@ class AgentFleetServer extends Server
         TeamGetTool::class,
         TeamUpdateTool::class,
         TeamMembersTool::class,
+
+        // Telegram (1)
+        TelegramBotTool::class,
+
+        // Trigger (5)
+        TriggerRuleListTool::class,
+        TriggerRuleCreateTool::class,
+        TriggerRuleUpdateTool::class,
+        TriggerRuleDeleteTool::class,
+        TriggerRuleTestTool::class,
 
         // System (3)
         DashboardKpisTool::class,
