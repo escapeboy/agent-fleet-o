@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -33,13 +34,18 @@ class TeamMembersTool extends Tool
             return Response::error('Team not found.');
         }
 
-        $members = $team->users->map(fn ($user) => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'role' => $user->pivot->role,
-            'joined_at' => $user->pivot->created_at?->toIso8601String(),
-        ]);
+        $members = $team->users->map(function ($user) {
+            /** @var User $user */
+            $pivot = $user->pivot;
+
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $pivot?->role,
+                'joined_at' => $pivot?->created_at?->toIso8601String(),
+            ];
+        });
 
         return Response::text(json_encode([
             'team_id' => $team->id,

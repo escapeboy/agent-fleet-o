@@ -38,7 +38,7 @@ class WorkflowActivateTool extends Tool
             $result = app(ValidateWorkflowGraphAction::class)->execute($workflow, activateIfValid: true);
 
             if (! $result['valid']) {
-                return Response::error('Workflow graph is invalid: '.implode(', ', $result['errors'] ?? []));
+                return Response::error('Workflow graph is invalid: '.implode(', ', $result['errors']));
             }
 
             $workflow->refresh();
