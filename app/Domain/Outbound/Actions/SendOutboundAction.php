@@ -18,6 +18,7 @@ use App\Domain\Outbound\Middleware\ChannelRateLimit;
 use App\Domain\Outbound\Middleware\TargetRateLimit;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 
 class SendOutboundAction
 {
@@ -27,9 +28,10 @@ class SendOutboundAction
         private readonly CheckBlacklistAction $checkBlacklist,
         private readonly ChannelRateLimit $channelRateLimit,
         private readonly TargetRateLimit $targetRateLimit,
+        private readonly OutboundCredentialResolver $credentialResolver,
     ) {
         $this->connectors = [
-            new SmtpEmailConnector,
+            new SmtpEmailConnector($this->credentialResolver),
             new TelegramConnector,
             new SlackConnector,
             new WhatsAppConnector,
