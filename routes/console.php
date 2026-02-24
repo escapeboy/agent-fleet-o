@@ -22,6 +22,7 @@ Schedule::command('audit:cleanup')->dailyAt('02:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
 Schedule::command('human-tasks:check-sla')->everyFiveMinutes();
+Schedule::command('workflows:poll-time-gates')->everyMinute()->withoutOverlapping(1);
 
 // Project scheduling & budget enforcement
 Schedule::command('projects:check-budgets')->hourly();

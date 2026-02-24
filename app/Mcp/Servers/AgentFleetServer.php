@@ -94,6 +94,7 @@ use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\SystemHealthTool;
+use App\Mcp\Tools\Telegram\TelegramBotTool;
 use App\Mcp\Tools\Tool\ToolCreateTool;
 use App\Mcp\Tools\Tool\ToolDeleteTool;
 use App\Mcp\Tools\Tool\ToolDiscoverMcpTool;
@@ -101,7 +102,6 @@ use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
-use App\Mcp\Tools\Telegram\TelegramBotTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
 use App\Mcp\Tools\Trigger\TriggerRuleListTool;
@@ -115,11 +115,13 @@ use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
 use App\Mcp\Tools\Workflow\WorkflowDuplicateTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
+use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
 use App\Mcp\Tools\Workflow\WorkflowSaveGraphTool;
 use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
+use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
 use Laravel\Mcp\Server;
@@ -213,6 +215,8 @@ class AgentFleetServer extends Server
         WorkflowEstimateCostTool::class,
         WorkflowGenerateTool::class,
         WorkflowSuggestionTool::class,
+        WorkflowTimeGateTool::class,
+        WorkflowExecutionChainTool::class,
 
         // Project (8)
         ProjectListTool::class,

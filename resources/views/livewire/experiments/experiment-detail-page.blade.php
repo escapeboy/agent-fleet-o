@@ -224,7 +224,7 @@
         <nav class="-mb-px flex gap-6">
             @php
                 $tabs = $experiment->hasWorkflow()
-                    ? ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions']
+                    ? ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions']
                     : ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions'];
             @endphp
             @foreach($tabs as $tab => $label)
@@ -242,6 +242,11 @@
                         <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->metrics_count }}</span>
                     @elseif($tab === 'transitions' && $experiment->state_transitions_count > 0)
                         <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{{ $experiment->state_transitions_count }}</span>
+                    @elseif($tab === 'chain')
+                        @php $chainCount = \App\Domain\Workflow\Models\WorkflowNodeEvent::where('experiment_id', $experiment->id)->count(); @endphp
+                        @if($chainCount > 0)
+                            <span class="ml-1 rounded-full bg-indigo-100 px-1.5 py-0.5 text-xs text-indigo-700">{{ $chainCount }}</span>
+                        @endif
                     @elseif($tab === 'reasoning' && $reasoningCount > 0)
                         <span class="ml-1 rounded-full bg-purple-100 px-1.5 py-0.5 text-xs text-purple-700">{{ $reasoningCount }}</span>
                     @endif
@@ -328,6 +333,9 @@
                 </div>
             @endforelse
         </div>
+
+    @elseif($activeTab === 'chain')
+        <livewire:experiments.execution-chain-panel :experiment="$experiment" :key="'chain-'.$experiment->id" />
 
     @elseif($activeTab === 'suggestions')
         <div class="space-y-4">

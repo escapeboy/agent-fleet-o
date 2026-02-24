@@ -39,6 +39,8 @@ class PlaybookStep extends Model
         'idempotency_key',
         'checkpoint_version',
         'guardrail_result',
+        'resume_at',
+        'root_event_id',
     ];
 
     protected function casts(): array
@@ -56,6 +58,7 @@ class PlaybookStep extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'last_heartbeat_at' => 'datetime',
+            'resume_at' => 'datetime',
         ];
     }
 
@@ -107,6 +110,11 @@ class PlaybookStep extends Model
     public function isWaitingHuman(): bool
     {
         return $this->status === 'waiting_human';
+    }
+
+    public function isWaitingTime(): bool
+    {
+        return $this->status === 'waiting_time';
     }
 
     public function isTerminal(): bool

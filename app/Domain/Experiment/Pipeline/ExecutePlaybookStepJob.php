@@ -8,6 +8,8 @@ use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Services\CheckpointManager;
 use App\Domain\Skill\Actions\ExecuteGuardrailAction;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Domain\Workflow\Models\WorkflowNodeEvent;
+use App\Domain\Workflow\Services\WorkflowEventRecorder;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -151,6 +153,22 @@ class ExecutePlaybookStepJob implements ShouldQueue
 
         $stopHeartbeat = $checkpointManager->startHeartbeat($this->stepId);
 
+        // Record execution chain event (best-effort, never blocks execution)
+        $chainEvent = null;
+        if ($step->workflow_node_id) {
+            try {
+                $wfNode = WorkflowNode::find($step->workflow_node_id);
+                $chainEvent = app(WorkflowEventRecorder::class)->recordStarted(
+                    step: $step,
+                    nodeType: $wfNode?->type->value ?? 'agent',
+                    nodeLabel: $wfNode?->label ?? '',
+                    rootEventId: $step->root_event_id,
+                );
+            } catch (\Throwable) {
+                // Non-blocking — event tracing failures must not stop execution
+            }
+        }
+
         try {
             $input = $this->resolveInput($step, $experiment);
 
@@ -228,6 +246,25 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 $checkpointManager->clearCheckpoint($this->stepId);
             }
 
+            // Record completion event (best-effort)
+            if ($chainEvent instanceof WorkflowNodeEvent) {
+                try {
+                    $durationMs = $result['execution']->duration_ms ?? 0;
+                    $success = $result['output'] !== null;
+                    $recorder = app(WorkflowEventRecorder::class);
+                    if ($success) {
+                        $outputSummary = is_array($result['output'])
+                            ? implode(', ', array_keys($result['output']))
+                            : null;
+                        $recorder->recordCompleted($chainEvent, $durationMs, $outputSummary);
+                    } else {
+                        $recorder->recordFailed($chainEvent, $result['execution']->error_message ?? 'Unknown error', $durationMs);
+                    }
+                } catch (\Throwable) {
+                    // Non-blocking
+                }
+            }
+
             if ($result['output'] === null) {
                 throw new \RuntimeException("Step failed: {$result['execution']->error_message}");
             }
@@ -250,6 +287,15 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 'attempt' => $this->attempts(),
                 'failed_at' => now()->toIso8601String(),
             ]);
+
+            // Record failure event (best-effort)
+            if ($chainEvent instanceof WorkflowNodeEvent) {
+                try {
+                    app(WorkflowEventRecorder::class)->recordFailed($chainEvent, $e->getMessage());
+                } catch (\Throwable) {
+                    // Non-blocking
+                }
+            }
 
             // Ensure step is marked as failed (may have already been updated above)
             if ($step->fresh()?->isRunning()) {

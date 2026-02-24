@@ -11,6 +11,7 @@ use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
+use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
@@ -91,6 +92,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Sub-experiment orchestration: check parent when child reaches terminal state
         Event::listen(ExperimentTransitioned::class, CheckParentExperimentCompletion::class);
+
+        // Sub-workflow node: resume parent workflow step when sub-workflow experiment completes
+        Event::listen(ExperimentTransitioned::class, ResumeParentOnSubWorkflowComplete::class);
 
         // Memory: extract learnings from completed experiments
         Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);
