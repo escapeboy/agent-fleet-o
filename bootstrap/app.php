@@ -3,6 +3,7 @@
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetCurrentTeam;
+use App\Http\Middleware\SetPostgresRlsContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -33,7 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
         $middleware->appendToGroup('web', SetCurrentTeam::class);
-        $middleware->appendToGroup('web', \App\Http\Middleware\SetPostgresRlsContext::class);
+        $middleware->appendToGroup('web', SetPostgresRlsContext::class);
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {

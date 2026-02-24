@@ -130,7 +130,7 @@ return new class extends Migration
             // Skip if the table doesn't exist (community vs cloud edition differences)
             $exists = DB::selectOne(
                 "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=?",
-                [$table]
+                [$table],
             );
             if (! $exists) {
                 continue;
@@ -154,7 +154,7 @@ return new class extends Migration
         // 6. semantic_cache_entries is intentionally cross-tenant (shared LLM response cache).
         //    Apply a permissive USING(true) policy so the non-superuser role can still read/write it.
         $cacheTableExists = DB::selectOne(
-            "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='semantic_cache_entries'"
+            "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='semantic_cache_entries'",
         );
         if ($cacheTableExists) {
             DB::statement('ALTER TABLE "semantic_cache_entries" ENABLE ROW LEVEL SECURITY');
@@ -180,7 +180,7 @@ return new class extends Migration
         foreach ($this->tenantTables as $table) {
             $exists = DB::selectOne(
                 "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=?",
-                [$table]
+                [$table],
             );
             if (! $exists) {
                 continue;
@@ -192,7 +192,7 @@ return new class extends Migration
 
         // Revert semantic_cache_entries
         $cacheTableExists = DB::selectOne(
-            "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='semantic_cache_entries'"
+            "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='semantic_cache_entries'",
         );
         if ($cacheTableExists) {
             DB::statement('DROP POLICY IF EXISTS allow_all ON "semantic_cache_entries"');

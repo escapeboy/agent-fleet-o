@@ -11,16 +11,21 @@ All notable changes to Agent Fleet Community Edition are documented here.
 - **Webhook System** -- Outbound webhooks with event filtering, secret signing, retry logic, and management UI
 - **Testing Framework** -- Regression test suites for agent outputs with automated evaluation
 - **Project Kanban Board** -- Visual kanban and graph views for project experiments
+- **MCP Tools** -- 19 additional MCP tools across new domains bringing coverage to 112 tools total; `IsDestructive` / `IsReadOnly` annotations on all tools
+- **OpenAPI annotations** -- Scramble `@tags` and `@response` doc-blocks on all 18 API controllers for richer OpenAPI 3.1 output
+- **Deployment Mode service** -- `DeploymentMode` service gates cloud-only vs self-hosted-only features; cloud landing page and auth flows respect deployment context
 
 ### Changed
 - Expanded default skills catalog (14 agents, updated skills and tools)
 - Updated REST API to 99 endpoints (from 68)
 - Architecture table updated to reflect 16 bounded contexts (from 12)
 - README screenshots now use responsive thumbnail grid layout
+- SMTP outbound connector now resolves team-configured credentials instead of relying solely on platform `.env` keys
+- Email connector is always team-configurable regardless of deployment mode
 
 ### Fixed
-- PHPStan baseline regenerated for all new domains
-- Laravel Pint style issues across feature branches
+- PHPStan baseline regenerated for all new domains and RLS security files
+- Laravel Pint style issues across feature branches (SmtpEmailConnector, RLS middleware, bootstrap/app.php, RLS migration, RLS test)
 
 ---
 
