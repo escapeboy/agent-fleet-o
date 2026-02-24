@@ -107,7 +107,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
             $unsubscribeAddress = $fromAddress;
             $listUnsubscribe = "<mailto:{$unsubscribeAddress}?subject=unsubscribe>";
 
-            $email = (new Email())
+            $email = (new Email)
                 ->from(new Address($fromAddress, $fromName))
                 ->to($to)
                 ->subject($subject)

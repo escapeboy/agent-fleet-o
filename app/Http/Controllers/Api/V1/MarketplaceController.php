@@ -58,6 +58,7 @@ class MarketplaceController extends Controller
 
     /**
      * @unauthenticated
+     *
      * @response 200 {"data": {"slug": "my-skill", "type": "skill", "name": "My Skill", "version": "1.0.0", "configuration": {}, "checksum": "abc123..."}}
      * @response 404 {"message": "Not found.", "error": "not_found"}
      */
@@ -79,6 +80,7 @@ class MarketplaceController extends Controller
 
     /**
      * @unauthenticated
+     *
      * @response 200 {"data": [{"category": "nlp", "count": 12}, {"category": "automation", "count": 7}]}
      */
     public function categories(): JsonResponse
@@ -98,6 +100,7 @@ class MarketplaceController extends Controller
 
     /**
      * @unauthenticated
+     *
      * @response 200 {"current_page": 1, "data": [{"id": "uuid", "rating": 5, "comment": "Great!", "user": {"id": "uuid", "name": "Alice"}, "created_at": "2026-02-24T10:00:00.000000Z"}], "last_page": 1, "per_page": 15, "total": 1}
      * @response 404 {"message": "Not found.", "error": "not_found"}
      */

@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
         $middleware->appendToGroup('web', SetCurrentTeam::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\SetPostgresRlsContext::class);
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {

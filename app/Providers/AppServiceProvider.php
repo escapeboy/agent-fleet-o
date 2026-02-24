@@ -41,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode());
+        $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
     }
 
     /**
