@@ -2,6 +2,7 @@
 
 namespace App\Domain\Shared\Services;
 
+use App\Domain\Shared\Jobs\SendPushNotificationJob;
 use App\Domain\Shared\Models\UserNotification;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -9,7 +10,8 @@ use Illuminate\Support\Collection;
 class NotificationService
 {
     /**
-     * Create an in-app notification for a user.
+     * Create an in-app notification for a user and optionally dispatch a push.
+     * Respects the user's notification_preferences.
      */
     public function notify(
         string $userId,
@@ -19,16 +21,32 @@ class NotificationService
         string $body,
         ?string $actionUrl = null,
         ?array $data = null,
-    ): UserNotification {
-        return UserNotification::create([
-            'user_id' => $userId,
-            'team_id' => $teamId,
-            'type' => $type,
-            'title' => $title,
-            'body' => $body,
-            'action_url' => $actionUrl,
-            'data' => $data,
-        ]);
+    ): ?UserNotification {
+        $user = User::find($userId);
+
+        if (! $user) {
+            return null;
+        }
+
+        $notification = null;
+
+        if ($user->prefersChannel($type, 'in_app')) {
+            $notification = UserNotification::create([
+                'user_id' => $userId,
+                'team_id' => $teamId,
+                'type' => $type,
+                'title' => $title,
+                'body' => $body,
+                'action_url' => $actionUrl,
+                'data' => $data,
+            ]);
+        }
+
+        if ($user->prefersChannel($type, 'push')) {
+            SendPushNotificationJob::dispatch($userId, $title, $body, $actionUrl, $type);
+        }
+
+        return $notification;
     }
 
     /**
@@ -45,7 +63,7 @@ class NotificationService
     ): Collection {
         $users = User::whereHas('teams', fn ($q) => $q->where('teams.id', $teamId))
             ->when($excludeUserIds, fn ($q) => $q->whereNotIn('id', $excludeUserIds))
-            ->get(['id']);
+            ->get(['id', 'notification_preferences']);
 
         return $users->map(fn (User $user) => $this->notify(
             userId: $user->id,
@@ -55,7 +73,7 @@ class NotificationService
             body: $body,
             actionUrl: $actionUrl,
             data: $data,
-        ));
+        ))->filter();
     }
 
     public function unreadCount(string $userId, string $teamId): int
