@@ -16,6 +16,9 @@ use Illuminate\Support\Str;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Agents
+ */
 class AgentController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -84,6 +87,9 @@ class AgentController extends Controller
         return new AgentResource($agent->fresh()->load('skills'));
     }
 
+    /**
+     * @response 200 {"message": "Agent deleted."}
+     */
     public function destroy(Agent $agent): JsonResponse
     {
         $agent->delete();

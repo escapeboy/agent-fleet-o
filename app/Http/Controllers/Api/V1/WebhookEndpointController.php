@@ -12,6 +12,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Webhooks
+ */
 class WebhookEndpointController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -75,6 +78,9 @@ class WebhookEndpointController extends Controller
         return new WebhookEndpointResource($webhookEndpoint->fresh());
     }
 
+    /**
+     * @response 204
+     */
     public function destroy(WebhookEndpoint $webhookEndpoint): JsonResponse
     {
         $webhookEndpoint->delete();

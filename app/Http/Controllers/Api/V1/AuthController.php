@@ -12,10 +12,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @tags Authentication
+ */
 class AuthController extends Controller
 {
     /**
      * Issue a new API token (login).
+     *
+     * @response 201 {"token": "1|abc123...", "expires_at": "2026-03-26T12:00:00.000000Z", "user": {}}
+     * @response 422 {"message": "Validation error.", "errors": {"email": ["The provided credentials are incorrect."]}}
      */
     public function token(LoginRequest $request): JsonResponse
     {
@@ -40,6 +46,8 @@ class AuthController extends Controller
 
     /**
      * Refresh current token (revoke old, issue new).
+     *
+     * @response 200 {"token": "2|xyz789...", "expires_at": "2026-03-26T12:00:00.000000Z"}
      */
     public function refresh(Request $request): JsonResponse
     {
@@ -58,6 +66,8 @@ class AuthController extends Controller
 
     /**
      * Revoke current token (logout).
+     *
+     * @response 200 {"message": "Token revoked."}
      */
     public function logout(Request $request): JsonResponse
     {
@@ -68,6 +78,8 @@ class AuthController extends Controller
 
     /**
      * List all active tokens/devices for current user.
+     *
+     * @response 200 {"data": [{"id": 1, "name": "api-client", "abilities": ["*"], "last_used_at": "2026-02-24T10:00:00.000000Z", "expires_at": "2026-03-26T10:00:00.000000Z", "created_at": "2026-02-24T10:00:00.000000Z", "is_current": true}]}
      */
     public function devices(Request $request): JsonResponse
     {
@@ -89,6 +101,9 @@ class AuthController extends Controller
 
     /**
      * Revoke a specific token by ID.
+     *
+     * @response 200 {"message": "Token revoked."}
+     * @response 404 {"message": "Token not found."}
      */
     public function revokeDevice(Request $request, int $tokenId): JsonResponse
     {

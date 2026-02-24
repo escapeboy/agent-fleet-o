@@ -19,6 +19,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Tools
+ */
 class ToolController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -93,6 +96,9 @@ class ToolController extends Controller
         return new ToolResource($tool);
     }
 
+    /**
+     * @response 200 {"message": "Tool deleted."}
+     */
     public function destroy(Tool $tool, DeleteToolAction $action): JsonResponse
     {
         $action->execute($tool);

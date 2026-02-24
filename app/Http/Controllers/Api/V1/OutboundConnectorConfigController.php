@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Outbound Connectors
+ */
 class OutboundConnectorConfigController extends Controller
 {
     private const VALID_CHANNELS = 'telegram,slack,discord,teams,google_chat,whatsapp,email,webhook';
@@ -66,6 +69,9 @@ class OutboundConnectorConfigController extends Controller
         return (new OutboundConnectorConfigResource($outboundConnectorConfig->fresh()))->response();
     }
 
+    /**
+     * @response 204
+     */
     public function destroy(OutboundConnectorConfig $outboundConnectorConfig): JsonResponse
     {
         $outboundConnectorConfig->delete();
@@ -73,6 +79,10 @@ class OutboundConnectorConfigController extends Controller
         return response()->json(null, 204);
     }
 
+    /**
+     * @response 200 {"status": "success", "message": "Connected as @mybotname"}
+     * @response 422 {"status": "failed", "message": "Bot token is required"}
+     */
     public function test(OutboundConnectorConfig $outboundConnectorConfig): JsonResponse
     {
         $creds = $outboundConnectorConfig->credentials ?? [];

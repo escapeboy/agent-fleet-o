@@ -14,6 +14,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Skills
+ */
 class SkillController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -93,6 +96,9 @@ class SkillController extends Controller
         return new SkillResource($skill);
     }
 
+    /**
+     * @response 200 {"message": "Skill deleted."}
+     */
     public function destroy(Skill $skill): JsonResponse
     {
         $skill->delete();
@@ -100,6 +106,9 @@ class SkillController extends Controller
         return response()->json(['message' => 'Skill deleted.']);
     }
 
+    /**
+     * @response 200 {"data": [{"id": "uuid", "version": 2, "changelog": "Updated prompt.", "created_by": "uuid", "created_at": "2026-02-24T10:00:00.000000Z"}]}
+     */
     public function versions(Skill $skill): JsonResponse
     {
         $versions = $skill->versions()->get()->map(fn ($v) => [

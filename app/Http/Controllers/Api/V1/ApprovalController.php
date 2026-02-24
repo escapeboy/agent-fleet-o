@@ -12,6 +12,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Approvals
+ */
 class ApprovalController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection

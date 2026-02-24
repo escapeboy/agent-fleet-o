@@ -19,6 +19,9 @@ use Illuminate\Validation\Rules\Enum;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Credentials
+ */
 class CredentialController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -80,6 +83,9 @@ class CredentialController extends Controller
         return new CredentialResource($credential->refresh());
     }
 
+    /**
+     * @response 200 {"message": "Credential deleted."}
+     */
     public function destroy(Credential $credential, DeleteCredentialAction $action): JsonResponse
     {
         $action->execute($credential);

@@ -19,6 +19,9 @@ use Illuminate\Validation\Rules\Enum;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Crews
+ */
 class CrewController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -119,6 +122,9 @@ class CrewController extends Controller
         return new CrewResource($crew->load(['coordinator', 'qaAgent', 'members.agent']));
     }
 
+    /**
+     * @response 200 {"message": "Crew deleted."}
+     */
     public function destroy(Crew $crew): JsonResponse
     {
         $crew->delete();

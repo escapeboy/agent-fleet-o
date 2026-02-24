@@ -9,6 +9,9 @@ use App\Http\Resources\Api\V1\TeamResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Team
+ */
 class TeamController extends Controller
 {
     public function show(Request $request): TeamResource
@@ -32,6 +35,9 @@ class TeamController extends Controller
         return new TeamResource($team);
     }
 
+    /**
+     * @response 200 {"data": [{"id": "uuid", "name": "Alice", "email": "alice@example.com", "role": "owner", "joined_at": "2026-01-01T00:00:00.000000Z"}]}
+     */
     public function members(Request $request): JsonResponse
     {
         $team = Team::findOrFail($request->user()->current_team_id);
@@ -47,6 +53,10 @@ class TeamController extends Controller
         return response()->json(['data' => $members]);
     }
 
+    /**
+     * @response 200 {"message": "Member removed."}
+     * @response 403 {"message": "Cannot remove the team owner."}
+     */
     public function removeMember(Request $request, string $userId): JsonResponse
     {
         $team = Team::findOrFail($request->user()->current_team_id);
@@ -60,6 +70,9 @@ class TeamController extends Controller
         return response()->json(['message' => 'Member removed.']);
     }
 
+    /**
+     * @response 200 {"data": [{"id": "uuid", "provider": "anthropic", "is_active": true, "created_at": "2026-01-01T00:00:00.000000Z"}]}
+     */
     public function credentials(Request $request): JsonResponse
     {
         $credentials = TeamProviderCredential::where('team_id', $request->user()->current_team_id)
@@ -74,6 +87,10 @@ class TeamController extends Controller
         return response()->json(['data' => $credentials]);
     }
 
+    /**
+     * @response 201 {"data": {"id": "uuid", "provider": "anthropic", "is_active": true}}
+     * @response 422 {"message": "Validation error.", "errors": {"provider": ["The provider field is required."]}}
+     */
     public function storeCredential(Request $request): JsonResponse
     {
         $request->validate([
@@ -98,6 +115,9 @@ class TeamController extends Controller
         ], 201);
     }
 
+    /**
+     * @response 200 {"message": "Credential removed."}
+     */
     public function deleteCredential(TeamProviderCredential $credential): JsonResponse
     {
         $credential->delete();
@@ -105,6 +125,9 @@ class TeamController extends Controller
         return response()->json(['message' => 'Credential removed.']);
     }
 
+    /**
+     * @response 200 {"data": [{"id": 1, "name": "my-token", "abilities": ["*"], "last_used_at": "2026-02-24T10:00:00.000000Z", "created_at": "2026-01-01T00:00:00.000000Z"}]}
+     */
     public function tokens(Request $request): JsonResponse
     {
         $tokens = $request->user()->tokens()->get()->map(fn ($token) => [
@@ -118,6 +141,10 @@ class TeamController extends Controller
         return response()->json(['data' => $tokens]);
     }
 
+    /**
+     * @response 201 {"data": {"token": "3|plaintext...", "name": "my-token"}}
+     * @response 422 {"message": "Validation error.", "errors": {"name": ["The name field is required."]}}
+     */
     public function createToken(Request $request): JsonResponse
     {
         $request->validate([
@@ -138,6 +165,9 @@ class TeamController extends Controller
         ], 201);
     }
 
+    /**
+     * @response 200 {"message": "Token revoked."}
+     */
     public function revokeToken(Request $request, string $tokenId): JsonResponse
     {
         $request->user()->tokens()->where('id', $tokenId)->delete();

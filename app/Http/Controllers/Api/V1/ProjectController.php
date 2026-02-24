@@ -24,6 +24,9 @@ use Illuminate\Validation\Rules\Enum;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Projects
+ */
 class ProjectController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -141,6 +144,9 @@ class ProjectController extends Controller
         return new ProjectResource($project->load('schedule'));
     }
 
+    /**
+     * @response 200 {"message": "Project archived."}
+     */
     public function destroy(Project $project, ArchiveProjectAction $action): JsonResponse
     {
         $action->execute($project);
@@ -189,6 +195,9 @@ class ProjectController extends Controller
         return new ProjectResource($project->fresh()->load('schedule'));
     }
 
+    /**
+     * @response 202 {"message": "Run triggered."}
+     */
     public function triggerRun(Project $project, TriggerProjectRunAction $action): JsonResponse
     {
         $action->execute($project, 'api');

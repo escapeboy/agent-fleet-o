@@ -23,6 +23,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Experiments
+ */
 class ExperimentController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -123,6 +126,10 @@ class ExperimentController extends Controller
         return new ExperimentResource($experiment);
     }
 
+    /**
+     * @response 202 {"message": "Retry from step initiated."}
+     * @response 422 {"message": "Validation error.", "errors": {"step_id": ["The step id field is required."]}}
+     */
     public function retryFromStep(Request $request, Experiment $experiment, RetryFromStepAction $action): JsonResponse
     {
         $request->validate([

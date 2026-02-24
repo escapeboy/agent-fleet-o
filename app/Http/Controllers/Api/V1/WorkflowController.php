@@ -16,6 +16,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Workflows
+ */
 class WorkflowController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -84,6 +87,9 @@ class WorkflowController extends Controller
         return new WorkflowResource($workflow);
     }
 
+    /**
+     * @response 200 {"message": "Workflow deleted."}
+     */
     public function destroy(Workflow $workflow, DeleteWorkflowAction $action): JsonResponse
     {
         $action->execute($workflow);
@@ -109,6 +115,9 @@ class WorkflowController extends Controller
         return new WorkflowResource($workflow->load(['nodes', 'edges']));
     }
 
+    /**
+     * @response 200 {"valid": true, "errors": []}
+     */
     public function validateGraph(Workflow $workflow, ValidateWorkflowGraphAction $action): JsonResponse
     {
         $result = $action->execute($workflow);
@@ -116,6 +125,10 @@ class WorkflowController extends Controller
         return response()->json($result);
     }
 
+    /**
+     * @response 200 {"message": "Workflow activated.", "data": {}}
+     * @response 422 {"message": "Workflow graph is invalid.", "errors": ["Missing start node."]}
+     */
     public function activate(Workflow $workflow, ValidateWorkflowGraphAction $action): JsonResponse
     {
         $result = $action->execute($workflow, activateIfValid: true);
@@ -165,6 +178,9 @@ class WorkflowController extends Controller
             ->setStatusCode(201);
     }
 
+    /**
+     * @response 200 {"estimated_cost_credits": 150}
+     */
     public function estimateCost(Workflow $workflow, EstimateWorkflowCostAction $action): JsonResponse
     {
         $credits = $action->execute($workflow);
