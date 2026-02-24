@@ -4,7 +4,10 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Models\Workflow;
+use App\Domain\Workflow\Models\WorkflowEdge;
+use App\Domain\Workflow\Models\WorkflowNode;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -43,23 +46,29 @@ class WorkflowDuplicateTool extends Tool
                 userId: auth()->id(),
                 name: $newName,
                 description: $workflow->description,
-                nodes: $workflow->nodes->map(fn ($n) => [
-                    'type' => $n->type->value,
-                    'label' => $n->label,
-                    'agent_id' => $n->agent_id,
-                    'skill_id' => $n->skill_id,
-                    'position_x' => $n->position_x,
-                    'position_y' => $n->position_y,
-                    'config' => $n->config,
-                ])->toArray(),
-                edges: $workflow->edges->map(fn ($e) => [
-                    'source_node_index' => $workflow->nodes->search(fn ($n) => $n->id === $e->source_node_id),
-                    'target_node_index' => $workflow->nodes->search(fn ($n) => $n->id === $e->target_node_id),
-                    'condition' => $e->condition,
-                    'label' => $e->label,
-                    'is_default' => $e->is_default,
-                    'sort_order' => $e->sort_order,
-                ])->toArray(),
+                nodes: $workflow->nodes->map(function (Model $n) {
+                    /** @var WorkflowNode $n */
+                    return [
+                        'type' => $n->type->value,
+                        'label' => $n->label,
+                        'agent_id' => $n->agent_id,
+                        'skill_id' => $n->skill_id,
+                        'position_x' => $n->position_x,
+                        'position_y' => $n->position_y,
+                        'config' => $n->config,
+                    ];
+                })->toArray(),
+                edges: $workflow->edges->map(function (Model $e) use ($workflow) {
+                    /** @var WorkflowEdge $e */
+                    return [
+                        'source_node_index' => $workflow->nodes->search(fn (Model $n) => $n->id === $e->source_node_id),
+                        'target_node_index' => $workflow->nodes->search(fn (Model $n) => $n->id === $e->target_node_id),
+                        'condition' => $e->condition,
+                        'label' => $e->label,
+                        'is_default' => $e->is_default,
+                        'sort_order' => $e->sort_order,
+                    ];
+                })->toArray(),
                 maxLoopIterations: $workflow->max_loop_iterations,
                 teamId: app('mcp.team_id') ?? auth()->user()?->current_team_id,
             );

@@ -39,9 +39,9 @@ class MarketplaceCategoriesListTool extends Tool
 
         return Response::text(json_encode([
             'count' => $categories->count(),
-            'categories' => $categories->map(fn ($c) => [
+            'categories' => $categories->map(fn (MarketplaceListing $c) => [
                 'name' => $c->category,
-                'listing_count' => $c->count,
+                'listing_count' => $c->getAttribute('count'),
             ])->toArray(),
         ]));
     }

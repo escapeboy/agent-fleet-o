@@ -14,17 +14,23 @@ All notable changes to Agent Fleet Community Edition are documented here.
 - **Inbound Signal Connectors UI** -- Manage Slack, HTTP monitor, GitHub events, IMAP OAuth2, and Telegram connectors from a dedicated page
 - **Push Notifications** -- Web push via `laravel-notification-channels/webpush`; configurable per-event preferences
 - **Event-Driven Trigger Rules** -- Define conditions on incoming signals to auto-start projects; Telegram bot routing
+- **Agent Templates** -- 14 pre-built agent templates across 5 categories with gallery page, search, and one-click deploy
+- **Agent Evolution** -- AI-driven self-improvement with execution analysis, proposal generation, and one-click apply
+- **Agent Personality** -- Configurable personality traits (tone, verbosity, creativity, risk tolerance, collaboration style)
+- **Webhook System** -- Outbound webhooks with event filtering, secret signing, retry logic, and management UI
+- **Testing Framework** -- Regression test suites for agent outputs with automated evaluation
+- **Project Kanban Board** -- Visual kanban and graph views for project experiments
+- **MCP Tools** -- 19 additional MCP tools across new domains bringing coverage to 112 tools total; `IsDestructive` / `IsReadOnly` annotations on all tools
+- **OpenAPI annotations** -- Scramble `@tags` and `@response` doc-blocks on all 18 API controllers for richer OpenAPI 3.1 output
+- **Deployment Mode service** -- `DeploymentMode` service gates cloud-only vs self-hosted-only features; cloud landing page and auth flows respect deployment context
 
 ### Changed
-- Agent Templates** -- 14 pre-built agent templates across 5 categories with gallery page, search, and one-click deploy
-- Agent Evolution** -- AI-driven self-improvement with execution analysis, proposal generation, and one-click apply
-- Agent Personality** -- Configurable personality traits (tone, verbosity, creativity, risk tolerance, collaboration style)
-- Webhook System** -- Outbound webhooks with event filtering, secret signing, retry logic, and management UI
-- Testing Framework** -- Regression test suites for agent outputs with automated evaluation
-- Project Kanban Board** -- Visual kanban and graph views for project experiments
 - Expanded default skills catalog (14 agents, updated skills and tools)
 - Updated REST API to 99 endpoints (from 68)
 - Architecture table updated to reflect 16 bounded contexts (from 12)
+- README screenshots now use responsive thumbnail grid layout
+- SMTP outbound connector now resolves team-configured credentials instead of relying solely on platform `.env` keys
+- Email connector is always team-configurable regardless of deployment mode
 
 ### Fixed
 - `TestCase` bootstrap detection now checks if `Cloud\\` namespace is registered in the current autoloader instead of relying on file-path heuristics — fixes standalone base tests being broken when run inside the cloud repo
@@ -33,7 +39,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-02-15
+## 2026-02-15
 
 ### Added
 - **AutoForge-inspired enhancements (v2)** -- Multi-terminal experiment panel, project kanban board, expanded execution modes
@@ -45,7 +51,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-02-12
+## 2026-02-12
 
 ### Added
 - **Tool risk classification** -- Tools categorized by risk level (safe, low, medium, high, critical)
@@ -54,7 +60,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-02-08
+## 2026-02-08
 
 ### Added
 - **MCP Server** -- 65 Model Context Protocol tools across 15 domains (stdio + HTTP/SSE transports)
@@ -68,7 +74,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-28
+## 2026-01-28
 
 ### Added
 - **Connectors** -- WhatsApp, Discord, Teams, Google Chat outbound connectors
@@ -78,7 +84,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-22
+## 2026-01-22
 
 ### Added
 - **Tool Management** -- MCP server (stdio/HTTP) and built-in tool (bash/filesystem/browser) support with per-agent assignment
@@ -91,7 +97,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-18
+## 2026-01-18
 
 ### Added
 - **Per-agent LLM config** -- Provider and model selection per agent with fallback chains
@@ -99,7 +105,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-15
+## 2026-01-15
 
 ### Added
 - **Continuous Projects** -- Long-running agent projects with cron scheduling, budget caps, milestones, and overlap policies
@@ -107,7 +113,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-10
+## 2026-01-10
 
 ### Added
 - **Agent Crews** -- Multi-agent teams with lead/member roles, parallel execution, and result synthesis
@@ -116,7 +122,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-05
+## 2026-01-05
 
 ### Added
 - **REST API v1** -- 59 endpoints with Sanctum auth, cursor pagination, and OpenAPI 3.1 docs at `/docs/api`
@@ -124,7 +130,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-01
+## 2026-01-01
 
 ### Added
 - **Agent Fleet Community Edition** -- Initial release

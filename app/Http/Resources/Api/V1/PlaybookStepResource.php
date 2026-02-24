@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Domain\Experiment\Models\PlaybookStep;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin PlaybookStep */
 class PlaybookStepResource extends JsonResource
 {
     public function toArray(Request $request): array

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Artifact;
 
 use App\Domain\Experiment\Services\ArtifactContentResolver;
 use App\Models\Artifact;
+use App\Models\ArtifactVersion;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -43,6 +44,7 @@ class ArtifactContentTool extends Tool
             return Response::error('Artifact not found.');
         }
 
+        /** @var ArtifactVersion|null $version */
         $version = ! empty($validated['version'])
             ? $artifact->versions()->where('version', $validated['version'])->first()
             : $artifact->versions()->orderByDesc('version')->first();
@@ -51,9 +53,7 @@ class ArtifactContentTool extends Tool
             return Response::error('Artifact has no versions.');
         }
 
-        $content = is_string($version->content)
-            ? $version->content
-            : json_encode($version->content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $content = (string) $version->content;
 
         $truncated = false;
         if (mb_strlen($content) > 100000) {

@@ -3,7 +3,9 @@
 namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Models\SkillVersion;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -43,13 +45,16 @@ class SkillVersionsTool extends Tool
             'skill_id' => $skill->id,
             'skill_name' => $skill->name,
             'count' => $versions->count(),
-            'versions' => $versions->map(fn ($v) => [
-                'id' => $v->id,
-                'version' => $v->version,
-                'changelog' => $v->changelog,
-                'created_by' => $v->created_by,
-                'created_at' => $v->created_at->toIso8601String(),
-            ])->toArray(),
+            'versions' => $versions->map(function (Model $v) {
+                /** @var SkillVersion $v */
+                return [
+                    'id' => $v->id,
+                    'version' => $v->version,
+                    'changelog' => $v->changelog,
+                    'created_by' => $v->created_by,
+                    'created_at' => $v->created_at->toIso8601String(),
+                ];
+            })->toArray(),
         ]));
     }
 }

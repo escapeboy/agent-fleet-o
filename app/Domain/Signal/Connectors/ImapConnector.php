@@ -93,7 +93,7 @@ class ImapConnector implements InputConnectorInterface
             $query = $mailFolder->messages();
             if ($lastUid > 0) {
                 $query->setFetchFlags(false);
-                $query->whereUid('>', $lastUid);
+                $query->whereUid((string) ($lastUid + 1).':*');
             }
             $messages = $query->limit($maxPerPoll)->get();
 

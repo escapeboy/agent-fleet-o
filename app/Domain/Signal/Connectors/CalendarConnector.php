@@ -46,7 +46,7 @@ class CalendarConnector implements InputConnectorInterface
 
             $vcalendar = Reader::read($response->body());
 
-            if (! $vcalendar || $vcalendar->name !== 'VCALENDAR') {
+            if ($vcalendar->name !== 'VCALENDAR') {
                 Log::warning('CalendarConnector: Invalid iCal format', ['url' => $icalUrl]);
 
                 return [];
