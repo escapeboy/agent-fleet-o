@@ -196,7 +196,8 @@
                 </div>
             </div>
 
-            {{-- Local Agents --}}
+            @selfhosted
+            {{-- Local Agents (self-hosted only) --}}
             <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -241,6 +242,7 @@
                     @endif
                 </div>
             </div>
+            @endselfhosted
         </div>
     @endif
 
@@ -255,7 +257,11 @@
             {{-- Outbound Connectors Grid --}}
             <div>
                 <h3 class="text-sm font-medium text-(--color-on-surface-muted)">Outbound Connectors</h3>
+                @selfhosted
                 <p class="mt-1 text-xs text-(--color-on-surface-muted)">Configure credentials for each delivery channel. Settings stored here override .env defaults.</p>
+                @else
+                <p class="mt-1 text-xs text-(--color-on-surface-muted)">Configure your outbound delivery channels below.</p>
+                @endselfhosted
 
                 <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     @foreach($connectorStatuses as $channelKey => $connector)
@@ -296,7 +302,13 @@
                                             @if($connector['configured'])
                                                 <span class="inline-block h-1.5 w-1.5 rounded-full bg-green-500"></span>
                                                 <span class="text-xs text-green-700">
-                                                    {{ $connector['source'] === 'ui' ? 'Configured' : 'Via .env' }}
+                                                    @if($connector['source'] === 'ui')
+                                                        Configured
+                                                    @elsecloud
+                                                        Platform default
+                                                    @else
+                                                        Via .env
+                                                    @endif
                                                 </span>
                                             @else
                                                 <span class="inline-block h-1.5 w-1.5 rounded-full bg-(--color-on-surface-muted)"></span>
@@ -336,7 +348,22 @@
             </div>
         </div>
 
-        {{-- Connector Config Modal --}}
+        @cloud
+        {{-- Email is platform-managed in cloud mode --}}
+        <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-(--color-surface-alt) text-(--color-on-surface-muted)">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-(--color-on-surface)">Email (Platform Managed)</p>
+                    <p class="text-xs text-(--color-on-surface-muted)">Email delivery is handled by the platform. No configuration required.</p>
+                </div>
+            </div>
+        </div>
+        @endcloud
+
+        {{-- Connector Config Modal (self-hosted only for email; other channels use it too) --}}
         @livewire('settings.connector-config-modal')
     @endif
 
@@ -344,9 +371,23 @@
     @if($activeTab === 'security')
         <div class="space-y-6">
             {{-- Organization Security Policy --}}
+            @selfhosted
             <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
                 @livewire('settings.security-policy-panel')
             </div>
+            @else
+            <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+                <div class="flex items-start gap-3">
+                    <svg class="mt-0.5 h-5 w-5 shrink-0 text-(--color-on-surface-muted)" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <div>
+                        <h3 class="text-sm font-medium text-(--color-on-surface)">Shell Command Execution Unavailable</h3>
+                        <p class="mt-1 text-sm text-(--color-on-surface-muted)">Shell command execution is not available in cloud mode. Agents run in an isolated sandbox with no host filesystem access.</p>
+                    </div>
+                </div>
+            </div>
+            @endselfhosted
 
             {{-- Blacklist Management --}}
             <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">

@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Models\GlobalSetting;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class SecurityPolicyPanel extends Component
@@ -40,6 +41,8 @@ class SecurityPolicyPanel extends Component
 
     public function save(): void
     {
+        Gate::authorize('feature.security_policy');
+
         $policy = [
             'blocked_commands' => $this->parseLines($this->blockedCommands),
             'blocked_patterns' => $this->parseLines($this->blockedPatterns),
@@ -60,6 +63,8 @@ class SecurityPolicyPanel extends Component
 
     public function resetPolicy(): void
     {
+        Gate::authorize('feature.security_policy');
+
         GlobalSetting::set('org_security_policy', []);
         $this->loadPolicy();
         $this->editing = false;

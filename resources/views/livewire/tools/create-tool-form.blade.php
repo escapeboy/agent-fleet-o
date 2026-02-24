@@ -38,7 +38,9 @@
                 @elseif($type === 'mcp_http')
                     <p class="text-sm text-gray-500">Connects to an MCP server over HTTP/SSE</p>
                 @elseif($type === 'built_in')
+                    @selfhosted
                     <p class="text-sm text-gray-500">Use host machine capabilities (bash, filesystem) with sandboxing</p>
+                    @endselfhosted
                 @endif
 
                 <x-form-select wire:model="riskLevel" label="Risk Level" hint="Controls tool availability in Watcher mode projects">
@@ -78,6 +80,7 @@
                         hint="One per line, KEY=VALUE format" />
                 @endif
 
+                @selfhosted
                 @if($type === 'built_in')
                     <x-form-select wire:model.live="builtInKind" label="Kind">
                         @foreach($builtInKinds as $kind)
@@ -97,6 +100,7 @@
                         <x-form-checkbox wire:model="readOnly" label="Read-only mode" />
                     @endif
                 @endif
+                @endselfhosted
 
                 {{-- Shared fields --}}
                 @if($type !== 'built_in')

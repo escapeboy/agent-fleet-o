@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tools;
 
+use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Tool\Actions\CreateToolAction;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Enums\ToolRiskLevel;
@@ -181,8 +182,15 @@ class CreateToolForm extends Component
 
     public function render()
     {
+        $types = ToolType::cases();
+
+        // In cloud mode, hide built_in (host machine capabilities are not available)
+        if (app(DeploymentMode::class)->isCloud()) {
+            $types = array_filter($types, fn ($t) => $t !== ToolType::BuiltIn);
+        }
+
         return view('livewire.tools.create-tool-form', [
-            'types' => ToolType::cases(),
+            'types' => $types,
             'builtInKinds' => BuiltInToolKind::cases(),
             'riskLevels' => ToolRiskLevel::cases(),
         ])->layout('layouts.app', ['header' => 'Create Tool']);

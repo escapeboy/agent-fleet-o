@@ -123,4 +123,18 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Deployment Mode
+    |--------------------------------------------------------------------------
+    |
+    | Controls which features are available based on deployment context.
+    | Set to 'cloud' for SaaS/hosted deployments, 'self-hosted' for on-premise.
+    |
+    | Supported: "cloud", "self-hosted"
+    |
+    */
+
+    'deployment_mode' => env('DEPLOYMENT_MODE', 'self-hosted'),
+
 ];

@@ -17,6 +17,7 @@ use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
 use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
+use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
@@ -26,6 +27,7 @@ use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -39,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode());
     }
 
     /**
@@ -51,6 +53,18 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-team', fn ($user) => true);
         Gate::define('edit-content', fn ($user) => true);
         Gate::define('delete-team', fn ($user) => true);
+
+        // Deployment mode feature gates
+        $mode = app(DeploymentMode::class);
+        Gate::define('feature.smtp_connector', fn ($user) => $mode->isSelfHosted());
+        Gate::define('feature.local_agents', fn ($user) => $mode->isSelfHosted());
+        Gate::define('feature.mcp_host_scan', fn ($user) => $mode->isSelfHosted());
+        Gate::define('feature.security_policy', fn ($user) => $mode->isSelfHosted());
+        Gate::define('feature.built_in_tools', fn ($user) => $mode->isSelfHosted());
+
+        // Blade directives for deployment mode
+        Blade::if('cloud', fn () => app(DeploymentMode::class)->isCloud());
+        Blade::if('selfhosted', fn () => app(DeploymentMode::class)->isSelfHosted());
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
