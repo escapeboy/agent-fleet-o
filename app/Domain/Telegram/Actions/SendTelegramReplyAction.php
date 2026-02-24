@@ -29,7 +29,7 @@ class SendTelegramReplyAction
                     'chat_id' => $chatId,
                     'text' => $chunk,
                     'parse_mode' => $parseMode,
-                ]
+                ],
             );
 
             if (! $response->successful()) {
@@ -46,7 +46,7 @@ class SendTelegramReplyAction
                         [
                             'chat_id' => $chatId,
                             'text' => strip_tags($chunk),
-                        ]
+                        ],
                     );
                 }
 

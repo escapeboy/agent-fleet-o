@@ -66,7 +66,7 @@ class NotificationPreferencesPage extends Component
         foreach ($available as $type => $channels) {
             $toSave[$type] = array_values(array_filter(
                 $channels,
-                fn ($ch) => (bool) ($this->preferences[$type][$ch] ?? false)
+                fn ($ch) => (bool) ($this->preferences[$type][$ch] ?? false),
             ));
         }
 
@@ -79,21 +79,21 @@ class NotificationPreferencesPage extends Component
         return view('livewire.shared.notification-preferences-page', [
             'availableChannels' => NotificationPreferencesService::availableChannels(),
             'typeLabels' => [
-                'experiment.stuck'          => 'Experiment stuck / recovery failed',
-                'experiment.completed'      => 'Experiment completed',
-                'project.run.failed'        => 'Project run failed',
-                'project.run.completed'     => 'Project run completed',
-                'project.budget.warning'    => 'Project budget warning',
+                'experiment.stuck' => 'Experiment stuck / recovery failed',
+                'experiment.completed' => 'Experiment completed',
+                'project.run.failed' => 'Project run failed',
+                'project.run.completed' => 'Project run completed',
+                'project.budget.warning' => 'Project budget warning',
                 'project.milestone.reached' => 'Project milestone reached',
-                'agent.risk.high'           => 'Agent high-risk auto-disabled',
-                'approval.requested'        => 'Approval requested',
-                'usage.alert'               => 'Usage limit alert',
-                'weekly.digest'             => 'Weekly digest email',
+                'agent.risk.high' => 'Agent high-risk auto-disabled',
+                'approval.requested' => 'Approval requested',
+                'usage.alert' => 'Usage limit alert',
+                'weekly.digest' => 'Weekly digest email',
             ],
             'channelLabels' => [
                 'in_app' => 'In-App',
-                'mail'   => 'Email',
-                'push'   => 'Push',
+                'mail' => 'Email',
+                'push' => 'Push',
             ],
         ])->layout('layouts.app', ['header' => 'Notification Preferences']);
     }

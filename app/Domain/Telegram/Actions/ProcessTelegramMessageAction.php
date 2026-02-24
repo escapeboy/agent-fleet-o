@@ -4,6 +4,8 @@ namespace App\Domain\Telegram\Actions;
 
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
 use App\Domain\Assistant\Models\AssistantConversation;
+use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Domain\Telegram\Models\TelegramChatBinding;
 use App\Models\User;
@@ -41,7 +43,7 @@ class ProcessTelegramMessageAction
         }
 
         // Get or create conversation
-        /** @var \App\Domain\Assistant\Models\AssistantConversation|null $conversation */
+        /** @var AssistantConversation|null $conversation */
         $conversation = $binding->conversation;
         if (! $conversation) {
             $conversation = $this->createConversation($bot, $username);
@@ -50,7 +52,7 @@ class ProcessTelegramMessageAction
         }
 
         // Resolve user: prefer bound user, fall back to team owner
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = $binding->user ?? $this->resolveTeamUser($bot->team_id);
         if (! $user) {
             Log::warning('ProcessTelegramMessageAction: no user found', ['team_id' => $bot->team_id]);
@@ -101,7 +103,7 @@ class ProcessTelegramMessageAction
         }
 
         if ($command === '/status') {
-            $runs = \App\Domain\Project\Models\ProjectRun::withoutGlobalScopes()
+            $runs = ProjectRun::withoutGlobalScopes()
                 ->where('project_runs.id', function ($query) use ($bot) {
                     $query->from('project_runs')
                         ->whereExists(function ($q) use ($bot) {
@@ -122,7 +124,7 @@ class ProcessTelegramMessageAction
 
             $lines = ["<b>Last 3 project runs:</b>\n"];
             foreach ($runs as $run) {
-                /** @var \App\Domain\Project\Models\ProjectRun $run */
+                /** @var ProjectRun $run */
                 $status = $run->status instanceof \BackedEnum ? $run->status->value : (string) $run->status;
                 $lines[] = "• <b>{$run->project?->title}</b> — {$status} ({$run->created_at->diffForHumans()})";
             }
@@ -157,7 +159,7 @@ class ProcessTelegramMessageAction
     private function resolveTeamUser(string $teamId): ?User
     {
         /** @var User|null $owner */
-        $owner = \App\Domain\Shared\Models\Team::find($teamId)?->owner;
+        $owner = Team::find($teamId)?->owner;
 
         return $owner;
     }

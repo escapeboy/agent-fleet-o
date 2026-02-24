@@ -31,7 +31,7 @@ class EvaluateTriggerRulesAction
             ->get();
 
         return $candidates->filter(
-            fn (TriggerRule $rule) => $this->conditionEvaluator->evaluate($rule->conditions, $signal)
+            fn (TriggerRule $rule) => $this->conditionEvaluator->evaluate($rule->conditions, $signal),
         )->values();
     }
 }

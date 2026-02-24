@@ -19,7 +19,7 @@ class RegisterTelegramBotAction
     ): TelegramBot {
         // Validate token by calling getMe
         $response = Http::timeout(10)->get(
-            "https://api.telegram.org/bot{$botToken}/getMe"
+            "https://api.telegram.org/bot{$botToken}/getMe",
         );
 
         if (! $response->successful() || ! $response->json('ok')) {
@@ -39,7 +39,7 @@ class RegisterTelegramBotAction
                 'default_project_id' => $defaultProjectId,
                 'status' => 'active',
                 'last_error' => null,
-            ]
+            ],
         );
     }
 }

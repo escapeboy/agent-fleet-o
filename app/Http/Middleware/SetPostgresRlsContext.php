@@ -60,7 +60,7 @@ class SetPostgresRlsContext
     {
         if (self::$rlsAvailable === null) {
             self::$rlsAvailable = (bool) DB::selectOne(
-                "SELECT 1 FROM pg_roles WHERE rolname = 'agent_fleet_rls'"
+                "SELECT 1 FROM pg_roles WHERE rolname = 'agent_fleet_rls'",
             );
         }
 

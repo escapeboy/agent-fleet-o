@@ -16,13 +16,18 @@ class SignalConnectorsPage extends Component
 {
     // HTTP Monitor form state
     public bool $showAddMonitor = false;
+
     public string $newMonitorUrl = '';
+
     public string $newMonitorType = 'availability';
+
     public string $newMonitorName = '';
 
     // RSS feed form state
     public bool $showAddRss = false;
+
     public string $newRssUrl = '';
+
     public string $newRssName = '';
 
     /**
@@ -30,15 +35,15 @@ class SignalConnectorsPage extends Component
      * Declared as private so Livewire does not try to hydrate/dehydrate it.
      */
     private array $webhookConnectors = [
-        'github'    => ['label' => 'GitHub',    'category' => 'Code & Issues',  'env_key' => 'services.github.webhook_secret',  'path' => '/api/signals/github'],
-        'slack'     => ['label' => 'Slack',     'category' => 'Chat',           'env_key' => 'services.slack.signing_secret',   'path' => '/api/signals/slack'],
-        'jira'      => ['label' => 'Jira',      'category' => 'Issues',         'env_key' => 'services.jira.webhook_secret',    'path' => '/api/signals/jira'],
-        'linear'    => ['label' => 'Linear',    'category' => 'Issues',         'env_key' => 'services.linear.webhook_secret',  'path' => '/api/signals/linear'],
-        'discord'   => ['label' => 'Discord',   'category' => 'Chat',           'env_key' => 'services.discord.webhook_secret', 'path' => '/api/signals/discord'],
-        'sentry'    => ['label' => 'Sentry',    'category' => 'Errors',         'env_key' => 'services.sentry.webhook_secret',  'path' => '/api/signals/sentry'],
+        'github' => ['label' => 'GitHub',    'category' => 'Code & Issues',  'env_key' => 'services.github.webhook_secret',  'path' => '/api/signals/github'],
+        'slack' => ['label' => 'Slack',     'category' => 'Chat',           'env_key' => 'services.slack.signing_secret',   'path' => '/api/signals/slack'],
+        'jira' => ['label' => 'Jira',      'category' => 'Issues',         'env_key' => 'services.jira.webhook_secret',    'path' => '/api/signals/jira'],
+        'linear' => ['label' => 'Linear',    'category' => 'Issues',         'env_key' => 'services.linear.webhook_secret',  'path' => '/api/signals/linear'],
+        'discord' => ['label' => 'Discord',   'category' => 'Chat',           'env_key' => 'services.discord.webhook_secret', 'path' => '/api/signals/discord'],
+        'sentry' => ['label' => 'Sentry',    'category' => 'Errors',         'env_key' => 'services.sentry.webhook_secret',  'path' => '/api/signals/sentry'],
         'pagerduty' => ['label' => 'PagerDuty', 'category' => 'Incidents',      'env_key' => 'services.pagerduty.auth_token',   'path' => '/api/signals/pagerduty'],
-        'datadog'   => ['label' => 'Datadog',   'category' => 'Monitoring',     'env_key' => null,                              'path' => '/api/signals/datadog/{secret}'],
-        'whatsapp'  => ['label' => 'WhatsApp',  'category' => 'Chat',           'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
+        'datadog' => ['label' => 'Datadog',   'category' => 'Monitoring',     'env_key' => null,                              'path' => '/api/signals/datadog/{secret}'],
+        'whatsapp' => ['label' => 'WhatsApp',  'category' => 'Chat',           'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
     ];
 
     public function mount(): void
@@ -71,20 +76,20 @@ class SignalConnectorsPage extends Component
         ]);
 
         Connector::create([
-            'type'   => 'input',
+            'type' => 'input',
             'driver' => 'http_monitor',
-            'name'   => $this->newMonitorName ?: (parse_url($this->newMonitorUrl, PHP_URL_HOST) ?? $this->newMonitorUrl),
+            'name' => $this->newMonitorName ?: (parse_url($this->newMonitorUrl, PHP_URL_HOST) ?? $this->newMonitorUrl),
             'status' => 'active',
             'config' => [
-                'url'                  => $this->newMonitorUrl,
-                'monitor_type'         => $this->newMonitorType,
-                'expected_status'      => [200],
-                'ssl_check'            => true,
-                'timeout'              => 15,
-                'last_content_hash'    => null,
-                'last_etag'            => null,
-                'last_modified'        => null,
-                'last_status'          => null,
+                'url' => $this->newMonitorUrl,
+                'monitor_type' => $this->newMonitorType,
+                'expected_status' => [200],
+                'ssl_check' => true,
+                'timeout' => 15,
+                'last_content_hash' => null,
+                'last_etag' => null,
+                'last_modified' => null,
+                'last_status' => null,
                 'consecutive_failures' => 0,
             ],
         ]);
@@ -108,9 +113,9 @@ class SignalConnectorsPage extends Component
         $this->validate(['newRssUrl' => 'required|url']);
 
         Connector::create([
-            'type'   => 'input',
+            'type' => 'input',
             'driver' => 'rss',
-            'name'   => $this->newRssName ?: (parse_url($this->newRssUrl, PHP_URL_HOST) ?? $this->newRssUrl),
+            'name' => $this->newRssName ?: (parse_url($this->newRssUrl, PHP_URL_HOST) ?? $this->newRssUrl),
             'status' => 'active',
             'config' => ['url' => $this->newRssUrl, 'tags' => []],
         ]);
@@ -139,30 +144,30 @@ class SignalConnectorsPage extends Component
         $cards = [];
         foreach ($this->webhookConnectors as $driver => $def) {
             $secretConfigured = $def['env_key'] ? (bool) config($def['env_key']) : false;
-            $stats            = $signalStats->get($driver);
-            $lastReceived     = $stats?->last_received_at ? Carbon::parse($stats->last_received_at) : null;
-            $totalSignals     = (int) ($stats?->total ?? 0);
+            $stats = $signalStats->get($driver);
+            $lastReceived = $stats?->last_received_at ? Carbon::parse($stats->last_received_at) : null;
+            $totalSignals = (int) ($stats?->total ?? 0);
 
             // Datadog uses a URL-embedded secret stored in a Connector record instead of an env var.
             if ($driver === 'datadog') {
-                $ddConnector      = Connector::where('driver', 'datadog')->where('type', 'input')->first();
+                $ddConnector = Connector::where('driver', 'datadog')->where('type', 'input')->first();
                 $secretConfigured = $ddConnector !== null;
             }
 
             $status = match (true) {
-                ! $secretConfigured && $totalSignals > 0                     => 'unsecured',
+                ! $secretConfigured && $totalSignals > 0 => 'unsecured',
                 $secretConfigured && $lastReceived?->gt(now()->subHours(24)) => 'active',
-                $secretConfigured && $totalSignals > 0                       => 'stale',
-                $secretConfigured                                            => 'configured',
-                default                                                      => 'not_configured',
+                $secretConfigured && $totalSignals > 0 => 'stale',
+                $secretConfigured => 'configured',
+                default => 'not_configured',
             };
 
             $cards[$driver] = [
                 ...$def,
-                'driver'           => $driver,
-                'status'           => $status,
+                'driver' => $driver,
+                'status' => $status,
                 'last_received_at' => $lastReceived,
-                'total_signals'    => $totalSignals,
+                'total_signals' => $totalSignals,
                 'secret_configured' => $secretConfigured,
             ];
         }
@@ -183,7 +188,7 @@ class SignalConnectorsPage extends Component
             ->first();
 
         return view('livewire.signals.signal-connectors-page', compact(
-            'cards', 'httpMonitors', 'rssFeeds', 'imapConnector'
+            'cards', 'httpMonitors', 'rssFeeds', 'imapConnector',
         ))->title('Signal Sources');
     }
 }

@@ -13,16 +13,16 @@ class NotificationPreferencesService
     public static function defaults(): array
     {
         return [
-            'experiment.stuck'           => ['in_app', 'mail', 'push'],
-            'experiment.completed'       => ['in_app'],
-            'project.run.failed'         => ['in_app', 'mail', 'push'],
-            'project.run.completed'      => ['in_app'],
-            'project.budget.warning'     => ['in_app', 'mail'],
-            'project.milestone.reached'  => ['in_app'],
-            'agent.risk.high'            => ['in_app', 'mail', 'push'],
-            'approval.requested'         => ['in_app', 'mail', 'push'],
-            'usage.alert'                => ['in_app', 'mail'],
-            'weekly.digest'              => ['mail'],
+            'experiment.stuck' => ['in_app', 'mail', 'push'],
+            'experiment.completed' => ['in_app'],
+            'project.run.failed' => ['in_app', 'mail', 'push'],
+            'project.run.completed' => ['in_app'],
+            'project.budget.warning' => ['in_app', 'mail'],
+            'project.milestone.reached' => ['in_app'],
+            'agent.risk.high' => ['in_app', 'mail', 'push'],
+            'approval.requested' => ['in_app', 'mail', 'push'],
+            'usage.alert' => ['in_app', 'mail'],
+            'weekly.digest' => ['mail'],
         ];
     }
 
@@ -32,16 +32,16 @@ class NotificationPreferencesService
     public static function availableChannels(): array
     {
         return [
-            'experiment.stuck'           => ['in_app', 'mail', 'push'],
-            'experiment.completed'       => ['in_app', 'mail', 'push'],
-            'project.run.failed'         => ['in_app', 'mail', 'push'],
-            'project.run.completed'      => ['in_app', 'mail', 'push'],
-            'project.budget.warning'     => ['in_app', 'mail', 'push'],
-            'project.milestone.reached'  => ['in_app', 'mail'],
-            'agent.risk.high'            => ['in_app', 'mail', 'push'],
-            'approval.requested'         => ['in_app', 'mail', 'push'],
-            'usage.alert'                => ['in_app', 'mail'],
-            'weekly.digest'              => ['mail'],
+            'experiment.stuck' => ['in_app', 'mail', 'push'],
+            'experiment.completed' => ['in_app', 'mail', 'push'],
+            'project.run.failed' => ['in_app', 'mail', 'push'],
+            'project.run.completed' => ['in_app', 'mail', 'push'],
+            'project.budget.warning' => ['in_app', 'mail', 'push'],
+            'project.milestone.reached' => ['in_app', 'mail'],
+            'agent.risk.high' => ['in_app', 'mail', 'push'],
+            'approval.requested' => ['in_app', 'mail', 'push'],
+            'usage.alert' => ['in_app', 'mail'],
+            'weekly.digest' => ['mail'],
         ];
     }
 
@@ -60,7 +60,7 @@ class NotificationPreferencesService
                 continue;
             }
             $sanitized[$type] = array_values(
-                array_intersect((array) $channels, $allowed[$type])
+                array_intersect((array) $channels, $allowed[$type]),
             );
         }
 

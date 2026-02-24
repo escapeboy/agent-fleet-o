@@ -42,14 +42,14 @@ class InboundConnectorManageTool extends Tool
     {
         try {
             return match ($request->get('action')) {
-                'list_connectors'        => $this->listConnectors(),
+                'list_connectors' => $this->listConnectors(),
                 'get_setup_instructions' => $this->getSetupInstructions($request->get('driver')),
-                'connector_status'       => $this->connectorStatus($request->get('driver')),
-                'add_monitor'            => $this->addMonitor($request),
-                'remove_monitor'         => $this->removeMonitor($request->get('connector_id')),
-                'add_rss_feed'           => $this->addRssFeed($request),
-                'remove_rss_feed'        => $this->removeRssFeed($request->get('connector_id')),
-                default                  => Response::error('Unknown action'),
+                'connector_status' => $this->connectorStatus($request->get('driver')),
+                'add_monitor' => $this->addMonitor($request),
+                'remove_monitor' => $this->removeMonitor($request->get('connector_id')),
+                'add_rss_feed' => $this->addRssFeed($request),
+                'remove_rss_feed' => $this->removeRssFeed($request->get('connector_id')),
+                default => Response::error('Unknown action'),
             };
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());
@@ -70,28 +70,28 @@ class InboundConnectorManageTool extends Tool
             ->keyBy('source_type');
 
         $webhooks = array_map(fn ($d) => [
-            'driver'            => $d,
-            'type'              => 'webhook',
-            'webhook_url'       => url('/api/signals/' . ($d === 'datadog' ? 'datadog/{secret}' : $d)),
-            'signals_last_30d'  => (int) ($stats->get($d)?->total ?? 0),
-            'last_received_at'  => $stats->get($d)?->last_received_at,
+            'driver' => $d,
+            'type' => 'webhook',
+            'webhook_url' => url('/api/signals/'.($d === 'datadog' ? 'datadog/{secret}' : $d)),
+            'signals_last_30d' => (int) ($stats->get($d)?->total ?? 0),
+            'last_received_at' => $stats->get($d)?->last_received_at,
         ], $webhookDrivers);
 
         $pollingConnectors = Connector::where('type', 'input')
             ->whereIn('driver', ['rss', 'imap', 'http_monitor'])
             ->get()
             ->map(fn ($c) => [
-                'id'                 => $c->id,
-                'driver'             => $c->driver,
-                'name'               => $c->name,
-                'status'             => $c->status,
-                'last_success_at'    => $c->last_success_at?->toIso8601String(),
+                'id' => $c->id,
+                'driver' => $c->driver,
+                'name' => $c->name,
+                'status' => $c->status,
+                'last_success_at' => $c->last_success_at?->toIso8601String(),
                 'last_error_message' => $c->last_error_message,
             ]);
 
         return Response::text(json_encode([
-            'webhook_connectors'  => array_values($webhooks),
-            'polling_connectors'  => $pollingConnectors->values(),
+            'webhook_connectors' => array_values($webhooks),
+            'polling_connectors' => $pollingConnectors->values(),
         ]));
     }
 
@@ -105,12 +105,12 @@ class InboundConnectorManageTool extends Tool
         }
 
         $envVars = [
-            'github'    => 'GITHUB_WEBHOOK_SECRET',
-            'slack'     => 'SLACK_SIGNING_SECRET',
-            'jira'      => 'JIRA_WEBHOOK_SECRET',
-            'linear'    => 'LINEAR_WEBHOOK_SECRET',
-            'discord'   => 'DISCORD_WEBHOOK_SECRET',
-            'sentry'    => 'SENTRY_WEBHOOK_SECRET',
+            'github' => 'GITHUB_WEBHOOK_SECRET',
+            'slack' => 'SLACK_SIGNING_SECRET',
+            'jira' => 'JIRA_WEBHOOK_SECRET',
+            'linear' => 'LINEAR_WEBHOOK_SECRET',
+            'discord' => 'DISCORD_WEBHOOK_SECRET',
+            'sentry' => 'SENTRY_WEBHOOK_SECRET',
             'pagerduty' => 'PAGERDUTY_AUTH_TOKEN',
         ];
 
@@ -120,9 +120,9 @@ class InboundConnectorManageTool extends Tool
         }
 
         return Response::text(json_encode([
-            'driver'      => $driver,
-            'webhook_url' => url('/api/signals/' . $driver),
-            'env_var'     => $envVars[$driver] ?? null,
+            'driver' => $driver,
+            'webhook_url' => url('/api/signals/'.$driver),
+            'env_var' => $envVars[$driver] ?? null,
         ]));
     }
 
@@ -144,10 +144,10 @@ class InboundConnectorManageTool extends Tool
             ->first();
 
         return Response::text(json_encode([
-            'driver'            => $driver,
+            'driver' => $driver,
             'signals_last_hour' => $recentCount,
-            'last_received_at'  => $last?->received_at?->toIso8601String(),
-            'total_all_time'    => Signal::where('source_type', $driver)->count(),
+            'last_received_at' => $last?->received_at?->toIso8601String(),
+            'total_all_time' => Signal::where('source_type', $driver)->count(),
         ]));
     }
 
@@ -165,17 +165,17 @@ class InboundConnectorManageTool extends Tool
         }
 
         $connector = Connector::create([
-            'type'   => 'input',
+            'type' => 'input',
             'driver' => 'http_monitor',
-            'name'   => $request->get('name') ?? (parse_url($url, PHP_URL_HOST) ?? $url),
+            'name' => $request->get('name') ?? (parse_url($url, PHP_URL_HOST) ?? $url),
             'status' => 'active',
             'config' => [
-                'url'                  => $url,
-                'monitor_type'         => $request->get('monitor_type', 'availability'),
-                'expected_status'      => [200],
-                'ssl_check'            => true,
-                'timeout'              => 15,
-                'last_status'          => null,
+                'url' => $url,
+                'monitor_type' => $request->get('monitor_type', 'availability'),
+                'expected_status' => [200],
+                'ssl_check' => true,
+                'timeout' => 15,
+                'last_status' => null,
                 'consecutive_failures' => 0,
             ],
         ]);
@@ -214,17 +214,17 @@ class InboundConnectorManageTool extends Tool
         }
 
         $connector = Connector::create([
-            'type'   => 'input',
+            'type' => 'input',
             'driver' => 'rss',
-            'name'   => $request->get('name') ?? (parse_url($url, PHP_URL_HOST) ?? $url),
+            'name' => $request->get('name') ?? (parse_url($url, PHP_URL_HOST) ?? $url),
             'status' => 'active',
             'config' => ['url' => $url, 'tags' => []],
         ]);
 
         return Response::text(json_encode([
-            'success'      => true,
+            'success' => true,
             'connector_id' => $connector->id,
-            'message'      => 'RSS feed added. Polls every 15 minutes.',
+            'message' => 'RSS feed added. Polls every 15 minutes.',
         ]));
     }
 

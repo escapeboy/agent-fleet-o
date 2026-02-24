@@ -71,7 +71,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
 
             if (empty($creds['host'])) {
                 throw new \RuntimeException(
-                    'No SMTP connector configured for this team. Configure your mail server credentials in Settings → Connectors.'
+                    'No SMTP connector configured for this team. Configure your mail server credentials in Settings → Connectors.',
                 );
             }
 

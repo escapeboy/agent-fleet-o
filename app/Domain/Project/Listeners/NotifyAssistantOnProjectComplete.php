@@ -2,9 +2,12 @@
 
 namespace App\Domain\Project\Listeners;
 
+use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
+use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Services\NotificationService;
 use App\Domain\Telegram\Actions\SendTelegramReplyAction;
 use App\Domain\Telegram\Models\TelegramBot;
@@ -34,13 +37,13 @@ class NotifyAssistantOnProjectComplete
             return;
         }
 
-        /** @var \App\Domain\Assistant\Models\AssistantConversation|null $conversation */
+        /** @var AssistantConversation|null $conversation */
         $conversation = $run->triggeredByConversation;
         if (! $conversation) {
             return;
         }
 
-        /** @var \App\Domain\Project\Models\Project|null $project */
+        /** @var Project|null $project */
         $project = $run->project;
         $teamId = $project?->team_id ?? $conversation->team_id;
         $isCompleted = $event->toState === ExperimentStatus::Completed;
@@ -131,7 +134,7 @@ class NotifyAssistantOnProjectComplete
             return null;
         }
 
-        return \App\Domain\Shared\Models\Team::find($teamId)?->owner?->id;
+        return Team::find($teamId)?->owner?->id;
     }
 
     private function projectUrl(ProjectRun $run): string

@@ -118,7 +118,7 @@ class RefreshOAuthTokenAction
         $data = $response->json();
 
         if (empty($data['access_token'])) {
-            throw new \RuntimeException("OAuth2 token refresh response missing access_token.");
+            throw new \RuntimeException('OAuth2 token refresh response missing access_token.');
         }
 
         return $data;

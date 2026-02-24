@@ -104,14 +104,14 @@ class TriggerConditionEvaluator
     {
         foreach ($constraint as $operator => $expected) {
             $result = match ($operator) {
-                'eq'          => $value == $expected,
-                'neq'         => $value != $expected,
-                'gte'         => $value !== null && $value >= $expected,
-                'lte'         => $value !== null && $value <= $expected,
-                'contains'    => is_string($value) && str_contains(strtolower($value), strtolower((string) $expected)),
-                'not_contains'=> ! is_string($value) || ! str_contains(strtolower($value), strtolower((string) $expected)),
-                'exists'      => $expected ? $value !== null : $value === null,
-                default       => false, // Unknown operator — fail closed
+                'eq' => $value == $expected,
+                'neq' => $value != $expected,
+                'gte' => $value !== null && $value >= $expected,
+                'lte' => $value !== null && $value <= $expected,
+                'contains' => is_string($value) && str_contains(strtolower($value), strtolower((string) $expected)),
+                'not_contains' => ! is_string($value) || ! str_contains(strtolower($value), strtolower((string) $expected)),
+                'exists' => $expected ? $value !== null : $value === null,
+                default => false, // Unknown operator — fail closed
             };
 
             if (! $result) {

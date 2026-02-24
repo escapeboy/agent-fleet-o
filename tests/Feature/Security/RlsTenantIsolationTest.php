@@ -5,8 +5,10 @@ namespace Tests\Feature\Security;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -143,7 +145,7 @@ class RlsTenantIsolationTest extends TestCase
     public function rls_prevents_insert_for_wrong_team(): void
     {
         $this->withRlsContext($this->teamA->id, function (): void {
-            $this->expectException(\Illuminate\Database\QueryException::class);
+            $this->expectException(QueryException::class);
 
             // Attempt to insert a row with Team B's team_id while context is Team A
             Agent::withoutGlobalScopes()->create([
@@ -178,7 +180,7 @@ class RlsTenantIsolationTest extends TestCase
     {
         // semantic_cache_entries has a PERMISSIVE allow_all policy
         $tableExists = DB::selectOne(
-            "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='semantic_cache_entries'"
+            "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='semantic_cache_entries'",
         );
 
         if (! $tableExists) {
@@ -188,7 +190,7 @@ class RlsTenantIsolationTest extends TestCase
         $this->withRlsContext($this->teamA->id, function (): void {
             // Insert a row — should succeed without team_id (cross-tenant cache)
             DB::table('semantic_cache_entries')->insert([
-                'id' => \Illuminate\Support\Str::uuid7()->toString(),
+                'id' => Str::uuid7()->toString(),
                 'prompt_hash' => hash('sha256', 'test-prompt'),
                 'prompt_text' => 'test-prompt',
                 'response_text' => 'test-response',

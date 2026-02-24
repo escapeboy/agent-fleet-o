@@ -3,6 +3,7 @@
 namespace App\Domain\Trigger\Models;
 
 use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Trigger\Enums\TriggerRuleStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -48,7 +49,7 @@ class TriggerRule extends Model
 
     public function projectRuns(): HasMany
     {
-        return $this->hasMany(\App\Domain\Project\Models\ProjectRun::class);
+        return $this->hasMany(ProjectRun::class);
     }
 
     public function matchesSourceType(string $sourceType): bool

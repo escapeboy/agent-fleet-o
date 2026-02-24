@@ -4,9 +4,9 @@ namespace App\Console\Commands;
 
 use App\Domain\Signal\Connectors\ApiPollingConnector;
 use App\Domain\Signal\Connectors\CalendarConnector;
-use App\Domain\Signal\Connectors\HttpMonitorConnector;
 use App\Domain\Signal\Connectors\DatadogAlertConnector;
 use App\Domain\Signal\Connectors\GitHubIssuesConnector;
+use App\Domain\Signal\Connectors\HttpMonitorConnector;
 use App\Domain\Signal\Connectors\ImapConnector;
 use App\Domain\Signal\Connectors\JiraConnector;
 use App\Domain\Signal\Connectors\LinearConnector;

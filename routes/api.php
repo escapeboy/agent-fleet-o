@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\DatadogAlertWebhookController;
-use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\DiscordWebhookController;
 use App\Http\Controllers\GitHubIssueWebhookController;
 use App\Http\Controllers\GitHubWebhookController;
@@ -11,6 +10,7 @@ use App\Http\Controllers\PagerDutyWebhookController;
 use App\Http\Controllers\SentryAlertWebhookController;
 use App\Http\Controllers\SignalWebhookController;
 use App\Http\Controllers\SlackWebhookController;
+use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;

@@ -52,7 +52,7 @@ class TelegramSignalConnector implements InputConnectorInterface
                     'limit' => self::MAX_UPDATES_PER_POLL,
                     'timeout' => 0,
                     'allowed_updates' => ['message', 'callback_query'],
-                ]
+                ],
             );
 
             if (! $response->successful()) {

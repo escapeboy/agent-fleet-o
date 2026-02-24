@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Shared;
 use App\Domain\Shared\Models\UserNotification;
 use App\Domain\Shared\Services\NotificationPreferencesService;
 use App\Domain\Shared\Services\NotificationService;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -63,11 +64,11 @@ class NotificationTool extends Tool
         $service = app(NotificationService::class);
 
         return match ($validated['action']) {
-            'list_unread'        => $this->listUnread($user->id, $team->id),
-            'send'               => $this->send($validated, $team->id, $user->id, $service),
-            'mark_read'          => $this->markRead($validated['notification_id'] ?? null, $user->id),
-            'mark_all_read'      => $this->markAllRead($user->id, $team->id, $service),
-            'get_preferences'    => $this->getPreferences($user),
+            'list_unread' => $this->listUnread($user->id, $team->id),
+            'send' => $this->send($validated, $team->id, $user->id, $service),
+            'mark_read' => $this->markRead($validated['notification_id'] ?? null, $user->id),
+            'mark_all_read' => $this->markAllRead($user->id, $team->id, $service),
+            'get_preferences' => $this->getPreferences($user),
             'update_preferences' => $this->updatePreferences($validated, $user),
         };
     }
@@ -153,7 +154,7 @@ class NotificationTool extends Tool
         return Response::text(json_encode(['success' => true]));
     }
 
-    private function getPreferences(\App\Models\User $user): Response
+    private function getPreferences(User $user): Response
     {
         $prefs = app(NotificationPreferencesService::class)->getForUser($user);
 
@@ -163,7 +164,7 @@ class NotificationTool extends Tool
         ]));
     }
 
-    private function updatePreferences(array $data, \App\Models\User $user): Response
+    private function updatePreferences(array $data, User $user): Response
     {
         if (empty($data['preferences'])) {
             return Response::error('preferences object is required for update_preferences action.');

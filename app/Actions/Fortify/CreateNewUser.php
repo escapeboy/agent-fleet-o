@@ -46,7 +46,7 @@ class CreateNewUser implements CreatesNewUsers
 
             if (! $team) {
                 throw new \RuntimeException(
-                    'Default team not found. Run `php artisan app:install` before registering users.'
+                    'Default team not found. Run `php artisan app:install` before registering users.',
                 );
             }
 

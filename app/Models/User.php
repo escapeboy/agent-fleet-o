@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\NotificationPreferencesService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +19,7 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasUuids, HasPushSubscriptions, Notifiable;
+    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, Notifiable;
 
     protected $fillable = [
         'name',
@@ -49,7 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function getPreferences(): array
     {
-        $defaults = \App\Domain\Shared\Services\NotificationPreferencesService::defaults();
+        $defaults = NotificationPreferencesService::defaults();
         $saved = $this->notification_preferences ?? [];
 
         return array_merge($defaults, $saved);

@@ -2,9 +2,11 @@
 
 namespace App\Domain\Project\Models;
 
+use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Enums\ProjectRunStatus;
+use App\Domain\Signal\Models\Signal;
 use App\Domain\Trigger\Models\TriggerRule;
 use App\Models\Artifact;
 use Database\Factories\Domain\Project\ProjectRunFactory;
@@ -75,12 +77,12 @@ class ProjectRun extends Model
 
     public function signal(): BelongsTo
     {
-        return $this->belongsTo(\App\Domain\Signal\Models\Signal::class);
+        return $this->belongsTo(Signal::class);
     }
 
     public function triggeredByConversation(): BelongsTo
     {
-        return $this->belongsTo(\App\Domain\Assistant\Models\AssistantConversation::class, 'triggered_by_conversation_id');
+        return $this->belongsTo(AssistantConversation::class, 'triggered_by_conversation_id');
     }
 
     public function artifacts(): HasMany
