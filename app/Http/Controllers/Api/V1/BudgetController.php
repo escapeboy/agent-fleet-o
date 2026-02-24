@@ -7,8 +7,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Budget
+ */
 class BudgetController extends Controller
 {
+    /**
+     * @response 200 {"data": {"balance": 50000, "recent_entries": [{"id": "uuid", "type": "debit", "amount": -150, "balance_after": 49850, "description": "LLM call", "experiment_id": "uuid", "created_at": "2026-02-24T10:00:00.000000Z"}]}}
+     */
     public function index(Request $request): JsonResponse
     {
         $teamId = $request->user()->current_team_id;

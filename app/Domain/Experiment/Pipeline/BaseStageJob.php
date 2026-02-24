@@ -15,6 +15,7 @@ use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\EnforceConcurrencyLimit;
 use App\Jobs\Middleware\EnforceExecutionDepth;
 use App\Jobs\Middleware\EnforceExecutionTtl;
+use App\Jobs\Middleware\EnforceTenantContext;
 use App\Jobs\Middleware\TenantRateLimit;
 use App\Models\GlobalSetting;
 use Illuminate\Bus\Queueable;
@@ -49,6 +50,7 @@ abstract class BaseStageJob implements ShouldQueue
     public function middleware(): array
     {
         return [
+            new EnforceTenantContext,
             new CheckKillSwitch,
             new CheckBudgetAvailable,
             new EnforceExecutionTtl,

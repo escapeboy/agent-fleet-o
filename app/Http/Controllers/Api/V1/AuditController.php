@@ -10,6 +10,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Audit
+ */
 class AuditController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection

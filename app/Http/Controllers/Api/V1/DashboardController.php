@@ -10,8 +10,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Dashboard
+ */
 class DashboardController extends Controller
 {
+    /**
+     * @response 200 {"data": {"experiments_count": 42, "active_experiments": 5, "agents_count": 10, "active_agents": 8, "skills_count": 20, "workflows_count": 6}}
+     */
     public function index(Request $request): JsonResponse
     {
         return response()->json([

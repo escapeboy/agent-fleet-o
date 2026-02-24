@@ -5,14 +5,19 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Webhook\Enums\WebhookEvent;
 use App\Domain\Webhook\Models\WebhookEndpoint;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\WebhookEndpointResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Webhooks
+ */
 class WebhookEndpointController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): AnonymousResourceCollection
     {
         $endpoints = QueryBuilder::for(WebhookEndpoint::class)
             ->allowedFilters(['is_active'])
@@ -20,14 +25,12 @@ class WebhookEndpointController extends Controller
             ->defaultSort('-created_at')
             ->cursorPaginate($request->input('per_page', 15));
 
-        return response()->json($endpoints);
+        return WebhookEndpointResource::collection($endpoints);
     }
 
-    public function show(WebhookEndpoint $webhookEndpoint): JsonResponse
+    public function show(WebhookEndpoint $webhookEndpoint): WebhookEndpointResource
     {
-        return response()->json([
-            'data' => $webhookEndpoint->makeHidden('secret'),
-        ]);
+        return new WebhookEndpointResource($webhookEndpoint);
     }
 
     public function store(Request $request): JsonResponse
@@ -53,10 +56,12 @@ class WebhookEndpointController extends Controller
             'retry_config' => $validated['retry_config'] ?? ['max_retries' => 3, 'backoff' => 'exponential'],
         ]);
 
-        return response()->json(['data' => $endpoint->makeHidden('secret')], 201);
+        return (new WebhookEndpointResource($endpoint))
+            ->response()
+            ->setStatusCode(201);
     }
 
-    public function update(Request $request, WebhookEndpoint $webhookEndpoint): JsonResponse
+    public function update(Request $request, WebhookEndpoint $webhookEndpoint): WebhookEndpointResource
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -70,9 +75,12 @@ class WebhookEndpointController extends Controller
 
         $webhookEndpoint->update($validated);
 
-        return response()->json(['data' => $webhookEndpoint->fresh()->makeHidden('secret')]);
+        return new WebhookEndpointResource($webhookEndpoint->fresh());
     }
 
+    /**
+     * @response 204
+     */
     public function destroy(WebhookEndpoint $webhookEndpoint): JsonResponse
     {
         $webhookEndpoint->delete();

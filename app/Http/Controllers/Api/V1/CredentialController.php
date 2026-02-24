@@ -10,6 +10,7 @@ use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\StoreCredentialRequest;
 use App\Http\Resources\Api\V1\CredentialResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,9 @@ use Illuminate\Validation\Rules\Enum;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Credentials
+ */
 class CredentialController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -40,17 +44,8 @@ class CredentialController extends Controller
         return new CredentialResource($credential);
     }
 
-    public function store(Request $request, CreateCredentialAction $action): JsonResponse
+    public function store(StoreCredentialRequest $request, CreateCredentialAction $action): JsonResponse
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'credential_type' => ['required', new Enum(CredentialType::class)],
-            'secret_data' => ['required', 'array'],
-            'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
-            'metadata' => ['sometimes', 'nullable', 'array'],
-            'expires_at' => ['sometimes', 'nullable', 'date'],
-        ]);
-
         $credential = $action->execute(
             teamId: $request->user()->current_team_id,
             name: $request->name,
@@ -88,6 +83,9 @@ class CredentialController extends Controller
         return new CredentialResource($credential->refresh());
     }
 
+    /**
+     * @response 200 {"message": "Credential deleted."}
+     */
     public function destroy(Credential $credential, DeleteCredentialAction $action): JsonResponse
     {
         $action->execute($credential);

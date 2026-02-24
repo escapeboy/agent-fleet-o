@@ -14,6 +14,9 @@ use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * @tags Artifacts
+ */
 class ArtifactController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -41,6 +44,10 @@ class ArtifactController extends Controller
         return new ArtifactResource($artifact);
     }
 
+    /**
+     * @response 200 {"artifact_id": "uuid", "version": 1, "type": "code", "category": "code", "content": "<?php echo 'Hello World';"}
+     * @response 404 {"message": "Not found.", "error": "not_found"}
+     */
     public function content(Artifact $artifact, Request $request): JsonResponse
     {
         $version = $request->query('version')

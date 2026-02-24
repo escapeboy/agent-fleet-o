@@ -31,6 +31,9 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.jit=1255" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.jit_buffer_size=128M" >> /usr/local/etc/php/conf.d/opcache.ini
 
+# Security hardening (disable dangerous functions, hide PHP version, block remote includes)
+COPY docker/php/conf.d/security.ini /usr/local/etc/php/conf.d/security.ini
+
 # PHP config
 RUN echo "memory_limit=512M" >> /usr/local/etc/php/conf.d/app.ini \
     && echo "upload_max_filesize=64M" >> /usr/local/etc/php/conf.d/app.ini \

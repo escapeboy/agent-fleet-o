@@ -14,7 +14,7 @@ class ConnectorConfigDeleteTool extends Tool
 {
     protected string $name = 'connector_config_delete';
 
-    protected string $description = 'Delete an outbound connector config. The channel will fall back to .env configuration.';
+    protected string $description = 'Delete an outbound connector config. The channel will be unconfigured and inactive.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -37,7 +37,7 @@ class ConnectorConfigDeleteTool extends Tool
         return Response::text(json_encode([
             'deleted' => true,
             'channel' => $channel,
-            'message' => "Config removed. {$channel} will fall back to .env configuration.",
+            'message' => "Config removed. {$channel} channel is now unconfigured and inactive.",
         ]));
     }
 }

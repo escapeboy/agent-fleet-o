@@ -58,6 +58,10 @@
 
                     {{-- Email (SMTP) --}}
                     @if($channel === 'email')
+                        <p class="text-sm text-(--color-on-surface-muted) -mt-1">
+                            These credentials are used by your agents to send outbound emails.
+                            Platform system emails (invitations, notifications) are sent separately and do not use this configuration.
+                        </p>
                         <div class="grid grid-cols-2 gap-4">
                             <x-form-input wire:model="smtpHost" label="SMTP Host" type="text" placeholder="smtp.gmail.com"
                                 :error="$errors->first('smtpHost')" />
@@ -114,7 +118,7 @@
                 <div class="mt-6 flex items-center justify-between">
                     <div>
                         @if($hasExistingConfig)
-                            <button wire:click="disconnect" wire:confirm="Remove this connector configuration? It will fall back to .env settings."
+                            <button wire:click="disconnect" wire:confirm="Remove this connector configuration? The channel will become inactive."
                                 class="text-sm text-red-600 hover:text-red-800">
                                 Remove Configuration
                             </button>

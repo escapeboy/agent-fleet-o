@@ -6,8 +6,15 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * @tags Health
+ */
 class HealthController extends Controller
 {
+    /**
+     * @response 200 {"status": "healthy", "checks": {"database": "ok", "redis": "ok"}}
+     * @response 503 {"status": "degraded", "checks": {"database": "ok", "redis": "error"}}
+     */
     public function index(): JsonResponse
     {
         $checks = [];

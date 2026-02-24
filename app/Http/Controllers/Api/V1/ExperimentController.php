@@ -16,12 +16,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreExperimentRequest;
 use App\Http\Requests\Api\V1\TransitionExperimentRequest;
 use App\Http\Resources\Api\V1\ExperimentResource;
+use App\Http\Resources\Api\V1\PlaybookStepResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Experiments
+ */
 class ExperimentController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -122,6 +126,10 @@ class ExperimentController extends Controller
         return new ExperimentResource($experiment);
     }
 
+    /**
+     * @response 202 {"message": "Retry from step initiated."}
+     * @response 422 {"message": "Validation error.", "errors": {"step_id": ["The step id field is required."]}}
+     */
     public function retryFromStep(Request $request, Experiment $experiment, RetryFromStepAction $action): JsonResponse
     {
         $request->validate([
@@ -137,16 +145,12 @@ class ExperimentController extends Controller
         return response()->json(['message' => 'Retry from step initiated.'], 202);
     }
 
-    public function steps(Experiment $experiment): JsonResponse
+    public function steps(Experiment $experiment): AnonymousResourceCollection
     {
         $steps = PlaybookStep::where('experiment_id', $experiment->id)
             ->orderBy('order')
-            ->get([
-                'id', 'experiment_id', 'workflow_node_id', 'agent_id', 'skill_id', 'crew_id',
-                'order', 'status', 'input_prompt', 'output', 'error_message',
-                'duration_ms', 'cost_credits', 'started_at', 'completed_at',
-            ]);
+            ->get();
 
-        return response()->json(['data' => $steps]);
+        return PlaybookStepResource::collection($steps);
     }
 }

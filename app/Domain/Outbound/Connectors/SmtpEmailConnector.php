@@ -8,16 +8,25 @@ use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Mail\ExperimentSummaryMail;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
+use Symfony\Component\Mailer\Mailer as SymfonyMailer;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email;
 
 /**
- * Real SMTP email connector using Laravel Mail.
+ * Real SMTP email connector using team-configured SMTP credentials.
  *
- * Enhanced version of EmailConnector with tracking pixel and unsubscribe link support.
+ * Requires the team to have configured SMTP credentials via Settings → Connectors.
+ * Falls back to content-provided from_address/from_name, then platform config defaults.
  */
 class SmtpEmailConnector implements OutboundConnectorInterface
 {
+    public function __construct(
+        private readonly OutboundCredentialResolver $resolver,
+    ) {}
+
     public function send(OutboundProposal $proposal): OutboundAction
     {
         $target = $proposal->target;
@@ -56,18 +65,33 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 return $action;
             }
 
+            // Resolve team SMTP credentials — required for sending
+            $dbConfig = $this->resolver->getDbConfig('email', $proposal->team_id);
+            $creds = $dbConfig?->credentials ?? [];
+
+            if (empty($creds['host'])) {
+                throw new \RuntimeException(
+                    'No SMTP connector configured for this team. Configure your mail server credentials in Settings → Connectors.',
+                );
+            }
+
+            $transport = $this->buildTransport($creds);
+
+            $fromAddress = $creds['from_address'] ?? $content['from_address'] ?? config('mail.from.address');
+            $fromName = $creds['from_name'] ?? $content['from_name'] ?? config('mail.from.name', '');
+
             if (($content['type'] ?? null) === 'experiment_summary') {
                 $experiment = Experiment::withoutGlobalScopes()->find($content['experiment_id']);
                 if (! $experiment) {
                     throw new \RuntimeException("Experiment {$content['experiment_id']} not found");
                 }
 
-                Mail::to($to)->send(new ExperimentSummaryMail($experiment));
+                $mailable = new ExperimentSummaryMail($experiment);
+                $html = $mailable->render();
+                $subject = "Experiment Summary: {$experiment->title}";
             } else {
                 $subject = $content['subject'] ?? "Experiment: {$proposal->experiment->title}";
-                $body = $content['body'] ?? 'No content generated.';
-                $fromName = $content['from_name'] ?? config('mail.from.name');
-                $fromAddress = $content['from_address'] ?? config('mail.from.address');
+                $html = $content['body'] ?? 'No content generated.';
 
                 // Append tracking pixel if tracking base URL is configured
                 $trackingBaseUrl = config('services.tracking.base_url');
@@ -76,21 +100,23 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                         'oa' => $action->id,
                         'exp' => $proposal->experiment_id,
                     ]);
-                    $body .= "\n\n<img src=\"{$pixelUrl}\" width=\"1\" height=\"1\" alt=\"\" />";
+                    $html .= "\n\n<img src=\"{$pixelUrl}\" width=\"1\" height=\"1\" alt=\"\" />";
                 }
-
-                $unsubscribeEmail = config('mail.from.address', $fromAddress);
-                $listUnsubscribe = "<mailto:{$unsubscribeEmail}?subject=unsubscribe>";
-
-                Mail::html($body, function ($message) use ($to, $subject, $fromName, $fromAddress, $listUnsubscribe) {
-                    $message->to($to)
-                        ->subject($subject)
-                        ->from($fromAddress, $fromName);
-
-                    $message->getHeaders()->addTextHeader('List-Unsubscribe', $listUnsubscribe);
-                    $message->getHeaders()->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
-                });
             }
+
+            $unsubscribeAddress = $fromAddress;
+            $listUnsubscribe = "<mailto:{$unsubscribeAddress}?subject=unsubscribe>";
+
+            $email = (new Email)
+                ->from(new Address($fromAddress, $fromName))
+                ->to($to)
+                ->subject($subject)
+                ->html($html);
+
+            $email->getHeaders()->addTextHeader('List-Unsubscribe', $listUnsubscribe);
+            $email->getHeaders()->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
+
+            (new SymfonyMailer($transport))->send($email);
 
             $action->update([
                 'status' => OutboundActionStatus::Sent,
@@ -111,5 +137,18 @@ class SmtpEmailConnector implements OutboundConnectorInterface
     public function supports(string $channel): bool
     {
         return $channel === 'email';
+    }
+
+    private function buildTransport(array $creds): EsmtpTransport
+    {
+        $ssl = ($creds['encryption'] ?? '') === 'ssl';
+        $transport = new EsmtpTransport($creds['host'], (int) ($creds['port'] ?? 587), $ssl);
+
+        if (! empty($creds['username'])) {
+            $transport->setUsername($creds['username']);
+            $transport->setPassword($creds['password'] ?? '');
+        }
+
+        return $transport;
     }
 }

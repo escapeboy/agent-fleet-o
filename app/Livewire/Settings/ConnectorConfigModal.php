@@ -167,7 +167,7 @@ class ConnectorConfigModal extends Component
         $this->showModal = false;
 
         $this->dispatch('connector-saved');
-        session()->flash('message', self::CHANNEL_LABELS[$this->channel].' connector removed. Falling back to .env configuration.');
+        session()->flash('message', self::CHANNEL_LABELS[$this->channel].' connector removed. Channel is now inactive.');
     }
 
     public function render()

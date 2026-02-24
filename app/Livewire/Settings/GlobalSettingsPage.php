@@ -6,12 +6,14 @@ use App\Domain\Agent\Actions\DisableAgentAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
+use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Tool\Actions\ImportMcpServersAction;
 use App\Domain\Tool\Services\McpConfigDiscovery;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\Blacklist;
 use App\Models\GlobalSetting;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -236,6 +238,8 @@ class GlobalSettingsPage extends Component
 
     public function rescanLocalAgents(): void
     {
+        Gate::authorize('feature.local_agents');
+
         $discovery = app(LocalAgentDiscovery::class);
         $detected = $discovery->detect();
         $count = count($detected);
@@ -278,6 +282,8 @@ class GlobalSettingsPage extends Component
 
     public function scanHostMcpServers(): void
     {
+        Gate::authorize('feature.mcp_host_scan');
+
         $discovery = app(McpConfigDiscovery::class);
         $result = $discovery->scanAllSources();
         $this->discoveredServers = $result['servers'];
@@ -285,7 +291,7 @@ class GlobalSettingsPage extends Component
         $this->mcpImportResult = null;
 
         if (empty($this->discoveredServers)) {
-            session()->flash('mcp-error', 'No MCP servers found on this machine. Configure them in your IDE first.');
+            session()->flash('mcp-error', 'No MCP servers found. Configure them in your IDE first.');
         }
     }
 
@@ -351,19 +357,34 @@ class GlobalSettingsPage extends Component
 
     public function render()
     {
-        $discovery = app(LocalAgentDiscovery::class);
-        $bridgeMode = $discovery->isBridgeMode();
+        $mode = app(DeploymentMode::class);
+
+        // Local agent data is only meaningful in self-hosted mode
+        $localAgentsEnabled = false;
+        $detectedLocalAgents = [];
+        $allLocalAgents = [];
+        $bridgeMode = false;
+        $bridgeConnected = false;
+
+        if ($mode->isSelfHosted()) {
+            $discovery = app(LocalAgentDiscovery::class);
+            $bridgeMode = $discovery->isBridgeMode();
+            $localAgentsEnabled = config('local_agents.enabled');
+            $detectedLocalAgents = $discovery->detect();
+            $allLocalAgents = $discovery->allAgents();
+            $bridgeConnected = $bridgeMode ? $discovery->bridgeHealth() : false;
+        }
 
         $resolver = app(OutboundCredentialResolver::class);
         $channels = [
-            'telegram' => ['label' => 'Telegram',         'icon' => 'paper-airplane'],
-            'slack' => ['label' => 'Slack',            'icon' => 'chat-bubble-left-right'],
-            'discord' => ['label' => 'Discord',          'icon' => 'chat-bubble-oval-left'],
-            'teams' => ['label' => 'Microsoft Teams',  'icon' => 'building-office'],
-            'google_chat' => ['label' => 'Google Chat',      'icon' => 'chat-bubble-left'],
-            'whatsapp' => ['label' => 'WhatsApp',         'icon' => 'phone'],
-            'email' => ['label' => 'Email (SMTP)',     'icon' => 'envelope'],
-            'webhook' => ['label' => 'Webhook',          'icon' => 'globe-alt'],
+            'telegram' => ['label' => 'Telegram',        'icon' => 'paper-airplane'],
+            'slack' => ['label' => 'Slack',           'icon' => 'chat-bubble-left-right'],
+            'discord' => ['label' => 'Discord',         'icon' => 'chat-bubble-oval-left'],
+            'teams' => ['label' => 'Microsoft Teams', 'icon' => 'building-office'],
+            'google_chat' => ['label' => 'Google Chat',     'icon' => 'chat-bubble-left'],
+            'whatsapp' => ['label' => 'WhatsApp',        'icon' => 'phone'],
+            'email' => ['label' => 'Email (SMTP)',    'icon' => 'envelope'],
+            'webhook' => ['label' => 'Webhook',         'icon' => 'globe-alt'],
         ];
 
         $connectorStatuses = [];
@@ -383,11 +404,11 @@ class GlobalSettingsPage extends Component
         return view('livewire.settings.global-settings-page', [
             'blacklistEntries' => Blacklist::orderByDesc('created_at')->get(),
             'agents' => Agent::with('circuitBreakerState')->orderBy('name')->get(),
-            'localAgentsEnabled' => config('local_agents.enabled'),
-            'detectedLocalAgents' => $discovery->detect(),
-            'allLocalAgents' => $discovery->allAgents(),
+            'localAgentsEnabled' => $localAgentsEnabled,
+            'detectedLocalAgents' => $detectedLocalAgents,
+            'allLocalAgents' => $allLocalAgents,
             'bridgeMode' => $bridgeMode,
-            'bridgeConnected' => $bridgeMode ? $discovery->bridgeHealth() : false,
+            'bridgeConnected' => $bridgeConnected,
             'providers' => config('llm_providers', []),
             'connectorStatuses' => $connectorStatuses,
         ])->layout('layouts.app', ['header' => 'Settings']);

@@ -53,11 +53,13 @@
                     class="flex-1 rounded-md px-3 py-2 text-sm font-medium transition">
                     Upload File
                 </button>
+                @selfhosted
                 <button @click="tab = 'scan'"
                     :class="tab === 'scan' ? 'bg-(--color-surface-raised) shadow-sm text-(--color-on-surface)' : 'text-(--color-on-surface-muted) hover:text-(--color-on-surface)'"
                     class="flex-1 rounded-md px-3 py-2 text-sm font-medium transition">
                     Scan Host
                 </button>
+                @endselfhosted
             </div>
 
             {{-- Paste JSON Tab --}}
@@ -92,7 +94,8 @@
                 </button>
             </div>
 
-            {{-- Scan Host Tab --}}
+            @selfhosted
+            {{-- Scan Host Tab (self-hosted only) --}}
             <div x-show="tab === 'scan'" x-cloak class="mt-4">
                 <p class="mb-3 text-xs text-(--color-on-surface-muted)">
                     Scan this machine for MCP servers configured in Claude Desktop, Claude Code, Cursor, Windsurf, Kiro, and VS Code.
@@ -108,6 +111,7 @@
                     Supported: Claude Desktop, Claude Code, Cursor, Windsurf, Kiro, VS Code
                 </p>
             </div>
+            @endselfhosted
         </div>
 
         {{-- Discovered Servers Preview --}}
@@ -172,7 +176,8 @@
         @endif
     </div>
 
-    {{-- Quick Help --}}
+    @selfhosted
+    {{-- Quick Help (self-hosted only — shows host filesystem paths) --}}
     <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
         <h3 class="text-sm font-medium text-(--color-on-surface-muted)">Supported Config Locations</h3>
         <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -199,4 +204,13 @@
             You can also use the CLI: <code class="rounded bg-(--color-surface-alt) px-1 py-0.5">php artisan tools:discover --import</code>
         </p>
     </div>
+    @else
+    {{-- Cloud replacement: no host filesystem access --}}
+    <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+        <h3 class="text-sm font-medium text-(--color-on-surface-muted)">Adding MCP Servers</h3>
+        <p class="mt-2 text-sm text-(--color-on-surface-muted)">
+            Paste or upload your MCP configuration JSON above. MCP servers are configured via the interface — no host filesystem access is required.
+        </p>
+    </div>
+    @endselfhosted
 </div>

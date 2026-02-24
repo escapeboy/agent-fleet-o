@@ -38,14 +38,14 @@ return [
     'timeout' => (int) env('LOCAL_AGENT_TIMEOUT', 900),
 
     // Enable/disable local agent support
-    'enabled' => (bool) env('LOCAL_AGENTS_ENABLED', true),
+    'enabled' => (bool) env('LOCAL_AGENTS_ENABLED', false),
 
     // Whether running inside Docker container
     'running_in_docker' => (bool) env('RUNNING_IN_DOCKER', false),
 
     // MCP server discovery from host IDE configs
     'mcp_discovery' => [
-        'enabled' => (bool) env('MCP_DISCOVERY_ENABLED', true),
+        'enabled' => (bool) env('MCP_DISCOVERY_ENABLED', false),
         'additional_paths' => array_filter(explode(',', env('MCP_DISCOVERY_EXTRA_PATHS', ''))),
     ],
 

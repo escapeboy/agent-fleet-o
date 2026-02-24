@@ -12,6 +12,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @tags Signals
+ */
 class SignalController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -34,6 +37,10 @@ class SignalController extends Controller
         return new SignalResource($signal);
     }
 
+    /**
+     * @response 200 {"message": "Signal was deduplicated or blacklisted."}
+     * @response 422 {"message": "Validation error.", "errors": {"source_type": ["The source type field is required."]}}
+     */
     public function store(Request $request, IngestSignalAction $action): JsonResponse
     {
         $request->validate([
