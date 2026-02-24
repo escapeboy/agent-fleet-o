@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Domain\Signal\Connectors\ApiPollingConnector;
 use App\Domain\Signal\Connectors\CalendarConnector;
+use App\Domain\Signal\Connectors\HttpMonitorConnector;
 use App\Domain\Signal\Connectors\DatadogAlertConnector;
 use App\Domain\Signal\Connectors\GitHubIssuesConnector;
 use App\Domain\Signal\Connectors\ImapConnector;
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Log;
 
 class PollInputConnectors extends Command
 {
-    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram). Polls all if omitted.}';
+    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor). Polls all if omitted.}';
 
     protected $description = 'Poll active input connectors for new signals';
 
@@ -37,6 +38,7 @@ class PollInputConnectors extends Command
         'datadog' => DatadogAlertConnector::class,
         'pagerduty' => PagerDutyConnector::class,
         'telegram' => TelegramSignalConnector::class,
+        'http_monitor' => HttpMonitorConnector::class,
     ];
 
     public function handle(): int

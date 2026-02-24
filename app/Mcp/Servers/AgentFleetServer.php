@@ -76,9 +76,11 @@ use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
+use App\Mcp\Tools\Signal\HttpMonitorTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
@@ -228,12 +230,14 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (5)
+        // Signal (7)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
         TicketConnectorTool::class,
         AlertConnectorTool::class,
+        SlackConnectorTool::class,
+        HttpMonitorTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,

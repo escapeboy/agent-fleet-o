@@ -13,7 +13,7 @@ class TicketConnectorTool extends Tool
 {
     protected string $name = 'ticket_connector_manage';
 
-    protected string $description = 'Manage ticket connectors (GitHub Issues, Jira, Linear). List supported drivers, get webhook setup instructions, and view recent signals from ticket sources.';
+    protected string $description = 'Manage ticket and code connectors (GitHub, Jira, Linear). List supported drivers and get webhook setup instructions. GitHub supports: issues, pull_request, push, workflow_run, release.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -23,8 +23,8 @@ class TicketConnectorTool extends Tool
                 ->enum(['list_drivers', 'get_setup_instructions'])
                 ->required(),
             'driver' => $schema->string()
-                ->description('Connector driver for setup instructions: github_issues | jira | linear')
-                ->enum(['github_issues', 'jira', 'linear']),
+                ->description('Connector driver for setup instructions: github | github_issues | jira | linear')
+                ->enum(['github', 'github_issues', 'jira', 'linear']),
         ];
     }
 
@@ -32,7 +32,7 @@ class TicketConnectorTool extends Tool
     {
         $validated = $request->validate([
             'action' => 'required|string|in:list_drivers,get_setup_instructions',
-            'driver' => 'nullable|string|in:github_issues,jira,linear',
+            'driver' => 'nullable|string|in:github,github_issues,jira,linear',
         ]);
 
         $action = $validated['action'];
@@ -52,12 +52,22 @@ class TicketConnectorTool extends Tool
         return Response::text(json_encode([
             'drivers' => [
                 [
+                    'driver' => 'github',
+                    'name' => 'GitHub (all events)',
+                    'webhook_url' => url('/api/signals/github'),
+                    'signature_header' => 'X-Hub-Signature-256',
+                    'events' => ['issues', 'pull_request', 'push', 'workflow_run', 'release'],
+                    'config_key' => 'services.github.webhook_secret',
+                    'note' => 'Recommended over github_issues — supports all event types.',
+                ],
+                [
                     'driver' => 'github_issues',
-                    'name' => 'GitHub Issues',
+                    'name' => 'GitHub Issues (legacy)',
                     'webhook_url' => url('/api/signals/github-issues'),
                     'signature_header' => 'X-Hub-Signature-256',
                     'events' => ['issues'],
                     'config_key' => 'services.github.webhook_secret',
+                    'note' => 'Legacy endpoint, issues only. Use github driver for full event coverage.',
                 ],
                 [
                     'driver' => 'jira',
@@ -86,18 +96,34 @@ class TicketConnectorTool extends Tool
         }
 
         $instructions = match ($driver) {
+            'github' => [
+                'webhook_url' => url('/api/signals/github'),
+                'steps' => [
+                    '1. Go to your GitHub repository (or organisation) → Settings → Webhooks → Add webhook',
+                    '2. Set Payload URL to: '.url('/api/signals/github'),
+                    '3. Set Content type to: application/json',
+                    '4. Set Secret and add GITHUB_WEBHOOK_SECRET to your .env',
+                    '5. Under "Which events?", select individual events: Issues, Pull requests, Pushes, Workflow runs, Releases',
+                    '6. Click "Add webhook"',
+                ],
+                'env_var' => 'GITHUB_WEBHOOK_SECRET',
+                'services_config' => "Add to config/services.php:\n'github' => ['webhook_secret' => env('GITHUB_WEBHOOK_SECRET')]",
+                'supported_events' => ['issues', 'pull_request', 'push', 'workflow_run', 'release'],
+                'note' => 'ping events are acknowledged automatically without creating a signal.',
+            ],
             'github_issues' => [
                 'webhook_url' => url('/api/signals/github-issues'),
                 'steps' => [
                     '1. Go to your GitHub repository → Settings → Webhooks → Add webhook',
                     '2. Set Payload URL to: '.url('/api/signals/github-issues'),
                     '3. Set Content type to: application/json',
-                    '4. Set Secret to any random string — set it in Settings → Connectors → GitHub (or add GITHUB_WEBHOOK_SECRET to your .env on self-hosted)',
+                    '4. Set Secret to any random string — set it as GITHUB_WEBHOOK_SECRET in your .env',
                     '5. Under "Which events would you like to trigger this webhook?", select "Issues"',
                     '6. Click "Add webhook"',
                 ],
                 'env_var' => 'GITHUB_WEBHOOK_SECRET',
                 'services_config' => "Add to config/services.php:\n'github' => ['webhook_secret' => env('GITHUB_WEBHOOK_SECRET')]",
+                'note' => 'Legacy endpoint. Use /api/signals/github for full event coverage.',
             ],
             'jira' => [
                 'webhook_url' => url('/api/signals/jira'),
@@ -124,7 +150,7 @@ class TicketConnectorTool extends Tool
                 'env_var' => 'LINEAR_WEBHOOK_SECRET',
                 'services_config' => "Add to config/services.php:\n'linear' => ['webhook_secret' => env('LINEAR_WEBHOOK_SECRET')]",
             ],
-            default => throw new \InvalidArgumentException("Unknown driver: {$driver}"),
+            default => throw new \InvalidArgumentException("Unknown driver: {$driver}. Valid: github, github_issues, jira, linear"),
         };
 
         return Response::text(json_encode($instructions));
