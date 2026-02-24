@@ -150,7 +150,7 @@ class UpdateAgentRiskProfileAction
             // Notify team
             $this->notificationService->notifyTeam(
                 teamId: $agent->team_id,
-                type: 'agent_risk_critical',
+                type: 'agent.risk.high',
                 title: "Agent '{$agent->name}' auto-disabled",
                 body: "Risk score reached {$riskScore}/100. Risk factors: ".implode(', ', $riskFactors).'. Please review and re-enable when issues are resolved.',
                 actionUrl: '/agents/'.$agent->id,
