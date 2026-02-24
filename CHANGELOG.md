@@ -29,7 +29,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-02-15
+## 2026-02-15
 
 ### Added
 - **AutoForge-inspired enhancements (v2)** -- Multi-terminal experiment panel, project kanban board, expanded execution modes
@@ -41,7 +41,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-02-12
+## 2026-02-12
 
 ### Added
 - **Tool risk classification** -- Tools categorized by risk level (safe, low, medium, high, critical)
@@ -50,7 +50,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-02-08
+## 2026-02-08
 
 ### Added
 - **MCP Server** -- 65 Model Context Protocol tools across 15 domains (stdio + HTTP/SSE transports)
@@ -64,7 +64,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-28
+## 2026-01-28
 
 ### Added
 - **Connectors** -- WhatsApp, Discord, Teams, Google Chat outbound connectors
@@ -74,7 +74,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-22
+## 2026-01-22
 
 ### Added
 - **Tool Management** -- MCP server (stdio/HTTP) and built-in tool (bash/filesystem/browser) support with per-agent assignment
@@ -87,7 +87,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-18
+## 2026-01-18
 
 ### Added
 - **Per-agent LLM config** -- Provider and model selection per agent with fallback chains
@@ -95,7 +95,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-15
+## 2026-01-15
 
 ### Added
 - **Continuous Projects** -- Long-running agent projects with cron scheduling, budget caps, milestones, and overlap policies
@@ -103,7 +103,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-10
+## 2026-01-10
 
 ### Added
 - **Agent Crews** -- Multi-agent teams with lead/member roles, parallel execution, and result synthesis
@@ -112,7 +112,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-05
+## 2026-01-05
 
 ### Added
 - **REST API v1** -- 59 endpoints with Sanctum auth, cursor pagination, and OpenAPI 3.1 docs at `/docs/api`
@@ -120,7 +120,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
-## 2025-01-01
+## 2026-01-01
 
 ### Added
 - **Agent Fleet Community Edition** -- Initial release
