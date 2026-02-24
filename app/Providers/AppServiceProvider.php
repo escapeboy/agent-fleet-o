@@ -56,7 +56,6 @@ class AppServiceProvider extends ServiceProvider
 
         // Deployment mode feature gates
         $mode = app(DeploymentMode::class);
-        Gate::define('feature.smtp_connector', fn ($user) => $mode->isSelfHosted());
         Gate::define('feature.local_agents', fn ($user) => $mode->isSelfHosted());
         Gate::define('feature.mcp_host_scan', fn ($user) => $mode->isSelfHosted());
         Gate::define('feature.security_policy', fn ($user) => $mode->isSelfHosted());

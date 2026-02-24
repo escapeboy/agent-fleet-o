@@ -4,7 +4,6 @@ namespace App\Livewire\Settings;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -78,10 +77,6 @@ class ConnectorConfigModal extends Component
     #[On('openModal')]
     public function openModal(string $channel): void
     {
-        if ($channel === 'email') {
-            Gate::authorize('feature.smtp_connector');
-        }
-
         $this->channel = $channel;
         $this->channelLabel = self::CHANNEL_LABELS[$channel] ?? $channel;
         $this->testResult = null;
@@ -106,10 +101,6 @@ class ConnectorConfigModal extends Component
 
     public function save(): void
     {
-        if ($this->channel === 'email') {
-            Gate::authorize('feature.smtp_connector');
-        }
-
         $credentials = $this->collectCredentials();
 
         if (empty(array_filter($credentials, fn ($v) => $v !== null && $v !== ''))) {

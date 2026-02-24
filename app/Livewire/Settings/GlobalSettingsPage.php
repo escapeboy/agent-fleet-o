@@ -387,11 +387,6 @@ class GlobalSettingsPage extends Component
             'webhook' => ['label' => 'Webhook',         'icon' => 'globe-alt'],
         ];
 
-        // In cloud mode, hide SMTP connector (email is platform-managed)
-        if ($mode->isCloud()) {
-            unset($channels['email']);
-        }
-
         $connectorStatuses = [];
         foreach ($channels as $key => $meta) {
             $source = $resolver->getSource($key);
