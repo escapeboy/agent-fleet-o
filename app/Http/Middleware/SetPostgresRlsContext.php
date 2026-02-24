@@ -33,7 +33,7 @@ class SetPostgresRlsContext
         }
 
         $user = $request->user();
-        $teamId = $user?->current_team_id ?? '';
+        $teamId = $user !== null ? ($user->current_team_id ?? '') : '';
 
         // Set session-level GUC — FPM connections are per-request so no leak risk.
         DB::statement("SELECT set_config('app.current_team_id', ?, false)", [$teamId]);
@@ -58,12 +58,12 @@ class SetPostgresRlsContext
      */
     private function isRlsAvailable(): bool
     {
-        if (static::$rlsAvailable === null) {
-            static::$rlsAvailable = (bool) DB::selectOne(
+        if (self::$rlsAvailable === null) {
+            self::$rlsAvailable = (bool) DB::selectOne(
                 "SELECT 1 FROM pg_roles WHERE rolname = 'agent_fleet_rls'"
             );
         }
 
-        return static::$rlsAvailable;
+        return self::$rlsAvailable;
     }
 }

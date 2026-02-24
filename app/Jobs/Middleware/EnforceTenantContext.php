@@ -61,13 +61,13 @@ class EnforceTenantContext
 
     private function isRlsAvailable(): bool
     {
-        if (static::$rlsAvailable === null) {
-            static::$rlsAvailable = (bool) DB::selectOne(
+        if (self::$rlsAvailable === null) {
+            self::$rlsAvailable = (bool) DB::selectOne(
                 "SELECT 1 FROM pg_roles WHERE rolname = 'agent_fleet_rls'"
             );
         }
 
-        return static::$rlsAvailable;
+        return self::$rlsAvailable;
     }
 
     private function resolveTeamId(object $job): ?string
