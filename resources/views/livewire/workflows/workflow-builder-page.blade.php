@@ -1,4 +1,4 @@
-<div wire:ignore.self x-data="workflowBuilder(@js($nodes), @js($edges), @js($availableAgents), @js($availableSkills), @js($availableCrews))" class="flex flex-col h-[calc(100vh-8rem)]">
+<div wire:ignore.self x-data="workflowBuilder(@js($nodes), @js($edges), @js($availableAgents), @js($availableSkills), @js($availableCrews), @js($availableWorkflows))" class="flex flex-col h-[calc(100vh-8rem)]">
     {{-- Top Bar --}}
     <div class="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-3">
         <div class="flex-1 flex items-center gap-3">
@@ -81,6 +81,24 @@
                     </span>
                     Do While
                 </button>
+                <button @click="addNode('time_gate')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-amber-300 hover:bg-amber-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-amber-100 text-amber-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                    Time Gate
+                </button>
+                <button @click="addNode('merge')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-rose-300 hover:bg-rose-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-rose-100 text-rose-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
+                    </span>
+                    Merge
+                </button>
+                <button @click="addNode('sub_workflow')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-violet-300 hover:bg-violet-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-violet-100 text-violet-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </span>
+                    Sub-Workflow
+                </button>
                 <button @click="addNode('end')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-red-300 hover:bg-red-50">
                     <span class="flex h-6 w-6 items-center justify-center rounded bg-red-100 text-red-600">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
@@ -154,6 +172,9 @@
                                 'border-indigo-400': node.type === 'human_task' && selectedNodeId !== node.id,
                                 'border-orange-400': node.type === 'switch' && selectedNodeId !== node.id,
                                 'border-cyan-400': node.type === 'do_while' && selectedNodeId !== node.id,
+                                'border-amber-400': node.type === 'time_gate' && selectedNodeId !== node.id,
+                                'border-rose-400': node.type === 'merge' && selectedNodeId !== node.id,
+                                'border-violet-400': node.type === 'sub_workflow' && selectedNodeId !== node.id,
                              }"
                              style="min-width: 160px;">
 
@@ -168,6 +189,9 @@
                                     'bg-indigo-50': node.type === 'human_task',
                                     'bg-orange-50': node.type === 'switch',
                                     'bg-cyan-50': node.type === 'do_while',
+                                    'bg-amber-50': node.type === 'time_gate',
+                                    'bg-rose-50': node.type === 'merge',
+                                    'bg-violet-50': node.type === 'sub_workflow',
                                  }">
                                 <span class="text-xs font-medium uppercase"
                                       :class="{
@@ -179,6 +203,9 @@
                                          'text-indigo-700': node.type === 'human_task',
                                          'text-orange-700': node.type === 'switch',
                                          'text-cyan-700': node.type === 'do_while',
+                                         'text-amber-700': node.type === 'time_gate',
+                                         'text-rose-700': node.type === 'merge',
+                                         'text-violet-700': node.type === 'sub_workflow',
                                       }" x-text="nodeTypeLabel(node.type)"></span>
                                 <button x-show="node.type !== 'start'" @click.stop="removeNode(node.id)"
                                         class="ml-auto text-gray-400 hover:text-red-500">
@@ -331,6 +358,52 @@
                                 </div>
                             </div>
                         </template>
+
+                        <template x-if="selectedNode.type === 'time_gate'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Delay (seconds)</label>
+                                    <input type="number" x-model="selectedNode.config.delay_seconds" @input="syncToLivewire()" min="1"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                                           placeholder="3600" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Or delay until (ISO 8601, optional)</label>
+                                    <input type="text" x-model="selectedNode.config.delay_until" @input="syncToLivewire()"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                                           placeholder="2026-03-01T09:00:00Z" />
+                                </div>
+                                <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+                                    Pauses workflow execution for the specified duration. <em>delay_until</em> takes priority over <em>delay_seconds</em> when both are set.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'merge'">
+                            <div class="space-y-3">
+                                <div class="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+                                    Merge node uses OR-join semantics — execution continues as soon as the <em>first</em> incoming branch completes. Connect multiple incoming edges and one outgoing edge.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'sub_workflow'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Sub-Workflow</label>
+                                    <select x-model="selectedNode.sub_workflow_id" @change="syncToLivewire()"
+                                            class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                        <option value="">Select workflow...</option>
+                                        <template x-for="wf in workflows" :key="wf.id">
+                                            <option :value="wf.id" x-text="wf.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="rounded-lg bg-violet-50 p-3 text-xs text-violet-700">
+                                    Spawns a child experiment from the selected workflow. The parent workflow waits until the child reaches a terminal state before continuing.
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </template>
@@ -465,12 +538,13 @@
 
 @script
 <script>
-Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crews) => ({
+Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crews, workflows) => ({
     localNodes: initialNodes,
     localEdges: initialEdges,
     agents: agents,
     skills: skills,
     crews: crews || [],
+    workflows: workflows || [],
 
     // Selection state
     selectedNodeId: null,
@@ -527,7 +601,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     addNode(type) {
         this.nodeCounter++;
         const id = 'node-' + Date.now() + '-' + this.nodeCounter;
-        const labels = { agent: 'Agent ' + this.nodeCounter, crew: 'Crew ' + this.nodeCounter, conditional: 'Condition', human_task: 'Human Task ' + this.nodeCounter, switch: 'Switch', do_while: 'Do While', dynamic_fork: 'Dynamic Fork', end: 'End' };
+        const labels = { agent: 'Agent ' + this.nodeCounter, crew: 'Crew ' + this.nodeCounter, conditional: 'Condition', human_task: 'Human Task ' + this.nodeCounter, switch: 'Switch', do_while: 'Do While', dynamic_fork: 'Dynamic Fork', time_gate: 'Time Gate', merge: 'Merge', sub_workflow: 'Sub-Workflow', end: 'End' };
 
         this.localNodes.push({
             id: id,
@@ -536,6 +610,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
             agent_id: null,
             skill_id: null,
             crew_id: null,
+            sub_workflow_id: null,
             config: {},
             position_x: 250 + (this.nodeCounter * 20) % 200,
             position_y: 150 + Math.floor(this.nodeCounter / 3) * 100,
@@ -877,7 +952,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     },
 
     nodeTypeLabel(type) {
-        const labels = { start: 'Start', end: 'End', agent: 'Agent', crew: 'Crew', conditional: 'Condition', human_task: 'Human Task', switch: 'Switch', dynamic_fork: 'Dynamic Fork', do_while: 'Do While' };
+        const labels = { start: 'Start', end: 'End', agent: 'Agent', crew: 'Crew', conditional: 'Condition', human_task: 'Human Task', switch: 'Switch', dynamic_fork: 'Dynamic Fork', do_while: 'Do While', time_gate: 'Time Gate', merge: 'Merge', sub_workflow: 'Sub-Workflow' };
         return labels[type] || type;
     },
 

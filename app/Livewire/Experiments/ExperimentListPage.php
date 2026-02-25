@@ -28,6 +28,11 @@ class ExperimentListPage extends Component
 
     public bool $showCreateForm = false;
 
+    public function toggle(string $property): void
+    {
+        $this->$property = ! $this->$property;
+    }
+
     public function sortBy(string $field): void
     {
         if ($this->sortField === $field) {

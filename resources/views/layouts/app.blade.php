@@ -23,7 +23,7 @@
     {{-- Prevent theme flash — apply saved theme before paint --}}
     <script>
         (function() {
-            var t = document.documentElement.getAttribute('data-theme') || localStorage.getItem('agent-fleet-theme') || 'default';
+            var t = document.documentElement.getAttribute('data-theme') || localStorage.getItem('fleetq-theme') || 'default';
             document.documentElement.setAttribute('data-theme', t);
         })();
     </script>

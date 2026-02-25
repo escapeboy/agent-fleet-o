@@ -8,7 +8,7 @@ Cookies are small text files stored on your device when you visit a website. The
 
 ## 2. How We Use Cookies
 
-PriceX Ltd. uses cookies and similar technologies (local storage, session storage) on the Agent Fleet platform.
+PriceX Ltd. uses cookies and similar technologies (local storage, session storage) on the FleetQ platform.
 
 ## 3. Cookie Categories
 
@@ -18,9 +18,9 @@ These cookies are essential for the website to function and cannot be disabled.
 
 | Cookie Name | Provider | Purpose | Duration |
 |------------|----------|---------|----------|
-| `agentfleet_session` | agentfleet.app | Session management and authentication | 2 hours (session) |
-| `XSRF-TOKEN` | agentfleet.app | CSRF protection for form submissions | 2 hours (session) |
-| `remember_web_*` | agentfleet.app | "Remember me" persistent login | 30 days |
+| `fleetq_session` | fleetq.net | Session management and authentication | 2 hours (session) |
+| `XSRF-TOKEN` | fleetq.net | CSRF protection for form submissions | 2 hours (session) |
+| `remember_web_*` | fleetq.net | "Remember me" persistent login | 30 days |
 
 ### 3.2 Analytics / Performance Cookies
 
@@ -31,20 +31,20 @@ We use Plausible Analytics, a privacy-respecting analytics service that does **n
 - Is hosted in the EU
 - Complies with GDPR, CCPA, and PECR without requiring consent
 
-No analytics cookies are set by Agent Fleet.
+No analytics cookies are set by FleetQ.
 
 ### 3.3 Functionality Cookies
 
 | Cookie Name | Provider | Purpose | Duration |
 |------------|----------|---------|----------|
-| Local Storage: `theme` | agentfleet.app | Theme preference (light/dark) | Persistent |
-| Local Storage: `sidebar_collapsed` | agentfleet.app | Sidebar UI state | Persistent |
+| Local Storage: `theme` | fleetq.net | Theme preference (light/dark) | Persistent |
+| Local Storage: `sidebar_collapsed` | fleetq.net | Sidebar UI state | Persistent |
 
 These use browser Local Storage (not cookies) and are considered strictly necessary for UI functionality.
 
 ### 3.4 Advertising / Targeting Cookies
 
-Agent Fleet does **not** use any advertising or targeting cookies.
+FleetQ does **not** use any advertising or targeting cookies.
 
 ## 4. Third-Party Cookies
 
@@ -59,7 +59,7 @@ Stripe may set cookies when you interact with payment forms (checkout, billing p
 
 ### 5.1 Our Cookie Usage
 
-Since Agent Fleet only uses strictly necessary cookies (session, CSRF) and cookieless analytics (Plausible), no cookie consent banner is required under ePrivacy Directive Article 5(3). All cookies we set are exempt from consent requirements as they are strictly necessary for the service.
+Since FleetQ only uses strictly necessary cookies (session, CSRF) and cookieless analytics (Plausible), no cookie consent banner is required under ePrivacy Directive Article 5(3). All cookies we set are exempt from consent requirements as they are strictly necessary for the service.
 
 ### 5.2 Browser Controls
 
@@ -69,7 +69,7 @@ You can control cookies through your browser settings:
 - **Safari:** Preferences > Privacy > Manage Website Data
 - **Edge:** Settings > Privacy, search, and services > Cookies
 
-Note: Disabling session cookies will prevent you from logging into Agent Fleet.
+Note: Disabling session cookies will prevent you from logging into FleetQ.
 
 ### 5.3 Global Privacy Control (GPC)
 
@@ -90,7 +90,7 @@ In addition to cookies, we use:
 
 | Cookie/Storage | Retention |
 |---------------|-----------|
-| `agentfleet_session` | 2 hours or until logout |
+| `fleetq_session` | 2 hours or until logout |
 | `XSRF-TOKEN` | 2 hours (regenerated per session) |
 | `remember_web_*` | 30 days |
 | Local Storage items | Until manually cleared |

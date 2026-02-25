@@ -1,7 +1,7 @@
 <aside class="flex w-64 flex-col bg-(--color-sidebar) text-white" x-data="{ current: '{{ request()->routeIs('dashboard') ? 'dashboard' : (request()->routeIs('projects.*') ? 'projects' : (request()->routeIs('experiments.*') ? 'experiments' : (request()->routeIs('workflows.*') ? 'workflows' : (request()->routeIs('approvals.*') ? 'approvals' : (request()->routeIs('health') ? 'health' : (request()->routeIs('settings') ? 'settings' : (request()->routeIs('audit') ? 'audit' : (request()->routeIs('team.*') ? 'team' : 'dashboard')))))))) }}' }">
     {{-- Logo --}}
     <div class="flex h-16 items-center border-b border-gray-800 px-6">
-        <span class="text-xl font-bold tracking-tight">Agent Fleet</span>
+        <span class="text-xl font-bold tracking-tight">FleetQ</span>
     </div>
 
     {{-- Navigation --}}
@@ -82,7 +82,7 @@
     {{-- Footer --}}
     <div class="border-t border-gray-800 p-4">
         <div class="text-xs text-gray-500">
-            Agent Fleet v1.0
+            FleetQ v1.0
         </div>
     </div>
 </aside>

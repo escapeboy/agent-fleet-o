@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Agent Fleet — Host Agent Bridge
+ * FleetQ — Host Agent Bridge
  *
  * Lightweight HTTP bridge that runs on the host machine and proxies
  * agent discovery + execution requests from Docker containers.
@@ -173,7 +173,7 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
     $isAssistant = $purpose === 'platform_assistant';
 
     // Codex assistant: enable --full-auto for MCP tool execution and
-    // connect to our Agent Fleet MCP server (replaces advisory mode).
+    // connect to our FleetQ MCP server (replaces advisory mode).
     if ($isAssistant) {
         $mcpServers = json_encode(['agent-fleet' => [
             'command' => 'php',

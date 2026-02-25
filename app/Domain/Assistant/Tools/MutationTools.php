@@ -52,7 +52,7 @@ class MutationTools
     private static function createProject(): PrismToolObject
     {
         return PrismTool::as('create_project')
-            ->for('Create a new project in Agent Fleet')
+            ->for('Create a new project in FleetQ')
             ->withStringParameter('title', 'Project title', required: true)
             ->withStringParameter('description', 'Project description')
             ->withStringParameter('type', 'Project type: one_shot or continuous (default: one_shot)')

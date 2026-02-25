@@ -9,11 +9,11 @@ return [
     |
     | The community edition can browse, search, and install skills, agents,
     | and workflows from the cloud marketplace. Set the registry URL to
-    | your Agent Fleet cloud instance or the official registry.
+    | your FleetQ cloud instance or the official registry.
     |
     */
 
-    'registry_url' => env('MARKETPLACE_REGISTRY_URL', 'https://agentfleet.com/api/v1/marketplace'),
+    'registry_url' => env('MARKETPLACE_REGISTRY_URL', 'https://fleetq.net/api/v1/marketplace'),
 
     'api_key' => env('MARKETPLACE_API_KEY'),
 

@@ -1,6 +1,6 @@
 <x-layouts.public
-    title="Cookie Policy — Agent Fleet"
-    description="Learn about the cookies and similar technologies used by Agent Fleet."
+    title="Cookie Policy — FleetQ"
+    description="Learn about the cookies and similar technologies used by FleetQ."
 >
     <x-landing.nav />
 
@@ -14,7 +14,7 @@
             <p>Cookies are small text files stored on your device when you visit a website. They serve various purposes including remembering your preferences and maintaining your session.</p>
 
             <h2>2. How We Use Cookies</h2>
-            <p>PriceX Ltd. uses cookies and similar technologies (local storage, session storage) on the Agent Fleet platform.</p>
+            <p>PriceX Ltd. uses cookies and similar technologies (local storage, session storage) on the FleetQ platform.</p>
 
             <h2>3. Cookie Categories</h2>
 
@@ -25,7 +25,7 @@
                     <tr><th>Cookie Name</th><th>Purpose</th><th>Duration</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><code>agentfleet_session</code></td><td>Session management and authentication</td><td>2 hours (session)</td></tr>
+                    <tr><td><code>fleetq_session</code></td><td>Session management and authentication</td><td>2 hours (session)</td></tr>
                     <tr><td><code>XSRF-TOKEN</code></td><td>CSRF protection for form submissions</td><td>2 hours (session)</td></tr>
                     <tr><td><code>remember_web_*</code></td><td>"Remember me" persistent login</td><td>30 days</td></tr>
                 </tbody>
@@ -40,7 +40,7 @@
                 <li>Is hosted in the EU</li>
                 <li>Complies with GDPR, CCPA, and PECR without requiring consent</li>
             </ul>
-            <p><strong>No analytics cookies are set by Agent Fleet.</strong></p>
+            <p><strong>No analytics cookies are set by FleetQ.</strong></p>
 
             <h3>3.3 Functionality Storage</h3>
             <table>
@@ -54,7 +54,7 @@
             </table>
 
             <h3>3.4 Advertising / Targeting Cookies</h3>
-            <p>Agent Fleet does <strong>not</strong> use any advertising or targeting cookies.</p>
+            <p>FleetQ does <strong>not</strong> use any advertising or targeting cookies.</p>
 
             <h2>4. Third-Party Cookies</h2>
             <table>
@@ -68,7 +68,7 @@
             </table>
 
             <h2>5. Managing Your Cookies</h2>
-            <p>Since Agent Fleet only uses strictly necessary cookies (session, CSRF) and cookieless analytics (Plausible), no cookie consent banner is required under ePrivacy Directive Article 5(3).</p>
+            <p>Since FleetQ only uses strictly necessary cookies (session, CSRF) and cookieless analytics (Plausible), no cookie consent banner is required under ePrivacy Directive Article 5(3).</p>
             <p>You can control cookies through your browser settings:</p>
             <ul>
                 <li><strong>Chrome:</strong> Settings &gt; Privacy and Security &gt; Cookies</li>
@@ -76,7 +76,7 @@
                 <li><strong>Safari:</strong> Preferences &gt; Privacy &gt; Manage Website Data</li>
                 <li><strong>Edge:</strong> Settings &gt; Privacy, search, and services &gt; Cookies</li>
             </ul>
-            <p><em>Note: Disabling session cookies will prevent you from logging into Agent Fleet.</em></p>
+            <p><em>Note: Disabling session cookies will prevent you from logging into FleetQ.</em></p>
 
             <h2>6. Global Privacy Control</h2>
             <p>We honor the Global Privacy Control (GPC) and Do Not Track (DNT) browser signals.</p>

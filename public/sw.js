@@ -1,4 +1,4 @@
-// Agent Fleet Service Worker — Web Push Notifications
+// FleetQ Service Worker — Web Push Notifications
 
 self.addEventListener('push', function (event) {
     if (!event.data) return;
@@ -7,10 +7,10 @@ self.addEventListener('push', function (event) {
     try {
         data = event.data.json();
     } catch (e) {
-        data = { title: 'Agent Fleet', body: event.data.text() };
+        data = { title: 'FleetQ', body: event.data.text() };
     }
 
-    const title = data.title || 'Agent Fleet';
+    const title = data.title || 'FleetQ';
     const options = {
         body: data.body || '',
         icon: data.icon || '/favicon.ico',
@@ -18,7 +18,7 @@ self.addEventListener('push', function (event) {
         data: data.data || {},
         actions: data.actions || [],
         requireInteraction: false,
-        tag: data.data?.type || 'agent-fleet-notification',
+        tag: data.data?.type || 'fleetq-notification',
     };
 
     event.waitUntil(

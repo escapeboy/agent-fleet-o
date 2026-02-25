@@ -1,6 +1,6 @@
 <x-layouts.public
     title="{{ ucfirst($category) }} — {{ config('app.name') }} Marketplace"
-    description="Browse {{ $category }} AI skills, agents, and workflows on the Agent Fleet marketplace."
+    description="Browse {{ $category }} AI skills, agents, and workflows on the FleetQ marketplace."
 >
     <x-landing.nav />
 

@@ -3,20 +3,20 @@
 @php
     $baseItems = [
         [
-            'question' => 'What is Agent Fleet?',
-            'answer' => 'Agent Fleet is an AI Agent Mission Control Platform. You create AI agents with specific roles and goals, assemble them into multi-agent crews, and orchestrate their work through visual workflows. Every run includes human-in-the-loop approval gates and budget controls, so you stay in charge.',
+            'question' => 'What is FleetQ?',
+            'answer' => 'FleetQ is an AI Agent Mission Control Platform. You create AI agents with specific roles and goals, assemble them into multi-agent crews, and orchestrate their work through visual workflows. Every run includes human-in-the-loop approval gates and budget controls, so you stay in charge.',
         ],
         [
-            'question' => 'Is Agent Fleet open source?',
+            'question' => 'Is FleetQ open source?',
             'answer' => 'Yes. The community edition is fully open source under the MIT license. You can self-host it on your own infrastructure. A managed cloud edition is also available with additional features like team management and billing.',
         ],
         [
             'question' => 'What AI providers are supported?',
-            'answer' => 'Agent Fleet supports three cloud providers — Anthropic (Claude), OpenAI (GPT-4o), and Google (Gemini) — with automatic failover between them. You bring your own API keys, so your credentials stay on your infrastructure. Local agents like Claude Code and OpenAI Codex are also supported at zero platform cost.',
+            'answer' => 'FleetQ supports three cloud providers — Anthropic (Claude), OpenAI (GPT-4o), and Google (Gemini) — with automatic failover between them. You bring your own API keys, so your credentials stay on your infrastructure. Local agents like Claude Code and OpenAI Codex are also supported at zero platform cost.',
         ],
         [
-            'question' => 'Can I self-host Agent Fleet?',
-            'answer' => 'Yes. Agent Fleet ships as a Docker stack with PHP 8.4, PostgreSQL 17, and Redis 7. Run the install wizard and it walks you through database setup, admin account creation, AI provider keys, and default agent configuration in under five minutes.',
+            'question' => 'Can I self-host FleetQ?',
+            'answer' => 'Yes. FleetQ ships as a Docker stack with PHP 8.4, PostgreSQL 17, and Redis 7. Run the install wizard and it walks you through database setup, admin account creation, AI provider keys, and default agent configuration in under five minutes.',
         ],
         [
             'question' => 'How does budget control work?',
@@ -24,7 +24,7 @@
         ],
         [
             'question' => 'What is MCP integration?',
-            'answer' => 'Agent Fleet includes a Model Context Protocol (MCP) server with 76 tools across 15 domains. This means external AI agents — such as Claude Code, OpenAI Codex, or Cursor — can manage your Agent Fleet instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace.',
+            'answer' => 'FleetQ includes a Model Context Protocol (MCP) server with 120+ tools across 20 domains. This means external AI agents — such as Claude Code, OpenAI Codex, or Cursor — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace.',
         ],
         [
             'question' => 'Is my data secure?',

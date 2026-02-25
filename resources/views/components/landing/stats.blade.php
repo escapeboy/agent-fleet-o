@@ -5,7 +5,7 @@
                 $stats = $stats ?? [
                     ['value' => '5', 'label' => 'AI Providers'],
                     ['value' => '9', 'label' => 'Workflow Node Types'],
-                    ['value' => '76', 'label' => 'MCP Tools'],
+                    ['value' => '120+', 'label' => 'MCP Tools'],
                     ['value' => '100%', 'label' => 'Open Source'],
                 ];
             @endphp

@@ -1,4 +1,4 @@
-// Agent Fleet — Web Push subscription management
+// FleetQ — Web Push subscription management
 // Exposed globally as window.AgentFleetPush for Alpine.js integration
 
 function urlBase64ToUint8Array(base64String) {

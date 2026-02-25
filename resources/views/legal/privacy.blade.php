@@ -1,6 +1,6 @@
 <x-layouts.public
-    title="Privacy Policy — Agent Fleet"
-    description="Learn how Agent Fleet collects, uses, and protects your personal data. GDPR and CCPA compliant."
+    title="Privacy Policy — FleetQ"
+    description="Learn how FleetQ collects, uses, and protects your personal data. GDPR and CCPA compliant."
 >
     <x-landing.nav />
 
@@ -11,7 +11,7 @@
             <h1>Privacy Policy</h1>
 
             <h2>1. Introduction</h2>
-            <p>PriceX Ltd. ("we," "us," or "our") operates Agent Fleet (the "Service"). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal data when you use our Service.</p>
+            <p>PriceX Ltd. ("we," "us," or "our") operates FleetQ (the "Service"). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal data when you use our Service.</p>
             <p>We are committed to protecting your privacy in accordance with the General Data Protection Regulation (GDPR), the California Consumer Privacy Act (CCPA/CPRA), and other applicable data protection laws.</p>
 
             <h2>2. Data Controller</h2>
@@ -51,7 +51,7 @@
 
             <h2>4. How We Use Your Data</h2>
             <ol>
-                <li><strong>Service Delivery:</strong> To provide, maintain, and improve the Agent Fleet platform</li>
+                <li><strong>Service Delivery:</strong> To provide, maintain, and improve the FleetQ platform</li>
                 <li><strong>Account Management:</strong> To create and manage your account, team, and subscriptions</li>
                 <li><strong>AI Processing:</strong> To execute AI agents, skills, and experiments using your configured LLM providers</li>
                 <li><strong>Billing:</strong> To process subscription payments and generate invoices via Stripe</li>

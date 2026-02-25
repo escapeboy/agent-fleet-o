@@ -23,7 +23,7 @@ This Data Processing Agreement ("DPA") forms part of the agreement between:
 ## 2. Subject Matter and Duration
 
 ### 2.1 Subject Matter
-The Processor processes Personal Data on behalf of the Controller as necessary to provide the Agent Fleet platform services ("Services").
+The Processor processes Personal Data on behalf of the Controller as necessary to provide the FleetQ platform services ("Services").
 
 ### 2.2 Duration
 This DPA remains in effect for the duration of the main agreement plus the period required to delete or return all Personal Data.
@@ -32,7 +32,7 @@ This DPA remains in effect for the duration of the main agreement plus the perio
 
 | Aspect | Description |
 |--------|-------------|
-| **Purpose** | Providing the Agent Fleet SaaS platform including AI agent execution, experiment pipeline, workflow automation, and team collaboration |
+| **Purpose** | Providing the FleetQ SaaS platform including AI agent execution, experiment pipeline, workflow automation, and team collaboration |
 | **Nature** | Collection, storage, processing by AI models (via Controller's API keys), transmission, deletion |
 | **Categories of Data Subjects** | Controller's team members, end users of Controller's AI-powered workflows |
 | **Categories of Personal Data** | Name, email address, IP address, session data, AI prompt/response data, usage metrics |

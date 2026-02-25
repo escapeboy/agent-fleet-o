@@ -1,6 +1,6 @@
 <x-layouts.public
     title="Marketplace — {{ config('app.name') }}"
-    description="Browse and install AI skills, agents, and workflows from the Agent Fleet marketplace."
+    description="Browse and install AI skills, agents, and workflows from the FleetQ marketplace."
     keywords="AI marketplace, AI agents, AI skills, AI workflows, agent templates"
 >
     <x-slot:head>
@@ -8,9 +8,9 @@
         {
             "@@context": "https://schema.org",
             "@@type": "CollectionPage",
-            "name": "Agent Fleet Marketplace",
+            "name": "FleetQ Marketplace",
             "url": "{{ route('marketplace.index') }}",
-            "description": "Browse and install AI skills, agents, and workflows from the Agent Fleet marketplace."
+            "description": "Browse and install AI skills, agents, and workflows from the FleetQ marketplace."
         }
         </script>
     </x-slot:head>

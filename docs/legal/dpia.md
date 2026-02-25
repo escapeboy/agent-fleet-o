@@ -1,6 +1,6 @@
 # Data Protection Impact Assessment (DPIA)
 
-**Project/Feature:** Agent Fleet — AI Agent Mission Control Platform
+**Project/Feature:** FleetQ — AI Agent Mission Control Platform
 **Date:** 22 February 2026
 **Assessor:** Compliance Audit (Claude Code)
 **Version:** 1.0
@@ -9,7 +9,7 @@
 ## 1. Overview
 
 ### 1.1 Description of Processing
-Agent Fleet is a SaaS platform that enables users to create, configure, and execute AI agents powered by large language models (LLMs). The platform processes user data through AI models (Anthropic Claude, OpenAI GPT-4o, Google Gemini) for experiment pipelines, workflow automation, and skill execution. Users provide their own API keys (BYOK model) to connect with AI providers.
+FleetQ is a SaaS platform that enables users to create, configure, and execute AI agents powered by large language models (LLMs). The platform processes user data through AI models (Anthropic Claude, OpenAI GPT-4o, Google Gemini) for experiment pipelines, workflow automation, and skill execution. Users provide their own API keys (BYOK model) to connect with AI providers.
 
 ### 1.2 Why is a DPIA Required?
 A DPIA is mandatory under GDPR Article 35 when processing is likely to result in high risk to individuals. This DPIA was triggered by:
@@ -67,7 +67,7 @@ A DPIA is mandatory under GDPR Article 35 when processing is likely to result in
 
 ```mermaid
 graph LR
-    A[User / Team Member] -->|Registration & Login| B[Agent Fleet Platform]
+    A[User / Team Member] -->|Registration & Login| B[FleetQ Platform]
     B -->|Session & Auth| C[(PostgreSQL Database)]
     B -->|Sessions & Cache| D[(Redis)]
 

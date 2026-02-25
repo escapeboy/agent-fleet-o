@@ -12,7 +12,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                 </svg>
             </div>
-            <span class="text-lg font-bold text-gray-900">Agent Fleet</span>
+            <span class="text-lg font-bold text-gray-900">FleetQ</span>
         </a>
 
         {{-- Desktop nav --}}

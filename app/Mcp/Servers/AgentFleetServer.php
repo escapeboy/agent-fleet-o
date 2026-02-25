@@ -130,11 +130,11 @@ class AgentFleetServer extends Server
 {
     use BootstrapsMcpAuth;
 
-    protected string $name = 'Agent Fleet';
+    protected string $name = 'FleetQ';
 
     protected string $version = '1.1.0';
 
-    protected string $instructions = 'Agent Fleet MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, and team settings.';
+    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, and team settings.';
 
     protected function boot(): void
     {

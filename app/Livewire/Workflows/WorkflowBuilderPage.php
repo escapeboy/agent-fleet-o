@@ -41,6 +41,8 @@ class WorkflowBuilderPage extends Component
 
     public array $availableCrews = [];
 
+    public array $availableWorkflows = [];
+
     public function mount(?Workflow $workflow = null): void
     {
         if ($workflow && $workflow->exists) {
@@ -58,6 +60,7 @@ class WorkflowBuilderPage extends Component
                 'agent_id' => $node->agent_id,
                 'skill_id' => $node->skill_id,
                 'crew_id' => $node->crew_id,
+                'sub_workflow_id' => $node->sub_workflow_id,
                 'config' => $node->config ?? [],
                 'position_x' => $node->position_x,
                 'position_y' => $node->position_y,
@@ -115,6 +118,14 @@ class WorkflowBuilderPage extends Component
 
         $this->availableCrews = Crew::select('id', 'name', 'status', 'process_type')
             ->where('status', 'active')
+            ->orderBy('name')
+            ->get()
+            ->toArray();
+
+        // Exclude the current workflow to prevent self-referential sub-workflows
+        $this->availableWorkflows = Workflow::select('id', 'name', 'status')
+            ->where('status', 'active')
+            ->when($this->workflowId, fn ($q) => $q->where('id', '!=', $this->workflowId))
             ->orderBy('name')
             ->get()
             ->toArray();
@@ -217,6 +228,7 @@ class WorkflowBuilderPage extends Component
     {
         return view('livewire.workflows.workflow-builder-page', [
             'nodeTypes' => WorkflowNodeType::cases(),
+            'availableWorkflows' => $this->availableWorkflows,
         ])->layout('layouts.app', ['header' => $this->workflowId ? 'Edit Workflow' : 'Create Workflow']);
     }
 }

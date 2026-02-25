@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Register - Agent Fleet</title>
+    <title>Register - {{ config('app.name') }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
     @vite(['resources/css/app.css'])
@@ -11,7 +11,7 @@
 <body class="flex min-h-screen items-center justify-center bg-gray-50 font-sans antialiased">
     <div class="w-full max-w-md">
         <div class="mb-8 text-center">
-            <h1 class="text-2xl font-bold text-gray-900">Agent Fleet</h1>
+            <h1 class="text-2xl font-bold text-gray-900">{{ config('app.name') }}</h1>
             <p class="mt-2 text-sm text-gray-500">AI Agent Mission Control</p>
         </div>
 

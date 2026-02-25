@@ -1,4 +1,4 @@
-# Contributing to Agent Fleet
+# Contributing to FleetQ
 
 ## Development Setup
 
