@@ -8,7 +8,7 @@
         ],
         [
             'question' => 'Is FleetQ open source?',
-            'answer' => 'Yes. The community edition is fully open source under the MIT license. You can self-host it on your own infrastructure. A managed cloud edition is also available with additional features like team management and billing.',
+            'answer' => 'Yes. FleetQ is fully open source under the MIT license. Self-host it on your own infrastructure with complete control over your data, models, and configuration.',
         ],
         [
             'question' => 'What AI providers are supported?',
