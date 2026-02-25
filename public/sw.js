@@ -13,8 +13,8 @@ self.addEventListener('push', function (event) {
     const title = data.title || 'FleetQ';
     const options = {
         body: data.body || '',
-        icon: data.icon || '/favicon.ico',
-        badge: '/favicon.ico',
+        icon: data.icon || '/icon-192.png',
+        badge: '/icon-192.png',
         data: data.data || {},
         actions: data.actions || [],
         requireInteraction: false,
