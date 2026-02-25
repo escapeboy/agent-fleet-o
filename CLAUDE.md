@@ -170,7 +170,7 @@ app/
       Trigger/                   # trigger_rule_list, trigger_rule_create, trigger_rule_update, trigger_rule_delete, trigger_rule_test
       Outbound/                  # outbound_proposal_list, outbound_action_list, outbound_proposal_approve, outbound_proposal_reject, outbound_blacklist_manage, outbound_channel_stats
   Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
-  Http/Controllers/Api/V1/      # 18 REST API controllers (99 endpoints)
+  Http/Controllers/Api/V1/      # 20 REST API controllers (122 endpoints)
   Http/Middleware/               # SetCurrentTeam
   Livewire/                      # Admin panel components
     Dashboard/                   # DashboardPage
@@ -247,7 +247,7 @@ app/
 
 ### API v1 Routes (`/api/v1/`)
 
-99 endpoints across 18 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
+122 endpoints across 20 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
 
 | Group | Endpoints | Purpose |
 |-------|-----------|---------|
@@ -270,6 +270,8 @@ app/
 | Audit | `GET /audit` | Audit log |
 | Artifacts | `GET`, `GET {id}`, `GET {id}/content`, `GET {id}/download` | Artifact CRUD + content + download |
 | Budget | `GET /budget` | Budget summary |
+| Outbound Connectors | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/test` | Outbound connector CRUD + test |
+| Webhook Endpoints | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}` | Outbound webhook CRUD |
 
 ### MCP Routes (`routes/ai.php`)
 
