@@ -8,9 +8,7 @@
         {{-- Logo --}}
         <a href="{{ url('/') }}" class="flex items-center gap-2.5">
             <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
-                <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                </svg>
+                <x-logo-icon class="h-5 w-5 text-white" />
             </div>
             <span class="text-lg font-bold text-gray-900">FleetQ</span>
         </a>

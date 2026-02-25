@@ -11,6 +11,11 @@
 <body class="flex min-h-screen items-center justify-center bg-gray-50 font-sans antialiased">
     <div class="w-full max-w-md">
         <div class="mb-8 text-center">
+            <div class="mb-3 flex justify-center">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600">
+                    <x-logo-icon class="h-7 w-7 text-white" />
+                </div>
+            </div>
             <h1 class="text-2xl font-bold text-gray-900">{{ config('app.name') }}</h1>
             <p class="mt-2 text-sm text-gray-500">AI Agent Mission Control</p>
         </div>

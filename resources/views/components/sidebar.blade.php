@@ -1,6 +1,9 @@
 <aside class="flex w-64 flex-col bg-(--color-sidebar) text-white" x-data="{ current: '{{ request()->routeIs('dashboard') ? 'dashboard' : (request()->routeIs('projects.*') ? 'projects' : (request()->routeIs('experiments.*') ? 'experiments' : (request()->routeIs('workflows.*') ? 'workflows' : (request()->routeIs('approvals.*') ? 'approvals' : (request()->routeIs('health') ? 'health' : (request()->routeIs('settings') ? 'settings' : (request()->routeIs('audit') ? 'audit' : (request()->routeIs('team.*') ? 'team' : 'dashboard')))))))) }}' }">
     {{-- Logo --}}
-    <div class="flex h-16 items-center border-b border-gray-800 px-6">
+    <div class="flex h-16 items-center gap-2.5 border-b border-gray-800 px-5">
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary-600">
+            <x-logo-icon class="h-4 w-4 text-white" />
+        </div>
         <span class="text-xl font-bold tracking-tight">FleetQ</span>
     </div>
 
