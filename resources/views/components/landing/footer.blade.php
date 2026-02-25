@@ -80,9 +80,7 @@
             <div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
                 <div class="flex items-center gap-2.5">
                     <div class="flex h-7 w-7 items-center justify-center rounded-md bg-primary-600">
-                        <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                        </svg>
+                        <x-logo-icon class="h-4 w-4 text-white" />
                     </div>
                     <span class="text-sm font-semibold text-white">FleetQ</span>
                 </div>

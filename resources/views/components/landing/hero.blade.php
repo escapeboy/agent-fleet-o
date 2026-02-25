@@ -59,7 +59,7 @@
                             <div class="h-3 w-3 rounded-full bg-yellow-400"></div>
                             <div class="h-3 w-3 rounded-full bg-green-400"></div>
                             <div class="ml-4 flex items-center gap-1.5 rounded bg-gray-100 px-2.5 py-1">
-                                <svg class="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
+                                <x-logo-icon class="h-3 w-3 text-gray-400" />
                                 <span class="text-[10px] font-medium text-gray-400">FleetQ Dashboard</span>
                             </div>
                         </div>
