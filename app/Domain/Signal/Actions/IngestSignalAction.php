@@ -5,6 +5,7 @@ namespace App\Domain\Signal\Actions;
 use App\Domain\Signal\Jobs\ExtractSignalEntitiesJob;
 use App\Domain\Signal\Jobs\ProcessSignalMediaJob;
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Trigger\Jobs\EvaluateTriggerRulesJob;
 use App\Models\Blacklist;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -91,6 +92,9 @@ class IngestSignalAction
 
         // Dispatch entity extraction for new signals
         ExtractSignalEntitiesJob::dispatch($signal->id);
+
+        // Evaluate trigger rules asynchronously (zero overhead to HTTP response)
+        EvaluateTriggerRulesJob::dispatch($signal->id);
 
         return $signal;
     }

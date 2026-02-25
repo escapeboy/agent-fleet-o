@@ -32,7 +32,9 @@ use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Shared\NotificationInboxPage;
+use App\Livewire\Shared\NotificationPreferencesPage;
 use App\Livewire\Signals\EntityBrowserPage;
+use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
 use App\Livewire\Skills\SkillListPage;
@@ -40,6 +42,8 @@ use App\Livewire\Teams\TeamSettingsPage;
 use App\Livewire\Tools\CreateToolForm;
 use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
+use App\Livewire\Triggers\CreateTriggerRuleForm;
+use App\Livewire\Triggers\TriggerRulesPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
@@ -116,6 +120,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
 
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
+    Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
 
     Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
 
@@ -126,4 +131,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
 
     Route::get('/notifications', NotificationInboxPage::class)->name('notifications.index');
+    Route::get('/notifications/preferences', NotificationPreferencesPage::class)->name('notifications.preferences');
+
+    Route::get('/triggers', TriggerRulesPage::class)->name('triggers.index');
+    Route::get('/triggers/create', CreateTriggerRuleForm::class)->name('triggers.create');
 });

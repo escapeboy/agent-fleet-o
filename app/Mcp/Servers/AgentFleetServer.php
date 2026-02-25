@@ -76,9 +76,12 @@ use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
+use App\Mcp\Tools\Signal\HttpMonitorTool;
+use App\Mcp\Tools\Signal\InboundConnectorManageTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
@@ -91,6 +94,7 @@ use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\SystemHealthTool;
+use App\Mcp\Tools\Telegram\TelegramBotTool;
 use App\Mcp\Tools\Tool\ToolCreateTool;
 use App\Mcp\Tools\Tool\ToolDeleteTool;
 use App\Mcp\Tools\Tool\ToolDiscoverMcpTool;
@@ -98,6 +102,11 @@ use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
+use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
+use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
+use App\Mcp\Tools\Trigger\TriggerRuleListTool;
+use App\Mcp\Tools\Trigger\TriggerRuleTestTool;
+use App\Mcp\Tools\Trigger\TriggerRuleUpdateTool;
 use App\Mcp\Tools\Webhook\WebhookCreateTool;
 use App\Mcp\Tools\Webhook\WebhookDeleteTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
@@ -106,11 +115,13 @@ use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
 use App\Mcp\Tools\Workflow\WorkflowDuplicateTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
+use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
 use App\Mcp\Tools\Workflow\WorkflowSaveGraphTool;
 use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
+use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
 use Laravel\Mcp\Server;
@@ -204,6 +215,8 @@ class AgentFleetServer extends Server
         WorkflowEstimateCostTool::class,
         WorkflowGenerateTool::class,
         WorkflowSuggestionTool::class,
+        WorkflowTimeGateTool::class,
+        WorkflowExecutionChainTool::class,
 
         // Project (8)
         ProjectListTool::class,
@@ -222,12 +235,15 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (5)
+        // Signal (8)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
         TicketConnectorTool::class,
         AlertConnectorTool::class,
+        SlackConnectorTool::class,
+        HttpMonitorTool::class,
+        InboundConnectorManageTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,
@@ -275,6 +291,16 @@ class AgentFleetServer extends Server
         TeamGetTool::class,
         TeamUpdateTool::class,
         TeamMembersTool::class,
+
+        // Telegram (1)
+        TelegramBotTool::class,
+
+        // Trigger (5)
+        TriggerRuleListTool::class,
+        TriggerRuleCreateTool::class,
+        TriggerRuleUpdateTool::class,
+        TriggerRuleDeleteTool::class,
+        TriggerRuleTestTool::class,
 
         // System (3)
         DashboardKpisTool::class,

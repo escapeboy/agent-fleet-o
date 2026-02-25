@@ -87,6 +87,7 @@ class MaterializeWorkflowAction
                 'agent_id' => $node->agent_id,
                 'skill_id' => $node->skill_id,
                 'crew_id' => $node->crew_id,
+                'sub_workflow_id' => $node->sub_workflow_id,
                 'config' => $node->config,
                 'expression' => $node->expression,
                 'order' => $node->order,
@@ -102,6 +103,8 @@ class MaterializeWorkflowAction
                 'label' => $edge->label,
                 'is_default' => $edge->is_default,
                 'sort_order' => $edge->sort_order,
+                'source_channel' => $edge->source_channel,
+                'target_channel' => $edge->target_channel,
             ])->toArray(),
         ];
     }

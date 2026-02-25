@@ -3,9 +3,12 @@
 namespace App\Domain\Experiment\Notifications;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class StuckExperimentNotification extends Notification
 {
@@ -20,7 +23,25 @@ class StuckExperimentNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        $channels = ['mail'];
+
+        if ($notifiable instanceof User
+            && $notifiable->prefersChannel('experiment.stuck', 'push')
+            && $notifiable->pushSubscriptions()->exists()) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        return $channels;
+    }
+
+    public function toWebPush(object $notifiable, self $notification): WebPushMessage
+    {
+        return WebPushMessage::create()
+            ->title("Experiment stuck: {$this->experiment->title}")
+            ->body("Stuck in {$this->stuckState} for {$this->stuckDuration}. {$this->recoveryAttempts} recovery attempt(s).")
+            ->icon('/favicon.ico')
+            ->action('View Health', route('health'))
+            ->data(['url' => route('health'), 'type' => 'experiment.stuck']);
     }
 
     public function toMail(object $notifiable): MailMessage

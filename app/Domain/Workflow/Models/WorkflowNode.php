@@ -13,6 +13,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string|null $sub_workflow_id
+ */
 class WorkflowNode extends Model
 {
     use HasFactory, HasUuids;
@@ -27,6 +30,7 @@ class WorkflowNode extends Model
         'agent_id',
         'skill_id',
         'crew_id',
+        'sub_workflow_id',
         'guardrail_skill_id',
         'type',
         'label',
@@ -71,6 +75,11 @@ class WorkflowNode extends Model
     public function guardrailSkill(): BelongsTo
     {
         return $this->belongsTo(Skill::class, 'guardrail_skill_id');
+    }
+
+    public function subWorkflow(): BelongsTo
+    {
+        return $this->belongsTo(Workflow::class, 'sub_workflow_id');
     }
 
     public function outgoingEdges(): HasMany

@@ -33,6 +33,9 @@ class GraphValidator
         $this->validateLoopExits();
         $this->validateAgentNodes();
         $this->validateCrewNodes();
+        $this->validateTimeGateNodes();
+        $this->validateMergeNodes();
+        $this->validateSubWorkflowNodes();
 
         return $this->errors;
     }
@@ -417,6 +420,82 @@ class GraphValidator
                     'message' => "Crew node '{$node->label}' has no crew assigned.",
                     'node_id' => $node->id,
                 ];
+            }
+        }
+    }
+
+    private function validateTimeGateNodes(): void
+    {
+        $timeGateNodes = $this->nodes->where('type', WorkflowNodeType::TimeGate);
+
+        foreach ($timeGateNodes as $node) {
+            $config = is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []);
+
+            if (empty($config['delay_seconds']) && empty($config['delay_until'])) {
+                $this->errors[] = [
+                    'type' => 'time_gate_no_delay',
+                    'message' => "Time Gate node '{$node->label}' requires either 'delay_seconds' or 'delay_until' in config.",
+                    'node_id' => $node->id,
+                ];
+            }
+        }
+    }
+
+    private function validateMergeNodes(): void
+    {
+        $mergeNodes = $this->nodes->where('type', WorkflowNodeType::Merge);
+
+        foreach ($mergeNodes as $node) {
+            $incoming = $this->edges->where('target_node_id', $node->id);
+
+            if ($incoming->count() < 2) {
+                $this->errors[] = [
+                    'type' => 'merge_insufficient_incoming',
+                    'message' => "Merge node '{$node->label}' should have at least 2 incoming edges to be meaningful.",
+                    'node_id' => $node->id,
+                ];
+            }
+
+            $outgoing = $this->edges->where('source_node_id', $node->id);
+
+            if ($outgoing->count() !== 1) {
+                $this->errors[] = [
+                    'type' => 'merge_wrong_outgoing',
+                    'message' => "Merge node '{$node->label}' must have exactly 1 outgoing edge.",
+                    'node_id' => $node->id,
+                ];
+            }
+        }
+    }
+
+    private function validateSubWorkflowNodes(): void
+    {
+        $subWorkflowNodes = $this->nodes->where('type', WorkflowNodeType::SubWorkflow);
+
+        foreach ($subWorkflowNodes as $node) {
+            if (! $node->sub_workflow_id) {
+                $this->errors[] = [
+                    'type' => 'sub_workflow_no_workflow',
+                    'message' => "Sub-Workflow node '{$node->label}' has no sub-workflow assigned.",
+                    'node_id' => $node->id,
+                ];
+
+                continue;
+            }
+
+            // Guard against circular references: the sub-workflow must not reference this workflow
+            // (shallow check — we don't traverse nested sub-workflows)
+            $subWorkflow = Workflow::find($node->sub_workflow_id);
+            if ($subWorkflow) {
+                $subWorkflowId = $node->sub_workflow_id;
+                $parentWorkflowId = $node->workflow_id;
+                if ($subWorkflowId === $parentWorkflowId) {
+                    $this->errors[] = [
+                        'type' => 'sub_workflow_circular_reference',
+                        'message' => "Sub-Workflow node '{$node->label}' references its own parent workflow, creating a circular dependency.",
+                        'node_id' => $node->id,
+                    ];
+                }
             }
         }
     }

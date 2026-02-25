@@ -13,6 +13,9 @@ enum WorkflowNodeType: string
     case Switch = 'switch';
     case DynamicFork = 'dynamic_fork';
     case DoWhile = 'do_while';
+    case TimeGate = 'time_gate';
+    case Merge = 'merge';
+    case SubWorkflow = 'sub_workflow';
 
     public function label(): string
     {
@@ -26,6 +29,9 @@ enum WorkflowNodeType: string
             self::Switch => 'Switch',
             self::DynamicFork => 'Dynamic Fork',
             self::DoWhile => 'Do While',
+            self::TimeGate => 'Time Gate',
+            self::Merge => 'Merge',
+            self::SubWorkflow => 'Sub-Workflow',
         };
     }
 
@@ -41,6 +47,9 @@ enum WorkflowNodeType: string
             self::Switch => 'arrows-pointing-out',
             self::DynamicFork => 'queue-list',
             self::DoWhile => 'arrow-path',
+            self::TimeGate => 'clock',
+            self::Merge => 'funnel',
+            self::SubWorkflow => 'rectangle-stack',
         };
     }
 
@@ -74,6 +83,7 @@ enum WorkflowNodeType: string
             self::Switch,
             self::DynamicFork,
             self::DoWhile,
+            self::Merge,
         ]);
     }
 
@@ -86,6 +96,8 @@ enum WorkflowNodeType: string
             self::Agent,
             self::Crew,
             self::HumanTask,
+            self::TimeGate,
+            self::SubWorkflow,
         ]);
     }
 }

@@ -11,6 +11,8 @@ use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Pipeline\ExecutePlaybookStepJob;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Workflow\Actions\DispatchSubWorkflowAction;
+use App\Domain\Workflow\Actions\HandleTimeGateAction;
 use App\Domain\Workflow\Models\WorkflowNode;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -89,9 +91,8 @@ class WorkflowGraphExecutor
         );
 
         // Filter to nodes whose ALL predecessors are complete (join semantics).
-        // Without this, a retry on one branch could dispatch a downstream join node
-        // before the other branch's retried step finishes.
-        $executableNodeIds = $this->filterReadyNodes($executableNodeIds, $graph['edges'], $steps);
+        // Merge nodes use OR semantics (any predecessor complete is enough).
+        $executableNodeIds = $this->filterReadyNodes($executableNodeIds, $graph['edges'], $steps, $nodeMap);
 
         if (empty($executableNodeIds)) {
             [$state, $msg] = $this->resolveCompletionState($experiment, 'Workflow completed');
@@ -131,18 +132,26 @@ class WorkflowGraphExecutor
         $nodeMap = collect($graph['nodes'])->keyBy('id')->toArray();
         $maxLoopIterations = $graph['max_loop_iterations'] ?? 10;
 
-        // Collect all successor node IDs from completed nodes
+        // Collect successor node IDs, respecting output channels on edges.
+        // If a step's output contains '_channel', only traverse edges whose
+        // source_channel matches (or have no source_channel constraint).
         $nextNodeIds = [];
         foreach ($completedNodeIds as $nodeId) {
-            foreach ($adjacency[$nodeId] ?? [] as $successor) {
-                $nextNodeIds[] = $successor;
+            $step = $steps[$nodeId] ?? null;
+            $outputChannel = is_array($step?->output) ? ($step->output['_channel'] ?? null) : null;
+
+            foreach ($edgeMap[$nodeId] ?? [] as $edge) {
+                $edgeChannel = $edge['source_channel'] ?? null;
+                if (empty($edgeChannel) || $edgeChannel === $outputChannel) {
+                    $nextNodeIds[] = $edge['target_node_id'];
+                }
             }
         }
 
         $nextNodeIds = array_unique($nextNodeIds);
 
-        // Filter to nodes where ALL predecessors are complete
-        $nextNodeIds = $this->filterReadyNodes($nextNodeIds, $graph['edges'], $steps);
+        // Filter to nodes where ALL predecessors are complete (AND) or ANY (Merge/OR).
+        $nextNodeIds = $this->filterReadyNodes($nextNodeIds, $graph['edges'], $steps, $nodeMap);
 
         $executableNodeIds = $this->resolveExecutableNodes(
             $nextNodeIds, $nodeMap, $edgeMap, $adjacency, $steps, $experiment, $maxLoopIterations,
@@ -150,7 +159,7 @@ class WorkflowGraphExecutor
 
         if (empty($executableNodeIds)) {
             // Check if all steps are done
-            $pendingSteps = $steps->filter(fn (PlaybookStep $s) => $s->isPending() || $s->status === 'running' || $s->isWaitingHuman());
+            $pendingSteps = $steps->filter(fn (PlaybookStep $s) => $s->isPending() || $s->status === 'running' || $s->isWaitingHuman() || $s->isWaitingTime());
 
             if ($pendingSteps->isEmpty()) {
                 try {
@@ -234,7 +243,7 @@ class WorkflowGraphExecutor
             return;
         }
 
-        if ($type === 'agent' || $type === 'crew' || $type === 'human_task') {
+        if ($type === 'agent' || $type === 'crew' || $type === 'human_task' || $type === 'time_gate' || $type === 'sub_workflow') {
             $step = $steps[$nodeId] ?? null;
 
             if (! $step) {
@@ -452,6 +461,19 @@ class WorkflowGraphExecutor
             return;
         }
 
+        // Merge node — OR fan-in: pass through to successors immediately.
+        // filterReadyNodes handles the OR semantics (any predecessor complete).
+        if ($type === 'merge') {
+            foreach ($adjacency[$nodeId] ?? [] as $successor) {
+                $this->resolveNode(
+                    $successor, $nodeMap, $edgeMap, $adjacency,
+                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                );
+            }
+
+            return;
+        }
+
         // Start node — just traverse to successors
         if ($type === 'start') {
             foreach ($adjacency[$nodeId] ?? [] as $successor) {
@@ -464,34 +486,53 @@ class WorkflowGraphExecutor
     }
 
     /**
-     * Filter candidate node IDs to only those whose ALL incoming edges are from completed nodes.
-     * This enables proper join semantics for convergent paths.
+     * Filter candidate node IDs to only those that are ready to execute.
+     *
+     * - Default (AND semantics): ALL incoming predecessors must be complete.
+     * - Merge nodes (OR semantics): ANY predecessor complete is sufficient.
      */
-    private function filterReadyNodes(array $candidateNodeIds, array $edges, $steps): array
+    private function filterReadyNodes(array $candidateNodeIds, array $edges, $steps, array $nodeMap = []): array
     {
         $ready = [];
 
         foreach ($candidateNodeIds as $nodeId) {
             $incomingEdges = collect($edges)->where('target_node_id', $nodeId);
-            $allPredecessorsComplete = true;
+            $nodeType = $nodeMap[$nodeId]['type'] ?? null;
+            $isMerge = $nodeType === 'merge';
 
-            foreach ($incomingEdges as $edge) {
-                $sourceStep = $steps[$edge['source_node_id']] ?? null;
-
-                // If source is a non-agent node (start/conditional), it's always "complete"
-                if (! $sourceStep) {
-                    continue;
+            if ($isMerge) {
+                // OR semantics: ready if ANY predecessor has a completed/skipped step
+                // (or is a control-flow node with no step — always counts as complete)
+                $anyComplete = false;
+                foreach ($incomingEdges as $edge) {
+                    $sourceStep = $steps[$edge['source_node_id']] ?? null;
+                    if (! $sourceStep || $sourceStep->isCompleted() || $sourceStep->isSkipped()) {
+                        $anyComplete = true;
+                        break;
+                    }
                 }
-
-                if (! $sourceStep->isCompleted() && ! $sourceStep->isSkipped()) {
-                    $allPredecessorsComplete = false;
-
-                    break;
+                if ($anyComplete) {
+                    $ready[] = $nodeId;
                 }
-            }
+            } else {
+                // AND semantics: ALL predecessors must be complete
+                $allPredecessorsComplete = true;
+                foreach ($incomingEdges as $edge) {
+                    $sourceStep = $steps[$edge['source_node_id']] ?? null;
 
-            if ($allPredecessorsComplete) {
-                $ready[] = $nodeId;
+                    // Control-flow nodes have no step — always "complete"
+                    if (! $sourceStep) {
+                        continue;
+                    }
+
+                    if (! $sourceStep->isCompleted() && ! $sourceStep->isSkipped()) {
+                        $allPredecessorsComplete = false;
+                        break;
+                    }
+                }
+                if ($allPredecessorsComplete) {
+                    $ready[] = $nodeId;
+                }
             }
         }
 
@@ -557,6 +598,22 @@ class WorkflowGraphExecutor
             if ($nodeType === 'human_task') {
                 // Human tasks create an approval request instead of dispatching a job
                 $this->dispatchHumanTask($step, $experiment, $nodeMap[$nodeId]);
+                $dispatchedNodeIds[] = $nodeId;
+
+                continue;
+            }
+
+            if ($nodeType === 'time_gate') {
+                // Time gates mark the step as waiting_time and schedule a delayed wakeup
+                $this->dispatchTimeGate($step, $experiment, $nodeMap[$nodeId]);
+                $dispatchedNodeIds[] = $nodeId;
+
+                continue;
+            }
+
+            if ($nodeType === 'sub_workflow') {
+                // Sub-workflow nodes spawn a child experiment and keep the step in "running"
+                $this->dispatchSubWorkflow($step, $experiment, $nodeMap[$nodeId]);
                 $dispatchedNodeIds[] = $nodeId;
 
                 continue;
@@ -635,6 +692,40 @@ class WorkflowGraphExecutor
         }
     }
 
+    private function dispatchTimeGate(PlaybookStep $step, Experiment $experiment, array $nodeData): void
+    {
+        try {
+            app(HandleTimeGateAction::class)->execute($step, $experiment, $nodeData);
+        } catch (\Throwable $e) {
+            Log::error('WorkflowGraphExecutor: Failed to activate time gate', [
+                'step_id' => $step->id,
+                'error' => $e->getMessage(),
+            ]);
+            $step->update([
+                'status' => 'failed',
+                'error_message' => 'Failed to activate time gate: '.$e->getMessage(),
+                'completed_at' => now(),
+            ]);
+        }
+    }
+
+    private function dispatchSubWorkflow(PlaybookStep $step, Experiment $experiment, array $nodeData): void
+    {
+        try {
+            app(DispatchSubWorkflowAction::class)->execute($step, $experiment, $nodeData);
+        } catch (\Throwable $e) {
+            Log::error('WorkflowGraphExecutor: Failed to dispatch sub-workflow', [
+                'step_id' => $step->id,
+                'error' => $e->getMessage(),
+            ]);
+            $step->update([
+                'status' => 'failed',
+                'error_message' => 'Failed to dispatch sub-workflow: '.$e->getMessage(),
+                'completed_at' => now(),
+            ]);
+        }
+    }
+
     /**
      * Calculate priority scores for nodes based on unblocking potential.
      * Higher score = should execute first.
@@ -652,7 +743,9 @@ class WorkflowGraphExecutor
             // Human tasks take longer — prioritize unblocking them first
             $typeWeight = match ($nodeMap[$nodeId]['type'] ?? 'agent') {
                 'human_task' => 3,
+                'sub_workflow' => 3,
                 'crew' => 2,
+                'time_gate' => 2,
                 'agent' => 1,
                 default => 0,
             };

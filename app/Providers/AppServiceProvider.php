@@ -11,10 +11,12 @@ use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
+use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
 use App\Domain\Project\Listeners\LogProjectActivity;
+use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use App\Domain\Shared\Services\DeploymentMode;
@@ -81,12 +83,18 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ExperimentTransitioned::class, LogProjectActivity::class);
         Event::listen(ExperimentTransitioned::class, NotifyDependentsOnRunComplete::class);
 
+        // Delegation loop: notify assistant/Telegram when delegated run completes
+        Event::listen(ExperimentTransitioned::class, NotifyAssistantOnProjectComplete::class);
+
         // Webhook notifications
         Event::listen(ExperimentTransitioned::class, SendWebhookOnExperimentTransition::class);
         Event::listen(ExperimentTransitioned::class, SendWebhookOnProjectRunComplete::class);
 
         // Sub-experiment orchestration: check parent when child reaches terminal state
         Event::listen(ExperimentTransitioned::class, CheckParentExperimentCompletion::class);
+
+        // Sub-workflow node: resume parent workflow step when sub-workflow experiment completes
+        Event::listen(ExperimentTransitioned::class, ResumeParentOnSubWorkflowComplete::class);
 
         // Memory: extract learnings from completed experiments
         Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);

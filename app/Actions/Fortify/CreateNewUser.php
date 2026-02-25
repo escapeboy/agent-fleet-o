@@ -42,7 +42,13 @@ class CreateNewUser implements CreatesNewUsers
             ]);
 
             // Attach to the default team (created during app:install)
-            $team = Team::where('slug', 'default')->firstOrFail();
+            $team = Team::where('slug', 'default')->first();
+
+            if (! $team) {
+                throw new \RuntimeException(
+                    'Default team not found. Run `php artisan app:install` before registering users.',
+                );
+            }
 
             $team->users()->attach($user->id, ['role' => 'member']);
 

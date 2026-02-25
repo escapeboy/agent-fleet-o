@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string|null $source_channel
+ * @property string|null $target_channel
+ */
 class WorkflowEdge extends Model
 {
     use HasFactory, HasUuids;
@@ -26,6 +30,8 @@ class WorkflowEdge extends Model
         'label',
         'is_default',
         'sort_order',
+        'source_channel',
+        'target_channel',
     ];
 
     protected function casts(): array

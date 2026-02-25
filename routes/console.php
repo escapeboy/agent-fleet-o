@@ -15,11 +15,14 @@ Schedule::command('approvals:expire-stale')->hourly();
 Schedule::command('metrics:aggregate --period=hourly')->hourly();
 Schedule::command('metrics:aggregate --period=daily')->dailyAt('01:00');
 Schedule::command('connectors:poll')->everyFifteenMinutes();
+Schedule::command('connectors:poll --driver=http_monitor')->everyFiveMinutes()->withoutOverlapping(5);
+Schedule::command('connectors:poll --driver=telegram')->everyMinute()->withoutOverlapping(2);
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
 Schedule::command('human-tasks:check-sla')->everyFiveMinutes();
+Schedule::command('workflows:poll-time-gates')->everyMinute()->withoutOverlapping(1);
 
 // Project scheduling & budget enforcement
 Schedule::command('projects:check-budgets')->hourly();

@@ -325,6 +325,30 @@ parameters:
 			path: app/Domain/Assistant/Services/ConversationManager.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/DelegationTools.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Tools/DelegationTools.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Assistant/Tools/DelegationTools.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Domain/Assistant/Tools/DelegationTools.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent\.$#'
 			identifier: property.notFound
 			count: 1
@@ -931,6 +955,12 @@ parameters:
 			path: app/Domain/Experiment/Models/Experiment.php
 
 		-
+			message: '#^Call to an undefined static method NotificationChannels\\WebPush\\WebPushMessage\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Domain/Experiment/Notifications/StuckExperimentNotification.php
+
+		-
 			message: '#^Offset ''default_llm_model'' does not exist on array\{\}\|string\.$#'
 			identifier: offsetAccess.notFound
 			count: 1
@@ -1135,6 +1165,12 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
+
+		-
 			message: '#^Parameter \$agent of method App\\Domain\\Agent\\Actions\\ExecuteAgentAction\:\:execute\(\) expects App\\Domain\\Agent\\Models\\Agent, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1150,6 +1186,12 @@ parameters:
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
 			count: 2
+			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>label" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
@@ -2307,6 +2349,18 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
+			count: 1
+			path: app/Domain/Project/Listeners/NotifyAssistantOnProjectComplete.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>team_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Project/Listeners/NotifyAssistantOnProjectComplete.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
 			count: 3
 			path: app/Domain/Project/Listeners/NotifyDependentsOnRunComplete.php
 
@@ -2443,6 +2497,12 @@ parameters:
 			path: app/Domain/Project/Notifications/ProjectRunCompletedNotification.php
 
 		-
+			message: '#^Call to an undefined static method NotificationChannels\\WebPush\\WebPushMessage\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Domain/Project/Notifications/ProjectRunFailedNotification.php
+
+		-
 			message: '#^Offset ''channels'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -2575,6 +2635,12 @@ parameters:
 			path: app/Domain/Project/Services/RunOutputCollector.php
 
 		-
+			message: '#^Call to an undefined static method NotificationChannels\\WebPush\\WebPushMessage\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Domain/Shared/Jobs/SendPushNotificationJob.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Relations\\Pivot\:\:\$role\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2641,6 +2707,54 @@ parameters:
 			path: app/Domain/Signal/Actions/ExtractEntitiesAction.php
 
 		-
+			message: '#^Left side of && is always false\.$#'
+			identifier: booleanAnd.leftAlwaysFalse
+			count: 1
+			path: app/Domain/Signal/Actions/RefreshOAuthTokenAction.php
+
+		-
+			message: '#^Method App\\Domain\\Signal\\Actions\\RefreshOAuthTokenAction\:\:refreshToken\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Signal/Actions/RefreshOAuthTokenAction.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Signal/Actions/RefreshOAuthTokenAction.php
+
+		-
+			message: '#^Offset ''access_token'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Signal/Actions/RefreshOAuthTokenAction.php
+
+		-
+			message: '#^Offset ''refresh_token'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Signal/Actions/RefreshOAuthTokenAction.php
+
+		-
+			message: '#^Offset ''token_expires_at'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Signal/Actions/RefreshOAuthTokenAction.php
+
+		-
+			message: '#^Right side of && is always false\.$#'
+			identifier: booleanAnd.rightAlwaysFalse
+			count: 1
+			path: app/Domain/Signal/Actions/RefreshOAuthTokenAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Signal/Actions/RefreshOAuthTokenAction.php
+
+		-
 			message: '#^Method App\\Domain\\Signal\\Connectors\\ApiPollingConnector\:\:resolveCredentials\(\) never returns array so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
@@ -2651,24 +2765,6 @@ parameters:
 			identifier: return.type
 			count: 1
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
-
-		-
-			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Domain/Signal/Connectors/CalendarConnector.php
-
-		-
-			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Domain/Signal/Connectors/ImapConnector.php
-
-		-
-			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Domain/Signal/Connectors/ImapConnector.php
 
 		-
 			message: '#^Method App\\Domain\\Signal\\Connectors\\ImapConnector\:\:resolveCredentials\(\) never returns array so it can be removed from the return type\.$#'
@@ -2965,6 +3061,18 @@ parameters:
 			path: app/Domain/Skill/Services/SkillCostCalculator.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Telegram/Actions/ProcessTelegramMessageAction.php
+
+		-
+			message: '#^Instanceof between string and BackedEnum will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 1
+			path: app/Domain/Telegram/Actions/ProcessTelegramMessageAction.php
+
+		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Domain\\Tool\\Models\\Tool\)\: bool given\.$#'
 			identifier: argument.type
 			count: 2
@@ -3077,6 +3185,36 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Signal\\Models\\Signal\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Trigger/Actions/EvaluateTriggerRulesAction.php
+
+		-
+			message: '#^Parameter \#1 \$conditions of method App\\Domain\\Trigger\\Services\\TriggerConditionEvaluator\:\:evaluate\(\) expects array\<string, mixed\>\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Trigger/Actions/EvaluateTriggerRulesAction.php
+
+		-
+			message: '#^Parameter \#1 \$inputMapping of method App\\Domain\\Trigger\\Services\\SignalInputMapper\:\:map\(\) expects array\<string, string\>\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Trigger/Actions/ExecuteTriggerRuleAction.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Trigger/Services/SignalInputMapper.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Trigger/Services/SignalInputMapper.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$condition\.$#'
@@ -3349,7 +3487,25 @@ parameters:
 			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$source_channel\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$source_node_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sub_workflow_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$target_channel\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Domain/Workflow/Actions/MaterializeWorkflowAction.php
@@ -3471,6 +3627,18 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
 			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Workflow/Services/WorkflowGraphExecutor.php
 
@@ -6061,6 +6229,24 @@ parameters:
 			path: app/Livewire/Shared/NotificationInboxPage.php
 
 		-
+			message: '#^Offset ''secret'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Signals/ConnectorSetupPanel.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Signal\\Models\\Signal\:\:\$total\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>total" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -6111,7 +6297,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 6
 			path: app/Livewire/Teams/TeamSettingsPage.php
 
 		-
@@ -6155,6 +6341,12 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
+			message: '#^Cannot call method isActive\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Livewire/Triggers/TriggerRulesPage.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -6711,6 +6903,84 @@ parameters:
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
+
+		-
+			message: '#^Offset ''consecutive_failures'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
+
+		-
+			message: '#^Offset ''last_status'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
+
+		-
+			message: '#^Offset ''monitor_type'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
+
+		-
+			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Connector\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Signal\\Models\\Signal\:\:\$total\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
+
+		-
+			message: '#^Offset ''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack'' on array\{github\: ''GITHUB_WEBHOOK…'', slack\: ''SLACK_SIGNING_SECRET'', jira\: ''JIRA_WEBHOOK_SECRET'', linear\: ''LINEAR_WEBHOOK…'', discord\: ''DISCORD_WEBHOOK…'', sentry\: ''SENTRY_WEBHOOK…'', pagerduty\: ''PAGERDUTY_AUTH_TOKEN''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
+
+		-
+			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
+
+		-
+			message: '#^Parameter \#1 \$array \(array\{array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, \.\.\.\}\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Connector\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>total" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
 			count: 1
 			path: app/Mcp/Tools/Signal/SignalGetTool.php
 
@@ -6829,6 +7099,12 @@ parameters:
 			path: app/Mcp/Tools/System/AuditLogTool.php
 
 		-
+			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Telegram/TelegramBotTool.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 2
@@ -6863,6 +7139,48 @@ parameters:
 			identifier: property.nonObject
 			count: 2
 			path: app/Mcp/Tools/Tool/ToolUpdateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleCreateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleListTool.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Trigger\\Models\\TriggerRule\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleListTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleTestTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Trigger/TriggerRuleUpdateTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -6965,6 +7283,18 @@ parameters:
 			identifier: property.nonObject
 			count: 1
 			path: app/Mcp/Tools/Workflow/WorkflowSaveGraphTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Workflow/WorkflowTimeGateTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowTimeGateTool.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'

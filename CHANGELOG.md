@@ -5,6 +5,15 @@ All notable changes to Agent Fleet Community Edition are documented here.
 ## [Unreleased]
 
 ### Added
+- **Workflow Engine Enhancements** -- 5 new node types and capabilities:
+  - **TimeGate Node** — delay-based gate with configurable `delay_seconds`; `PollWorkflowTimeGatesCommand` cron resumes expired gates automatically
+  - **Multiple Output Channels** — edge-level `source_channel`/`target_channel` routing so nodes can fan-out to labelled downstream paths
+  - **Merge Node** — OR-join semantics; proceeds when the first incoming branch completes, ignoring remaining branches
+  - **Event-Chain Tracking** — `WorkflowNodeEvent` model records every node execution with event type, duration, input/output summaries, and parent chain links; Execution Chain tab in ExperimentDetailPage; `workflow_execution_chain` MCP tool
+  - **Sub-Workflow Node** — spawn a child experiment from a reusable workflow blueprint; parent waits and resumes when child reaches a terminal state
+- **Inbound Signal Connectors UI** -- Manage Slack, HTTP monitor, GitHub events, IMAP OAuth2, and Telegram connectors from a dedicated page
+- **Push Notifications** -- Web push via `laravel-notification-channels/webpush`; configurable per-event preferences
+- **Event-Driven Trigger Rules** -- Define conditions on incoming signals to auto-start projects; Telegram bot routing
 - **Agent Templates** -- 14 pre-built agent templates across 5 categories with gallery page, search, and one-click deploy
 - **Agent Evolution** -- AI-driven self-improvement with execution analysis, proposal generation, and one-click apply
 - **Agent Personality** -- Configurable personality traits (tone, verbosity, creativity, risk tolerance, collaboration style)
@@ -24,8 +33,9 @@ All notable changes to Agent Fleet Community Edition are documented here.
 - Email connector is always team-configurable regardless of deployment mode
 
 ### Fixed
-- PHPStan baseline regenerated for all new domains and RLS security files
-- Laravel Pint style issues across feature branches (SmtpEmailConnector, RLS middleware, bootstrap/app.php, RLS migration, RLS test)
+- `TestCase` bootstrap detection now checks if `Cloud\\` namespace is registered in the current autoloader instead of relying on file-path heuristics — fixes standalone base tests being broken when run inside the cloud repo
+- PHPStan baseline regenerated from scratch (1509 suppressed errors; all prior stale entries removed)
+- Laravel Pint style fixes across Phases 9 and 10 files
 
 ---
 

@@ -4,6 +4,7 @@ namespace App\Domain\Signal\Connectors;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Signal\Actions\IngestSignalAction;
+use App\Domain\Signal\Actions\RefreshOAuthTokenAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,7 @@ class ImapConnector implements InputConnectorInterface
 
     public function __construct(
         private readonly IngestSignalAction $ingestAction,
+        private readonly RefreshOAuthTokenAction $refreshToken,
     ) {}
 
     /**
@@ -48,16 +50,35 @@ class ImapConnector implements InputConnectorInterface
         }
 
         try {
-            $cm = new ClientManager;
-            $client = $cm->make([
+            $clientConfig = [
                 'host' => $host,
                 'port' => $port,
                 'encryption' => $encryption,
                 'validate_cert' => true,
                 'username' => $credentials['username'],
-                'password' => $credentials['password'],
                 'protocol' => 'imap',
-            ]);
+            ];
+
+            $authType = $config['auth_type'] ?? 'basic';
+
+            if ($authType === 'oauth2') {
+                // Resolve a fresh access token (auto-refreshes if expired)
+                $credentialId = $config['credential_id'] ?? null;
+                if (! $credentialId) {
+                    Log::warning('ImapConnector: auth_type=oauth2 but no credential_id configured');
+
+                    return [];
+                }
+
+                $accessToken = $this->refreshToken->execute($credentialId);
+                $clientConfig['password'] = $accessToken;
+                $clientConfig['authentication'] = 'oauth';
+            } else {
+                $clientConfig['password'] = $credentials['password'] ?? '';
+            }
+
+            $cm = new ClientManager;
+            $client = $cm->make($clientConfig);
 
             $client->connect();
             $mailFolder = $client->getFolder($folder);

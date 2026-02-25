@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\NotificationPreferencesService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,11 +14,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasUuids, Notifiable;
+    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, Notifiable;
 
     protected $fillable = [
         'name',
@@ -25,6 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'current_team_id',
         'theme',
+        'notification_preferences',
     ];
 
     protected $hidden = [
@@ -41,7 +44,21 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    public function getPreferences(): array
+    {
+        $defaults = NotificationPreferencesService::defaults();
+        $saved = $this->notification_preferences ?? [];
+
+        return array_merge($defaults, $saved);
+    }
+
+    public function prefersChannel(string $type, string $channel): bool
+    {
+        return in_array($channel, $this->getPreferences()[$type] ?? []);
     }
 
     public function teams(): BelongsToMany
