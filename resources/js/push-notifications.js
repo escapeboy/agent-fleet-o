@@ -80,10 +80,33 @@ async function unsubscribeFromPush(wire) {
     }
 }
 
-// Register service worker silently on page load (no subscription prompt)
+// Register service worker on page load and handle updates
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then((registration) => {
+                // Detect when a new SW version is waiting to activate
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    if (!newWorker) return;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New SW is ready — notify the page via a custom event
+                            window.dispatchEvent(new CustomEvent('fleetq:sw-update-ready'));
+                        }
+                    });
+                });
+            })
+            .catch(() => {});
+    });
+
+    // When the SW controller changes (new SW took over), reload the page if
+    // the update toast was dismissed in favour of a manual reload
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            refreshing = true;
+        }
     });
 }
 
