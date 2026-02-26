@@ -118,6 +118,50 @@
         </div>
     </div>
 
+    {{-- RunPod Integration --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">RunPod Integration</h2>
+        <p class="mb-4 text-sm text-gray-500">
+            Connect your RunPod account to run AI models on GPU cloud. Agents can call serverless endpoints and manage pods.
+            Get your API key from <a href="https://www.runpod.io/console/user/settings" target="_blank" class="text-primary-600 hover:underline">RunPod Settings</a>.
+        </p>
+
+        @if($runpodCredential)
+            <div class="mb-4 rounded-lg bg-green-50 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium text-green-900">RunPod API key configured</p>
+                        <p class="mt-0.5 text-sm text-green-700">
+                            Status:
+                            @if($runpodCredential->is_active)
+                                <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span>
+                            @else
+                                <span class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Inactive</span>
+                            @endif
+                        </p>
+                    </div>
+                    <button wire:click="removeRunPodCredential" wire:confirm="Remove the RunPod API key?"
+                        class="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50">
+                        Remove
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500">Agents can now use <strong>RunPod Endpoint</strong> skill type to call your hosted AI models. Use the <code class="rounded bg-gray-100 px-1">runpod_manage</code> MCP tool to run jobs programmatically.</p>
+        @else
+            <div class="flex items-end gap-3">
+                <div class="flex-1">
+                    <x-form-input wire:model="runpodApiKey" label="RunPod API Key" type="password"
+                        placeholder="rpa_..."
+                        hint="Found in RunPod Console → Settings → API Keys."
+                        :error="$errors->first('runpodApiKey')" />
+                </div>
+                <button wire:click="saveRunPodCredential" class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
+                    Save Key
+                </button>
+            </div>
+        @endif
+    </div>
+
     {{-- Telegram Bot --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Telegram Bot</h2>

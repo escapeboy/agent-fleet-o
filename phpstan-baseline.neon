@@ -2875,6 +2875,24 @@ parameters:
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
 
 		-
+			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/CalendarConnector.php
+
+		-
+			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
+			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
 			message: '#^Method App\\Domain\\Signal\\Connectors\\ImapConnector\:\:resolveCredentials\(\) never returns array so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
@@ -3063,6 +3081,138 @@ parameters:
 		-
 			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
 			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:buildPodPayload\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:calculateCostCredits\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:resolveApiKey\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:resolveApiKey\(\) never returns string so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:sendPodRequest\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:waitForPodRunning\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Offset ''api_key'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Offset ''gpu_type_id'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Offset ''image_name'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:applyInputMapping\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:resolveApiKey\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:resolveApiKey\(\) never returns string so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:runAsynchronous\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:runSynchronous\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Offset ''api_key'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Offset ''endpoint_id'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
 			count: 2
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
@@ -3116,6 +3266,18 @@ parameters:
 
 		-
 			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Rule is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
@@ -6483,7 +6645,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 6
+			count: 8
 			path: app/Livewire/Teams/TeamSettingsPage.php
 
 		-
@@ -7073,6 +7235,18 @@ parameters:
 			identifier: property.nonObject
 			count: 1
 			path: app/Mcp/Tools/Project/ProjectUpdateTool.php
+
+		-
+			message: '#^Method App\\Mcp\\Tools\\RunPod\\RunPodManageTool\:\:resolveApiKey\(\) never returns string so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Mcp/Tools/RunPod/RunPodManageTool.php
+
+		-
+			message: '#^Offset ''api_key'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/RunPod/RunPodManageTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'

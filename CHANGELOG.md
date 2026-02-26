@@ -5,6 +5,11 @@ All notable changes to Agent Fleet Community Edition are documented here.
 ## [Unreleased]
 
 ### Added
+- **RunPod GPU Cloud Integration** -- Two new skill types for GPU-accelerated workloads:
+  - **`runpod_endpoint`** — invoke any RunPod serverless endpoint synchronously or asynchronously; BYOK API key via Team Settings; `input_mapping` support; zero platform credits charged.
+  - **`runpod_pod`** — full GPU pod lifecycle (create → wait until RUNNING → HTTP request → stop) within a single skill execution; configurable Docker image, GPU type, spot pricing, environment variables, and startup timeout; cost_credits recorded for analytics.
+  - `runpod_manage` MCP tool: 10 actions covering credential management, serverless endpoints, and pod operations (`credential_save/check/remove`, `endpoint_run/status/health`, `pod_create/list/status/stop`).
+  - GPU price catalog in `config/runpod.php` with 12 models and spot discount support.
 - **Workflow Engine Enhancements** -- 5 new node types and capabilities:
   - **TimeGate Node** — delay-based gate with configurable `delay_seconds`; `PollWorkflowTimeGatesCommand` cron resumes expired gates automatically
   - **Multiple Output Channels** — edge-level `source_channel`/`target_channel` routing so nodes can fan-out to labelled downstream paths

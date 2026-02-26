@@ -127,6 +127,36 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'API token revoked.');
     }
 
+    // RunPod integration
+    public string $runpodApiKey = '';
+
+    public function saveRunPodCredential(): void
+    {
+        $this->validate([
+            'runpodApiKey' => 'required|string|min:20',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+
+        TeamProviderCredential::updateOrCreate(
+            ['team_id' => $team->id, 'provider' => 'runpod'],
+            ['credentials' => ['api_key' => $this->runpodApiKey], 'is_active' => true],
+        );
+
+        $this->runpodApiKey = '';
+
+        session()->flash('message', 'RunPod API key saved.');
+    }
+
+    public function removeRunPodCredential(): void
+    {
+        TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
+            ->where('provider', 'runpod')
+            ->delete();
+
+        session()->flash('message', 'RunPod API key removed.');
+    }
+
     // Telegram bot settings
     public string $telegramBotToken = '';
 
@@ -170,11 +200,12 @@ class TeamSettingsPage extends Component
 
         return view('livewire.teams.team-settings-page', [
             'team' => $team,
-            'credentials' => $team ? TeamProviderCredential::where('team_id', $team->id)->get() : collect(),
+            'credentials' => $team ? TeamProviderCredential::where('team_id', $team->id)->whereIn('provider', ['openai', 'anthropic', 'google'])->get() : collect(),
             'providers' => ['openai', 'anthropic', 'google'],
             'llmProviders' => config('llm_providers', []),
             'apiTokens' => $apiTokens,
             'telegramBot' => $team ? TelegramBot::where('team_id', $team->id)->first() : null,
+            'runpodCredential' => $team ? TeamProviderCredential::where('team_id', $team->id)->where('provider', 'runpod')->first() : null,
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

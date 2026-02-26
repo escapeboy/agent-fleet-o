@@ -34,6 +34,8 @@ class ExecuteSkillAction
         private readonly MultiModelConsensusService $consensusService,
         private readonly ExecuteCodeExecutionSkillAction $executeCodeExecution,
         private readonly ExecuteBrowserSkillAction $executeBrowserSkill,
+        private readonly ExecuteRunPodSkillAction $executeRunPod,
+        private readonly ExecuteRunPodPodSkillAction $executeRunPodPod,
     ) {}
 
     /**
@@ -63,6 +65,16 @@ class ExecuteSkillAction
         // Browser Automation calls Browserless REST API directly — no LLM, no budget reservation
         if ($skill->type === SkillType::Browser->value) {
             return $this->executeBrowserSkill->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
+        }
+
+        // RunPod Endpoint calls RunPod REST API directly — no LLM, costs billed to user's RunPod account
+        if ($skill->type === SkillType::RunpodEndpoint->value) {
+            return $this->executeRunPod->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
+        }
+
+        // RunPod Pod manages a full GPU pod lifecycle — create → wait → call → stop
+        if ($skill->type === SkillType::RunpodPod->value) {
+            return $this->executeRunPodPod->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // 0. Check provider compatibility (if requirements declared)
@@ -209,7 +221,7 @@ class ExecuteSkillAction
             SkillType::Rule => $this->executeRuleSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Guardrail => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::MultiModelConsensus => $this->executeMultiModelConsensusSkill($skill, $input, $teamId, $userId, $agentId, $experimentId),
-            SkillType::CodeExecution, SkillType::Browser => throw new \LogicException('CodeExecution and Browser skill types must be short-circuited before reaching executeByType.'),
+            SkillType::CodeExecution, SkillType::Browser, SkillType::RunpodEndpoint, SkillType::RunpodPod => throw new \LogicException('CodeExecution, Browser, RunpodEndpoint, and RunpodPod skill types must be short-circuited before reaching executeByType.'),
         };
     }
 
