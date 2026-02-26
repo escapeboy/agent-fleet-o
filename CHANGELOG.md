@@ -5,6 +5,37 @@ All notable changes to Agent Fleet Community Edition are documented here.
 ## [Unreleased]
 
 ### Added
+
+- **Local LLM Support** -- Run inference against Ollama or any OpenAI-compatible server (LM Studio, vLLM, llama.cpp, Jan) with no cloud API keys required:
+  - New `ollama` provider: 17 preset models — Llama 3.3/3.2/3.1, Mistral 7B/Nemo, Qwen 2.5 (7B/14B/72B/Coder), Gemma 3, Phi-4, DeepSeek-R1, Codestral.
+  - New `openai_compatible` provider: configure any OpenAI-compatible endpoint (LM Studio, vLLM, text-generation-webui, Ollama's OpenAI shim) with a custom base URL.
+  - Zero platform credits charged — inference runs entirely on your hardware.
+  - SSRF protection: user-supplied URLs validated and blocked from link-local and reserved IP ranges in production; always allows localhost.
+  - `TeamProviderCredential` stores `base_url`, `api_key`, and optional `models` list per provider.
+  - Settings UI: "Local LLM Endpoints" section in Team Settings (visible when `LOCAL_LLM_ENABLED=true`).
+  - `local_llm_manage` MCP tool: `status`, `configure_ollama`, `configure_openai_compatible`, `discover_models`, `remove` actions.
+  - Activation: set `LOCAL_LLM_ENABLED=true` and optionally `LOCAL_LLM_SSRF_PROTECTION=false` for LAN IPs.
+
+- **Pluggable Compute Providers** -- New `gpu_compute` skill type backed by a provider-agnostic infrastructure:
+  - Providers: **RunPod** (existing), **Replicate**, **Fal.ai**, **Vast.ai** — each with synchronous and asynchronous execution modes.
+  - `ComputeProviderManager`: registry with per-provider credential resolution, health check, and job execution.
+  - `ExecuteGpuComputeSkillAction`: replaces the single-provider `runpod_endpoint` action; reads `provider` from skill configuration (defaults to `runpod`).
+  - `compute_manage` MCP tool: `provider_list`, `credential_save`, `credential_check`, `credential_remove`, `health_check`, `run` actions across all providers.
+  - `config/compute_providers.php`: per-provider API base URLs, timeout, and capability flags.
+  - Zero platform credits for all GPU compute executions; actual inference costs billed directly to the provider account.
+
+- **Integration Domain** -- Connect external services to the platform via a unified driver interface:
+  - Built-in drivers: **GitHub** (webhooks + polling), **Slack** (OAuth2 + events), **Notion** (OAuth2 + database queries), **Airtable** (API key + polling), **Linear** (API key + webhooks), **Stripe** (webhook events), **Generic Webhook** (HMAC-verified inbound), **API Polling** (configurable interval).
+  - `IntegrationDriverInterface`: standardised `connect`, `disconnect`, `ping`, `listTriggers`, `listActions`, `executeAction`, `verifyWebhook` contract.
+  - `IntegrationManager`: driver registry with lazy instantiation.
+  - `Integration` model: encrypted credentials, status lifecycle (`pending/active/error/disconnected`), last-pinged-at tracking.
+  - OAuth 2.0 flow: `OAuthConnectAction` + `OAuthCallbackAction` + `IntegrationOAuthController` (redirect + callback routes).
+  - Background health monitoring: `PingIntegrations` command (every 15 min), `PollIntegrations` command (per-driver frequency), `RefreshExpiringIntegrationTokens` command (token refresh 1 h before expiry).
+  - Inbound webhook routing via `IntegrationWebhookController` (`POST /api/integrations/{integration}/webhook`).
+  - `integration_manage` MCP tool: `list`, `get`, `connect`, `disconnect`, `ping`, `execute_action`, `list_triggers`, `list_actions` actions.
+  - Livewire UI: `/integrations` (list) and `/integrations/{integration}` (detail with action panel).
+
+### Added
 - **RunPod GPU Cloud Integration** -- Two new skill types for GPU-accelerated workloads:
   - **`runpod_endpoint`** — invoke any RunPod serverless endpoint synchronously or asynchronously; BYOK API key via Team Settings; `input_mapping` support; zero platform credits charged.
   - **`runpod_pod`** — full GPU pod lifecycle (create → wait until RUNNING → HTTP request → stop) within a single skill execution; configurable Docker image, GPU type, spot pricing, environment variables, and startup timeout; cost_credits recorded for analytics.
