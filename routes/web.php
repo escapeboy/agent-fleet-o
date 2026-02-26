@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Livewire\Agents\AgentDetailPage;
@@ -104,6 +105,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/credentials/{credential}', CredentialDetailPage::class)->name('credentials.show');
 
     Route::get('/integrations', IntegrationListPage::class)->name('integrations.index');
+    Route::get('/integrations/oauth/{driver}', [IntegrationOAuthController::class, 'redirect'])->name('integrations.oauth.redirect');
+    Route::get('/integrations/oauth/{driver}/callback', [IntegrationOAuthController::class, 'callback'])->name('integrations.oauth.callback');
     Route::get('/integrations/{integration}', IntegrationDetailPage::class)->name('integrations.show');
 
     Route::get('/crews', CrewListPage::class)->name('crews.index');

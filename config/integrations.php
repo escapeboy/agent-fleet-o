@@ -56,6 +56,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | OAuth 2.0 Provider URLs
+    |--------------------------------------------------------------------------
+    |
+    | Authorization and token endpoint URLs for each OAuth2 driver.
+    |
+    */
+    'oauth_urls' => [
+        'slack' => [
+            'authorize' => 'https://slack.com/oauth/v2/authorize',
+            'token'     => 'https://slack.com/api/oauth.v2.access',
+        ],
+        'notion' => [
+            'authorize' => 'https://api.notion.com/v1/oauth/authorize',
+            'token'     => 'https://api.notion.com/v1/oauth/token',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Health Check Settings
     |--------------------------------------------------------------------------
     */

@@ -26,9 +26,10 @@ Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
 Schedule::command('human-tasks:check-sla')->everyFiveMinutes();
 Schedule::command('workflows:poll-time-gates')->everyMinute()->withoutOverlapping(1);
 
-// Integration health checks and polling
+// Integration health checks, polling, and token refresh
 Schedule::command('integrations:ping')->everyFifteenMinutes()->withoutOverlapping(10);
 Schedule::command('integrations:poll')->everyFifteenMinutes()->withoutOverlapping(10);
+Schedule::command('integrations:refresh-tokens')->everyFiveMinutes()->withoutOverlapping(3);
 
 // Project scheduling & budget enforcement
 Schedule::command('projects:check-budgets')->hourly();

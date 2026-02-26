@@ -83,7 +83,12 @@
                         $driverConfig = $availableDrivers[$connectDriver] ?? [];
                     @endphp
 
-                    @if(($driverConfig['auth'] ?? '') !== 'webhook_only')
+                    @if(($driverConfig['auth'] ?? '') === 'oauth2')
+                        <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
+                            <p class="font-medium">OAuth2 Authorization Required</p>
+                            <p class="mt-1 text-blue-600">You'll be redirected to {{ ucfirst($connectDriver) }} to authorize access. Make sure to return here after authorizing.</p>
+                        </div>
+                    @elseif(($driverConfig['auth'] ?? '') !== 'webhook_only')
                         <div>
                             <label class="mb-1 block text-sm font-medium text-gray-700">Credentials</label>
                             <p class="mb-2 text-xs text-gray-500">
@@ -114,10 +119,17 @@
                             class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                         Cancel
                     </button>
-                    <button wire:click="connect"
-                            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                        Connect
-                    </button>
+                    @if(($driverConfig['auth'] ?? '') === 'oauth2')
+                        <button wire:click="connectOAuth"
+                                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                            Continue with {{ ucfirst($connectDriver) }} →
+                        </button>
+                    @else
+                        <button wire:click="connect"
+                                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                            Connect
+                        </button>
+                    @endif
                 </div>
             </div>
         </div>

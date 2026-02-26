@@ -4,6 +4,7 @@ namespace App\Livewire\Integrations;
 
 use App\Domain\Integration\Actions\ConnectIntegrationAction;
 use App\Domain\Integration\Actions\DisconnectIntegrationAction;
+use App\Domain\Integration\Actions\OAuthConnectAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Models\Integration;
@@ -46,6 +47,30 @@ class IntegrationListPage extends Component
     {
         $this->showConnectForm = false;
         $this->connectDriver = '';
+    }
+
+    public function connectOAuth(OAuthConnectAction $action): mixed
+    {
+        $this->validate([
+            'connectDriver' => 'required|string',
+            'connectName'   => 'required|string|min:2|max:255',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+
+        try {
+            $url = $action->execute(
+                teamId: $team->getKey(),
+                driver: $this->connectDriver,
+                name: $this->connectName,
+            );
+
+            return redirect()->away($url);
+        } catch (\Throwable $e) {
+            session()->flash('error', 'OAuth2 initiation failed: '.$e->getMessage());
+
+            return null;
+        }
     }
 
     public function connect(ConnectIntegrationAction $action): void
