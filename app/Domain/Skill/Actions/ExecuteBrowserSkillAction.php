@@ -68,7 +68,7 @@ class ExecuteBrowserSkillAction
                 'scrape' => $this->scrapeContent($url, $config),
                 'pdf' => $this->generatePdf($url, $config),
                 default => throw new \InvalidArgumentException(
-                    "Unsupported browser action: {$action}. Supported: screenshot, scrape, pdf."
+                    "Unsupported browser action: {$action}. Supported: screenshot, scrape, pdf.",
                 ),
             };
 
@@ -192,7 +192,7 @@ class ExecuteBrowserSkillAction
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "Browserless {$path} failed [{$response->status()}]: ".mb_substr($response->body(), 0, 500)
+                "Browserless {$path} failed [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
             );
         }
 

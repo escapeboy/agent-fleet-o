@@ -2,13 +2,14 @@
 
 namespace Tests\Feature\Domain\Trigger;
 
+use App\Domain\Project\Enums\ProjectRunStatus;
+use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
-use App\Domain\Project\Enums\ProjectStatus;
-use App\Domain\Project\Enums\ProjectRunStatus;
-use App\Domain\Signal\Models\Signal;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Signal\Models\Signal;
 use App\Domain\Trigger\Actions\EvaluateTriggerRulesAction;
+use App\Domain\Trigger\Actions\ExecuteTriggerRuleAction;
 use App\Domain\Trigger\Enums\TriggerRuleStatus;
 use App\Domain\Trigger\Models\TriggerRule;
 use App\Models\User;
@@ -183,7 +184,7 @@ class TriggerRulesTest extends TestCase
         $rule = $this->makeRule($project, ['cooldown_seconds' => 3600]);
         $signal = $this->makeSignal(['event' => 'test']);
 
-        $action = app(\App\Domain\Trigger\Actions\ExecuteTriggerRuleAction::class);
+        $action = app(ExecuteTriggerRuleAction::class);
 
         // First trigger should create a run
         $run1 = $action->execute($rule, $signal);
@@ -212,7 +213,7 @@ class TriggerRulesTest extends TestCase
             'run_number' => 1,
         ]);
 
-        $action = app(\App\Domain\Trigger\Actions\ExecuteTriggerRuleAction::class);
+        $action = app(ExecuteTriggerRuleAction::class);
         $run = $action->execute($rule, $signal);
 
         // Should be blocked because max_concurrent = 1 and one run is already running

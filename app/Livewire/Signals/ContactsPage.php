@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Signals;
 
+use App\Domain\Shared\Models\ContactChannel;
 use App\Domain\Shared\Models\ContactIdentity;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -45,7 +46,7 @@ class ContactsPage extends Component
             $query->whereHas('channels', fn ($cq) => $cq->where('channel', $this->channelFilter));
         }
 
-        $channels = \App\Domain\Shared\Models\ContactChannel::query()
+        $channels = ContactChannel::query()
             ->distinct()
             ->pluck('channel')
             ->sort()

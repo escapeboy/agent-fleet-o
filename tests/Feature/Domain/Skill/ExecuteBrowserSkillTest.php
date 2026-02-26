@@ -5,7 +5,6 @@ namespace Tests\Feature\Domain\Skill;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteBrowserSkillAction;
 use App\Domain\Skill\Models\Skill;
-use App\Domain\Skill\Models\SkillExecution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;

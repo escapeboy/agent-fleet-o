@@ -6,6 +6,7 @@ use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -205,7 +206,7 @@ class BrowserSkillTool extends Tool
 
         if ($enabled) {
             try {
-                $response = \Illuminate\Support\Facades\Http::timeout(5)->get("{$url}/json");
+                $response = Http::timeout(5)->get("{$url}/json");
                 $reachable = $response->successful();
             } catch (\Throwable $e) {
                 $error = $e->getMessage();

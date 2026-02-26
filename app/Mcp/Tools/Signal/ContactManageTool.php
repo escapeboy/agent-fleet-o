@@ -2,7 +2,6 @@
 
 namespace App\Mcp\Tools\Signal;
 
-use App\Domain\Shared\Models\ContactChannel;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Services\ContactResolver;
 use Illuminate\Contracts\JsonSchema\JsonSchema;

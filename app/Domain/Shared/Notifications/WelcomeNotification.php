@@ -23,7 +23,7 @@ class WelcomeNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Welcome to ' . config('app.name') . '!')
+            ->subject('Welcome to '.config('app.name').'!')
             ->greeting("Welcome, {$notifiable->name}!")
             ->line("Your team **{$this->team->name}** is ready. Here's how to get started:")
             ->line('1. Connect your AI provider (OpenAI, Anthropic, etc.)')

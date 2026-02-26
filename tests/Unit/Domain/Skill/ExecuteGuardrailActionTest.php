@@ -3,9 +3,6 @@
 namespace Tests\Unit\Domain\Skill;
 
 use App\Domain\Skill\Actions\ExecuteGuardrailAction;
-use App\Domain\Skill\Enums\RiskLevel;
-use App\Domain\Skill\Enums\SkillStatus;
-use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -16,7 +13,6 @@ use Tests\TestCase;
 
 class ExecuteGuardrailActionTest extends TestCase
 {
-
     private function makeGuardrailSkill(string $slug, array $config = []): Skill
     {
         $skill = new Skill;
