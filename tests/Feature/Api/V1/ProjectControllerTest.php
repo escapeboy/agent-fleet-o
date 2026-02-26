@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Models\Project;
 
 class ProjectControllerTest extends ApiTestCase
@@ -145,6 +146,10 @@ class ProjectControllerTest extends ApiTestCase
     {
         $this->actingAsApiUser();
         $project = $this->createProject(['status' => 'draft']);
+
+        $this->mock(TriggerProjectRunAction::class)
+            ->shouldReceive('execute')
+            ->once();
 
         $response = $this->postJson("/api/v1/projects/{$project->id}/activate");
 

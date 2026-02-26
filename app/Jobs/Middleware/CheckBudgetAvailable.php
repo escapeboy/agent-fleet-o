@@ -38,16 +38,18 @@ class CheckBudgetAvailable
             return;
         }
 
-        // Check global team balance (billing is team-based)
-        $balance = CreditLedger::where('team_id', $experiment->team_id)
+        // Check global team balance — only enforce if credits have been issued.
+        // Community installs have no credit ledger entries, so we skip this check
+        // entirely to avoid blocking all jobs on self-hosted deployments.
+        $latestEntry = CreditLedger::where('team_id', $experiment->team_id)
             ->orderByDesc('created_at')
-            ->value('balance_after') ?? 0;
+            ->first(['balance_after']);
 
-        if ($balance <= 0) {
+        if ($latestEntry !== null && $latestEntry->balance_after <= 0) {
             Log::warning('CheckBudgetAvailable: User has no credits, skipping job', [
                 'experiment_id' => $experiment->id,
                 'user_id' => $experiment->user_id,
-                'balance' => $balance,
+                'balance' => $latestEntry->balance_after,
                 'job' => class_basename($job),
             ]);
 
