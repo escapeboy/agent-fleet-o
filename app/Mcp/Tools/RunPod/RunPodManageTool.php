@@ -27,7 +27,7 @@ class RunPodManageTool extends Tool
 {
     protected string $name = 'runpod_manage';
 
-    protected string $description = 'Manage RunPod GPU cloud integration: save API keys, run serverless endpoint jobs, manage persistent pods.';
+    protected string $description = 'Manage RunPod GPU cloud integration: save API keys, run serverless endpoint jobs, manage persistent pods. Actions: credential_save, credential_check, credential_remove, endpoint_run, endpoint_status, endpoint_health, pod_create, pod_list, pod_status, pod_stop.';
 
     public function __construct(
         private readonly RunPodClient $client,
@@ -37,7 +37,7 @@ class RunPodManageTool extends Tool
     {
         return [
             'action' => $schema->string()
-                ->description('Action: credential_save | credential_check | credential_remove | endpoint_run | endpoint_status | endpoint_health | pod_create | pod_list | pod_stop')
+                ->description('Action: credential_save | credential_check | credential_remove | endpoint_run | endpoint_status | endpoint_health | pod_create | pod_list | pod_status | pod_stop')
                 ->required(),
             'api_key' => $schema->string()
                 ->description('RunPod API key (required for credential_save)'),
@@ -52,7 +52,7 @@ class RunPodManageTool extends Tool
             'timeout_seconds' => $schema->integer()
                 ->description('Max wait time for sync run (default: 90)'),
             'pod_id' => $schema->string()
-                ->description('Pod ID for pod_stop'),
+                ->description('Pod ID for pod_status or pod_stop'),
             'pod_config' => $schema->object()
                 ->description('Pod configuration for pod_create (imageName, gpuTypeIds, gpuCount, env, etc.)'),
         ];
@@ -72,8 +72,9 @@ class RunPodManageTool extends Tool
             'endpoint_health' => $this->getEndpointHealth($request, $teamId),
             'pod_create' => $this->createPod($request, $teamId),
             'pod_list' => $this->listPods($teamId),
+            'pod_status' => $this->getPodStatus($request, $teamId),
             'pod_stop' => $this->stopPod($request, $teamId),
-            default => Response::error("Unknown action: {$action}. Valid: credential_save, credential_check, credential_remove, endpoint_run, endpoint_status, endpoint_health, pod_create, pod_list, pod_stop"),
+            default => Response::error("Unknown action: {$action}. Valid: credential_save, credential_check, credential_remove, endpoint_run, endpoint_status, endpoint_health, pod_create, pod_list, pod_status, pod_stop"),
         };
     }
 
@@ -249,6 +250,29 @@ class RunPodManageTool extends Tool
             return Response::text(json_encode($result));
         } catch (\Throwable $e) {
             return Response::error('RunPod pod_list failed: '.$e->getMessage());
+        }
+    }
+
+    private function getPodStatus(Request $request, ?string $teamId): Response
+    {
+        $podId = $request->get('pod_id');
+
+        if (! $podId) {
+            return Response::error('pod_id is required for pod_status');
+        }
+
+        $apiKey = $this->resolveApiKey($teamId);
+
+        if (! $apiKey) {
+            return Response::error('No RunPod API key configured.');
+        }
+
+        try {
+            $result = $this->client->getPod($podId, $apiKey);
+
+            return Response::text(json_encode($result));
+        } catch (\Throwable $e) {
+            return Response::error('RunPod pod_status failed: '.$e->getMessage());
         }
     }
 

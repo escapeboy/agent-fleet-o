@@ -13,6 +13,7 @@ enum SkillType: string
     case CodeExecution = 'code_execution';
     case Browser = 'browser';
     case RunpodEndpoint = 'runpod_endpoint';
+    case RunpodPod = 'runpod_pod';
 
     public function label(): string
     {
@@ -26,6 +27,7 @@ enum SkillType: string
             self::CodeExecution => 'Code Execution',
             self::Browser => 'Browser Automation',
             self::RunpodEndpoint => 'RunPod Endpoint',
+            self::RunpodPod => 'RunPod Pod',
         };
     }
 }

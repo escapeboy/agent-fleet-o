@@ -162,6 +162,24 @@ class RunPodClient
     }
 
     /**
+     * Get the details of a specific pod (status, runtime ports, cost/hr, etc.).
+     */
+    public function getPod(string $podId, string $apiKey): array
+    {
+        $response = Http::timeout(15)
+            ->withToken($apiKey)
+            ->get(self::REST_BASE."/pods/{$podId}");
+
+        if (! $response->successful()) {
+            throw new \RuntimeException(
+                "RunPod getPod [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
+            );
+        }
+
+        return $response->json();
+    }
+
+    /**
      * Stop a running pod.
      */
     public function stopPod(string $podId, string $apiKey): array
