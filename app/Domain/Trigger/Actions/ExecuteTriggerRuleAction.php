@@ -40,10 +40,10 @@ class ExecuteTriggerRuleAction
             return null;
         }
 
-        // Cooldown check via Redis SETNX (atomic debounce)
+        // Cooldown check — atomic debounce via cache add() (works with redis/array/file)
         if ($rule->cooldown_seconds > 0) {
             $debounceKey = "trigger_debounce:{$rule->id}";
-            $acquired = Cache::store('redis')->add($debounceKey, 1, $rule->cooldown_seconds);
+            $acquired = Cache::add($debounceKey, 1, $rule->cooldown_seconds);
             if (! $acquired) {
                 Log::info('ExecuteTriggerRuleAction: skipped (cooldown active)', [
                     'rule_id' => $rule->id,
