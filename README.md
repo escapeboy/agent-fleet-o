@@ -127,7 +127,8 @@ Failed tasks display detailed error information including provider, error type, 
 - **Agent Templates** -- 14 pre-built templates across 5 categories (engineering, content, business, design, research)
 - **Agent Evolution** -- AI-driven self-improvement: analyze execution history, propose config changes, and apply improvements
 - **Agent Crews** -- Multi-agent teams with lead/member roles and shared context
-- **Skills** -- Reusable AI skill definitions (LLM, connector, rule, hybrid) with versioning and cost tracking
+- **Skills** -- Reusable AI skill definitions (LLM, connector, rule, hybrid, browser, RunPod) with versioning and cost tracking
+- **RunPod GPU Integration** -- Invoke RunPod serverless endpoints or manage full GPU pod lifecycles as skills; BYOK API key; spot pricing; cost tracking
 - **Playbooks** -- Sequential or parallel multi-step workflows combining skills
 - **Workflows** -- Visual DAG builder with 8 node types: agent, conditional, human task, switch, dynamic fork, do-while loops
 - **Projects** -- One-shot and continuous long-running agent projects with cron scheduling, budget caps, milestones, and overlap policies
