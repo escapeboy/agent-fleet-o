@@ -49,6 +49,18 @@ parameters:
 			path: app/Console/Commands/CheckProjectBudgets.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/FleetDoctorCommand.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 3
+			path: app/Console/Commands/FleetDoctorCommand.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1857,6 +1869,96 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Domain\\Outbound\\Models\\OutboundProposal\:\:\$team_id\.$#'
 			identifier: property.notFound
+			count: 1
+			path: app/Domain/Outbound/Connectors/MatrixConnector.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Outbound/Connectors/MatrixConnector.php
+
+		-
+			message: '#^Offset ''access_token'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/MatrixConnector.php
+
+		-
+			message: '#^Offset ''homeserver_url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/MatrixConnector.php
+
+		-
+			message: '#^Offset ''room_id'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/MatrixConnector.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Outbound/Connectors/MatrixConnector.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Outbound/Connectors/MatrixConnector.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Outbound\\Models\\OutboundProposal\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Outbound/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Outbound/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Offset ''api_url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Offset ''phone'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Offset ''phone_number'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Offset ''recipient'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Outbound/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Outbound/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Outbound\\Models\\OutboundProposal\:\:\$team_id\.$#'
+			identifier: property.notFound
 			count: 2
 			path: app/Domain/Outbound/Connectors/SlackConnector.php
 
@@ -2653,6 +2755,12 @@ parameters:
 			path: app/Domain/Shared/Models/Team.php
 
 		-
+			message: '#^Method App\\Domain\\Shared\\Services\\ContactResolver\:\:resolveOrCreate\(\) should return App\\Domain\\Shared\\Models\\ContactIdentity but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Domain/Shared/Services/ContactResolver.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Signal\\Models\\Signal\:\:\$team_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2779,6 +2887,18 @@ parameters:
 			path: app/Domain/Signal/Connectors/ImapConnector.php
 
 		-
+			message: '#^Parameter \#1 \$array \(array\{''signal_protocol'', ''direct''\|''group''\}\) to function array_filter does not contain falsy values, the array will always stay the same\.$#'
+			identifier: arrayFilter.same
+			count: 1
+			path: app/Domain/Signal/Connectors/SignalProtocolConnector.php
+
+		-
+			message: '#^Parameter \#1 \$array \(array\{0\: ''telegram'', 1\: ''chat'', 2\?\: ''audio''\|''document''\|''photo''\|''sticker''\|''video''\|''video_note''\|''voice''\}\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Domain/Signal/Connectors/TelegramSignalConnector.php
+
+		-
 			message: '#^Offset ''body'' on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -2807,6 +2927,66 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Signal/Jobs/ExtractSignalEntitiesJob.php
+
+		-
+			message: '#^Cannot call method isApproved\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Signal/Models/ConnectorBinding.php
+
+		-
+			message: '#^Cannot call method isBlocked\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Signal/Models/ConnectorBinding.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Signal/Models/ConnectorBinding.php
+
+		-
+			message: '#^Cannot call method isPending\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Signal/Models/ConnectorBinding.php
+
+		-
+			message: '#^Call to an undefined method Spatie\\Image\\Drivers\\ImageDriver\:\:queued\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Domain/Signal/Models/Signal.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Signal/Services/ConnectorBindingGate.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteBrowserSkillAction.php
+
+		-
+			message: '#^Offset ''action'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteBrowserSkillAction.php
+
+		-
+			message: '#^Offset ''url'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteBrowserSkillAction.php
+
+		-
+			message: '#^Variable \$url on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteBrowserSkillAction.php
 
 		-
 			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
@@ -2889,6 +3069,12 @@ parameters:
 		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Browser is always false\.$#'
+			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
@@ -6427,6 +6613,12 @@ parameters:
 			path: app/Livewire/Workflows/WorkflowBuilderPage.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sub_workflow_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Workflows/WorkflowBuilderPage.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$target_node_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -6901,6 +7093,72 @@ parameters:
 			path: app/Mcp/Tools/Shared/TeamMembersTool.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Signal/ConnectorBindingTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 4
+			path: app/Mcp/Tools/Signal/ConnectorBindingTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Signal\\Models\\ConnectorBinding\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Signal/ConnectorBindingTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\User\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Signal/ConnectorBindingTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$channel\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Signal/ContactManageTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$external_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Signal/ContactManageTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$external_username\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Signal/ContactManageTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Signal/ContactManageTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$verified\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Signal/ContactManageTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Shared\\Models\\ContactIdentity\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Signal/ContactManageTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Mcp/Tools/Signal/ContactManageTool.php
+
+		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 2
@@ -6983,6 +7241,84 @@ parameters:
 			identifier: method.nonObject
 			count: 1
 			path: app/Mcp/Tools/Signal/SignalGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''action'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''action'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''action'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''size_bytes'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''url'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''url'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''viewport_height'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''viewport_width'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Offset ''wait_for'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Skill\\Models\\SkillExecution\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
 
 		-
 			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
