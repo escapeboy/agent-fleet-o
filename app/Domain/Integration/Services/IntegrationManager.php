@@ -3,8 +3,14 @@
 namespace App\Domain\Integration\Services;
 
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
+use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
 use App\Domain\Integration\Drivers\Generic\ApiPollingDriver;
 use App\Domain\Integration\Drivers\Generic\WebhookOnlyDriver;
+use App\Domain\Integration\Drivers\GitHub\GitHubIntegrationDriver;
+use App\Domain\Integration\Drivers\Linear\LinearIntegrationDriver;
+use App\Domain\Integration\Drivers\Notion\NotionIntegrationDriver;
+use App\Domain\Integration\Drivers\Slack\SlackIntegrationDriver;
+use App\Domain\Integration\Drivers\Stripe\StripeIntegrationDriver;
 use Illuminate\Support\Manager;
 
 /**
@@ -34,5 +40,35 @@ class IntegrationManager extends Manager
     public function createWebhookDriver(): IntegrationDriverInterface
     {
         return $this->container->make(WebhookOnlyDriver::class);
+    }
+
+    public function createGithubDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(GitHubIntegrationDriver::class);
+    }
+
+    public function createSlackDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(SlackIntegrationDriver::class);
+    }
+
+    public function createStripeDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(StripeIntegrationDriver::class);
+    }
+
+    public function createNotionDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(NotionIntegrationDriver::class);
+    }
+
+    public function createAirtableDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(AirtableIntegrationDriver::class);
+    }
+
+    public function createLinearDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(LinearIntegrationDriver::class);
     }
 }
