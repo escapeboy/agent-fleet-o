@@ -33,6 +33,12 @@ class PublicExperimentController extends Controller
                 ->get(['id', 'type', 'status', 'started_at', 'completed_at', 'output']);
         }
 
+        // Hide sensitive internal JSONB fields before passing to the unauthenticated view
+        $experiment->setHidden([
+            'constraints', 'orchestration_config', 'success_criteria',
+            'share_token', 'share_config', 'input_data', 'playbook_config',
+        ]);
+
         return view('public.experiment', compact('experiment', 'config', 'stages'));
     }
 }

@@ -11,6 +11,7 @@ enum SkillType: string
     case Guardrail = 'guardrail';
     case MultiModelConsensus = 'multi_model_consensus';
     case CodeExecution = 'code_execution';
+    case Browser = 'browser';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum SkillType: string
             self::Guardrail => 'Guardrail',
             self::MultiModelConsensus => 'Multi-Model Consensus',
             self::CodeExecution => 'Code Execution',
+            self::Browser => 'Browser Automation',
         };
     }
 }

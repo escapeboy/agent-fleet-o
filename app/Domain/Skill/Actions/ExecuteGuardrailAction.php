@@ -6,6 +6,7 @@ use App\Domain\Skill\Models\Skill;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Log;
 
 class ExecuteGuardrailAction
 {
@@ -84,8 +85,12 @@ EOT;
                     'checked_at' => $checkedAt,
                 ];
             }
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
             // On guardrail execution failure, assume safe to avoid blocking legitimate work
+            Log::warning('ExecuteGuardrailAction: LLM guardrail failed, defaulting to safe', [
+                'guardrail_skill' => $guardrailSkill->slug,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return [
