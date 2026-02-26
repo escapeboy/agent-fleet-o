@@ -103,44 +103,73 @@
 
         {{-- Step 3: Configuration --}}
         @elseif($step === 3)
-            <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <x-form-select wire:model.live="provider" label="LLM Provider (optional)">
-                        <option value="">Team Default</option>
-                        @foreach($providers as $key => $providerConfig)
-                            <option value="{{ $key }}">{{ $providerConfig['name'] }}</option>
-                        @endforeach
-                    </x-form-select>
+            @if($type === 'gpu_compute')
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-purple-800">
+                        GPU Compute skills route inference requests to external GPU cloud providers. Costs are billed directly to your provider account.
+                    </div>
 
-                    @if($provider && isset($providers[$provider]))
-                        <x-form-select wire:model="model" label="Model">
-                            @foreach($providers[$provider]['models'] as $modelKey => $modelConfig)
-                                <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-form-select wire:model="computeProvider" label="GPU Provider">
+                            @foreach($computeProviders as $slug => $info)
+                                <option value="{{ $slug }}">{{ $info['label'] ?? $slug }}</option>
                             @endforeach
                         </x-form-select>
-                    @else
-                        <x-form-input wire:model="model" label="Model (optional)" type="text" placeholder="e.g. claude-sonnet-4-5" />
-                    @endif
-                </div>
 
-                @if(!empty($providers[$provider]['local']))
-                    <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                        Local agent — executes on the host machine using its own CLI process. No per-request API costs.
+                        <x-form-input wire:model="computeEndpointId" label="Endpoint / Model ID" type="text"
+                            placeholder="e.g. abc123def for RunPod" :error="$errors->first('computeEndpointId')" />
                     </div>
-                @endif
 
-                <x-form-textarea wire:model="systemPrompt" label="System Prompt" rows="5" :mono="true"
-                    placeholder="Instruct the AI how to process input..." />
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-form-input wire:model="computeRoutePath" label="Route Path" type="text"
+                            placeholder="/" hint="Path to append to worker URL (Vast.ai / custom). Use / for default." />
 
-                <x-form-textarea wire:model="promptTemplate" label="Prompt Template (optional)" rows="3" :mono="true"
-                    placeholder="Use @{{field_name}} for variable substitution"
-                    hint="Leave empty to pass input as JSON." />
+                        <x-form-input wire:model.number="computeTimeout" label="Timeout (seconds)" type="number"
+                            min="10" max="600" />
+                    </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <x-form-input wire:model.number="maxTokens" label="Max Tokens" type="number" min="100" max="8192" />
-                    <x-form-input wire:model.number="temperature" label="Temperature" type="number" min="0" max="2" step="0.1" />
+                    <x-form-checkbox wire:model="computeUseSync" label="Use synchronous mode (recommended)" />
                 </div>
-            </div>
+            @else
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-form-select wire:model.live="provider" label="LLM Provider (optional)">
+                            <option value="">Team Default</option>
+                            @foreach($providers as $key => $providerConfig)
+                                <option value="{{ $key }}">{{ $providerConfig['name'] }}</option>
+                            @endforeach
+                        </x-form-select>
+
+                        @if($provider && isset($providers[$provider]))
+                            <x-form-select wire:model="model" label="Model">
+                                @foreach($providers[$provider]['models'] as $modelKey => $modelConfig)
+                                    <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                                @endforeach
+                            </x-form-select>
+                        @else
+                            <x-form-input wire:model="model" label="Model (optional)" type="text" placeholder="e.g. claude-sonnet-4-5" />
+                        @endif
+                    </div>
+
+                    @if(!empty($providers[$provider]['local']))
+                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                            Local agent — executes on the host machine using its own CLI process. No per-request API costs.
+                        </div>
+                    @endif
+
+                    <x-form-textarea wire:model="systemPrompt" label="System Prompt" rows="5" :mono="true"
+                        placeholder="Instruct the AI how to process input..." />
+
+                    <x-form-textarea wire:model="promptTemplate" label="Prompt Template (optional)" rows="3" :mono="true"
+                        placeholder="Use @{{field_name}} for variable substitution"
+                        hint="Leave empty to pass input as JSON." />
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-form-input wire:model.number="maxTokens" label="Max Tokens" type="number" min="100" max="8192" />
+                        <x-form-input wire:model.number="temperature" label="Temperature" type="number" min="0" max="2" step="0.1" />
+                    </div>
+                </div>
+            @endif
 
         {{-- Step 4: Review --}}
         @elseif($step === 4)
@@ -168,7 +197,16 @@
                         <dt class="text-sm font-medium text-gray-500">Output Fields</dt>
                         <dd class="text-sm text-gray-900 sm:col-span-2">{{ count($outputFields) }} fields</dd>
                     </div>
-                    @if($systemPrompt)
+                    @if($type === 'gpu_compute')
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">GPU Provider</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ $computeProvider }}</dd>
+                        </div>
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">Endpoint ID</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ $computeEndpointId ?: '—' }}</dd>
+                        </div>
+                    @elseif($systemPrompt)
                         <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
                             <dt class="text-sm font-medium text-gray-500">System Prompt</dt>
                             <dd class="max-h-24 overflow-auto text-sm text-gray-900 sm:col-span-2">{{ \Illuminate\Support\Str::limit($systemPrompt, 200) }}</dd>

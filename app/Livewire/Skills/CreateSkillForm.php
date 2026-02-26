@@ -27,7 +27,7 @@ class CreateSkillForm extends Component
 
     public array $outputFields = [];
 
-    // Step 3: Configuration
+    // Step 3: Configuration (LLM)
     public string $provider = '';
 
     public string $model = '';
@@ -40,10 +40,21 @@ class CreateSkillForm extends Component
 
     public float $temperature = 0.7;
 
+    // Step 3: Configuration (GPU Compute)
+    public string $computeProvider = 'runpod';
+
+    public string $computeEndpointId = '';
+
+    public string $computeRoutePath = '/';
+
+    public bool $computeUseSync = true;
+
+    public int $computeTimeout = 90;
+
     public function nextStep(): void
     {
         if ($this->step === 1) {
-            $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution';
+            $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute';
             if (config('browser.enabled', false)) {
                 $allowedTypes .= ',browser';
             }
@@ -93,13 +104,21 @@ class CreateSkillForm extends Component
         $inputSchema = $this->buildSchema($this->inputFields);
         $outputSchema = $this->buildSchema($this->outputFields);
 
-        $configuration = array_filter([
-            'provider' => $this->provider ?: null,
-            'model' => $this->model ?: null,
-            'max_tokens' => $this->maxTokens,
-            'temperature' => $this->temperature,
-            'prompt_template' => $this->promptTemplate ?: null,
-        ]);
+        $configuration = $this->type === 'gpu_compute'
+            ? array_filter([
+                'provider' => $this->computeProvider,
+                'endpoint_id' => $this->computeEndpointId ?: null,
+                'route_path' => $this->computeRoutePath ?: '/',
+                'use_sync' => $this->computeUseSync,
+                'timeout_seconds' => $this->computeTimeout,
+            ], fn ($v) => $v !== null)
+            : array_filter([
+                'provider' => $this->provider ?: null,
+                'model' => $this->model ?: null,
+                'max_tokens' => $this->maxTokens,
+                'temperature' => $this->temperature,
+                'prompt_template' => $this->promptTemplate ?: null,
+            ]);
 
         app(CreateSkillAction::class)->execute(
             teamId: $team->id,
@@ -160,6 +179,7 @@ class CreateSkillForm extends Component
             'types' => SkillType::cases(),
             'riskLevels' => RiskLevel::cases(),
             'providers' => $providers,
+            'computeProviders' => config('compute_providers.providers', []),
             'canCreate' => true,
             'browserSkillEnabled' => config('browser.enabled', false),
         ])->layout('layouts.app', ['header' => 'Create Skill']);

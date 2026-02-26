@@ -127,34 +127,86 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'API token revoked.');
     }
 
-    // RunPod integration
+    // GPU Compute provider credentials
     public string $runpodApiKey = '';
+
+    public string $replicateApiKey = '';
+
+    public string $falApiKey = '';
+
+    public string $vastApiKey = '';
 
     public function saveRunPodCredential(): void
     {
-        $this->validate([
-            'runpodApiKey' => 'required|string|min:20',
-        ]);
-
-        $team = auth()->user()->currentTeam;
-
-        TeamProviderCredential::updateOrCreate(
-            ['team_id' => $team->id, 'provider' => 'runpod'],
-            ['credentials' => ['api_key' => $this->runpodApiKey], 'is_active' => true],
-        );
-
+        $this->validate(['runpodApiKey' => 'required|string|min:20']);
+        $this->saveComputeCredential('runpod', $this->runpodApiKey);
         $this->runpodApiKey = '';
-
         session()->flash('message', 'RunPod API key saved.');
     }
 
     public function removeRunPodCredential(): void
     {
-        TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
-            ->where('provider', 'runpod')
-            ->delete();
-
+        $this->removeComputeCredential('runpod');
         session()->flash('message', 'RunPod API key removed.');
+    }
+
+    public function saveReplicateCredential(): void
+    {
+        $this->validate(['replicateApiKey' => 'required|string|min:20']);
+        $this->saveComputeCredential('replicate', $this->replicateApiKey);
+        $this->replicateApiKey = '';
+        session()->flash('message', 'Replicate API key saved.');
+    }
+
+    public function removeReplicateCredential(): void
+    {
+        $this->removeComputeCredential('replicate');
+        session()->flash('message', 'Replicate API key removed.');
+    }
+
+    public function saveFalCredential(): void
+    {
+        $this->validate(['falApiKey' => 'required|string|min:10']);
+        $this->saveComputeCredential('fal', $this->falApiKey);
+        $this->falApiKey = '';
+        session()->flash('message', 'Fal.ai API key saved.');
+    }
+
+    public function removeFalCredential(): void
+    {
+        $this->removeComputeCredential('fal');
+        session()->flash('message', 'Fal.ai API key removed.');
+    }
+
+    public function saveVastCredential(): void
+    {
+        $this->validate(['vastApiKey' => 'required|string|min:10']);
+        $this->saveComputeCredential('vast', $this->vastApiKey);
+        $this->vastApiKey = '';
+        session()->flash('message', 'Vast.ai API key saved.');
+    }
+
+    public function removeVastCredential(): void
+    {
+        $this->removeComputeCredential('vast');
+        session()->flash('message', 'Vast.ai API key removed.');
+    }
+
+    private function saveComputeCredential(string $provider, string $apiKey): void
+    {
+        $team = auth()->user()->currentTeam;
+
+        TeamProviderCredential::updateOrCreate(
+            ['team_id' => $team->id, 'provider' => $provider],
+            ['credentials' => ['api_key' => $apiKey], 'is_active' => true],
+        );
+    }
+
+    private function removeComputeCredential(string $provider): void
+    {
+        TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
+            ->where('provider', $provider)
+            ->delete();
     }
 
     // Telegram bot settings
@@ -205,7 +257,12 @@ class TeamSettingsPage extends Component
             'llmProviders' => config('llm_providers', []),
             'apiTokens' => $apiTokens,
             'telegramBot' => $team ? TelegramBot::where('team_id', $team->id)->first() : null,
-            'runpodCredential' => $team ? TeamProviderCredential::where('team_id', $team->id)->where('provider', 'runpod')->first() : null,
+            'computeCredentials' => $team
+                ? TeamProviderCredential::where('team_id', $team->id)
+                    ->whereIn('provider', ['runpod', 'replicate', 'fal', 'vast'])
+                    ->get()
+                    ->keyBy('provider')
+                : collect(),
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }
