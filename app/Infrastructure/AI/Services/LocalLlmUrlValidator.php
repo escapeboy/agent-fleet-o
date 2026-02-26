@@ -55,7 +55,7 @@ class LocalLlmUrlValidator
             if ($this->ipInCidr($ip, $cidr)) {
                 throw new InvalidArgumentException(
                     'The provided URL points to a restricted IP range. '
-                    .'Set LOCAL_LLM_SSRF_PROTECTION=false to allow private network addresses.'
+                    .'Set LOCAL_LLM_SSRF_PROTECTION=false to allow private network addresses.',
                 );
             }
         }

@@ -11,7 +11,7 @@ class IntegrationServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(
             __DIR__.'/../../config/integrations.php',
-            'integrations'
+            'integrations',
         );
 
         $this->app->singleton(IntegrationManager::class, function ($app) {

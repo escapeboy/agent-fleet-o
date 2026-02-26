@@ -215,13 +215,13 @@ class ExecuteRunPodPodSkillAction
 
             if ($desiredStatus === 'EXITED') {
                 throw new \RuntimeException(
-                    "RunPod pod {$podId} exited unexpectedly before becoming RUNNING."
+                    "RunPod pod {$podId} exited unexpectedly before becoming RUNNING.",
                 );
             }
         }
 
         throw new \RuntimeException(
-            "RunPod pod {$podId} did not become RUNNING within {$timeoutSeconds}s."
+            "RunPod pod {$podId} did not become RUNNING within {$timeoutSeconds}s.",
         );
     }
 
@@ -242,7 +242,7 @@ class ExecuteRunPodPodSkillAction
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "Pod HTTP request failed [{$response->status()}]: ".mb_substr($response->body(), 0, 500)
+                "Pod HTTP request failed [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
             );
         }
 

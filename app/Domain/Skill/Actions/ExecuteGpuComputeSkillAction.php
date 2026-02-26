@@ -2,13 +2,13 @@
 
 namespace App\Domain\Skill\Actions;
 
+use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Models\SkillExecution;
 use App\Infrastructure\Compute\ComputeProviderManager;
 use App\Infrastructure\Compute\Contracts\ComputeProviderInterface;
 use App\Infrastructure\Compute\DTOs\ComputeJobDTO;
 use App\Infrastructure\Compute\DTOs\ComputeJobResultDTO;
 use App\Infrastructure\Compute\Services\ComputeCredentialResolver;
-use App\Domain\Skill\Models\Skill;
-use App\Domain\Skill\Models\SkillExecution;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -50,7 +50,7 @@ class ExecuteGpuComputeSkillAction
         if (! $endpointId) {
             return $this->failExecution(
                 $skill, $teamId, $agentId, $experimentId, $input,
-                "GpuCompute skill missing required configuration: endpoint_id.",
+                'GpuCompute skill missing required configuration: endpoint_id.',
             );
         }
 

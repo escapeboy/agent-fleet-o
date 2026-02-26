@@ -87,7 +87,7 @@ class AiServiceProvider extends ServiceProvider
         app(PrismManager::class)->extend('openai_compatible', function ($app, array $config) {
             return new OpenRouter(
                 apiKey: $config['api_key'] ?? '',
-                url: rtrim($config['url'] ?? 'http://localhost:1234/v1', '/') . '/',
+                url: rtrim($config['url'] ?? 'http://localhost:1234/v1', '/').'/',
                 httpReferer: null,
                 xTitle: 'FleetQ',
             );

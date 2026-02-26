@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Domain\Integration\Actions\OAuthCallbackAction;
 use App\Domain\Integration\Actions\OAuthConnectAction;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,7 @@ class IntegrationOAuthController extends Controller
      */
     public function redirect(Request $request, string $driver): RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $team = $user->currentTeam;
 

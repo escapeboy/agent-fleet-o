@@ -44,8 +44,8 @@ class RefreshExpiringIntegrationTokens extends Command
             } catch (\Throwable $e) {
                 Log::error('RefreshExpiringIntegrationTokens: error', [
                     'integration_id' => $integration->getKey(),
-                    'driver'         => $driver,
-                    'error'          => $e->getMessage(),
+                    'driver' => $driver,
+                    'error' => $e->getMessage(),
                 ]);
                 $this->error("{$integration->getAttribute('name')}: {$e->getMessage()}");
             }

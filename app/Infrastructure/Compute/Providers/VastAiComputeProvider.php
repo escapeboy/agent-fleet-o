@@ -51,7 +51,7 @@ class VastAiComputeProvider implements ComputeProviderInterface
 
         if (! $routeResp->successful()) {
             throw new \RuntimeException(
-                "Vast.ai route [{$routeResp->status()}]: ".mb_substr($routeResp->body(), 0, 500)
+                "Vast.ai route [{$routeResp->status()}]: ".mb_substr($routeResp->body(), 0, 500),
             );
         }
 
@@ -73,7 +73,7 @@ class VastAiComputeProvider implements ComputeProviderInterface
 
         if (! $inferResp->successful()) {
             throw new \RuntimeException(
-                "Vast.ai worker [{$inferResp->status()}]: ".mb_substr($inferResp->body(), 0, 500)
+                "Vast.ai worker [{$inferResp->status()}]: ".mb_substr($inferResp->body(), 0, 500),
             );
         }
 
@@ -94,7 +94,7 @@ class VastAiComputeProvider implements ComputeProviderInterface
     {
         throw new \RuntimeException(
             'Vast.ai serverless does not support async job submission. '
-            .'Set use_sync: true in the skill configuration.'
+            .'Set use_sync: true in the skill configuration.',
         );
     }
 
@@ -102,7 +102,7 @@ class VastAiComputeProvider implements ComputeProviderInterface
     {
         throw new \RuntimeException(
             'Vast.ai serverless does not support async getResult. '
-            .'Set use_sync: true in the skill configuration.'
+            .'Set use_sync: true in the skill configuration.',
         );
     }
 

@@ -40,7 +40,7 @@ class FalComputeProvider implements ComputeProviderInterface
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "Fal.ai sync [{$response->status()}]: ".mb_substr($response->body(), 0, 500)
+                "Fal.ai sync [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
             );
         }
 
@@ -66,7 +66,7 @@ class FalComputeProvider implements ComputeProviderInterface
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "Fal.ai submit [{$response->status()}]: ".mb_substr($response->body(), 0, 500)
+                "Fal.ai submit [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
             );
         }
 
@@ -93,7 +93,7 @@ class FalComputeProvider implements ComputeProviderInterface
 
         if (! $statusResp->successful()) {
             throw new \RuntimeException(
-                "Fal.ai status [{$statusResp->status()}]: ".mb_substr($statusResp->body(), 0, 500)
+                "Fal.ai status [{$statusResp->status()}]: ".mb_substr($statusResp->body(), 0, 500),
             );
         }
 
@@ -117,7 +117,7 @@ class FalComputeProvider implements ComputeProviderInterface
 
         if (! $resultResp->successful()) {
             throw new \RuntimeException(
-                "Fal.ai getResult [{$resultResp->status()}]: ".mb_substr($resultResp->body(), 0, 500)
+                "Fal.ai getResult [{$resultResp->status()}]: ".mb_substr($resultResp->body(), 0, 500),
             );
         }
 

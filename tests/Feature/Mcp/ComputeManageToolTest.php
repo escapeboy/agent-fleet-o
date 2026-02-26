@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
 use Tests\TestCase;
 
 class ComputeManageToolTest extends TestCase
@@ -41,7 +42,7 @@ class ComputeManageToolTest extends TestCase
         return new Request($args);
     }
 
-    private function decode(\Laravel\Mcp\Response $response): array
+    private function decode(Response $response): array
     {
         return json_decode((string) $response->content(), true);
     }

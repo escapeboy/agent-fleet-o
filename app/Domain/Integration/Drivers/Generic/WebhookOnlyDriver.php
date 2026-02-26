@@ -3,7 +3,6 @@
 namespace App\Domain\Integration\Drivers\Generic;
 
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
-use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\DTOs\TriggerDefinition;
 use App\Domain\Integration\Enums\AuthType;

@@ -22,6 +22,7 @@ class ConnectIntegrationAction
      * Validate credentials, then atomically create Credential + Integration records.
      *
      * @param  string  $credentialId  Pass an existing credential ID (e.g. from OAuth2 callback) to skip creation.
+     *
      * @throws RuntimeException When credential validation fails.
      */
     public function execute(

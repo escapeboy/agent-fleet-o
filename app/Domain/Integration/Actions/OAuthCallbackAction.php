@@ -62,18 +62,18 @@ class OAuthCallbackAction
                 )
                 ->asJson()
                 ->post($tokenUrl, [
-                    'grant_type'   => 'authorization_code',
-                    'code'         => $code,
+                    'grant_type' => 'authorization_code',
+                    'code' => $code,
                     'redirect_uri' => route('integrations.oauth.callback', $driver),
                 ]);
         } else {
             $response = Http::timeout(15)
                 ->asForm()
                 ->post($tokenUrl, [
-                    'grant_type'    => 'authorization_code',
-                    'code'          => $code,
-                    'redirect_uri'  => route('integrations.oauth.callback', $driver),
-                    'client_id'     => $oauthConfig['client_id'] ?? '',
+                    'grant_type' => 'authorization_code',
+                    'code' => $code,
+                    'redirect_uri' => route('integrations.oauth.callback', $driver),
+                    'client_id' => $oauthConfig['client_id'] ?? '',
                     'client_secret' => $oauthConfig['client_secret'] ?? '',
                 ]);
         }
@@ -83,7 +83,7 @@ class OAuthCallbackAction
             Log::error('OAuthCallbackAction: token exchange failed', [
                 'driver' => $driver,
                 'status' => $response->status(),
-                'error'  => $error,
+                'error' => $error,
             ]);
             throw new \RuntimeException("OAuth2 token exchange failed: {$error}");
         }

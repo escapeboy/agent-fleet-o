@@ -14,7 +14,7 @@ class ComputeServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(
             __DIR__.'/../../config/compute_providers.php',
-            'compute_providers'
+            'compute_providers',
         );
 
         $this->app->singleton(ComputeCostEstimator::class);

@@ -41,7 +41,7 @@ class ComputeCredentialResolver
         if (! $credentials) {
             throw new \RuntimeException(
                 "No active credentials found for compute provider '{$provider}'. "
-                .'Configure your API key in Team Settings → Integrations.'
+                .'Configure your API key in Team Settings → Integrations.',
             );
         }
 

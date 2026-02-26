@@ -154,7 +154,7 @@ class ComputeManageTool extends Tool
             $providerInstance = $this->manager->driver($provider);
             $valid = $providerInstance->validateCredentials($credentials);
         } catch (\Throwable $e) {
-            return Response::error("Credential check failed: ".$e->getMessage());
+            return Response::error('Credential check failed: '.$e->getMessage());
         }
 
         return Response::text(json_encode([
@@ -162,8 +162,8 @@ class ComputeManageTool extends Tool
             'configured' => true,
             'valid' => $valid,
             'message' => $valid
-                ? "Credentials are valid."
-                : "Credentials appear invalid or the provider API is unreachable.",
+                ? 'Credentials are valid.'
+                : 'Credentials appear invalid or the provider API is unreachable.',
         ]));
     }
 
@@ -212,7 +212,7 @@ class ComputeManageTool extends Tool
 
             $health = $providerInstance->health($job);
         } catch (\Throwable $e) {
-            return Response::error("Health check failed: ".$e->getMessage());
+            return Response::error('Health check failed: '.$e->getMessage());
         }
 
         return Response::text(json_encode([
@@ -262,7 +262,7 @@ class ComputeManageTool extends Tool
             $providerInstance = $this->manager->driver($provider);
             $result = $providerInstance->runSync($job);
         } catch (\Throwable $e) {
-            return Response::error("Compute run failed: ".$e->getMessage());
+            return Response::error('Compute run failed: '.$e->getMessage());
         }
 
         return Response::text(json_encode([

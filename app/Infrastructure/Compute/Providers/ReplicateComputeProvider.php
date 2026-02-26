@@ -39,7 +39,7 @@ class ReplicateComputeProvider implements ComputeProviderInterface
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "Replicate createPrediction [{$response->status()}]: ".mb_substr($response->body(), 0, 500)
+                "Replicate createPrediction [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
             );
         }
 
@@ -72,7 +72,7 @@ class ReplicateComputeProvider implements ComputeProviderInterface
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "Replicate submit [{$response->status()}]: ".mb_substr($response->body(), 0, 500)
+                "Replicate submit [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
             );
         }
 
@@ -96,7 +96,7 @@ class ReplicateComputeProvider implements ComputeProviderInterface
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "Replicate getResult [{$response->status()}]: ".mb_substr($response->body(), 0, 500)
+                "Replicate getResult [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
             );
         }
 

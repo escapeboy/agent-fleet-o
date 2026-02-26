@@ -24,13 +24,13 @@ return [
     */
     'drivers' => [
         'api_polling' => ['label' => 'API Polling',  'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '🔄'],
-        'webhook'     => ['label' => 'Webhook',      'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🪝'],
-        'github'      => ['label' => 'GitHub',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🐙'],
-        'slack'       => ['label' => 'Slack',        'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '💬'],
-        'stripe'      => ['label' => 'Stripe',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💳'],
-        'notion'      => ['label' => 'Notion',       'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '📝'],
-        'airtable'    => ['label' => 'Airtable',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '📊'],
-        'linear'      => ['label' => 'Linear',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📋'],
+        'webhook' => ['label' => 'Webhook',      'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🪝'],
+        'github' => ['label' => 'GitHub',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🐙'],
+        'slack' => ['label' => 'Slack',        'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '💬'],
+        'stripe' => ['label' => 'Stripe',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💳'],
+        'notion' => ['label' => 'Notion',       'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '📝'],
+        'airtable' => ['label' => 'Airtable',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '📊'],
+        'linear' => ['label' => 'Linear',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📋'],
     ],
 
     /*
@@ -43,14 +43,14 @@ return [
     */
     'oauth' => [
         'slack' => [
-            'client_id'     => env('SLACK_CLIENT_ID'),
+            'client_id' => env('SLACK_CLIENT_ID'),
             'client_secret' => env('SLACK_CLIENT_SECRET'),
-            'scopes'        => ['channels:read', 'chat:write', 'reactions:read'],
+            'scopes' => ['channels:read', 'chat:write', 'reactions:read'],
         ],
         'notion' => [
-            'client_id'     => env('NOTION_CLIENT_ID'),
+            'client_id' => env('NOTION_CLIENT_ID'),
             'client_secret' => env('NOTION_CLIENT_SECRET'),
-            'scopes'        => [],
+            'scopes' => [],
         ],
     ],
 
@@ -65,11 +65,11 @@ return [
     'oauth_urls' => [
         'slack' => [
             'authorize' => 'https://slack.com/oauth/v2/authorize',
-            'token'     => 'https://slack.com/api/oauth.v2.access',
+            'token' => 'https://slack.com/api/oauth.v2.access',
         ],
         'notion' => [
             'authorize' => 'https://api.notion.com/v1/oauth/authorize',
-            'token'     => 'https://api.notion.com/v1/oauth/token',
+            'token' => 'https://api.notion.com/v1/oauth/token',
         ],
     ],
 
@@ -80,7 +80,7 @@ return [
     */
     'health' => [
         'ping_interval_minutes' => 15,
-        'error_threshold'       => 5,
+        'error_threshold' => 5,
     ],
 
     /*
@@ -90,7 +90,7 @@ return [
     */
     'webhook' => [
         'replay_protection_ttl' => 86400,  // Seconds to cache processed delivery IDs (24h)
-        'timestamp_tolerance'   => 300,    // Max age of timestamp header in seconds (5 min)
+        'timestamp_tolerance' => 300,    // Max age of timestamp header in seconds (5 min)
     ],
 
 ];

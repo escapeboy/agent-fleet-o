@@ -104,7 +104,7 @@ class ExecuteGpuComputeSkillTest extends TestCase
 
         $this->assertNull($result['output']);
         $this->assertEquals('failed', $result['execution']->status);
-        $this->assertStringContainsString("runpod", $result['execution']->error_message);
+        $this->assertStringContainsString('runpod', $result['execution']->error_message);
     }
 
     public function test_fails_without_endpoint_id(): void
@@ -169,7 +169,7 @@ class ExecuteGpuComputeSkillTest extends TestCase
 
         Http::fake([
             'https://api.runpod.ai/v2/test-endpoint-123/runsync' => Http::response(
-                ['error' => 'Endpoint not found'], 404
+                ['error' => 'Endpoint not found'], 404,
             ),
         ]);
 

@@ -6,7 +6,6 @@ use App\Domain\Integration\Actions\ConnectIntegrationAction;
 use App\Domain\Integration\Actions\DisconnectIntegrationAction;
 use App\Domain\Integration\Actions\OAuthConnectAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
-use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
 use Livewire\Component;
@@ -53,7 +52,7 @@ class IntegrationListPage extends Component
     {
         $this->validate([
             'connectDriver' => 'required|string',
-            'connectName'   => 'required|string|min:2|max:255',
+            'connectName' => 'required|string|min:2|max:255',
         ]);
 
         $team = auth()->user()->currentTeam;

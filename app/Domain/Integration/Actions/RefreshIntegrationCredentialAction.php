@@ -70,18 +70,18 @@ class RefreshIntegrationCredentialAction
             $oauthConfig = config("integrations.oauth.{$driver}", []);
 
             $response = Http::timeout(15)->asForm()->post((string) $tokenUrl, [
-                'grant_type'    => 'refresh_token',
+                'grant_type' => 'refresh_token',
                 'refresh_token' => (string) $refreshToken,
-                'client_id'     => $oauthConfig['client_id'] ?? '',
+                'client_id' => $oauthConfig['client_id'] ?? '',
                 'client_secret' => $oauthConfig['client_secret'] ?? '',
             ]);
 
             if (! $response->successful()) {
                 Log::error('RefreshIntegrationCredentialAction: refresh failed', [
                     'integration_id' => $integration->getKey(),
-                    'driver'         => $driver,
-                    'status'         => $response->status(),
-                    'error'          => $response->json('error') ?? 'unknown',
+                    'driver' => $driver,
+                    'status' => $response->status(),
+                    'error' => $response->json('error') ?? 'unknown',
                 ]);
 
                 return;
@@ -93,7 +93,7 @@ class RefreshIntegrationCredentialAction
             $expiresIn = (int) ($data['expires_in'] ?? 3600);
 
             $updated = array_merge($secretData, [
-                'access_token'    => (string) ($data['access_token'] ?? ''),
+                'access_token' => (string) ($data['access_token'] ?? ''),
                 'token_expires_at' => now()->addSeconds($expiresIn)->toIso8601String(),
             ]);
 
@@ -103,12 +103,12 @@ class RefreshIntegrationCredentialAction
 
             $credential->update([
                 'secret_data' => $updated,
-                'expires_at'  => now()->addSeconds($expiresIn),
+                'expires_at' => now()->addSeconds($expiresIn),
             ]);
 
             Log::info('RefreshIntegrationCredentialAction: token refreshed', [
                 'integration_id' => $integration->getKey(),
-                'driver'         => $driver,
+                'driver' => $driver,
             ]);
         } finally {
             $lock->release();

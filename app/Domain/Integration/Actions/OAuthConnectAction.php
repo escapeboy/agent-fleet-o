@@ -32,10 +32,10 @@ class OAuthConnectAction
         );
 
         $params = [
-            'client_id'     => $oauthConfig['client_id'],
-            'redirect_uri'  => route('integrations.oauth.callback', $driver),
+            'client_id' => $oauthConfig['client_id'],
+            'redirect_uri' => route('integrations.oauth.callback', $driver),
             'response_type' => 'code',
-            'state'         => $state,
+            'state' => $state,
         ];
 
         if (! empty($oauthConfig['scopes'])) {

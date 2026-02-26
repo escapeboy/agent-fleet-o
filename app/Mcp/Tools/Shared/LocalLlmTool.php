@@ -208,7 +208,7 @@ class LocalLlmTool extends Tool
 
         return Response::text($deleted
             ? "Removed {$provider} endpoint."
-            : "No {$provider} endpoint was configured."
+            : "No {$provider} endpoint was configured.",
         );
     }
 }
