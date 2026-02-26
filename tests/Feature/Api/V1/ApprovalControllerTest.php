@@ -100,6 +100,7 @@ class ApprovalControllerTest extends ApiTestCase
 
     public function test_can_reject_request(): void
     {
+        Event::fake([ExperimentTransitioned::class]);
         $this->actingAsApiUser();
         $approval = $this->createApproval();
 

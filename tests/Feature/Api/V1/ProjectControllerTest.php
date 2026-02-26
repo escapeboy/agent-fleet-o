@@ -78,6 +78,9 @@ class ProjectControllerTest extends ApiTestCase
     public function test_can_create_project(): void
     {
         $this->actingAsApiUser();
+        $this->mock(TriggerProjectRunAction::class)
+            ->shouldReceive('execute')
+            ->once();
 
         $response = $this->postJson('/api/v1/projects', [
             'title' => 'New Project',
