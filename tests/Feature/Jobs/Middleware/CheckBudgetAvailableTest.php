@@ -7,7 +7,6 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Models\User;
-use Closure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -54,7 +53,8 @@ class CheckBudgetAvailableTest extends TestCase
 
     private function makeJob(): object
     {
-        return new class($this->experiment->id) {
+        return new class($this->experiment->id)
+        {
             public string $experimentId;
 
             public function __construct(string $id)
@@ -125,7 +125,8 @@ class CheckBudgetAvailableTest extends TestCase
 
     public function test_allows_job_with_no_experiment_id(): void
     {
-        $job = new class {
+        $job = new class
+        {
             public string $someOtherProp = 'value';
         };
 
