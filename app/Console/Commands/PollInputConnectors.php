@@ -13,6 +13,8 @@ use App\Domain\Signal\Connectors\LinearConnector;
 use App\Domain\Signal\Connectors\PagerDutyConnector;
 use App\Domain\Signal\Connectors\RssConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
+use App\Domain\Signal\Connectors\MatrixConnector;
+use App\Domain\Signal\Connectors\SignalProtocolConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Models\Connector;
@@ -21,7 +23,7 @@ use Illuminate\Support\Facades\Log;
 
 class PollInputConnectors extends Command
 {
-    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor). Polls all if omitted.}';
+    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor, signal_protocol, matrix). Polls all if omitted.}';
 
     protected $description = 'Poll active input connectors for new signals';
 
@@ -39,6 +41,8 @@ class PollInputConnectors extends Command
         'pagerduty' => PagerDutyConnector::class,
         'telegram' => TelegramSignalConnector::class,
         'http_monitor' => HttpMonitorConnector::class,
+        'signal_protocol' => SignalProtocolConnector::class,
+        'matrix' => MatrixConnector::class,
     ];
 
     public function handle(): int

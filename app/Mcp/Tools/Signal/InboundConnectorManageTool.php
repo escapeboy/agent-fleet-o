@@ -78,7 +78,7 @@ class InboundConnectorManageTool extends Tool
         ], $webhookDrivers);
 
         $pollingConnectors = Connector::where('type', 'input')
-            ->whereIn('driver', ['rss', 'imap', 'http_monitor'])
+            ->whereIn('driver', ['rss', 'imap', 'http_monitor', 'signal_protocol', 'matrix'])
             ->get()
             ->map(fn ($c) => [
                 'id' => $c->id,
@@ -113,6 +113,27 @@ class InboundConnectorManageTool extends Tool
             'sentry' => 'SENTRY_WEBHOOK_SECRET',
             'pagerduty' => 'PAGERDUTY_AUTH_TOKEN',
         ];
+
+        $pollingInstructions = [
+            'signal_protocol' => [
+                'type' => 'polling',
+                'sidecar' => 'bbernhard/signal-cli-rest-api',
+                'config_keys' => ['api_url', 'phone_number', 'team_id'],
+                'docker_image' => 'bbernhard/signal-cli-rest-api:latest',
+                'poll_interval' => 'every minute',
+                'notes' => 'Run signal-cli-rest-api as a Docker sidecar. Register your Signal number first using the sidecar API.',
+            ],
+            'matrix' => [
+                'type' => 'polling',
+                'config_keys' => ['homeserver_url', 'access_token', 'bot_user_id', 'room_ids', 'team_id'],
+                'poll_interval' => 'every minute',
+                'notes' => 'Create a Matrix bot account on your homeserver. Use /_matrix/client/v3/login to obtain an access_token.',
+            ],
+        ];
+
+        if (isset($pollingInstructions[$driver])) {
+            return Response::text(json_encode(array_merge(['driver' => $driver], $pollingInstructions[$driver])));
+        }
 
         $knownDrivers = array_keys($envVars) + ['datadog', 'whatsapp'];
         if (! in_array($driver, $knownDrivers, true)) {

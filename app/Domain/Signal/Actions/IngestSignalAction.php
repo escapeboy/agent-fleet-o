@@ -2,9 +2,11 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Domain\Shared\Services\ContactResolver;
 use App\Domain\Signal\Jobs\ExtractSignalEntitiesJob;
 use App\Domain\Signal\Jobs\ProcessSignalMediaJob;
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Signal\Services\ConnectorBindingGate;
 use App\Domain\Trigger\Jobs\EvaluateTriggerRulesJob;
 use App\Models\Blacklist;
 use Illuminate\Http\UploadedFile;
@@ -14,11 +16,18 @@ use Illuminate\Support\Facades\RateLimiter;
 class IngestSignalAction
 {
     /**
+     * Channels where binding gate is enforced (sender must be approved before signals are accepted).
+     */
+    private const GATED_CHANNELS = ['telegram', 'whatsapp', 'discord', 'signal_protocol', 'matrix'];
+
+    /**
      * @param  array<int, UploadedFile|mixed>  $files  Optional file attachments for media processing
      * @param  string|null  $sourceNativeId  Stable provider-assigned ID (e.g. "ISSUE-123" from Sentry).
      *                                       When provided, dedup by (source_type + source_native_id) takes
      *                                       priority over content_hash, preventing repeated webhooks for the
      *                                       same upstream event from creating duplicate signals.
+     * @param  string|null  $teamId  Team ID for ConnectorBindingGate checks (required for gated channels).
+     * @param  array<string, mixed>  $senderHints  Optional hints for ConnectorBindingGate: ['name', 'phone', 'email'].
      */
     public function execute(
         string $sourceType,
@@ -28,7 +37,29 @@ class IngestSignalAction
         ?string $experimentId = null,
         array $files = [],
         ?string $sourceNativeId = null,
+        ?string $teamId = null,
+        array $senderHints = [],
     ): ?Signal {
+        // ConnectorBinding gate: reject or hold signals from unapproved senders on gated channels.
+        if (in_array($sourceType, self::GATED_CHANNELS, true) && $teamId !== null && $sourceIdentifier !== '') {
+            $gateStatus = app(ConnectorBindingGate::class)->check(
+                teamId: $teamId,
+                channel: $sourceType,
+                externalId: $sourceIdentifier,
+                hints: $senderHints,
+            );
+
+            if ($gateStatus !== 'approved') {
+                Log::info('IngestSignalAction: signal blocked by ConnectorBindingGate', [
+                    'source_type' => $sourceType,
+                    'source_identifier' => $sourceIdentifier,
+                    'gate_status' => $gateStatus,
+                ]);
+
+                return null;
+            }
+        }
+
         // Alert storm protection: limit signals per source_type to prevent runaway alert floods.
         // Default: 60 signals/minute per source_type. Configurable via config('signals.rate_limit').
         $rateKey = 'signal_ingest:'.$sourceType;
@@ -67,8 +98,25 @@ class IngestSignalAction
             return null;
         }
 
+        // Resolve cross-channel contact identity for gated channels with known senders.
+        $contactIdentityId = null;
+        if (in_array($sourceType, self::GATED_CHANNELS, true) && $teamId !== null && $sourceIdentifier !== '') {
+            try {
+                $identity = app(ContactResolver::class)->resolveOrCreate(
+                    teamId: $teamId,
+                    channel: $sourceType,
+                    externalId: $sourceIdentifier,
+                    hints: $senderHints,
+                );
+                $contactIdentityId = $identity->id;
+            } catch (\Throwable $e) {
+                Log::warning('IngestSignalAction: ContactResolver failed', ['error' => $e->getMessage()]);
+            }
+        }
+
         $signal = Signal::create([
             'experiment_id' => $experimentId,
+            'contact_identity_id' => $contactIdentityId,
             'source_type' => $sourceType,
             'source_identifier' => $sourceIdentifier,
             'source_native_id' => $sourceNativeId,

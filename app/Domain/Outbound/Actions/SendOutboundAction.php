@@ -5,6 +5,8 @@ namespace App\Domain\Outbound\Actions;
 use App\Domain\Outbound\Connectors\DiscordConnector;
 use App\Domain\Outbound\Connectors\DummyConnector;
 use App\Domain\Outbound\Connectors\GoogleChatConnector;
+use App\Domain\Outbound\Connectors\MatrixConnector;
+use App\Domain\Outbound\Connectors\SignalProtocolConnector;
 use App\Domain\Outbound\Connectors\SlackConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
 use App\Domain\Outbound\Connectors\TeamsConnector;
@@ -39,6 +41,8 @@ class SendOutboundAction
             new TeamsConnector,
             new GoogleChatConnector,
             new WebhookOutboundConnector,
+            new SignalProtocolConnector,
+            new MatrixConnector,
             new DummyConnector,  // Fallback — must be last
         ];
     }

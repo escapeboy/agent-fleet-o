@@ -17,6 +17,8 @@ Schedule::command('metrics:aggregate --period=daily')->dailyAt('01:00');
 Schedule::command('connectors:poll')->everyFifteenMinutes();
 Schedule::command('connectors:poll --driver=http_monitor')->everyFiveMinutes()->withoutOverlapping(5);
 Schedule::command('connectors:poll --driver=telegram')->everyMinute()->withoutOverlapping(2);
+Schedule::command('connectors:poll --driver=signal_protocol')->everyMinute()->withoutOverlapping(2);
+Schedule::command('connectors:poll --driver=matrix')->everyMinute()->withoutOverlapping(2);
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();

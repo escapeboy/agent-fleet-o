@@ -3,6 +3,7 @@
 namespace App\Domain\Signal\Models;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Database\Factories\Domain\Signal\SignalFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -20,6 +21,7 @@ class Signal extends Model implements HasMedia
     protected $fillable = [
         'team_id',
         'experiment_id',
+        'contact_identity_id',
         'source_type',
         'source_identifier',
         'source_native_id',
@@ -58,6 +60,11 @@ class Signal extends Model implements HasMedia
         return $this->belongsTo(Experiment::class);
     }
 
+    public function contactIdentity(): BelongsTo
+    {
+        return $this->belongsTo(ContactIdentity::class);
+    }
+
     public function entities(): BelongsToMany
     {
         return $this->belongsToMany(Entity::class, 'entity_signal')
@@ -67,6 +74,19 @@ class Signal extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('attachments');
+        $this->addMediaCollection('attachments')
+            ->acceptsMimeTypes([
+                'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+                'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4',
+                'video/mp4', 'video/webm', 'video/ogg',
+                'application/pdf', 'text/plain',
+                'application/octet-stream', // Telegram voice notes, stickers, etc.
+            ]);
+
+        $this->addMediaConversion('thumb')
+            ->width(256)
+            ->height(256)
+            ->queued()
+            ->performOnCollections('attachments');
     }
 }

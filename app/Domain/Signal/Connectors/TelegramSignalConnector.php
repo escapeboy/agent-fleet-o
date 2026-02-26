@@ -5,8 +5,11 @@ namespace App\Domain\Signal\Connectors;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Models\Signal;
+use Illuminate\Http\Client\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Polls a Telegram bot for new messages using getUpdates long-polling.
@@ -23,7 +26,12 @@ class TelegramSignalConnector implements InputConnectorInterface
 
     private const MAX_UPDATES_PER_POLL = 100;
 
+    /** Media types that carry a file_id for downloading. */
+    private const MEDIA_FIELDS = ['photo', 'audio', 'voice', 'video', 'document', 'sticker', 'video_note'];
+
     private int $highestUpdateId = 0;
+
+    private string $currentBotToken = '';
 
     public function __construct(
         private readonly IngestSignalAction $ingestAction,
@@ -43,6 +51,8 @@ class TelegramSignalConnector implements InputConnectorInterface
 
             return [];
         }
+
+        $this->currentBotToken = $botToken;
 
         try {
             $response = Http::timeout(10)->get(
@@ -127,6 +137,32 @@ class TelegramSignalConnector implements InputConnectorInterface
             return null;
         }
 
+        // Detect media type and file_id
+        $mediaType = null;
+        $fileId = null;
+        $mediaMeta = [];
+
+        foreach (self::MEDIA_FIELDS as $field) {
+            if (isset($message[$field])) {
+                $mediaType = $field;
+                // Photos arrive as array of sizes; take the largest
+                if ($field === 'photo' && is_array($message[$field])) {
+                    $largest = end($message[$field]);
+                    $fileId = $largest['file_id'] ?? null;
+                    $mediaMeta = ['width' => $largest['width'] ?? null, 'height' => $largest['height'] ?? null];
+                } else {
+                    $fileId = $message[$field]['file_id'] ?? null;
+                    $mediaMeta = array_filter([
+                        'file_name' => $message[$field]['file_name'] ?? null,
+                        'mime_type' => $message[$field]['mime_type'] ?? null,
+                        'file_size' => $message[$field]['file_size'] ?? null,
+                        'duration' => $message[$field]['duration'] ?? null,
+                    ]);
+                }
+                break;
+            }
+        }
+
         $payload = [
             'update_id' => $updateId,
             'message_id' => $messageId,
@@ -135,19 +171,86 @@ class TelegramSignalConnector implements InputConnectorInterface
             'user_id' => (string) ($from['id'] ?? ''),
             'username' => $from['username'] ?? null,
             'first_name' => $from['first_name'] ?? null,
-            'text' => $text,
-            'metadata' => [
+            'text' => $text ?: ($message['caption'] ?? ''),
+            'media_type' => $mediaType,
+            'metadata' => array_filter([
                 'chat_title' => $chat['title'] ?? null,
                 'message_type' => isset($update['callback_query']) ? 'callback_query' : 'message',
-            ],
+                'media' => $mediaMeta ?: null,
+            ]),
         ];
+
+        // Download media file if present
+        $files = [];
+        if ($fileId && $this->currentBotToken) {
+            $file = $this->downloadMedia($this->currentBotToken, $fileId, $mediaMeta['file_name'] ?? null);
+            if ($file) {
+                $files[] = $file;
+                $payload['has_media'] = true;
+            }
+        }
+
+        $tags = array_filter(['telegram', 'chat', $mediaType]);
 
         return $this->ingestAction->execute(
             sourceType: 'telegram',
             sourceIdentifier: "telegram:{$chatId}",
             payload: $payload,
-            tags: ['telegram', 'chat'],
+            tags: array_values($tags),
             sourceNativeId: "telegram:{$updateId}",
+            files: $files,
+            teamId: $teamId,
+            senderHints: array_filter([
+                'name' => $from['first_name'] ?? $from['username'] ?? null,
+            ]),
         );
     }
+
+    /**
+     * Download a Telegram media file via getFile API and return a temporary UploadedFile.
+     */
+    private function downloadMedia(string $botToken, string $fileId, ?string $originalName): ?UploadedFile
+    {
+        try {
+            // Get file path from Telegram
+            $fileResponse = Http::timeout(10)->get(
+                self::TELEGRAM_API."/bot{$botToken}/getFile",
+                ['file_id' => $fileId],
+            );
+
+            if (! $fileResponse->successful() || ! $fileResponse->json('ok')) {
+                return null;
+            }
+
+            $filePath = $fileResponse->json('result.file_path');
+            if (! $filePath) {
+                return null;
+            }
+
+            // Download the actual file
+            $downloadUrl = self::TELEGRAM_API."/file/bot{$botToken}/{$filePath}";
+            $content = Http::timeout(30)->get($downloadUrl)->body();
+
+            if (empty($content)) {
+                return null;
+            }
+
+            // Write to a temporary file
+            $tempPath = tempnam(sys_get_temp_dir(), 'tg_media_');
+            file_put_contents($tempPath, $content);
+
+            $fileName = $originalName ?? basename($filePath);
+            $mimeType = mime_content_type($tempPath) ?: 'application/octet-stream';
+
+            return new UploadedFile($tempPath, $fileName, $mimeType, null, true);
+        } catch (\Throwable $e) {
+            Log::warning('TelegramSignalConnector: media download failed', [
+                'file_id' => $fileId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
 }
+

@@ -31,20 +31,31 @@ class SignalGetTool extends Tool
     {
         $validated = $request->validate(['signal_id' => 'required|string']);
 
-        $signal = Signal::find($validated['signal_id']);
+        $signal = Signal::with('contactIdentity')->find($validated['signal_id']);
 
         if (! $signal) {
             return Response::error('Signal not found.');
         }
 
+        $attachments = $signal->getMedia('attachments')->map(fn ($m) => [
+            'id' => $m->id,
+            'file_name' => $m->file_name,
+            'mime_type' => $m->mime_type,
+            'size' => $m->size,
+            'url' => $m->getUrl(),
+            'thumb_url' => $m->hasGeneratedConversion('thumb') ? $m->getUrl('thumb') : null,
+        ])->values()->all();
+
         return Response::text(json_encode([
             'id' => $signal->id,
             'source_type' => $signal->source_type,
             'source_identifier' => $signal->source_identifier,
+            'contact_identity_id' => $signal->contact_identity_id,
             'payload' => $signal->payload,
             'score' => $signal->score,
             'scored_at' => $signal->scored_at?->toIso8601String(),
             'experiment_id' => $signal->experiment_id,
+            'attachments' => $attachments,
             'created_at' => $signal->created_at?->toIso8601String(),
         ]));
     }
