@@ -23,6 +23,7 @@ use App\Mcp\Tools\Budget\BudgetForecastTool;
 use App\Mcp\Tools\Budget\BudgetSummaryTool;
 use App\Mcp\Tools\Cache\SemanticCachePurgeTool;
 use App\Mcp\Tools\Cache\SemanticCacheStatsTool;
+use App\Mcp\Tools\Integration\IntegrationManageTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
 use App\Mcp\Tools\Credential\CredentialListTool;
@@ -311,6 +312,9 @@ class AgentFleetServer extends Server
         TriggerRuleUpdateTool::class,
         TriggerRuleDeleteTool::class,
         TriggerRuleTestTool::class,
+
+        // Integration (1)
+        IntegrationManageTool::class,
 
         // Compute (1)
         ComputeManageTool::class,

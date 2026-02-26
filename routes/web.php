@@ -12,6 +12,8 @@ use App\Livewire\Audit\AuditLogPage;
 use App\Livewire\Credentials\CreateCredentialForm;
 use App\Livewire\Credentials\CredentialDetailPage;
 use App\Livewire\Credentials\CredentialListPage;
+use App\Livewire\Integrations\IntegrationDetailPage;
+use App\Livewire\Integrations\IntegrationListPage;
 use App\Livewire\Crews\CreateCrewForm;
 use App\Livewire\Crews\CrewDetailPage;
 use App\Livewire\Crews\CrewExecutionPage;
@@ -100,6 +102,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/credentials', CredentialListPage::class)->name('credentials.index');
     Route::get('/credentials/create', CreateCredentialForm::class)->name('credentials.create');
     Route::get('/credentials/{credential}', CredentialDetailPage::class)->name('credentials.show');
+
+    Route::get('/integrations', IntegrationListPage::class)->name('integrations.index');
+    Route::get('/integrations/{integration}', IntegrationDetailPage::class)->name('integrations.show');
 
     Route::get('/crews', CrewListPage::class)->name('crews.index');
     Route::get('/crews/create', CreateCrewForm::class)->name('crews.create');
