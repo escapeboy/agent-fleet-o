@@ -3,7 +3,9 @@
 namespace App\Infrastructure\Compute;
 
 use App\Infrastructure\Compute\Contracts\ComputeProviderInterface;
+use App\Infrastructure\Compute\Providers\FalComputeProvider;
 use App\Infrastructure\Compute\Providers\NullComputeProvider;
+use App\Infrastructure\Compute\Providers\ReplicateComputeProvider;
 use App\Infrastructure\Compute\Providers\RunPodComputeProvider;
 use App\Infrastructure\Compute\Services\ComputeCostEstimator;
 use App\Infrastructure\RunPod\RunPodClient;
@@ -34,6 +36,16 @@ class ComputeProviderManager extends Manager
             client: $this->container->make(RunPodClient::class),
             costEstimator: $this->container->make(ComputeCostEstimator::class),
         );
+    }
+
+    public function createReplicateDriver(): ComputeProviderInterface
+    {
+        return new ReplicateComputeProvider;
+    }
+
+    public function createFalDriver(): ComputeProviderInterface
+    {
+        return new FalComputeProvider;
     }
 
     public function createNullDriver(): ComputeProviderInterface
