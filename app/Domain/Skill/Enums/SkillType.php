@@ -14,6 +14,7 @@ enum SkillType: string
     case Browser = 'browser';
     case RunpodEndpoint = 'runpod_endpoint';
     case RunpodPod = 'runpod_pod';
+    case GpuCompute = 'gpu_compute';
 
     public function label(): string
     {
@@ -28,6 +29,7 @@ enum SkillType: string
             self::Browser => 'Browser Automation',
             self::RunpodEndpoint => 'RunPod Endpoint',
             self::RunpodPod => 'RunPod Pod',
+            self::GpuCompute => 'GPU Compute',
         };
     }
 }

@@ -45,6 +45,10 @@
             Credentials
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('integrations.index') }}" :active="request()->routeIs('integrations.*')" icon="puzzle-piece">
+            Integrations
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*')" icon="circle-stack">
             Memory
         </x-sidebar-link>

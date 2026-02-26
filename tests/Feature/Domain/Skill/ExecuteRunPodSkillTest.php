@@ -168,7 +168,7 @@ class ExecuteRunPodSkillTest extends TestCase
 
         Http::fake([
             'https://api.runpod.ai/v2/test-endpoint-123/runsync' => Http::response(
-                ['error' => 'Endpoint not found'], 404
+                ['error' => 'Endpoint not found'], 404,
             ),
         ]);
 

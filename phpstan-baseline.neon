@@ -3082,6 +3082,54 @@ parameters:
 			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:runAsync\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Offset ''endpoint_id'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Offset ''provider'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:\$credentialResolver is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:\$manager is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
 			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
 
 		-
@@ -3236,6 +3284,12 @@ parameters:
 
 		-
 			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Connector is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
@@ -5851,6 +5905,18 @@ parameters:
 			path: app/Infrastructure/AI/Gateways/PrismAiGateway.php
 
 		-
+			message: '#^Offset ''api_key'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Infrastructure/AI/Gateways/PrismAiGateway.php
+
+		-
+			message: '#^Offset ''base_url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Infrastructure/AI/Gateways/PrismAiGateway.php
+
+		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
 			count: 1
@@ -5969,6 +6035,12 @@ parameters:
 			identifier: booleanAnd.alwaysFalse
 			count: 2
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Infrastructure/Compute/Services/ComputeCredentialResolver.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -6645,7 +6717,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 8
+			count: 11
 			path: app/Livewire/Teams/TeamSettingsPage.php
 
 		-
@@ -7247,6 +7319,36 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Mcp/Tools/RunPod/RunPodManageTool.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Mcp/Tools/Shared/LocalLlmTool.php
+
+		-
+			message: '#^Offset ''api_key'' on string in empty\(\) does not exist\.$#'
+			identifier: empty.offset
+			count: 1
+			path: app/Mcp/Tools/Shared/LocalLlmTool.php
+
+		-
+			message: '#^Offset ''base_url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Mcp/Tools/Shared/LocalLlmTool.php
+
+		-
+			message: '#^Offset ''models'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Shared/LocalLlmTool.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Mcp/Tools/Shared/LocalLlmTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'

@@ -69,16 +69,27 @@ class ProviderResolver
     {
         $providers = config('llm_providers', []);
 
-        // Filter local agent providers based on enabled flag and detection
-        $localEnabled = config('local_agents.enabled');
+        // Filter providers based on enabled flags and detection
+        $localAgentsEnabled = config('local_agents.enabled');
+        $localLlmEnabled = config('local_llm.enabled', false);
         $detected = null;
 
         foreach ($providers as $key => $provider) {
+            // HTTP-based local LLM providers (Ollama, OpenAI-compatible)
+            if (! empty($provider['http_local'])) {
+                if (! $localLlmEnabled) {
+                    unset($providers[$key]);
+                }
+
+                continue;
+            }
+
+            // CLI-based local agent providers (Codex, Claude Code)
             if (empty($provider['local'])) {
                 continue;
             }
 
-            if (! $localEnabled) {
+            if (! $localAgentsEnabled) {
                 unset($providers[$key]);
 
                 continue;

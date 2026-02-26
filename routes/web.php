@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Livewire\Agents\AgentDetailPage;
@@ -20,6 +21,8 @@ use App\Livewire\Dashboard\DashboardPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
 use App\Livewire\Experiments\ExperimentListPage;
 use App\Livewire\Health\HealthPage;
+use App\Livewire\Integrations\IntegrationDetailPage;
+use App\Livewire\Integrations\IntegrationListPage;
 use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
@@ -100,6 +103,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/credentials', CredentialListPage::class)->name('credentials.index');
     Route::get('/credentials/create', CreateCredentialForm::class)->name('credentials.create');
     Route::get('/credentials/{credential}', CredentialDetailPage::class)->name('credentials.show');
+
+    Route::get('/integrations', IntegrationListPage::class)->name('integrations.index');
+    Route::get('/integrations/oauth/{driver}', [IntegrationOAuthController::class, 'redirect'])->name('integrations.oauth.redirect');
+    Route::get('/integrations/oauth/{driver}/callback', [IntegrationOAuthController::class, 'callback'])->name('integrations.oauth.callback');
+    Route::get('/integrations/{integration}', IntegrationDetailPage::class)->name('integrations.show');
 
     Route::get('/crews', CrewListPage::class)->name('crews.index');
     Route::get('/crews/create', CreateCrewForm::class)->name('crews.create');

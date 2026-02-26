@@ -4,6 +4,7 @@ use App\Http\Controllers\DatadogAlertWebhookController;
 use App\Http\Controllers\DiscordWebhookController;
 use App\Http\Controllers\GitHubIssueWebhookController;
 use App\Http\Controllers\GitHubWebhookController;
+use App\Http\Controllers\IntegrationWebhookController;
 use App\Http\Controllers\JiraWebhookController;
 use App\Http\Controllers\LinearWebhookController;
 use App\Http\Controllers\PagerDutyWebhookController;
@@ -38,6 +39,11 @@ Route::post('/signals/linear', LinearWebhookController::class)->name('signals.li
 Route::post('/signals/sentry', SentryAlertWebhookController::class)->name('signals.sentry');
 Route::post('/signals/datadog/{secret}', DatadogAlertWebhookController::class)->name('signals.datadog');
 Route::post('/signals/pagerduty', PagerDutyWebhookController::class)->name('signals.pagerduty');
+
+// Generic integration webhooks (per-slug, HMAC verified in controller)
+Route::post('/integrations/webhook/{slug}', [IntegrationWebhookController::class, 'handle'])
+    ->name('integrations.webhook')
+    ->middleware('throttle:120,1');
 
 // Telegram webhook (optional push-mode alternative to polling)
 Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'handle'])

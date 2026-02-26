@@ -5,6 +5,7 @@ namespace App\Livewire\Teams;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
+use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -127,34 +128,181 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'API token revoked.');
     }
 
-    // RunPod integration
+    // GPU Compute provider credentials
     public string $runpodApiKey = '';
+
+    public string $replicateApiKey = '';
+
+    public string $falApiKey = '';
+
+    public string $vastApiKey = '';
 
     public function saveRunPodCredential(): void
     {
-        $this->validate([
-            'runpodApiKey' => 'required|string|min:20',
-        ]);
-
-        $team = auth()->user()->currentTeam;
-
-        TeamProviderCredential::updateOrCreate(
-            ['team_id' => $team->id, 'provider' => 'runpod'],
-            ['credentials' => ['api_key' => $this->runpodApiKey], 'is_active' => true],
-        );
-
+        $this->validate(['runpodApiKey' => 'required|string|min:20']);
+        $this->saveComputeCredential('runpod', $this->runpodApiKey);
         $this->runpodApiKey = '';
-
         session()->flash('message', 'RunPod API key saved.');
     }
 
     public function removeRunPodCredential(): void
     {
+        $this->removeComputeCredential('runpod');
+        session()->flash('message', 'RunPod API key removed.');
+    }
+
+    public function saveReplicateCredential(): void
+    {
+        $this->validate(['replicateApiKey' => 'required|string|min:20']);
+        $this->saveComputeCredential('replicate', $this->replicateApiKey);
+        $this->replicateApiKey = '';
+        session()->flash('message', 'Replicate API key saved.');
+    }
+
+    public function removeReplicateCredential(): void
+    {
+        $this->removeComputeCredential('replicate');
+        session()->flash('message', 'Replicate API key removed.');
+    }
+
+    public function saveFalCredential(): void
+    {
+        $this->validate(['falApiKey' => 'required|string|min:10']);
+        $this->saveComputeCredential('fal', $this->falApiKey);
+        $this->falApiKey = '';
+        session()->flash('message', 'Fal.ai API key saved.');
+    }
+
+    public function removeFalCredential(): void
+    {
+        $this->removeComputeCredential('fal');
+        session()->flash('message', 'Fal.ai API key removed.');
+    }
+
+    public function saveVastCredential(): void
+    {
+        $this->validate(['vastApiKey' => 'required|string|min:10']);
+        $this->saveComputeCredential('vast', $this->vastApiKey);
+        $this->vastApiKey = '';
+        session()->flash('message', 'Vast.ai API key saved.');
+    }
+
+    public function removeVastCredential(): void
+    {
+        $this->removeComputeCredential('vast');
+        session()->flash('message', 'Vast.ai API key removed.');
+    }
+
+    private function saveComputeCredential(string $provider, string $apiKey): void
+    {
+        $team = auth()->user()->currentTeam;
+
+        TeamProviderCredential::updateOrCreate(
+            ['team_id' => $team->id, 'provider' => $provider],
+            ['credentials' => ['api_key' => $apiKey], 'is_active' => true],
+        );
+    }
+
+    private function removeComputeCredential(string $provider): void
+    {
         TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
-            ->where('provider', 'runpod')
+            ->where('provider', $provider)
+            ->delete();
+    }
+
+    // Local LLM HTTP endpoints (Ollama, OpenAI-compatible)
+    public string $ollamaBaseUrl = '';
+
+    public string $ollamaApiKey = '';
+
+    public string $openaiCompatibleBaseUrl = '';
+
+    public string $openaiCompatibleApiKey = '';
+
+    public string $openaiCompatibleModels = '';
+
+    public ?string $localLlmTestResult = null;
+
+    public function saveOllamaCredential(LocalLlmUrlValidator $validator): void
+    {
+        $this->validate([
+            'ollamaBaseUrl' => 'required|url|max:255',
+        ]);
+
+        try {
+            $validator->validate($this->ollamaBaseUrl);
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('ollamaBaseUrl', $e->getMessage());
+
+            return;
+        }
+
+        $team = auth()->user()->currentTeam;
+
+        TeamProviderCredential::updateOrCreate(
+            ['team_id' => $team->id, 'provider' => 'ollama'],
+            ['credentials' => [
+                'base_url' => rtrim($this->ollamaBaseUrl, '/'),
+                'api_key' => $this->ollamaApiKey ?: '',
+            ], 'is_active' => true],
+        );
+
+        $this->ollamaBaseUrl = '';
+        $this->ollamaApiKey = '';
+        session()->flash('message', 'Ollama endpoint saved.');
+    }
+
+    public function removeOllamaCredential(): void
+    {
+        TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
+            ->where('provider', 'ollama')
             ->delete();
 
-        session()->flash('message', 'RunPod API key removed.');
+        session()->flash('message', 'Ollama endpoint removed.');
+    }
+
+    public function saveOpenaiCompatibleCredential(LocalLlmUrlValidator $validator): void
+    {
+        $this->validate([
+            'openaiCompatibleBaseUrl' => 'required|url|max:255',
+            'openaiCompatibleApiKey' => 'nullable|string|max:255',
+            'openaiCompatibleModels' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $validator->validate($this->openaiCompatibleBaseUrl);
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('openaiCompatibleBaseUrl', $e->getMessage());
+
+            return;
+        }
+
+        $models = array_filter(array_map('trim', explode(',', $this->openaiCompatibleModels)));
+
+        $team = auth()->user()->currentTeam;
+
+        TeamProviderCredential::updateOrCreate(
+            ['team_id' => $team->id, 'provider' => 'openai_compatible'],
+            ['credentials' => [
+                'base_url' => rtrim($this->openaiCompatibleBaseUrl, '/'),
+                'api_key' => $this->openaiCompatibleApiKey ?: '',
+                'models' => $models,
+            ], 'is_active' => true],
+        );
+
+        $this->openaiCompatibleBaseUrl = '';
+        $this->openaiCompatibleApiKey = '';
+        $this->openaiCompatibleModels = '';
+        session()->flash('message', 'OpenAI-compatible endpoint saved.');
+    }
+
+    public function removeOpenaiCompatibleCredential(): void
+    {
+        TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
+            ->where('provider', 'openai_compatible')
+            ->delete();
+
+        session()->flash('message', 'OpenAI-compatible endpoint removed.');
     }
 
     // Telegram bot settings
@@ -205,7 +353,19 @@ class TeamSettingsPage extends Component
             'llmProviders' => config('llm_providers', []),
             'apiTokens' => $apiTokens,
             'telegramBot' => $team ? TelegramBot::where('team_id', $team->id)->first() : null,
-            'runpodCredential' => $team ? TeamProviderCredential::where('team_id', $team->id)->where('provider', 'runpod')->first() : null,
+            'computeCredentials' => $team
+                ? TeamProviderCredential::where('team_id', $team->id)
+                    ->whereIn('provider', ['runpod', 'replicate', 'fal', 'vast'])
+                    ->get()
+                    ->keyBy('provider')
+                : collect(),
+            'localLlmEnabled' => config('local_llm.enabled', false),
+            'localLlmCredentials' => $team
+                ? TeamProviderCredential::where('team_id', $team->id)
+                    ->whereIn('provider', ['ollama', 'openai_compatible'])
+                    ->get()
+                    ->keyBy('provider')
+                : collect(),
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

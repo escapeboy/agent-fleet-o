@@ -118,49 +118,172 @@
         </div>
     </div>
 
-    {{-- RunPod Integration --}}
+    {{-- GPU Compute Providers --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 class="mb-1 text-lg font-semibold text-gray-900">RunPod Integration</h2>
-        <p class="mb-4 text-sm text-gray-500">
-            Connect your RunPod account to run AI models on GPU cloud. Agents can call serverless endpoints and manage pods.
-            Get your API key from <a href="https://www.runpod.io/console/user/settings" target="_blank" class="text-primary-600 hover:underline">RunPod Settings</a>.
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">GPU Compute Providers</h2>
+        <p class="mb-5 text-sm text-gray-500">
+            Connect GPU cloud accounts to run AI inference via <strong>GPU Compute</strong> skills.
+            Costs are billed directly to your provider account — not to FleetQ.
+            Use the <code class="rounded bg-gray-100 px-1">compute_manage</code> MCP tool to manage credentials programmatically.
         </p>
 
-        @if($runpodCredential)
-            <div class="mb-4 rounded-lg bg-green-50 p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-medium text-green-900">RunPod API key configured</p>
-                        <p class="mt-0.5 text-sm text-green-700">
-                            Status:
-                            @if($runpodCredential->is_active)
-                                <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span>
-                            @else
-                                <span class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Inactive</span>
-                            @endif
-                        </p>
+        @php
+        $computeProviderList = [
+            'runpod'    => ['label' => 'RunPod',    'placeholder' => 'rpa_...', 'field' => 'runpodApiKey',    'save' => 'saveRunPodCredential',    'remove' => 'removeRunPodCredential',    'hint' => 'RunPod Console → Settings → API Keys'],
+            'replicate' => ['label' => 'Replicate', 'placeholder' => 'r8_...', 'field' => 'replicateApiKey', 'save' => 'saveReplicateCredential', 'remove' => 'removeReplicateCredential', 'hint' => 'replicate.com → Account → API Tokens'],
+            'fal'       => ['label' => 'Fal.ai',    'placeholder' => 'fal_...',  'field' => 'falApiKey',       'save' => 'saveFalCredential',       'remove' => 'removeFalCredential',       'hint' => 'fal.ai → Dashboard → API Keys'],
+            'vast'      => ['label' => 'Vast.ai',   'placeholder' => 'vast_...',  'field' => 'vastApiKey',      'save' => 'saveVastCredential',      'remove' => 'removeVastCredential',      'hint' => 'vast.ai → Account → API Key'],
+        ];
+        @endphp
+
+        <div class="space-y-4">
+            @foreach($computeProviderList as $slug => $info)
+                @php $cred = $computeCredentials->get($slug); @endphp
+                <div class="rounded-lg border border-gray-100 p-4">
+                    <div class="mb-2 flex items-center justify-between">
+                        <span class="text-sm font-semibold text-gray-800">{{ $info['label'] }}</span>
+                        @if($cred)
+                            <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                                <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Configured
+                            </span>
+                        @endif
                     </div>
-                    <button wire:click="removeRunPodCredential" wire:confirm="Remove the RunPod API key?"
-                        class="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50">
+
+                    @if($cred)
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-gray-500">API key is saved. Remove to replace it.</p>
+                            <button wire:click="{{ $info['remove'] }}" wire:confirm="Remove the {{ $info['label'] }} API key?"
+                                class="text-sm text-red-600 hover:text-red-800">
+                                Remove
+                            </button>
+                        </div>
+                    @else
+                        <div class="flex items-end gap-3">
+                            <div class="flex-1">
+                                <x-form-input wire:model="{{ $info['field'] }}" label="API Key" type="password"
+                                    placeholder="{{ $info['placeholder'] }}" hint="{{ $info['hint'] }}"
+                                    :error="$errors->first($info['field'])" />
+                            </div>
+                            <button wire:click="{{ $info['save'] }}" class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
+                                Save
+                            </button>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Local LLM Endpoints --}}
+    @if($localLlmEnabled)
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Local LLM Endpoints</h2>
+        <p class="mb-5 text-sm text-gray-500">
+            Connect locally-running models via <strong>Ollama</strong> or any <strong>OpenAI-compatible</strong> endpoint
+            (LM Studio, vLLM, llama.cpp, etc.). Inference runs on your hardware — no tokens are sent to external APIs.
+        </p>
+
+        {{-- Ollama --}}
+        <div class="mb-4 rounded-lg border border-gray-100 p-4">
+            <div class="mb-2 flex items-center justify-between">
+                <span class="text-sm font-semibold text-gray-800">Ollama</span>
+                @if($localLlmCredentials->has('ollama'))
+                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Configured
+                    </span>
+                @endif
+            </div>
+
+            @if($localLlmCredentials->has('ollama'))
+                @php $ollamaCred = $localLlmCredentials->get('ollama'); @endphp
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-500">
+                        Endpoint: <code class="rounded bg-gray-100 px-1 text-xs">{{ $ollamaCred->credentials['base_url'] ?? '—' }}</code>
+                    </p>
+                    <button wire:click="removeOllamaCredential" wire:confirm="Remove the Ollama endpoint?"
+                        class="text-sm text-red-600 hover:text-red-800">
                         Remove
                     </button>
                 </div>
-            </div>
-            <p class="text-xs text-gray-500">Agents can now use <strong>RunPod Endpoint</strong> skill type to call your hosted AI models. Use the <code class="rounded bg-gray-100 px-1">runpod_manage</code> MCP tool to run jobs programmatically.</p>
-        @else
-            <div class="flex items-end gap-3">
-                <div class="flex-1">
-                    <x-form-input wire:model="runpodApiKey" label="RunPod API Key" type="password"
-                        placeholder="rpa_..."
-                        hint="Found in RunPod Console → Settings → API Keys."
-                        :error="$errors->first('runpodApiKey')" />
+            @else
+                <div class="space-y-3">
+                    <x-form-input wire:model="ollamaBaseUrl" label="Base URL" type="url"
+                        placeholder="http://localhost:11434"
+                        hint="Root URL without /v1 — e.g. http://localhost:11434"
+                        :error="$errors->first('ollamaBaseUrl')" />
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1">
+                            <x-form-input wire:model="ollamaApiKey" label="API Key (optional)" type="password"
+                                placeholder="Leave empty for unauthenticated Ollama"
+                                :error="$errors->first('ollamaApiKey')" />
+                        </div>
+                        <button wire:click="saveOllamaCredential"
+                            class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
+                            Save
+                        </button>
+                    </div>
                 </div>
-                <button wire:click="saveRunPodCredential" class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
-                    Save Key
-                </button>
+            @endif
+        </div>
+
+        {{-- OpenAI-compatible --}}
+        <div class="rounded-lg border border-gray-100 p-4">
+            <div class="mb-2 flex items-center justify-between">
+                <span class="text-sm font-semibold text-gray-800">OpenAI-Compatible Endpoint</span>
+                @if($localLlmCredentials->has('openai_compatible'))
+                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Configured
+                    </span>
+                @endif
             </div>
-        @endif
+            <p class="mb-3 text-xs text-gray-500">Works with LM Studio, vLLM, llama.cpp server, Ollama OpenAI-compat mode, and similar.</p>
+
+            @if($localLlmCredentials->has('openai_compatible'))
+                @php $oaiCred = $localLlmCredentials->get('openai_compatible'); @endphp
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-500">
+                            Endpoint: <code class="rounded bg-gray-100 px-1 text-xs">{{ $oaiCred->credentials['base_url'] ?? '—' }}</code>
+                        </p>
+                        <button wire:click="removeOpenaiCompatibleCredential" wire:confirm="Remove this endpoint?"
+                            class="text-sm text-red-600 hover:text-red-800">
+                            Remove
+                        </button>
+                    </div>
+                    @if(!empty($oaiCred->credentials['models']))
+                        <p class="text-xs text-gray-400">Models: {{ implode(', ', $oaiCred->credentials['models']) }}</p>
+                    @endif
+                </div>
+            @else
+                <div class="space-y-3">
+                    <x-form-input wire:model="openaiCompatibleBaseUrl" label="Base URL" type="url"
+                        placeholder="http://localhost:1234/v1"
+                        hint="URL with /v1 suffix — e.g. http://localhost:1234/v1"
+                        :error="$errors->first('openaiCompatibleBaseUrl')" />
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1">
+                            <x-form-input wire:model="openaiCompatibleApiKey" label="API Key (optional)" type="password"
+                                placeholder="Leave empty if not required"
+                                :error="$errors->first('openaiCompatibleApiKey')" />
+                        </div>
+                    </div>
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1">
+                            <x-form-input wire:model="openaiCompatibleModels" label="Available Models (comma-separated)" type="text"
+                                placeholder="meta-llama/Llama-3.2-3B-Instruct, mistral-7b-instruct"
+                                hint="Model IDs as reported by the server's /models endpoint"
+                                :error="$errors->first('openaiCompatibleModels')" />
+                        </div>
+                        <button wire:click="saveOpenaiCompatibleCredential"
+                            class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            @endif
+        </div>
     </div>
+    @endif
 
     {{-- Telegram Bot --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">

@@ -87,6 +87,7 @@ class CreateCredentialForm extends Component
                 'customPairs.*.key' => 'required|string|min:1',
                 'customPairs.*.value' => 'required|string|min:1',
             ]),
+            CredentialType::OAuth2 => null,
         };
     }
 
@@ -149,6 +150,7 @@ class CreateCredentialForm extends Component
                 ->filter(fn ($p) => ! empty($p['key']) && ! empty($p['value']))
                 ->pluck('value', 'key')
                 ->toArray(),
+            CredentialType::OAuth2 => [],
         };
     }
 

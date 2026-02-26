@@ -22,8 +22,8 @@ class CredentialCreateTool extends Tool
                 ->description('Credential name')
                 ->required(),
             'type' => $schema->string()
-                ->description('Credential type: api_key, oauth2, basic_auth, bearer_token, custom')
-                ->enum(['api_key', 'oauth2', 'basic_auth', 'bearer_token', 'custom'])
+                ->description('Credential type: api_token, oauth2, basic_auth, ssh_key, custom_kv')
+                ->enum(['api_token', 'oauth2', 'basic_auth', 'ssh_key', 'custom_kv'])
                 ->required(),
             'secret_data' => $schema->object()
                 ->description('Secret data object (e.g. {"token": "..."} or {"username": "...", "password": "..."})')
@@ -39,7 +39,7 @@ class CredentialCreateTool extends Tool
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|string|in:api_key,oauth2,basic_auth,bearer_token,custom',
+            'type' => 'required|string|in:api_token,oauth2,basic_auth,ssh_key,custom_kv',
             'secret_data' => 'required|array',
             'description' => 'nullable|string',
             'expires_at' => 'nullable|string|date',

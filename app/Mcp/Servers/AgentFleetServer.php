@@ -23,6 +23,7 @@ use App\Mcp\Tools\Budget\BudgetForecastTool;
 use App\Mcp\Tools\Budget\BudgetSummaryTool;
 use App\Mcp\Tools\Cache\SemanticCachePurgeTool;
 use App\Mcp\Tools\Cache\SemanticCacheStatsTool;
+use App\Mcp\Tools\Compute\ComputeManageTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
 use App\Mcp\Tools\Credential\CredentialListTool;
@@ -50,6 +51,7 @@ use App\Mcp\Tools\Experiment\ExperimentRetryTool;
 use App\Mcp\Tools\Experiment\ExperimentShareTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
+use App\Mcp\Tools\Integration\IntegrationManageTool;
 use App\Mcp\Tools\Marketplace\MarketplaceAnalyticsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
 use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
@@ -73,6 +75,7 @@ use App\Mcp\Tools\Project\ProjectResumeTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
+use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
@@ -295,11 +298,12 @@ class AgentFleetServer extends Server
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
 
-        // Shared (4)
+        // Shared (5)
         NotificationTool::class,
         TeamGetTool::class,
         TeamUpdateTool::class,
         TeamMembersTool::class,
+        LocalLlmTool::class,
 
         // Telegram (1)
         TelegramBotTool::class,
@@ -310,6 +314,12 @@ class AgentFleetServer extends Server
         TriggerRuleUpdateTool::class,
         TriggerRuleDeleteTool::class,
         TriggerRuleTestTool::class,
+
+        // Integration (1)
+        IntegrationManageTool::class,
+
+        // Compute (1)
+        ComputeManageTool::class,
 
         // RunPod (1)
         RunPodManageTool::class,
