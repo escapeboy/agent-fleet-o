@@ -68,10 +68,11 @@ class PrismAiGateway implements AiGatewayInterface
     {
         $provider = $this->resolveProvider($request->provider);
         $this->applyTeamCredentials($request);
+        $localConfig = $this->getLocalProviderConfig($request);
         $startTime = hrtime(true);
 
         $generator = Prism::text()
-            ->using($provider, $request->model)
+            ->using($provider, $request->model, $localConfig)
             ->withSystemPrompt($request->systemPrompt)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
@@ -126,11 +127,12 @@ class PrismAiGateway implements AiGatewayInterface
     {
         $provider = $this->resolveProvider($request->provider);
         $this->applyTeamCredentials($request);
+        $localConfig = $this->getLocalProviderConfig($request);
         $startTime = hrtime(true);
 
         if ($request->isStructured()) {
             $response = Prism::structured()
-                ->using($provider, $request->model)
+                ->using($provider, $request->model, $localConfig)
                 ->withSystemPrompt($request->systemPrompt)
                 ->withPrompt($request->userPrompt)
                 ->withMaxTokens($request->maxTokens)
@@ -163,7 +165,7 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         $builder = Prism::text()
-            ->using($provider, $request->model)
+            ->using($provider, $request->model, $localConfig)
             ->withSystemPrompt($request->systemPrompt)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
@@ -263,9 +265,14 @@ class PrismAiGateway implements AiGatewayInterface
     /**
      * If the request has a teamId, look up team-specific API credentials
      * and inject them into Prism's runtime config. Falls back to platform config.
+     * Local HTTP providers (ollama, openai_compatible) use per-request config instead.
      */
     private function applyTeamCredentials(AiRequestDTO $request): void
     {
+        if (in_array($request->provider, ['ollama', 'openai_compatible'], true)) {
+            return; // Handled via getLocalProviderConfig()
+        }
+
         if (! $request->teamId) {
             return;
         }
@@ -301,14 +308,56 @@ class PrismAiGateway implements AiGatewayInterface
         }
     }
 
-    private function resolveProvider(string $provider): Provider
+    private function resolveProvider(string $provider): Provider|string
     {
         return match ($provider) {
             'anthropic' => Provider::Anthropic,
             'openai' => Provider::OpenAI,
             'google' => Provider::Gemini,
+            'ollama' => Provider::Ollama,
+            'openai_compatible' => 'openai_compatible', // Custom PrismManager extension
             default => throw new PrismException("Unsupported provider: {$provider}"),
         };
+    }
+
+    /**
+     * For local HTTP providers (ollama, openai_compatible), resolve the base URL
+     * and optional API key from team credentials and return as per-request config.
+     *
+     * @return array<string, string>
+     */
+    private function getLocalProviderConfig(AiRequestDTO $request): array
+    {
+        if (! in_array($request->provider, ['ollama', 'openai_compatible'], true)) {
+            return [];
+        }
+
+        $defaultUrl = config("llm_providers.{$request->provider}.default_url", 'http://localhost:11434');
+
+        $defaults = [
+            'url' => $defaultUrl,
+            'api_key' => '',
+        ];
+
+        if (! $request->teamId) {
+            return $defaults;
+        }
+
+        $credential = TeamProviderCredential::where('team_id', $request->teamId)
+            ->where('provider', $request->provider)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $credential) {
+            return $defaults;
+        }
+
+        $creds = $credential->credentials;
+
+        return [
+            'url' => $creds['base_url'] ?? $defaultUrl,
+            'api_key' => $creds['api_key'] ?? '',
+        ];
     }
 
     /**

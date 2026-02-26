@@ -15,7 +15,10 @@ use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
+use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use Illuminate\Support\ServiceProvider;
+use Prism\Prism\PrismManager;
+use Prism\Prism\Providers\OpenRouter\OpenRouter;
 
 class AiServiceProvider extends ServiceProvider
 {
@@ -24,6 +27,7 @@ class AiServiceProvider extends ServiceProvider
         $this->app->singleton(CostCalculator::class);
         $this->app->singleton(CircuitBreaker::class);
         $this->app->singleton(LocalAgentDiscovery::class);
+        $this->app->singleton(LocalLlmUrlValidator::class);
 
         $this->app->singleton(LocalAgentGateway::class, function ($app) {
             return new LocalAgentGateway(
@@ -67,6 +71,25 @@ class AiServiceProvider extends ServiceProvider
                 localGateway: config('local_agents.enabled')
                     ? $app->make(LocalAgentGateway::class)
                     : null,
+            );
+        });
+    }
+
+    public function boot(): void
+    {
+        if (! config('local_llm.enabled', false)) {
+            return;
+        }
+
+        // Register an OpenAI-compatible custom provider backed by the OpenRouter driver.
+        // This lets any LM Studio, vLLM, llama.cpp server, or other OpenAI-compatible
+        // endpoint work via the standard ->using('openai_compatible', $model, [...]) call.
+        app(PrismManager::class)->extend('openai_compatible', function ($app, array $config) {
+            return new OpenRouter(
+                apiKey: $config['api_key'] ?? '',
+                url: rtrim($config['url'] ?? 'http://localhost:1234/v1', '/') . '/',
+                httpReferer: null,
+                xTitle: 'FleetQ',
             );
         });
     }

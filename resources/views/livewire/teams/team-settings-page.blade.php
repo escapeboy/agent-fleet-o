@@ -174,6 +174,117 @@
         </div>
     </div>
 
+    {{-- Local LLM Endpoints --}}
+    @if($localLlmEnabled)
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Local LLM Endpoints</h2>
+        <p class="mb-5 text-sm text-gray-500">
+            Connect locally-running models via <strong>Ollama</strong> or any <strong>OpenAI-compatible</strong> endpoint
+            (LM Studio, vLLM, llama.cpp, etc.). Inference runs on your hardware — no tokens are sent to external APIs.
+        </p>
+
+        {{-- Ollama --}}
+        <div class="mb-4 rounded-lg border border-gray-100 p-4">
+            <div class="mb-2 flex items-center justify-between">
+                <span class="text-sm font-semibold text-gray-800">Ollama</span>
+                @if($localLlmCredentials->has('ollama'))
+                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Configured
+                    </span>
+                @endif
+            </div>
+
+            @if($localLlmCredentials->has('ollama'))
+                @php $ollamaCred = $localLlmCredentials->get('ollama'); @endphp
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-500">
+                        Endpoint: <code class="rounded bg-gray-100 px-1 text-xs">{{ $ollamaCred->credentials['base_url'] ?? '—' }}</code>
+                    </p>
+                    <button wire:click="removeOllamaCredential" wire:confirm="Remove the Ollama endpoint?"
+                        class="text-sm text-red-600 hover:text-red-800">
+                        Remove
+                    </button>
+                </div>
+            @else
+                <div class="space-y-3">
+                    <x-form-input wire:model="ollamaBaseUrl" label="Base URL" type="url"
+                        placeholder="http://localhost:11434"
+                        hint="Root URL without /v1 — e.g. http://localhost:11434"
+                        :error="$errors->first('ollamaBaseUrl')" />
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1">
+                            <x-form-input wire:model="ollamaApiKey" label="API Key (optional)" type="password"
+                                placeholder="Leave empty for unauthenticated Ollama"
+                                :error="$errors->first('ollamaApiKey')" />
+                        </div>
+                        <button wire:click="saveOllamaCredential"
+                            class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        {{-- OpenAI-compatible --}}
+        <div class="rounded-lg border border-gray-100 p-4">
+            <div class="mb-2 flex items-center justify-between">
+                <span class="text-sm font-semibold text-gray-800">OpenAI-Compatible Endpoint</span>
+                @if($localLlmCredentials->has('openai_compatible'))
+                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Configured
+                    </span>
+                @endif
+            </div>
+            <p class="mb-3 text-xs text-gray-500">Works with LM Studio, vLLM, llama.cpp server, Ollama OpenAI-compat mode, and similar.</p>
+
+            @if($localLlmCredentials->has('openai_compatible'))
+                @php $oaiCred = $localLlmCredentials->get('openai_compatible'); @endphp
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-500">
+                            Endpoint: <code class="rounded bg-gray-100 px-1 text-xs">{{ $oaiCred->credentials['base_url'] ?? '—' }}</code>
+                        </p>
+                        <button wire:click="removeOpenaiCompatibleCredential" wire:confirm="Remove this endpoint?"
+                            class="text-sm text-red-600 hover:text-red-800">
+                            Remove
+                        </button>
+                    </div>
+                    @if(!empty($oaiCred->credentials['models']))
+                        <p class="text-xs text-gray-400">Models: {{ implode(', ', $oaiCred->credentials['models']) }}</p>
+                    @endif
+                </div>
+            @else
+                <div class="space-y-3">
+                    <x-form-input wire:model="openaiCompatibleBaseUrl" label="Base URL" type="url"
+                        placeholder="http://localhost:1234/v1"
+                        hint="URL with /v1 suffix — e.g. http://localhost:1234/v1"
+                        :error="$errors->first('openaiCompatibleBaseUrl')" />
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1">
+                            <x-form-input wire:model="openaiCompatibleApiKey" label="API Key (optional)" type="password"
+                                placeholder="Leave empty if not required"
+                                :error="$errors->first('openaiCompatibleApiKey')" />
+                        </div>
+                    </div>
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1">
+                            <x-form-input wire:model="openaiCompatibleModels" label="Available Models (comma-separated)" type="text"
+                                placeholder="meta-llama/Llama-3.2-3B-Instruct, mistral-7b-instruct"
+                                hint="Model IDs as reported by the server's /models endpoint"
+                                :error="$errors->first('openaiCompatibleModels')" />
+                        </div>
+                        <button wire:click="saveOpenaiCompatibleCredential"
+                            class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+    @endif
+
     {{-- Telegram Bot --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Telegram Bot</h2>

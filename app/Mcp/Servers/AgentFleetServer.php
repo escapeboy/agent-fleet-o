@@ -75,6 +75,7 @@ use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\Compute\ComputeManageTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
+use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
@@ -297,11 +298,12 @@ class AgentFleetServer extends Server
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
 
-        // Shared (4)
+        // Shared (5)
         NotificationTool::class,
         TeamGetTool::class,
         TeamUpdateTool::class,
         TeamMembersTool::class,
+        LocalLlmTool::class,
 
         // Telegram (1)
         TelegramBotTool::class,

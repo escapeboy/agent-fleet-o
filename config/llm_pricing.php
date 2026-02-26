@@ -60,6 +60,12 @@ return [
             'claude-opus-4-6' => ['input' => 0, 'output' => 0],
             'claude-haiku-4-5' => ['input' => 0, 'output' => 0],
         ],
+
+        // Local HTTP LLM providers — zero cost (runs on your hardware).
+        // CostCalculator returns 0 for unknown models, so no per-model entries needed.
+        // Add specific model entries here if you want explicit cost tracking.
+        'ollama' => [],
+        'openai_compatible' => [],
     ],
 
     // Default estimation multiplier for budget reservation
