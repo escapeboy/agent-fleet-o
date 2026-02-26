@@ -7841,3 +7841,63 @@ parameters:
 			identifier: nullCoalesce.expr
 			count: 1
 			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:\$manager is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:\$credentialResolver is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Offset ''provider'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Offset ''endpoint_id'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:runAsync\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Infrastructure/Compute/Services/ComputeCredentialResolver.php
