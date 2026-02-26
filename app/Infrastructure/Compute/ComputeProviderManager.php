@@ -7,6 +7,7 @@ use App\Infrastructure\Compute\Providers\FalComputeProvider;
 use App\Infrastructure\Compute\Providers\NullComputeProvider;
 use App\Infrastructure\Compute\Providers\ReplicateComputeProvider;
 use App\Infrastructure\Compute\Providers\RunPodComputeProvider;
+use App\Infrastructure\Compute\Providers\VastAiComputeProvider;
 use App\Infrastructure\Compute\Services\ComputeCostEstimator;
 use App\Infrastructure\RunPod\RunPodClient;
 use Illuminate\Support\Manager;
@@ -46,6 +47,11 @@ class ComputeProviderManager extends Manager
     public function createFalDriver(): ComputeProviderInterface
     {
         return new FalComputeProvider;
+    }
+
+    public function createVastDriver(): ComputeProviderInterface
+    {
+        return new VastAiComputeProvider;
     }
 
     public function createNullDriver(): ComputeProviderInterface
