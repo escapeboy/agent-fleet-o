@@ -187,8 +187,18 @@ class SignalConnectorsPage extends Component
             ->where('driver', 'imap')
             ->first();
 
+        $signalProtocolConnectors = Connector::where('type', 'input')
+            ->where('driver', 'signal_protocol')
+            ->orderBy('created_at')
+            ->get();
+
+        $matrixConnectors = Connector::where('type', 'input')
+            ->where('driver', 'matrix')
+            ->orderBy('created_at')
+            ->get();
+
         return view('livewire.signals.signal-connectors-page', compact(
-            'cards', 'httpMonitors', 'rssFeeds', 'imapConnector',
+            'cards', 'httpMonitors', 'rssFeeds', 'imapConnector', 'signalProtocolConnectors', 'matrixConnectors',
         ))->title('Signal Sources');
     }
 }

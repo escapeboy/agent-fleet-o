@@ -102,7 +102,7 @@ class ConnectorConfigTestTool extends Tool
             throw new \RuntimeException('Webhook URL is required');
         }
 
-        $response = Http::timeout(10)->post($url, ['text' => '[Test] Agent Fleet connectivity check']);
+        $response = Http::timeout(10)->post($url, ['text' => '[Test] FleetQ connectivity check']);
 
         if ($response->successful()) {
             return 'Message sent successfully';
@@ -118,7 +118,7 @@ class ConnectorConfigTestTool extends Tool
             throw new \RuntimeException('Webhook URL is required');
         }
 
-        $response = Http::timeout(10)->post($url.'?wait=true', ['content' => '[Test] Agent Fleet connectivity check']);
+        $response = Http::timeout(10)->post($url.'?wait=true', ['content' => '[Test] FleetQ connectivity check']);
 
         if ($response->successful()) {
             return 'Message sent successfully';
@@ -145,7 +145,7 @@ class ConnectorConfigTestTool extends Tool
                     'version' => '1.4',
                     'body' => [[
                         'type' => 'TextBlock',
-                        'text' => '[Test] Agent Fleet connectivity check',
+                        'text' => '[Test] FleetQ connectivity check',
                         'wrap' => true,
                     ]],
                 ],
@@ -168,7 +168,7 @@ class ConnectorConfigTestTool extends Tool
             throw new \RuntimeException('Webhook URL is required');
         }
 
-        $response = Http::timeout(10)->post($url, ['text' => '[Test] Agent Fleet connectivity check']);
+        $response = Http::timeout(10)->post($url, ['text' => '[Test] FleetQ connectivity check']);
 
         if ($response->successful()) {
             return 'Message sent successfully';
@@ -235,7 +235,7 @@ class ConnectorConfigTestTool extends Tool
             throw new \RuntimeException('Webhook URL is required');
         }
 
-        $payload = ['test' => true, 'source' => 'agent-fleet', 'timestamp' => now()->toIso8601String()];
+        $payload = ['test' => true, 'source' => 'fleetq', 'timestamp' => now()->toIso8601String()];
         $headers = [];
         $secret = $creds['secret'] ?? '';
 

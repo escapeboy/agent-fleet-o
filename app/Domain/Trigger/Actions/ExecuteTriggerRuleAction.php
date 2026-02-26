@@ -10,6 +10,7 @@ use App\Domain\Signal\Models\Signal;
 use App\Domain\Trigger\Models\TriggerRule;
 use App\Domain\Trigger\Services\SignalInputMapper;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ExecuteTriggerRuleAction
@@ -32,7 +33,9 @@ class ExecuteTriggerRuleAction
         }
 
         /** @var Project|null $project */
-        $project = Project::withoutGlobalScopes()->find($rule->project_id);
+        $project = Project::withoutGlobalScopes()
+            ->where('team_id', $rule->team_id)
+            ->find($rule->project_id);
         if (! $project) {
             return null;
         }
@@ -51,17 +54,26 @@ class ExecuteTriggerRuleAction
             }
         }
 
-        // Concurrency check
+        // Concurrency check — wrapped in SELECT FOR UPDATE to prevent TOCTOU race
         if ($rule->max_concurrent > 0) {
-            $activeRuns = ProjectRun::withoutGlobalScopes()
-                ->where('project_id', $rule->project_id)
-                ->whereIn('status', [ProjectRunStatus::Pending->value, ProjectRunStatus::Running->value])
-                ->count();
+            $skipped = DB::transaction(function () use ($rule): bool {
+                // Lock the project row so concurrent workers serialize at this point
+                Project::withoutGlobalScopes()
+                    ->where('id', $rule->project_id)
+                    ->lockForUpdate()
+                    ->first();
 
-            if ($activeRuns >= $rule->max_concurrent) {
+                $activeRuns = ProjectRun::withoutGlobalScopes()
+                    ->where('project_id', $rule->project_id)
+                    ->whereIn('status', [ProjectRunStatus::Pending->value, ProjectRunStatus::Running->value])
+                    ->count();
+
+                return $activeRuns >= $rule->max_concurrent;
+            });
+
+            if ($skipped) {
                 Log::info('ExecuteTriggerRuleAction: skipped (max_concurrent reached)', [
                     'rule_id' => $rule->id,
-                    'active_runs' => $activeRuns,
                     'max_concurrent' => $rule->max_concurrent,
                 ]);
 

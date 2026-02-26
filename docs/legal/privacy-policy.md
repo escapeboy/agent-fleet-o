@@ -4,7 +4,7 @@
 
 ## 1. Introduction
 
-PriceX Ltd. ("we," "us," or "our") operates Agent Fleet (the "Service"). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal data when you use our Service.
+PriceX Ltd. ("we," "us," or "our") operates FleetQ (the "Service"). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal data when you use our Service.
 
 We are committed to protecting your privacy in accordance with the General Data Protection Regulation (GDPR), the California Consumer Privacy Act (CCPA/CPRA), and other applicable data protection laws.
 
@@ -47,7 +47,7 @@ We are committed to protecting your privacy in accordance with the General Data 
 
 We process your personal data for the following purposes:
 
-1. **Service Delivery:** To provide, maintain, and improve the Agent Fleet platform
+1. **Service Delivery:** To provide, maintain, and improve the FleetQ platform
 2. **Account Management:** To create and manage your account, team, and subscriptions
 3. **AI Processing:** To execute AI agents, skills, and experiments using your configured LLM providers
 4. **Billing:** To process subscription payments and generate invoices via Stripe

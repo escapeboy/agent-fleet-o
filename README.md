@@ -1,4 +1,4 @@
-# Agent Fleet - Community Edition
+# FleetQ - Community Edition
 
 Self-hosted AI Agent Mission Control platform. Build, orchestrate, and monitor AI agent experiments with a visual pipeline, human-in-the-loop approvals, and full audit trail.
 
@@ -289,4 +289,4 @@ Contributions are welcome. Please open an issue first to discuss proposed change
 
 ## License
 
-Agent Fleet Community Edition is open-source software licensed under the [GNU Affero General Public License v3.0](LICENSE).
+FleetQ Community Edition is open-source software licensed under the [GNU Affero General Public License v3.0](LICENSE).

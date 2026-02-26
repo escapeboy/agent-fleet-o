@@ -17,11 +17,11 @@ class InstallCommand extends Command
 {
     protected $signature = 'app:install {--force : Skip confirmation prompts}';
 
-    protected $description = 'Set up Agent Fleet Community Edition';
+    protected $description = 'Set up FleetQ Community Edition';
 
     public function handle(): int
     {
-        $this->components->info('Agent Fleet — Community Edition Setup');
+        $this->components->info('FleetQ — Community Edition Setup');
         $this->newLine();
 
         // Step 1: Check requirements
@@ -44,7 +44,7 @@ class InstallCommand extends Command
         }
 
         if ($alreadyInstalled) {
-            $this->components->warn('Agent Fleet is already installed.');
+            $this->components->warn('FleetQ is already installed.');
 
             if (! $this->option('force') && ! $this->components->confirm('Re-run migrations anyway?', false)) {
                 $this->components->info('Skipping database setup.');
@@ -166,7 +166,7 @@ class InstallCommand extends Command
     private function createAdminAccount(): void
     {
         $name = $this->components->ask('Admin name', 'Admin');
-        $email = $this->components->ask('Admin email', 'admin@agentfleet.local');
+        $email = $this->components->ask('Admin email', 'admin@fleetq.local');
         $password = $this->secret('Admin password');
 
         if (! $password) {
@@ -185,7 +185,7 @@ class InstallCommand extends Command
             $team = Team::firstOrCreate(
                 ['slug' => 'default'],
                 [
-                    'name' => config('app.name', 'Agent Fleet'),
+                    'name' => config('app.name', 'FleetQ'),
                     'owner_id' => $user->id,
                     'plan' => 'community',
                 ],

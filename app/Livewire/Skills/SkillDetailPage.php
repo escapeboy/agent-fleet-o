@@ -82,7 +82,7 @@ class SkillDetailPage extends Component
         $this->validate([
             'editName' => 'required|min:2|max:255',
             'editDescription' => 'max:1000',
-            'editType' => 'required|in:llm,connector,rule,hybrid',
+            'editType' => 'required|in:llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution'.(config('browser.enabled', false) ? ',browser' : ''),
             'editRiskLevel' => 'required|in:low,medium,high,critical',
             'editSystemPrompt' => 'max:10000',
             'editMaxTokens' => 'integer|min:1|max:32768',

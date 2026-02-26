@@ -12,4 +12,6 @@ enum OutboundChannel: string
     case Discord = 'discord';
     case Teams = 'teams';
     case GoogleChat = 'google_chat';
+    case SignalProtocol = 'signal_protocol';
+    case Matrix = 'matrix';
 }

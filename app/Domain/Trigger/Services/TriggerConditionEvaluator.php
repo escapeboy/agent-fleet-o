@@ -104,8 +104,8 @@ class TriggerConditionEvaluator
     {
         foreach ($constraint as $operator => $expected) {
             $result = match ($operator) {
-                'eq' => $value == $expected,
-                'neq' => $value != $expected,
+                'eq' => $value === $expected,
+                'neq' => $value !== $expected,
                 'gte' => $value !== null && $value >= $expected,
                 'lte' => $value !== null && $value <= $expected,
                 'contains' => is_string($value) && str_contains(strtolower($value), strtolower((string) $expected)),

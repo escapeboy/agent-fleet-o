@@ -633,7 +633,7 @@ class LocalAgentGateway implements AiGatewayInterface
         $isAssistant = $purpose === 'platform_assistant';
 
         // Codex assistant: enable --full-auto for MCP tool execution and
-        // connect to our Agent Fleet MCP server (replaces advisory mode).
+        // connect to our FleetQ MCP server (replaces advisory mode).
         // Non-assistant Codex: --full-auto, no MCP override.
         if ($isAssistant) {
             $mcpServers = json_encode(['agent-fleet' => [

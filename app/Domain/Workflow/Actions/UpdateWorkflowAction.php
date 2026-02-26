@@ -80,6 +80,8 @@ class UpdateWorkflowAction
                 'workflow_id' => $workflow->id,
                 'agent_id' => $nodeData['agent_id'] ?? null,
                 'skill_id' => $nodeData['skill_id'] ?? null,
+                'crew_id' => $nodeData['crew_id'] ?? null,
+                'sub_workflow_id' => $nodeData['sub_workflow_id'] ?? null,
                 'type' => $nodeData['type'],
                 'label' => $nodeData['label'],
                 'position_x' => $nodeData['position_x'] ?? 0,

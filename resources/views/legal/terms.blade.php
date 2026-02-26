@@ -1,6 +1,6 @@
 <x-layouts.public
-    title="Terms of Service — Agent Fleet"
-    description="Read the terms and conditions governing your use of the Agent Fleet platform."
+    title="Terms of Service — FleetQ"
+    description="Read the terms and conditions governing your use of the FleetQ platform."
 >
     <x-landing.nav />
 
@@ -11,10 +11,10 @@
             <h1>Terms of Service</h1>
 
             <h2>1. Agreement to Terms</h2>
-            <p>By accessing or using Agent Fleet (the "Service") operated by PriceX Ltd. ("we," "us," or "our"), you agree to be bound by these Terms of Service. If you do not agree, you may not use the Service.</p>
+            <p>By accessing or using FleetQ (the "Service") operated by PriceX Ltd. ("we," "us," or "our"), you agree to be bound by these Terms of Service. If you do not agree, you may not use the Service.</p>
 
             <h2>2. Description of Service</h2>
-            <p>Agent Fleet is an AI Agent Mission Control Platform that enables you to create, orchestrate, and manage AI agents, workflows, and experiments. The Service is available as:</p>
+            <p>FleetQ is an AI Agent Mission Control Platform that enables you to create, orchestrate, and manage AI agents, workflows, and experiments. The Service is available as:</p>
             <ul>
                 <li><strong>Community Edition:</strong> Free, open-source, self-hosted under the MIT License</li>
                 <li><strong>Cloud Edition:</strong> Managed SaaS with subscription plans (Free, Starter, Pro, Enterprise)</li>
@@ -43,7 +43,7 @@
             </ul>
 
             <h2>5. AI Processing and BYOK</h2>
-            <p>Agent Fleet integrates with third-party AI providers (Anthropic, OpenAI, Google). You acknowledge that:</p>
+            <p>FleetQ integrates with third-party AI providers (Anthropic, OpenAI, Google). You acknowledge that:</p>
             <ul>
                 <li>When using BYOK (Bring Your Own Key), you are responsible for compliance with each AI provider's terms of service</li>
                 <li>AI-generated outputs may be inaccurate and should not be relied upon without human review</li>

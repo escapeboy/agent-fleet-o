@@ -47,6 +47,7 @@ use App\Mcp\Tools\Experiment\ExperimentPauseTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
+use App\Mcp\Tools\Experiment\ExperimentShareTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceAnalyticsTool;
@@ -76,6 +77,8 @@ use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
+use App\Mcp\Tools\Signal\ConnectorBindingTool;
+use App\Mcp\Tools\Signal\ContactManageTool;
 use App\Mcp\Tools\Signal\HttpMonitorTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
@@ -83,6 +86,7 @@ use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
+use App\Mcp\Tools\Skill\BrowserSkillTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
@@ -130,11 +134,11 @@ class AgentFleetServer extends Server
 {
     use BootstrapsMcpAuth;
 
-    protected string $name = 'Agent Fleet';
+    protected string $name = 'FleetQ';
 
     protected string $version = '1.1.0';
 
-    protected string $instructions = 'Agent Fleet MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, and team settings.';
+    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, and team settings.';
 
     protected function boot(): void
     {
@@ -164,7 +168,7 @@ class AgentFleetServer extends Server
         CrewExecutionStatusTool::class,
         CrewExecutionsListTool::class,
 
-        // Experiment (11)
+        // Experiment (12)
         ExperimentListTool::class,
         ExperimentGetTool::class,
         ExperimentCreateTool::class,
@@ -176,8 +180,9 @@ class AgentFleetServer extends Server
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
         ExperimentStepsTool::class,
+        ExperimentShareTool::class,
 
-        // Skill (8)
+        // Skill (9)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
@@ -186,6 +191,7 @@ class AgentFleetServer extends Server
         GuardrailTool::class,
         MultiModelConsensusTool::class,
         CodeExecutionTool::class,
+        BrowserSkillTool::class,
 
         // Tool (7)
         ToolListTool::class,
@@ -235,7 +241,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (8)
+        // Signal (10)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -244,6 +250,8 @@ class AgentFleetServer extends Server
         SlackConnectorTool::class,
         HttpMonitorTool::class,
         InboundConnectorManageTool::class,
+        ConnectorBindingTool::class,
+        ContactManageTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,

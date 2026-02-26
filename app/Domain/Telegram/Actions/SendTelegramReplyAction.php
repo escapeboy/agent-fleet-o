@@ -10,6 +10,52 @@ class SendTelegramReplyAction
     private const MAX_MESSAGE_LENGTH = 4096;
 
     /**
+     * Send a placeholder message and return the Telegram message_id for later editing.
+     * Returns null on failure.
+     */
+    public function sendPlaceholder(string $botToken, string $chatId, string $text = '<i>Generating...</i>'): ?int
+    {
+        $response = Http::timeout(10)->post(
+            "https://api.telegram.org/bot{$botToken}/sendMessage",
+            [
+                'chat_id' => $chatId,
+                'text' => $text,
+                'parse_mode' => 'HTML',
+            ],
+        );
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        return $response->json('result.message_id');
+    }
+
+    /**
+     * Edit a previously sent Telegram message (used for live streaming effect).
+     * Silently ignores rate limit errors (Telegram allows max 20 edits/minute/chat).
+     */
+    public function editMessage(string $botToken, string $chatId, int $messageId, string $text): void
+    {
+        $text = $this->convertMarkdownToHtml($text);
+        // Truncate to Telegram's limit for edits
+        if (mb_strlen($text) > self::MAX_MESSAGE_LENGTH) {
+            $text = mb_substr($text, 0, self::MAX_MESSAGE_LENGTH - 3).'...';
+        }
+
+        Http::timeout(5)->post(
+            "https://api.telegram.org/bot{$botToken}/editMessageText",
+            [
+                'chat_id' => $chatId,
+                'message_id' => $messageId,
+                'text' => $text,
+                'parse_mode' => 'HTML',
+            ],
+        );
+        // Deliberately not checking response — rate limit 429s are expected during streaming
+    }
+
+    /**
      * Send a text reply to a Telegram chat. Long messages are split at MAX_MESSAGE_LENGTH.
      */
     public function execute(string $botToken, string $chatId, string $text, string $parseMode = 'HTML'): bool

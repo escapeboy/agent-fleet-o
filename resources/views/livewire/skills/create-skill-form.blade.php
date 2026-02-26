@@ -27,7 +27,9 @@
                 <div class="grid grid-cols-2 gap-4">
                     <x-form-select wire:model="type" label="Type">
                         @foreach($types as $t)
-                            <option value="{{ $t->value }}">{{ $t->label() }}</option>
+                            @if($t->value !== 'browser' || $browserSkillEnabled)
+                                <option value="{{ $t->value }}">{{ $t->label() }}</option>
+                            @endif
                         @endforeach
                     </x-form-select>
 

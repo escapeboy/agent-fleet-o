@@ -82,7 +82,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <x-form-input wire:model="fromAddress" label="From Address" type="email" placeholder="noreply@example.com"
                                 :error="$errors->first('fromAddress')" />
-                            <x-form-input wire:model="fromName" label="From Name" type="text" placeholder="Agent Fleet"
+                            <x-form-input wire:model="fromName" label="From Name" type="text" placeholder="FleetQ"
                                 :error="$errors->first('fromName')" />
                         </div>
                     @endif

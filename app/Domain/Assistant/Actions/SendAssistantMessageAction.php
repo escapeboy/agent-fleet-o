@@ -53,7 +53,7 @@ class SendAssistantMessageAction
 
         // Resolve the local agent key to determine capabilities.
         // claude-code: supports text-based <tool_call> format (tool loop managed by us).
-        // codex: supports MCP natively — connect it to our Agent Fleet MCP server.
+        // codex: supports MCP natively — connect it to our FleetQ MCP server.
         $localAgentKey = $isLocal
             ? config("llm_providers.{$provider}.agent_key", $provider)
             : null;
@@ -65,7 +65,7 @@ class SendAssistantMessageAction
 
         // Build system prompt with context and tool info.
         // canExecuteTools: cloud providers use PrismPHP tools, claude-code uses <tool_call> format,
-        // codex uses MCP tools natively (our Agent Fleet MCP server is connected via config).
+        // codex uses MCP tools natively (our FleetQ MCP server is connected via config).
         $canExecuteTools = ! $isLocal || $supportsToolLoop || $supportsMcpNatively;
         $context = $this->contextResolver->resolve($contextType, $contextId);
         $systemPrompt = $this->buildSystemPrompt($context, $user, $supportsToolLoop, $canExecuteTools, $tools, $supportsMcpNatively);
@@ -461,12 +461,12 @@ class SendAssistantMessageAction
             GUIDE;
 
         return <<<PROMPT
-        You are the **Agent Fleet Platform Assistant** — an AI-powered helper embedded in the Agent Fleet platform.
+        You are the **FleetQ Platform Assistant** — an AI-powered helper embedded in the FleetQ platform.
         {$introLine}
 
-        ## About Agent Fleet
+        ## About FleetQ
 
-        Agent Fleet is an AI agent orchestration platform that lets users:
+        FleetQ is an AI agent orchestration platform that lets users:
 
         - **Agents**: Create and manage AI agents with specific roles, goals, and backstories. Each agent uses a configurable LLM provider/model and can have tools (MCP servers, built-in tools) attached.
         - **Skills**: Define reusable AI capabilities (LLM prompts, connectors, rules, hybrid) that agents use in experiments. Skills are versioned and have risk levels.
@@ -562,7 +562,7 @@ class SendAssistantMessageAction
         $sections = [
             <<<'MCP'
 
-            You have MCP tools connected to the Agent Fleet platform. Use them to interact with the platform.
+            You have MCP tools connected to the FleetQ platform. Use them to interact with the platform.
             Tool names follow the pattern `{domain}_{action}` (e.g. `agent_list`, `experiment_create`, `project_get`).
 
             ### Available MCP Tool Domains

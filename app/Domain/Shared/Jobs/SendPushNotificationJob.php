@@ -38,7 +38,8 @@ class SendPushNotificationJob implements ShouldQueue
         $message = WebPushMessage::create()
             ->title($this->title)
             ->body($this->body)
-            ->icon('/favicon.ico')
+            ->icon('/icons/icon-192.png')
+            ->badge('/icons/badge-72x72.png')
             ->data(['url' => $this->actionUrl ?? '/notifications', 'type' => $this->type]);
 
         if ($this->actionUrl) {

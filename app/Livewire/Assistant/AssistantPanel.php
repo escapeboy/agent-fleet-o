@@ -6,6 +6,7 @@ use App\Domain\Assistant\Actions\SendAssistantMessageAction;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class AssistantPanel extends Component
@@ -74,15 +75,32 @@ class AssistantPanel extends Component
 
             $action = app(SendAssistantMessageAction::class);
 
-            $response = $action->execute(
+            // Stream response token-by-token into the wire:stream target.
+            // executeStreaming() uses text-only generation (no tool calling) which
+            // allows Livewire's SSE stream to push partial content in real time.
+            $accumulated = '';
+
+            $response = $action->executeStreaming(
                 conversation: $conversation,
                 userMessage: $message,
                 user: $user,
                 contextType: $this->contextType ?: null,
                 contextId: $this->contextId ?: null,
+                onChunk: function (string $chunk) use (&$accumulated): void {
+                    $accumulated .= $chunk;
+                    $this->stream(
+                        to: 'assistant-stream',
+                        content: '<div class="assistant-response prose prose-sm max-w-none">'.Str::markdown($accumulated).'</div>',
+                        replace: true,
+                    );
+                },
                 provider: $this->selectedProvider ?: null,
                 model: $this->selectedModel ?: null,
             );
+
+            // Clear the streaming bubble — the response will now appear in the
+            // messages array and be rendered by the standard @foreach loop.
+            $this->stream(to: 'assistant-stream', content: '', replace: true);
 
             // Add both user message and assistant response to the messages array.
             // Alpine shows the user message optimistically during the request,
@@ -100,6 +118,7 @@ class AssistantPanel extends Component
 
             $this->loadRecentConversations();
         } catch (\Throwable $e) {
+            $this->stream(to: 'assistant-stream', content: '', replace: true);
             $this->messages[] = [
                 'role' => 'user',
                 'content' => $message,

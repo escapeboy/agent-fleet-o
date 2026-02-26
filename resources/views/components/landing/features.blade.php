@@ -40,11 +40,11 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                        76 MCP tools for AI agent access
+                        120+ MCP tools for AI agent access
                     </li>
                     <li class="flex items-start gap-2">
                         <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                        Bring Your Own API Keys (BYOK)
+                        Telegram integration & signal connectors
                     </li>
                 </ul>
             </div>
@@ -75,15 +75,15 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                        Per-channel rate limits & target blacklists
+                        AI Safety Guardrails (PII, toxicity, budget)
                     </li>
                     <li class="flex items-start gap-2">
                         <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                        Full audit trail with role-based access
+                        Full audit trail with decision reasoning
                     </li>
                     <li class="flex items-start gap-2">
                         <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                        SLA enforcement & task escalation
+                        Agent risk profiles & auto-disable
                     </li>
                 </ul>
             </div>
@@ -114,7 +114,7 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-purple-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                        Metrics, attribution & revenue tracking
+                        AI spend forecasting & semantic caching
                     </li>
                     <li class="flex items-start gap-2">
                         <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-purple-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
@@ -122,7 +122,7 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-purple-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                        Continuous project scheduling & triggers
+                        Event-driven trigger rules & scheduling
                     </li>
                 </ul>
             </div>

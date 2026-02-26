@@ -1,4 +1,4 @@
-# Agent Fleet - Community Edition
+# FleetQ - Community Edition
 
 ## Stack
 
@@ -119,10 +119,22 @@ app/
       Models/                    # MarketplaceListing, MarketplaceInstallation, MarketplaceReview
     Shared/                      # Cross-domain
       Enums/                     # TeamRole
-      Models/                    # Team, TeamProviderCredential
+      Models/                    # Team, TeamProviderCredential, UserNotification
       Notifications/             # WeeklyDigest, Welcome
       Scopes/                    # TeamScope
+      Services/                  # NotificationService
       Traits/                    # BelongsToTeam
+    Trigger/                     # Event-driven trigger rules
+      Actions/                   # EvaluateTriggerRulesAction, ExecuteTriggerRuleAction
+      Enums/                     # TriggerRuleStatus
+      Jobs/                      # EvaluateTriggerRulesJob
+      Models/                    # TriggerRule
+      Services/                  # TriggerConditionEvaluator, SignalInputMapper
+    Telegram/                    # Telegram bot integration (signal connector + assistant chat)
+      Actions/                   # RegisterTelegramBotAction, ProcessTelegramMessageAction, SendTelegramReplyAction
+      Enums/                     # TelegramRoutingMode
+      Jobs/                      # ProcessTelegramMessageJob
+      Models/                    # TelegramBot, TelegramChatBinding
   Infrastructure/
     AI/                          # Provider-agnostic LLM gateway
       Contracts/                 # AiGatewayInterface, AiMiddlewareInterface
@@ -133,7 +145,7 @@ app/
       Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
   Mcp/                           # MCP Server (Model Context Protocol)
     Concerns/                    # BootstrapsMcpAuth (stdio auth bootstrap)
-    Servers/                     # AgentFleetServer (112 tools across 16 domains)
+    Servers/                     # AgentFleetServer (121 tools across 23 domains)
     Tools/                       # MCP tool implementations
       Agent/                     # agent_list, agent_get, agent_create, agent_update, agent_toggle_status
       Experiment/                # experiment_list, experiment_get, experiment_create, experiment_pause, experiment_resume, experiment_retry, experiment_kill, experiment_valid_transitions, experiment_retry_from_step, experiment_steps
@@ -152,8 +164,13 @@ app/
       System/                    # system_dashboard_kpis, system_health, system_audit_log
       Webhook/                   # webhook_list, webhook_create, webhook_update, webhook_delete
       Shared/                    # notification_manage, team_get, team_update, team_members
+      Evolution/                 # evolution_proposal_list, evolution_analyze, evolution_apply
+      Cache/                     # semantic_cache_stats, semantic_cache_purge
+      Telegram/                  # telegram_bot_manage
+      Trigger/                   # trigger_rule_list, trigger_rule_create, trigger_rule_update, trigger_rule_delete, trigger_rule_test
+      Outbound/                  # outbound_proposal_list, outbound_action_list, outbound_proposal_approve, outbound_proposal_reject, outbound_blacklist_manage, outbound_channel_stats
   Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
-  Http/Controllers/Api/V1/      # 18 REST API controllers (99 endpoints)
+  Http/Controllers/Api/V1/      # 20 REST API controllers (122 endpoints)
   Http/Middleware/               # SetCurrentTeam
   Livewire/                      # Admin panel components
     Dashboard/                   # DashboardPage
@@ -172,6 +189,8 @@ app/
     Marketplace/                 # Browse, Detail, Publish
     Assistant/                   # AssistantPanel (embedded in layout, no dedicated route)
     Teams/                       # TeamSettingsPage (BYOK + API tokens)
+    Triggers/                    # TriggerRulesPage, CreateTriggerRuleForm
+    Shared/                      # NotificationBell (header), NotificationInboxPage
   Console/Commands/              # AgentHealthCheck, AggregateMetrics, ExpireStaleApprovals, PollInputConnectors,
                                  # SendWeeklyDigest, CleanupAuditEntries, CheckProjectBudgets, RecoverStuckTasks,
                                  # CheckHumanTaskSla, InstallCommand
@@ -222,10 +241,13 @@ app/
 | `GET /audit` | AuditLogPage | audit |
 | `GET /settings` | GlobalSettingsPage | settings |
 | `GET /team` | TeamSettingsPage | team.settings |
+| `GET /triggers` | TriggerRulesPage | triggers.index |
+| `GET /triggers/create` | CreateTriggerRuleForm | triggers.create |
+| `GET /notifications` | NotificationInboxPage | notifications.index |
 
 ### API v1 Routes (`/api/v1/`)
 
-99 endpoints across 18 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
+122 endpoints across 20 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
 
 | Group | Endpoints | Purpose |
 |-------|-----------|---------|
@@ -248,6 +270,8 @@ app/
 | Audit | `GET /audit` | Audit log |
 | Artifacts | `GET`, `GET {id}`, `GET {id}/content`, `GET {id}/download` | Artifact CRUD + content + download |
 | Budget | `GET /budget` | Budget summary |
+| Outbound Connectors | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/test` | Outbound connector CRUD + test |
+| Webhook Endpoints | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}` | Outbound webhook CRUD |
 
 ### MCP Routes (`routes/ai.php`)
 
@@ -256,13 +280,14 @@ app/
 | HTTP/SSE | `/mcp` | AgentFleetServer | Sanctum bearer token | Remote MCP clients (Cursor, etc.) |
 | stdio | `agent-fleet` | AgentFleetServer | Auto (default team owner) | Local CLI agents (Codex, Claude Code) |
 
-112 MCP tools across 16 domains. Start local server: `php artisan mcp:start agent-fleet`
+121 MCP tools across 23 domains. Start local server: `php artisan mcp:start agent-fleet`
 
 ### Legacy API Routes (`/api/`)
 
 | Method | Path | Controller | Auth | Purpose |
 |--------|------|------------|------|---------|
 | `POST` | `/api/signals/webhook` | SignalWebhookController | HMAC | Signal ingestion |
+| `POST` | `/api/telegram/webhook/{teamId}` | TelegramWebhookController | Secret token | Telegram bot updates |
 | `GET` | `/api/track/click` | TrackingController | -- | Click tracking (302 redirect) |
 | `GET` | `/api/track/pixel` | TrackingController | -- | Open tracking (1x1 pixel) |
 
@@ -281,7 +306,7 @@ The community edition uses an "implicit single team" pattern:
 The platform exposes a Model Context Protocol (MCP) server via `laravel/mcp`, giving LLMs and agents full programmatic access.
 
 ### Architecture
-- **Server:** `app/Mcp/Servers/AgentFleetServer.php` — registers 65 tools across 15 domains
+- **Server:** `app/Mcp/Servers/AgentFleetServer.php` — registers 121 tools across 23 domains
 - **Auth (stdio):** `BootstrapsMcpAuth` trait auto-resolves default team owner, sets `mcp.active` flag
 - **Auth (HTTP):** Sanctum bearer token via `auth:sanctum` middleware
 - **TeamScope:** Console mode bypasses `TeamScope` unless `mcp.active` is bound in the container

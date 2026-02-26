@@ -194,7 +194,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="mb-3 h-12 w-12 text-gray-300">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
                     </svg>
-                    <p class="text-sm font-medium text-gray-500">Agent Fleet Assistant</p>
+                    <p class="text-sm font-medium text-gray-500">FleetQ Assistant</p>
                     <p class="mt-1 text-xs text-gray-400">Ask me anything about your projects,<br>experiments, agents, and more.</p>
                     <div class="mt-4 flex flex-wrap justify-center gap-2">
                         <button x-on:click="quickSend('List my recent experiments')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
@@ -244,7 +244,12 @@
                 </div>
             </template>
 
-            {{-- Thinking indicator --}}
+            {{-- Streaming response (wire:stream) — fills with tokens as they arrive --}}
+            <div class="flex justify-start" wire:stream="assistant-stream">
+                {{-- Livewire streams HTML here token by token --}}
+            </div>
+
+            {{-- Thinking indicator — shown until first tokens arrive --}}
             <template x-if="sending">
                 <div class="flex justify-start">
                     <div class="max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3">

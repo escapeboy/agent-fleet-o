@@ -3,7 +3,7 @@
     <div>
         <h1 class="text-xl font-semibold text-(--color-on-surface)">Signal Sources</h1>
         <p class="mt-1 text-sm text-(--color-on-surface-muted)">
-            Configure inbound connectors that deliver signals to Agent Fleet. Signals trigger agents, projects, and automation rules.
+            Configure inbound connectors that deliver signals to FleetQ. Signals trigger agents, projects, and automation rules.
         </p>
     </div>
 
@@ -317,6 +317,76 @@
                 </div>
             @endif
         </div>
+    </div>
+
+    {{-- ═══ Signal Protocol Connectors ═══ --}}
+    <div>
+        <div class="mb-4">
+            <h2 class="text-base font-semibold text-(--color-on-surface)">Signal Protocol</h2>
+            <p class="text-sm text-(--color-on-surface-muted)">Privacy-first messaging via <code class="font-mono text-xs">bbernhard/signal-cli-rest-api</code> Docker sidecar. Polls every minute.</p>
+        </div>
+        @if($signalProtocolConnectors->isNotEmpty())
+            <div class="space-y-2">
+                @foreach($signalProtocolConnectors as $connector)
+                    <div class="flex items-center justify-between rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) px-5 py-3">
+                        <div class="flex items-center gap-3">
+                            <span class="h-2 w-2 rounded-full {{ $connector->last_success_at && $connector->last_success_at->gt(now()->subMinutes(5)) ? 'bg-green-500' : 'bg-gray-300' }}"></span>
+                            <div>
+                                <p class="text-sm font-medium text-(--color-on-surface)">{{ $connector->name }}</p>
+                                <p class="text-xs text-(--color-on-surface-muted)">{{ $connector->config['phone_number'] ?? '—' }} · {{ $connector->config['api_url'] ?? '—' }}</p>
+                            </div>
+                        </div>
+                        @if($connector->last_error_message)
+                            <span class="text-xs text-red-600 truncate max-w-xs">{{ $connector->last_error_message }}</span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-5 space-y-2">
+                <p class="text-sm text-(--color-on-surface-muted)">No Signal Protocol connector configured.</p>
+                <div class="rounded-lg bg-(--color-surface-alt) p-3 font-mono text-xs text-(--color-on-surface-muted) space-y-1">
+                    <p># Run the sidecar:</p>
+                    <p>docker run -p 8080:8080 bbernhard/signal-cli-rest-api</p>
+                    <p># Then create a Connector via MCP:</p>
+                    <p>driver: signal_protocol, config: &#123; api_url, phone_number, team_id &#125;</p>
+                </div>
+            </div>
+        @endif
+    </div>
+
+    {{-- ═══ Matrix Connectors ═══ --}}
+    <div>
+        <div class="mb-4">
+            <h2 class="text-base font-semibold text-(--color-on-surface)">Matrix / Element</h2>
+            <p class="text-sm text-(--color-on-surface-muted)">Self-hosted enterprise messaging via Matrix Client-Server API. Polls every minute.</p>
+        </div>
+        @if($matrixConnectors->isNotEmpty())
+            <div class="space-y-2">
+                @foreach($matrixConnectors as $connector)
+                    <div class="flex items-center justify-between rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) px-5 py-3">
+                        <div class="flex items-center gap-3">
+                            <span class="h-2 w-2 rounded-full {{ $connector->last_success_at && $connector->last_success_at->gt(now()->subMinutes(5)) ? 'bg-green-500' : 'bg-gray-300' }}"></span>
+                            <div>
+                                <p class="text-sm font-medium text-(--color-on-surface)">{{ $connector->name }}</p>
+                                <p class="text-xs text-(--color-on-surface-muted)">{{ $connector->config['homeserver_url'] ?? '—' }} · {{ $connector->config['bot_user_id'] ?? '—' }}</p>
+                            </div>
+                        </div>
+                        @if($connector->last_error_message)
+                            <span class="text-xs text-red-600 truncate max-w-xs">{{ $connector->last_error_message }}</span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-5 space-y-2">
+                <p class="text-sm text-(--color-on-surface-muted)">No Matrix connector configured.</p>
+                <div class="rounded-lg bg-(--color-surface-alt) p-3 font-mono text-xs text-(--color-on-surface-muted) space-y-1">
+                    <p># Create a bot account on your homeserver, then create a Connector via MCP:</p>
+                    <p>driver: matrix, config: &#123; homeserver_url, access_token, bot_user_id &#125;</p>
+                </div>
+            </div>
+        @endif
     </div>
 
     {{-- Setup panel (sibling Livewire component) --}}

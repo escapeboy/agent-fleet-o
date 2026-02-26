@@ -1,0 +1,75 @@
+{
+    "name": "FleetQ",
+    "short_name": "FleetQ",
+    "id": "/",
+    "scope": "/",
+    "lang": "en",
+    "dir": "ltr",
+    "description": "AI Agent Mission Control Platform — build, deploy, and manage autonomous AI agent workflows.",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#2563eb",
+    "orientation": "portrait-primary",
+    "categories": ["productivity", "developer-tools", "utilities"],
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "url": "/dashboard",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Experiments",
+            "url": "/experiments",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Approvals",
+            "url": "/approvals",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshots/desktop-dashboard.png",
+            "sizes": "1280x720",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "FleetQ Dashboard"
+        },
+        {
+            "src": "/screenshots/mobile-dashboard.png",
+            "sizes": "390x844",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "FleetQ Mobile"
+        }
+    ]
+}

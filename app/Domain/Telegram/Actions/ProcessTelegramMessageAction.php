@@ -16,6 +16,7 @@ class ProcessTelegramMessageAction
     public function __construct(
         private readonly SendAssistantMessageAction $sendAssistantMessage,
         private readonly SendTelegramReplyAction $sendReply,
+        private readonly SendTypingIndicatorAction $sendTypingIndicator,
     ) {}
 
     /**
@@ -61,16 +62,41 @@ class ProcessTelegramMessageAction
             return;
         }
 
-        // Send "processing" indicator for potentially slow LLM responses
-        $this->sendReply->execute($bot->bot_token, $chatId, '⏳ Processing...');
+        // Send typing indicator for potentially slow LLM responses
+        $this->sendTypingIndicator->execute($bot, $chatId);
+
+        // Send placeholder message that we'll edit live as tokens arrive.
+        // Returns null if the send fails (network error, etc.) — we fall back to a final send.
+        $placeholderMessageId = $this->sendReply->sendPlaceholder($bot->bot_token, $chatId);
+
+        // Throttle: Telegram allows max 20 edits/minute/chat (1 per 3s is safe; 1.5s is within limit)
+        $editIntervalMs = 1500;
+        $lastEditAt = 0.0;
+        $accumulated = '';
 
         try {
-            $response = $this->sendAssistantMessage->execute(
+            $response = $this->sendAssistantMessage->executeStreaming(
                 conversation: $conversation,
                 userMessage: $text,
                 user: $user,
                 contextType: 'telegram',
                 contextId: $chatId,
+                onChunk: function (string $chunk) use (
+                    $bot, $chatId, $placeholderMessageId, $editIntervalMs,
+                    &$accumulated, &$lastEditAt
+                ): void {
+                    $accumulated .= $chunk;
+
+                    if ($placeholderMessageId === null) {
+                        return;
+                    }
+
+                    $nowMs = microtime(true) * 1000;
+                    if (($nowMs - $lastEditAt) >= $editIntervalMs) {
+                        $this->sendReply->editMessage($bot->bot_token, $chatId, $placeholderMessageId, $accumulated);
+                        $lastEditAt = $nowMs;
+                    }
+                },
             );
 
             $replyText = $response->content ?: 'I could not process that request.';
@@ -85,7 +111,13 @@ class ProcessTelegramMessageAction
         // Update last message timestamp on bot
         $bot->update(['last_message_at' => now()]);
 
-        $this->sendReply->execute($bot->bot_token, $chatId, $replyText);
+        if ($placeholderMessageId !== null) {
+            // Final edit — sets the complete response on the placeholder message
+            $this->sendReply->editMessage($bot->bot_token, $chatId, $placeholderMessageId, $replyText);
+        } else {
+            // Fallback: placeholder failed, send a new message
+            $this->sendReply->execute($bot->bot_token, $chatId, $replyText);
+        }
     }
 
     private function handleCommand(string $text, TelegramBot $bot): ?string
@@ -93,9 +125,9 @@ class ProcessTelegramMessageAction
         $command = strtolower(trim($text));
 
         if (str_starts_with($command, '/start')) {
-            $botName = $bot->bot_name ?? 'Agent Fleet Bot';
+            $botName = $bot->bot_name ?? config('app.name') . ' Bot';
 
-            return "<b>Welcome to {$botName}!</b>\n\nI'm connected to your Agent Fleet workspace. You can:\n• Chat with your AI assistant\n• Ask about your projects and experiments\n• Get status updates\n\nType /help for more commands.";
+            return "<b>Welcome to {$botName}!</b>\n\nI'm connected to your " . config('app.name') . " workspace. You can:\n• Chat with your AI assistant\n• Ask about your projects and experiments\n• Get status updates\n\nType /help for more commands.";
         }
 
         if ($command === '/help') {

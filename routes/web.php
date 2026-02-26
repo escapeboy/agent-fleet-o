@@ -33,6 +33,9 @@ use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Shared\NotificationInboxPage;
 use App\Livewire\Shared\NotificationPreferencesPage;
+use App\Livewire\Signals\ConnectorBindingsPage;
+use App\Livewire\Signals\ContactDetailPage;
+use App\Livewire\Signals\ContactsPage;
 use App\Livewire\Signals\EntityBrowserPage;
 use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
@@ -121,6 +124,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
     Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
+    Route::get('/signals/bindings', ConnectorBindingsPage::class)->name('signals.bindings');
+
+    Route::get('/contacts', ContactsPage::class)->name('contacts.index');
+    Route::get('/contacts/{contact}', ContactDetailPage::class)->name('contacts.show');
 
     Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
 

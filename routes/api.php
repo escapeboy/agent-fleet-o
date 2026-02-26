@@ -40,7 +40,9 @@ Route::post('/signals/datadog/{secret}', DatadogAlertWebhookController::class)->
 Route::post('/signals/pagerduty', PagerDutyWebhookController::class)->name('signals.pagerduty');
 
 // Telegram webhook (optional push-mode alternative to polling)
-Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
+Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'handle'])
+    ->name('telegram.webhook')
+    ->middleware('throttle:60,1');
 
 // Tracking endpoints (public, no auth)
 Route::get('/track/click', [TrackingController::class, 'click'])->name('track.click');

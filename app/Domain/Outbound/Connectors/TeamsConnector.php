@@ -47,7 +47,7 @@ class TeamsConnector implements OutboundConnectorInterface
             }
 
             $text = $content['body'] ?? $content['text'] ?? 'No content generated.';
-            $title = $content['title'] ?? $content['subject'] ?? 'Agent Fleet';
+            $title = $content['title'] ?? $content['subject'] ?? config('app.name');
 
             // Build Adaptive Card payload for Power Automate Workflows
             $payload = [

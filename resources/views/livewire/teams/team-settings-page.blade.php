@@ -73,7 +73,7 @@
     {{-- API Tokens --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-4 text-lg font-semibold text-gray-900">API Tokens</h2>
-        <p class="mb-4 text-sm text-gray-500">Use API tokens to authenticate requests to the Agent Fleet API.</p>
+        <p class="mb-4 text-sm text-gray-500">Use API tokens to authenticate requests to the FleetQ API.</p>
 
         {{-- New token display --}}
         @if($newToken)

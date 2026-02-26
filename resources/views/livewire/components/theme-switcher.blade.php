@@ -4,7 +4,7 @@
         isDark(t) { return t.includes('-dark') || ['catppuccin', 'monokai', 'dracula', 'nord', 'solarized'].includes(t) },
         applyTheme(t) {
             document.documentElement.setAttribute('data-theme', t);
-            localStorage.setItem('agent-fleet-theme', t);
+            localStorage.setItem('fleetq-theme', t);
         },
         toggleMode() {
             const themes = {{ Js::from($themes) }};

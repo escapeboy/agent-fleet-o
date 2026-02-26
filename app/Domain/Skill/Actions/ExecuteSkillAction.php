@@ -33,6 +33,7 @@ class ExecuteSkillAction
         private readonly RecordMarketplaceUsageAction $recordMarketplaceUsage,
         private readonly MultiModelConsensusService $consensusService,
         private readonly ExecuteCodeExecutionSkillAction $executeCodeExecution,
+        private readonly ExecuteBrowserSkillAction $executeBrowserSkill,
     ) {}
 
     /**
@@ -57,6 +58,11 @@ class ExecuteSkillAction
         // CodeExecution has its own full pipeline (worktree + Docker sandbox + approval)
         if ($skill->type === SkillType::CodeExecution->value) {
             return $this->executeCodeExecution->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
+        }
+
+        // Browser Automation calls Browserless REST API directly — no LLM, no budget reservation
+        if ($skill->type === SkillType::Browser->value) {
+            return $this->executeBrowserSkill->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // 0. Check provider compatibility (if requirements declared)
@@ -203,7 +209,7 @@ class ExecuteSkillAction
             SkillType::Rule => $this->executeRuleSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Guardrail => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::MultiModelConsensus => $this->executeMultiModelConsensusSkill($skill, $input, $teamId, $userId, $agentId, $experimentId),
-            SkillType::CodeExecution => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
+            SkillType::CodeExecution, SkillType::Browser => throw new \LogicException('CodeExecution and Browser skill types must be short-circuited before reaching executeByType.'),
         };
     }
 

@@ -201,7 +201,7 @@ class ConnectorConfigModal extends Component
         }
 
         $response = Http::timeout(10)->post($this->webhookUrl, [
-            'text' => '[Test] Agent Fleet connectivity check',
+            'text' => '[Test] FleetQ connectivity check',
         ]);
 
         if ($response->successful()) {
@@ -218,7 +218,7 @@ class ConnectorConfigModal extends Component
         }
 
         $response = Http::timeout(10)->post($this->webhookUrl.'?wait=true', [
-            'content' => '[Test] Agent Fleet connectivity check',
+            'content' => '[Test] FleetQ connectivity check',
         ]);
 
         if ($response->successful()) {
@@ -245,7 +245,7 @@ class ConnectorConfigModal extends Component
                     'version' => '1.4',
                     'body' => [[
                         'type' => 'TextBlock',
-                        'text' => '[Test] Agent Fleet connectivity check',
+                        'text' => '[Test] FleetQ connectivity check',
                         'wrap' => true,
                     ]],
                 ],
@@ -268,7 +268,7 @@ class ConnectorConfigModal extends Component
         }
 
         $response = Http::timeout(10)->post($this->webhookUrl, [
-            'text' => '[Test] Agent Fleet connectivity check',
+            'text' => '[Test] FleetQ connectivity check',
         ]);
 
         if ($response->successful()) {
@@ -328,7 +328,7 @@ class ConnectorConfigModal extends Component
             throw new \RuntimeException('Webhook URL is required');
         }
 
-        $payload = ['test' => true, 'source' => 'agent-fleet', 'timestamp' => now()->toIso8601String()];
+        $payload = ['test' => true, 'source' => 'fleetq', 'timestamp' => now()->toIso8601String()];
         $headers = [];
 
         if ($this->secret) {
