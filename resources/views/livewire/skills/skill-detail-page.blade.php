@@ -18,7 +18,9 @@
                         :error="$errors->first('editName')" />
                     <x-form-select wire:model="editType" label="Type">
                         @foreach(\App\Domain\Skill\Enums\SkillType::cases() as $t)
-                            <option value="{{ $t->value }}">{{ $t->label() }}</option>
+                            @if($t->value !== 'browser' || config('browser.enabled', false))
+                                <option value="{{ $t->value }}">{{ $t->label() }}</option>
+                            @endif
                         @endforeach
                     </x-form-select>
                 </div>

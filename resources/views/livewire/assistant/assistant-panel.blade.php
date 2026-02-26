@@ -244,7 +244,12 @@
                 </div>
             </template>
 
-            {{-- Thinking indicator --}}
+            {{-- Streaming response (wire:stream) — fills with tokens as they arrive --}}
+            <div class="flex justify-start" wire:stream="assistant-stream">
+                {{-- Livewire streams HTML here token by token --}}
+            </div>
+
+            {{-- Thinking indicator — shown until first tokens arrive --}}
             <template x-if="sending">
                 <div class="flex justify-start">
                     <div class="max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3">

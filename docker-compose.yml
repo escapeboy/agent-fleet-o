@@ -19,6 +19,7 @@ services:
       - RUNNING_IN_DOCKER=true
     networks:
       - agent-fleet-open
+      - agent-fleet-internal
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,7 +50,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - agent-fleet-open
+      - agent-fleet-internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-agent_fleet}"]
       interval: 5s
@@ -63,7 +64,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - agent-fleet-open
+      - agent-fleet-internal
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -89,6 +90,7 @@ services:
       - RUNNING_IN_DOCKER=true
     networks:
       - agent-fleet-open
+      - agent-fleet-internal
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,6 +117,7 @@ services:
       - RUNNING_IN_DOCKER=true
     networks:
       - agent-fleet-open
+      - agent-fleet-internal
     depends_on:
       postgres:
         condition: service_healthy
@@ -138,6 +141,18 @@ services:
     networks:
       - agent-fleet-open
 
+  browserless:
+    image: browserless/chrome:1-chrome-stable
+    restart: unless-stopped
+    environment:
+      MAX_CONCURRENT_SESSIONS: 5
+      CONNECTION_TIMEOUT: 30000
+      TOKEN: ${BROWSERLESS_TOKEN:-secret}
+    networks:
+      - agent-fleet-open
+    profiles:
+      - browser
+
 volumes:
   postgres_data:
   redis_data:
@@ -147,3 +162,6 @@ volumes:
 networks:
   agent-fleet-open:
     driver: bridge
+  agent-fleet-internal:
+    driver: bridge
+    internal: true  # postgres/redis only — no external network access

@@ -43,10 +43,15 @@ class CreateSkillForm extends Component
     public function nextStep(): void
     {
         if ($this->step === 1) {
+            $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution';
+            if (config('browser.enabled', false)) {
+                $allowedTypes .= ',browser';
+            }
+
             $this->validate([
                 'name' => 'required|min:2|max:255',
                 'description' => 'max:1000',
-                'type' => 'required|in:llm,connector,rule,hybrid',
+                'type' => "required|in:{$allowedTypes}",
                 'riskLevel' => 'required|in:low,medium,high,critical',
             ]);
         }
@@ -156,6 +161,7 @@ class CreateSkillForm extends Component
             'riskLevels' => RiskLevel::cases(),
             'providers' => $providers,
             'canCreate' => true,
+            'browserSkillEnabled' => config('browser.enabled', false),
         ])->layout('layouts.app', ['header' => 'Create Skill']);
     }
 }
