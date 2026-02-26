@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Domain\Trigger;
 
-use App\Domain\Signal\Models\Signal;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Signal\Models\Signal;
 use App\Domain\Trigger\Services\SignalInputMapper;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;

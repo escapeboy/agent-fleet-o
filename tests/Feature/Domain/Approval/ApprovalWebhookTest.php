@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Domain\Approval;
 
+use App\Domain\Approval\Actions\ApproveAction;
+use App\Domain\Approval\Actions\RejectAction;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Jobs\FireApprovalWebhookJob;
 use App\Domain\Approval\Models\ApprovalRequest;
@@ -12,6 +14,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -89,7 +92,7 @@ class ApprovalWebhookTest extends TestCase
         // Ensure experiment is in correct state (makeApproval may share the same experiment)
         $this->experiment->update(['status' => ExperimentStatus::AwaitingApproval]);
 
-        app(\App\Domain\Approval\Actions\ApproveAction::class)->execute(
+        app(ApproveAction::class)->execute(
             $approval,
             $this->user->id,
             'LGTM',
@@ -109,7 +112,7 @@ class ApprovalWebhookTest extends TestCase
 
         $this->experiment->update(['status' => ExperimentStatus::AwaitingApproval]);
 
-        app(\App\Domain\Approval\Actions\RejectAction::class)->execute(
+        app(RejectAction::class)->execute(
             $approval,
             $this->user->id,
             'Does not meet criteria',
@@ -128,7 +131,7 @@ class ApprovalWebhookTest extends TestCase
 
         $this->experiment->update(['status' => ExperimentStatus::AwaitingApproval]);
 
-        app(\App\Domain\Approval\Actions\ApproveAction::class)->execute(
+        app(ApproveAction::class)->execute(
             $approval,
             $this->user->id,
         );
@@ -139,8 +142,8 @@ class ApprovalWebhookTest extends TestCase
 
     public function test_fire_approval_webhook_job_posts_hmac_signed_payload(): void
     {
-        \Illuminate\Support\Facades\Http::fake([
-            'https://example.com/webhook' => \Illuminate\Support\Facades\Http::response([], 200),
+        Http::fake([
+            'https://example.com/webhook' => Http::response([], 200),
         ]);
 
         $approval = $this->makeApproval([
@@ -152,7 +155,7 @@ class ApprovalWebhookTest extends TestCase
 
         (new FireApprovalWebhookJob($approval->id))->handle();
 
-        \Illuminate\Support\Facades\Http::assertSent(function ($request) use ($approval) {
+        Http::assertSent(function ($request) use ($approval) {
             // Verify HMAC signature header is present
             return $request->hasHeader('X-Signature-SHA256')
                 && $request->url() === 'https://example.com/webhook'
@@ -167,8 +170,8 @@ class ApprovalWebhookTest extends TestCase
 
     public function test_fire_approval_webhook_job_marks_failed_on_http_error(): void
     {
-        \Illuminate\Support\Facades\Http::fake([
-            'https://example.com/webhook' => \Illuminate\Support\Facades\Http::response([], 500),
+        Http::fake([
+            'https://example.com/webhook' => Http::response([], 500),
         ]);
 
         $approval = $this->makeApproval([

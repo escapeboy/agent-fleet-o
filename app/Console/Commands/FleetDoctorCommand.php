@@ -9,6 +9,8 @@ use App\Domain\Telegram\Models\TelegramBot;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Cashier\Cashier;
 
 class FleetDoctorCommand extends Command
 {
@@ -119,7 +121,7 @@ class FleetDoctorCommand extends Command
 
     private function checkStripeKeys(): void
     {
-        if (! class_exists(\Laravel\Cashier\Cashier::class)) {
+        if (! class_exists(Cashier::class)) {
             // Not a cloud edition — skip Stripe checks
             return;
         }
@@ -162,7 +164,7 @@ class FleetDoctorCommand extends Command
                 array_filter(
                     ExperimentStatus::cases(),
                     fn (ExperimentStatus $s) => $s->isActive() && ! $s->isFailed(),
-                )
+                ),
             );
 
             $stale = Experiment::withoutGlobalScopes()
@@ -218,8 +220,8 @@ class FleetDoctorCommand extends Command
 
         try {
             $testKey = '_fleet_doctor_test_'.uniqid();
-            \Illuminate\Support\Facades\Storage::put($testKey, 'test');
-            \Illuminate\Support\Facades\Storage::delete($testKey);
+            Storage::put($testKey, 'test');
+            Storage::delete($testKey);
             $this->ok('S3 storage: Writable');
         } catch (\Throwable $e) {
             $this->warnLine('S3 storage: Write test failed — '.$e->getMessage());
@@ -276,7 +278,7 @@ class FleetDoctorCommand extends Command
                 array_filter(
                     ExperimentStatus::cases(),
                     fn (ExperimentStatus $s) => $s->isActive() && ! $s->isFailed(),
-                )
+                ),
             );
 
             $stale = Experiment::withoutGlobalScopes()

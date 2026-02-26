@@ -4,6 +4,7 @@ namespace App\Livewire\Signals;
 
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Services\ContactResolver;
+use App\Domain\Signal\Models\Signal;
 use Livewire\Component;
 
 class ContactDetailPage extends Component
@@ -47,7 +48,7 @@ class ContactDetailPage extends Component
     {
         $this->contact->load(['channels']);
 
-        $signals = \App\Domain\Signal\Models\Signal::withoutGlobalScopes()
+        $signals = Signal::withoutGlobalScopes()
             ->where('contact_identity_id', $this->contact->id)
             ->latest('received_at')
             ->limit(20)

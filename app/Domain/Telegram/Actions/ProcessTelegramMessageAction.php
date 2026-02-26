@@ -125,9 +125,9 @@ class ProcessTelegramMessageAction
         $command = strtolower(trim($text));
 
         if (str_starts_with($command, '/start')) {
-            $botName = $bot->bot_name ?? config('app.name') . ' Bot';
+            $botName = $bot->bot_name ?? config('app.name').' Bot';
 
-            return "<b>Welcome to {$botName}!</b>\n\nI'm connected to your " . config('app.name') . " workspace. You can:\n• Chat with your AI assistant\n• Ask about your projects and experiments\n• Get status updates\n\nType /help for more commands.";
+            return "<b>Welcome to {$botName}!</b>\n\nI'm connected to your ".config('app.name')." workspace. You can:\n• Chat with your AI assistant\n• Ask about your projects and experiments\n• Get status updates\n\nType /help for more commands.";
         }
 
         if ($command === '/help') {

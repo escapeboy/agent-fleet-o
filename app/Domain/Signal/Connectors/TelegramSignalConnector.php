@@ -5,11 +5,9 @@ namespace App\Domain\Signal\Connectors;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Models\Signal;
-use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Polls a Telegram bot for new messages using getUpdates long-polling.
@@ -253,4 +251,3 @@ class TelegramSignalConnector implements InputConnectorInterface
         }
     }
 }
-

@@ -2,10 +2,15 @@
 
 namespace Tests\Feature\Domain\Telegram;
 
+use App\Domain\Assistant\Actions\SendAssistantMessageAction;
+use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Telegram\Actions\ProcessTelegramMessageAction;
 use App\Domain\Telegram\Jobs\ProcessTelegramMessageJob;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Domain\Telegram\Models\TelegramChatBinding;
+use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -135,7 +140,7 @@ class ProcessTelegramMessageTest extends TestCase
             'https://api.telegram.org/bot*/sendChatAction' => Http::response(['ok' => true], 200),
         ]);
 
-        $action = app(\App\Domain\Telegram\Actions\ProcessTelegramMessageAction::class);
+        $action = app(ProcessTelegramMessageAction::class);
         $action->execute($this->bot, '123456', '/start', 'testuser');
 
         Http::assertSent(function ($request) {
@@ -151,7 +156,7 @@ class ProcessTelegramMessageTest extends TestCase
             'https://api.telegram.org/bot*/sendChatAction' => Http::response(['ok' => true], 200),
         ]);
 
-        $action = app(\App\Domain\Telegram\Actions\ProcessTelegramMessageAction::class);
+        $action = app(ProcessTelegramMessageAction::class);
         $action->execute($this->bot, '123456', '/help');
 
         Http::assertSent(function ($request) {
@@ -169,7 +174,7 @@ class ProcessTelegramMessageTest extends TestCase
         ]);
 
         // Pre-create a conversation with a user so action doesn't try to create one
-        $conversation = \App\Domain\Assistant\Models\AssistantConversation::create([
+        $conversation = AssistantConversation::create([
             'team_id' => $this->team->id,
             'user_id' => $this->user->id,
             'title' => 'Telegram test',
@@ -178,7 +183,7 @@ class ProcessTelegramMessageTest extends TestCase
         ]);
 
         // Pre-create the binding linked to user and conversation
-        \App\Domain\Telegram\Models\TelegramChatBinding::create([
+        TelegramChatBinding::create([
             'team_id' => $this->team->id,
             'chat_id' => 'chat-999',
             'user_id' => $this->user->id,
@@ -186,20 +191,20 @@ class ProcessTelegramMessageTest extends TestCase
         ]);
 
         // Mock the AI assistant to return a simple response
-        $this->mock(\App\Domain\Assistant\Actions\SendAssistantMessageAction::class, function ($mock) {
+        $this->mock(SendAssistantMessageAction::class, function ($mock) {
             $mock->shouldReceive('executeStreaming')
                 ->once()
-                ->andReturn(new \App\Infrastructure\AI\DTOs\AiResponseDTO(
+                ->andReturn(new AiResponseDTO(
                     content: 'Hello! How can I help you?',
                     parsedOutput: null,
-                    usage: new \App\Infrastructure\AI\DTOs\AiUsageDTO(5, 10, 0),
+                    usage: new AiUsageDTO(5, 10, 0),
                     model: 'claude-haiku-4-5',
                     provider: 'anthropic',
                     latencyMs: 0,
                 ));
         });
 
-        $action = app(\App\Domain\Telegram\Actions\ProcessTelegramMessageAction::class);
+        $action = app(ProcessTelegramMessageAction::class);
         $action->execute($this->bot, 'chat-999', 'Hello assistant', 'testuser');
 
         // Binding remains intact after the action runs
