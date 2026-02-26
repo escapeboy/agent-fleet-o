@@ -12,6 +12,7 @@ enum SkillType: string
     case MultiModelConsensus = 'multi_model_consensus';
     case CodeExecution = 'code_execution';
     case Browser = 'browser';
+    case RunpodEndpoint = 'runpod_endpoint';
 
     public function label(): string
     {
@@ -24,6 +25,7 @@ enum SkillType: string
             self::MultiModelConsensus => 'Multi-Model Consensus',
             self::CodeExecution => 'Code Execution',
             self::Browser => 'Browser Automation',
+            self::RunpodEndpoint => 'RunPod Endpoint',
         };
     }
 }

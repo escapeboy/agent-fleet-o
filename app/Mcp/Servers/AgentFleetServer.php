@@ -127,6 +127,7 @@ use App\Mcp\Tools\Workflow\WorkflowSaveGraphTool;
 use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
+use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
 use Laravel\Mcp\Server;
 
@@ -309,6 +310,9 @@ class AgentFleetServer extends Server
         TriggerRuleUpdateTool::class,
         TriggerRuleDeleteTool::class,
         TriggerRuleTestTool::class,
+
+        // RunPod (1)
+        RunPodManageTool::class,
 
         // System (3)
         DashboardKpisTool::class,
