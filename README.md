@@ -127,8 +127,11 @@ Failed tasks display detailed error information including provider, error type, 
 - **Agent Templates** -- 14 pre-built templates across 5 categories (engineering, content, business, design, research)
 - **Agent Evolution** -- AI-driven self-improvement: analyze execution history, propose config changes, and apply improvements
 - **Agent Crews** -- Multi-agent teams with lead/member roles and shared context
-- **Skills** -- Reusable AI skill definitions (LLM, connector, rule, hybrid, browser, RunPod) with versioning and cost tracking
+- **Skills** -- Reusable AI skill definitions (LLM, connector, rule, hybrid, browser, RunPod, GPU compute) with versioning and cost tracking
 - **RunPod GPU Integration** -- Invoke RunPod serverless endpoints or manage full GPU pod lifecycles as skills; BYOK API key; spot pricing; cost tracking
+- **Pluggable Compute Providers** -- `gpu_compute` skill type backed by RunPod, Replicate, Fal.ai, and Vast.ai; configure via `compute_manage` MCP tool; zero platform credits
+- **Local LLM Support** -- Run Ollama or any OpenAI-compatible server (LM Studio, vLLM, llama.cpp) as a provider; 17 preset Ollama models; zero cost; SSRF protection
+- **Integrations** -- Connect GitHub, Slack, Notion, Airtable, Linear, Stripe, and generic webhooks/polling sources via unified driver interface with OAuth 2.0 support
 - **Playbooks** -- Sequential or parallel multi-step workflows combining skills
 - **Workflows** -- Visual DAG builder with 8 node types: agent, conditional, human task, switch, dynamic fork, do-while loops
 - **Projects** -- One-shot and continuous long-running agent projects with cron scheduling, budget caps, milestones, and overlap policies
@@ -138,7 +141,7 @@ Failed tasks display detailed error information including provider, error type, 
 - **Budget Controls** -- Per-experiment and per-project credit ledger with pessimistic locking and auto-pause on overspend
 - **Marketplace** -- Browse, publish, and install shared skills, agents, and workflows
 - **REST API** -- 99 endpoints under `/api/v1/` with Sanctum auth, cursor pagination, and auto-generated OpenAPI 3.1 docs at `/docs/api`
-- **MCP Server** -- 112 Model Context Protocol tools across 16 domains for LLM/agent access (stdio + HTTP/SSE)
+- **MCP Server** -- 121 Model Context Protocol tools across 17 domains for LLM/agent access (stdio + HTTP/SSE)
 - **Tool Management** -- MCP servers (stdio/HTTP), built-in tools (bash/filesystem/browser), risk classification, per-agent assignment
 - **Credentials** -- Encrypted credential vault for external services with rotation, expiry tracking, and per-project injection
 - **Testing** -- Regression test suites for agent outputs with automated evaluation
@@ -203,6 +206,16 @@ GOOGLE_AI_API_KEY=
 
 Additional LLM keys can be configured in **Settings > AI Provider Keys** after login.
 
+To use local models (Ollama, LM Studio, vLLM):
+
+```bash
+LOCAL_LLM_ENABLED=true
+LOCAL_LLM_SSRF_PROTECTION=false  # set false if Ollama is on a LAN IP (192.168.x.x)
+LOCAL_LLM_TIMEOUT=180
+```
+
+Then configure endpoints in **Settings > Local LLM Endpoints**.
+
 ## Architecture
 
 Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 16 bounded contexts:
@@ -225,6 +238,7 @@ Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 1
 | Project | Continuous/one-shot projects, scheduling |
 | Assistant | Context-aware AI chat with 28 tools |
 | Marketplace | Skill/agent/workflow sharing |
+| Integration | External service connectors (GitHub, Slack, Notion, Airtable, Linear, Stripe, Generic) |
 
 ## Docker Services
 
