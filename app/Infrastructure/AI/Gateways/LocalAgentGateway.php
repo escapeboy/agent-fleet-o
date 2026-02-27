@@ -638,11 +638,9 @@ class LocalAgentGateway implements AiGatewayInterface
         // connect to our FleetQ MCP server (replaces advisory mode).
         // Non-assistant Codex: --full-auto, no MCP override.
         if ($isAssistant) {
-            $mcpServers = json_encode(['agent-fleet' => [
-                'command' => 'php',
-                'args' => ['artisan', 'mcp:start', 'agent-fleet'],
-            ]]);
-            $codexMcpFlag = ' -c '.escapeshellarg("mcp_servers={$mcpServers}");
+            // Uses TOML dotted-key syntax (not JSON) — codex parses -c values as TOML.
+            $codexMcpFlag = ' -c '.escapeshellarg('mcp_servers.agent-fleet.command="php"')
+                .' -c '.escapeshellarg('mcp_servers.agent-fleet.args=["artisan","mcp:start","agent-fleet"]');
         } else {
             $codexMcpFlag = '';
         }

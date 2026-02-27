@@ -174,12 +174,10 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
 
     // Codex assistant: connect to our FleetQ MCP server.
     // -c is a GLOBAL codex flag and must come before the 'exec' subcommand.
+    // Uses TOML dotted-key syntax (not JSON) — codex parses -c values as TOML.
     if ($isAssistant) {
-        $mcpServers = json_encode(['agent-fleet' => [
-            'command' => 'php',
-            'args' => ['artisan', 'mcp:start', 'agent-fleet'],
-        ]]);
-        $codexConfigFlag = ' -c '.escapeshellarg("mcp_servers={$mcpServers}");
+        $codexConfigFlag = ' -c '.escapeshellarg('mcp_servers.agent-fleet.command="php"')
+            .' -c '.escapeshellarg('mcp_servers.agent-fleet.args=["artisan","mcp:start","agent-fleet"]');
     } else {
         $codexConfigFlag = '';
     }
