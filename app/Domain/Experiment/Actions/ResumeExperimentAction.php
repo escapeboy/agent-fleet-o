@@ -22,7 +22,7 @@ class ResumeExperimentAction
 
         $resumeState = $experiment->paused_from_status
             ? ExperimentStatus::from($experiment->paused_from_status)
-            : ExperimentStatus::Draft;
+            : ExperimentStatus::Scoring;
 
         $result = $this->transition->execute(
             experiment: $experiment,
