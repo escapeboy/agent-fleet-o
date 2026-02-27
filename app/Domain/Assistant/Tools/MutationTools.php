@@ -37,13 +37,13 @@ use App\Domain\Skill\Actions\CreateSkillAction;
 use App\Domain\Skill\Actions\UpdateSkillAction;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
-use App\Domain\Tool\Models\Tool as AgentTool;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\GenerateWorkflowFromPromptAction;
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Models\Workflow;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Facades\DB;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
 
@@ -766,7 +766,7 @@ class MutationTools
                 }
 
                 try {
-                    \Illuminate\Support\Facades\DB::transaction(function () use ($project) {
+                    DB::transaction(function () use ($project) {
                         $project->update(['status' => ProjectStatus::Active]);
                         if ($project->schedule) {
                             $project->schedule->update(['enabled' => true]);

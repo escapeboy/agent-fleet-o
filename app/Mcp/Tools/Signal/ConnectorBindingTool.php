@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+
 class ConnectorBindingTool extends Tool
 {
     protected string $name = 'connector_binding_manage';

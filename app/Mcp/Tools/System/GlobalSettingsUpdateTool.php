@@ -51,7 +51,7 @@ class GlobalSettingsUpdateTool extends Tool
         if (! empty($unknownKeys)) {
             return Response::error(
                 'Unknown or disallowed setting key(s): '.implode(', ', $unknownKeys).
-                '. Allowed keys: '.implode(', ', self::ALLOWED_KEYS)
+                '. Allowed keys: '.implode(', ', self::ALLOWED_KEYS),
             );
         }
 
