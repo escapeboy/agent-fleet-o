@@ -103,12 +103,14 @@ use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
+use App\Mcp\Tools\Tool\ToolBashPolicyTool;
 use App\Mcp\Tools\Tool\ToolCreateTool;
 use App\Mcp\Tools\Tool\ToolDeleteTool;
 use App\Mcp\Tools\Tool\ToolDiscoverMcpTool;
 use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
+use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
@@ -205,6 +207,8 @@ class AgentFleetServer extends Server
         ToolDeleteTool::class,
         ToolDiscoverMcpTool::class,
         ToolImportMcpTool::class,
+        ToolSshFingerprintsTool::class,
+        ToolBashPolicyTool::class,
 
         // Credential (5)
         CredentialListTool::class,

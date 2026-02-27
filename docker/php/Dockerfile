@@ -8,6 +8,9 @@ RUN apk add --no-cache \
     linux-headers \
     $PHPIZE_DEPS
 
+# Install system dependencies for exif
+RUN apk add --no-cache libexif-dev
+
 # Install PHP extensions
 RUN docker-php-ext-install \
     pdo_pgsql \
@@ -16,7 +19,8 @@ RUN docker-php-ext-install \
     intl \
     pcntl \
     opcache \
-    bcmath
+    bcmath \
+    exif
 
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
@@ -53,7 +57,7 @@ RUN apk add --no-cache nodejs npm
 
 COPY . .
 
-RUN composer install --no-interaction --optimize-autoloader
+RUN php -d disable_functions="" /usr/bin/composer install --no-interaction --optimize-autoloader
 
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
@@ -67,10 +71,10 @@ FROM base AS production
 
 COPY . .
 
-RUN composer install --no-dev --no-interaction --optimize-autoloader \
-    && php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+RUN php -d disable_functions="" /usr/bin/composer install --no-dev --no-interaction --optimize-autoloader \
+    && php -d disable_functions="" artisan config:cache \
+    && php -d disable_functions="" artisan route:cache \
+    && php -d disable_functions="" artisan view:cache
 
 # Set proper permissions
 RUN chown -R www-data:www-data storage bootstrap/cache

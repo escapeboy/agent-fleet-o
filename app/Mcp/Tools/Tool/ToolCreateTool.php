@@ -14,7 +14,19 @@ class ToolCreateTool extends Tool
 {
     protected string $name = 'tool_create';
 
-    protected string $description = 'Create a new tool (MCP server or built-in). Specify name and optionally description, type, and transport config.';
+    protected string $description = <<<'DESC'
+Create a new tool. Supported types:
+
+mcp_stdio — local MCP server via stdio. transport_config: {command, args, env}
+mcp_http  — remote MCP server via HTTP/SSE. transport_config: {url, headers}
+built_in  — host capability. transport_config depends on kind:
+  bash: {kind:"bash", allowed_commands:[], allowed_paths:[]}
+  filesystem: {kind:"filesystem", allowed_paths:[], read_only:false}
+  ssh: {kind:"ssh", host, port, username, credential_id, allowed_commands:[]}
+
+For SSH tools: create an ssh_key Credential first, then reference its ID in credential_id.
+Host fingerprints are stored automatically on first connect (TOFU). Manage via tool_ssh_fingerprints.
+DESC;
 
     public function schema(JsonSchema $schema): array
     {

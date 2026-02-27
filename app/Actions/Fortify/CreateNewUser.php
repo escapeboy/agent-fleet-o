@@ -36,9 +36,10 @@ class CreateNewUser implements CreatesNewUsers
 
         return DB::transaction(function () use ($input) {
             $user = User::create([
-                'name' => $input['name'],
-                'email' => $input['email'],
-                'password' => Hash::make($input['password']),
+                'name'              => $input['name'],
+                'email'             => $input['email'],
+                'password'          => Hash::make($input['password']),
+                'email_verified_at' => now(),
             ]);
 
             // Attach to the default team (created during app:install)
