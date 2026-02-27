@@ -5,6 +5,7 @@ namespace App\Livewire\Projects;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectRun;
 use Livewire\Component;
 
 class ProjectKanbanPage extends Component
@@ -52,16 +53,24 @@ class ProjectKanbanPage extends Component
         $this->viewMode = $this->viewMode === 'kanban' ? 'graph' : 'kanban';
     }
 
+    private function projectExperimentIds(): array
+    {
+        return ProjectRun::where('project_id', $this->project->id)
+            ->whereNotNull('experiment_id')
+            ->pluck('experiment_id')
+            ->all();
+    }
+
     public function updateSortOrder(string $experimentId, int $newOrder): void
     {
-        Experiment::where('id', $experimentId)
-            ->where('project_id', $this->project->id)
+        Experiment::whereIn('id', $this->projectExperimentIds())
+            ->where('id', $experimentId)
             ->update(['sort_order' => $newOrder]);
     }
 
     public function getExperimentsByColumn(): array
     {
-        $experiments = Experiment::where('project_id', $this->project->id)
+        $experiments = Experiment::whereIn('id', $this->projectExperimentIds())
             ->orderBy('sort_order')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -83,7 +92,7 @@ class ProjectKanbanPage extends Component
 
     public function getGraphData(): array
     {
-        $experiments = Experiment::where('project_id', $this->project->id)
+        $experiments = Experiment::whereIn('id', $this->projectExperimentIds())
             ->orderBy('created_at')
             ->get();
 
