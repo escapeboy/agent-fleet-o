@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Instanceof between App\\Models\\User and Illuminate\\Contracts\\Auth\\MustVerifyEmail will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: app/Actions/Fortify/UpdateUserProfileInformation.php
-
-		-
 			message: '#^Access to an undefined property App\\Domain\\Metrics\\Models\\Metric\:\:\$avg_value\.$#'
 			identifier: property.notFound
 			count: 1
@@ -489,6 +483,12 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
+			count: 11
+			path: app/Domain/Assistant/Tools/MutationTools.php
+
+		-
+			message: '#^Cannot call method canTransitionTo\(\) on string\.$#'
+			identifier: method.nonObject
 			count: 1
 			path: app/Domain/Assistant/Tools/MutationTools.php
 
@@ -6961,12 +6961,6 @@ parameters:
 			path: app/Livewire/Workflows/WorkflowDetailPage.php
 
 		-
-			message: '#^Attribute class Laravel\\Mcp\\Attributes\\IsDestructive does not exist\.$#'
-			identifier: attribute.notFound
-			count: 1
-			path: app/Mcp/Tools/Approval/ApprovalWebhookTool.php
-
-		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -6983,12 +6977,6 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Mcp/Tools/Artifact/ArtifactGetTool.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\JsonSchema\\Types\\IntegerType\:\:minimum\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Mcp/Tools/Artifact/ArtifactListTool.php
 
 		-
 			message: '#^Method App\\Mcp\\Tools\\Cache\\SemanticCachePurgeTool\:\:schema\(\) should return array\<string, mixed\> but returns array\<int, Illuminate\\JsonSchema\\Types\\BooleanType\|Illuminate\\JsonSchema\\Types\\StringType\>\.$#'
@@ -7289,6 +7277,30 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Memory/MemorySearchTool.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryUploadKnowledgeTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\User\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryUploadKnowledgeTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Project/ProjectActivateTool.php
+
+		-
+			message: '#^Cannot call method canTransitionTo\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Project/ProjectActivateTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
