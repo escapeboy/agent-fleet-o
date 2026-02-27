@@ -5,6 +5,7 @@ namespace App\Infrastructure\AI\Services;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Models\Skill;
+use App\Models\GlobalSetting;
 
 class ProviderResolver
 {
@@ -52,7 +53,17 @@ class ProviderResolver
             }
         }
 
-        // 4. Platform default
+        // 4. GlobalSetting (configured via Settings page)
+        $globalProvider = GlobalSetting::get('default_llm_provider');
+        $globalModel = GlobalSetting::get('default_llm_model');
+        if ($globalProvider && $globalModel) {
+            return [
+                'provider' => $globalProvider,
+                'model' => $globalModel,
+            ];
+        }
+
+        // 5. Platform default
         return [
             'provider' => config('llm_pricing.default_provider', 'anthropic'),
             'model' => config('llm_pricing.default_model', 'claude-sonnet-4-5'),
