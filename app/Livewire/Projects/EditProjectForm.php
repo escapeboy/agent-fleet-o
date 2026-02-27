@@ -169,8 +169,8 @@ class EditProjectForm extends Component
 
         // Update tools & credentials
         $this->project->update([
-            'allowed_tool_ids' => ! empty($this->selectedToolIds) ? array_values($this->selectedToolIds) : null,
-            'allowed_credential_ids' => ! empty($this->selectedCredentialIds) ? array_values($this->selectedCredentialIds) : null,
+            'allowed_tool_ids' => array_values($this->selectedToolIds),
+            'allowed_credential_ids' => array_values($this->selectedCredentialIds),
         ]);
 
         session()->flash('message', 'Project updated successfully!');
