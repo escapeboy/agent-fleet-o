@@ -54,6 +54,7 @@ class ToolBashPolicyTool extends Tool
             'get' => $this->get(),
             'set' => $this->set($validated),
             'reset' => $this->reset(),
+            default => Response::error('Unknown action'),
         };
     }
 

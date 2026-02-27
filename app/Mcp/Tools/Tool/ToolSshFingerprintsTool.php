@@ -37,6 +37,7 @@ class ToolSshFingerprintsTool extends Tool
         return match ($validated['action']) {
             'list' => $this->list(),
             'delete' => $this->delete($validated['fingerprint_id'] ?? null),
+            default => Response::error('Unknown action'),
         };
     }
 
