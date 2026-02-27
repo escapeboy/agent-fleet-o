@@ -51,9 +51,10 @@ class SetupPage extends Component
     public function createAccount(): void
     {
         Validator::make([
-            'name'     => $this->name,
-            'email'    => $this->email,
-            'password' => $this->password,
+            'name'                  => $this->name,
+            'email'                 => $this->email,
+            'password'              => $this->password,
+            'password_confirmation' => $this->password_confirmation,
         ], [
             'name'     => ['required', 'string', 'max:255'],
             'email'    => ['required', 'string', 'email', 'max:255'],
