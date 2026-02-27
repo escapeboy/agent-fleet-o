@@ -2875,24 +2875,6 @@ parameters:
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
 
 		-
-			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Domain/Signal/Connectors/CalendarConnector.php
-
-		-
-			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Domain/Signal/Connectors/ImapConnector.php
-
-		-
-			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Domain/Signal/Connectors/ImapConnector.php
-
-		-
 			message: '#^Method App\\Domain\\Signal\\Connectors\\ImapConnector\:\:resolveCredentials\(\) never returns array so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
@@ -3541,6 +3523,42 @@ parameters:
 			path: app/Domain/Tool/Models/Tool.php
 
 		-
+			message: '#^Constant App\\Domain\\Tool\\Services\\SshExecutor\:\:MAX_OUTPUT_BYTES is unused\.$#'
+			identifier: classConstant.unused
+			count: 1
+			path: app/Domain/Tool/Services/SshExecutor.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Tool/Services/SshExecutor.php
+
+		-
+			message: '#^Offset ''passphrase'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Services/SshExecutor.php
+
+		-
+			message: '#^Offset ''private_key'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Services/SshExecutor.php
+
+		-
+			message: '#^Property App\\Domain\\Tool\\Services\\SshExecutor\:\:\$fingerprintStore is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Tool/Services/SshExecutor.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Tool/Services/SshExecutor.php
+
+		-
 			message: '#^Empty array passed to foreach\.$#'
 			identifier: foreach.emptyArray
 			count: 1
@@ -3555,13 +3573,13 @@ parameters:
 		-
 			message: '#^Negated boolean expression is always true\.$#'
 			identifier: booleanNot.alwaysTrue
-			count: 1
+			count: 3
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
 			message: '#^Offset ''allowed_commands'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 1
+			count: 2
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
@@ -3571,7 +3589,25 @@ parameters:
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
+			message: '#^Offset ''credential_id'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Offset ''host'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
 			message: '#^Offset ''kind'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Offset ''port'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
@@ -3585,6 +3621,30 @@ parameters:
 		-
 			message: '#^Offset ''timeout'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Offset ''username'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Property App\\Domain\\Tool\\Services\\ToolTranslator\:\:\$sshExecutor is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
