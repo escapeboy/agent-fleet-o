@@ -42,7 +42,9 @@ class CheckBudgetAvailable
         // Check global team balance — only enforce if credits have been explicitly purchased.
         // Community/self-hosted installs never have purchase entries, so we skip this check
         // to avoid blocking jobs on deployments where no billing is configured.
-        $hasPurchasedCredits = CreditLedger::where('team_id', $experiment->team_id)
+        // withoutGlobalScopes() ensures this works in queue workers (console context) and tests.
+        $hasPurchasedCredits = CreditLedger::withoutGlobalScopes()
+            ->where('team_id', $experiment->team_id)
             ->whereIn('type', [LedgerType::Purchase->value, LedgerType::Refund->value])
             ->exists();
 
@@ -52,8 +54,12 @@ class CheckBudgetAvailable
             return;
         }
 
-        $latestEntry = CreditLedger::where('team_id', $experiment->team_id)
+        // Secondary sort by id (UUIDv7 is time-ordered) ensures deterministic ordering
+        // when multiple entries share the same created_at timestamp (e.g. in tests).
+        $latestEntry = CreditLedger::withoutGlobalScopes()
+            ->where('team_id', $experiment->team_id)
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->first(['balance_after']);
 
         if ($latestEntry !== null && $latestEntry->balance_after <= 0) {

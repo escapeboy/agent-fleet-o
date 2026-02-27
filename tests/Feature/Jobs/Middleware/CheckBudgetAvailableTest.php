@@ -74,12 +74,21 @@ class CheckBudgetAvailableTest extends TestCase
 
     public function test_blocks_job_when_balance_is_zero(): void
     {
+        // Establish a purchase so the billing guard is active, then drain to zero.
+        CreditLedger::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->experiment->user_id,
+            'type' => 'purchase',
+            'amount' => 10,
+            'balance_after' => 10,
+            'description' => 'Initial top-up',
+        ]);
         CreditLedger::create([
             'team_id' => $this->team->id,
             'user_id' => $this->experiment->user_id,
             'experiment_id' => $this->experiment->id,
             'type' => 'deduction',
-            'amount' => 0,
+            'amount' => 10,
             'balance_after' => 0,
             'description' => 'Zero balance',
         ]);
@@ -91,6 +100,15 @@ class CheckBudgetAvailableTest extends TestCase
 
     public function test_blocks_job_when_balance_is_negative(): void
     {
+        // Establish a purchase so the billing guard is active, then overdraft.
+        CreditLedger::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->experiment->user_id,
+            'type' => 'purchase',
+            'amount' => 5,
+            'balance_after' => 5,
+            'description' => 'Initial top-up',
+        ]);
         CreditLedger::create([
             'team_id' => $this->team->id,
             'user_id' => $this->experiment->user_id,
