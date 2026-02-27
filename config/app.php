@@ -137,4 +137,18 @@ return [
 
     'deployment_mode' => env('DEPLOYMENT_MODE', 'self-hosted'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Auth Bypass (Local No-Password Mode)
+    |--------------------------------------------------------------------------
+    |
+    | When set to true, the application auto-logs in as the first user on every
+    | request. Designed for local single-user installs where a password is
+    | unnecessary. Only activates when APP_ENV is not 'production' and
+    | DEPLOYMENT_MODE is 'self-hosted'. NEVER enable on a public server.
+    |
+    */
+
+    'auth_bypass' => env('APP_AUTH_BYPASS', false),
+
 ];

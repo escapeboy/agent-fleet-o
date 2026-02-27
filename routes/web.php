@@ -59,8 +59,29 @@ use Illuminate\Support\Facades\Route;
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 
-// Root — landing page (always visible, even when authenticated)
-Route::get('/', fn () => view('landing'))->name('home');
+// Root — smart redirect: setup (fresh install) → dashboard (authed) → login
+Route::get('/', function () {
+    try {
+        if (! \App\Models\User::exists()) {
+            return redirect()->route('setup');
+        }
+    } catch (\Throwable) {
+        // DB unreachable — send to setup page to show diagnostics
+        return redirect()->route('setup');
+    }
+
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return redirect()->route('login');
+})->name('home');
+
+// Setup / installation check page (public — excluded from DB-dependent middleware)
+Route::withoutMiddleware([
+    \App\Http\Middleware\SetCurrentTeam::class,
+    \App\Http\Middleware\SetPostgresRlsContext::class,
+])->get('/setup', \App\Livewire\Setup\SetupPage::class)->name('setup');
 
 // Legal pages (public)
 Route::get('/privacy', fn () => view('legal.privacy'))->name('legal.privacy');

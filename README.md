@@ -166,7 +166,7 @@ This will:
 
 Visit **http://localhost:8080** when complete.
 
-## Quick Start (Manual)
+## Quick Start (Manual — Web Setup)
 
 Requirements: PHP 8.4+, PostgreSQL 17+, Redis 7+, Node.js 20+, Composer
 
@@ -176,11 +176,34 @@ cd agent-fleet
 composer install
 npm install && npm run build
 cp .env.example .env
-# Edit .env with your database and Redis credentials
-php artisan app:install
+# Edit .env — set DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD, REDIS_HOST
+php artisan key:generate
+php artisan migrate
 php artisan horizon &
 php artisan serve
 ```
+
+Then open **http://localhost:8000** in your browser. The setup page will guide you through creating your admin account.
+
+> **Alternative:** Run `php artisan app:install` for an interactive CLI setup wizard that also seeds default agents and skills.
+
+## Authentication
+
+- **No email verification** — the self-hosted edition skips email verification entirely. Accounts are active immediately on registration.
+- **Single user** — all registered users join the default workspace automatically.
+
+### No-Password Mode (local installs)
+
+If you're running FleetQ locally on your own machine and don't want to enter a password on every visit, set `APP_AUTH_BYPASS=true` in `.env`:
+
+```bash
+APP_AUTH_BYPASS=true   # Auto-login as first user
+APP_ENV=local          # Required — bypass is disabled in production
+```
+
+With bypass enabled, the app logs you in automatically on every request. A logout link is still shown but you'll be logged back in on the next page load — this is intentional.
+
+> **Warning:** Never set `APP_AUTH_BYPASS=true` on a server accessible from the internet.
 
 ## Configuration
 
@@ -198,10 +221,13 @@ REDIS_DB=0          # Queues
 REDIS_CACHE_DB=1    # Cache
 REDIS_LOCK_DB=2     # Locks
 
-# LLM Providers -- at least one required
+# LLM Providers -- at least one required for AI features
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
 GOOGLE_AI_API_KEY=
+
+# Auth bypass -- local no-password mode (never use in production)
+APP_AUTH_BYPASS=false
 ```
 
 Additional LLM keys can be configured in **Settings > AI Provider Keys** after login.
