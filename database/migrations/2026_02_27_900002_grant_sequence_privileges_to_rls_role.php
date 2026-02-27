@@ -7,6 +7,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // PostgreSQL-only: sequences have separate ACLs from tables.
+        // Skipped on SQLite (test environment).
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         // The agent_fleet_rls role is used for RLS enforcement (SET ROLE).
         // PostgreSQL sequences have separate ACLs from their tables, so writes
         // to tables with auto-increment IDs fail unless the RLS role has USAGE
@@ -20,6 +26,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('REVOKE USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public FROM agent_fleet_rls');
     }
 };
