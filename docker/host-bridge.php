@@ -151,7 +151,7 @@ function get_version(string $command): ?string
     return strtok($stdout, "\n") ?: $stdout;
 }
 
-function build_command(string $agentKey, string $binaryPath, bool $streaming = false, ?string $purpose = null): ?string
+function build_command(string $agentKey, string $binaryPath, bool $streaming = false, ?string $purpose = null, ?string $model = null): ?string
 {
     $bin = escapeshellarg($binaryPath);
 
@@ -172,17 +172,19 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
 
     $isAssistant = $purpose === 'platform_assistant';
 
-    // Codex assistant: enable --full-auto for MCP tool execution and
-    // connect to our FleetQ MCP server (replaces advisory mode).
+    // Codex assistant: connect to our FleetQ MCP server.
+    // -c is a GLOBAL codex flag and must come before the 'exec' subcommand.
     if ($isAssistant) {
         $mcpServers = json_encode(['agent-fleet' => [
             'command' => 'php',
             'args' => ['artisan', 'mcp:start', 'agent-fleet'],
         ]]);
-        $codexMcpFlag = ' -c '.escapeshellarg("mcp_servers={$mcpServers}");
+        $codexConfigFlag = ' -c '.escapeshellarg("mcp_servers={$mcpServers}");
     } else {
-        $codexMcpFlag = '';
+        $codexConfigFlag = '';
     }
+
+    $codexModelFlag = $model ? ' --model '.escapeshellarg($model) : '';
 
     // Use stream-json when streaming for real-time output, json otherwise.
     // stream-json emits NDJSON events (assistant, content_block_delta, result)
@@ -193,7 +195,8 @@ function build_command(string $agentKey, string $binaryPath, bool $streaming = f
     $ccStreamFlags = $streaming ? ' --include-partial-messages --verbose' : '';
 
     return match ($agentKey) {
-        'codex' => $preamble.$bin." exec --json --full-auto{$codexMcpFlag}",
+        // -c (config override) is a global flag — must come before 'exec' subcommand
+        'codex' => $preamble.$bin."{$codexConfigFlag} exec --json --full-auto{$codexModelFlag}",
         'claude-code' => $preamble.$bin." --print --output-format {$ccOutputFormat}{$ccStreamFlags} --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' --max-budget-usd 2.0",
         default => null,
     };
@@ -357,6 +360,7 @@ if ($method === 'POST' && $path === '/execute') {
     }
 
     $purpose = $body['purpose'] ?? null;
+    $model = $body['model'] ?? null;
     $isAssistant = $purpose === 'platform_assistant';
 
     // Resolve working directory
@@ -385,7 +389,7 @@ if ($method === 'POST' && $path === '/execute') {
 
         $process = proc_open($ccAssistant['command'], $descriptors, $pipes, $cwd, $ccAssistant['env']);
     } else {
-        $command = build_command($agentKey, $binaryPath, $streaming, $purpose);
+        $command = build_command($agentKey, $binaryPath, $streaming, $purpose, $model);
 
         if (! $command) {
             json_response([

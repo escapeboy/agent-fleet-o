@@ -108,6 +108,27 @@ detect_runtime() {
 }
 
 # ---------------------------------------------------------------------------
+# Load agent API keys from .env so local agent CLIs can authenticate.
+# Only exports keys that are not already set in the environment.
+# ---------------------------------------------------------------------------
+load_agent_env_keys() {
+    if [ ! -f "$ENV_FILE" ]; then return; fi
+
+    for key in OPENAI_API_KEY ANTHROPIC_API_KEY GOOGLE_AI_API_KEY; do
+        # Skip if already exported
+        eval "current=\$$key"
+        if [ -n "$current" ]; then continue; fi
+
+        val=$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d'=' -f2-)
+        # Strip surrounding quotes if present
+        val=$(echo "$val" | sed "s/^['\"]//;s/['\"]$//")
+        if [ -n "$val" ]; then
+            export "${key}=${val}"
+        fi
+    done
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -115,6 +136,7 @@ echo "=== Agent Fleet — Host Bridge ==="
 echo ""
 
 ensure_secret
+load_agent_env_keys
 
 runtime=$(detect_runtime)
 
