@@ -4,7 +4,6 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\SshHostFingerprint;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -31,12 +30,12 @@ class ToolSshFingerprintsTool extends Tool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'action'         => 'required|string|in:list,delete',
+            'action' => 'required|string|in:list,delete',
             'fingerprint_id' => 'nullable|string',
         ]);
 
         return match ($validated['action']) {
-            'list'   => $this->list(),
+            'list' => $this->list(),
             'delete' => $this->delete($validated['fingerprint_id'] ?? null),
         };
     }
@@ -52,7 +51,7 @@ class ToolSshFingerprintsTool extends Tool
         }
 
         $rows = $fingerprints->map(fn ($f) => sprintf(
-            "%-30s  port %-5d  sha256:%s  verified:%s",
+            '%-30s  port %-5d  sha256:%s  verified:%s',
             $f->host,
             $f->port,
             substr($f->fingerprint_sha256, 0, 16).'...',

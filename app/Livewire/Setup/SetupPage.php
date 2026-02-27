@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -18,8 +19,11 @@ use Livewire\Component;
 class SetupPage extends Component
 {
     public string $name = '';
+
     public string $email = '';
+
     public string $password = '';
+
     public string $password_confirmation = '';
 
     /** @var array<string, array{status: string, detail: string, hint?: string}> */
@@ -51,22 +55,22 @@ class SetupPage extends Component
     public function createAccount(): void
     {
         Validator::make([
-            'name'                  => $this->name,
-            'email'                 => $this->email,
-            'password'              => $this->password,
+            'name' => $this->name,
+            'email' => $this->email,
+            'password' => $this->password,
             'password_confirmation' => $this->password_confirmation,
         ], [
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'string', 'email', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)],
         ])->validate();
 
         DB::transaction(function () {
             // Create admin user
             $user = User::create([
-                'name'              => $this->name,
-                'email'             => strtolower($this->email),
-                'password'          => Hash::make($this->password),
+                'name' => $this->name,
+                'email' => strtolower($this->email),
+                'password' => Hash::make($this->password),
                 'email_verified_at' => now(), // no email verification in self-hosted
             ]);
 
@@ -74,9 +78,9 @@ class SetupPage extends Component
             $team = Team::firstOrCreate(
                 ['slug' => 'default'],
                 [
-                    'name'     => config('app.name', 'FleetQ'),
+                    'name' => config('app.name', 'FleetQ'),
                     'owner_id' => $user->id,
-                    'plan'     => 'community',
+                    'plan' => 'community',
                 ],
             );
 
@@ -102,7 +106,7 @@ class SetupPage extends Component
         $this->redirect(route('dashboard'), navigate: true);
     }
 
-    public function render(): \Illuminate\View\View
+    public function render(): View
     {
         return view('livewire.setup.setup-page');
     }
@@ -120,7 +124,7 @@ class SetupPage extends Component
             $this->checks['database'] = [
                 'status' => 'fail',
                 'detail' => 'Cannot connect to database',
-                'hint'   => 'Check DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, and DB_PASSWORD in your .env file. Error: ' . $e->getMessage(),
+                'hint' => 'Check DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, and DB_PASSWORD in your .env file. Error: '.$e->getMessage(),
             ];
             $blocking = true;
         }
@@ -136,7 +140,7 @@ class SetupPage extends Component
                     $this->checks['migrations'] = [
                         'status' => 'fail',
                         'detail' => 'Database tables not found',
-                        'hint'   => 'Run migrations: php artisan migrate',
+                        'hint' => 'Run migrations: php artisan migrate',
                     ];
                     $blocking = true;
                 }
@@ -144,7 +148,7 @@ class SetupPage extends Component
                 $this->checks['migrations'] = [
                     'status' => 'fail',
                     'detail' => 'Cannot verify database schema',
-                    'hint'   => 'Run migrations: php artisan migrate',
+                    'hint' => 'Run migrations: php artisan migrate',
                 ];
                 $blocking = true;
             }
@@ -155,7 +159,7 @@ class SetupPage extends Component
             $this->checks['app_key'] = [
                 'status' => 'fail',
                 'detail' => 'Application key is not set',
-                'hint'   => 'Generate one: php artisan key:generate',
+                'hint' => 'Generate one: php artisan key:generate',
             ];
             $blocking = true;
         } else {
@@ -170,7 +174,7 @@ class SetupPage extends Component
             $this->checks['redis'] = [
                 'status' => 'warn',
                 'detail' => 'Cannot connect to Redis',
-                'hint'   => 'Queue workers and sessions require Redis. Check REDIS_HOST and REDIS_PORT in .env.',
+                'hint' => 'Queue workers and sessions require Redis. Check REDIS_HOST and REDIS_PORT in .env.',
             ];
         }
 
@@ -184,7 +188,7 @@ class SetupPage extends Component
             : [
                 'status' => 'warn',
                 'detail' => 'No LLM API key found',
-                'hint'   => 'Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_AI_API_KEY in .env. You can also configure this later in Settings.',
+                'hint' => 'Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_AI_API_KEY in .env. You can also configure this later in Settings.',
             ];
 
         $this->blockerPresent = $blocking;

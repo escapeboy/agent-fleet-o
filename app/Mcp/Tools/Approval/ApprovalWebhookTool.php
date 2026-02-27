@@ -4,10 +4,10 @@ namespace App\Mcp\Tools\Approval;
 
 use App\Domain\Approval\Models\ApprovalRequest;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 class ApprovalWebhookTool extends Tool

@@ -4,6 +4,8 @@ use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
+use App\Http\Middleware\SetCurrentTeam;
+use App\Http\Middleware\SetPostgresRlsContext;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
@@ -34,6 +36,7 @@ use App\Livewire\Projects\ProjectDetailPage;
 use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
+use App\Livewire\Setup\SetupPage;
 use App\Livewire\Shared\NotificationInboxPage;
 use App\Livewire\Shared\NotificationPreferencesPage;
 use App\Livewire\Signals\ConnectorBindingsPage;
@@ -54,6 +57,7 @@ use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 // Public experiment share (no auth)
@@ -62,10 +66,10 @@ Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->
 // Root — smart redirect: setup (fresh install) → dashboard (authed) → login
 Route::get('/', function () {
     try {
-        if (! \App\Models\User::exists()) {
+        if (! User::exists()) {
             return redirect()->route('setup');
         }
-    } catch (\Throwable) {
+    } catch (Throwable) {
         // DB unreachable — send to setup page to show diagnostics
         return redirect()->route('setup');
     }
@@ -79,9 +83,9 @@ Route::get('/', function () {
 
 // Setup / installation check page (public — excluded from DB-dependent middleware)
 Route::withoutMiddleware([
-    \App\Http\Middleware\SetCurrentTeam::class,
-    \App\Http\Middleware\SetPostgresRlsContext::class,
-])->get('/setup', \App\Livewire\Setup\SetupPage::class)->name('setup');
+    SetCurrentTeam::class,
+    SetPostgresRlsContext::class,
+])->get('/setup', SetupPage::class)->name('setup');
 
 // Legal pages (public)
 Route::get('/privacy', fn () => view('legal.privacy'))->name('legal.privacy');

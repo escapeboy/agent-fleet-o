@@ -10,12 +10,12 @@ class SshFingerprintResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'                 => $this->id,
-            'host'               => $this->host,
-            'port'               => $this->port,
+            'id' => $this->id,
+            'host' => $this->host,
+            'port' => $this->port,
             'fingerprint_sha256' => $this->fingerprint_sha256,
-            'verified_at'        => $this->verified_at?->toISOString(),
-            'created_at'         => $this->created_at->toISOString(),
+            'verified_at' => $this->verified_at?->toISOString(),
+            'created_at' => $this->created_at->toISOString(),
         ];
     }
 }

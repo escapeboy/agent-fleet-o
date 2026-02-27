@@ -4,7 +4,6 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -42,18 +41,18 @@ class ToolBashPolicyTool extends Tool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'action'               => 'required|string|in:get,set,reset',
-            'blocked_commands'     => 'nullable|array',
-            'blocked_patterns'     => 'nullable|array',
-            'allowed_commands'     => 'nullable|array',
-            'allowed_paths'        => 'nullable|array',
+            'action' => 'required|string|in:get,set,reset',
+            'blocked_commands' => 'nullable|array',
+            'blocked_patterns' => 'nullable|array',
+            'allowed_commands' => 'nullable|array',
+            'allowed_paths' => 'nullable|array',
             'require_approval_for' => 'nullable|array',
-            'max_command_timeout'  => 'nullable|integer|min:1|max:3600',
+            'max_command_timeout' => 'nullable|integer|min:1|max:3600',
         ]);
 
         return match ($validated['action']) {
-            'get'   => $this->get(),
-            'set'   => $this->set($validated),
+            'get' => $this->get(),
+            'set' => $this->set($validated),
             'reset' => $this->reset(),
         };
     }
