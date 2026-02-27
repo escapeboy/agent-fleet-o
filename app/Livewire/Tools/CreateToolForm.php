@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Tools;
 
-use App\Domain\Shared\Services\DeploymentMode;
+use App\Domain\Credential\Enums\CredentialStatus;
+use App\Domain\Credential\Enums\CredentialType;
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Tool\Actions\CreateToolAction;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Enums\ToolRiskLevel;
@@ -41,6 +43,17 @@ class CreateToolForm extends Component
     public string $allowedPaths = '/tmp/agent-workspace';
 
     public bool $readOnly = false;
+
+    // SSH-specific
+    public string $sshHost = '';
+
+    public int $sshPort = 22;
+
+    public string $sshUsername = 'root';
+
+    public string $sshCredentialId = '';
+
+    public string $sshAllowedCommands = '';
 
     // Credentials (optional)
     public string $apiKey = '';
@@ -91,6 +104,15 @@ class CreateToolForm extends Component
                 'mcpUrl' => 'required|url',
             ]);
         }
+
+        if ($type === ToolType::BuiltIn && $this->builtInKind === 'ssh') {
+            $this->validate([
+                'sshHost' => 'required|string|max:255',
+                'sshPort' => 'required|integer|min:1|max:65535',
+                'sshUsername' => 'required|string|max:64',
+                'sshCredentialId' => 'required|uuid',
+            ]);
+        }
     }
 
     public function save(): void
@@ -135,13 +157,29 @@ class CreateToolForm extends Component
                 'url' => $this->mcpUrl,
                 'headers' => $this->parseKeyValuePairs($this->mcpHeaders),
             ],
-            ToolType::BuiltIn => [
-                'kind' => $this->builtInKind,
-                'allowed_commands' => array_filter(array_map('trim', explode(',', $this->allowedCommands))),
-                'allowed_paths' => array_filter(array_map('trim', explode(',', $this->allowedPaths))),
-                'read_only' => $this->readOnly,
-            ],
+            ToolType::BuiltIn => $this->buildBuiltInConfig(),
         };
+    }
+
+    private function buildBuiltInConfig(): array
+    {
+        if ($this->builtInKind === 'ssh') {
+            return [
+                'kind' => 'ssh',
+                'host' => $this->sshHost,
+                'port' => $this->sshPort,
+                'username' => $this->sshUsername,
+                'credential_id' => $this->sshCredentialId,
+                'allowed_commands' => array_values(array_filter(array_map('trim', explode(',', $this->sshAllowedCommands)))),
+            ];
+        }
+
+        return [
+            'kind' => $this->builtInKind,
+            'allowed_commands' => array_filter(array_map('trim', explode(',', $this->allowedCommands))),
+            'allowed_paths' => array_filter(array_map('trim', explode(',', $this->allowedPaths))),
+            'read_only' => $this->readOnly,
+        ];
     }
 
     private function buildCredentials(): array
@@ -184,15 +222,17 @@ class CreateToolForm extends Component
     {
         $types = ToolType::cases();
 
-        // In cloud mode, hide built_in (host machine capabilities are not available)
-        if (app(DeploymentMode::class)->isCloud()) {
-            $types = array_filter($types, fn ($t) => $t !== ToolType::BuiltIn);
-        }
+        // SSH credentials: only active SSH key credentials for the current team
+        $sshCredentials = Credential::where('credential_type', CredentialType::SshKey)
+            ->where('status', CredentialStatus::Active)
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return view('livewire.tools.create-tool-form', [
             'types' => $types,
             'builtInKinds' => BuiltInToolKind::cases(),
             'riskLevels' => ToolRiskLevel::cases(),
+            'sshCredentials' => $sshCredentials,
         ])->layout('layouts.app', ['header' => 'Create Tool']);
     }
 }
