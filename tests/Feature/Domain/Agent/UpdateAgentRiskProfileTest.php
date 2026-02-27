@@ -113,44 +113,72 @@ class UpdateAgentRiskProfileTest extends TestCase
     {
         $agent = $this->makeAgent(['status' => AgentStatus::Active]);
 
-        // 100% failure rate → failure contribution = 30
-        // We need total > 80. Add more failures to ensure it passes.
+        // 100% failure rate → failure contribution = 1.0 * 30 = 30
         for ($i = 0; $i < 20; $i++) {
             $this->makeExecution($agent, 'failed', 10000);
         }
 
-        // Force score > 80 by mocking — create a second agent with much lower cost
-        // so this agent is in the 100th percentile (cost_percentile = 1.0, weight = 25)
-        $otherAgent = $this->makeAgent();
-        AgentExecution::create([
-            'agent_id' => $otherAgent->id,
-            'team_id' => $otherAgent->team_id,
-            'status' => 'completed',
-            'cost_credits' => 1,
-            'duration_ms' => 100,
-            'input' => [],
-            'output' => [],
+        // Add several other agents with much lower cost so this agent is in the
+        // top cost percentile (cost_percentile approaches 1.0, weight = 25).
+        // With 5 other agents at cost 1 and this agent at cost 10000:
+        // lowerCount=5, total=6 → costPercentile = 5/6 ≈ 0.833 → contribution ≈ 20.8
+        for ($i = 0; $i < 5; $i++) {
+            $other = $this->makeAgent();
+            AgentExecution::create([
+                'agent_id' => $other->id,
+                'team_id' => $other->team_id,
+                'status' => 'completed',
+                'cost_credits' => 1,
+                'duration_ms' => 100,
+                'input' => [],
+                'output' => [],
+            ]);
+        }
+
+        // Create an experiment to attach PlaybookSteps
+        $experiment = \App\Domain\Experiment\Models\Experiment::factory()->create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
         ]);
+
+        // Add PlaybookSteps with 100% PII guardrail blocks:
+        // pii_detection_rate = 1.0 → contribution = 1.0 * 25 = 25
+        // guardrail_block_rate = 1.0 → contribution = 1.0 * 20 = 20
+        for ($i = 0; $i < 5; $i++) {
+            \App\Domain\Experiment\Models\PlaybookStep::create([
+                'experiment_id' => $experiment->id,
+                'agent_id' => $agent->id,
+                'order' => $i + 1,
+                'status' => 'completed',
+                'guardrail_result' => ['safe' => false, 'reason' => 'PII detected in output'],
+                'conditions' => [],
+                'input_mapping' => [],
+            ]);
+        }
+
+        // Expected score:
+        //   failure_rate_7d (1.0) * 30   = 30.0
+        //   cost_percentile (~0.833) * 25 ≈ 20.8
+        //   pii_detection_rate (1.0) * 25 = 25.0
+        //   guardrail_block_rate (1.0) * 20 = 20.0
+        //   Total ≈ 95.8 → well above 80
 
         $this->action->execute($agent);
 
         $agent->refresh();
 
-        if ($agent->risk_score > 80) {
-            // Auto-disable should have fired
-            $this->assertEquals(AgentStatus::Disabled, $agent->status);
+        // Risk score must exceed 80 with this data set
+        $this->assertGreaterThan(80, $agent->risk_score, 'Risk score should exceed 80 with 100% failure, high cost, and 100% PII/guardrail blocks');
 
-            // Team notification should have been created
-            $notification = UserNotification::where('user_id', $this->user->id)
-                ->where('type', 'agent.risk.high')
-                ->first();
-            $this->assertNotNull($notification);
-            $this->assertStringContainsString($agent->name, $notification->title);
-        } else {
-            // Risk score didn't exceed 80 with this data set — agent should still be active
-            $this->assertEquals(AgentStatus::Active, $agent->status);
-            $this->markTestIncomplete('Risk score did not exceed 80 with test data; verify formula');
-        }
+        // Auto-disable should have fired
+        $this->assertEquals(AgentStatus::Disabled, $agent->status);
+
+        // Team notification should have been created
+        $notification = UserNotification::where('user_id', $this->user->id)
+            ->where('type', 'agent.risk.high')
+            ->first();
+        $this->assertNotNull($notification);
+        $this->assertStringContainsString($agent->name, $notification->title);
     }
 
     public function test_risk_factors_include_high_failure_rate_flag(): void

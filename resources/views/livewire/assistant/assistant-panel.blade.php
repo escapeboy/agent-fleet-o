@@ -4,6 +4,7 @@
         inputText: '',
         pendingMessage: null,
         sending: false,
+        userScrolled: false,
         panelWidth: parseInt(localStorage.getItem('assistant-panel-width')) || 420,
         resizing: false,
         init() {
@@ -28,6 +29,30 @@
                     }
                 }
             });
+
+            // Scroll to bottom when panel opens
+            this.$watch('open', (val) => {
+                if (val) {
+                    this.userScrolled = false;
+                    this.scrollToBottom();
+                }
+            });
+
+            // Attach scroll listener + MutationObserver for auto-scroll
+            this.$nextTick(() => {
+                const container = this.$refs.messagesContainer;
+                if (!container) return;
+
+                // Detect when user manually scrolls up
+                container.addEventListener('scroll', () => {
+                    const distFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+                    this.userScrolled = distFromBottom > 100;
+                });
+
+                // Auto-scroll on any content change (new messages or streaming tokens)
+                new MutationObserver(() => this.scrollIfNeeded())
+                    .observe(container, { childList: true, subtree: true });
+            });
         },
         scrollToBottom() {
             this.$nextTick(() => {
@@ -37,6 +62,9 @@
                 }
             });
         },
+        scrollIfNeeded() {
+            if (!this.userScrolled) this.scrollToBottom();
+        },
         async send() {
             const text = this.inputText.trim();
             if (!text || this.sending) return;
@@ -44,6 +72,7 @@
             this.inputText = '';
             this.sending = true;
             this.pendingMessage = text;
+            this.userScrolled = false;
             this.scrollToBottom();
 
             // Reset textarea height

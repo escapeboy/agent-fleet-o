@@ -84,10 +84,9 @@ class LocalAgentDiscovery
 
         $binary = $config['binary'];
 
-        $process = Process::fromShellCommandline("which {$binary}");
-        $process->setTimeout(5);
-
         try {
+            $process = Process::fromShellCommandline("which {$binary}");
+            $process->setTimeout(5);
             $process->run();
 
             if ($process->isSuccessful()) {
@@ -121,10 +120,9 @@ class LocalAgentDiscovery
 
         $detectCommand = $config['detect_command'];
 
-        $process = Process::fromShellCommandline($detectCommand);
-        $process->setTimeout(10);
-
         try {
+            $process = Process::fromShellCommandline($detectCommand);
+            $process->setTimeout(10);
             $process->run();
 
             if ($process->isSuccessful()) {

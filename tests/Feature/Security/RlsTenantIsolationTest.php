@@ -9,6 +9,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
@@ -96,7 +97,7 @@ class RlsTenantIsolationTest extends TestCase
         parent::tearDown();
     }
 
-    /** @test */
+    #[Test]
     public function rls_allows_team_a_to_see_only_its_own_agents(): void
     {
         $this->withRlsContext($this->teamA->id, function (): void {
@@ -108,7 +109,7 @@ class RlsTenantIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function rls_allows_team_b_to_see_only_its_own_agents(): void
     {
         $this->withRlsContext($this->teamB->id, function (): void {
@@ -120,7 +121,7 @@ class RlsTenantIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function rls_blocks_direct_access_to_another_teams_agent_by_id(): void
     {
         $this->withRlsContext($this->teamA->id, function (): void {
@@ -131,7 +132,7 @@ class RlsTenantIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function rls_blocks_all_access_when_no_team_context_is_set(): void
     {
         $this->withRlsContext('', function (): void {
@@ -141,7 +142,7 @@ class RlsTenantIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function rls_prevents_insert_for_wrong_team(): void
     {
         $this->withRlsContext($this->teamA->id, function (): void {
@@ -159,7 +160,7 @@ class RlsTenantIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function rls_context_resets_between_calls(): void
     {
         // First context: Team A
@@ -175,7 +176,7 @@ class RlsTenantIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function semantic_cache_entries_are_accessible_across_teams(): void
     {
         // semantic_cache_entries has a PERMISSIVE allow_all policy

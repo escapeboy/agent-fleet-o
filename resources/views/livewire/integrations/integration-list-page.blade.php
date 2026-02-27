@@ -10,7 +10,6 @@
     {{-- Page Header --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-semibold text-gray-900">Integrations</h1>
             <p class="mt-1 text-sm text-gray-500">Connect external services to receive signals and execute actions.</p>
         </div>
     </div>
@@ -52,11 +51,19 @@
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-4 text-lg font-semibold text-gray-900">Available Integrations</h2>
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            @php
+                $authLabels = [
+                    'api_key'      => 'API Key',
+                    'oauth2'       => 'OAuth 2.0',
+                    'webhook_only' => 'Webhook Only',
+                    'basic_auth'   => 'Basic Auth',
+                ];
+            @endphp
             @foreach($availableDrivers as $slug => $info)
                 <div class="rounded-lg border border-gray-100 p-4 hover:border-primary-200 hover:bg-primary-50">
                     <div class="mb-2 text-2xl">{{ $info['icon'] ?? '🔌' }}</div>
                     <p class="font-medium text-gray-900">{{ $info['label'] }}</p>
-                    <p class="mt-0.5 text-xs text-gray-500">{{ ucfirst($info['auth']) }}</p>
+                    <p class="mt-0.5 text-xs text-gray-500">{{ $authLabels[$info['auth']] ?? ucfirst($info['auth']) }}</p>
                     <button wire:click="openConnectForm('{{ $slug }}')"
                             class="mt-3 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
                         Connect

@@ -1,7 +1,6 @@
 <div class="space-y-8">
     {{-- Page header --}}
     <div>
-        <h1 class="text-xl font-semibold text-(--color-on-surface)">Signal Sources</h1>
         <p class="mt-1 text-sm text-(--color-on-surface-muted)">
             Configure inbound connectors that deliver signals to FleetQ. Signals trigger agents, projects, and automation rules.
         </p>
