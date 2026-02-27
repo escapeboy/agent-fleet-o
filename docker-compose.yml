@@ -83,6 +83,7 @@ services:
     volumes:
       - .:/var/www
       - vendor_data:/var/www/vendor
+      - ./docker/php/conf.d/horizon.ini:/usr/local/etc/php/conf.d/zz-horizon.ini
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -110,6 +111,7 @@ services:
     volumes:
       - .:/var/www
       - vendor_data:/var/www/vendor
+      - ./docker/php/conf.d/horizon.ini:/usr/local/etc/php/conf.d/zz-horizon.ini
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -137,6 +139,7 @@ services:
       - "5174:5173"
     volumes:
       - .:/var/www
+      - vendor_data:/var/www/vendor
       - node_modules:/var/www/node_modules
     networks:
       - agent-fleet-open

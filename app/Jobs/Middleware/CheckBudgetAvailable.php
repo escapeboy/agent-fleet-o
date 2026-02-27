@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Middleware;
 
+use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Experiment\Models\Experiment;
 use Closure;
@@ -38,9 +39,19 @@ class CheckBudgetAvailable
             return;
         }
 
-        // Check global team balance — only enforce if credits have been issued.
-        // Community installs have no credit ledger entries, so we skip this check
-        // entirely to avoid blocking all jobs on self-hosted deployments.
+        // Check global team balance — only enforce if credits have been explicitly purchased.
+        // Community/self-hosted installs never have purchase entries, so we skip this check
+        // to avoid blocking jobs on deployments where no billing is configured.
+        $hasPurchasedCredits = CreditLedger::where('team_id', $experiment->team_id)
+            ->whereIn('type', [LedgerType::Purchase->value, LedgerType::Refund->value])
+            ->exists();
+
+        if (! $hasPurchasedCredits) {
+            $next($job);
+
+            return;
+        }
+
         $latestEntry = CreditLedger::where('team_id', $experiment->team_id)
             ->orderByDesc('created_at')
             ->first(['balance_after']);

@@ -29,9 +29,7 @@ class ArtifactListTool extends Tool
             'project_run_id' => $schema->string()
                 ->description('Filter by project run UUID'),
             'limit' => $schema->integer()
-                ->description('Max results (default 20)')
-                ->minimum(1)
-                ->maximum(100),
+                ->description('Max results (default 20, max 100)'),
         ];
     }
 

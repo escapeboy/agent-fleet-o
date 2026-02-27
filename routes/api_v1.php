@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\SshFingerprintController;
 use App\Http\Controllers\Api\V1\ToolController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
 use App\Http\Controllers\Api\V1\WorkflowController;
@@ -81,6 +82,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Tools
     Route::apiResource('tools', ToolController::class);
+    Route::get('/ssh-fingerprints', [SshFingerprintController::class, 'index']);
+    Route::delete('/ssh-fingerprints/{sshFingerprint}', [SshFingerprintController::class, 'destroy']);
 
     // Credentials
     Route::apiResource('credentials', CredentialController::class);

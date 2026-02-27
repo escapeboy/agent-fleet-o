@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     /**
-     * Tables with a direct team_id column — RLS is applied with RESTRICTIVE policies.
+     * Tables with a direct team_id column — RLS is applied with PERMISSIVE policies.
      * Child tables without team_id (skill_versions, playbook_steps, workflow_nodes, etc.)
      * are protected indirectly through their parent model's RLS.
      *

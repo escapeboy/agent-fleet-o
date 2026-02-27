@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTaskStatus;
@@ -448,9 +449,8 @@ class RecoverStuckTasks extends Command
         $this->notifyStuckExperiment($experiment, $attempts, $state->value, $stuckDuration);
 
         try {
-            app(TransitionExperimentAction::class)->execute(
+            app(PauseExperimentAction::class)->execute(
                 experiment: $experiment,
-                toState: ExperimentStatus::Paused,
                 reason: "Auto-paused after {$attempts} recovery attempts — stuck in {$state->value} for {$stuckDuration}",
             );
 
