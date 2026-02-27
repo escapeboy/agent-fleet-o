@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     /**
-     * Tables with a direct team_id column — RLS is applied with RESTRICTIVE policies.
+     * Tables with a direct team_id column — RLS is applied with PERMISSIVE policies.
      * Child tables without team_id (skill_versions, playbook_steps, workflow_nodes, etc.)
      * are protected indirectly through their parent model's RLS.
      *
@@ -122,8 +122,11 @@ return new class extends Migration
             \$func\$;
         ");
 
-        // 5. Enable RLS and create RESTRICTIVE policies on all tenant tables.
-        //    RESTRICTIVE policies are combined with AND logic (stricter than PERMISSIVE AND).
+        // 5. Enable RLS and create PERMISSIVE policies on all tenant tables.
+        //    PERMISSIVE is the correct choice for tenant isolation: a row is accessible
+        //    if it passes this policy (OR logic across permissive policies).
+        //    RESTRICTIVE alone would deny all rows because PostgreSQL requires at least
+        //    one PERMISSIVE policy to allow access — "only restrictive policies = deny all".
         //    FOR ALL covers SELECT, INSERT, UPDATE, DELETE in one policy.
         //    WITH CHECK ensures INSERT/UPDATE cannot write rows for a different team.
         foreach ($this->tenantTables as $table) {
@@ -144,7 +147,7 @@ return new class extends Migration
 
             DB::statement("
                 CREATE POLICY team_isolation ON \"{$table}\"
-                AS RESTRICTIVE
+                AS PERMISSIVE
                 FOR ALL
                 USING (team_id = current_team_id())
                 WITH CHECK (team_id = current_team_id())
