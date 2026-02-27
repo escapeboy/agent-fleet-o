@@ -86,11 +86,22 @@ return new class extends Migration
         }
 
         foreach ($this->tenantTables as $table) {
+            // Skip tables that don't exist in this installation
             $exists = DB::selectOne(
                 "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=?",
                 [$table],
             );
             if (! $exists) {
+                continue;
+            }
+
+            // Skip tables that don't have a team_id column (not all tables in the list
+            // may have been given team_id in every installation variant)
+            $hasTeamId = DB::selectOne(
+                "SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=? AND column_name='team_id'",
+                [$table],
+            );
+            if (! $hasTeamId) {
                 continue;
             }
 
@@ -131,6 +142,14 @@ return new class extends Migration
                 [$table],
             );
             if (! $exists) {
+                continue;
+            }
+
+            $hasTeamId = DB::selectOne(
+                "SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=? AND column_name='team_id'",
+                [$table],
+            );
+            if (! $hasTeamId) {
                 continue;
             }
 
