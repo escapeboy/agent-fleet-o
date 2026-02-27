@@ -159,6 +159,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
             agent_key = body.get("agent_key", "")
             prompt = body.get("prompt", "")
+            model = body.get("model")
             timeout = int(body.get("timeout", 300))
             workdir = body.get("working_directory")
 
@@ -181,7 +182,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 }, 404)
                 return
 
-            command = agent["command_template"].format(binary=binary_path)
+            template = agent["command_template"]
+            if model and agent_key == "codex":
+                # --model is an exec subcommand flag
+                template = template + " --model " + model
+            command = template.format(binary=binary_path)
 
             # Resolve working directory
             cwd = workdir if workdir and os.path.isdir(workdir) else str(CONFIG_PATH.parent.parent)
