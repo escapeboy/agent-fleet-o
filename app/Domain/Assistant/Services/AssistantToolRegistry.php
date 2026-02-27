@@ -54,14 +54,26 @@ class AssistantToolRegistry
     public static function toolTier(string $toolName): string
     {
         return match (true) {
-            in_array($toolName, ['kill_experiment', 'archive_project']) => 'destructive',
+            in_array($toolName, [
+                'kill_experiment', 'archive_project',
+                'delete_agent', 'delete_memory', 'delete_connector_binding',
+                'manage_byok_credential', 'manage_api_token',
+            ]) => 'destructive',
             str_starts_with($toolName, 'create_') ||
+            str_starts_with($toolName, 'execute_') ||
+            str_starts_with($toolName, 'update_') ||
+            str_starts_with($toolName, 'generate_') ||
+            str_starts_with($toolName, 'activate_') ||
+            str_starts_with($toolName, 'start_') ||
             str_starts_with($toolName, 'pause_') ||
             str_starts_with($toolName, 'resume_') ||
             str_starts_with($toolName, 'retry_') ||
             str_starts_with($toolName, 'trigger_') ||
             str_starts_with($toolName, 'approve_') ||
-            str_starts_with($toolName, 'reject_') => 'write',
+            str_starts_with($toolName, 'reject_') ||
+            str_starts_with($toolName, 'save_') ||
+            str_starts_with($toolName, 'sync_') ||
+            str_starts_with($toolName, 'upload_') => 'write',
             default => 'read',
         };
     }

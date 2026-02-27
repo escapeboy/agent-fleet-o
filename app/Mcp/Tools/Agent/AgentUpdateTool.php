@@ -30,6 +30,12 @@ class AgentUpdateTool extends Tool
                 ->description('New backstory'),
             'personality' => $schema->object()
                 ->description('New personality traits: {tone, communication_style, traits[], behavioral_rules[], response_format_preference}'),
+            'provider' => $schema->string()
+                ->description('Override LLM provider (e.g. anthropic, openai, google, claude-code, codex)'),
+            'model' => $schema->string()
+                ->description('Override LLM model name (e.g. claude-sonnet-4-5, gpt-4o)'),
+            'budget_cap_credits' => $schema->integer()
+                ->description('Per-agent budget cap in credits. Set to 0 to remove cap.'),
         ];
     }
 
@@ -42,6 +48,9 @@ class AgentUpdateTool extends Tool
             'goal' => 'nullable|string',
             'backstory' => 'nullable|string',
             'personality' => 'nullable|array',
+            'provider' => 'nullable|string',
+            'model' => 'nullable|string',
+            'budget_cap_credits' => 'nullable|integer|min:0',
         ]);
 
         $agent = Agent::find($validated['agent_id']);
@@ -56,10 +65,17 @@ class AgentUpdateTool extends Tool
             'goal' => $validated['goal'] ?? null,
             'backstory' => $validated['backstory'] ?? null,
             'personality' => $validated['personality'] ?? null,
+            'provider' => $validated['provider'] ?? null,
+            'model' => $validated['model'] ?? null,
         ], fn ($v) => $v !== null);
 
+        // budget_cap_credits: allow explicit 0 (removes cap) so we handle separately
+        if (array_key_exists('budget_cap_credits', $validated) && $validated['budget_cap_credits'] !== null) {
+            $data['budget_cap_credits'] = $validated['budget_cap_credits'] === 0 ? null : $validated['budget_cap_credits'];
+        }
+
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality.');
+            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits.');
         }
 
         $agent->update($data);

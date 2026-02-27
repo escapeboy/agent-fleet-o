@@ -4,10 +4,13 @@ namespace App\Mcp\Servers;
 
 use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Tools\Agent\AgentCreateTool;
+use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
 use App\Mcp\Tools\Agent\AgentListTool;
+use App\Mcp\Tools\Agent\AgentSkillSyncTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
+use App\Mcp\Tools\Agent\AgentToolSyncTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
@@ -39,8 +42,10 @@ use App\Mcp\Tools\Crew\CrewUpdateTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
+use App\Mcp\Tools\Evolution\EvolutionRejectTool;
 use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
+use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentGetTool;
 use App\Mcp\Tools\Experiment\ExperimentKillTool;
 use App\Mcp\Tools\Experiment\ExperimentListTool;
@@ -58,14 +63,17 @@ use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
+use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
+use App\Mcp\Tools\Memory\MemoryUploadKnowledgeTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
+use App\Mcp\Tools\Project\ProjectActivateTool;
 use App\Mcp\Tools\Project\ProjectArchiveTool;
 use App\Mcp\Tools\Project\ProjectCreateTool;
 use App\Mcp\Tools\Project\ProjectGetTool;
@@ -75,12 +83,15 @@ use App\Mcp\Tools\Project\ProjectResumeTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
+use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
+use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
+use App\Mcp\Tools\Signal\ConnectorBindingDeleteTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
 use App\Mcp\Tools\Signal\ContactManageTool;
 use App\Mcp\Tools\Signal\HttpMonitorTool;
@@ -101,6 +112,7 @@ use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
+use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
 use App\Mcp\Tools\Tool\ToolBashPolicyTool;
@@ -157,18 +169,22 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
-        // Agent (6)
+        // Agent (9)
         AgentListTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
         AgentUpdateTool::class,
         AgentToggleStatusTool::class,
         AgentTemplatesListTool::class,
+        AgentSkillSyncTool::class,
+        AgentToolSyncTool::class,
+        AgentDeleteTool::class,
 
-        // Evolution (3)
+        // Evolution (4)
         EvolutionProposalListTool::class,
         EvolutionAnalyzeTool::class,
         EvolutionApplyTool::class,
+        EvolutionRejectTool::class,
 
         // Crew (7)
         CrewListTool::class,
@@ -179,10 +195,11 @@ class AgentFleetServer extends Server
         CrewExecutionStatusTool::class,
         CrewExecutionsListTool::class,
 
-        // Experiment (12)
+        // Experiment (13)
         ExperimentListTool::class,
         ExperimentGetTool::class,
         ExperimentCreateTool::class,
+        ExperimentStartTool::class,
         ExperimentPauseTool::class,
         ExperimentResumeTool::class,
         ExperimentRetryTool::class,
@@ -237,11 +254,12 @@ class AgentFleetServer extends Server
         WorkflowTimeGateTool::class,
         WorkflowExecutionChainTool::class,
 
-        // Project (8)
+        // Project (9)
         ProjectListTool::class,
         ProjectGetTool::class,
         ProjectCreateTool::class,
         ProjectUpdateTool::class,
+        ProjectActivateTool::class,
         ProjectPauseTool::class,
         ProjectResumeTool::class,
         ProjectTriggerRunTool::class,
@@ -254,7 +272,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (10)
+        // Signal (11)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -264,6 +282,7 @@ class AgentFleetServer extends Server
         HttpMonitorTool::class,
         InboundConnectorManageTool::class,
         ConnectorBindingTool::class,
+        ConnectorBindingDeleteTool::class,
         ContactManageTool::class,
 
         // Budget (3)
@@ -283,10 +302,12 @@ class AgentFleetServer extends Server
         MarketplaceReviewTool::class,
         MarketplaceCategoriesListTool::class,
 
-        // Memory (3)
+        // Memory (5)
         MemorySearchTool::class,
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
+        MemoryDeleteTool::class,
+        MemoryUploadKnowledgeTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,
@@ -307,12 +328,14 @@ class AgentFleetServer extends Server
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
 
-        // Shared (5)
+        // Shared (7)
         NotificationTool::class,
         TeamGetTool::class,
         TeamUpdateTool::class,
         TeamMembersTool::class,
         LocalLlmTool::class,
+        TeamByokCredentialManageTool::class,
+        ApiTokenManageTool::class,
 
         // Telegram (1)
         TelegramBotTool::class,
@@ -333,9 +356,10 @@ class AgentFleetServer extends Server
         // RunPod (1)
         RunPodManageTool::class,
 
-        // System (3)
+        // System (4)
         DashboardKpisTool::class,
         SystemHealthTool::class,
         AuditLogTool::class,
+        GlobalSettingsUpdateTool::class,
     ];
 }
