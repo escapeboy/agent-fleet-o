@@ -4,7 +4,7 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\SshHostFingerprint;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Mcp\Attributes\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
