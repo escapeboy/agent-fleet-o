@@ -2,6 +2,7 @@
 
 namespace App\Domain\Budget\Actions;
 
+use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Experiment\Models\Experiment;
 
@@ -35,7 +36,22 @@ class CheckBudgetAction
             }
         }
 
-        // Global team balance check (scoped by team_id for isolation)
+        // Global team balance check — only enforce if credits have been explicitly purchased.
+        // Community/self-hosted installs never have purchase entries, so we skip this check
+        // to avoid blocking experiments on deployments where no billing is configured.
+        $hasPurchasedCredits = CreditLedger::withoutGlobalScopes()
+            ->where('team_id', $experiment->team_id)
+            ->whereIn('type', [LedgerType::Purchase->value, LedgerType::Refund->value])
+            ->exists();
+
+        if (! $hasPurchasedCredits) {
+            return [
+                'ok' => true,
+                'reason' => null,
+                'pct_used' => 0,
+            ];
+        }
+
         $balance = CreditLedger::withoutGlobalScopes()
             ->where('team_id', $experiment->team_id)
             ->orderByDesc('created_at')
