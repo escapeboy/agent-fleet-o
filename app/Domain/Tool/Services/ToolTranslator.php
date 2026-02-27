@@ -4,21 +4,26 @@ namespace App\Domain\Tool\Services;
 
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
 
 class ToolTranslator
 {
+    public function __construct(
+        private readonly ?SshExecutor $sshExecutor = null,
+    ) {}
+
     /**
      * Convert a Tool model into PrismPHP Tool objects.
      *
      * @return array<PrismToolObject>
      */
-    public function toPrismTools(Tool $tool, array $overrides = []): array
+    public function toPrismTools(Tool $tool, array $overrides = [], ?array $orgPolicy = null): array
     {
         if ($tool->isBuiltIn()) {
-            return $this->translateBuiltInTool($tool, $overrides);
+            return $this->translateBuiltInTool($tool, $overrides, $orgPolicy);
         }
 
         if ($tool->isMcp()) {
@@ -91,19 +96,20 @@ class ToolTranslator
     /**
      * Build PrismPHP Tools for built-in host capabilities.
      */
-    private function translateBuiltInTool(Tool $tool, array $overrides): array
+    private function translateBuiltInTool(Tool $tool, array $overrides, ?array $orgPolicy = null): array
     {
         $kind = BuiltInToolKind::tryFrom($tool->transport_config['kind'] ?? 'bash');
 
         return match ($kind) {
-            BuiltInToolKind::Bash => $this->buildBashTools($tool, $overrides),
+            BuiltInToolKind::Bash => $this->buildBashTools($tool, $overrides, $orgPolicy),
             BuiltInToolKind::Filesystem => $this->buildFilesystemTools($tool, $overrides),
             BuiltInToolKind::Browser => [],
+            BuiltInToolKind::Ssh => $this->buildSshTools($tool, $overrides),
             default => [],
         };
     }
 
-    private function buildBashTools(Tool $tool, array $overrides): array
+    private function buildBashTools(Tool $tool, array $overrides, ?array $orgPolicy = null): array
     {
         $config = $tool->transport_config;
         $allowedCommands = $config['allowed_commands'] ?? [
@@ -122,8 +128,8 @@ class ToolTranslator
                 ->for("Execute a shell command. Allowed commands: {$commandDescription}. Working directory restricted to: {$pathDescription}")
                 ->withStringParameter('command', 'The shell command to execute')
                 ->withStringParameter('working_directory', 'Working directory (must be within allowed paths)', required: false)
-                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars): string {
-                    return $this->executeBashCommand($command, $working_directory, $allowedCommands, $allowedPaths, $timeout, $maxOutputChars);
+                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy): string {
+                    return $this->executeBashCommand($command, $working_directory, $allowedCommands, $allowedPaths, $timeout, $maxOutputChars, orgSecurityPolicy: $orgPolicy);
                 }),
         ];
     }
@@ -137,6 +143,7 @@ class ToolTranslator
         int $maxOutputChars,
         ?array $projectCommandPolicy = null,
         ?array $agentCommandPolicy = null,
+        ?array $orgSecurityPolicy = null,
     ): string {
         $cwd = $workingDirectory ?? $allowedPaths[0] ?? '/tmp';
 
@@ -144,7 +151,7 @@ class ToolTranslator
         $policy = app(CommandSecurityPolicy::class);
         $validation = $policy->validate(
             $command, $cwd, $allowedCommands, $allowedPaths,
-            $projectCommandPolicy, $agentCommandPolicy,
+            $projectCommandPolicy, $agentCommandPolicy, $orgSecurityPolicy,
         );
 
         if (! $validation->allowed) {
@@ -251,6 +258,63 @@ class ToolTranslator
         }
 
         return $tools;
+    }
+
+    private function buildSshTools(Tool $tool, array $overrides): array
+    {
+        $config = $tool->transport_config;
+        $host = $config['host'] ?? null;
+        $port = (int) ($config['port'] ?? 22);
+        $username = $config['username'] ?? 'root';
+        $credentialId = $config['credential_id'] ?? null;
+        $allowedCommands = $config['allowed_commands'] ?? [];
+        $timeout = (int) ($tool->settings['timeout'] ?? 30);
+
+        if (! $host || ! $credentialId) {
+            return [];
+        }
+
+        $allowedDesc = empty($allowedCommands)
+            ? 'all commands allowed by policy'
+            : 'allowed: '.implode(', ', $allowedCommands);
+
+        $teamId = $tool->team_id;
+        $sshExecutor = $this->sshExecutor ?? app(SshExecutor::class);
+
+        return [
+            PrismTool::as('ssh_execute')
+                ->for("Execute a command on {$username}@{$host}:{$port} via SSH. {$allowedDesc}")
+                ->withStringParameter('command', 'The command to execute on the remote server')
+                ->using(function (string $command) use ($teamId, $host, $port, $username, $credentialId, $allowedCommands, $timeout, $sshExecutor): string {
+                    // Enforce allowed-commands whitelist at tool level
+                    if (! empty($allowedCommands)) {
+                        $binary = basename(explode(' ', trim($command))[0]);
+                        if (! in_array($binary, $allowedCommands, true)) {
+                            return "Error: Command '{$binary}' is not in the SSH tool allowlist.";
+                        }
+                    }
+
+                    try {
+                        $result = $sshExecutor->execute(
+                            teamId: $teamId,
+                            host: $host,
+                            port: $port,
+                            username: $username,
+                            credentialId: $credentialId,
+                            command: $command,
+                            timeout: $timeout,
+                        );
+
+                        $prefix = $result->successful() ? '' : "Command failed (exit {$result->exitCode}):\n";
+
+                        return $prefix.$result->output;
+                    } catch (\Throwable $e) {
+                        Log::error('SshExecutor error', ['error' => $e->getMessage()]);
+
+                        return 'SSH error: '.$e->getMessage();
+                    }
+                }),
+        ];
     }
 
     private function isPathAllowed(string $path, array $allowedPaths): bool

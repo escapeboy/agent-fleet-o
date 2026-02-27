@@ -40,6 +40,8 @@
                 @elseif($type === 'built_in')
                     @selfhosted
                     <p class="text-sm text-gray-500">Use host machine capabilities (bash, filesystem) with sandboxing</p>
+                    @else
+                    <p class="text-sm text-gray-500">Connect agents to remote servers via SSH for secure remote command execution</p>
                     @endselfhosted
                 @endif
 
@@ -80,7 +82,6 @@
                         hint="One per line, KEY=VALUE format" />
                 @endif
 
-                @selfhosted
                 @if($type === 'built_in')
                     <x-form-select wire:model.live="builtInKind" label="Kind">
                         @foreach($builtInKinds as $kind)
@@ -88,19 +89,52 @@
                         @endforeach
                     </x-form-select>
 
+                    @selfhosted
                     @if($builtInKind === 'bash')
                         <x-form-textarea wire:model="allowedCommands" label="Allowed Commands (comma-separated)" rows="2"
                             hint="Only these binaries can be executed" />
-                    @endif
 
-                    <x-form-textarea wire:model="allowedPaths" label="Allowed Paths (comma-separated)" rows="2"
-                        hint="Restrict file access to these directories" />
+                        <x-form-textarea wire:model="allowedPaths" label="Allowed Paths (comma-separated)" rows="2"
+                            hint="Restrict working directory to these paths" />
+                    @endif
 
                     @if($builtInKind === 'filesystem')
+                        <x-form-textarea wire:model="allowedPaths" label="Allowed Paths (comma-separated)" rows="2"
+                            hint="Restrict file access to these directories" />
+
                         <x-form-checkbox wire:model="readOnly" label="Read-only mode" />
                     @endif
+                    @endselfhosted
+
+                    @if($builtInKind === 'ssh')
+                        <x-form-input wire:model="sshHost" label="Host" type="text" placeholder="example.com"
+                            :error="$errors->first('sshHost')" hint="Hostname or IP of the remote server" />
+
+                        <x-form-input wire:model.number="sshPort" label="Port" type="number" min="1" max="65535"
+                            :error="$errors->first('sshPort')" />
+
+                        <x-form-input wire:model="sshUsername" label="Username" type="text" placeholder="deploy"
+                            :error="$errors->first('sshUsername')" />
+
+                        <x-form-select wire:model="sshCredentialId" label="SSH Key Credential"
+                            :error="$errors->first('sshCredentialId')">
+                            <option value="">-- Select SSH key --</option>
+                            @foreach($sshCredentials as $cred)
+                                <option value="{{ $cred->id }}">{{ $cred->name }}</option>
+                            @endforeach
+                        </x-form-select>
+
+                        @if($sshCredentials->isEmpty())
+                            <p class="text-sm text-amber-600">
+                                No active SSH key credentials found.
+                                <a href="{{ route('credentials.create') }}" class="underline">Add one first</a>.
+                            </p>
+                        @endif
+
+                        <x-form-textarea wire:model="sshAllowedCommands" label="Allowed Commands (comma-separated, optional)" rows="2"
+                            hint="Leave empty to allow all commands permitted by org policy" />
+                    @endif
                 @endif
-                @endselfhosted
 
                 {{-- Shared fields --}}
                 @if($type !== 'built_in')

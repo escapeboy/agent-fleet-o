@@ -7,6 +7,7 @@ enum BuiltInToolKind: string
     case Bash = 'bash';
     case Filesystem = 'filesystem';
     case Browser = 'browser';
+    case Ssh = 'ssh';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum BuiltInToolKind: string
             self::Bash => 'Bash / Shell',
             self::Filesystem => 'Filesystem',
             self::Browser => 'Browser',
+            self::Ssh => 'SSH Remote',
         };
     }
 }

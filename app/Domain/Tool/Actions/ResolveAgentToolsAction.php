@@ -9,6 +9,7 @@ use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolTranslator;
+use App\Livewire\Settings\SecurityPolicyPanel;
 
 class ResolveAgentToolsAction
 {
@@ -43,10 +44,13 @@ class ResolveAgentToolsAction
             );
         }
 
+        // Read org-level command security policy from GlobalSettings
+        $orgPolicy = SecurityPolicyPanel::getOrgPolicy() ?: null;
+
         $prismTools = [];
         foreach ($agentTools as $tool) {
             $overrides = $tool->pivot->overrides ?? [];
-            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($tool, $overrides));
+            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($tool, $overrides, $orgPolicy));
         }
 
         return $prismTools;
