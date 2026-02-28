@@ -129,7 +129,7 @@ APP_ENV=local</pre>
                 </div>
             @endif
 
-            <form wire:submit="createAccount" class="space-y-4">
+            <form wire:submit="createAccount" method="POST" class="space-y-4">
                 <div>
                     <x-form-input
                         label="Full Name"
