@@ -2,6 +2,42 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.1.0] - 2026-02-28
+
+### Added
+
+- **Platform Tool Marketplace** -- Curated tools activatable per team from a central catalog; `ActivatePlatformToolAction` / `DeactivatePlatformToolAction`; `tool_activate` / `tool_deactivate` MCP tools; team-level activation state managed via `team_tool_activations` pivot table.
+- **HMAC Tracking URL Signer** -- `TrackingUrlSigner` service signs click/pixel URLs; cloud enforces signatures, community edition logs-and-continues for backwards compatibility.
+
+### Security
+
+- **SSRF Protection (outbound)** -- New shared `SsrfGuard` service blocks RFC 1918, loopback, and link-local addresses for both IPv4 and IPv6. Applied to `WebhookOutboundConnector` and `RssConnector`. Enabled globally in cloud via `services.ssrf.validate_host = true`.
+- **Webhook header injection** -- `WebhookOutboundConnector` now uses an allowlist (only `x-*` and `content-type` headers forwarded); blocks `Authorization`, `Host`, and `Cookie` injection.
+- **Revenue attribution integrity** -- `AttributeRevenueAction::execute()` accepts `?string $owningTeamId`; validates that the `experiment_id` from Stripe metadata belongs to the paying customer's team before recording revenue.
+- **MCP cross-tenant reads** -- Explicit `where('team_id', ...)` added to `ExperimentCostTool`, `CrewExecutionStatusTool`, `SemanticCachePurgeTool`, `SemanticCacheStatsTool`, `AuditLogTool`, `MemorySearchTool`, `MemoryListRecentTool`, `SignalGetTool`, and `ArtifactGetTool`.
+- **Token abilities** -- `TeamController::createToken()` always forces `['team:{id}']`; `AuthController::token/refresh()` no longer fall back to `['*']` wildcard.
+- **Team API authorization** -- `TeamController::removeMember()` and `update()` now require `Gate::authorize('manage-team')`.
+- **Cross-tenant agent references** -- `CrewController::store/update()` validate agent IDs against the current team.
+- **Password change** -- `updateMe()` revokes all other tokens when password changes; `UpdateMeRequest` requires `current_password` to change password.
+- **Tracking metrics** -- `TrackingController` resolves `team_id` from experiment before `Metric::create()`; tracking pixel returns 404 on invalid signature.
+- **Email header injection** -- `SmtpEmailConnector` strips `\r\n<>` from `fromAddress` before embedding in `List-Unsubscribe` header.
+- **Auth rate limiting** -- `/auth/refresh` separately throttled at 10 requests/minute.
+- **Signal HMAC** -- `WebhookConnector` uses constant-time comparison for HMAC verification.
+- **Datadog webhook** -- `DatadogAlertWebhookController` accepts secret from `X-Datadog-Webhook-Secret` header (path-based token deprecated).
+
+### Changed
+
+- `UsageMeter::isWithinLimit()` documented as a non-atomic UI-only peek; use `incrementIfWithinLimit()` for enforcement gates.
+- `TeamScope` / `BelongsToTeam`: clarified `orWhereNull` semantics for platform records.
+
+### Fixed
+
+- `SemanticCache` middleware: strip trailing whitespace from prompt text before embedding.
+- `MarketplaceBrowsePage`: MCP status filter and bundle monetization UI guard.
+- `NaturalLanguageScheduleParser`: timezone edge case handling.
+
+---
+
 ## [Unreleased]
 
 ### Added
