@@ -309,9 +309,8 @@
                         with your mail server details. Create one first, then configure the connector via the API or MCP.
                     </p>
                     <div class="space-y-1 rounded-lg bg-(--color-surface-alt) p-3 font-mono text-xs text-(--color-on-surface-muted)">
-                        <p># Via MCP tool:</p>
-                        <p>inbound_connector_manage</p>
-                        <p>  action: add_imap (coming soon)</p>
+                        <p># Create a Credential first, then create the Connector via MCP:</p>
+                        <p>driver: imap, config: &#123; credential_id, host, port: 993, encryption: ssl, folder: INBOX &#125;</p>
                     </div>
                 </div>
             @endif
