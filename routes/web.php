@@ -4,6 +4,7 @@ use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
+use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use App\Livewire\Agents\AgentDetailPage;
@@ -82,10 +83,12 @@ Route::get('/', function () {
 })->name('home');
 
 // Setup / installation check page (public — excluded from DB-dependent middleware)
+// Accepts both GET (page render) and POST (native form fallback when Livewire JS fails)
 Route::withoutMiddleware([
     SetCurrentTeam::class,
     SetPostgresRlsContext::class,
-])->get('/setup', SetupPage::class)->name('setup');
+    BypassAuth::class,
+])->match(['GET', 'POST'], '/setup', SetupPage::class)->name('setup');
 
 // Legal pages (public)
 Route::get('/privacy', fn () => view('legal.privacy'))->name('legal.privacy');

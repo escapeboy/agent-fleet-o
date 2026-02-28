@@ -6,4 +6,5 @@ enum ListingVisibility: string
 {
     case Public = 'public';
     case Unlisted = 'unlisted';
+    case Team = 'team';
 }

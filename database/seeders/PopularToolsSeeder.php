@@ -50,7 +50,7 @@ class PopularToolsSeeder extends Seeder
         $this->command?->info("Tools: {$created} created, {$skipped} already existed.");
     }
 
-    private function toolDefinitions(): array
+    protected function toolDefinitions(): array
     {
         return [
             // ─── Built-in Tools ─────────────────────────────────────
@@ -1372,6 +1372,1332 @@ class PopularToolsSeeder extends Seeder
                                 'seed' => ['type' => 'integer', 'description' => 'Random seed for reproducibility'],
                             ],
                             'required' => ['prompt'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 60],
+            ],
+
+            // ─── Databases ───────────────────────────────────────────
+
+            [
+                'name' => 'SQLite',
+                'slug' => 'sqlite',
+                'description' => 'Run SQL queries and manage a local SQLite database. Create tables, insert data, query records, and explore schema. Ideal for lightweight data storage in agent workflows. No external service required.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@modelcontextprotocol/server-sqlite', '/tmp/agent-workspace/agent.db'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'read_query',
+                        'description' => 'Execute a SELECT query and return results',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'SELECT SQL query'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'write_query',
+                        'description' => 'Execute an INSERT, UPDATE, or DELETE query',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'SQL write query'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'create_table',
+                        'description' => 'Create a new table in the database',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'CREATE TABLE SQL statement'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'list_tables',
+                        'description' => 'List all tables in the database',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'describe_table',
+                        'description' => 'Get the schema of a specific table',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'table_name' => ['type' => 'string', 'description' => 'Table name to describe'],
+                            ],
+                            'required' => ['table_name'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            [
+                'name' => 'MySQL',
+                'slug' => 'mysql',
+                'description' => 'Execute SQL queries against a MySQL database. Supports read and write operations, schema inspection, and multi-database access. Requires a MySQL connection URL.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@benborla29/mcp-server-mysql'],
+                    'env' => ['MYSQL_HOST' => '', 'MYSQL_PORT' => '3306', 'MYSQL_USER' => '', 'MYSQL_PASS' => '', 'MYSQL_DB' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'mysql_query',
+                        'description' => 'Execute a SQL query against the MySQL database',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'SQL query to execute'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'mysql_list_tables',
+                        'description' => 'List all tables in the current database',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'mysql_describe_table',
+                        'description' => 'Describe the schema of a table',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'table' => ['type' => 'string', 'description' => 'Table name'],
+                            ],
+                            'required' => ['table'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 30],
+            ],
+
+            [
+                'name' => 'Supabase',
+                'slug' => 'supabase',
+                'description' => 'Interact with your Supabase project — query tables, manage auth users, invoke Edge Functions, and access Storage. Requires a Supabase project URL and service role key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@supabase/mcp-server-supabase@latest'],
+                    'env' => ['SUPABASE_URL' => '', 'SUPABASE_SERVICE_ROLE_KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'supabase_query',
+                        'description' => 'Execute a SQL query on the Supabase PostgreSQL database',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'SQL query'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'supabase_list_tables',
+                        'description' => 'List all tables in the Supabase database',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'supabase_invoke_function',
+                        'description' => 'Invoke a Supabase Edge Function',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'function_name' => ['type' => 'string', 'description' => 'Edge Function name'],
+                                'body' => ['type' => 'object', 'description' => 'Request body'],
+                            ],
+                            'required' => ['function_name'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 30],
+            ],
+
+            // ─── Cloud & Infrastructure ───────────────────────────────
+
+            [
+                'name' => 'Cloudflare',
+                'slug' => 'cloudflare',
+                'description' => 'Manage Cloudflare resources — DNS records, Workers scripts, KV storage, R2 buckets, D1 databases, and analytics. Requires a Cloudflare API token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@cloudflare/mcp-server-cloudflare'],
+                    'env' => ['CLOUDFLARE_API_TOKEN' => '', 'CLOUDFLARE_ACCOUNT_ID' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'cloudflare_dns_list',
+                        'description' => 'List DNS records for a zone',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'zone_id' => ['type' => 'string', 'description' => 'Cloudflare zone ID'],
+                            ],
+                            'required' => ['zone_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'cloudflare_kv_get',
+                        'description' => 'Get a value from a KV namespace',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'namespace_id' => ['type' => 'string', 'description' => 'KV namespace ID'],
+                                'key' => ['type' => 'string', 'description' => 'Key to retrieve'],
+                            ],
+                            'required' => ['namespace_id', 'key'],
+                        ],
+                    ],
+                    [
+                        'name' => 'cloudflare_kv_put',
+                        'description' => 'Put a value in a KV namespace',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'namespace_id' => ['type' => 'string', 'description' => 'KV namespace ID'],
+                                'key' => ['type' => 'string', 'description' => 'Key to set'],
+                                'value' => ['type' => 'string', 'description' => 'Value to store'],
+                            ],
+                            'required' => ['namespace_id', 'key', 'value'],
+                        ],
+                    ],
+                    [
+                        'name' => 'cloudflare_worker_deploy',
+                        'description' => 'Deploy a Worker script',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string', 'description' => 'Worker name'],
+                                'script' => ['type' => 'string', 'description' => 'Worker script source'],
+                            ],
+                            'required' => ['name', 'script'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            [
+                'name' => 'Vercel',
+                'slug' => 'vercel',
+                'description' => 'Manage Vercel deployments — trigger deploys, list projects, check deployment status, and manage environment variables. Requires a Vercel API token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@vercel/mcp-adapter@latest'],
+                    'env' => ['VERCEL_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'vercel_list_projects',
+                        'description' => 'List all Vercel projects',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'vercel_list_deployments',
+                        'description' => 'List recent deployments for a project',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'projectId' => ['type' => 'string', 'description' => 'Project ID or name'],
+                                'limit' => ['type' => 'integer', 'description' => 'Number of deployments to return'],
+                            ],
+                            'required' => ['projectId'],
+                        ],
+                    ],
+                    [
+                        'name' => 'vercel_get_deployment',
+                        'description' => 'Get details of a specific deployment',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'deploymentId' => ['type' => 'string', 'description' => 'Deployment ID'],
+                            ],
+                            'required' => ['deploymentId'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            // ─── Payments & CRM ───────────────────────────────────────
+
+            [
+                'name' => 'Stripe',
+                'slug' => 'stripe',
+                'description' => 'Manage Stripe payments — list and create customers, retrieve charges, manage subscriptions, issue refunds, and query payment intents. Requires a Stripe secret key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@stripe/mcp@latest', '--tools=all'],
+                    'env' => ['STRIPE_SECRET_KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'stripe_list_customers',
+                        'description' => 'List Stripe customers',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'limit' => ['type' => 'integer', 'description' => 'Max customers to return (default: 10)'],
+                                'email' => ['type' => 'string', 'description' => 'Filter by email address'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'stripe_list_charges',
+                        'description' => 'List recent Stripe charges',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'limit' => ['type' => 'integer', 'description' => 'Max charges to return (default: 10)'],
+                                'customer' => ['type' => 'string', 'description' => 'Filter by customer ID'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'stripe_create_refund',
+                        'description' => 'Issue a refund for a charge',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'charge' => ['type' => 'string', 'description' => 'Charge ID to refund'],
+                                'amount' => ['type' => 'integer', 'description' => 'Amount to refund in cents (optional, full refund if omitted)'],
+                            ],
+                            'required' => ['charge'],
+                        ],
+                    ],
+                    [
+                        'name' => 'stripe_list_subscriptions',
+                        'description' => 'List active subscriptions',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'customer' => ['type' => 'string', 'description' => 'Filter by customer ID'],
+                                'status' => ['type' => 'string', 'description' => 'Filter by status: active, past_due, canceled'],
+                            ],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            [
+                'name' => 'HubSpot',
+                'slug' => 'hubspot',
+                'description' => 'Manage HubSpot CRM — search and create contacts, companies, and deals; log activities; retrieve pipelines and properties. Requires a HubSpot private app access token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@hubspot/mcp-server@latest'],
+                    'env' => ['HUBSPOT_ACCESS_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'hubspot_search_contacts',
+                        'description' => 'Search HubSpot contacts',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Search query (email, name, company)'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'hubspot_create_contact',
+                        'description' => 'Create a new HubSpot contact',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'email' => ['type' => 'string', 'description' => 'Contact email'],
+                                'firstname' => ['type' => 'string', 'description' => 'First name'],
+                                'lastname' => ['type' => 'string', 'description' => 'Last name'],
+                                'company' => ['type' => 'string', 'description' => 'Company name'],
+                            ],
+                            'required' => ['email'],
+                        ],
+                    ],
+                    [
+                        'name' => 'hubspot_list_deals',
+                        'description' => 'List deals in a pipeline',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'pipeline_id' => ['type' => 'string', 'description' => 'Pipeline ID (optional)'],
+                                'stage_id' => ['type' => 'string', 'description' => 'Stage ID filter (optional)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'hubspot_create_deal',
+                        'description' => 'Create a new deal in HubSpot',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'dealname' => ['type' => 'string', 'description' => 'Deal name'],
+                                'amount' => ['type' => 'number', 'description' => 'Deal amount'],
+                                'pipeline' => ['type' => 'string', 'description' => 'Pipeline ID'],
+                                'dealstage' => ['type' => 'string', 'description' => 'Stage ID'],
+                            ],
+                            'required' => ['dealname'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            // ─── Communication ────────────────────────────────────────
+
+            [
+                'name' => 'Resend',
+                'slug' => 'resend',
+                'description' => 'Send transactional and marketing emails via Resend. Supports HTML and plain text, attachments, reply-to headers, and bulk sends. Requires a Resend API key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', 'resend-mcp'],
+                    'env' => ['RESEND_API_KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'resend_send_email',
+                        'description' => 'Send an email via Resend',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'from' => ['type' => 'string', 'description' => 'Sender email (must be a verified domain)'],
+                                'to' => ['type' => 'array', 'description' => 'Recipient email addresses'],
+                                'subject' => ['type' => 'string', 'description' => 'Email subject'],
+                                'html' => ['type' => 'string', 'description' => 'HTML email body'],
+                                'text' => ['type' => 'string', 'description' => 'Plain text fallback'],
+                            ],
+                            'required' => ['from', 'to', 'subject'],
+                        ],
+                    ],
+                    [
+                        'name' => 'resend_list_emails',
+                        'description' => 'List recently sent emails',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'limit' => ['type' => 'integer', 'description' => 'Number of emails to return (default: 10)'],
+                            ],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            [
+                'name' => 'Twilio',
+                'slug' => 'twilio',
+                'description' => 'Send SMS and WhatsApp messages via Twilio. List phone numbers, send messages, and check delivery status. Requires Twilio Account SID and Auth Token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@twilio/mcp@latest'],
+                    'env' => ['TWILIO_ACCOUNT_SID' => '', 'TWILIO_AUTH_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'twilio_send_sms',
+                        'description' => 'Send an SMS message',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'to' => ['type' => 'string', 'description' => 'Recipient phone number (E.164 format, e.g. +12025551234)'],
+                                'from' => ['type' => 'string', 'description' => 'Twilio phone number to send from'],
+                                'body' => ['type' => 'string', 'description' => 'Message text (max 1600 chars)'],
+                            ],
+                            'required' => ['to', 'from', 'body'],
+                        ],
+                    ],
+                    [
+                        'name' => 'twilio_list_messages',
+                        'description' => 'List sent/received messages',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'to' => ['type' => 'string', 'description' => 'Filter by recipient number'],
+                                'from' => ['type' => 'string', 'description' => 'Filter by sender number'],
+                                'limit' => ['type' => 'integer', 'description' => 'Max messages to return'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'twilio_list_phone_numbers',
+                        'description' => 'List Twilio phone numbers in the account',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            [
+                'name' => 'Discord',
+                'slug' => 'discord',
+                'description' => 'Send messages, read channels, and manage Discord servers. Post announcements, read message history, and search content. Requires a Discord Bot token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@binalfew/mcp-server-discord@latest'],
+                    'env' => ['DISCORD_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'discord_list_guilds',
+                        'description' => 'List all guilds (servers) the bot is in',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'discord_list_channels',
+                        'description' => 'List channels in a guild',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'guild_id' => ['type' => 'string', 'description' => 'Guild (server) ID'],
+                            ],
+                            'required' => ['guild_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'discord_send_message',
+                        'description' => 'Send a message to a Discord channel',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'channel_id' => ['type' => 'string', 'description' => 'Channel ID to send to'],
+                                'content' => ['type' => 'string', 'description' => 'Message content (up to 2000 chars)'],
+                            ],
+                            'required' => ['channel_id', 'content'],
+                        ],
+                    ],
+                    [
+                        'name' => 'discord_read_messages',
+                        'description' => 'Read recent messages from a channel',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'channel_id' => ['type' => 'string', 'description' => 'Channel ID'],
+                                'limit' => ['type' => 'integer', 'description' => 'Number of messages (default: 50, max: 100)'],
+                            ],
+                            'required' => ['channel_id'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            // ─── Productivity & Data ──────────────────────────────────
+
+            [
+                'name' => 'Airtable',
+                'slug' => 'airtable',
+                'description' => 'Query and update Airtable bases — list tables, read and filter records, create/update rows, and search content. Works like a spreadsheet database. Requires an Airtable API key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@anthropic-ai/mcp-server-airtable'],
+                    'env' => ['AIRTABLE_API_KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'airtable_list_bases',
+                        'description' => 'List all accessible Airtable bases',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'airtable_list_tables',
+                        'description' => 'List tables in a base',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'base_id' => ['type' => 'string', 'description' => 'Airtable base ID'],
+                            ],
+                            'required' => ['base_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'airtable_list_records',
+                        'description' => 'List records from a table with optional filtering',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'base_id' => ['type' => 'string', 'description' => 'Base ID'],
+                                'table_name' => ['type' => 'string', 'description' => 'Table name'],
+                                'filter' => ['type' => 'string', 'description' => 'Airtable formula filter'],
+                                'max_records' => ['type' => 'integer', 'description' => 'Max records to return (default: 100)'],
+                            ],
+                            'required' => ['base_id', 'table_name'],
+                        ],
+                    ],
+                    [
+                        'name' => 'airtable_create_record',
+                        'description' => 'Create a new record in a table',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'base_id' => ['type' => 'string', 'description' => 'Base ID'],
+                                'table_name' => ['type' => 'string', 'description' => 'Table name'],
+                                'fields' => ['type' => 'object', 'description' => 'Record fields as key-value pairs'],
+                            ],
+                            'required' => ['base_id', 'table_name', 'fields'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            [
+                'name' => 'Google Drive',
+                'slug' => 'google-drive',
+                'description' => 'Access and manage Google Drive files — list files, search by name or content, read documents, and upload files. Requires Google OAuth credentials.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@googleapis/mcp-server-drive'],
+                    'env' => [
+                        'GOOGLE_CLIENT_ID' => '',
+                        'GOOGLE_CLIENT_SECRET' => '',
+                        'GOOGLE_REFRESH_TOKEN' => '',
+                    ],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'drive_list_files',
+                        'description' => 'List files in Google Drive',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Search query (Google Drive query syntax)'],
+                                'page_size' => ['type' => 'integer', 'description' => 'Number of files to return (default: 20)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'drive_read_file',
+                        'description' => 'Read the content of a Google Drive file',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'file_id' => ['type' => 'string', 'description' => 'Google Drive file ID'],
+                            ],
+                            'required' => ['file_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'drive_create_file',
+                        'description' => 'Create or upload a file to Google Drive',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string', 'description' => 'File name'],
+                                'content' => ['type' => 'string', 'description' => 'File content'],
+                                'mime_type' => ['type' => 'string', 'description' => 'MIME type (default: text/plain)'],
+                                'folder_id' => ['type' => 'string', 'description' => 'Parent folder ID (optional)'],
+                            ],
+                            'required' => ['name', 'content'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            [
+                'name' => 'Tavily',
+                'slug' => 'tavily',
+                'description' => 'AI-optimised web search designed for LLM agents. Returns structured, clean search results with source URLs and answer summaries. More accurate than general search for research tasks. Requires a Tavily API key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', 'tavily-mcp@latest'],
+                    'env' => ['TAVILY_API_KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'tavily_search',
+                        'description' => 'Search the web with Tavily AI search',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Search query'],
+                                'search_depth' => ['type' => 'string', 'description' => 'Search depth: basic or advanced (default: basic)'],
+                                'max_results' => ['type' => 'integer', 'description' => 'Max results to return (default: 5)'],
+                                'include_answer' => ['type' => 'boolean', 'description' => 'Include LLM-generated answer summary'],
+                                'include_domains' => ['type' => 'array', 'description' => 'Domains to include in search'],
+                                'exclude_domains' => ['type' => 'array', 'description' => 'Domains to exclude from search'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'tavily_extract',
+                        'description' => 'Extract content from specific URLs',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'urls' => ['type' => 'array', 'description' => 'URLs to extract content from'],
+                            ],
+                            'required' => ['urls'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            // ─── Productivity & Project Management ────────────────────
+
+            [
+                'name' => 'Google Sheets',
+                'slug' => 'google-sheets',
+                'description' => 'Read and write Google Sheets spreadsheets — get cell values, update ranges, append rows, and create new sheets. Ideal for agents that store or retrieve structured data. Requires Google OAuth credentials.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@googleapis/mcp-server-sheets'],
+                    'env' => [
+                        'GOOGLE_CLIENT_ID' => '',
+                        'GOOGLE_CLIENT_SECRET' => '',
+                        'GOOGLE_REFRESH_TOKEN' => '',
+                    ],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'sheets_get_values',
+                        'description' => 'Read values from a range in a Google Sheet',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'spreadsheet_id' => ['type' => 'string', 'description' => 'Spreadsheet ID (from URL)'],
+                                'range' => ['type' => 'string', 'description' => 'A1 notation range (e.g. Sheet1!A1:D10)'],
+                            ],
+                            'required' => ['spreadsheet_id', 'range'],
+                        ],
+                    ],
+                    [
+                        'name' => 'sheets_update_values',
+                        'description' => 'Write values to a range in a Google Sheet',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'spreadsheet_id' => ['type' => 'string', 'description' => 'Spreadsheet ID'],
+                                'range' => ['type' => 'string', 'description' => 'A1 notation range'],
+                                'values' => ['type' => 'array', 'description' => '2D array of values to write'],
+                            ],
+                            'required' => ['spreadsheet_id', 'range', 'values'],
+                        ],
+                    ],
+                    [
+                        'name' => 'sheets_append_values',
+                        'description' => 'Append rows to a Google Sheet',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'spreadsheet_id' => ['type' => 'string', 'description' => 'Spreadsheet ID'],
+                                'range' => ['type' => 'string', 'description' => 'Target range (e.g. Sheet1!A:Z)'],
+                                'values' => ['type' => 'array', 'description' => '2D array of rows to append'],
+                            ],
+                            'required' => ['spreadsheet_id', 'range', 'values'],
+                        ],
+                    ],
+                    [
+                        'name' => 'sheets_list_spreadsheets',
+                        'description' => 'List spreadsheets in Google Drive',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Optional name search query'],
+                            ],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            [
+                'name' => 'Google Calendar',
+                'slug' => 'google-calendar',
+                'description' => 'Manage Google Calendar — list events, create appointments, check availability, and update or delete events. Useful for scheduling agents and assistants. Requires Google OAuth credentials.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@googleapis/mcp-server-calendar'],
+                    'env' => [
+                        'GOOGLE_CLIENT_ID' => '',
+                        'GOOGLE_CLIENT_SECRET' => '',
+                        'GOOGLE_REFRESH_TOKEN' => '',
+                    ],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'calendar_list_events',
+                        'description' => 'List upcoming calendar events',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'calendar_id' => ['type' => 'string', 'description' => 'Calendar ID (use "primary" for main calendar)'],
+                                'time_min' => ['type' => 'string', 'description' => 'Start of time range (ISO 8601, e.g. 2025-01-01T00:00:00Z)'],
+                                'time_max' => ['type' => 'string', 'description' => 'End of time range (ISO 8601)'],
+                                'max_results' => ['type' => 'integer', 'description' => 'Max events to return (default: 10)'],
+                            ],
+                            'required' => ['calendar_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'calendar_create_event',
+                        'description' => 'Create a new calendar event',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'calendar_id' => ['type' => 'string', 'description' => 'Calendar ID'],
+                                'summary' => ['type' => 'string', 'description' => 'Event title'],
+                                'description' => ['type' => 'string', 'description' => 'Event description'],
+                                'start' => ['type' => 'string', 'description' => 'Start time (ISO 8601)'],
+                                'end' => ['type' => 'string', 'description' => 'End time (ISO 8601)'],
+                                'attendees' => ['type' => 'array', 'description' => 'Array of attendee email addresses'],
+                            ],
+                            'required' => ['calendar_id', 'summary', 'start', 'end'],
+                        ],
+                    ],
+                    [
+                        'name' => 'calendar_delete_event',
+                        'description' => 'Delete a calendar event',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'calendar_id' => ['type' => 'string', 'description' => 'Calendar ID'],
+                                'event_id' => ['type' => 'string', 'description' => 'Event ID to delete'],
+                            ],
+                            'required' => ['calendar_id', 'event_id'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            [
+                'name' => 'Monday.com',
+                'slug' => 'monday',
+                'description' => 'Manage Monday.com boards — read and update items, add updates, create new items, and query workspaces. Useful for project tracking agents. Requires a Monday.com API token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@mondaydotcom/mcp-server'],
+                    'env' => ['MONDAY_API_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'monday_list_boards',
+                        'description' => 'List Monday.com boards',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'limit' => ['type' => 'integer', 'description' => 'Max boards to return (default: 10)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'monday_get_items',
+                        'description' => 'Get items from a Monday.com board',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'board_id' => ['type' => 'string', 'description' => 'Board ID'],
+                                'limit' => ['type' => 'integer', 'description' => 'Max items to return'],
+                            ],
+                            'required' => ['board_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'monday_create_item',
+                        'description' => 'Create a new item on a Monday.com board',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'board_id' => ['type' => 'string', 'description' => 'Board ID'],
+                                'item_name' => ['type' => 'string', 'description' => 'Item name'],
+                                'column_values' => ['type' => 'string', 'description' => 'Column values as JSON string'],
+                            ],
+                            'required' => ['board_id', 'item_name'],
+                        ],
+                    ],
+                    [
+                        'name' => 'monday_add_update',
+                        'description' => 'Post an update/comment on a Monday.com item',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'item_id' => ['type' => 'string', 'description' => 'Item ID'],
+                                'body' => ['type' => 'string', 'description' => 'Update text'],
+                            ],
+                            'required' => ['item_id', 'body'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            // ─── E-commerce ───────────────────────────────────────────
+
+            [
+                'name' => 'Shopify',
+                'slug' => 'shopify',
+                'description' => 'Manage a Shopify store — browse products, manage orders, update inventory, handle customers, and apply discounts. Ideal for e-commerce automation agents. Requires a Shopify Admin API token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@shopify/dev-mcp@latest'],
+                    'env' => ['SHOPIFY_STORE_URL' => '', 'SHOPIFY_ADMIN_API_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'shopify_list_products',
+                        'description' => 'List products in the Shopify store',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'limit' => ['type' => 'integer', 'description' => 'Max products to return (default: 50)'],
+                                'status' => ['type' => 'string', 'description' => 'Filter by status: active, draft, archived'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'shopify_get_order',
+                        'description' => 'Get a specific Shopify order by ID',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'order_id' => ['type' => 'string', 'description' => 'Order ID'],
+                            ],
+                            'required' => ['order_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'shopify_list_orders',
+                        'description' => 'List recent Shopify orders',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'status' => ['type' => 'string', 'description' => 'Order status: open, closed, cancelled, any (default: open)'],
+                                'limit' => ['type' => 'integer', 'description' => 'Max orders to return (default: 50)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'shopify_update_product',
+                        'description' => 'Update a product in the Shopify store',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'product_id' => ['type' => 'string', 'description' => 'Product ID'],
+                                'title' => ['type' => 'string', 'description' => 'New product title'],
+                                'body_html' => ['type' => 'string', 'description' => 'Product description (HTML)'],
+                                'status' => ['type' => 'string', 'description' => 'Product status: active, draft, archived'],
+                            ],
+                            'required' => ['product_id'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            // ─── Monitoring & Support ─────────────────────────────────
+
+            [
+                'name' => 'Datadog',
+                'slug' => 'datadog',
+                'description' => 'Monitor infrastructure and applications via Datadog — query metrics, search logs, list monitors and alerts, inspect dashboards, and get incident details. Requires a Datadog API key and App key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Read,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@datadog/mcp-server'],
+                    'env' => ['DD_API_KEY' => '', 'DD_APP_KEY' => '', 'DD_SITE' => 'datadoghq.com'],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'datadog_query_metrics',
+                        'description' => 'Query Datadog metrics for a time range',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Datadog metric query (e.g. avg:system.cpu.user{*})'],
+                                'from' => ['type' => 'integer', 'description' => 'Start time as Unix timestamp'],
+                                'to' => ['type' => 'integer', 'description' => 'End time as Unix timestamp'],
+                            ],
+                            'required' => ['query', 'from', 'to'],
+                        ],
+                    ],
+                    [
+                        'name' => 'datadog_list_monitors',
+                        'description' => 'List Datadog monitors and their current status',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string', 'description' => 'Filter monitors by name'],
+                                'tags' => ['type' => 'string', 'description' => 'Filter by tags (comma-separated)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'datadog_search_logs',
+                        'description' => 'Search Datadog logs',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Log search query'],
+                                'from' => ['type' => 'string', 'description' => 'Start time (ISO 8601 or relative like "15m")'],
+                                'to' => ['type' => 'string', 'description' => 'End time'],
+                                'limit' => ['type' => 'integer', 'description' => 'Max log lines to return (default: 50)'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 20],
+            ],
+
+            [
+                'name' => 'Zendesk',
+                'slug' => 'zendesk',
+                'description' => 'Manage Zendesk support tickets — list, search, create, and update tickets; add comments; manage users and organisations. Ideal for customer support automation. Requires Zendesk subdomain, email, and API token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@zendesk/mcp-server'],
+                    'env' => ['ZENDESK_SUBDOMAIN' => '', 'ZENDESK_EMAIL' => '', 'ZENDESK_API_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'zendesk_list_tickets',
+                        'description' => 'List recent Zendesk tickets',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'status' => ['type' => 'string', 'description' => 'Filter by status: new, open, pending, solved, closed'],
+                                'assignee_id' => ['type' => 'string', 'description' => 'Filter by assignee'],
+                                'per_page' => ['type' => 'integer', 'description' => 'Results per page (default: 25)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'zendesk_get_ticket',
+                        'description' => 'Get a Zendesk ticket by ID',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'ticket_id' => ['type' => 'integer', 'description' => 'Ticket ID'],
+                            ],
+                            'required' => ['ticket_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'zendesk_create_ticket',
+                        'description' => 'Create a new Zendesk support ticket',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'subject' => ['type' => 'string', 'description' => 'Ticket subject'],
+                                'body' => ['type' => 'string', 'description' => 'Ticket description'],
+                                'requester_email' => ['type' => 'string', 'description' => 'Requester email address'],
+                                'priority' => ['type' => 'string', 'description' => 'Priority: low, normal, high, urgent'],
+                            ],
+                            'required' => ['subject', 'body'],
+                        ],
+                    ],
+                    [
+                        'name' => 'zendesk_add_comment',
+                        'description' => 'Add a comment to a Zendesk ticket',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'ticket_id' => ['type' => 'integer', 'description' => 'Ticket ID'],
+                                'body' => ['type' => 'string', 'description' => 'Comment text'],
+                                'public' => ['type' => 'boolean', 'description' => 'Whether the comment is public (default: true)'],
+                            ],
+                            'required' => ['ticket_id', 'body'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            // ─── Email Marketing ──────────────────────────────────────
+
+            [
+                'name' => 'Mailchimp',
+                'slug' => 'mailchimp',
+                'description' => 'Manage Mailchimp email marketing — list audiences and campaigns, add/update contacts, send campaigns, and check campaign stats. Requires a Mailchimp API key.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@anthropic-ai/mcp-server-mailchimp'],
+                    'env' => ['MAILCHIMP_API_KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'mailchimp_list_audiences',
+                        'description' => 'List Mailchimp audiences/lists',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'mailchimp_add_member',
+                        'description' => 'Add or update a contact in a Mailchimp audience',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'list_id' => ['type' => 'string', 'description' => 'Audience/list ID'],
+                                'email_address' => ['type' => 'string', 'description' => 'Contact email'],
+                                'first_name' => ['type' => 'string', 'description' => 'First name'],
+                                'last_name' => ['type' => 'string', 'description' => 'Last name'],
+                                'status' => ['type' => 'string', 'description' => 'Status: subscribed, unsubscribed, pending (default: subscribed)'],
+                            ],
+                            'required' => ['list_id', 'email_address'],
+                        ],
+                    ],
+                    [
+                        'name' => 'mailchimp_list_campaigns',
+                        'description' => 'List recent email campaigns and their stats',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'count' => ['type' => 'integer', 'description' => 'Max campaigns to return (default: 10)'],
+                                'status' => ['type' => 'string', 'description' => 'Filter by status: save, paused, schedule, sending, sent'],
+                            ],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            // ─── Social & Community ───────────────────────────────────
+
+            [
+                'name' => 'Reddit',
+                'slug' => 'reddit',
+                'description' => 'Browse Reddit — search posts, read subreddits, get comments, and find trending content. Useful for research, market intelligence, and monitoring community discussions. No API key required for public data.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Safe,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@anthropic-ai/mcp-server-reddit'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'reddit_search',
+                        'description' => 'Search Reddit posts across all subreddits',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Search query'],
+                                'subreddit' => ['type' => 'string', 'description' => 'Limit search to a specific subreddit (optional)'],
+                                'sort' => ['type' => 'string', 'description' => 'Sort by: relevance, new, top, hot (default: relevance)'],
+                                'limit' => ['type' => 'integer', 'description' => 'Number of results (default: 10)'],
+                                'time' => ['type' => 'string', 'description' => 'Time filter: hour, day, week, month, year, all'],
+                            ],
+                            'required' => ['query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'reddit_get_subreddit',
+                        'description' => 'Get top/hot posts from a subreddit',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'subreddit' => ['type' => 'string', 'description' => 'Subreddit name (without r/)'],
+                                'sort' => ['type' => 'string', 'description' => 'Sort by: hot, new, top, rising (default: hot)'],
+                                'limit' => ['type' => 'integer', 'description' => 'Number of posts (default: 10)'],
+                            ],
+                            'required' => ['subreddit'],
+                        ],
+                    ],
+                    [
+                        'name' => 'reddit_get_post_comments',
+                        'description' => 'Get comments on a Reddit post',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'post_url' => ['type' => 'string', 'description' => 'Full Reddit post URL'],
+                                'limit' => ['type' => 'integer', 'description' => 'Number of top-level comments to return (default: 20)'],
+                            ],
+                            'required' => ['post_url'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            // ─── Marketplace Connectors (HTTP) ────────────────────────
+            // These expose 1000s of pre-built actions via a single MCP endpoint.
+            // Enable one to give your agents access to virtually any SaaS tool.
+
+            [
+                'name' => 'Zapier',
+                'slug' => 'zapier',
+                'description' => 'Connect agents to 7,000+ apps via Zapier. Each Zapier action you configure becomes a callable tool — send Slack messages, update CRM records, post to social media, and more, without building custom integrations. Copy your personal MCP server URL from zapier.com/mcp.',
+                'type' => ToolType::McpHttp,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'url' => '',
+                    'headers' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'zapier_run_action',
+                        'description' => 'Run a configured Zapier action',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'instructions' => ['type' => 'string', 'description' => 'Natural language description of what to do'],
+                            ],
+                            'required' => ['instructions'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 60],
+            ],
+
+            [
+                'name' => 'Make',
+                'slug' => 'make',
+                'description' => 'Connect agents to 2,000+ apps via Make (formerly Integromat). Trigger Make scenarios, pass data between apps, and automate complex multi-step workflows. Copy your MCP endpoint URL from make.com/mcp.',
+                'type' => ToolType::McpHttp,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'url' => '',
+                    'headers' => ['Authorization' => 'Token '],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'make_run_scenario',
+                        'description' => 'Trigger a Make scenario and pass data to it',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'scenario_id' => ['type' => 'string', 'description' => 'Make scenario ID to trigger'],
+                                'data' => ['type' => 'object', 'description' => 'Input data to pass to the scenario'],
+                            ],
+                            'required' => ['scenario_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'make_list_scenarios',
+                        'description' => 'List available Make scenarios',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'team_id' => ['type' => 'string', 'description' => 'Make team ID (optional)'],
+                            ],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 60],
+            ],
+
+            [
+                'name' => 'n8n',
+                'slug' => 'n8n',
+                'description' => 'Connect agents to your self-hosted n8n workflows. Trigger automations, pass data to n8n workflows, and retrieve results. n8n has 400+ integrations. Requires a running n8n instance with the MCP extension enabled.',
+                'type' => ToolType::McpHttp,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'url' => '',
+                    'headers' => ['X-N8N-API-KEY' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'n8n_execute_workflow',
+                        'description' => 'Execute an n8n workflow by ID',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'workflow_id' => ['type' => 'string', 'description' => 'n8n workflow ID'],
+                                'data' => ['type' => 'object', 'description' => 'Input data to send to the workflow'],
+                            ],
+                            'required' => ['workflow_id'],
+                        ],
+                    ],
+                    [
+                        'name' => 'n8n_list_workflows',
+                        'description' => 'List available n8n workflows',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'active' => ['type' => 'boolean', 'description' => 'Filter to only active workflows'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'n8n_get_executions',
+                        'description' => 'Get recent workflow execution history',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'workflow_id' => ['type' => 'string', 'description' => 'Filter by workflow ID (optional)'],
+                                'limit' => ['type' => 'integer', 'description' => 'Max executions to return (default: 20)'],
+                            ],
                         ],
                     ],
                 ],

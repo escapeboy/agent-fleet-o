@@ -60,9 +60,9 @@ class IngestSignalAction
             }
         }
 
-        // Alert storm protection: limit signals per source_type to prevent runaway alert floods.
-        // Default: 60 signals/minute per source_type. Configurable via config('signals.rate_limit').
-        $rateKey = 'signal_ingest:'.$sourceType;
+        // Alert storm protection: limit signals per team per source_type to prevent runaway alert floods.
+        // Scoped to team so one team's flood does not throttle another. Default: 60 signals/minute.
+        $rateKey = 'signal_ingest:'.($teamId ?? 'global').':'.$sourceType;
         $maxPerMinute = (int) config('signals.storm_rate_limit', 60);
 
         if (! RateLimiter::attempt($rateKey, $maxPerMinute, fn () => null)) {
@@ -79,6 +79,7 @@ class IngestSignalAction
         if ($sourceNativeId) {
             $existing = Signal::where('source_type', $sourceType)
                 ->where('source_native_id', $sourceNativeId)
+                ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
                 ->first();
             if ($existing) {
                 return $this->mergeIntoExisting($existing, $tags, $payload, $sourceIdentifier);
@@ -87,8 +88,10 @@ class IngestSignalAction
 
         $contentHash = hash('sha256', json_encode($payload));
 
-        // Dedup: check if signal with same content_hash already exists
-        $existing = Signal::where('content_hash', $contentHash)->first();
+        // Dedup: check if signal with same content_hash already exists (scoped to team)
+        $existing = Signal::where('content_hash', $contentHash)
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->first();
         if ($existing) {
             return $this->mergeIntoExisting($existing, $tags, $payload, $sourceIdentifier);
         }
@@ -115,6 +118,7 @@ class IngestSignalAction
         }
 
         $signal = Signal::create([
+            'team_id' => $teamId,
             'experiment_id' => $experimentId,
             'contact_identity_id' => $contactIdentityId,
             'source_type' => $sourceType,

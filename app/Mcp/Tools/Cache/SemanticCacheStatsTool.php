@@ -25,14 +25,18 @@ class SemanticCacheStatsTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $total = SemanticCacheEntry::withoutGlobalScopes()->count();
-        $totalHits = (int) SemanticCacheEntry::withoutGlobalScopes()->sum('hit_count');
-        $expired = SemanticCacheEntry::withoutGlobalScopes()
+        $teamId = auth()->user()?->current_team_id;
+
+        $base = SemanticCacheEntry::withoutGlobalScopes()->where('team_id', $teamId);
+
+        $total = (clone $base)->count();
+        $totalHits = (int) (clone $base)->sum('hit_count');
+        $expired = (clone $base)
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
             ->count();
 
-        $byModel = SemanticCacheEntry::withoutGlobalScopes()
+        $byModel = (clone $base)
             ->selectRaw('provider, model, COUNT(*) as entries, SUM(hit_count) as hits')
             ->groupBy('provider', 'model')
             ->orderByDesc('hits')

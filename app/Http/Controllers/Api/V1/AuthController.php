@@ -35,7 +35,10 @@ class AuthController extends Controller
 
         $deviceName = $request->input('device_name', 'api-client');
 
-        $token = $user->createToken($deviceName, ['*'], now()->addDays(30));
+        // Scope token to the user's current team (prevents cross-team access in cloud).
+        // Never issue wildcard tokens — if the user has no team yet, use a scoped placeholder.
+        $teamAbility = $user->current_team_id ? ['team:'.$user->current_team_id] : ['team:none'];
+        $token = $user->createToken($deviceName, $teamAbility, now()->addDays(30));
 
         return response()->json([
             'token' => $token->plainTextToken,
@@ -54,7 +57,9 @@ class AuthController extends Controller
         $currentToken = $request->user()->currentAccessToken();
         $deviceName = $currentToken->name;
 
-        $newToken = $request->user()->createToken($deviceName, ['*'], now()->addDays(30));
+        $user = $request->user();
+        $teamAbility = $user->current_team_id ? ['team:'.$user->current_team_id] : ['team:none'];
+        $newToken = $user->createToken($deviceName, $teamAbility, now()->addDays(30));
 
         $currentToken->delete();
 
@@ -135,11 +140,18 @@ class AuthController extends Controller
 
         $data = $request->only(['name', 'email']);
 
-        if ($request->filled('password')) {
+        $passwordChanged = $request->filled('password');
+        if ($passwordChanged) {
             $data['password'] = $request->password;
         }
 
         $user->update($data);
+
+        // Revoke all other tokens when password changes (forces re-login on all devices)
+        if ($passwordChanged) {
+            $currentTokenId = $request->user()->currentAccessToken()?->id;
+            $user->tokens()->when($currentTokenId, fn ($q) => $q->where('id', '!=', $currentTokenId))->delete();
+        }
 
         return new UserResource($user->fresh()->load('currentTeam'));
     }

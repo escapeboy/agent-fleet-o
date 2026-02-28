@@ -63,8 +63,8 @@ class BuiltInGuardrailsSeeder extends Seeder
                     'risk_level' => RiskLevel::Low,
                     'system_prompt' => $guardrail['system_prompt'],
                     'configuration' => $guardrail['configuration'],
-                    'input_schema' => null,
-                    'output_schema' => null,
+                    'input_schema' => ['type' => 'object', 'properties' => ['input' => ['type' => 'string']]],
+                    'output_schema' => ['type' => 'object', 'properties' => ['passed' => ['type' => 'boolean'], 'reason' => ['type' => 'string']]],
                 ],
             );
         }

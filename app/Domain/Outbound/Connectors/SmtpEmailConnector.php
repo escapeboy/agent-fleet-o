@@ -8,6 +8,7 @@ use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Mail\ExperimentSummaryMail;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Metrics\Services\TrackingUrlSigner;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Mailer\Mailer as SymfonyMailer;
@@ -96,15 +97,18 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 // Append tracking pixel if tracking base URL is configured
                 $trackingBaseUrl = config('services.tracking.base_url');
                 if ($trackingBaseUrl) {
+                    $sig = app(TrackingUrlSigner::class)->sign('pixel', $proposal->experiment_id, $action->id);
                     $pixelUrl = "{$trackingBaseUrl}/api/track/pixel?".http_build_query([
-                        'oa' => $action->id,
+                        'oa'  => $action->id,
                         'exp' => $proposal->experiment_id,
+                        'sig' => $sig,
                     ]);
                     $html .= "\n\n<img src=\"{$pixelUrl}\" width=\"1\" height=\"1\" alt=\"\" />";
                 }
             }
 
-            $unsubscribeAddress = $fromAddress;
+            // Sanitize from address for use in List-Unsubscribe header (prevent header injection)
+            $unsubscribeAddress = preg_replace('/[\r\n<>]/', '', $fromAddress);
             $listUnsubscribe = "<mailto:{$unsubscribeAddress}?subject=unsubscribe>";
 
             $email = (new Email)
@@ -139,10 +143,56 @@ class SmtpEmailConnector implements OutboundConnectorInterface
         return $channel === 'email';
     }
 
+    /**
+     * Block SMTP connections to RFC 1918 private networks and loopback (SSRF prevention).
+     * Only enforced when services.smtp.validate_host = true (default: false).
+     */
+    private function assertPublicSmtpHost(string $host): void
+    {
+        $blockedCidrs = [
+            ['127.0.0.0', 8],
+            ['10.0.0.0', 8],
+            ['172.16.0.0', 12],
+            ['192.168.0.0', 16],
+            ['169.254.0.0', 16],
+            ['100.64.0.0', 10],
+        ];
+
+        $ips = filter_var($host, FILTER_VALIDATE_IP)
+            ? [$host]
+            : array_column(dns_get_record($host, DNS_A) ?: [], 'ip');
+
+        if (empty($ips)) {
+            throw new \RuntimeException("SMTP host '{$host}' could not be resolved or is not allowed.");
+        }
+
+        foreach ($ips as $ip) {
+            $ipLong = ip2long($ip);
+            if ($ipLong === false) {
+                continue;
+            }
+            foreach ($blockedCidrs as [$network, $prefix]) {
+                $mask = ~((1 << (32 - $prefix)) - 1);
+                if (($ipLong & $mask) === (ip2long($network) & $mask)) {
+                    throw new \RuntimeException(
+                        "SMTP host '{$host}' resolves to a private address not allowed in this environment."
+                    );
+                }
+            }
+        }
+    }
+
     private function buildTransport(array $creds): EsmtpTransport
     {
+        $host = $creds['host'];
+
+        // In cloud mode, block SMTP connections to private/internal networks (SSRF prevention)
+        if (config('services.smtp.validate_host', false)) {
+            $this->assertPublicSmtpHost($host);
+        }
+
         $ssl = ($creds['encryption'] ?? '') === 'ssl';
-        $transport = new EsmtpTransport($creds['host'], (int) ($creds['port'] ?? 587), $ssl);
+        $transport = new EsmtpTransport($host, (int) ($creds['port'] ?? 587), $ssl);
 
         if (! empty($creds['username'])) {
             $transport->setUsername($creds['username']);

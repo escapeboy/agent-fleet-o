@@ -2,6 +2,7 @@
 
 namespace App\Domain\Signal\Connectors;
 
+use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Models\Signal;
@@ -34,6 +35,9 @@ class RssConnector implements InputConnectorInterface
         $tags = $config['tags'] ?? ['rss'];
 
         try {
+            // Block SSRF — validate host is a public, routable address.
+            app(SsrfGuard::class)->assertPublicUrl($url);
+
             $response = Http::timeout(30)->get($url);
 
             if (! $response->successful()) {

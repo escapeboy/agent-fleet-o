@@ -13,7 +13,7 @@ class MarketplaceInstallTool extends Tool
 {
     protected string $name = 'marketplace_install';
 
-    protected string $description = 'Install a marketplace listing into your team workspace. Clones the skill/agent/workflow with your team ownership.';
+    protected string $description = 'Install a marketplace listing into your team workspace. Clones the skill/agent/workflow/bundle with your team ownership.';
 
     public function schema(JsonSchema $schema): array
     {

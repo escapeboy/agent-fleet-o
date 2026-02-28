@@ -33,8 +33,11 @@ class MemoryListRecentTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $query = Memory::query()
+        $teamId = auth()->user()?->current_team_id;
+
+        $query = Memory::withoutGlobalScopes()
             ->with(['agent:id,name', 'project:id,title'])
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
             ->orderByDesc('created_at');
 
         if ($agentId = $request->get('agent_id')) {

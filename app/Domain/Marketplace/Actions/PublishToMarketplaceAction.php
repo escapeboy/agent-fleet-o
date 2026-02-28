@@ -76,7 +76,7 @@ class PublishToMarketplaceAction
         ]);
     }
 
-    private function snapshotWorkflow(Workflow $workflow): array
+    public function snapshotWorkflow(Workflow $workflow): array
     {
         $nodes = $workflow->nodes()->with(['agent:id,name', 'skill:id,name'])->get();
         $edges = $workflow->edges()->get();

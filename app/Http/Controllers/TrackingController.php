@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Metrics\Models\Metric;
+use App\Domain\Metrics\Services\TrackingUrlSigner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -25,10 +27,33 @@ class TrackingController extends Controller
             abort(422, 'Missing url parameter');
         }
 
+        // Only allow http/https schemes to prevent javascript: and data: URI redirects
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            abort(422, 'Invalid redirect URL');
+        }
+
+        // Verify HMAC signature to prevent metric manipulation.
+        // When TRACKING_REQUIRE_SIG=true, unsigned requests are rejected.
+        // Default: false (log-only) for backwards compatibility with already-sent emails.
+        if ($experimentId && config('services.tracking.require_sig', false)) {
+            $sig = $request->query('sig', '');
+            if (! $sig || ! app(TrackingUrlSigner::class)->verify($sig, 'click', $experimentId, $outboundActionId, $url)) {
+                Log::warning('TrackingController: invalid or missing click signature', [
+                    'experiment_id' => $experimentId,
+                    'ip' => $request->ip(),
+                ]);
+                abort(403, 'Invalid tracking link');
+            }
+        }
+
         // Record click metric
         if ($experimentId) {
             try {
+                $teamId = Experiment::withoutGlobalScopes()->where('id', $experimentId)->value('team_id');
+
                 Metric::create([
+                    'team_id' => $teamId,
                     'experiment_id' => $experimentId,
                     'outbound_action_id' => $outboundActionId,
                     'type' => 'click',
@@ -67,9 +92,26 @@ class TrackingController extends Controller
         $experimentId = $request->query('exp');
         $outboundActionId = $request->query('oa');
 
+        // Verify HMAC signature to prevent metric manipulation.
+        if ($experimentId && config('services.tracking.require_sig', false)) {
+            $sig = $request->query('sig', '');
+            if (! $sig || ! app(TrackingUrlSigner::class)->verify($sig, 'pixel', $experimentId, $outboundActionId)) {
+                Log::warning('TrackingController: invalid or missing pixel signature', [
+                    'experiment_id' => $experimentId,
+                    'ip' => $request->ip(),
+                ]);
+                // Return 404 on invalid signature — do not serve a pixel that
+                // could be used to infer endpoint structure.
+                abort(404);
+            }
+        }
+
         if ($experimentId) {
             try {
+                $teamId = Experiment::withoutGlobalScopes()->where('id', $experimentId)->value('team_id');
+
                 Metric::create([
+                    'team_id' => $teamId,
                     'experiment_id' => $experimentId,
                     'outbound_action_id' => $outboundActionId,
                     'type' => 'open',

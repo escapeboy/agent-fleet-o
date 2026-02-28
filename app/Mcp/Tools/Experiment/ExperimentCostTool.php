@@ -28,7 +28,11 @@ class ExperimentCostTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $experiment = Experiment::withoutGlobalScopes()->findOrFail($request->get('experiment_id'));
+        $teamId = auth()->user()?->current_team_id;
+
+        $experiment = Experiment::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->findOrFail($request->get('experiment_id'));
 
         $runs = AiRun::withoutGlobalScopes()
             ->where('experiment_id', $experiment->id)

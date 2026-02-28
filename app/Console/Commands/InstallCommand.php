@@ -25,7 +25,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 1: Check requirements
-        $this->components->twoColumnDetail('Step 1/8', 'System Requirements');
+        $this->components->twoColumnDetail('Step 1/9', 'System Requirements');
 
         if (! $this->checkRequirements()) {
             return self::FAILURE;
@@ -34,7 +34,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 2: Database
-        $this->components->twoColumnDetail('Step 2/8', 'Database');
+        $this->components->twoColumnDetail('Step 2/9', 'Database');
 
         $alreadyInstalled = false;
         try {
@@ -58,7 +58,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 3: Admin account
-        $this->components->twoColumnDetail('Step 3/8', 'Admin Account');
+        $this->components->twoColumnDetail('Step 3/9', 'Admin Account');
 
         $usersExist = false;
         try {
@@ -76,7 +76,7 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 4: LLM Provider
-        $this->components->twoColumnDetail('Step 4/8', 'LLM Provider (optional)');
+        $this->components->twoColumnDetail('Step 4/9', 'LLM Provider (optional)');
 
         if ($this->option('force')) {
             $this->components->info('Skipping LLM configuration (--force). Configure later in Settings or .env.');
@@ -87,27 +87,44 @@ class InstallCommand extends Command
         $this->newLine();
 
         // Step 5: Local Agents
-        $this->components->twoColumnDetail('Step 5/8', 'Local Agents (optional)');
+        $this->components->twoColumnDetail('Step 5/9', 'Local Agents (optional)');
         $this->detectLocalAgents();
 
         $this->newLine();
 
         // Step 6: Seed default skills & agents
-        $this->components->twoColumnDetail('Step 6/8', 'Default Skills & Agents');
+        $this->components->twoColumnDetail('Step 6/9', 'Default Skills & Agents');
         $this->components->info('Seeding default skills and agents...');
         Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\SkillAndAgentSeeder', '--force' => true], $this->output);
 
         $this->newLine();
 
         // Step 7: Seed popular tools
-        $this->components->twoColumnDetail('Step 7/8', 'Popular Tools');
+        $this->components->twoColumnDetail('Step 7/9', 'Popular Tools');
         $this->components->info('Seeding popular tools (disabled by default)...');
         Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\PopularToolsSeeder', '--force' => true], $this->output);
 
         $this->newLine();
 
-        // Step 8: Discover host MCP servers
-        $this->components->twoColumnDetail('Step 8/8', 'Host MCP Servers (optional)');
+        // Step 8: Seed agent templates
+        $this->components->twoColumnDetail('Step 8/9', 'Agent Templates (optional)');
+
+        if ($this->option('force')) {
+            $seedTemplates = true;
+        } else {
+            $seedTemplates = $this->components->confirm('Seed built-in agent templates?', true);
+        }
+
+        if ($seedTemplates) {
+            Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\BuiltInAgentTemplatesSeeder', '--force' => true], $this->output);
+        } else {
+            $this->components->info('Skipped. Run php artisan db:seed --class=BuiltInAgentTemplatesSeeder later.');
+        }
+
+        $this->newLine();
+
+        // Step 9: Discover host MCP servers
+        $this->components->twoColumnDetail('Step 9/9', 'Host MCP Servers (optional)');
         $this->discoverHostMcpServers();
 
         $this->newLine();

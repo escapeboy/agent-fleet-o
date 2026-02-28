@@ -10,14 +10,15 @@
     <div class="mb-6 border-b border-(--color-theme-border)">
         <nav class="-mb-px flex gap-6" aria-label="Settings tabs">
             @php
-                $tabs = [
+                $tabs = array_filter([
                     'general'    => 'General',
+                    'updates'    => app(\App\Domain\Shared\Services\DeploymentMode::class)->isSelfHosted() ? 'Updates' : null,
                     'budget'     => 'Budget & Limits',
                     'agents'     => 'Agents',
                     'tools'      => 'Tools',
                     'connectors' => 'Connectors',
                     'security'   => 'Security',
-                ];
+                ]);
             @endphp
             @foreach($tabs as $key => $label)
                 <button wire:click="$set('activeTab', '{{ $key }}')"
@@ -111,6 +112,84 @@
             </div>
         </div>
     @endif
+
+    {{-- ═══ Updates Tab — self-hosted only ═══ --}}
+    @selfhosted
+    @if($activeTab === 'updates')
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {{-- Current Version --}}
+            <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+                <h3 class="text-sm font-medium text-(--color-on-surface-muted)">Version Information</h3>
+                <div class="mt-4 space-y-3">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-(--color-on-surface-muted)">Installed version</span>
+                        <span class="font-mono font-semibold text-(--color-on-surface)">v{{ $installedVersion }}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-(--color-on-surface-muted)">Latest version</span>
+                        @if($latestVersion)
+                            <span class="font-mono font-semibold
+                                {{ $updateAvailable ? 'text-amber-600' : 'text-green-600' }}">
+                                v{{ ltrim($latestVersion, 'v') }}
+                            </span>
+                        @else
+                            <span class="text-(--color-on-surface-muted) italic">unknown</span>
+                        @endif
+                    </div>
+                    @if($updateAvailable && $updateInfo)
+                        <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            <strong>Update available!</strong>
+                            @if($updateInfo['release_url'])
+                                <a href="{{ $updateInfo['release_url'] }}" target="_blank" rel="noopener noreferrer"
+                                   class="ml-1 underline hover:no-underline">View release notes</a>
+                            @endif
+                        </div>
+                    @elseif($latestVersion)
+                        <p class="text-xs text-green-600">You are running the latest version.</p>
+                    @endif
+                </div>
+                <div class="mt-4">
+                    <button wire:click="forceUpdateCheck"
+                            type="button"
+                            class="rounded-lg border border-(--color-theme-border) bg-(--color-surface-raised) px-4 py-2 text-sm font-medium text-(--color-on-surface) hover:bg-(--color-surface-alt)">
+                        Check Now
+                    </button>
+                </div>
+            </div>
+
+            {{-- Update Check Settings --}}
+            <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+                <h3 class="text-sm font-medium text-(--color-on-surface-muted)">Update Check Settings</h3>
+                <p class="mt-1 text-xs text-(--color-on-surface-muted)">
+                    When enabled, FleetQ checks GitHub Releases once per hour to detect new versions.
+                    No personal data is sent — only a version comparison request is made.
+                </p>
+                <form wire:submit="saveUpdateSettings" class="mt-4 space-y-4">
+                    <label class="relative inline-flex cursor-pointer items-center gap-3">
+                        <input type="checkbox" wire:model="updateCheckEnabled" class="peer sr-only" />
+                        <div class="peer h-6 w-11 shrink-0 rounded-full bg-(--color-surface-alt) after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-(--color-theme-border-strong) after:bg-(--color-surface-raised) after:transition-all peer-checked:bg-primary-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300"></div>
+                        <span class="text-sm font-medium text-(--color-on-surface)">Enable automatic update checks</span>
+                    </label>
+
+                    <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                        Save
+                    </button>
+                </form>
+
+                <div class="mt-4 border-t border-(--color-theme-border) pt-4 text-xs text-(--color-on-surface-muted)">
+                    <p>Update checks are performed hourly by the scheduler.</p>
+                    <p class="mt-1">Source:
+                        <a href="https://github.com/{{ config('app.github_repo') }}/releases"
+                           target="_blank" rel="noopener noreferrer"
+                           class="underline hover:no-underline">
+                            github.com/{{ config('app.github_repo') }}
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+    @endselfhosted
 
     {{-- ═══ Budget & Limits Tab ═══ --}}
     @if($activeTab === 'budget')

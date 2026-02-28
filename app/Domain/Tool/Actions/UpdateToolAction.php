@@ -11,6 +11,7 @@ class UpdateToolAction
 {
     public function execute(
         Tool $tool,
+        // Note: platform tools are read-only for teams; super-admin can update via withoutGlobalScopes
         ?string $name = null,
         ?string $description = null,
         ?array $transportConfig = null,
@@ -20,6 +21,10 @@ class UpdateToolAction
         ?ToolStatus $status = null,
         ?ToolRiskLevel $riskLevel = null,
     ): Tool {
+        if ($tool->isPlatformTool()) {
+            throw new \RuntimeException('Platform tools cannot be modified by teams.');
+        }
+
         $data = array_filter([
             'name' => $name,
             'slug' => $name ? Str::slug($name) : null,

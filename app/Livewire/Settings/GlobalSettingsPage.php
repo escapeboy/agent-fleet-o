@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Domain\Agent\Actions\DisableAgentAction;
+use App\Domain\System\Services\VersionCheckService;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
@@ -74,6 +75,9 @@ class GlobalSettingsPage extends Component
 
     public string $blacklistReason = '';
 
+    // Update check settings
+    public bool $updateCheckEnabled = true;
+
     // MCP Import
     public string $mcpJsonInput = '';
 
@@ -87,6 +91,12 @@ class GlobalSettingsPage extends Component
 
     public function mount(): void
     {
+        // In cloud mode only super-admins may access platform-wide settings.
+        // In self-hosted mode the owner of the sole team is effectively the admin.
+        if (app(DeploymentMode::class)->isCloud()) {
+            abort_unless(auth()->user()?->is_super_admin, 403);
+        }
+
         $this->globalBudgetCap = GlobalSetting::get('global_budget_cap', 100000);
         $this->defaultExperimentBudgetCap = GlobalSetting::get('default_experiment_budget_cap', 10000);
         $this->budgetAlertThresholdPct = GlobalSetting::get('budget_alert_threshold_pct', 80);
@@ -106,6 +116,7 @@ class GlobalSettingsPage extends Component
         $this->targetCooldownDays = GlobalSetting::get('target_cooldown_days', 7);
 
         $this->mediaAnalysisEnabled = (bool) GlobalSetting::get('media_analysis_enabled', false);
+        $this->updateCheckEnabled = (bool) GlobalSetting::get('update_check_enabled', true);
         $this->approvalTimeoutHours = GlobalSetting::get('approval_timeout_hours', 48);
 
         $this->defaultLlmProvider = GlobalSetting::get('default_llm_provider', 'anthropic') ?? 'anthropic';
@@ -175,6 +186,44 @@ class GlobalSettingsPage extends Component
         GlobalSetting::set('media_analysis_enabled', $this->mediaAnalysisEnabled);
 
         session()->flash('message', 'Media analysis settings saved.');
+    }
+
+    public function saveUpdateSettings(): void
+    {
+        GlobalSetting::set('update_check_enabled', $this->updateCheckEnabled);
+
+        if (! $this->updateCheckEnabled) {
+            // Clear cached version info when disabling checks
+            cache()->forget('system.latest_version');
+            cache()->forget('system.latest_version_full');
+        }
+
+        session()->flash('message', 'Update settings saved.');
+    }
+
+    public function forceUpdateCheck(): void
+    {
+        $service = app(VersionCheckService::class);
+
+        if (! $service->isCheckEnabled()) {
+            session()->flash('mcp-error', 'Update checks are disabled. Enable them first.');
+
+            return;
+        }
+
+        $latest = $service->forceRefresh();
+
+        if ($latest === null) {
+            session()->flash('mcp-error', 'Could not reach GitHub. Check network connectivity.');
+
+            return;
+        }
+
+        if ($service->isUpdateAvailable()) {
+            session()->flash('message', "Update available: v{$latest}");
+        } else {
+            session()->flash('message', 'You are running the latest version ('.$service->getInstalledVersion().').');
+        }
     }
 
     public function addBlacklistEntry(): void
@@ -401,8 +450,15 @@ class GlobalSettingsPage extends Component
             ];
         }
 
+        $mode = app(DeploymentMode::class);
+        $versionService = $mode->isSelfHosted() ? app(VersionCheckService::class) : null;
+
         return view('livewire.settings.global-settings-page', [
             'blacklistEntries' => Blacklist::orderByDesc('created_at')->get(),
+            'installedVersion' => $versionService?->getInstalledVersion(),
+            'latestVersion' => $versionService?->getLatestVersion(),
+            'updateAvailable' => $versionService?->isUpdateAvailable() ?? false,
+            'updateInfo' => $versionService?->getUpdateInfo(),
             'agents' => Agent::with('circuitBreakerState')->orderBy('name')->get(),
             'localAgentsEnabled' => $localAgentsEnabled,
             'detectedLocalAgents' => $detectedLocalAgents,

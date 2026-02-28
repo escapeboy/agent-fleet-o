@@ -31,7 +31,11 @@ class AuditLogTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $query = AuditEntry::query()->orderByDesc('created_at');
+        $teamId = auth()->user()?->current_team_id;
+
+        $query = AuditEntry::withoutGlobalScopes()
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->orderByDesc('created_at');
 
         if ($subjectType = $request->get('subject_type')) {
             $query->where('subject_type', $subjectType);

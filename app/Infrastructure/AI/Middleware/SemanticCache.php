@@ -116,7 +116,7 @@ class SemanticCache implements AiMiddlewareInterface
             'provider' => $request->provider,
             'model' => $request->model,
             'prompt_hash' => $promptHash,
-            'request_text' => substr($requestText, 0, 10000),
+            'request_text' => substr($requestText, 0, config('semantic_cache.request_text_max_length', 10000)),
             'response_content' => $response->content,
             'response_metadata' => [
                 'parsed_output' => $response->parsedOutput,

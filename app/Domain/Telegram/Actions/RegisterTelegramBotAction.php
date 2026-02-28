@@ -4,6 +4,7 @@ namespace App\Domain\Telegram\Actions;
 
 use App\Domain\Telegram\Models\TelegramBot;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class RegisterTelegramBotAction
@@ -29,6 +30,12 @@ class RegisterTelegramBotAction
 
         $botInfo = $response->json('result');
 
+        // Auto-generate a cryptographically random webhook secret if the team doesn't already have one.
+        // This secret is verified on every inbound webhook to prevent unauthenticated message injection.
+        $existingSecret = TelegramBot::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->value('webhook_secret');
+
         return TelegramBot::updateOrCreate(
             ['team_id' => $teamId],
             [
@@ -37,6 +44,7 @@ class RegisterTelegramBotAction
                 'bot_name' => $botInfo['first_name'] ?? null,
                 'routing_mode' => $routingMode,
                 'default_project_id' => $defaultProjectId,
+                'webhook_secret' => $existingSecret ?? Str::random(32),
                 'status' => 'active',
                 'last_error' => null,
             ],

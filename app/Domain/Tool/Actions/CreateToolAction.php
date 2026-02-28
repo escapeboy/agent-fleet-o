@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class CreateToolAction
 {
     public function execute(
-        string $teamId,
+        ?string $teamId,
         string $name,
         ToolType $type,
         string $description = '',
@@ -18,9 +18,11 @@ class CreateToolAction
         array $credentials = [],
         array $toolDefinitions = [],
         array $settings = [],
+        bool $isPlatform = false,
     ): Tool {
         return Tool::withoutGlobalScopes()->create([
             'team_id' => $teamId,
+            'is_platform' => $isPlatform || $teamId === null,
             'name' => $name,
             'slug' => Str::slug($name),
             'description' => $description,

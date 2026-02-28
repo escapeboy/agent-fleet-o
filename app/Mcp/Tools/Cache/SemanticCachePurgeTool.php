@@ -27,7 +27,10 @@ class SemanticCachePurgeTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $query = SemanticCacheEntry::withoutGlobalScopes();
+        $teamId = auth()->user()?->current_team_id;
+
+        $query = SemanticCacheEntry::withoutGlobalScopes()
+            ->where('team_id', $teamId);
 
         if ($provider = $request->get('provider')) {
             $query->where('provider', $provider);

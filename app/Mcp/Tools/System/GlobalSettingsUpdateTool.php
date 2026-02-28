@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\System;
 
+use App\Domain\Shared\Services\DeploymentMode;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -41,6 +42,12 @@ class GlobalSettingsUpdateTool extends Tool
 
     public function handle(Request $request): Response
     {
+        // In cloud mode only super-admins may update global settings.
+        // In self-hosted mode any authenticated user may do so (single-team, owner controls the install).
+        if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
+            return Response::error('Access denied: super admin privileges required.');
+        }
+
         $settings = $request->get('settings');
 
         if (! is_array($settings) || empty($settings)) {

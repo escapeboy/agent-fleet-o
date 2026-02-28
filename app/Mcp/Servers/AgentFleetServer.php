@@ -114,9 +114,12 @@ use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
 use App\Mcp\Tools\System\SystemHealthTool;
+use App\Mcp\Tools\System\SystemVersionCheckTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
+use App\Mcp\Tools\Tool\ToolActivateTool;
 use App\Mcp\Tools\Tool\ToolBashPolicyTool;
 use App\Mcp\Tools\Tool\ToolCreateTool;
+use App\Mcp\Tools\Tool\ToolDeactivateTool;
 use App\Mcp\Tools\Tool\ToolDeleteTool;
 use App\Mcp\Tools\Tool\ToolDiscoverMcpTool;
 use App\Mcp\Tools\Tool\ToolGetTool;
@@ -227,6 +230,8 @@ class AgentFleetServer extends Server
         ToolCreateTool::class,
         ToolUpdateTool::class,
         ToolDeleteTool::class,
+        ToolActivateTool::class,
+        ToolDeactivateTool::class,
         ToolDiscoverMcpTool::class,
         ToolImportMcpTool::class,
         ToolSshFingerprintsTool::class,
@@ -356,9 +361,10 @@ class AgentFleetServer extends Server
         // RunPod (1)
         RunPodManageTool::class,
 
-        // System (4)
+        // System (5)
         DashboardKpisTool::class,
         SystemHealthTool::class,
+        SystemVersionCheckTool::class,
         AuditLogTool::class,
         GlobalSettingsUpdateTool::class,
     ];

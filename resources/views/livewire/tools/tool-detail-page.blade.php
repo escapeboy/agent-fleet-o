@@ -45,7 +45,11 @@
             <div>
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-bold text-gray-900">{{ $tool->name }}</h2>
-                    <x-status-badge :status="$tool->status->value" />
+                    @if($tool->isPlatformTool())
+                        <span class="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700">Platform</span>
+                    @else
+                        <x-status-badge :status="$tool->status->value" />
+                    @endif
                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
                         {{ match($tool->type->value) {
                             'mcp_stdio' => 'bg-blue-100 text-blue-800',
@@ -67,25 +71,42 @@
             </div>
 
             <div class="flex gap-2">
-                <button wire:click="toggleStatus"
-                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    {{ $tool->status === \App\Domain\Tool\Enums\ToolStatus::Active ? 'Disable' : 'Enable' }}
-                </button>
-                <button wire:click="startEdit"
-                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Edit
-                </button>
-                <button wire:click="deleteTool" wire:confirm="Are you sure you want to delete this tool?"
-                    class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">
-                    Delete
-                </button>
+                @if($tool->isPlatformTool())
+                    @php $isActivated = $activation?->isActive() ?? false; @endphp
+                    <button wire:click="toggleStatus"
+                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition
+                            {{ $isActivated
+                                ? 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                : 'border-primary-500 bg-primary-600 text-white hover:bg-primary-700' }}">
+                        {{ $isActivated ? 'Deactivate' : 'Activate' }}
+                    </button>
+                @else
+                    <button wire:click="toggleStatus"
+                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ $tool->status === \App\Domain\Tool\Enums\ToolStatus::Active ? 'Disable' : 'Enable' }}
+                    </button>
+                    <button wire:click="startEdit"
+                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Edit
+                    </button>
+                    <button wire:click="deleteTool" wire:confirm="Are you sure you want to delete this tool?"
+                        class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">
+                        Delete
+                    </button>
+                @endif
             </div>
         </div>
 
         {{-- Tabs --}}
+        @php
+            $tabs = ['overview' => 'Overview', 'config' => 'Configuration', 'agents' => 'Agents'];
+            if ($tool->isPlatformTool()) {
+                $tabs['activation'] = 'Team Setup';
+            }
+        @endphp
         <div class="mb-6 border-b border-gray-200">
             <nav class="-mb-px flex gap-6">
-                @foreach(['overview' => 'Overview', 'config' => 'Configuration', 'agents' => 'Agents'] as $tab => $label)
+                @foreach($tabs as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="border-b-2 pb-3 text-sm font-medium transition
                             {{ $activeTab === $tab
@@ -135,6 +156,18 @@
                             <dt class="text-gray-500">Created</dt>
                             <dd class="text-gray-700">{{ $tool->created_at->format('M j, Y H:i') }}</dd>
                         </div>
+                        @if($tool->isPlatformTool())
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">Team Status</dt>
+                                <dd>
+                                    @if($activation?->isActive())
+                                        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Active for your team</span>
+                                    @else
+                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">Not activated</span>
+                                    @endif
+                                </dd>
+                            </div>
+                        @endif
                     </dl>
                 </div>
 
@@ -207,6 +240,75 @@
                             @endforeach
                         </tbody>
                     </table>
+                @endif
+            </div>
+        @endif
+
+        {{-- Tab: Team Setup (platform tools only) --}}
+        @if($activeTab === 'activation' && $tool->isPlatformTool())
+            <div class="space-y-6">
+                {{-- Activation status card --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-5">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900">Team Activation</h4>
+                            <p class="mt-1 text-sm text-gray-500">
+                                Enable this platform tool for your team. Your credentials are stored securely and never shared.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            @if($activation?->isActive())
+                                <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">Active</span>
+                            @else
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-500">Inactive</span>
+                            @endif
+                            <button wire:click="toggleStatus"
+                                class="rounded-lg border px-3 py-1.5 text-sm font-medium transition
+                                    {{ $activation?->isActive()
+                                        ? 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                        : 'border-primary-500 bg-primary-600 text-white hover:bg-primary-700' }}">
+                                {{ $activation?->isActive() ? 'Deactivate' : 'Activate' }}
+                            </button>
+                        </div>
+                    </div>
+                    @if($activation?->activated_at)
+                        <p class="mt-3 text-xs text-gray-400">Activated {{ $activation->activated_at->diffForHumans() }}</p>
+                    @endif
+                </div>
+
+                {{-- Credentials form --}}
+                @php $envVars = array_keys($tool->transport_config['env'] ?? []); @endphp
+                @if(count($envVars) > 0)
+                    <div class="rounded-xl border border-gray-200 bg-white p-5">
+                        <h4 class="mb-1 text-sm font-semibold text-gray-900">API Credentials</h4>
+                        <p class="mb-4 text-sm text-gray-500">
+                            Enter your API credentials for this tool. They will be encrypted and injected at runtime.
+                        </p>
+
+                        <div class="space-y-4">
+                            @foreach($envVars as $key)
+                                <div>
+                                    <label class="mb-1 block text-xs font-medium text-gray-700">{{ $key }}</label>
+                                    <input wire:model="credentialInputs.{{ $key }}"
+                                        type="password"
+                                        autocomplete="off"
+                                        placeholder="Enter {{ $key }}..."
+                                        class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 font-mono text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="mt-5">
+                            <button wire:click="saveCredentials"
+                                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                                Save Credentials
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <div class="rounded-xl border border-gray-200 bg-white p-5">
+                        <p class="text-sm text-gray-500">This tool does not require any credentials. Simply activate it above.</p>
+                    </div>
                 @endif
             </div>
         @endif

@@ -9,6 +9,7 @@ use App\Http\Resources\Api\V1\SignalResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -48,7 +49,7 @@ class SignalController extends Controller
             'source_identifier' => ['required', 'string', 'max:255'],
             'payload' => ['required', 'array'],
             'tags' => ['sometimes', 'array'],
-            'experiment_id' => ['sometimes', 'nullable', 'uuid', 'exists:experiments,id'],
+            'experiment_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('experiments', 'id')->where('team_id', $request->user()?->current_team_id)],
         ]);
 
         $signal = $action->execute(

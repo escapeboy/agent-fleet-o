@@ -40,7 +40,12 @@ class ArtifactGetTool extends Tool
             'include_content' => 'sometimes|boolean',
         ]);
 
-        $artifact = Artifact::withCount('versions')->find($validated['artifact_id']);
+        $teamId = auth()->user()?->current_team_id;
+
+        $artifact = Artifact::withoutGlobalScopes()
+            ->withCount('versions')
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->find($validated['artifact_id']);
 
         if (! $artifact) {
             return Response::error('Artifact not found.');

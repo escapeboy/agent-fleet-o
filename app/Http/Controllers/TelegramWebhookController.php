@@ -26,12 +26,11 @@ class TelegramWebhookController extends Controller
             return response('', 200); // Return 200 to silence Telegram retries
         }
 
-        // Verify secret token header
-        if ($bot->webhook_secret) {
-            $secret = $request->header('X-Telegram-Bot-Api-Secret-Token');
-            if ($secret !== $bot->webhook_secret) {
-                return response('', 200); // Silent fail to prevent enumeration
-            }
+        // Always verify secret token header — a missing or mismatched secret silently drops the update.
+        // Bots registered before auto-generation was added will fail until they are re-registered.
+        $incomingSecret = $request->header('X-Telegram-Bot-Api-Secret-Token');
+        if (! $bot->webhook_secret || $incomingSecret !== $bot->webhook_secret) {
+            return response('', 200); // Silent fail (Telegram expects 200 even on rejection)
         }
 
         $update = $request->json()->all();
