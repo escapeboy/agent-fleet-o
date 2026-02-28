@@ -2,6 +2,7 @@
 
 namespace App\Domain\Project\Actions;
 
+use App\Domain\Project\DTOs\ScheduleParseResultDTO;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectSchedule;
@@ -78,7 +79,7 @@ class ScheduleProjectFromNaturalLanguageAction
 
     private function addScheduleToExistingProject(
         string $projectId,
-        \App\Domain\Project\DTOs\ScheduleParseResultDTO $scheduleDto,
+        ScheduleParseResultDTO $scheduleDto,
         array $scheduleArray,
         string $teamId,
     ): string {

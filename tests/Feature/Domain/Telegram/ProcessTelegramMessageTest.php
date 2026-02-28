@@ -50,6 +50,7 @@ class ProcessTelegramMessageTest extends TestCase
             'bot_name' => 'Test Bot',
             'routing_mode' => 'assistant',
             'status' => 'active',
+            'webhook_secret' => 'test-webhook-secret',
         ]);
     }
 
@@ -72,6 +73,7 @@ class ProcessTelegramMessageTest extends TestCase
         $response = $this->postJson(
             "/api/telegram/webhook/{$this->team->id}",
             $this->webhookPayload('Hello'),
+            ['X-Telegram-Bot-Api-Secret-Token' => 'test-webhook-secret'],
         );
 
         $response->assertStatus(200);
@@ -126,6 +128,7 @@ class ProcessTelegramMessageTest extends TestCase
         $response = $this->postJson(
             "/api/telegram/webhook/{$this->team->id}",
             $payload,
+            ['X-Telegram-Bot-Api-Secret-Token' => 'test-webhook-secret'],
         );
 
         $response->assertStatus(200);

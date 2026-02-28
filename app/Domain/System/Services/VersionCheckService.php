@@ -2,6 +2,7 @@
 
 namespace App\Domain\System\Services;
 
+use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -39,7 +40,7 @@ class VersionCheckService
         return version_compare(
             ltrim($latest, 'v'),
             ltrim($this->getInstalledVersion(), 'v'),
-            '>'
+            '>',
         );
     }
 
@@ -75,7 +76,7 @@ class VersionCheckService
     public function isCheckEnabled(): bool
     {
         try {
-            return (bool) \App\Models\GlobalSetting::get('update_check_enabled', true);
+            return (bool) GlobalSetting::get('update_check_enabled', true);
         } catch (\Throwable) {
             return true; // Default to enabled if DB is unavailable
         }

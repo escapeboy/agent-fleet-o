@@ -313,6 +313,12 @@ parameters:
 			path: app/Domain/Assistant/Jobs/ProcessAssistantMessageJob.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Assistant/Services/AssistantToolRegistry.php
+
+		-
 			message: '#^Parameter \#1 \$team of method App\\Models\\User\:\:teamRole\(\) expects App\\Domain\\Shared\\Models\\Team, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1399,6 +1405,12 @@ parameters:
 			path: app/Domain/Marketplace/Actions/AggregateMarketplaceStatsAction.php
 
 		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
+
+		-
 			message: '#^Offset ''capabilities'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -1475,6 +1487,18 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Domain/Marketplace/Actions/PublishBundleAction.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: string$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Domain/Marketplace/Actions/PublishBundleAction.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent\.$#'
@@ -2353,6 +2377,18 @@ parameters:
 			path: app/Domain/Project/Actions/ResumeProjectAction.php
 
 		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Project/Actions/ScheduleProjectFromNaturalLanguageAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Project\\Enums\\ProjectType\:\:Continuous will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Project/Actions/ScheduleProjectFromNaturalLanguageAction.php
+
+		-
 			message: '#^Offset ''per_run_cap'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -2761,6 +2797,12 @@ parameters:
 			path: app/Domain/Shared/Services/ContactResolver.php
 
 		-
+			message: '#^Binary operation "\<\<" between 1 and \-96\|16\|20\|22\|24\|25 results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: app/Domain/Shared/Services/SsrfGuard.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Signal\\Models\\Signal\:\:\$team_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2873,6 +2915,24 @@ parameters:
 			identifier: return.type
 			count: 1
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
+
+		-
+			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/CalendarConnector.php
+
+		-
+			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
+			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
 
 		-
 			message: '#^Method App\\Domain\\Signal\\Connectors\\ImapConnector\:\:resolveCredentials\(\) never returns array so it can be removed from the return type\.$#'
@@ -3457,9 +3517,27 @@ parameters:
 			path: app/Domain/Telegram/Actions/ProcessTelegramMessageAction.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$transport_config\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isPlatformTool\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Domain\\Tool\\Models\\Tool\)\: bool given\.$#'
 			identifier: argument.type
-			count: 2
+			count: 3
 			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
@@ -6531,12 +6609,24 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 4
 			path: app/Livewire/Marketplace/MarketplaceBrowsePage.php
 
 		-
 			message: '#^Parameter \#1 \$team of method App\\Domain\\Skill\\Services\\SkillCompatibilityChecker\:\:getAvailableProviders\(\) expects App\\Domain\\Shared\\Models\\Team, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
+			count: 1
+			path: app/Livewire/Marketplace/MarketplaceBrowsePage.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Livewire/Marketplace/MarketplaceBrowsePage.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Marketplace\\Enums\\ListingVisibility\:\:Team will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Livewire/Marketplace/MarketplaceBrowsePage.php
 
@@ -6561,7 +6651,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Livewire/Marketplace/PublishForm.php
 
 		-
@@ -6697,6 +6787,12 @@ parameters:
 			path: app/Livewire/Settings/ConnectorConfigModal.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$is_super_admin\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Settings/GlobalSettingsPage.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 3
@@ -6805,7 +6901,25 @@ parameters:
 			path: app/Livewire/Tools/ToolDetailPage.php
 
 		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
+			message: '#^Offset ''env'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
 			message: '#^Offset ''timeout'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
+			message: '#^Offset \*NEVER\* on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Livewire/Tools/ToolDetailPage.php
@@ -6817,10 +6931,22 @@ parameters:
 			path: app/Livewire/Tools/ToolDetailPage.php
 
 		-
+			message: '#^Using nullsafe property access "\?\-\>credential_overrides" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
 			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Tools/ToolDetailPage.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolStatus\:\:Active will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Livewire/Tools/ToolListPage.php
 
 		-
 			message: '#^Cannot call method isActive\(\) on string\.$#'
@@ -7783,10 +7909,22 @@ parameters:
 			path: app/Mcp/Tools/System/AuditLogTool.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$is_super_admin\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/System/GlobalSettingsUpdateTool.php
+
+		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
 			path: app/Mcp/Tools/Telegram/TelegramBotTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Tool/ToolActivateTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'

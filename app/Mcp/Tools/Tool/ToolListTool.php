@@ -51,10 +51,10 @@ class ToolListTool extends Tool
         return Response::text(json_encode([
             'count' => $tools->count(),
             'tools' => $tools->map(fn ($t) => [
-                'id'          => $t->id,
-                'name'        => $t->name,
-                'type'        => $t->type->value,
-                'status'      => $t->status->value,
+                'id' => $t->id,
+                'name' => $t->name,
+                'type' => $t->type->value,
+                'status' => $t->status->value,
                 'is_platform' => $t->isPlatformTool(),
                 'description' => $t->description,
             ])->toArray(),

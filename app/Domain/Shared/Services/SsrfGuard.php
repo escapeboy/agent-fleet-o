@@ -66,6 +66,7 @@ class SsrfGuard
             $ips = [$host];
         } elseif (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
             $this->assertPublicIpv6($host);
+
             return;
         } else {
             // DNS resolution — note: DNS rebinding is still possible if TTL=0.
@@ -94,7 +95,7 @@ class SsrfGuard
                     $mask = ~((1 << (32 - $prefix)) - 1);
                     if (($ipLong & $mask) === (ip2long($network) & $mask)) {
                         throw new \InvalidArgumentException(
-                            "Host '{$host}' resolves to a private or internal address and is not allowed."
+                            "Host '{$host}' resolves to a private or internal address and is not allowed.",
                         );
                     }
                 }
@@ -116,9 +117,9 @@ class SsrfGuard
 
         // fc00::/7 (unique local) and fe80::/10 (link-local)
         $first2 = unpack('n', substr($packed, 0, 2))[1];
-        if (($first2 & 0xfe00) === 0xfc00 || ($first2 & 0xffc0) === 0xfe80) {
+        if (($first2 & 0xFE00) === 0xFC00 || ($first2 & 0xFFC0) === 0xFE80) {
             throw new \InvalidArgumentException(
-                "Host '{$ip}' is a private or link-local IPv6 address and is not allowed."
+                "Host '{$ip}' is a private or link-local IPv6 address and is not allowed.",
             );
         }
     }

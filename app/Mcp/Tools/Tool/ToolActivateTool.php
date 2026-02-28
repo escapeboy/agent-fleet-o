@@ -22,15 +22,14 @@ class ToolActivateTool extends Tool
                 ->description('The platform tool UUID to activate')
                 ->required(),
             'credential_overrides' => $schema->object()
-                ->description('Key-value pairs of environment variable overrides (e.g. API keys). Values are stored encrypted.')
-                ->additionalProperties($schema->string()),
+                ->description('Key-value pairs of environment variable overrides (e.g. API keys). Values are stored encrypted.'),
         ];
     }
 
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'tool_id'              => 'required|string',
+            'tool_id' => 'required|string',
             'credential_overrides' => 'array',
         ]);
 
@@ -56,10 +55,10 @@ class ToolActivateTool extends Tool
         );
 
         return Response::text(json_encode([
-            'success'      => true,
-            'tool_id'      => $tool->id,
-            'team_id'      => $teamId,
-            'status'       => $activation->status,
+            'success' => true,
+            'tool_id' => $tool->id,
+            'team_id' => $teamId,
+            'status' => $activation->status,
             'activated_at' => $activation->activated_at?->toIso8601String(),
         ]));
     }

@@ -3,11 +3,11 @@
 namespace App\Livewire\Settings;
 
 use App\Domain\Agent\Actions\DisableAgentAction;
-use App\Domain\System\Services\VersionCheckService;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use App\Domain\Shared\Services\DeploymentMode;
+use App\Domain\System\Services\VersionCheckService;
 use App\Domain\Tool\Actions\ImportMcpServersAction;
 use App\Domain\Tool\Services\McpConfigDiscovery;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;

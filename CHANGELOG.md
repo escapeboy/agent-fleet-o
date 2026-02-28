@@ -2,6 +2,14 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.1.1] - 2026-02-28
+
+### Fixed
+
+- Migration `create_platform_tools_support` now guards PostgreSQL-specific `DROP/CREATE POLICY` statements with a driver check, preventing failures when running against SQLite (test environment).
+- Telegram webhook test updated to send the required `X-Telegram-Bot-Api-Secret-Token` header, aligning with the webhook secret enforcement added in v1.1.0.
+- PHPStan and Pint style issues in platform-tools and security files resolved.
+
 ## [1.1.0] - 2026-02-28
 
 ### Added
