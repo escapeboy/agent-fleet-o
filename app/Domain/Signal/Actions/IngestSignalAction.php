@@ -60,9 +60,9 @@ class IngestSignalAction
             }
         }
 
-        // Alert storm protection: limit signals per source_type to prevent runaway alert floods.
-        // Default: 60 signals/minute per source_type. Configurable via config('signals.rate_limit').
-        $rateKey = 'signal_ingest:'.$sourceType;
+        // Alert storm protection: limit signals per team per source_type to prevent runaway alert floods.
+        // Scoped to team so one team's flood does not throttle another. Default: 60 signals/minute.
+        $rateKey = 'signal_ingest:'.($teamId ?? 'global').':'.$sourceType;
         $maxPerMinute = (int) config('signals.storm_rate_limit', 60);
 
         if (! RateLimiter::attempt($rateKey, $maxPerMinute, fn () => null)) {
