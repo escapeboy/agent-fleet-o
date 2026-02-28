@@ -107,7 +107,7 @@ class MarketplaceBrowsePage extends Component
                 if ($teamId) {
                     $q->orWhere(fn ($q2) => $q2
                         ->where('visibility', ListingVisibility::Team)
-                        ->where('team_id', $teamId)
+                        ->where('team_id', $teamId),
                     );
                 }
             });
@@ -144,7 +144,7 @@ class MarketplaceBrowsePage extends Component
                 if ($teamId) {
                     $q->orWhere(fn ($q2) => $q2
                         ->where('visibility', ListingVisibility::Team)
-                        ->where('team_id', $teamId)
+                        ->where('team_id', $teamId),
                     );
                 }
             })

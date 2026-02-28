@@ -19,7 +19,7 @@ class TeamScope implements Scope
 
         if ($user && $user->current_team_id) {
             $teamId = $user->current_team_id;
-            $table  = $model->getTable();
+            $table = $model->getTable();
 
             // Wrap in closure so OR does not leak into other WHERE clauses
             $builder->where(function (Builder $query) use ($table, $teamId) {
