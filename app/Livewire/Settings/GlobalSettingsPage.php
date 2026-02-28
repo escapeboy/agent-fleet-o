@@ -91,6 +91,12 @@ class GlobalSettingsPage extends Component
 
     public function mount(): void
     {
+        // In cloud mode only super-admins may access platform-wide settings.
+        // In self-hosted mode the owner of the sole team is effectively the admin.
+        if (app(DeploymentMode::class)->isCloud()) {
+            abort_unless(auth()->user()?->is_super_admin, 403);
+        }
+
         $this->globalBudgetCap = GlobalSetting::get('global_budget_cap', 100000);
         $this->defaultExperimentBudgetCap = GlobalSetting::get('default_experiment_budget_cap', 10000);
         $this->budgetAlertThresholdPct = GlobalSetting::get('budget_alert_threshold_pct', 80);

@@ -21,8 +21,14 @@ class SignalWebhookController extends Controller
      */
     public function __invoke(Request $request): JsonResponse
     {
-        // Validate signature if secret is configured
+        // In production, a webhook secret is mandatory — fail closed if not configured.
         $secret = config('services.signal_webhook.secret');
+        if (! $secret && app()->isProduction()) {
+            Log::warning('SignalWebhookController: SIGNAL_WEBHOOK_SECRET not configured in production');
+
+            return response()->json(['error' => 'Webhook not configured'], 403);
+        }
+
         if ($secret) {
             $signature = $request->header('X-Webhook-Signature', '');
             if (! WebhookConnector::validateSignature($request->getContent(), $signature, $secret)) {

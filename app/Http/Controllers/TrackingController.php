@@ -25,6 +25,12 @@ class TrackingController extends Controller
             abort(422, 'Missing url parameter');
         }
 
+        // Only allow http/https schemes to prevent javascript: and data: URI redirects
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            abort(422, 'Invalid redirect URL');
+        }
+
         // Record click metric
         if ($experimentId) {
             try {

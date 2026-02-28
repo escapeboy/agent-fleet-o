@@ -79,6 +79,7 @@ class IngestSignalAction
         if ($sourceNativeId) {
             $existing = Signal::where('source_type', $sourceType)
                 ->where('source_native_id', $sourceNativeId)
+                ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
                 ->first();
             if ($existing) {
                 return $this->mergeIntoExisting($existing, $tags, $payload, $sourceIdentifier);
@@ -87,8 +88,10 @@ class IngestSignalAction
 
         $contentHash = hash('sha256', json_encode($payload));
 
-        // Dedup: check if signal with same content_hash already exists
-        $existing = Signal::where('content_hash', $contentHash)->first();
+        // Dedup: check if signal with same content_hash already exists (scoped to team)
+        $existing = Signal::where('content_hash', $contentHash)
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->first();
         if ($existing) {
             return $this->mergeIntoExisting($existing, $tags, $payload, $sourceIdentifier);
         }
@@ -115,6 +118,7 @@ class IngestSignalAction
         }
 
         $signal = Signal::create([
+            'team_id' => $teamId,
             'experiment_id' => $experimentId,
             'contact_identity_id' => $contactIdentityId,
             'source_type' => $sourceType,

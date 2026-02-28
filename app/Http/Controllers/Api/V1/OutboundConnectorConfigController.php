@@ -236,12 +236,37 @@ class OutboundConnectorConfigController extends Controller
         throw new \RuntimeException($response->json('error.message', 'Invalid credentials'));
     }
 
+    /**
+     * Block SSRF by ensuring the SMTP host does not resolve to a private/loopback address.
+     */
+    private function assertSsrfSafeHost(string $host): void
+    {
+        $ip = gethostbyname($host);
+
+        // gethostbyname returns the input unchanged on resolution failure
+        if ($ip === $host && ! filter_var($ip, FILTER_VALIDATE_IP)) {
+            throw new \RuntimeException("Cannot resolve host: {$host}");
+        }
+
+        // Reject loopback
+        if (in_array($ip, ['127.0.0.1', '0.0.0.0'], true) || str_starts_with($ip, '127.')) {
+            throw new \RuntimeException("Connection to '{$host}' is not allowed.");
+        }
+
+        // Reject private, link-local, and reserved ranges
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            throw new \RuntimeException("Connection to '{$host}' is not allowed.");
+        }
+    }
+
     private function testSmtp(array $creds): string
     {
         $host = $creds['host'] ?? '';
         if (! $host) {
             throw new \RuntimeException('SMTP host is required');
         }
+
+        $this->assertSsrfSafeHost($host);
 
         $port = (int) ($creds['port'] ?? 587);
         $encryption = $creds['encryption'] ?? 'tls';

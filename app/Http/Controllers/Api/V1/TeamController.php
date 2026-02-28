@@ -117,9 +117,14 @@ class TeamController extends Controller
 
     /**
      * @response 200 {"message": "Credential removed."}
+     * @response 403 {"message": "This resource belongs to another team."}
      */
-    public function deleteCredential(TeamProviderCredential $credential): JsonResponse
+    public function deleteCredential(Request $request, TeamProviderCredential $credential): JsonResponse
     {
+        if ($credential->team_id !== $request->user()->current_team_id) {
+            abort(403, 'This resource belongs to another team.');
+        }
+
         $credential->delete();
 
         return response()->json(['message' => 'Credential removed.']);

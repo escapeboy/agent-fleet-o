@@ -41,6 +41,11 @@ class GlobalSettingsUpdateTool extends Tool
 
     public function handle(Request $request): Response
     {
+        // Only super admins may update global platform settings via MCP.
+        if (! auth()->user()?->is_super_admin) {
+            return Response::error('Access denied: super admin privileges required.');
+        }
+
         $settings = $request->get('settings');
 
         if (! is_array($settings) || empty($settings)) {
