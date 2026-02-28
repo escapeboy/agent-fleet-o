@@ -10,15 +10,15 @@
     <div class="mb-6 border-b border-(--color-theme-border)">
         <nav class="-mb-px flex gap-6" aria-label="Settings tabs">
             @php
-                $tabs = [
+                $tabs = array_filter([
                     'general'    => 'General',
-                    'updates'    => 'Updates',
+                    'updates'    => app(\App\Domain\Shared\Services\DeploymentMode::class)->isSelfHosted() ? 'Updates' : null,
                     'budget'     => 'Budget & Limits',
                     'agents'     => 'Agents',
                     'tools'      => 'Tools',
                     'connectors' => 'Connectors',
                     'security'   => 'Security',
-                ];
+                ]);
             @endphp
             @foreach($tabs as $key => $label)
                 <button wire:click="$set('activeTab', '{{ $key }}')"
@@ -113,7 +113,8 @@
         </div>
     @endif
 
-    {{-- ═══ Updates Tab ═══ --}}
+    {{-- ═══ Updates Tab — self-hosted only ═══ --}}
+    @selfhosted
     @if($activeTab === 'updates')
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {{-- Current Version --}}
@@ -188,6 +189,7 @@
             </div>
         </div>
     @endif
+    @endselfhosted
 
     {{-- ═══ Budget & Limits Tab ═══ --}}
     @if($activeTab === 'budget')

@@ -444,14 +444,15 @@ class GlobalSettingsPage extends Component
             ];
         }
 
-        $versionService = app(VersionCheckService::class);
+        $mode = app(DeploymentMode::class);
+        $versionService = $mode->isSelfHosted() ? app(VersionCheckService::class) : null;
 
         return view('livewire.settings.global-settings-page', [
             'blacklistEntries' => Blacklist::orderByDesc('created_at')->get(),
-            'installedVersion' => $versionService->getInstalledVersion(),
-            'latestVersion' => $versionService->getLatestVersion(),
-            'updateAvailable' => $versionService->isUpdateAvailable(),
-            'updateInfo' => $versionService->getUpdateInfo(),
+            'installedVersion' => $versionService?->getInstalledVersion(),
+            'latestVersion' => $versionService?->getLatestVersion(),
+            'updateAvailable' => $versionService?->isUpdateAvailable() ?? false,
+            'updateInfo' => $versionService?->getUpdateInfo(),
             'agents' => Agent::with('circuitBreakerState')->orderBy('name')->get(),
             'localAgentsEnabled' => $localAgentsEnabled,
             'detectedLocalAgents' => $detectedLocalAgents,

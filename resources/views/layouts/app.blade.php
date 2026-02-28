@@ -71,10 +71,12 @@
                 </div>
             </header>
 
-            {{-- Update notification banner (shown when a newer version is available) --}}
-            @auth
-                <livewire:shared.update-banner />
-            @endauth
+            {{-- Update notification banner — self-hosted only (cloud manages its own deployments) --}}
+            @selfhosted
+                @auth
+                    <livewire:shared.update-banner />
+                @endauth
+            @endselfhosted
 
             {{-- Page Content --}}
             <main data-theme-scope class="flex-1 overflow-y-auto p-6">
