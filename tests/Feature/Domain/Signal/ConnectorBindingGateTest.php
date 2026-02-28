@@ -30,8 +30,8 @@ class ConnectorBindingGateTest extends TestCase
 
         $user = User::factory()->create();
         $this->team = Team::create([
-            'name'     => 'Test Team',
-            'slug'     => 'test-team',
+            'name' => 'Test Team',
+            'slug' => 'test-team',
             'owner_id' => $user->id,
             'settings' => [],
         ]);
@@ -56,11 +56,11 @@ class ConnectorBindingGateTest extends TestCase
         ]);
 
         TelegramBot::create([
-            'team_id'      => $this->team->id,
-            'bot_token'    => 'test-token-123',
+            'team_id' => $this->team->id,
+            'bot_token' => 'test-token-123',
             'bot_username' => 'testbot',
-            'bot_name'     => 'Test Bot',
-            'status'       => 'active',
+            'bot_name' => 'Test Bot',
+            'status' => 'active',
             'routing_mode' => 'assistant',
         ]);
 

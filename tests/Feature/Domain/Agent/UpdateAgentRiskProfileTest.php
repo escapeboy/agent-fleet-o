@@ -6,6 +6,8 @@ use App\Domain\Agent\Actions\UpdateAgentRiskProfileAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\UserNotification;
 use App\Models\User;
@@ -136,7 +138,7 @@ class UpdateAgentRiskProfileTest extends TestCase
         }
 
         // Create an experiment to attach PlaybookSteps
-        $experiment = \App\Domain\Experiment\Models\Experiment::factory()->create([
+        $experiment = Experiment::factory()->create([
             'team_id' => $this->team->id,
             'user_id' => $this->user->id,
         ]);
@@ -145,7 +147,7 @@ class UpdateAgentRiskProfileTest extends TestCase
         // pii_detection_rate = 1.0 → contribution = 1.0 * 25 = 25
         // guardrail_block_rate = 1.0 → contribution = 1.0 * 20 = 20
         for ($i = 0; $i < 5; $i++) {
-            \App\Domain\Experiment\Models\PlaybookStep::create([
+            PlaybookStep::create([
                 'experiment_id' => $experiment->id,
                 'agent_id' => $agent->id,
                 'order' => $i + 1,
