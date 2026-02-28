@@ -36,7 +36,7 @@ class InstallFromMarketplaceAction
             $installedWorkflowId = null;
 
             if ($listing->type === 'bundle') {
-                $this->installBundle($listing, $snapshot, $teamId, $userId);
+                $this->installBundle($listing, is_array($snapshot) ? $snapshot : [], $teamId, $userId);
             } elseif ($listing->type === 'skill') {
                 $skill = Skill::create([
                     'team_id' => $teamId,

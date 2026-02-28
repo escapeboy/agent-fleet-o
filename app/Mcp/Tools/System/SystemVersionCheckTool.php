@@ -21,7 +21,8 @@ class SystemVersionCheckTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            $schema->optionalBoolean('force', 'Bypass the cache and fetch the latest version from GitHub immediately.'),
+            'force' => $schema->boolean()
+                ->description('Bypass the cache and fetch the latest version from GitHub immediately.'),
         ];
     }
 

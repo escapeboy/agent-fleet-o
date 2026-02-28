@@ -22,8 +22,7 @@ class ToolActivateTool extends Tool
                 ->description('The platform tool UUID to activate')
                 ->required(),
             'credential_overrides' => $schema->object()
-                ->description('Key-value pairs of environment variable overrides (e.g. API keys). Values are stored encrypted.')
-                ->additionalProperties($schema->string()),
+                ->description('Key-value pairs of environment variable overrides (e.g. API keys). Values are stored encrypted.'),
         ];
     }
 

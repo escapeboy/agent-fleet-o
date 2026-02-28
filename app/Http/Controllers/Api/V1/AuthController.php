@@ -149,7 +149,7 @@ class AuthController extends Controller
 
         // Revoke all other tokens when password changes (forces re-login on all devices)
         if ($passwordChanged) {
-            $currentTokenId = $request->user()->currentAccessToken()?->id;
+            $currentTokenId = $request->user()->currentAccessToken()->id;
             $user->tokens()->when($currentTokenId, fn ($q) => $q->where('id', '!=', $currentTokenId))->delete();
         }
 

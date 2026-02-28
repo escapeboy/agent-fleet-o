@@ -74,6 +74,7 @@ class Tool extends Model
 
     public function activationFor(string $teamId): ?TeamToolActivation
     {
+        /** @var TeamToolActivation|null */
         return $this->activations()->where('team_id', $teamId)->first();
     }
 
