@@ -9,8 +9,7 @@ return [
     | The default provider used when no explicit provider is specified in the
     | GpuCompute skill configuration.
     |
-    | Supported: 'runpod', 'null'
-    | Coming soon: 'replicate', 'fal', 'modal', 'vast'
+    | Supported: 'runpod', 'replicate', 'fal', 'modal', 'vast', 'null'
     |
     */
     'default' => env('COMPUTE_PROVIDER', 'runpod'),
