@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history for changelog generation
+
+      - name: Extract version from tag
+        id: version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: echo "version=${REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Write .version file
+        run: echo "${{ steps.version.outputs.version }}" > .version
+
+      - name: Commit .version file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bump version to ${{ steps.version.outputs.version }}"
+          file_pattern: .version
+          tagging_message: ''  # Don't re-tag
+
+      - name: Generate release notes
+        id: notes
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Find the previous tag to generate a diff-based changelog
+          PREV_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | sed -n '2p')
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "Generating changelog from ${PREV_TAG} to ${TAG_NAME}"
+            NOTES=$(git log "${PREV_TAG}..HEAD" \
+              --pretty=format:"- %s (%h)" \
+              --no-merges \
+              | grep -v "^- chore: bump version" \
+              || echo "")
+          else
+            echo "First release — no previous tag found"
+            NOTES="Initial release."
+          fi
+
+          {
+            echo "## What's changed"
+            echo ""
+            if [ -n "$NOTES" ]; then
+              echo "$NOTES"
+            else
+              echo "- See commit history for changes."
+            fi
+            echo ""
+            echo "## Upgrade"
+            echo ""
+            echo '```bash'
+            echo "git fetch --tags origin"
+            echo "git checkout tags/${TAG_NAME}"
+            echo "composer install --no-dev --optimize-autoloader"
+            echo "php artisan migrate --force"
+            echo "php artisan optimize"
+            echo '```'
+            echo ""
+            echo "**Docker users:** Pull the latest image and restart your containers."
+          } > /tmp/release_notes.md
+
+          echo "notes_file=/tmp/release_notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Determine if prerelease
+        id: prerelease
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$TAG_NAME" == *"-"* ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "FleetQ v${{ steps.version.outputs.version }}"
+          body_path: ${{ steps.notes.outputs.notes_file }}
+          draft: false
+          prerelease: ${{ steps.prerelease.outputs.is_prerelease }}

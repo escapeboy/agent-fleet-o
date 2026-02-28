@@ -37,4 +37,7 @@ Schedule::command('projects:check-budgets')->hourly();
 // Agent memory pruning
 Schedule::command('memories:prune')->dailyAt('03:00');
 
+// Version update check
+Schedule::command('system:check-updates')->hourly()->runInBackground();
+
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();

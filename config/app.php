@@ -135,6 +135,10 @@ return [
     |
     */
 
+    'version' => env('APP_VERSION', trim((string) @file_get_contents(base_path('.version'))) ?: '0.0.0'),
+
+    'github_repo' => env('APP_GITHUB_REPO', 'agent-fleet/agent-fleet'),
+
     'deployment_mode' => env('DEPLOYMENT_MODE', 'self-hosted'),
 
     /*

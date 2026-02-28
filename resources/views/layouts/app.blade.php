@@ -71,6 +71,11 @@
                 </div>
             </header>
 
+            {{-- Update notification banner (shown when a newer version is available) --}}
+            @auth
+                <livewire:shared.update-banner />
+            @endauth
+
             {{-- Page Content --}}
             <main data-theme-scope class="flex-1 overflow-y-auto p-6">
                 {{ $slot }}

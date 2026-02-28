@@ -114,6 +114,7 @@ use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
 use App\Mcp\Tools\System\SystemHealthTool;
+use App\Mcp\Tools\System\SystemVersionCheckTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
 use App\Mcp\Tools\Tool\ToolBashPolicyTool;
 use App\Mcp\Tools\Tool\ToolCreateTool;
@@ -356,9 +357,10 @@ class AgentFleetServer extends Server
         // RunPod (1)
         RunPodManageTool::class,
 
-        // System (4)
+        // System (5)
         DashboardKpisTool::class,
         SystemHealthTool::class,
+        SystemVersionCheckTool::class,
         AuditLogTool::class,
         GlobalSettingsUpdateTool::class,
     ];
