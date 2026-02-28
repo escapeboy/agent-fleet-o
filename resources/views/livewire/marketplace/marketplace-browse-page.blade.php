@@ -70,7 +70,7 @@
                             {{ $listing->name }}
                         </a>
                         <span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                            {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') }}">
+                            {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : ($listing->type === 'bundle' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800')) }}">
                             {{ ucfirst($listing->type) }}
                         </span>
                         @if($listing->isPaid())

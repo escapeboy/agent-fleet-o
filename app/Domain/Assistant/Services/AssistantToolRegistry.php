@@ -8,6 +8,7 @@ use App\Domain\Assistant\Tools\GetEntityTools;
 use App\Domain\Assistant\Tools\ListEntitiesTools;
 use App\Domain\Assistant\Tools\MemoryTools;
 use App\Domain\Assistant\Tools\MutationTools;
+use App\Domain\Assistant\Tools\SchedulingTools;
 use App\Domain\Assistant\Tools\StatusTools;
 use App\Models\User;
 use Prism\Prism\Tool as PrismToolObject;
@@ -33,6 +34,7 @@ class AssistantToolRegistry
         $role = $user->teamRole($user->currentTeam);
         if ($role?->canEdit()) {
             $tools = array_merge($tools, MutationTools::writeTools());
+            $tools = array_merge($tools, SchedulingTools::tools($user->currentTeam->id, $user->id));
 
             // Delegation tools (fire-and-forget async project runs)
             if ($conversation) {
@@ -73,7 +75,8 @@ class AssistantToolRegistry
             str_starts_with($toolName, 'reject_') ||
             str_starts_with($toolName, 'save_') ||
             str_starts_with($toolName, 'sync_') ||
-            str_starts_with($toolName, 'upload_') => 'write',
+            str_starts_with($toolName, 'upload_') ||
+            str_starts_with($toolName, 'schedule_') => 'write',
             default => 'read',
         };
     }

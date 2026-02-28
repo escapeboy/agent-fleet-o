@@ -13,7 +13,7 @@
             <div class="flex items-center gap-3">
                 <h2 class="text-xl font-semibold text-gray-900">{{ $listing->name }}</h2>
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                    {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') }}">
+                    {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : ($listing->type === 'bundle' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800')) }}">
                     {{ ucfirst($listing->type) }}
                 </span>
                 <span class="text-sm text-gray-400">v{{ $listing->version }}</span>
@@ -238,6 +238,28 @@
                         </div>
                     </div>
                 @endif
+
+            @elseif($listing->type === 'bundle')
+                {{-- Bundle contents --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">Bundle Contents</h3>
+                    <p class="mb-3 text-xs text-gray-500">This bundle contains {{ count($snapshot['items'] ?? []) }} items. Installing this bundle will add all items to your workspace.</p>
+                    <div class="space-y-2">
+                        @foreach($snapshot['items'] ?? [] as $bundleItem)
+                            <div class="flex items-center gap-3 rounded border border-gray-100 px-3 py-2">
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                                    {{ $bundleItem['type'] === 'skill' ? 'bg-purple-100 text-purple-800' :
+                                       ($bundleItem['type'] === 'workflow' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') }}">
+                                    {{ ucfirst($bundleItem['type']) }}
+                                </span>
+                                <span class="text-sm text-gray-700">{{ $bundleItem['name'] }}</span>
+                                @if(!empty($bundleItem['description']))
+                                    <span class="ml-auto text-xs text-gray-400">{{ Str::limit($bundleItem['description'], 60) }}</span>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
             @endif
         </div>
 

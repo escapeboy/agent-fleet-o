@@ -35,7 +35,9 @@ class InstallFromMarketplaceAction
             $installedAgentId = null;
             $installedWorkflowId = null;
 
-            if ($listing->type === 'skill') {
+            if ($listing->type === 'bundle') {
+                $this->installBundle($listing, $snapshot, $teamId, $userId);
+            } elseif ($listing->type === 'skill') {
                 $skill = Skill::create([
                     'team_id' => $teamId,
                     'source_listing_id' => $listing->id,
@@ -189,6 +191,24 @@ class InstallFromMarketplaceAction
         }
 
         return $workflow;
+    }
+
+    private function installBundle(
+        MarketplaceListing $listing,
+        array $snapshot,
+        string $teamId,
+        string $userId,
+    ): void {
+        foreach ($snapshot['items'] ?? [] as $item) {
+            $this->executeFromManifest(
+                type: $item['type'],
+                configuration: $item['snapshot'],
+                name: $item['name'],
+                version: $listing->version,
+                teamId: $teamId,
+                userId: $userId,
+            );
+        }
     }
 
     private function cloneWorkflowFromSnapshot(

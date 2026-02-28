@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Marketplace;
 
+use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -31,7 +32,19 @@ class MarketplaceBrowseTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $query = MarketplaceListing::query()->orderByDesc('created_at');
+        $teamId = auth()->user()?->current_team_id;
+
+        $query = MarketplaceListing::query()
+            ->where(function ($q) use ($teamId) {
+                $q->where('visibility', ListingVisibility::Public);
+                if ($teamId) {
+                    $q->orWhere(fn ($q2) => $q2
+                        ->where('visibility', ListingVisibility::Team)
+                        ->where('team_id', $teamId)
+                    );
+                }
+            })
+            ->orderByDesc('created_at');
 
         if ($type = $request->get('type')) {
             $query->where('type', $type);

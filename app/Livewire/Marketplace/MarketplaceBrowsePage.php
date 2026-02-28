@@ -84,6 +84,13 @@ class MarketplaceBrowsePage extends Component
             return;
         }
 
+        // Team-private listings can only be installed by the owning team
+        if ($listing->visibility === ListingVisibility::Team && $listing->team_id !== $team->id) {
+            session()->flash('error', 'This item is private to its team.');
+
+            return;
+        }
+
         app(InstallFromMarketplaceAction::class)->execute($listing, $team->id, $user->id);
 
         session()->flash('success', "{$listing->name} installed successfully!");
@@ -91,9 +98,19 @@ class MarketplaceBrowsePage extends Component
 
     public function render()
     {
+        $teamId = auth()->user()?->currentTeam?->id;
+
         $query = MarketplaceListing::query()
             ->where('status', MarketplaceStatus::Published)
-            ->where('visibility', ListingVisibility::Public);
+            ->where(function ($q) use ($teamId) {
+                $q->where('visibility', ListingVisibility::Public);
+                if ($teamId) {
+                    $q->orWhere(fn ($q2) => $q2
+                        ->where('visibility', ListingVisibility::Team)
+                        ->where('team_id', $teamId)
+                    );
+                }
+            });
 
         if ($this->search) {
             $query->where(function ($q) {
@@ -122,7 +139,15 @@ class MarketplaceBrowsePage extends Component
 
         $categories = MarketplaceListing::query()
             ->where('status', MarketplaceStatus::Published)
-            ->where('visibility', ListingVisibility::Public)
+            ->where(function ($q) use ($teamId) {
+                $q->where('visibility', ListingVisibility::Public);
+                if ($teamId) {
+                    $q->orWhere(fn ($q2) => $q2
+                        ->where('visibility', ListingVisibility::Team)
+                        ->where('team_id', $teamId)
+                    );
+                }
+            })
             ->whereNotNull('category')
             ->distinct()
             ->pluck('category');

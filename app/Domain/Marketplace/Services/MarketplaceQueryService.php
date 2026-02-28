@@ -16,10 +16,19 @@ class MarketplaceQueryService
         ?string $category = null,
         string $sort = '-install_count',
         int $perPage = 12,
+        ?string $teamId = null,
     ): LengthAwarePaginator {
         $query = MarketplaceListing::query()
             ->where('status', MarketplaceStatus::Published)
-            ->where('visibility', ListingVisibility::Public);
+            ->where(function ($q) use ($teamId) {
+                $q->where('visibility', ListingVisibility::Public);
+                if ($teamId) {
+                    $q->orWhere(fn ($q2) => $q2
+                        ->where('visibility', ListingVisibility::Team)
+                        ->where('team_id', $teamId)
+                    );
+                }
+            });
 
         if ($search) {
             $query->where(fn ($q) => $q
@@ -46,11 +55,19 @@ class MarketplaceQueryService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function categories(): Collection
+    public function categories(?string $teamId = null): Collection
     {
         return MarketplaceListing::query()
             ->where('status', MarketplaceStatus::Published)
-            ->where('visibility', ListingVisibility::Public)
+            ->where(function ($q) use ($teamId) {
+                $q->where('visibility', ListingVisibility::Public);
+                if ($teamId) {
+                    $q->orWhere(fn ($q2) => $q2
+                        ->where('visibility', ListingVisibility::Team)
+                        ->where('team_id', $teamId)
+                    );
+                }
+            })
             ->whereNotNull('category')
             ->select('category')
             ->selectRaw('count(*) as count')

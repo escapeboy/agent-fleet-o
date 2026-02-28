@@ -13,10 +13,12 @@
                     <option value="skill">Skill</option>
                     <option value="agent">Agent</option>
                     <option value="workflow">Workflow</option>
+                    <option value="bundle">Bundle (multiple items)</option>
                 </x-form-select>
             </div>
 
-            {{-- Select Item --}}
+            {{-- Select Item (single) --}}
+            @if($itemType !== 'bundle')
             <div class="mb-4">
                 <x-form-select wire:model.live="itemId" label="Select {{ ucfirst($itemType) }}"
                     :error="$errors->first('itemId')">
@@ -36,6 +38,52 @@
                     @endif
                 </x-form-select>
             </div>
+            @endif
+
+            {{-- Bundle Items --}}
+            @if($itemType === 'bundle')
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-gray-700">Bundle Items</label>
+                @error('bundleItems') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                @foreach($bundleItems as $index => $bundleItem)
+                    <div class="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                        <span class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-800">{{ ucfirst($bundleItem['type']) }}</span>
+                        <span class="flex-1 text-sm text-gray-700">
+                            @php
+                                $name = match($bundleItem['type']) {
+                                    'skill' => $skills->find($bundleItem['id'])?->name ?? $bundleItem['id'],
+                                    'agent' => $agents->find($bundleItem['id'])?->name ?? $bundleItem['id'],
+                                    'workflow' => $workflows->find($bundleItem['id'])?->name ?? $bundleItem['id'],
+                                    default => $bundleItem['id'],
+                                };
+                            @endphp
+                            {{ $name }}
+                        </span>
+                        <button type="button" wire:click="removeBundleItem({{ $index }})"
+                            class="text-gray-400 hover:text-red-500">&times;</button>
+                    </div>
+                @endforeach
+                <div class="mt-2 flex gap-2">
+                    <select wire:model.live="bundleAddType" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+                        <option value="skill">Skill</option>
+                        <option value="agent">Agent</option>
+                        <option value="workflow">Workflow</option>
+                    </select>
+                    <select wire:model="bundleAddId" class="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+                        <option value="">Choose...</option>
+                        @if($bundleAddType === 'skill')
+                            @foreach($skills as $skill)<option value="{{ $skill->id }}">{{ $skill->name }}</option>@endforeach
+                        @elseif($bundleAddType === 'agent')
+                            @foreach($agents as $agent)<option value="{{ $agent->id }}">{{ $agent->name }}</option>@endforeach
+                        @elseif($bundleAddType === 'workflow')
+                            @foreach($workflows as $wf)<option value="{{ $wf->id }}">{{ $wf->name }}</option>@endforeach
+                        @endif
+                    </select>
+                    <button type="button" wire:click="addBundleItemFromState"
+                        class="rounded-md bg-primary-600 px-3 py-1.5 text-sm text-white hover:bg-primary-700">Add</button>
+                </div>
+            </div>
+            @endif
 
             {{-- Name --}}
             <div class="mb-4">
@@ -67,6 +115,7 @@
                 <div class="flex gap-4">
                     <x-form-radio wire:model="visibility" value="public" label="Public" />
                     <x-form-radio wire:model="visibility" value="unlisted" label="Unlisted" />
+                    <x-form-radio wire:model="visibility" value="team" label="Team only" />
                 </div>
             </div>
 
