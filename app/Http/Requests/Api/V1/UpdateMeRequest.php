@@ -14,10 +14,17 @@ class UpdateMeRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$this->user()->id],
             'password' => ['sometimes', Password::defaults()],
         ];
+
+        // Require current_password when changing password
+        if ($this->filled('password')) {
+            $rules['current_password'] = ['required', 'current_password'];
+        }
+
+        return $rules;
     }
 }

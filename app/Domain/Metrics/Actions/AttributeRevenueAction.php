@@ -2,6 +2,7 @@
 
 namespace App\Domain\Metrics\Actions;
 
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Metrics\Models\Metric;
 use App\Domain\Outbound\Models\OutboundAction;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,25 @@ class AttributeRevenueAction
         string $stripePaymentId,
         ?string $outboundActionId = null,
         array $metadata = [],
-    ): Metric {
+        ?string $owningTeamId = null,
+    ): ?Metric {
+        // Validate experiment belongs to the expected team (prevents cross-tenant revenue injection)
+        if ($owningTeamId !== null) {
+            $belongs = Experiment::withoutGlobalScopes()
+                ->where('id', $experimentId)
+                ->where('team_id', $owningTeamId)
+                ->exists();
+
+            if (! $belongs) {
+                Log::warning('AttributeRevenueAction: experiment does not belong to customer team', [
+                    'experiment_id' => $experimentId,
+                    'owning_team_id' => $owningTeamId,
+                ]);
+
+                return null;
+            }
+        }
+
         // Validate the outbound action belongs to the experiment
         if ($outboundActionId) {
             $action = OutboundAction::with('outboundProposal')

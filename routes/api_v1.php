@@ -33,8 +33,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Auth (public — no auth required)
-Route::post('/auth/token', [AuthController::class, 'token']);
+// Auth (public — no auth required, rate-limited to 5 attempts per minute per IP)
+Route::post('/auth/token', [AuthController::class, 'token'])->middleware('throttle:5,1');
 
 // Public marketplace API (no auth, rate-limited)
 Route::prefix('marketplace')
@@ -50,8 +50,8 @@ Route::prefix('marketplace')
 // Authenticated routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
-    // Auth management
-    Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+    // Auth management (refresh has tighter rate limit to prevent token churn abuse)
+    Route::post('/auth/refresh', [AuthController::class, 'refresh'])->middleware('throttle:10,1');
     Route::delete('/auth/token', [AuthController::class, 'logout']);
     Route::get('/auth/devices', [AuthController::class, 'devices']);
     Route::delete('/auth/devices/{tokenId}', [AuthController::class, 'revokeDevice']);

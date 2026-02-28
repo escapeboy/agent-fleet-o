@@ -36,8 +36,11 @@ class MemorySearchTool extends Tool
     {
         $validated = $request->validate(['query' => 'required|string']);
 
-        $query = Memory::query()
+        $teamId = auth()->user()?->current_team_id;
+
+        $query = Memory::withoutGlobalScopes()
             ->with(['agent:id,name', 'project:id,title'])
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
             ->where('content', 'ilike', '%'.addcslashes($validated['query'], '%_').'%')
             ->orderByDesc('created_at');
 

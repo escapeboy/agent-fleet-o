@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\TeamResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @tags Team
@@ -23,6 +24,8 @@ class TeamController extends Controller
 
     public function update(Request $request): TeamResource
     {
+        Gate::authorize('manage-team');
+
         $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'settings' => ['sometimes', 'array'],
@@ -59,6 +62,8 @@ class TeamController extends Controller
      */
     public function removeMember(Request $request, string $userId): JsonResponse
     {
+        Gate::authorize('manage-team');
+
         $team = Team::findOrFail($request->user()->current_team_id);
 
         if ($userId === $team->owner_id) {
@@ -157,9 +162,17 @@ class TeamController extends Controller
             'abilities' => ['sometimes', 'array'],
         ]);
 
+        // Force team-scoped ability — reject wildcard or foreign-team abilities.
+        $teamAbility = 'team:'.$request->user()->current_team_id;
+        $requested = $request->input('abilities', [$teamAbility]);
+
+        if (in_array('*', $requested, true) || array_diff($requested, [$teamAbility])) {
+            abort(422, 'Token abilities must be limited to the current team.');
+        }
+
         $token = $request->user()->createToken(
             $request->name,
-            $request->input('abilities', ['*']),
+            [$teamAbility],
         );
 
         return response()->json([

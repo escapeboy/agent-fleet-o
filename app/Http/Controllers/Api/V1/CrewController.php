@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CrewExecutionResource;
 use App\Http\Resources\Api\V1\CrewResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rules\Enum;
@@ -51,16 +52,18 @@ class CrewController extends Controller
 
     public function store(Request $request, CreateCrewAction $action): JsonResponse
     {
+        $teamId = $request->user()->current_team_id;
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
-            'coordinator_agent_id' => ['required', 'uuid', 'exists:agents,id'],
-            'qa_agent_id' => ['required', 'uuid', 'exists:agents,id'],
+            'coordinator_agent_id' => ['required', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
+            'qa_agent_id' => ['required', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
             'process_type' => ['sometimes', new Enum(CrewProcessType::class)],
             'max_task_iterations' => ['sometimes', 'integer', 'min:1', 'max:20'],
             'quality_threshold' => ['sometimes', 'numeric', 'min:0', 'max:1'],
             'worker_agent_ids' => ['sometimes', 'array'],
-            'worker_agent_ids.*' => ['uuid', 'exists:agents,id'],
+            'worker_agent_ids.*' => ['uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
             'settings' => ['sometimes', 'array'],
         ]);
 
@@ -87,16 +90,18 @@ class CrewController extends Controller
 
     public function update(Request $request, Crew $crew, UpdateCrewAction $action): CrewResource
     {
+        $teamId = $request->user()->current_team_id;
+
         $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
-            'coordinator_agent_id' => ['sometimes', 'uuid', 'exists:agents,id'],
-            'qa_agent_id' => ['sometimes', 'uuid', 'exists:agents,id'],
+            'coordinator_agent_id' => ['sometimes', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
+            'qa_agent_id' => ['sometimes', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
             'process_type' => ['sometimes', new Enum(CrewProcessType::class)],
             'max_task_iterations' => ['sometimes', 'integer', 'min:1', 'max:20'],
             'quality_threshold' => ['sometimes', 'numeric', 'min:0', 'max:1'],
             'worker_agent_ids' => ['sometimes', 'array'],
-            'worker_agent_ids.*' => ['uuid', 'exists:agents,id'],
+            'worker_agent_ids.*' => ['uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
             'status' => ['sometimes', new Enum(CrewStatus::class)],
             'settings' => ['sometimes', 'array'],
         ]);
@@ -136,7 +141,7 @@ class CrewController extends Controller
     {
         $request->validate([
             'goal' => ['required', 'string', 'max:2000'],
-            'experiment_id' => ['sometimes', 'nullable', 'uuid', 'exists:experiments,id'],
+            'experiment_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('experiments', 'id')->where('team_id', $request->user()?->current_team_id)],
         ]);
 
         $execution = $action->execute(

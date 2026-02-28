@@ -31,7 +31,12 @@ class SignalGetTool extends Tool
     {
         $validated = $request->validate(['signal_id' => 'required|string']);
 
-        $signal = Signal::with('contactIdentity')->find($validated['signal_id']);
+        $teamId = auth()->user()?->current_team_id;
+
+        $signal = Signal::withoutGlobalScopes()
+            ->with('contactIdentity')
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->find($validated['signal_id']);
 
         if (! $signal) {
             return Response::error('Signal not found.');

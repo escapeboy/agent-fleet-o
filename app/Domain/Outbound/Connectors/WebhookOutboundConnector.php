@@ -6,6 +6,7 @@ use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Shared\Services\SsrfGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -56,7 +57,18 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
                 return $action;
             }
 
-            $headers = $target['headers'] ?? [];
+            // Block SSRF — validate host is a public, routable address.
+            app(SsrfGuard::class)->assertPublicUrl($url);
+
+            // Header allowlist — only permit safe custom headers; block Host, Authorization, Cookie etc.
+            $allowedHeaderPrefixes = ['x-', 'content-type'];
+            $rawHeaders = $target['headers'] ?? [];
+            $headers = array_filter(
+                $rawHeaders,
+                fn ($key) => collect($allowedHeaderPrefixes)->contains(fn ($p) => str_starts_with(strtolower($key), $p)),
+                ARRAY_FILTER_USE_KEY
+            );
+
             $payload = [
                 'experiment_id' => $proposal->experiment_id,
                 'proposal_id' => $proposal->id,

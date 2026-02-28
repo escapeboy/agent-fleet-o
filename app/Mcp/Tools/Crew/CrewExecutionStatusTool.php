@@ -36,7 +36,12 @@ class CrewExecutionStatusTool extends Tool
             'include_full_output' => 'sometimes|boolean',
         ]);
 
-        $execution = CrewExecution::withCount('artifacts')->find($validated['execution_id']);
+        $teamId = auth()->user()?->current_team_id;
+
+        $execution = CrewExecution::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->withCount('artifacts')
+            ->find($validated['execution_id']);
 
         if (! $execution) {
             return Response::error('Crew execution not found.');
