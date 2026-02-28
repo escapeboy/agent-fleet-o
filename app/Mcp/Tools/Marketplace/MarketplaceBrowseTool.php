@@ -42,7 +42,7 @@ class MarketplaceBrowseTool extends Tool
                 if ($teamId) {
                     $q->orWhere(fn ($q2) => $q2
                         ->where('visibility', ListingVisibility::Team)
-                        ->where('team_id', $teamId)
+                        ->where('team_id', $teamId),
                     );
                 }
             })

@@ -24,19 +24,19 @@ class SchedulingTools
             ->for(
                 'Create a scheduled project that runs automatically on a recurring basis. '.
                 'Use when the user says they want to run something "every day", "every Monday", "weekly", "hourly", etc. '.
-                'Always confirm the schedule with the user after creating it.'
+                'Always confirm the schedule with the user after creating it.',
             )
             ->withStringParameter('project_title', 'A short title for the project', required: true)
             ->withStringParameter(
                 'frequency_description',
                 'Natural language description of how often to run. Examples: "every Monday at 9am", "daily at 6pm", "every 15 minutes", "weekly on Fridays", "every hour".',
-                required: true
+                required: true,
             )
             ->withStringParameter('project_goal', 'What the project should accomplish each time it runs', required: true)
             ->withStringParameter(
                 'project_id',
                 'Optional: UUID of an existing project to add a schedule to instead of creating a new one.',
-                required: false
+                required: false,
             )
             ->using(function (
                 string $project_title,

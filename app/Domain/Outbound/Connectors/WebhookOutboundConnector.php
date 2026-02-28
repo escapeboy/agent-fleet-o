@@ -66,7 +66,7 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
             $headers = array_filter(
                 $rawHeaders,
                 fn ($key) => collect($allowedHeaderPrefixes)->contains(fn ($p) => str_starts_with(strtolower($key), $p)),
-                ARRAY_FILTER_USE_KEY
+                ARRAY_FILTER_USE_KEY,
             );
 
             $payload = [

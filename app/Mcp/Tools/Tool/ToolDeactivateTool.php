@@ -49,7 +49,7 @@ class ToolDeactivateTool extends Tool
             'success' => true,
             'tool_id' => $tool->id,
             'team_id' => $teamId,
-            'status'  => 'disabled',
+            'status' => 'disabled',
         ]));
     }
 }

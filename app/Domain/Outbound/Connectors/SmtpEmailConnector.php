@@ -3,12 +3,12 @@
 namespace App\Domain\Outbound\Connectors;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Metrics\Services\TrackingUrlSigner;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Mail\ExperimentSummaryMail;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
-use App\Domain\Metrics\Services\TrackingUrlSigner;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Mailer\Mailer as SymfonyMailer;
@@ -99,7 +99,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 if ($trackingBaseUrl) {
                     $sig = app(TrackingUrlSigner::class)->sign('pixel', $proposal->experiment_id, $action->id);
                     $pixelUrl = "{$trackingBaseUrl}/api/track/pixel?".http_build_query([
-                        'oa'  => $action->id,
+                        'oa' => $action->id,
                         'exp' => $proposal->experiment_id,
                         'sig' => $sig,
                     ]);
@@ -175,7 +175,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 $mask = ~((1 << (32 - $prefix)) - 1);
                 if (($ipLong & $mask) === (ip2long($network) & $mask)) {
                     throw new \RuntimeException(
-                        "SMTP host '{$host}' resolves to a private address not allowed in this environment."
+                        "SMTP host '{$host}' resolves to a private address not allowed in this environment.",
                     );
                 }
             }

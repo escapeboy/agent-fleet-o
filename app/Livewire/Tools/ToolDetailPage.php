@@ -85,9 +85,9 @@ class ToolDetailPage extends Component
         TeamToolActivation::updateOrCreate(
             ['team_id' => $teamId, 'tool_id' => $this->tool->id],
             [
-                'status'               => 'active',
+                'status' => 'active',
                 'credential_overrides' => $overrides,
-                'activated_at'         => now(),
+                'activated_at' => now(),
             ],
         );
 
@@ -101,11 +101,11 @@ class ToolDetailPage extends Component
             return;
         }
 
-        $this->editName        = $this->tool->name;
+        $this->editName = $this->tool->name;
         $this->editDescription = $this->tool->description ?? '';
-        $this->editTimeout     = $this->tool->settings['timeout'] ?? 30;
-        $this->editRiskLevel   = $this->tool->risk_level?->value ?? '';
-        $this->editing         = true;
+        $this->editTimeout = $this->tool->settings['timeout'] ?? 30;
+        $this->editRiskLevel = $this->tool->risk_level?->value ?? '';
+        $this->editing = true;
     }
 
     public function cancelEdit(): void
@@ -121,9 +121,9 @@ class ToolDetailPage extends Component
         }
 
         $this->validate([
-            'editName'        => 'required|min:2|max:255',
+            'editName' => 'required|min:2|max:255',
             'editDescription' => 'max:1000',
-            'editTimeout'     => 'integer|min:1|max:300',
+            'editTimeout' => 'integer|min:1|max:300',
         ]);
 
         app(UpdateToolAction::class)->execute(
@@ -157,7 +157,7 @@ class ToolDetailPage extends Component
         $agents = $this->tool->agents()->get();
 
         return view('livewire.tools.tool-detail-page', [
-            'agents'     => $agents,
+            'agents' => $agents,
             'riskLevels' => ToolRiskLevel::cases(),
         ])->layout('layouts.app', ['header' => $this->tool->name]);
     }

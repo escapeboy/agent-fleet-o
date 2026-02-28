@@ -30,7 +30,7 @@ class ToolActivateTool extends Tool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'tool_id'              => 'required|string',
+            'tool_id' => 'required|string',
             'credential_overrides' => 'array',
         ]);
 
@@ -56,10 +56,10 @@ class ToolActivateTool extends Tool
         );
 
         return Response::text(json_encode([
-            'success'      => true,
-            'tool_id'      => $tool->id,
-            'team_id'      => $teamId,
-            'status'       => $activation->status,
+            'success' => true,
+            'tool_id' => $tool->id,
+            'team_id' => $teamId,
+            'status' => $activation->status,
             'activated_at' => $activation->activated_at?->toIso8601String(),
         ]));
     }
