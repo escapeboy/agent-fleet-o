@@ -130,6 +130,7 @@ APP_ENV=local</pre>
             @endif
 
             <form wire:submit="createAccount" method="POST" class="space-y-4">
+                @csrf
                 <div>
                     <x-form-input
                         label="Full Name"
