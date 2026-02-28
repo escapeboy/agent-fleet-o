@@ -136,7 +136,8 @@
                 </div>
             @endif
 
-            {{-- Monetization --}}
+            {{-- Monetization (not available for bundles) --}}
+            @if($itemType !== 'bundle')
             <div class="mb-6 rounded-lg border border-gray-200 p-4">
                 <div class="flex items-center justify-between">
                     <div>
@@ -153,6 +154,7 @@
                     </div>
                 @endif
             </div>
+            @endif
 
             {{-- Submit --}}
             <div class="flex items-center justify-between border-t border-gray-200 pt-4">

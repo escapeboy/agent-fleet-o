@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Marketplace;
 
 use App\Domain\Marketplace\Enums\ListingVisibility;
+use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -35,6 +36,7 @@ class MarketplaceBrowseTool extends Tool
         $teamId = auth()->user()?->current_team_id;
 
         $query = MarketplaceListing::query()
+            ->where('status', MarketplaceStatus::Published)
             ->where(function ($q) use ($teamId) {
                 $q->where('visibility', ListingVisibility::Public);
                 if ($teamId) {
