@@ -18,7 +18,14 @@ class TeamScope implements Scope
         $user = auth()->user();
 
         if ($user && $user->current_team_id) {
-            $builder->where($model->getTable().'.team_id', $user->current_team_id);
+            $teamId = $user->current_team_id;
+            $table  = $model->getTable();
+
+            // Wrap in closure so OR does not leak into other WHERE clauses
+            $builder->where(function (Builder $query) use ($table, $teamId) {
+                $query->where($table.'.team_id', $teamId)
+                    ->orWhereNull($table.'.team_id');
+            });
         } elseif ($user) {
             // Authenticated user with no team — return nothing to prevent cross-tenant leaks
             $builder->whereRaw('1=0');

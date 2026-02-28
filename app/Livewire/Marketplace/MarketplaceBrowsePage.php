@@ -152,12 +152,9 @@ class MarketplaceBrowsePage extends Component
             ->distinct()
             ->pluck('category');
 
-        // Build compatibility map for skill listings
         $team = auth()->user()?->currentTeam;
-        $compatibilityMap = [];
         if ($team) {
-            $checker = app(SkillCompatibilityChecker::class);
-            $availableProviders = $checker->getAvailableProviders($team);
+            $availableProviders = app(SkillCompatibilityChecker::class)->getAvailableProviders($team);
         } else {
             $availableProviders = [];
         }

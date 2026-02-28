@@ -47,6 +47,7 @@ class WebhookConnector implements InputConnectorInterface
             tags: $tags,
             experimentId: $experimentId,
             files: $flatFiles,
+            teamId: $config['team_id'] ?? null,
         );
 
         return $signal ? [$signal] : [];

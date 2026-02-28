@@ -33,7 +33,7 @@ Valid frequency values: {$validFrequencies}
 Rules:
 - Use "cron" frequency when the description specifies days of week + time (e.g. "every Monday at 9am").
 - Use "cron" frequency for custom intervals like "every 2 hours", "twice daily".
-- Use "every_5_minutes", "every_15_minutes", "every_30_minutes", "hourly", "daily", "weekly", "monthly" when the description matches directly.
+- Use "every_5_minutes", "every_10_minutes", "every_15_minutes", "every_30_minutes", "hourly", "daily", "weekly", "monthly" when the description matches directly.
 - For "daily at X time" use "cron" with the appropriate cron expression.
 - Set cron_expression to null when frequency is not "cron".
 - timezone defaults to "UTC" unless explicitly stated.

@@ -37,7 +37,9 @@ Route::post('/signals/linear', LinearWebhookController::class)->name('signals.li
 
 // Alert connectors (Sentry, Datadog, PagerDuty — validated in each controller)
 Route::post('/signals/sentry', SentryAlertWebhookController::class)->name('signals.sentry');
-Route::post('/signals/datadog/{secret}', DatadogAlertWebhookController::class)->name('signals.datadog');
+// Datadog: preferred form uses X-Datadog-Webhook-Secret header; legacy form embeds secret in URL (deprecated)
+Route::post('/signals/datadog', DatadogAlertWebhookController::class)->name('signals.datadog');
+Route::post('/signals/datadog/{secret}', DatadogAlertWebhookController::class)->name('signals.datadog.legacy');
 Route::post('/signals/pagerduty', PagerDutyWebhookController::class)->name('signals.pagerduty');
 
 // Generic integration webhooks (per-slug, HMAC verified in controller)
@@ -50,6 +52,8 @@ Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'ha
     ->name('telegram.webhook')
     ->middleware('throttle:60,1');
 
-// Tracking endpoints (public, no auth)
-Route::get('/track/click', [TrackingController::class, 'click'])->name('track.click');
-Route::get('/track/pixel', [TrackingController::class, 'pixel'])->name('track.pixel');
+// Tracking endpoints (public, no auth — rate-limited per IP as defence-in-depth)
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/track/click', [TrackingController::class, 'click'])->name('track.click');
+    Route::get('/track/pixel', [TrackingController::class, 'pixel'])->name('track.pixel');
+});

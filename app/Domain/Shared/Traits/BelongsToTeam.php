@@ -13,7 +13,10 @@ trait BelongsToTeam
         static::addGlobalScope(new TeamScope);
 
         static::creating(function ($model) {
-            if (empty($model->team_id)) {
+            // Only auto-assign team_id when it was NOT explicitly provided.
+            // Using array_key_exists allows callers to pass team_id = null
+            // to create platform records (is_platform = true).
+            if (! array_key_exists('team_id', $model->getAttributes())) {
                 $model->team_id = static::resolveTeamId();
             }
         });

@@ -16,7 +16,7 @@ class ToolListTool extends Tool
 {
     protected string $name = 'tool_list';
 
-    protected string $description = 'List tools with optional status filter. Returns id, name, type, status, and description.';
+    protected string $description = 'List tools with optional filters. Returns id, name, type, status, is_platform, and description.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -24,6 +24,8 @@ class ToolListTool extends Tool
             'status' => $schema->string()
                 ->description('Filter by status: active, disabled')
                 ->enum(['active', 'disabled']),
+            'platform_only' => $schema->boolean()
+                ->description('If true, return only platform-level tools (shared across all teams)'),
             'limit' => $schema->integer()
                 ->description('Max results to return (default 10, max 100)')
                 ->default(10),
@@ -38,6 +40,10 @@ class ToolListTool extends Tool
             $query->where('status', $status);
         }
 
+        if ($request->get('platform_only')) {
+            $query->where('is_platform', true);
+        }
+
         $limit = min((int) ($request->get('limit', 10)), 100);
 
         $tools = $query->limit($limit)->get();
@@ -45,10 +51,11 @@ class ToolListTool extends Tool
         return Response::text(json_encode([
             'count' => $tools->count(),
             'tools' => $tools->map(fn ($t) => [
-                'id' => $t->id,
-                'name' => $t->name,
-                'type' => $t->type->value,
-                'status' => $t->status->value,
+                'id'          => $t->id,
+                'name'        => $t->name,
+                'type'        => $t->type->value,
+                'status'      => $t->status->value,
+                'is_platform' => $t->isPlatformTool(),
                 'description' => $t->description,
             ])->toArray(),
         ]));

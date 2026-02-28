@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tool extends Model
@@ -26,6 +27,7 @@ class Tool extends Model
 
     protected $fillable = [
         'team_id',
+        'is_platform',
         'name',
         'slug',
         'description',
@@ -45,6 +47,7 @@ class Tool extends Model
     protected function casts(): array
     {
         return [
+            'is_platform' => 'boolean',
             'type' => ToolType::class,
             'status' => ToolStatus::class,
             'risk_level' => ToolRiskLevel::class,
@@ -62,6 +65,21 @@ class Tool extends Model
             ->using(AgentToolPivot::class)
             ->withPivot('priority', 'overrides')
             ->withTimestamps();
+    }
+
+    public function activations(): HasMany
+    {
+        return $this->hasMany(TeamToolActivation::class);
+    }
+
+    public function activationFor(string $teamId): ?TeamToolActivation
+    {
+        return $this->activations()->where('team_id', $teamId)->first();
+    }
+
+    public function isPlatformTool(): bool
+    {
+        return $this->is_platform === true || $this->team_id === null;
     }
 
     public function isAvailable(): bool

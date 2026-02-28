@@ -7,6 +7,7 @@ use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
+use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolTranslator;
 use App\Livewire\Settings\SecurityPolicyPanel;
@@ -47,9 +48,41 @@ class ResolveAgentToolsAction
         // Read org-level command security policy from GlobalSettings
         $orgPolicy = SecurityPolicyPanel::getOrgPolicy() ?: null;
 
+        // Pre-load activations for platform tools to avoid N+1
+        $teamId = $agent->team_id;
+        $platformToolIds = $agentTools->filter(fn (Tool $t) => $t->isPlatformTool())->pluck('id');
+        $activations = $platformToolIds->isNotEmpty()
+            ? TeamToolActivation::where('team_id', $teamId)
+                ->whereIn('tool_id', $platformToolIds)
+                ->get()
+                ->keyBy('tool_id')
+            : collect();
+
         $prismTools = [];
         foreach ($agentTools as $tool) {
             $overrides = $tool->pivot->overrides ?? [];
+
+            // For platform tools: inject team-specific credentials into transport_config env vars
+            if ($tool->isPlatformTool()) {
+                $activation = $activations->get($tool->id);
+
+                // Skip platform tools that are deactivated for this team
+                if ($activation && ! $activation->isActive()) {
+                    continue;
+                }
+
+                // Merge team credential overrides into the tool's transport_config env vars
+                if ($activation && ! empty($activation->credential_overrides)) {
+                    $tool = clone $tool;
+                    $config = $tool->transport_config ?? [];
+                    $config['env'] = array_merge(
+                        $config['env'] ?? [],
+                        $activation->credential_overrides,
+                    );
+                    $tool->transport_config = $config;
+                }
+            }
+
             $prismTools = array_merge($prismTools, $this->translator->toPrismTools($tool, $overrides, $orgPolicy));
         }
 
