@@ -199,6 +199,6 @@ class SignalConnectorsPage extends Component
 
         return view('livewire.signals.signal-connectors-page', compact(
             'cards', 'httpMonitors', 'rssFeeds', 'imapConnector', 'signalProtocolConnectors', 'matrixConnectors',
-        ))->title('Signal Sources');
+        ))->layout('layouts.app', ['header' => 'Signal Sources']);
     }
 }

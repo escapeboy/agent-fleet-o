@@ -1,7 +1,6 @@
 <div class="space-y-8">
     {{-- Page header --}}
     <div>
-        <h1 class="text-xl font-semibold text-(--color-on-surface)">Signal Sources</h1>
         <p class="mt-1 text-sm text-(--color-on-surface-muted)">
             Configure inbound connectors that deliver signals to FleetQ. Signals trigger agents, projects, and automation rules.
         </p>
@@ -310,9 +309,8 @@
                         with your mail server details. Create one first, then configure the connector via the API or MCP.
                     </p>
                     <div class="space-y-1 rounded-lg bg-(--color-surface-alt) p-3 font-mono text-xs text-(--color-on-surface-muted)">
-                        <p># Via MCP tool:</p>
-                        <p>inbound_connector_manage</p>
-                        <p>  action: add_imap (coming soon)</p>
+                        <p># Create a Credential first, then create the Connector via MCP:</p>
+                        <p>driver: imap, config: &#123; credential_id, host, port: 993, encryption: ssl, folder: INBOX &#125;</p>
                     </div>
                 </div>
             @endif

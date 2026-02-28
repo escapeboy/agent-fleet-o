@@ -36,6 +36,7 @@ class SendAssistantMessageAction
         ?string $contextId = null,
         ?string $provider = null,
         ?string $model = null,
+        ?callable $onChunk = null,
     ): AiResponseDTO {
         // Save user message
         $this->conversationManager->addMessage($conversation, 'user', $userMessage);
@@ -83,6 +84,7 @@ class SendAssistantMessageAction
                 userPrompt: $userPrompt,
                 tools: $tools,
                 user: $user,
+                onChunk: $onChunk,
             );
         } elseif ($isLocal) {
             // Other local agents (codex): no tool calling, conversational only
@@ -231,6 +233,7 @@ class SendAssistantMessageAction
         string $userPrompt,
         array $tools,
         User $user,
+        ?callable $onChunk = null,
     ): AiResponseDTO {
         $toolMap = [];
         foreach ($tools as $tool) {
@@ -258,7 +261,28 @@ class SendAssistantMessageAction
                 temperature: 0.3,
             );
 
-            $response = $this->gateway->complete($request);
+            if ($onChunk !== null) {
+                // Stream with <tool_call> blocks filtered from the visible output.
+                // $stepAccumulated tracks the full raw text; $cleanAccumulated tracks
+                // what is shown in the UI (no tool_call XML).
+                $stepAccumulated = '';
+                $cleanAccumulated = '';
+                $response = $this->gateway->stream(
+                    $request,
+                    function (string $chunk) use ($onChunk, &$stepAccumulated, &$cleanAccumulated): void {
+                        $stepAccumulated .= $chunk;
+                        $clean = trim(preg_replace('/<tool_call>\s*\{.+?\}\s*<\/tool_call>/s', '', $stepAccumulated));
+                        if ($clean !== $cleanAccumulated) {
+                            $cleanAccumulated = $clean;
+                            if ($clean !== '') {
+                                $onChunk($clean);
+                            }
+                        }
+                    },
+                );
+            } else {
+                $response = $this->gateway->complete($request);
+            }
             $lastResponse = $response;
             $totalPromptTokens += $response->usage->promptTokens;
             $totalCompletionTokens += $response->usage->completionTokens;
@@ -530,6 +554,18 @@ class SendAssistantMessageAction
             ### Write Tools (your role permits these)
             - `create_project` — Create a new project (title, description, type)
             - `create_agent` — Create a new AI agent (name, role, goal, provider/model)
+            - `create_crew` — Create a new crew/multi-agent team (name, coordinator_agent_id, qa_agent_id, description, process_type)
+            - `execute_crew` — Start a crew execution with a goal (crew_id, goal)
+            - `create_skill` — Create a new skill (name, type: llm/connector/rule/hybrid, description, prompt_template)
+            - `update_skill` — Update an existing skill (skill_id, name, description, prompt_template)
+            - `create_workflow` — Create a blank workflow template (name, description)
+            - `save_workflow_graph` — Save/replace nodes and edges for an existing workflow (workflow_id, nodes JSON, edges JSON with source_node_index/target_node_index); use after create_workflow or to fix a generated workflow
+            - `generate_workflow` — Generate a full workflow DAG from a natural language prompt (prompt) — calls an LLM internally, creates workflow with nodes and edges already connected
+            - `activate_workflow` — Validate and activate a workflow so it can be used in experiments (workflow_id)
+            - `create_experiment` — Create a new experiment (title, thesis, track: growth/retention/revenue/engagement/debug, budget_cap_credits, workflow_id)
+            - `update_project` — Update project title or description (project_id, title, description)
+            - `pause_project` — Pause an active project and its schedule (project_id, reason)
+            - `resume_project` — Resume a paused project (project_id)
             - `pause_experiment` — Pause a running experiment
             - `resume_experiment` — Resume a paused experiment
             - `retry_experiment` — Retry a failed experiment

@@ -5,14 +5,18 @@ namespace App\Domain\Workflow\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Services\GraphValidator;
+use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 class GenerateWorkflowFromPromptAction
 {
     public function __construct(
         private readonly CreateWorkflowAction $createWorkflow,
         private readonly GraphValidator $graphValidator,
+        private readonly AiGatewayInterface $gateway,
+        private readonly ProviderResolver $providerResolver,
     ) {}
 
     /**
@@ -37,17 +41,20 @@ class GenerateWorkflowFromPromptAction
 
         $systemPrompt = $this->buildSystemPrompt($availableAgents);
 
-        try {
-            $response = Prism::text()
-                ->using('anthropic', 'claude-sonnet-4-20250514')
-                ->withSystemPrompt($systemPrompt)
-                ->withPrompt($prompt)
-                ->withMaxTokens(4096)
-                ->usingTemperature(0.3)
-                ->withClientOptions(['timeout' => 60])
-                ->asText();
+        $resolved = $this->providerResolver->resolve();
 
-            $parsed = $this->parseResponse($response->text);
+        try {
+            $response = $this->gateway->complete(new AiRequestDTO(
+                provider: $resolved['provider'],
+                model: $resolved['model'],
+                systemPrompt: $systemPrompt,
+                userPrompt: $prompt,
+                maxTokens: 4096,
+                temperature: 0.3,
+                purpose: 'workflow_generation',
+            ));
+
+            $parsed = $this->parseResponse($response->content);
 
             if (! $parsed) {
                 return ['workflow' => null, 'errors' => ['Failed to parse LLM response into workflow structure.']];

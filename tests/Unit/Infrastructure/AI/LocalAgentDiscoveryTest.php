@@ -81,6 +81,10 @@ class LocalAgentDiscoveryTest extends TestCase
 
     public function test_detect_finds_available_binaries(): void
     {
+        if (! function_exists('proc_open')) {
+            $this->markTestSkipped('proc_open is not available in this environment');
+        }
+
         config(['local_agents.enabled' => true]);
 
         // Use 'php' as a binary that's guaranteed to exist
@@ -107,6 +111,10 @@ class LocalAgentDiscoveryTest extends TestCase
 
     public function test_detect_skips_unavailable_binaries(): void
     {
+        if (! function_exists('proc_open')) {
+            $this->markTestSkipped('proc_open is not available in this environment');
+        }
+
         config(['local_agents.enabled' => true]);
 
         config(['local_agents.agents' => [
@@ -129,6 +137,10 @@ class LocalAgentDiscoveryTest extends TestCase
 
     public function test_version_parses_common_patterns(): void
     {
+        if (! function_exists('proc_open')) {
+            $this->markTestSkipped('proc_open is not available in this environment');
+        }
+
         config(['local_agents.enabled' => true]);
 
         // Use 'php' as a test binary — its --version output contains a parseable version

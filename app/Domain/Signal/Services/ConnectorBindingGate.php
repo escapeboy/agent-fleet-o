@@ -2,6 +2,10 @@
 
 namespace App\Domain\Signal\Services;
 
+use App\Domain\Outbound\Actions\SendOutboundAction;
+use App\Domain\Outbound\Enums\OutboundChannel;
+use App\Domain\Outbound\Enums\OutboundProposalStatus;
+use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Signal\Enums\ConnectorBindingStatus;
 use App\Domain\Signal\Models\ConnectorBinding;
 use App\Domain\Telegram\Models\TelegramBot;
@@ -113,7 +117,11 @@ class ConnectorBindingGate
         try {
             match ($channel) {
                 'telegram' => $this->sendTelegramReply($teamId, $externalId, $message),
-                default => null, // Other channels TBD when their connectors are added
+                'whatsapp',
+                'discord',
+                'matrix',
+                'signal_protocol' => $this->sendOutboundPairingReply($teamId, $channel, $externalId, $message),
+                default => null,
             };
         } catch (\Throwable $e) {
             Log::warning('ConnectorBindingGate: failed to send pairing reply', [
@@ -140,5 +148,31 @@ class ConnectorBindingGate
             'text' => $message,
             'parse_mode' => 'HTML',
         ]);
+    }
+
+    private function sendOutboundPairingReply(
+        string $teamId,
+        string $channel,
+        string $externalId,
+        string $message,
+    ): void {
+        // Build a channel-appropriate target so each outbound connector
+        // can locate the recipient from the externalId it already knows.
+        $target = match ($channel) {
+            'whatsapp' => ['phone' => $externalId],
+            'signal_protocol' => ['recipient' => $externalId],
+            'matrix' => ['room_id' => $externalId],
+            default => ['recipient' => $externalId],
+        };
+
+        $proposal = OutboundProposal::withoutGlobalScopes()->create([
+            'team_id' => $teamId,
+            'channel' => OutboundChannel::from($channel),
+            'target' => $target,
+            'content' => ['text' => $message],
+            'status' => OutboundProposalStatus::Approved,
+        ]);
+
+        app(SendOutboundAction::class)->execute($proposal);
     }
 }
