@@ -5,7 +5,6 @@ namespace App\Domain\Agent\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
-use Illuminate\Support\Facades\DB;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
 use App\Domain\Memory\Services\MemoryContextInjector;
 use App\Domain\Project\Models\Project;
@@ -16,6 +15,7 @@ use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\DB;
 use Prism\Prism\Tool;
 
 class ExecuteAgentAction

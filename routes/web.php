@@ -100,6 +100,7 @@ Route::get('/use-cases', fn () => view('use-cases.index'))->name('use-cases.inde
 Route::get('/use-cases/{slug}', function (string $slug) {
     $uc = config("use_cases.{$slug}");
     abort_if(! $uc, 404);
+
     return view('use-cases.show', compact('slug', 'uc'));
 })->name('use-cases.show');
 
