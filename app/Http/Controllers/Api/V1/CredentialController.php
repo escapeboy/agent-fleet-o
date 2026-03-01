@@ -34,7 +34,7 @@ class CredentialController extends Controller
             ])
             ->allowedSorts(['created_at', 'updated_at', 'name', 'last_used_at'])
             ->defaultSort('-created_at')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return CredentialResource::collection($credentials);
     }

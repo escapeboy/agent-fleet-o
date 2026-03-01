@@ -38,6 +38,10 @@ class PrismAiGateway implements AiGatewayInterface
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
+        if ($request->teamId) {
+            app()->instance('ai.current_team_id', $request->teamId);
+        }
+
         $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeRequest($req));
 
         return $pipeline($request);
@@ -48,6 +52,10 @@ class PrismAiGateway implements AiGatewayInterface
         // Structured output and tool calling don't support streaming — fall back
         if ($request->isStructured() || $request->hasTools()) {
             return $this->complete($request);
+        }
+
+        if ($request->teamId) {
+            app()->instance('ai.current_team_id', $request->teamId);
         }
 
         $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeStreamRequest($req, $onChunk));

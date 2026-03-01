@@ -6,13 +6,22 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LlmRequestLog extends Model
 {
-    use BelongsToTeam, HasUuids;
+    use BelongsToTeam, HasUuids, MassPrunable;
+
+    public function prunable(): Builder
+    {
+        // Retain 30 days for debugging and billing reconciliation
+        return static::withoutGlobalScopes()
+            ->where('created_at', '<', now()->subDays(30));
+    }
 
     protected $fillable = [
         'team_id',

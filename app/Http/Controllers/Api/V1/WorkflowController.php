@@ -30,7 +30,7 @@ class WorkflowController extends Controller
             ])
             ->allowedSorts(['created_at', 'updated_at', 'name', 'version'])
             ->defaultSort('-created_at')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return WorkflowResource::collection($workflows);
     }

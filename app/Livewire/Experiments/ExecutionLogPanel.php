@@ -67,6 +67,8 @@ class ExecutionLogPanel extends Component
         $steps = PlaybookStep::where('experiment_id', $this->experimentId)
             ->whereNotNull('started_at')
             ->orderBy('started_at')
+            ->with('agent')
+            ->limit(200)
             ->get()
             ->map(fn (PlaybookStep $s) => [
                 'id' => 'step-'.$s->id,
@@ -85,10 +87,11 @@ class ExecutionLogPanel extends Component
             ]);
         $events = $events->merge($steps);
 
-        // LLM calls
+        // LLM calls (cap at 500 to prevent unbounded memory on long-running experiments)
         $llmLogs = LlmRequestLog::withoutGlobalScopes()
             ->where('experiment_id', $this->experimentId)
             ->orderBy('created_at')
+            ->limit(500)
             ->get()
             ->map(fn (LlmRequestLog $l) => [
                 'id' => 'llm-'.$l->id,

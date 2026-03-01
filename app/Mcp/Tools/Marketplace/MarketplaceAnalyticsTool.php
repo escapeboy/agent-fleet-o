@@ -32,6 +32,13 @@ class MarketplaceAnalyticsTool extends Tool
 
         $listing = MarketplaceListing::withoutGlobalScopes()->findOrFail($listingId);
 
+        $teamId = auth()->user()?->current_team_id;
+
+        // Only the team that published the listing may access its analytics.
+        if ($listing->team_id !== $teamId) {
+            return Response::error('Listing not found or access denied.');
+        }
+
         $successRate = $listing->run_count > 0
             ? round(($listing->success_count / $listing->run_count) * 100, 1)
             : null;

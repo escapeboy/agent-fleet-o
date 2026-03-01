@@ -4,6 +4,7 @@ namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Agent\Models\Agent;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class CircuitBreaker
@@ -32,6 +33,7 @@ class CircuitBreaker
 
     public function recordSuccess(string $provider): void
     {
+        Cache::forget($this->cacheKey($provider));
         $state = $this->getOrCreateState($provider);
 
         if ($state->state === self::STATE_HALF_OPEN) {
@@ -56,6 +58,7 @@ class CircuitBreaker
 
     public function recordFailure(string $provider): void
     {
+        Cache::forget($this->cacheKey($provider));
         $state = $this->getOrCreateState($provider);
 
         $newFailureCount = $state->failure_count + 1;
@@ -98,6 +101,7 @@ class CircuitBreaker
 
     public function reset(string $provider): void
     {
+        Cache::forget($this->cacheKey($provider));
         $state = $this->getState($provider);
 
         $state?->update([
@@ -136,14 +140,23 @@ class CircuitBreaker
         return false;
     }
 
+    private function cacheKey(string $provider): string
+    {
+        return "circuit_breaker:{$provider}";
+    }
+
     private function getState(string $provider): ?CircuitBreakerState
     {
-        $agent = Agent::withoutGlobalScopes()
-            ->where('provider', $provider)
-            ->whereHas('circuitBreakerState')
-            ->first();
+        // Cache state for 5s — isAvailable() is called on every AI request;
+        // DB hit every call would add latency at scale.
+        return Cache::remember($this->cacheKey($provider), 5, function () use ($provider) {
+            $agent = Agent::withoutGlobalScopes()
+                ->where('provider', $provider)
+                ->whereHas('circuitBreakerState')
+                ->first();
 
-        return $agent?->circuitBreakerState;
+            return $agent?->circuitBreakerState;
+        });
     }
 
     private function getOrCreateState(string $provider): CircuitBreakerState

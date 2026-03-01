@@ -21,16 +21,14 @@ class SecurityHeaders
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
 
-        // Content Security Policy — shipped in Report-Only mode first.
-        // Monitor violations, then switch to Content-Security-Policy once clean.
         $csp = implode('; ', [
             "default-src 'self'",
-            // Allow inline scripts (Blade inline scripts, Alpine.js) and CDN Alpine on public pages
+            // Inline scripts are required for Blade-injected Alpine.js bootstrapping.
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://plausible.io",
-            // Allow inline styles (Tailwind utilities) and Bunny fonts
+            // Inline styles are required for Tailwind JIT utilities applied via Alpine.
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
-            // Images: self, data URIs, blobs (chart.js canvas), and any HTTPS (avatars, OG images)
-            "img-src 'self' data: blob: https:",
+            // Restrict images to known origins; drop the open https: wildcard.
+            "img-src 'self' data: blob: https://avatars.githubusercontent.com https://secure.gravatar.com",
             // Fonts: self + Bunny CDN
             "font-src 'self' https://fonts.bunny.net",
             // XHR/fetch/WS: self + Stripe API + Plausible analytics
@@ -46,7 +44,7 @@ class SecurityHeaders
             "form-action 'self'",
         ]);
 
-        $response->headers->set('Content-Security-Policy-Report-Only', $csp);
+        $response->headers->set('Content-Security-Policy', $csp);
 
         return $response;
     }

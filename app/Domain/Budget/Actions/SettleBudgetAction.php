@@ -69,8 +69,15 @@ class SettleBudgetAction
                 ]);
             }
 
-            // Update experiment spend tracking
+            // Update experiment spend tracking — lock the experiment row first so that
+            // concurrent settlements for the same experiment are serialised within the
+            // same transaction that already holds the CreditLedger lock.
             if ($reservation->experiment_id) {
+                Experiment::withoutGlobalScopes()
+                    ->lockForUpdate()
+                    ->where('id', $reservation->experiment_id)
+                    ->first();
+
                 Experiment::withoutGlobalScopes()
                     ->where('id', $reservation->experiment_id)
                     ->increment('budget_spent_credits', $actualCost);

@@ -23,7 +23,7 @@ class OutboundConnectorConfigController extends Controller
             ->allowedFilters(['channel', 'is_active'])
             ->allowedSorts(['created_at', 'channel'])
             ->defaultSort('-created_at')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return OutboundConnectorConfigResource::collection($configs)->response();
     }

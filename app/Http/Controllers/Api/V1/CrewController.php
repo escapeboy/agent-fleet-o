@@ -37,7 +37,7 @@ class CrewController extends Controller
             ->defaultSort('-created_at')
             ->with(['coordinator', 'qaAgent'])
             ->withCount('executions')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return CrewResource::collection($crews);
     }
@@ -166,7 +166,7 @@ class CrewController extends Controller
             ])
             ->allowedSorts(['created_at', 'status', 'total_cost_credits', 'duration_ms'])
             ->defaultSort('-created_at')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return CrewExecutionResource::collection($executions);
     }

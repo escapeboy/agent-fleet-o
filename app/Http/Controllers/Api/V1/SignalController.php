@@ -28,7 +28,7 @@ class SignalController extends Controller
             ])
             ->allowedSorts(['created_at', 'score', 'received_at'])
             ->defaultSort('-created_at')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return SignalResource::collection($signals);
     }

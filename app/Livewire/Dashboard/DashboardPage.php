@@ -14,6 +14,7 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 
 class DashboardPage extends Component
@@ -27,55 +28,45 @@ class DashboardPage extends Component
             ExperimentStatus::Expired,
         ];
 
-        $total = Experiment::count();
-        $completed = Experiment::where('status', ExperimentStatus::Completed)->count();
-        $active = Experiment::whereNotIn('status', array_map(fn ($s) => $s->value, $terminalStatuses))
-            ->where('status', '!=', ExperimentStatus::Draft)
-            ->count();
-        $pendingApprovals = ApprovalRequest::where('status', 'pending')->count();
-        $successRate = $total > 0 ? round(($completed / $total) * 100, 1) : 0;
-        $totalSpend = CreditLedger::where('type', 'spend')->sum('amount');
+        // Cache aggregate KPIs for 30s — avoids 10+ COUNT queries on every wire:poll.5s tick
+        $kpis = Cache::remember('dashboard.kpis', 30, function () use ($terminalStatuses) {
+            $total = Experiment::count();
+            $completed = Experiment::where('status', ExperimentStatus::Completed)->count();
 
-        // Skills & Agents KPIs
-        $activeSkills = Skill::where('status', 'active')->count();
-        $activeAgents = Agent::where('status', 'active')->count();
-        $skillExecutions24h = SkillExecution::where('created_at', '>=', now()->subDay())->count();
-        $agentRuns24h = AgentExecution::where('created_at', '>=', now()->subDay())->count();
+            return [
+                'total' => $total,
+                'completed' => $completed,
+                'active' => Experiment::whereNotIn('status', array_map(fn ($s) => $s->value, $terminalStatuses))
+                    ->where('status', '!=', ExperimentStatus::Draft)
+                    ->count(),
+                'pendingApprovals' => ApprovalRequest::where('status', 'pending')->count(),
+                'successRate' => $total > 0 ? round(($completed / $total) * 100, 1) : 0,
+                'totalSpend' => abs((float) CreditLedger::where('type', 'spend')->sum('amount')),
+                'activeSkills' => Skill::where('status', 'active')->count(),
+                'activeAgents' => Agent::where('status', 'active')->count(),
+                'skillExecutions24h' => SkillExecution::where('created_at', '>=', now()->subDay())->count(),
+                'agentRuns24h' => AgentExecution::where('created_at', '>=', now()->subDay())->count(),
+                'activeProjects' => Project::where('status', ProjectStatus::Active)->count(),
+                'projectRuns24h' => ProjectRun::where('created_at', '>=', now()->subDay())->count(),
+                'spendForecast' => app(SpendForecaster::class)->forecast(),
+            ];
+        });
 
-        // Projects KPIs
-        $activeProjects = Project::where('status', ProjectStatus::Active)->count();
-        $projectRuns24h = ProjectRun::where('created_at', '>=', now()->subDay())->count();
+        // Active experiments list — short TTL so it's near-real-time
+        $activeExperiments = Cache::remember('dashboard.active_experiments', 10, function () use ($terminalStatuses) {
+            return Experiment::whereNotIn('status', array_map(fn ($s) => $s->value, $terminalStatuses))
+                ->where('status', '!=', ExperimentStatus::Draft)
+                ->latest('updated_at')
+                ->limit(10)
+                ->get();
+        });
 
-        // Active experiments (top 10)
-        $activeExperiments = Experiment::whereNotIn('status', array_map(fn ($s) => $s->value, $terminalStatuses))
-            ->where('status', '!=', ExperimentStatus::Draft)
-            ->latest('updated_at')
-            ->limit(10)
-            ->get();
-
-        // Alerts
         $alerts = $this->gatherAlerts();
 
-        // Spend forecast
-        $spendForecast = app(SpendForecaster::class)->forecast();
-
-        return view('livewire.dashboard.dashboard-page', [
-            'active' => $active,
-            'completed' => $completed,
-            'total' => $total,
-            'pendingApprovals' => $pendingApprovals,
-            'successRate' => $successRate,
-            'totalSpend' => abs($totalSpend),
-            'activeSkills' => $activeSkills,
-            'activeAgents' => $activeAgents,
-            'skillExecutions24h' => $skillExecutions24h,
-            'agentRuns24h' => $agentRuns24h,
-            'activeProjects' => $activeProjects,
-            'projectRuns24h' => $projectRuns24h,
+        return view('livewire.dashboard.dashboard-page', array_merge($kpis, [
             'activeExperiments' => $activeExperiments,
             'alerts' => $alerts,
-            'spendForecast' => $spendForecast,
-        ])->layout('layouts.app', ['header' => 'Dashboard']);
+        ]))->layout('layouts.app', ['header' => 'Dashboard']);
     }
 
     private function gatherAlerts(): array

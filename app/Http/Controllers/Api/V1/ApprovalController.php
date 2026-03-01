@@ -26,7 +26,7 @@ class ApprovalController extends Controller
             ])
             ->allowedSorts(['created_at', 'expires_at', 'status'])
             ->defaultSort('-created_at')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return ApprovalResource::collection($approvals);
     }

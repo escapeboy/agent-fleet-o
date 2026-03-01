@@ -41,10 +41,14 @@ class SignalIngestTool extends Tool
         }
 
         try {
+            $teamId = auth()->user()?->current_team_id
+                ?? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
+
             $signal = app(IngestSignalAction::class)->execute(
                 sourceType: 'mcp',
                 sourceIdentifier: $validated['source'],
                 payload: $payload,
+                teamId: $teamId,
             );
 
             if (! $signal) {
