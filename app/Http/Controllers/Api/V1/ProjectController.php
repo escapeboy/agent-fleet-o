@@ -117,6 +117,7 @@ class ProjectController extends Controller
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'workflow_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('workflows', 'id')->where('team_id', $request->user()->current_team_id)],
+            'crew_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('crews', 'id')->where('team_id', $request->user()->current_team_id)],
             'agent_config' => ['sometimes', 'array'],
             'budget_config' => ['sometimes', 'array'],
             'notification_config' => ['sometimes', 'array'],
@@ -130,7 +131,7 @@ class ProjectController extends Controller
         ]);
 
         $project = $action->execute($project, $request->only([
-            'title', 'description', 'execution_mode', 'workflow_id',
+            'title', 'description', 'execution_mode', 'workflow_id', 'crew_id',
             'agent_config', 'budget_config', 'notification_config',
             'delivery_config', 'schedule',
         ]));

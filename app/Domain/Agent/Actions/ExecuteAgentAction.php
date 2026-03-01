@@ -109,9 +109,10 @@ class ExecuteAgentAction
             $costCredits = $response->usage->costCredits;
 
             // Serialise concurrent budget increments for the same agent with a row-level lock.
+            // Must use the freshly-locked instance returned by first() — not the outer $agent.
             DB::transaction(function () use ($agent, $costCredits) {
-                Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
-                $agent->increment('budget_spent_credits', $costCredits);
+                $locked = Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
+                $locked->increment('budget_spent_credits', $costCredits);
             });
 
             $execution = AgentExecution::create([
@@ -204,8 +205,8 @@ class ExecuteAgentAction
             $costCredits = $response->usage->costCredits;
 
             DB::transaction(function () use ($agent, $costCredits) {
-                Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
-                $agent->increment('budget_spent_credits', $costCredits);
+                $locked = Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
+                $locked->increment('budget_spent_credits', $costCredits);
             });
 
             $execution = AgentExecution::create([
@@ -383,8 +384,8 @@ class ExecuteAgentAction
 
             // Track agent budget spend (locked to prevent concurrent over-spend)
             DB::transaction(function () use ($agent, $totalCost) {
-                Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
-                $agent->increment('budget_spent_credits', $totalCost);
+                $locked = Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
+                $locked->increment('budget_spent_credits', $totalCost);
             });
 
             $execution = AgentExecution::create([
@@ -407,8 +408,8 @@ class ExecuteAgentAction
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
             DB::transaction(function () use ($agent, $totalCost) {
-                Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
-                $agent->increment('budget_spent_credits', $totalCost);
+                $locked = Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
+                $locked->increment('budget_spent_credits', $totalCost);
             });
 
             return $this->failExecution(

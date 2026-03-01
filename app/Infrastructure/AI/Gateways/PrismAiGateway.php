@@ -274,6 +274,11 @@ class PrismAiGateway implements AiGatewayInterface
      * If the request has a teamId, look up team-specific API credentials
      * and inject them into Prism's runtime config. Falls back to platform config.
      * Local HTTP providers (ollama, openai_compatible) use per-request config instead.
+     *
+     * IMPORTANT: Horizon workers are long-lived processes. config() mutations persist
+     * across jobs. This method ALWAYS explicitly sets the config key — to the team key
+     * when a BYOK credential exists, or to the platform key otherwise — to prevent
+     * a team's API key from leaking into subsequent jobs that use platform fallback.
      */
     private function applyTeamCredentials(AiRequestDTO $request): void
     {
@@ -285,25 +290,6 @@ class PrismAiGateway implements AiGatewayInterface
             return;
         }
 
-        $credential = TeamProviderCredential::where('team_id', $request->teamId)
-            ->where('provider', $request->provider)
-            ->where('is_active', true)
-            ->first();
-
-        if (! $credential) {
-            // Check if team's plan allows platform fallback
-            $team = Team::find($request->teamId);
-            if ($team && ! $team->hasFeature('platform_llm_fallback')) {
-                throw new RuntimeException(
-                    'Your plan does not include platform AI keys. '
-                    .'Please add your own API key in Team Settings, or upgrade your plan.',
-                );
-            }
-
-            return; // Fall back to platform-level config
-        }
-
-        $creds = $credential->credentials;
         $configKey = match ($request->provider) {
             'anthropic' => 'prism.providers.anthropic.api_key',
             'openai' => 'prism.providers.openai.api_key',
@@ -311,8 +297,36 @@ class PrismAiGateway implements AiGatewayInterface
             default => null,
         };
 
-        if ($configKey && isset($creds['api_key'])) {
-            config([$configKey => $creds['api_key']]);
+        $credential = TeamProviderCredential::where('team_id', $request->teamId)
+            ->where('provider', $request->provider)
+            ->where('is_active', true)
+            ->first();
+
+        if ($credential && $configKey && isset($credential->credentials['api_key'])) {
+            config([$configKey => $credential->credentials['api_key']]);
+
+            return;
+        }
+
+        // No team credential — check if team's plan allows platform fallback.
+        $team = Team::find($request->teamId);
+        if ($team && ! $team->hasFeature('platform_llm_fallback')) {
+            throw new RuntimeException(
+                'Your plan does not include platform AI keys. '
+                .'Please add your own API key in Team Settings, or upgrade your plan.',
+            );
+        }
+
+        // Explicitly restore the original platform API key (read from the immutable
+        // process environment) to clear any BYOK key set by a prior Horizon job.
+        if ($configKey) {
+            $platformKey = match ($request->provider) {
+                'anthropic' => env('ANTHROPIC_API_KEY'),
+                'openai' => env('OPENAI_API_KEY'),
+                'google' => env('GOOGLE_AI_API_KEY'),
+                default => null,
+            };
+            config([$configKey => $platformKey]);
         }
     }
 

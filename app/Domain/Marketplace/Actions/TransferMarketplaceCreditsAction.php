@@ -90,8 +90,11 @@ class TransferMarketplaceCreditsAction
                 ],
             ]);
 
-            // Update installation totals
+            // Update installation totals.
+            // Both calls must include ->where('id', ...) — withoutGlobalScopes() on a model instance
+            // returns a plain query builder with no automatic WHERE clause applied.
             $installation->withoutGlobalScopes()
+                ->where('id', $installation->id)
                 ->increment('total_credits_spent', $amount);
             $installation->withoutGlobalScopes()
                 ->where('id', $installation->id)

@@ -28,8 +28,11 @@ class DashboardPage extends Component
             ExperimentStatus::Expired,
         ];
 
-        // Cache aggregate KPIs for 30s — avoids 10+ COUNT queries on every wire:poll.5s tick
-        $kpis = Cache::remember('dashboard.kpis', 30, function () use ($terminalStatuses) {
+        // Cache aggregate KPIs per team for 30s — avoids 10+ COUNT queries on every wire:poll.5s tick.
+        // Key MUST be team-scoped to prevent cross-tenant data leaks in multi-team deployments.
+        $teamId = auth()->user()->current_team_id;
+
+        $kpis = Cache::remember("dashboard.kpis:{$teamId}", 30, function () use ($terminalStatuses) {
             $total = Experiment::count();
             $completed = Experiment::where('status', ExperimentStatus::Completed)->count();
 
@@ -53,7 +56,7 @@ class DashboardPage extends Component
         });
 
         // Active experiments list — short TTL so it's near-real-time
-        $activeExperiments = Cache::remember('dashboard.active_experiments', 10, function () use ($terminalStatuses) {
+        $activeExperiments = Cache::remember("dashboard.active_experiments:{$teamId}", 10, function () use ($terminalStatuses) {
             return Experiment::whereNotIn('status', array_map(fn ($s) => $s->value, $terminalStatuses))
                 ->where('status', '!=', ExperimentStatus::Draft)
                 ->latest('updated_at')
