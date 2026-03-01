@@ -18,6 +18,7 @@
             <a href="#features" class="rounded text-sm font-medium text-gray-600 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">Features</a>
             <a href="#how-it-works" class="rounded text-sm font-medium text-gray-600 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">How It Works</a>
             <a href="{{ route('marketplace.index') }}" class="rounded text-sm font-medium text-gray-600 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">Marketplace</a>
+            <a href="{{ route('use-cases.index') }}" class="rounded text-sm font-medium text-gray-600 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">Use Cases</a>
             {{ $navLinks ?? '' }}
             <a href="{{ route('login') }}" class="rounded text-sm font-semibold text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">Log in</a>
             <a href="{{ route('register') }}"
@@ -61,6 +62,7 @@
         <a href="#features" @click="open = false" class="block py-2.5 text-base font-medium text-gray-700">Features</a>
         <a href="#how-it-works" @click="open = false" class="block py-2.5 text-base font-medium text-gray-700">How It Works</a>
         <a href="{{ route('marketplace.index') }}" class="block py-2.5 text-base font-medium text-gray-700">Marketplace</a>
+        <a href="{{ route('use-cases.index') }}" @click="open = false" class="block py-2.5 text-base font-medium text-gray-700">Use Cases</a>
         {{ $mobileNavLinks ?? '' }}
         <div class="mt-4 flex flex-col gap-3">
             <a href="{{ route('login') }}" class="block rounded-lg border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 transition hover:bg-gray-50">

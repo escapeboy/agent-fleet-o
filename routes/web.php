@@ -95,6 +95,14 @@ Route::get('/privacy', fn () => view('legal.privacy'))->name('legal.privacy');
 Route::get('/cookies', fn () => view('legal.cookies'))->name('legal.cookies');
 Route::get('/terms', fn () => view('legal.terms'))->name('legal.terms');
 
+// Use cases pages (public, SEO)
+Route::get('/use-cases', fn () => view('use-cases.index'))->name('use-cases.index');
+Route::get('/use-cases/{slug}', function (string $slug) {
+    $uc = config("use_cases.{$slug}");
+    abort_if(! $uc, 404);
+    return view('use-cases.show', compact('slug', 'uc'));
+})->name('use-cases.show');
+
 // Public marketplace storefront (Blade + Alpine.js, no auth)
 Route::controller(MarketplacePageController::class)->prefix('marketplace')->name('marketplace.')->group(function () {
     Route::get('/', 'index')->name('index');
