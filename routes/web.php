@@ -64,31 +64,35 @@ use Illuminate\Support\Facades\Route;
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 
-// Root — smart redirect: setup (fresh install) → dashboard (authed) → login
-Route::get('/', function () {
-    try {
-        if (! User::exists()) {
+// Root and /setup are self-hosted-only — the cloud edition registers its own
+// versions in cloud/routes/cloud-web.php (landing page + 404 for setup).
+if (config('app.deployment_mode', 'self-hosted') !== 'cloud') {
+    // Root — smart redirect: setup (fresh install) → dashboard (authed) → login
+    Route::get('/', function () {
+        try {
+            if (! User::exists()) {
+                return redirect()->route('setup');
+            }
+        } catch (Throwable) {
+            // DB unreachable — send to setup page to show diagnostics
             return redirect()->route('setup');
         }
-    } catch (Throwable) {
-        // DB unreachable — send to setup page to show diagnostics
-        return redirect()->route('setup');
-    }
 
-    if (auth()->check()) {
-        return redirect()->route('dashboard');
-    }
+        if (auth()->check()) {
+            return redirect()->route('dashboard');
+        }
 
-    return redirect()->route('login');
-})->name('home');
+        return redirect()->route('login');
+    })->name('home');
 
-// Setup / installation check page (public — excluded from DB-dependent middleware)
-// Accepts both GET (page render) and POST (native form fallback when Livewire JS fails)
-Route::withoutMiddleware([
-    SetCurrentTeam::class,
-    SetPostgresRlsContext::class,
-    BypassAuth::class,
-])->match(['GET', 'POST'], '/setup', SetupPage::class)->name('setup');
+    // Setup / installation check page (public — excluded from DB-dependent middleware)
+    // Accepts both GET (page render) and POST (native form fallback when Livewire JS fails)
+    Route::withoutMiddleware([
+        SetCurrentTeam::class,
+        SetPostgresRlsContext::class,
+        BypassAuth::class,
+    ])->match(['GET', 'POST'], '/setup', SetupPage::class)->name('setup');
+}
 
 // Legal pages (public)
 Route::get('/privacy', fn () => view('legal.privacy'))->name('legal.privacy');
