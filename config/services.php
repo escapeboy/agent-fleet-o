@@ -44,6 +44,14 @@ return [
         'domain' => env('PLAUSIBLE_DOMAIN'),
     ],
 
+    'google_analytics' => [
+        'id' => env('GOOGLE_ANALYTICS_ID'),
+    ],
+
+    'sentry' => [
+        'dsn' => env('SENTRY_LARAVEL_DSN'),
+    ],
+
     'whatsapp' => [
         'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
         'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
