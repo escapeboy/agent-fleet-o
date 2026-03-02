@@ -26,7 +26,7 @@ class AuditController extends Controller
             ])
             ->allowedSorts(['created_at'])
             ->defaultSort('-created_at')
-            ->cursorPaginate($request->input('per_page', 25));
+            ->cursorPaginate(min((int) $request->input('per_page', 25), 100));
 
         return AuditEntryResource::collection($entries);
     }

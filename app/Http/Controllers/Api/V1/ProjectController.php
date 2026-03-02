@@ -20,6 +20,7 @@ use App\Http\Resources\Api\V1\ProjectRunResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -40,7 +41,7 @@ class ProjectController extends Controller
             ->allowedSorts(['created_at', 'updated_at', 'title', 'status', 'last_run_at'])
             ->defaultSort('-created_at')
             ->with('schedule')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return ProjectResource::collection($projects);
     }
@@ -57,8 +58,8 @@ class ProjectController extends Controller
             'type' => ['required', new Enum(ProjectType::class)],
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'goal' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'workflow_id' => ['sometimes', 'nullable', 'uuid', 'exists:workflows,id'],
-            'crew_id' => ['sometimes', 'nullable', 'uuid', 'exists:crews,id'],
+            'workflow_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('workflows', 'id')->where('team_id', $request->user()->current_team_id)],
+            'crew_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('crews', 'id')->where('team_id', $request->user()->current_team_id)],
             'execution_mode' => ['sometimes', new Enum(ProjectExecutionMode::class)],
             'agent_config' => ['sometimes', 'array'],
             'budget_config' => ['sometimes', 'array'],
@@ -69,7 +70,7 @@ class ProjectController extends Controller
             'milestones' => ['sometimes', 'array'],
             'milestones.*.title' => ['required_with:milestones', 'string', 'max:255'],
             'dependencies' => ['sometimes', 'array'],
-            'dependencies.*.depends_on_id' => ['required_with:dependencies', 'uuid', 'exists:projects,id'],
+            'dependencies.*.depends_on_id' => ['required_with:dependencies', 'uuid', Rule::exists('projects', 'id')->where('team_id', $request->user()->current_team_id)],
             'allowed_tool_ids' => ['sometimes', 'array'],
             'allowed_tool_ids.*' => ['uuid'],
             'allowed_credential_ids' => ['sometimes', 'array'],
@@ -115,7 +116,8 @@ class ProjectController extends Controller
         $request->validate([
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'workflow_id' => ['sometimes', 'nullable', 'uuid', 'exists:workflows,id'],
+            'workflow_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('workflows', 'id')->where('team_id', $request->user()->current_team_id)],
+            'crew_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('crews', 'id')->where('team_id', $request->user()->current_team_id)],
             'agent_config' => ['sometimes', 'array'],
             'budget_config' => ['sometimes', 'array'],
             'notification_config' => ['sometimes', 'array'],
@@ -129,7 +131,7 @@ class ProjectController extends Controller
         ]);
 
         $project = $action->execute($project, $request->only([
-            'title', 'description', 'execution_mode', 'workflow_id',
+            'title', 'description', 'execution_mode', 'workflow_id', 'crew_id',
             'agent_config', 'budget_config', 'notification_config',
             'delivery_config', 'schedule',
         ]));
@@ -215,7 +217,7 @@ class ProjectController extends Controller
             ])
             ->allowedSorts(['created_at', 'run_number', 'status', 'spend_credits'])
             ->defaultSort('-run_number')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return ProjectRunResource::collection($runs);
     }

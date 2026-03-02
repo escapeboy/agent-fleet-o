@@ -1,4 +1,4 @@
-<div wire:poll.5s>
+<div wire:poll.5s.visible>
     {{-- KPI Cards --}}
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <x-stat-card label="Active Runs" :value="$active" />

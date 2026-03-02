@@ -31,7 +31,11 @@ class CredentialGetTool extends Tool
     {
         $validated = $request->validate(['credential_id' => 'required|string']);
 
-        $credential = Credential::find($validated['credential_id']);
+        $teamId = auth()->user()?->current_team_id;
+
+        $credential = Credential::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->find($validated['credential_id']);
 
         if (! $credential) {
             return Response::error('Credential not found.');

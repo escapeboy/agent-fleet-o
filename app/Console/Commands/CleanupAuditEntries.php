@@ -15,7 +15,11 @@ class CleanupAuditEntries extends Command
     {
         $days = (int) $this->option('days');
 
-        $deleted = AuditEntry::where('created_at', '<', now()->subDays($days))->delete();
+        // withoutGlobalScopes() ensures the query spans all teams, not just the current team.
+        // This command runs in console/cron context where no team is authenticated.
+        $deleted = AuditEntry::withoutGlobalScopes()
+            ->where('created_at', '<', now()->subDays($days))
+            ->delete();
 
         $this->info("Deleted {$deleted} audit entries older than {$days} days.");
 

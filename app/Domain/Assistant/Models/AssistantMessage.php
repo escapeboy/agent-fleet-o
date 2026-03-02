@@ -2,13 +2,21 @@
 
 namespace App\Domain\Assistant\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AssistantMessage extends Model
 {
-    use HasUuids;
+    use HasUuids, MassPrunable;
+
+    public function prunable(): Builder
+    {
+        // Retain 90 days of conversation history
+        return static::where('created_at', '<', now()->subDays(90));
+    }
 
     public $timestamps = false;
 

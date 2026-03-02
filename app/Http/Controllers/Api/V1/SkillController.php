@@ -29,7 +29,7 @@ class SkillController extends Controller
             ])
             ->allowedSorts(['created_at', 'updated_at', 'name', 'execution_count'])
             ->defaultSort('-created_at')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return SkillResource::collection($skills);
     }

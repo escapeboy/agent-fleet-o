@@ -32,7 +32,13 @@ class CredentialListTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $query = Credential::query()->orderBy('name');
+        $teamId = auth()->user()?->current_team_id;
+
+        // Use withoutGlobalScopes + explicit where('team_id') for defence-in-depth:
+        // TeamScope's orWhereNull() would otherwise expose platform credentials (team_id=null).
+        $query = Credential::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->orderBy('name');
 
         if ($status = $request->get('status')) {
             $query->where('status', $status);

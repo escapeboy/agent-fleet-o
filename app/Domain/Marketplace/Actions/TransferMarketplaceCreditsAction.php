@@ -35,12 +35,26 @@ class TransferMarketplaceCreditsAction
             $consumingTeamId, $publisherTeamId, $installation,
             $listing, $amount, $platformFee, $publisherRevenue
         ) {
-            // Lock and deduct from consuming team
-            $consumerLast = CreditLedger::withoutGlobalScopes()
-                ->where('team_id', $consumingTeamId)
+            // Always acquire locks in ascending team_id order to prevent deadlocks
+            // when two concurrent transactions involve the same two teams in reverse roles.
+            $sortedIds = [$consumingTeamId, $publisherTeamId];
+            sort($sortedIds);
+            [$firstId, $secondId] = $sortedIds;
+
+            $firstLast = CreditLedger::withoutGlobalScopes()
+                ->where('team_id', $firstId)
                 ->lockForUpdate()
                 ->orderByDesc('created_at')
                 ->first();
+
+            $secondLast = CreditLedger::withoutGlobalScopes()
+                ->where('team_id', $secondId)
+                ->lockForUpdate()
+                ->orderByDesc('created_at')
+                ->first();
+
+            $consumerLast = $firstId === $consumingTeamId ? $firstLast : $secondLast;
+            $publisherLast = $firstId === $publisherTeamId ? $firstLast : $secondLast;
 
             $consumerBalance = (float) ($consumerLast?->balance_after ?? 0);
 
@@ -61,13 +75,6 @@ class TransferMarketplaceCreditsAction
                 ],
             ]);
 
-            // Credit publisher team (80% of price)
-            $publisherLast = CreditLedger::withoutGlobalScopes()
-                ->where('team_id', $publisherTeamId)
-                ->lockForUpdate()
-                ->orderByDesc('created_at')
-                ->first();
-
             $publisherBalance = (float) ($publisherLast?->balance_after ?? 0);
 
             CreditLedger::withoutGlobalScopes()->create([
@@ -83,8 +90,11 @@ class TransferMarketplaceCreditsAction
                 ],
             ]);
 
-            // Update installation totals
+            // Update installation totals.
+            // Both calls must include ->where('id', ...) — withoutGlobalScopes() on a model instance
+            // returns a plain query builder with no automatic WHERE clause applied.
             $installation->withoutGlobalScopes()
+                ->where('id', $installation->id)
                 ->increment('total_credits_spent', $amount);
             $installation->withoutGlobalScopes()
                 ->where('id', $installation->id)

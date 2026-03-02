@@ -33,8 +33,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Auth (public — no auth required, rate-limited to 5 attempts per minute per IP)
+// Public endpoints (no auth required)
 Route::post('/auth/token', [AuthController::class, 'token'])->middleware('throttle:5,1');
+Route::get('/health', [HealthController::class, 'index']);
 
 // Public marketplace API (no auth, rate-limited)
 Route::prefix('marketplace')
@@ -154,9 +155,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         ->parameters(['outbound-connectors' => 'outboundConnectorConfig']);
     Route::post('/outbound-connectors/{outboundConnectorConfig}/test', [OutboundConnectorConfigController::class, 'test']);
 
-    // Dashboard & Health
+    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
-    Route::get('/health', [HealthController::class, 'index']);
 
     // Audit
     Route::get('/audit', [AuditController::class, 'index']);

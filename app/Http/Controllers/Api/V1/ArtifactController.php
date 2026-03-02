@@ -32,7 +32,7 @@ class ArtifactController extends Controller
             ->allowedSorts(['created_at', 'name', 'type'])
             ->defaultSort('-created_at')
             ->withCount('versions')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return ArtifactResource::collection($artifacts);
     }

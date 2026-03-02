@@ -32,7 +32,7 @@ class AgentController extends Controller
             ->allowedSorts(['created_at', 'updated_at', 'name', 'status'])
             ->defaultSort('-created_at')
             ->with('skills')
-            ->cursorPaginate($request->input('per_page', 15));
+            ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return AgentResource::collection($agents);
     }

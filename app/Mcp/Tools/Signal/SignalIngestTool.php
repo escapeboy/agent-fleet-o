@@ -41,10 +41,18 @@ class SignalIngestTool extends Tool
         }
 
         try {
+            $teamId = auth()->user()?->current_team_id
+                ?? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
+
+            if (! $teamId) {
+                return Response::error('Unauthorized: no active team context.');
+            }
+
             $signal = app(IngestSignalAction::class)->execute(
                 sourceType: 'mcp',
                 sourceIdentifier: $validated['source'],
                 payload: $payload,
+                teamId: $teamId,
             );
 
             if (! $signal) {
