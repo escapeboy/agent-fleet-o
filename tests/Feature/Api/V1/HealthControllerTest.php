@@ -17,10 +17,12 @@ class HealthControllerTest extends ApiTestCase
         ]);
     }
 
-    public function test_unauthenticated_cannot_check_health(): void
+    public function test_health_is_publicly_accessible(): void
     {
+        // /health is a public endpoint used by deploy scripts — no auth required
         $response = $this->getJson('/api/v1/health');
 
-        $response->assertStatus(401);
+        $response->assertJsonStructure(['status', 'checks']);
+        $this->assertContains($response->status(), [200, 503]);
     }
 }
