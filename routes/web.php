@@ -4,6 +4,7 @@ use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
+use App\Http\Controllers\UseCasesController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
@@ -95,18 +96,13 @@ if (config('app.deployment_mode', 'self-hosted') !== 'cloud') {
 }
 
 // Legal pages (public)
-Route::get('/privacy', fn () => view('legal.privacy'))->name('legal.privacy');
-Route::get('/cookies', fn () => view('legal.cookies'))->name('legal.cookies');
-Route::get('/terms', fn () => view('legal.terms'))->name('legal.terms');
+Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
+Route::view('/cookies', 'legal.cookies')->name('legal.cookies');
+Route::view('/terms', 'legal.terms')->name('legal.terms');
 
 // Use cases pages (public, SEO)
-Route::get('/use-cases', fn () => view('use-cases.index'))->name('use-cases.index');
-Route::get('/use-cases/{slug}', function (string $slug) {
-    $uc = config("use_cases.{$slug}");
-    abort_if(! $uc, 404);
-
-    return view('use-cases.show', compact('slug', 'uc'));
-})->name('use-cases.show');
+Route::view('/use-cases', 'use-cases.index')->name('use-cases.index');
+Route::get('/use-cases/{slug}', UseCasesController::class)->name('use-cases.show');
 
 // Public marketplace storefront (Blade + Alpine.js, no auth)
 Route::controller(MarketplacePageController::class)->prefix('marketplace')->name('marketplace.')->group(function () {
