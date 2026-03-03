@@ -173,7 +173,21 @@ class CreateSkillForm extends Component
 
     public function render()
     {
-        $providers = app(ProviderResolver::class)->availableProviders();
+        $resolver = app(ProviderResolver::class);
+        $providers = $resolver->availableProviders();
+
+        // Append team's custom endpoints as selectable providers
+        $team = auth()->user()->currentTeam;
+        foreach ($resolver->customEndpointsForTeam($team) as $ep) {
+            $models = [];
+            foreach ($ep->credentials['models'] ?? [] as $m) {
+                $models[$m] = ['label' => $m, 'input_cost' => 0, 'output_cost' => 0];
+            }
+            $providers["custom_endpoint:{$ep->name}"] = [
+                'name' => $ep->name.' (Custom)',
+                'models' => $models,
+            ];
+        }
 
         return view('livewire.skills.create-skill-form', [
             'types' => SkillType::cases(),

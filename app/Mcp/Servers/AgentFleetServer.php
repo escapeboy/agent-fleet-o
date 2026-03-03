@@ -84,6 +84,7 @@ use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
+use App\Mcp\Tools\Shared\CustomEndpointManageTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
 use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
@@ -340,6 +341,7 @@ class AgentFleetServer extends Server
         TeamMembersTool::class,
         LocalLlmTool::class,
         TeamByokCredentialManageTool::class,
+        CustomEndpointManageTool::class,
         ApiTokenManageTool::class,
 
         // Telegram (1)

@@ -3,6 +3,7 @@
 namespace App\Livewire\Teams;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
@@ -305,6 +306,80 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'OpenAI-compatible endpoint removed.');
     }
 
+    // Custom AI Endpoints
+    public string $customEndpointName = '';
+
+    public string $customEndpointBaseUrl = '';
+
+    public string $customEndpointApiKey = '';
+
+    public string $customEndpointModels = '';
+
+    public function addCustomEndpoint(SsrfGuard $ssrfGuard): void
+    {
+        $this->validate([
+            'customEndpointName' => 'required|string|max:255|regex:/^[a-z0-9_-]+$/',
+            'customEndpointBaseUrl' => 'required|url|max:500',
+            'customEndpointApiKey' => 'nullable|string|max:500',
+            'customEndpointModels' => 'required|string|max:1000',
+        ], [
+            'customEndpointName.regex' => 'Name must be lowercase letters, numbers, hyphens, and underscores only.',
+        ]);
+
+        try {
+            $ssrfGuard->assertPublicUrl($this->customEndpointBaseUrl);
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('customEndpointBaseUrl', $e->getMessage());
+
+            return;
+        }
+
+        $team = auth()->user()->currentTeam;
+        $models = array_filter(array_map('trim', explode(',', $this->customEndpointModels)));
+
+        TeamProviderCredential::updateOrCreate(
+            ['team_id' => $team->id, 'provider' => 'custom_endpoint', 'name' => $this->customEndpointName],
+            [
+                'credentials' => [
+                    'base_url' => rtrim($this->customEndpointBaseUrl, '/'),
+                    'api_key' => $this->customEndpointApiKey ?: '',
+                    'models' => $models,
+                ],
+                'is_active' => true,
+            ],
+        );
+
+        $this->customEndpointName = '';
+        $this->customEndpointBaseUrl = '';
+        $this->customEndpointApiKey = '';
+        $this->customEndpointModels = '';
+
+        session()->flash('message', 'Custom AI endpoint saved.');
+    }
+
+    public function removeCustomEndpoint(string $id): void
+    {
+        TeamProviderCredential::where('id', $id)
+            ->where('team_id', auth()->user()->current_team_id)
+            ->where('provider', 'custom_endpoint')
+            ->delete();
+
+        session()->flash('message', 'Custom endpoint removed.');
+    }
+
+    public function toggleCustomEndpoint(string $id): void
+    {
+        $cred = TeamProviderCredential::where('id', $id)
+            ->where('team_id', auth()->user()->current_team_id)
+            ->where('provider', 'custom_endpoint')
+            ->first();
+
+        if ($cred) {
+            $cred->update(['is_active' => ! $cred->is_active]);
+            session()->flash('message', $cred->is_active ? 'Endpoint activated.' : 'Endpoint deactivated.');
+        }
+    }
+
     // Telegram bot settings
     public string $telegramBotToken = '';
 
@@ -365,6 +440,12 @@ class TeamSettingsPage extends Component
                     ->whereIn('provider', ['ollama', 'openai_compatible'])
                     ->get()
                     ->keyBy('provider')
+                : collect(),
+            'customEndpoints' => $team
+                ? TeamProviderCredential::where('team_id', $team->id)
+                    ->where('provider', 'custom_endpoint')
+                    ->latest()
+                    ->get()
                 : collect(),
         ])->layout('layouts.app', ['header' => 'Settings']);
     }

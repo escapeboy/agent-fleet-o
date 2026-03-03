@@ -75,13 +75,11 @@ class CreateAgentForm extends Component
 
     protected function rules(): array
     {
-        $providerKeys = implode(',', array_keys(app(ProviderResolver::class)->availableProviders()));
-
         return [
             'name' => 'required|min:2|max:255',
             'role' => 'required|max:255',
             'goal' => 'required|max:1000',
-            'provider' => "required|in:{$providerKeys}",
+            'provider' => 'required|string|max:255',
             'model' => 'required|max:255',
         ];
     }
@@ -160,7 +158,21 @@ class CreateAgentForm extends Component
     {
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
         $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
-        $providers = app(ProviderResolver::class)->availableProviders();
+        $resolver = app(ProviderResolver::class);
+        $providers = $resolver->availableProviders();
+
+        // Append team's custom endpoints as selectable providers
+        $team = auth()->user()->currentTeam;
+        foreach ($resolver->customEndpointsForTeam($team) as $ep) {
+            $models = [];
+            foreach ($ep->credentials['models'] ?? [] as $m) {
+                $models[$m] = ['label' => $m, 'input_cost' => 0, 'output_cost' => 0];
+            }
+            $providers["custom_endpoint:{$ep->name}"] = [
+                'name' => $ep->name.' (Custom)',
+                'models' => $models,
+            ];
+        }
 
         return view('livewire.agents.create-agent-form', [
             'availableSkills' => $availableSkills,

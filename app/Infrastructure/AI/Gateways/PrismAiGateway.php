@@ -5,6 +5,7 @@ namespace App\Infrastructure\AI\Gateways;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Domain\Shared\Services\SsrfGuard;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -38,6 +39,8 @@ class PrismAiGateway implements AiGatewayInterface
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
+        $request = $this->normalizeCustomEndpoint($request);
+
         if ($request->teamId) {
             app()->instance('ai.current_team_id', $request->teamId);
         }
@@ -49,6 +52,8 @@ class PrismAiGateway implements AiGatewayInterface
 
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
+        $request = $this->normalizeCustomEndpoint($request);
+
         // Structured output and tool calling don't support streaming — fall back
         if ($request->isStructured() || $request->hasTools()) {
             return $this->complete($request);
@@ -76,7 +81,7 @@ class PrismAiGateway implements AiGatewayInterface
     {
         $provider = $this->resolveProvider($request->provider);
         $this->applyTeamCredentials($request);
-        $localConfig = $this->getLocalProviderConfig($request);
+        $localConfig = $this->getPerRequestProviderConfig($request);
         $startTime = hrtime(true);
 
         $generator = Prism::text()
@@ -135,7 +140,7 @@ class PrismAiGateway implements AiGatewayInterface
     {
         $provider = $this->resolveProvider($request->provider);
         $this->applyTeamCredentials($request);
-        $localConfig = $this->getLocalProviderConfig($request);
+        $localConfig = $this->getPerRequestProviderConfig($request);
         $startTime = hrtime(true);
 
         if ($request->isStructured()) {
@@ -282,8 +287,8 @@ class PrismAiGateway implements AiGatewayInterface
      */
     private function applyTeamCredentials(AiRequestDTO $request): void
     {
-        if (in_array($request->provider, ['ollama', 'openai_compatible'], true)) {
-            return; // Handled via getLocalProviderConfig()
+        if (in_array($request->provider, ['ollama', 'openai_compatible', 'custom_endpoint'], true)) {
+            return; // Handled via getPerRequestProviderConfig()
         }
 
         if (! $request->teamId) {
@@ -337,19 +342,54 @@ class PrismAiGateway implements AiGatewayInterface
             'openai' => Provider::OpenAI,
             'google' => Provider::Gemini,
             'ollama' => Provider::Ollama,
-            'openai_compatible' => 'openai_compatible', // Custom PrismManager extension
+            'openai_compatible' => 'openai_compatible',
+            'custom_endpoint' => 'custom_endpoint',
             default => throw new PrismException("Unsupported provider: {$provider}"),
         };
     }
 
     /**
-     * For local HTTP providers (ollama, openai_compatible), resolve the base URL
-     * and optional API key from team credentials and return as per-request config.
+     * For providers that use per-request config (ollama, openai_compatible,
+     * custom_endpoint), resolve the base URL and optional API key from
+     * team credentials and return as per-request config array.
      *
      * @return array<string, string>
      */
-    private function getLocalProviderConfig(AiRequestDTO $request): array
+    private function getPerRequestProviderConfig(AiRequestDTO $request): array
     {
+        // Custom AI endpoints — resolve by team + provider + name
+        if ($request->provider === 'custom_endpoint') {
+            if (! $request->teamId || ! $request->providerName) {
+                throw new RuntimeException(
+                    'Custom endpoint requires both teamId and providerName.',
+                );
+            }
+
+            $credential = TeamProviderCredential::where('team_id', $request->teamId)
+                ->where('provider', 'custom_endpoint')
+                ->where('name', $request->providerName)
+                ->where('is_active', true)
+                ->first();
+
+            if (! $credential) {
+                throw new RuntimeException(
+                    "Custom endpoint '{$request->providerName}' not found or inactive.",
+                );
+            }
+
+            $creds = $credential->credentials;
+            $baseUrl = rtrim($creds['base_url'] ?? '', '/').'/v1/';
+
+            // SSRF protection: block private/internal IPs in cloud mode
+            app(SsrfGuard::class)->assertPublicUrl($baseUrl);
+
+            return [
+                'url' => $baseUrl,
+                'api_key' => $creds['api_key'] ?? '',
+            ];
+        }
+
+        // Local HTTP providers (ollama, openai_compatible)
         if (! in_array($request->provider, ['ollama', 'openai_compatible'], true)) {
             return [];
         }
@@ -380,6 +420,42 @@ class PrismAiGateway implements AiGatewayInterface
             'url' => $creds['base_url'] ?? $defaultUrl,
             'api_key' => $creds['api_key'] ?? '',
         ];
+    }
+
+    /**
+     * If provider is a compound key like "custom_endpoint:my-proxy",
+     * split it into provider='custom_endpoint' and providerName='my-proxy'.
+     * This allows agents/skills to store a single provider string.
+     */
+    private function normalizeCustomEndpoint(AiRequestDTO $request): AiRequestDTO
+    {
+        if (! str_starts_with($request->provider, 'custom_endpoint:')) {
+            return $request;
+        }
+
+        $name = substr($request->provider, strlen('custom_endpoint:'));
+
+        return new AiRequestDTO(
+            provider: 'custom_endpoint',
+            model: $request->model,
+            systemPrompt: $request->systemPrompt,
+            userPrompt: $request->userPrompt,
+            maxTokens: $request->maxTokens,
+            outputSchema: $request->outputSchema,
+            userId: $request->userId,
+            teamId: $request->teamId,
+            experimentId: $request->experimentId,
+            experimentStageId: $request->experimentStageId,
+            agentId: $request->agentId,
+            purpose: $request->purpose,
+            idempotencyKey: $request->idempotencyKey,
+            temperature: $request->temperature,
+            fallbackChain: $request->fallbackChain,
+            tools: $request->tools,
+            maxSteps: $request->maxSteps,
+            toolChoice: $request->toolChoice,
+            providerName: $name,
+        );
     }
 
     /**

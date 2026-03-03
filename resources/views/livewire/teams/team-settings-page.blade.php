@@ -177,6 +177,104 @@
         </div>
     </div>
 
+    {{-- Custom AI Endpoints --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Custom AI Endpoints</h2>
+        <p class="mb-5 text-sm text-gray-500">
+            Connect any <strong>OpenAI-compatible</strong> AI service — proxy gateways (CCProxy, OpenClaw),
+            hosted models (vLLM, Ollama Cloud), or other providers (OpenRouter, Together AI).
+            Costs are billed by the external service — FleetQ tracks usage at zero cost.
+        </p>
+
+        {{-- Existing endpoints --}}
+        @if($customEndpoints->isNotEmpty())
+            <div class="mb-4 space-y-2">
+                @foreach($customEndpoints as $ep)
+                    <div class="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                        <div class="flex items-center justify-between">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-semibold text-gray-900">{{ $ep->name }}</span>
+                                    @if($ep->is_active)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Active
+                                        </span>
+                                    @else
+                                        <span class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Inactive</span>
+                                    @endif
+                                </div>
+                                <p class="mt-0.5 text-xs text-gray-500">
+                                    <code class="rounded bg-gray-100 px-1">{{ $ep->credentials['base_url'] ?? '—' }}</code>
+                                    @if(!empty($ep->credentials['api_key']))
+                                        · Key: {{ $ep->masked_api_key }}
+                                    @endif
+                                </p>
+                                @if(!empty($ep->credentials['models']))
+                                    <p class="mt-0.5 text-xs text-gray-400">Models: {{ implode(', ', $ep->credentials['models']) }}</p>
+                                @endif
+                            </div>
+                            <div class="ml-3 flex items-center gap-2">
+                                <button
+                                    wire:click="toggleCustomEndpoint('{{ $ep->id }}')"
+                                    class="text-xs {{ $ep->is_active ? 'text-gray-500 hover:text-gray-700' : 'text-green-600 hover:text-green-800' }}"
+                                >
+                                    {{ $ep->is_active ? 'Disable' : 'Enable' }}
+                                </button>
+                                <button
+                                    wire:click="removeCustomEndpoint('{{ $ep->id }}')"
+                                    wire:confirm="Remove the '{{ $ep->name }}' endpoint?"
+                                    class="text-xs text-red-600 hover:text-red-800"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        {{-- Add new endpoint form --}}
+        @if($canAddCustomEndpoint ?? true)
+            <div class="rounded-lg border border-dashed border-gray-300 p-4">
+                <p class="mb-3 text-sm font-medium text-gray-700">Add New Endpoint</p>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <x-form-input wire:model="customEndpointName" label="Name" type="text"
+                            placeholder="my-proxy"
+                            hint="Unique identifier (lowercase, hyphens, underscores)"
+                            :error="$errors->first('customEndpointName')" />
+                        <x-form-input wire:model="customEndpointBaseUrl" label="Base URL" type="url"
+                            placeholder="https://proxy.example.com/v1"
+                            hint="Root URL of the OpenAI-compatible API"
+                            :error="$errors->first('customEndpointBaseUrl')" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <x-form-input wire:model="customEndpointApiKey" label="API Key (optional)" type="password"
+                            placeholder="sk-..."
+                            :error="$errors->first('customEndpointApiKey')" />
+                        <x-form-input wire:model="customEndpointModels" label="Models (comma-separated)" type="text"
+                            placeholder="gpt-4o, claude-3-opus"
+                            hint="Model IDs available at this endpoint"
+                            :error="$errors->first('customEndpointModels')" />
+                    </div>
+                    <div>
+                        <button wire:click="addCustomEndpoint"
+                            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                            Add Endpoint
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-4 text-center">
+                <p class="text-sm text-amber-800">You've reached the custom endpoint limit for your plan.
+                    <a href="{{ route('billing') }}" class="font-medium underline">Upgrade</a> to add more.
+                </p>
+            </div>
+        @endif
+    </div>
+
     {{-- Local LLM Endpoints --}}
     @if($localLlmEnabled)
     <div class="rounded-lg border border-gray-200 bg-white p-6">

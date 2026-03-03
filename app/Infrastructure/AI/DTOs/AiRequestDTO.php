@@ -27,6 +27,8 @@ final readonly class AiRequestDTO
         public ?array $tools = null,
         public int $maxSteps = 1,
         public ?string $toolChoice = null,
+        /** Custom endpoint credential name (only when provider='custom_endpoint') */
+        public ?string $providerName = null,
     ) {}
 
     public function isStructured(): bool
