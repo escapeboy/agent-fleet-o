@@ -11,6 +11,21 @@ use Livewire\Component;
 
 class TeamSettingsPage extends Component
 {
+    /**
+     * First-party LLM providers available for BYOK credentials.
+     * Shared between base and cloud — change here, both update automatically.
+     * Free-tier providers listed first for better onboarding UX.
+     */
+    protected const BYOK_PROVIDERS = ['groq', 'openrouter', 'google', 'openai', 'anthropic'];
+
+    protected const PROVIDER_LABELS = [
+        'groq' => 'Groq',
+        'openrouter' => 'OpenRouter',
+        'google' => 'Google',
+        'openai' => 'OpenAI',
+        'anthropic' => 'Anthropic',
+    ];
+
     public string $teamName = '';
 
     public string $teamSlug = '';
@@ -80,7 +95,7 @@ class TeamSettingsPage extends Component
     public function addProviderCredential(): void
     {
         $this->validate([
-            'credProvider' => 'required|in:openai,anthropic,google,groq,openrouter',
+            'credProvider' => 'required|in:'.implode(',', static::BYOK_PROVIDERS),
             'credApiKey' => 'required|string|min:10',
         ]);
 
@@ -423,8 +438,9 @@ class TeamSettingsPage extends Component
 
         return view('livewire.teams.team-settings-page', [
             'team' => $team,
-            'credentials' => $team ? TeamProviderCredential::where('team_id', $team->id)->whereIn('provider', ['openai', 'anthropic', 'google', 'groq', 'openrouter'])->get() : collect(),
-            'providers' => ['groq', 'openrouter', 'google', 'openai', 'anthropic'],
+            'credentials' => $team ? TeamProviderCredential::where('team_id', $team->id)->whereIn('provider', static::BYOK_PROVIDERS)->get() : collect(),
+            'providers' => static::BYOK_PROVIDERS,
+            'providerLabels' => static::PROVIDER_LABELS,
             'llmProviders' => config('llm_providers', []),
             'apiTokens' => $apiTokens,
             'telegramBot' => $team ? TelegramBot::where('team_id', $team->id)->first() : null,
