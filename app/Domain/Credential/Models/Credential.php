@@ -5,6 +5,7 @@ namespace App\Domain\Credential\Models;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Infrastructure\Encryption\Casts\TeamEncryptedArray;
 use Database\Factories\Domain\Credential\CredentialFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -41,7 +42,7 @@ class Credential extends Model
         return [
             'credential_type' => CredentialType::class,
             'status' => CredentialStatus::class,
-            'secret_data' => 'encrypted:array',
+            'secret_data' => TeamEncryptedArray::class,
             'metadata' => 'array',
             'expires_at' => 'datetime',
             'last_used_at' => 'datetime',

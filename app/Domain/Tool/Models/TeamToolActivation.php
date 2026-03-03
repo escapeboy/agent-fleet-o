@@ -3,6 +3,7 @@
 namespace App\Domain\Tool\Models;
 
 use App\Domain\Shared\Models\Team;
+use App\Infrastructure\Encryption\Casts\TeamEncryptedArray;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +24,7 @@ class TeamToolActivation extends Model
     protected function casts(): array
     {
         return [
-            'credential_overrides' => 'encrypted:array',
+            'credential_overrides' => TeamEncryptedArray::class,
             'config_overrides' => 'array',
             'activated_at' => 'datetime',
         ];

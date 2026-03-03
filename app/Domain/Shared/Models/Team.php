@@ -3,6 +3,7 @@
 namespace App\Domain\Shared\Models;
 
 use App\Domain\Shared\Enums\TeamRole;
+use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Models\User;
 use Database\Factories\Domain\Shared\TeamFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -16,17 +17,32 @@ class Team extends Model
 {
     use HasFactory, HasUuids;
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $team) {
+            if (! $team->credential_key) {
+                $team->credential_key = CredentialEncryption::generateKey();
+            }
+        });
+    }
+
     protected $fillable = [
         'name',
         'slug',
         'owner_id',
         'settings',
+        'credential_key',
+    ];
+
+    protected $hidden = [
+        'credential_key',
     ];
 
     protected function casts(): array
     {
         return [
             'settings' => 'array',
+            'credential_key' => 'encrypted',
         ];
     }
 
