@@ -34,7 +34,7 @@
                 @foreach($credentials as $cred)
                     <div class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2">
                         <div>
-                            <span class="text-sm font-medium text-gray-900">{{ ['openai' => 'OpenAI', 'anthropic' => 'Anthropic', 'google' => 'Google'][$cred->provider] ?? ucfirst($cred->provider) }}</span>
+                            <span class="text-sm font-medium text-gray-900">{{ ['openai' => 'OpenAI', 'anthropic' => 'Anthropic', 'google' => 'Google', 'groq' => 'Groq', 'openrouter' => 'OpenRouter'][$cred->provider] ?? ucfirst($cred->provider) }}</span>
                             <span class="ml-2 text-xs text-gray-500">Key configured</span>
                             @if($cred->is_active)
                                 <span class="ml-2 inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span>
@@ -57,7 +57,7 @@
             <div>
                 <x-form-select wire:model="credProvider" label="Provider">
                     @php
-                        $providerLabels = ['openai' => 'OpenAI', 'anthropic' => 'Anthropic', 'google' => 'Google'];
+                        $providerLabels = ['groq' => 'Groq', 'openrouter' => 'OpenRouter', 'google' => 'Google', 'openai' => 'OpenAI', 'anthropic' => 'Anthropic'];
                     @endphp
                     @foreach($providers as $p)
                         <option value="{{ $p }}">{{ $providerLabels[$p] ?? ucfirst($p) }}</option>
@@ -70,6 +70,15 @@
             <button wire:click="addProviderCredential" class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
                 Add Key
             </button>
+        </div>
+        <div class="mt-2 text-sm text-gray-500">
+            @if($credProvider === 'groq')
+                Get your free API key at <a href="https://console.groq.com/keys" target="_blank" class="text-primary-600 underline">console.groq.com</a> — no credit card required.
+            @elseif($credProvider === 'openrouter')
+                Get your free API key at <a href="https://openrouter.ai/keys" target="_blank" class="text-primary-600 underline">openrouter.ai</a> — 28 free models, no credit card.
+            @elseif($credProvider === 'google')
+                Get your free API key at <a href="https://aistudio.google.com/apikey" target="_blank" class="text-primary-600 underline">Google AI Studio</a> — just sign in with Google.
+            @endif
         </div>
     </div>
 

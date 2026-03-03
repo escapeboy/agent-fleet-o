@@ -61,6 +61,18 @@ return [
             'claude-haiku-4-5' => ['input' => 0, 'output' => 0],
         ],
 
+        'groq' => [
+            'llama-3.3-70b-versatile' => ['input' => 6, 'output' => 8],   // $0.59/$0.79 per 1M
+            'llama-3.1-8b-instant' => ['input' => 1, 'output' => 1],      // $0.05/$0.08 per 1M
+            'llama-4-scout-17b-16e' => ['input' => 1, 'output' => 3],     // $0.11/$0.34 per 1M
+            'gemma2-9b-it' => ['input' => 2, 'output' => 2],              // $0.20/$0.20 per 1M
+            'qwen-qwq-32b' => ['input' => 3, 'output' => 4],             // $0.29/$0.39 per 1M
+            'mixtral-8x7b-32768' => ['input' => 2, 'output' => 2],        // $0.24/$0.24 per 1M
+        ],
+
+        // OpenRouter free models — zero cost (rate-limited by OpenRouter).
+        'openrouter' => [],
+
         // Local HTTP LLM providers — zero cost (runs on your hardware).
         // CostCalculator returns 0 for unknown models, so no per-model entries needed.
         // Add specific model entries here if you want explicit cost tracking.

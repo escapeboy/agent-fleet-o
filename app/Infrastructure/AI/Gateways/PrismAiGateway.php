@@ -299,6 +299,8 @@ class PrismAiGateway implements AiGatewayInterface
             'anthropic' => 'prism.providers.anthropic.api_key',
             'openai' => 'prism.providers.openai.api_key',
             'google' => 'prism.providers.gemini.api_key',
+            'groq' => 'prism.providers.groq.api_key',
+            'openrouter' => 'prism.providers.openrouter.api_key',
             default => null,
         };
 
@@ -329,6 +331,8 @@ class PrismAiGateway implements AiGatewayInterface
                 'anthropic' => env('ANTHROPIC_API_KEY'),
                 'openai' => env('OPENAI_API_KEY'),
                 'google' => env('GOOGLE_AI_API_KEY'),
+                'groq' => env('GROQ_API_KEY'),
+                'openrouter' => env('OPENROUTER_API_KEY'),
                 default => null,
             };
             config([$configKey => $platformKey]);
@@ -341,6 +345,8 @@ class PrismAiGateway implements AiGatewayInterface
             'anthropic' => Provider::Anthropic,
             'openai' => Provider::OpenAI,
             'google' => Provider::Gemini,
+            'groq' => Provider::Groq,
+            'openrouter' => Provider::OpenRouter,
             'ollama' => Provider::Ollama,
             'openai_compatible' => 'openai_compatible',
             'custom_endpoint' => 'custom_endpoint',
