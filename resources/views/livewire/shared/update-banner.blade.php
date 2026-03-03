@@ -14,14 +14,10 @@
                     </span>
                 @endif
             </span>
-            @if($updateInfo['release_url'])
-                <a href="{{ $updateInfo['release_url'] }}"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   class="font-medium underline underline-offset-2 hover:no-underline">
-                    View changelog
-                </a>
-            @endif
+            <a href="{{ route('changelog') }}"
+               class="font-medium underline underline-offset-2 hover:no-underline">
+                View changelog
+            </a>
         </div>
         <button wire:click="dismiss"
                 type="button"

@@ -1109,4 +1109,25 @@ return [
         ],
     ],
 
+    // ── Changelog ────────────────────────────────────────────────────
+
+    'changelog' => [
+        'title' => "What's New",
+        'description' => 'See the latest platform changes, new features, improvements, and bug fixes.',
+        'steps' => [
+            'Browse the timeline to see recent changes',
+            'Click on a version to expand its full changelog',
+            'New entries are highlighted when you visit after an update',
+        ],
+        'tips' => [
+            'A dot indicator appears in the sidebar when new changes are available',
+            'The badge clears automatically when you visit this page',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Health', 'route' => 'health'],
+            ['label' => 'Settings', 'route' => 'settings'],
+        ],
+    ],
+
 ];
