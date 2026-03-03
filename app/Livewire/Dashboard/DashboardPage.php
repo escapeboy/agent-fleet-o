@@ -13,6 +13,7 @@ use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Skill\Models\SkillExecution;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
@@ -66,9 +67,16 @@ class DashboardPage extends Component
 
         $alerts = $this->gatherAlerts();
 
+        $hasProviderKeys = Cache::remember("dashboard.has_provider_keys:{$teamId}", 60, function () use ($teamId) {
+            return TeamProviderCredential::where('team_id', $teamId)
+                ->where('is_active', true)
+                ->exists();
+        });
+
         return view('livewire.dashboard.dashboard-page', array_merge($kpis, [
             'activeExperiments' => $activeExperiments,
             'alerts' => $alerts,
+            'hasProviderKeys' => $hasProviderKeys,
         ]))->layout('layouts.app', ['header' => 'Dashboard']);
     }
 

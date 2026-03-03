@@ -19,6 +19,45 @@
         <x-stat-card label="Project Runs (24h)" :value="number_format($projectRuns24h)" />
     </div>
 
+    {{-- Quick Start — shown when no AI provider keys are configured --}}
+    @if(!$hasProviderKeys)
+        <div class="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-6">
+            <div class="flex items-start gap-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                    <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z"/></svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-base font-semibold text-blue-900">Quick Start — Connect an AI Provider</h3>
+                    <p class="mt-1 text-sm text-blue-800">
+                        FleetQ needs an AI provider to power agents, skills, and workflows. Free options available — no credit card needed.
+                    </p>
+                    <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        <div class="rounded-lg bg-white/80 px-3 py-2">
+                            <p class="text-sm font-medium text-gray-900">Groq</p>
+                            <p class="text-xs text-gray-500">Llama 3.3 70B, free tier</p>
+                            <a href="https://console.groq.com/keys" target="_blank" class="mt-1 inline-block text-xs font-medium text-primary-600 hover:text-primary-800">Get free key &rarr;</a>
+                        </div>
+                        <div class="rounded-lg bg-white/80 px-3 py-2">
+                            <p class="text-sm font-medium text-gray-900">OpenRouter</p>
+                            <p class="text-xs text-gray-500">28 free models</p>
+                            <a href="https://openrouter.ai/keys" target="_blank" class="mt-1 inline-block text-xs font-medium text-primary-600 hover:text-primary-800">Get free key &rarr;</a>
+                        </div>
+                        <div class="rounded-lg bg-white/80 px-3 py-2">
+                            <p class="text-sm font-medium text-gray-900">Google AI</p>
+                            <p class="text-xs text-gray-500">Gemini Flash, free tier</p>
+                            <a href="https://aistudio.google.com/apikey" target="_blank" class="mt-1 inline-block text-xs font-medium text-primary-600 hover:text-primary-800">Get free key &rarr;</a>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ route('team.settings') }}" class="inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                            Add API Key in Settings
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {{-- Active Runs --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">

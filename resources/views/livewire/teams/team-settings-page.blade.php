@@ -34,7 +34,7 @@
                 @foreach($credentials as $cred)
                     <div class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2">
                         <div>
-                            <span class="text-sm font-medium text-gray-900">{{ ['openai' => 'OpenAI', 'anthropic' => 'Anthropic', 'google' => 'Google', 'groq' => 'Groq', 'openrouter' => 'OpenRouter'][$cred->provider] ?? ucfirst($cred->provider) }}</span>
+                            <span class="text-sm font-medium text-gray-900">{{ ($providerLabels[$cred->provider] ?? null) ?: ucfirst($cred->provider) }}</span>
                             <span class="ml-2 text-xs text-gray-500">Key configured</span>
                             @if($cred->is_active)
                                 <span class="ml-2 inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span>
@@ -56,11 +56,8 @@
         <div class="flex items-end gap-3">
             <div>
                 <x-form-select wire:model="credProvider" label="Provider">
-                    @php
-                        $providerLabels = ['groq' => 'Groq', 'openrouter' => 'OpenRouter', 'google' => 'Google', 'openai' => 'OpenAI', 'anthropic' => 'Anthropic'];
-                    @endphp
                     @foreach($providers as $p)
-                        <option value="{{ $p }}">{{ $providerLabels[$p] ?? ucfirst($p) }}</option>
+                        <option value="{{ $p }}">{{ ($providerLabels[$p] ?? null) ?: ucfirst($p) }}</option>
                     @endforeach
                 </x-form-select>
             </div>
