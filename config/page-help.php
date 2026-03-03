@@ -896,4 +896,217 @@ return [
         ],
     ],
 
+    // ── Missing detail/edit pages ─────────────────────────────────────
+
+    'credentials.show' => [
+        'title' => 'Credential Detail',
+        'description' => 'View and manage a stored credential — its type, status, expiry, and linked resources.',
+        'steps' => [
+            'Review the credential type and status',
+            'Check the expiry date if one is set',
+            'Use the rotate action to update the secret without downtime',
+            'Delete the credential if it is no longer needed',
+        ],
+        'tips' => [
+            'The secret value is never shown after creation — rotate to replace it',
+            'Expired credentials are flagged automatically',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'All Credentials', 'route' => 'credentials.index'],
+            ['label' => 'Tools', 'route' => 'tools.index'],
+        ],
+    ],
+
+    'crews.execute' => [
+        'title' => 'Execute Crew',
+        'description' => 'Run a crew with a specific goal and watch agents collaborate in real time.',
+        'steps' => [
+            'Enter the goal the crew should accomplish',
+            'Optionally provide input context for the agents',
+            'Click "Execute" to start the crew run',
+            'Watch the execution log as agents work through their tasks',
+        ],
+        'tips' => [
+            'A clear, specific goal produces better results',
+            'You can run the same crew multiple times with different goals',
+            'Execution cost depends on the number of agents and their LLM usage',
+        ],
+        'prerequisites' => [
+            ['label' => 'Configure crew members first', 'route' => 'crews.index'],
+        ],
+        'related' => [
+            ['label' => 'All Crews', 'route' => 'crews.index'],
+            ['label' => 'Agents', 'route' => 'agents.index'],
+        ],
+    ],
+
+    'projects.edit' => [
+        'title' => 'Edit Project',
+        'description' => 'Update a project\'s configuration — name, workflow, schedule, budget, and input data.',
+        'steps' => [
+            'Update the project name and description as needed',
+            'Change the assigned workflow if required',
+            'Adjust the schedule for continuous projects',
+            'Update budget limits and input data',
+        ],
+        'tips' => [
+            'Changes take effect on the next run — active runs are not affected',
+            'You can switch between one-shot and continuous project types',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'All Projects', 'route' => 'projects.index'],
+            ['label' => 'Workflows', 'route' => 'workflows.index'],
+        ],
+    ],
+
+    'projects.kanban' => [
+        'title' => 'Project Kanban',
+        'description' => 'Visualize project milestones and tasks on a kanban board for tracking progress.',
+        'steps' => [
+            'View milestones organized by status columns',
+            'Drag milestones between columns to update their status',
+            'Click a milestone to view its details',
+            'Track overall project progress at a glance',
+        ],
+        'tips' => [
+            'Milestones are created from workflow step completions',
+            'Use the kanban view for a high-level progress overview',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Project Detail', 'route' => 'projects.index'],
+            ['label' => 'Workflows', 'route' => 'workflows.index'],
+        ],
+    ],
+
+    'workflows.edit' => [
+        'title' => 'Edit Workflow',
+        'description' => 'Visual editor for modifying workflow DAGs. Update nodes, connections, and agent assignments in an existing workflow.',
+        'steps' => [
+            'Modify existing nodes or add new ones to the graph',
+            'Update agent assignments on agent nodes',
+            'Reconnect edges to change the execution flow',
+            'Click "Validate" to check for graph errors before saving',
+        ],
+        'tips' => [
+            'Changes are saved when you click "Save" — they do not auto-save',
+            'Active projects using this workflow will pick up changes on their next run',
+            'Use "Duplicate" to create a variant without modifying the original',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'All Workflows', 'route' => 'workflows.index'],
+            ['label' => 'Agents', 'route' => 'agents.index'],
+            ['label' => 'Projects', 'route' => 'projects.index'],
+        ],
+    ],
+
+    'workflows.schedule' => [
+        'title' => 'Schedule Workflow',
+        'description' => 'Create a continuous project from this workflow with an automated schedule.',
+        'steps' => [
+            'Set the project name and description',
+            'Choose a schedule frequency (hourly, daily, weekly, etc.)',
+            'Configure the overlap policy for concurrent runs',
+            'Set a budget limit for automatic cost control',
+        ],
+        'tips' => [
+            'This creates a continuous project that runs the workflow on schedule',
+            'The overlap policy controls what happens when a new run overlaps with an existing one',
+            'You can pause and resume the schedule from the project detail page',
+        ],
+        'prerequisites' => [
+            ['label' => 'Validate the workflow first', 'route' => 'workflows.index'],
+        ],
+        'related' => [
+            ['label' => 'All Workflows', 'route' => 'workflows.index'],
+            ['label' => 'Projects', 'route' => 'projects.index'],
+        ],
+    ],
+
+    'app.marketplace.publish' => [
+        'title' => 'Publish to Marketplace',
+        'description' => 'Share a skill, agent, or workflow with the community by publishing it to the marketplace.',
+        'steps' => [
+            'Select the item to publish (skill, agent, or workflow)',
+            'Write a clear title and description',
+            'Choose a category and add tags',
+            'Set the visibility (public or unlisted) and submit',
+        ],
+        'tips' => [
+            'A good description and clear tags help others discover your listing',
+            'Published items are copies — changes to the original do not propagate',
+            'You can update or unpublish your listings at any time',
+        ],
+        'prerequisites' => [
+            'Create a skill, agent, or workflow to publish',
+        ],
+        'related' => [
+            ['label' => 'Marketplace', 'route' => 'app.marketplace.index'],
+            ['label' => 'Skills', 'route' => 'skills.index'],
+            ['label' => 'Agents', 'route' => 'agents.index'],
+        ],
+    ],
+
+    'app.marketplace.show' => [
+        'title' => 'Marketplace Listing',
+        'description' => 'View the details of a marketplace listing — description, reviews, install count, and configuration.',
+        'steps' => [
+            'Read the description and documentation',
+            'Check reviews and install count for community feedback',
+            'Click "Install" to add this to your team',
+            'Leave a review after trying it out',
+        ],
+        'tips' => [
+            'Installed items are copies — you can customize them after installing',
+            'Check the version and last updated date for freshness',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Marketplace', 'route' => 'app.marketplace.index'],
+        ],
+    ],
+
+    'contacts.show' => [
+        'title' => 'Contact Detail',
+        'description' => 'View a contact\'s unified identity across all communication channels and their signal history.',
+        'steps' => [
+            'Review the contact\'s linked channel identities',
+            'Browse their signal history across all channels',
+            'Merge with another contact if they represent the same person',
+            'Unlink channels that were incorrectly associated',
+        ],
+        'tips' => [
+            'Contacts can have identities across Telegram, email, WhatsApp, and more',
+            'Merging is irreversible — verify before combining contacts',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'All Contacts', 'route' => 'contacts.index'],
+            ['label' => 'Signal Connectors', 'route' => 'signals.connectors'],
+        ],
+    ],
+
+    'settings' => [
+        'title' => 'Platform Settings',
+        'description' => 'Global platform configuration for super administrators. Manage system-wide defaults, provider settings, and feature flags.',
+        'steps' => [
+            'Review and update platform-wide AI provider defaults',
+            'Configure system limits and defaults',
+            'Manage feature flags and global settings',
+            'Check platform-level health indicators',
+        ],
+        'tips' => [
+            'Changes here affect all teams on the platform',
+            'Team-level settings override platform defaults where applicable',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Health', 'route' => 'health'],
+            ['label' => 'Audit Log', 'route' => 'audit'],
+        ],
+    ],
+
 ];
