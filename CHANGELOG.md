@@ -2,6 +2,31 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.2.0] - 2026-03-03
+
+### Added
+
+- **What's New Page** -- Changelog page at `/changelog` rendered from `CHANGELOG.md` with collapsible version cards, category badges (New, Improved, Fixed, Security), and markdown-formatted content.
+- **Unread Changelog Badge** -- Blue dot indicator in sidebar next to "What's New" link shows when there are changes since the user's last visit; auto-clears on page view via `changelog_seen_at` timestamp.
+- **Contextual Page Help** -- In-app help panel (`<x-page-help />`) with page-specific guidance, tips, and links; accessible via `<x-page-help-button />` on every page.
+- **Custom AI Endpoints** -- Teams can configure their own OpenAI-compatible API endpoints (proxy gateways, self-hosted models, third-party providers) via Team Settings; SSRF-validated URLs; per-team `custom_endpoint` PrismPHP driver; zero platform credits; `custom_endpoint_manage` MCP tool.
+- **Dynamic Sidebar Version** -- Sidebar footer now reads version from `config('app.version')` instead of hardcoded value.
+- **View Sync CI Check** -- `scripts/check-view-sync.php` validates that cloud view overrides contain all required components and route patterns from base views; prevents layout drift.
+
+### Fixed
+
+- Theme-aware help panel colors for dark mode support.
+- Cloud sidebar now includes all base navigation routes (marketplace, memory, signals, changelog).
+- Cloud layout includes contextual help components (`<x-page-help-button />`, `<x-page-help />`).
+
+### Security
+
+- Cloud edition now explicitly forces `local_llm.enabled = false` (defense in depth).
+- `CloudProviderResolver` filters both `local` (CLI agents) and `http_local` (Ollama, openai_compatible) providers from cloud UI.
+- Cloud Team Settings LLM dropdown uses filtered providers instead of raw config.
+
+---
+
 ## [1.1.1] - 2026-02-28
 
 ### Fixed
