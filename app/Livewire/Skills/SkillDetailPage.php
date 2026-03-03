@@ -133,7 +133,20 @@ class SkillDetailPage extends Component
             ->limit(20)
             ->get();
 
-        $providers = app(ProviderResolver::class)->availableProviders();
+        $resolver = app(ProviderResolver::class);
+        $providers = $resolver->availableProviders();
+
+        $team = auth()->user()->currentTeam;
+        foreach ($resolver->customEndpointsForTeam($team) as $ep) {
+            $models = [];
+            foreach ($ep->credentials['models'] ?? [] as $m) {
+                $models[$m] = ['label' => $m, 'input_cost' => 0, 'output_cost' => 0];
+            }
+            $providers["custom_endpoint:{$ep->name}"] = [
+                'name' => $ep->name.' (Custom)',
+                'models' => $models,
+            ];
+        }
 
         return view('livewire.skills.skill-detail-page', [
             'versions' => $versions,

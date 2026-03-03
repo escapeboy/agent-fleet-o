@@ -124,13 +124,11 @@ class AgentDetailPage extends Component
 
     public function save(): void
     {
-        $providerKeys = implode(',', array_keys(app(ProviderResolver::class)->availableProviders()));
-
         $this->validate([
             'editName' => 'required|min:2|max:255',
             'editRole' => 'required|max:255',
             'editGoal' => 'required|max:1000',
-            'editProvider' => "required|in:{$providerKeys}",
+            'editProvider' => 'required|string|max:255',
             'editModel' => 'required|max:255',
         ]);
 
@@ -209,7 +207,22 @@ class AgentDetailPage extends Component
             ->limit(20)
             ->get();
 
-        $providers = app(ProviderResolver::class)->availableProviders();
+        $resolver = app(ProviderResolver::class);
+        $providers = $resolver->availableProviders();
+
+        // Append team's custom endpoints as selectable providers
+        $team = auth()->user()->currentTeam;
+        foreach ($resolver->customEndpointsForTeam($team) as $ep) {
+            $models = [];
+            foreach ($ep->credentials['models'] ?? [] as $m) {
+                $models[$m] = ['label' => $m, 'input_cost' => 0, 'output_cost' => 0];
+            }
+            $providers["custom_endpoint:{$ep->name}"] = [
+                'name' => $ep->name.' (Custom)',
+                'models' => $models,
+            ];
+        }
+
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
         $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
 

@@ -60,6 +60,7 @@
                 </h1>
                 <div class="flex items-center gap-4">
                     @auth
+                        <x-page-help-button />
                         <livewire:shared.notification-bell />
                         <livewire:components.theme-switcher />
                     @endauth
@@ -84,6 +85,7 @@
 
             {{-- Page Content --}}
             <main data-theme-scope class="flex-1 overflow-y-auto p-6">
+                <x-page-help />
                 {{ $slot }}
             </main>
         </div>

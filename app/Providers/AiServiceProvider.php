@@ -77,6 +77,19 @@ class AiServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $appName = config('app.name', 'FleetQ');
+
+        // Custom AI endpoints — always available (not gated by local_llm.enabled).
+        // Backed by the OpenRouter driver which uses POST /v1/chat/completions.
+        app(PrismManager::class)->extend('custom_endpoint', function ($app, array $config) use ($appName) {
+            return new OpenRouter(
+                apiKey: $config['api_key'] ?? '',
+                url: rtrim($config['url'] ?? '', '/').'/',
+                httpReferer: null,
+                xTitle: $appName,
+            );
+        });
+
         if (! config('local_llm.enabled', false)) {
             return;
         }
@@ -84,12 +97,12 @@ class AiServiceProvider extends ServiceProvider
         // Register an OpenAI-compatible custom provider backed by the OpenRouter driver.
         // This lets any LM Studio, vLLM, llama.cpp server, or other OpenAI-compatible
         // endpoint work via the standard ->using('openai_compatible', $model, [...]) call.
-        app(PrismManager::class)->extend('openai_compatible', function ($app, array $config) {
+        app(PrismManager::class)->extend('openai_compatible', function ($app, array $config) use ($appName) {
             return new OpenRouter(
                 apiKey: $config['api_key'] ?? '',
                 url: rtrim($config['url'] ?? 'http://localhost:1234/v1', '/').'/',
                 httpReferer: null,
-                xTitle: 'FleetQ',
+                xTitle: $appName,
             );
         });
     }

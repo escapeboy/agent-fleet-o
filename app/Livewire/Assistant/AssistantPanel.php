@@ -43,7 +43,7 @@ class AssistantPanel extends Component
 
     public function updatedSelectedProvider(): void
     {
-        $providers = app(ProviderResolver::class)->availableProviders();
+        $providers = $this->resolveProvidersWithCustom();
         $models = $providers[$this->selectedProvider]['models'] ?? [];
         $this->selectedModel = array_key_first($models) ?? '';
 
@@ -223,10 +223,28 @@ class AssistantPanel extends Component
 
     public function render()
     {
-        $providers = app(ProviderResolver::class)->availableProviders();
-
         return view('livewire.assistant.assistant-panel', [
-            'providers' => $providers,
+            'providers' => $this->resolveProvidersWithCustom(),
         ]);
+    }
+
+    private function resolveProvidersWithCustom(): array
+    {
+        $resolver = app(ProviderResolver::class);
+        $providers = $resolver->availableProviders();
+
+        $team = auth()->user()?->currentTeam;
+        foreach ($resolver->customEndpointsForTeam($team) as $ep) {
+            $models = [];
+            foreach ($ep->credentials['models'] ?? [] as $m) {
+                $models[$m] = ['label' => $m, 'input_cost' => 0, 'output_cost' => 0];
+            }
+            $providers["custom_endpoint:{$ep->name}"] = [
+                'name' => $ep->name.' (Custom)',
+                'models' => $models,
+            ];
+        }
+
+        return $providers;
     }
 }

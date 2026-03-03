@@ -4,6 +4,7 @@ namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Skill\Models\Skill;
 use App\Models\GlobalSetting;
 
@@ -129,5 +130,25 @@ class ProviderResolver
     public function modelsForProvider(string $provider): array
     {
         return config("llm_providers.{$provider}.models", []);
+    }
+
+    /**
+     * Get active custom AI endpoints for a team.
+     *
+     * Returns credential records with name, masked key, and base_url.
+     * These appear as selectable providers in agent/skill forms.
+     *
+     * @return \Illuminate\Support\Collection<int, TeamProviderCredential>
+     */
+    public function customEndpointsForTeam(?Team $team): \Illuminate\Support\Collection
+    {
+        if (! $team) {
+            return collect();
+        }
+
+        return TeamProviderCredential::where('team_id', $team->id)
+            ->where('provider', 'custom_endpoint')
+            ->where('is_active', true)
+            ->get();
     }
 }
