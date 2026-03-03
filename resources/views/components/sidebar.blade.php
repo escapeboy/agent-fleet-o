@@ -87,9 +87,23 @@
     </nav>
 
     {{-- Footer --}}
-    <div class="border-t border-gray-800 p-4">
-        <div class="text-xs text-gray-500">
-            FleetQ v1.0
+    <div class="border-t border-gray-800 px-4 py-3">
+        @php
+            $hasNewChanges = app(\App\Domain\System\Services\ChangelogParser::class)->hasNewEntries(auth()->user()?->changelog_seen_at);
+        @endphp
+        <div class="flex items-center justify-between text-xs text-gray-500">
+            <span>FleetQ v{{ config('app.version') }}</span>
+            <a href="{{ route('changelog') }}"
+               class="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
+               title="What's New">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                <span>What's New</span>
+                @if($hasNewChanges)
+                    <span class="h-2 w-2 rounded-full bg-primary-400"></span>
+                @endif
+            </a>
         </div>
     </div>
 </aside>

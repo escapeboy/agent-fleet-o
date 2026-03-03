@@ -27,6 +27,7 @@ class User extends Authenticatable
         'current_team_id',
         'theme',
         'notification_preferences',
+        'changelog_seen_at',
     ];
 
     protected $hidden = [
@@ -44,6 +45,7 @@ class User extends Authenticatable
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted',
             'notification_preferences' => 'array',
+            'changelog_seen_at' => 'datetime',
         ];
     }
 

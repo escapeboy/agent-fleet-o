@@ -12,6 +12,7 @@ use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
 use App\Livewire\Agents\CreateAgentForm;
+use App\Livewire\Changelog\ChangelogPage;
 use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Livewire\Audit\AuditLogPage;
 use App\Livewire\Credentials\CreateCredentialForm;
@@ -187,4 +188,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/triggers', TriggerRulesPage::class)->name('triggers.index');
     Route::get('/triggers/create', CreateTriggerRuleForm::class)->name('triggers.create');
+
+    Route::get('/changelog', ChangelogPage::class)->name('changelog');
 });
