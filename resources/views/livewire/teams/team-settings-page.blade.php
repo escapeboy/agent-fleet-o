@@ -55,7 +55,7 @@
         {{-- Add new credential --}}
         <div class="flex items-end gap-3">
             <div>
-                <x-form-select wire:model="credProvider" label="Provider">
+                <x-form-select wire:model.live="credProvider" label="Provider">
                     @foreach($providers as $p)
                         <option value="{{ $p }}">{{ ($providerLabels[$p] ?? null) ?: ucfirst($p) }}</option>
                     @endforeach
