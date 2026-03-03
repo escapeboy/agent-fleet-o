@@ -80,7 +80,7 @@ class TeamSettingsPage extends Component
     public function addProviderCredential(): void
     {
         $this->validate([
-            'credProvider' => 'required|in:openai,anthropic,google',
+            'credProvider' => 'required|in:openai,anthropic,google,groq,openrouter',
             'credApiKey' => 'required|string|min:10',
         ]);
 
@@ -423,8 +423,8 @@ class TeamSettingsPage extends Component
 
         return view('livewire.teams.team-settings-page', [
             'team' => $team,
-            'credentials' => $team ? TeamProviderCredential::where('team_id', $team->id)->whereIn('provider', ['openai', 'anthropic', 'google'])->get() : collect(),
-            'providers' => ['openai', 'anthropic', 'google'],
+            'credentials' => $team ? TeamProviderCredential::where('team_id', $team->id)->whereIn('provider', ['openai', 'anthropic', 'google', 'groq', 'openrouter'])->get() : collect(),
+            'providers' => ['groq', 'openrouter', 'google', 'openai', 'anthropic'],
             'llmProviders' => config('llm_providers', []),
             'apiTokens' => $apiTokens,
             'telegramBot' => $team ? TelegramBot::where('team_id', $team->id)->first() : null,
