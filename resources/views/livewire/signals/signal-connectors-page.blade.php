@@ -40,11 +40,17 @@
                     <div class="flex items-start justify-between">
                         <div class="flex items-center gap-3">
                             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-(--color-surface-alt)">
+                                @php
+                                    $iconSrc = $card['icon']
+                                        ? 'https://cdn.simpleicons.org/' . $card['icon']
+                                        : 'https://www.google.com/s2/favicons?domain=' . $card['domain'] . '&sz=64';
+                                    $fallbackSrc = 'https://www.google.com/s2/favicons?domain=' . $card['domain'] . '&sz=64';
+                                @endphp
                                 <img
-                                    src="https://cdn.simpleicons.org/{{ $card['icon'] }}"
+                                    src="{{ $iconSrc }}"
                                     alt="{{ $card['label'] }}"
                                     class="h-5 w-5 {{ $card['secret_configured'] ? '' : 'opacity-40' }}"
-                                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                                    onerror="if(this.src!=='{{ $fallbackSrc }}'){this.src='{{ $fallbackSrc }}';}else{this.style.display='none';this.nextElementSibling.style.display='flex';}"
                                 />
                                 <span class="hidden text-sm font-bold text-(--color-on-surface-muted) items-center justify-center w-full h-full">{{ strtoupper(substr($card['label'], 0, 2)) }}</span>
                             </div>
