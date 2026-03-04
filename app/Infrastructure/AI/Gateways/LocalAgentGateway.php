@@ -62,17 +62,26 @@ class LocalAgentGateway implements AiGatewayInterface
             $process->run();
         } else {
             $prompt = $this->buildPrompt($request);
-            $command = $this->buildCommand($agentKey, $binaryPath, $request->model, $request->purpose);
+            $usesStdin = $this->readsFromStdin($agentKey);
+            $command = $this->buildCommand(
+                $agentKey, $binaryPath, $request->model, $request->purpose,
+                $usesStdin ? null : $prompt,
+            );
 
             Log::debug("LocalAgentGateway: executing {$agentKey}", [
                 'command' => $command,
                 'model' => $request->model,
                 'prompt_length' => strlen($prompt),
                 'timeout' => $timeout,
+                'stdin' => $usesStdin,
             ]);
 
             $startTime = hrtime(true);
-            $process = Process::fromShellCommandline($command, $workdir, null, $prompt, $timeout);
+            $process = Process::fromShellCommandline(
+                $command, $workdir, null,
+                $usesStdin ? $prompt : null,
+                $timeout,
+            );
             $process->run();
         }
 
@@ -608,6 +617,16 @@ class LocalAgentGateway implements AiGatewayInterface
             return $event['item']['text'];
         }
 
+        // Amp --stream-json: text content events
+        if ($type === 'text' && ! empty($event['content'])) {
+            return $event['content'];
+        }
+
+        // Gemini CLI stream-json: incremental text deltas
+        if ($type === 'text_delta' && ! empty($event['text'])) {
+            return $event['text'];
+        }
+
         // Result events are handled by the done event — don't broadcast them as chunks
         return null;
     }
@@ -625,7 +644,15 @@ class LocalAgentGateway implements AiGatewayInterface
         return implode("\n\n", $parts);
     }
 
-    private function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null): string
+    /**
+     * Check if the agent reads its prompt from stdin (true) or needs it as a CLI argument (false).
+     */
+    private function readsFromStdin(string $agentKey): bool
+    {
+        return in_array($agentKey, ['codex', 'claude-code', 'gemini-cli'], true);
+    }
+
+    private function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null, ?string $prompt = null): string
     {
         $modelFlag = $model ? ' --model '.escapeshellarg($model) : '';
 
@@ -645,9 +672,16 @@ class LocalAgentGateway implements AiGatewayInterface
             $codexMcpFlag = '';
         }
 
+        $escapedPrompt = $prompt ? ' '.escapeshellarg($prompt) : '';
+
         return match ($agentKey) {
             'codex' => $preamble."{$binaryPath} exec --json --full-auto{$codexMcpFlag}{$modelFlag}",
             'claude-code' => $preamble."{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config ".escapeshellarg('{"mcpServers":{}}').$modelFlag,
+            'gemini-cli' => "{$binaryPath} -p --output-format json".($model ? ' -m '.escapeshellarg($model) : ''),
+            'kiro' => "{$binaryPath} chat --no-interactive{$escapedPrompt}",
+            'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
+            'amp' => "{$binaryPath} -x --stream-json{$escapedPrompt}",
+            'opencode' => "{$binaryPath} run --format json".($model ? ' -m '.escapeshellarg($model) : '').$escapedPrompt,
             default => throw new RuntimeException("No command template for agent: {$agentKey}"),
         };
     }
@@ -805,10 +839,39 @@ class LocalAgentGateway implements AiGatewayInterface
             ];
         }
 
-        // Codex may output events; look for the last message with content
+        // Gemini CLI JSON output: { "response": { "text": "..." } } or { "text": "..." }
+        if (isset($json['response']['text'])) {
+            return [
+                'content' => $json['response']['text'],
+                'structured' => $json,
+            ];
+        }
+        if (isset($json['text']) && is_string($json['text'])) {
+            return [
+                'content' => $json['text'],
+                'structured' => $json,
+            ];
+        }
+
+        // Amp --stream-json: { "type": "assistant", "content": "..." }
+        // or final message with content field
         if (isset($json['content'])) {
             return [
                 'content' => is_string($json['content']) ? $json['content'] : json_encode($json['content']),
+                'structured' => $json,
+            ];
+        }
+
+        // OpenCode JSON output: { "output": "..." } or { "message": "..." }
+        if (isset($json['output']) && is_string($json['output'])) {
+            return [
+                'content' => $json['output'],
+                'structured' => $json,
+            ];
+        }
+        if (isset($json['message']) && is_string($json['message'])) {
+            return [
+                'content' => $json['message'],
                 'structured' => $json,
             ];
         }
@@ -846,6 +909,11 @@ class LocalAgentGateway implements AiGatewayInterface
             $knownModels = [
                 'claude-code' => 'claude-code',
                 'codex' => 'codex',
+                'gemini-cli' => 'gemini-cli',
+                'kiro' => 'kiro',
+                'aider' => 'aider',
+                'amp' => 'amp',
+                'opencode' => 'opencode',
             ];
 
             if ($model && isset($knownModels[$model])) {
