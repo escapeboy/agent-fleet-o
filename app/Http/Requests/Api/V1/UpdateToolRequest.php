@@ -25,6 +25,8 @@ class UpdateToolRequest extends FormRequest
             'tool_definitions' => ['sometimes', 'nullable', 'array'],
             'settings' => ['sometimes', 'nullable', 'array'],
             'risk_level' => ['sometimes', 'nullable', new Enum(ToolRiskLevel::class)],
+            'credential_id' => ['sometimes', 'nullable', 'uuid', 'exists:credentials,id'],
+            'clear_credential_id' => ['sometimes', 'boolean'],
         ];
     }
 }

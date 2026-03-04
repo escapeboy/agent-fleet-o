@@ -45,6 +45,8 @@ DESC;
             'risk_level' => $schema->string()
                 ->description('Risk classification: safe, read, write, destructive')
                 ->enum(['safe', 'read', 'write', 'destructive']),
+            'credential_id' => $schema->string()
+                ->description('UUID of a linked Credential to use for this tool (optional; preferred over inline api_key)'),
         ];
     }
 
@@ -56,6 +58,7 @@ DESC;
             'type' => 'nullable|string|in:mcp_stdio,mcp_http,built_in',
             'transport_config' => 'nullable|array',
             'risk_level' => 'nullable|string|in:safe,read,write,destructive',
+            'credential_id' => 'nullable|uuid|exists:credentials,id',
         ]);
 
         try {
@@ -65,6 +68,7 @@ DESC;
                 type: ToolType::from($validated['type'] ?? 'mcp_stdio'),
                 description: $validated['description'] ?? '',
                 transportConfig: $validated['transport_config'] ?? [],
+                credentialId: $validated['credential_id'] ?? null,
             );
 
             if (! empty($validated['risk_level'])) {

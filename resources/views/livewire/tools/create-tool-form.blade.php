@@ -136,11 +136,49 @@
                     @endif
                 @endif
 
-                {{-- Shared fields --}}
+                {{-- Credential section for MCP tools --}}
                 @if($type !== 'built_in')
-                    <x-form-input wire:model="apiKey" label="API Key (optional)" type="password"
-                        placeholder="Stored encrypted"
-                        hint="Will be encrypted at rest" />
+                    <div class="rounded-lg border border-gray-200 p-4 space-y-4">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700 mb-2">API Credential</p>
+                            <div class="flex gap-6">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" wire:model.live="credentialMode" value="inline"
+                                        class="text-primary-600 focus:ring-primary-500">
+                                    <span class="text-sm text-gray-700">Inline API Key</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" wire:model.live="credentialMode" value="reference"
+                                        class="text-primary-600 focus:ring-primary-500">
+                                    <span class="text-sm text-gray-700">Link to Credential</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        @if($credentialMode === 'inline')
+                            <x-form-input wire:model="apiKey" label="API Key" type="password"
+                                placeholder="Stored encrypted with per-team key"
+                                hint="Encrypted at rest using per-team envelope encryption" />
+                        @else
+                            <x-form-select wire:model="credentialId" label="Credential"
+                                hint="Reuse an existing credential — no need to re-enter the key">
+                                <option value="">-- Select credential --</option>
+                                @foreach($availableCredentials as $cred)
+                                    <option value="{{ $cred->id }}">{{ $cred->name }} ({{ $cred->credential_type->label() }})</option>
+                                @endforeach
+                            </x-form-select>
+                            @if($availableCredentials->isEmpty())
+                                <p class="text-sm text-amber-600">
+                                    No active credentials found.
+                                    <a href="{{ route('credentials.create') }}" class="underline">Add one first</a>.
+                                </p>
+                            @endif
+                        @endif
+
+                        <x-form-input wire:model="credentialEnvVar" label="Environment Variable Name" type="text"
+                            placeholder="API_KEY"
+                            hint="The env var injected into the MCP process with the secret value" />
+                    </div>
                 @endif
 
                 <x-form-input wire:model.number="timeout" label="Timeout (seconds)" type="number" min="1" max="300" />
