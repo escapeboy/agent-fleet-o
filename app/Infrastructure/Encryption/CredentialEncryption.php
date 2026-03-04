@@ -3,7 +3,11 @@
 namespace App\Infrastructure\Encryption;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Shared\Enums\KmsConfigStatus;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Models\TeamKmsConfig;
+use App\Infrastructure\Encryption\Kms\Exceptions\KmsUnavailableException;
+use App\Infrastructure\Encryption\Kms\KmsWrapperService;
 use Illuminate\Encryption\Encrypter;
 
 class CredentialEncryption
@@ -100,7 +104,15 @@ class CredentialEncryption
 
     /**
      * Resolve the decrypted team key, with per-request caching.
-     * The team's credential_key is stored encrypted with APP_KEY in the DB.
+     *
+     * Resolution order:
+     * 1. In-memory cache (per-request)
+     * 2. KMS config (if active) → unwrap via KmsWrapperService
+     * 3. Team.credential_key (APP_KEY-wrapped DEK)
+     * 4. null (APP_KEY direct fallback for v1 legacy)
+     *
+     * SECURITY: When KMS is configured and active, NEVER fall back to APP_KEY.
+     * Revoking KMS access must revoke data access.
      */
     private function resolveTeamKey(?string $teamId): ?string
     {
@@ -112,15 +124,36 @@ class CredentialEncryption
             return $this->keyCache[$teamId];
         }
 
+        // Check for KMS configuration
+        $kmsConfig = TeamKmsConfig::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->first();
+
+        if ($kmsConfig && $kmsConfig->status === KmsConfigStatus::Active) {
+            // KMS is active — unwrap DEK via KMS (no APP_KEY fallback)
+            $kmsService = app(KmsWrapperService::class);
+            $key = $kmsService->unwrapDek($kmsConfig);
+
+            $this->keyCache[$teamId] = $key;
+
+            return $key;
+        }
+
+        if ($kmsConfig && $kmsConfig->status === KmsConfigStatus::Error) {
+            // KMS is in error state — throw, do NOT fall back
+            throw new KmsUnavailableException(
+                $kmsConfig->provider->value,
+                'KMS is in error state. Check your KMS configuration in Team Settings.',
+            );
+        }
+
+        // No KMS config (or disabled) — use APP_KEY-wrapped DEK from Team model
         $team = Team::withoutGlobalScopes()->find($teamId);
 
         if (! $team || ! $team->credential_key) {
             return null;
         }
 
-        // credential_key is stored encrypted via Laravel's `encrypted` cast
-        // and auto-decrypted when accessed. The raw value is a base64-encoded
-        // 32-byte key suitable for sodium_crypto_secretbox.
         $key = base64_decode($team->credential_key);
 
         if (strlen($key) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
