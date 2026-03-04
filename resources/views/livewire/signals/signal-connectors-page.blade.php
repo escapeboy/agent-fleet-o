@@ -387,6 +387,132 @@
         @endif
     </div>
 
+    {{-- ═══ Signal Activity Log ═══ --}}
+    <div
+        x-data="{
+            filter: 'all',
+            get filtered() {
+                if (this.filter === 'all') return this.$el.querySelectorAll('[data-source]');
+                return this.$el.querySelectorAll('[data-source=\"' + this.filter + '\"]');
+            }
+        }"
+    >
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-base font-semibold text-(--color-on-surface)">Signal Activity Log</h2>
+                <p class="text-sm text-(--color-on-surface-muted)">Last 100 received signals across all connectors.</p>
+            </div>
+            @if($availableSourceTypes->isNotEmpty())
+                <div class="flex flex-wrap gap-1.5">
+                    <button
+                        @click="filter = 'all'"
+                        :class="filter === 'all' ? 'bg-primary-600 text-white border-primary-600' : 'border-(--color-theme-border-strong) text-(--color-on-surface) hover:bg-(--color-surface-alt)'"
+                        class="rounded-full border px-3 py-1 text-xs font-medium transition"
+                    >All</button>
+                    @foreach($availableSourceTypes as $sourceType)
+                        <button
+                            @click="filter = '{{ $sourceType }}'"
+                            :class="filter === '{{ $sourceType }}' ? 'bg-primary-600 text-white border-primary-600' : 'border-(--color-theme-border-strong) text-(--color-on-surface) hover:bg-(--color-surface-alt)'"
+                            class="rounded-full border px-3 py-1 text-xs font-medium transition"
+                        >{{ ucfirst(str_replace('_', ' ', $sourceType)) }}</button>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        @if($recentSignals->isEmpty())
+            <div class="rounded-xl border border-dashed border-(--color-theme-border) py-10 text-center">
+                <p class="text-sm text-(--color-on-surface-muted)">No signals received yet.</p>
+            </div>
+        @else
+            <div class="overflow-hidden rounded-xl border border-(--color-theme-border)">
+                <table class="min-w-full divide-y divide-(--color-theme-border)">
+                    <thead class="bg-(--color-surface-alt)">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-(--color-on-surface-muted)">Source</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-(--color-on-surface-muted)">Identifier</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-(--color-on-surface-muted)">Tags</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-(--color-on-surface-muted)">Score</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-(--color-on-surface-muted)">Received</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-(--color-theme-border)">
+                        @foreach($recentSignals as $signal)
+                            @php
+                                $sourceColors = [
+                                    'github'    => 'bg-gray-100 text-gray-700',
+                                    'slack'     => 'bg-purple-100 text-purple-700',
+                                    'jira'      => 'bg-blue-100 text-blue-700',
+                                    'linear'    => 'bg-violet-100 text-violet-700',
+                                    'discord'   => 'bg-indigo-100 text-indigo-700',
+                                    'sentry'    => 'bg-red-100 text-red-700',
+                                    'pagerduty' => 'bg-green-100 text-green-700',
+                                    'datadog'   => 'bg-orange-100 text-orange-700',
+                                    'whatsapp'  => 'bg-emerald-100 text-emerald-700',
+                                    'rss'       => 'bg-amber-100 text-amber-700',
+                                    'imap'      => 'bg-cyan-100 text-cyan-700',
+                                    'http_monitor' => 'bg-teal-100 text-teal-700',
+                                    'telegram'  => 'bg-sky-100 text-sky-700',
+                                    'manual'    => 'bg-gray-100 text-gray-600',
+                                ];
+                                $badge = $sourceColors[$signal->source_type] ?? 'bg-(--color-surface-alt) text-(--color-on-surface)';
+                                $scoreColor = match(true) {
+                                    $signal->score === null => 'text-(--color-on-surface-muted)',
+                                    $signal->score >= 0.7   => 'text-green-600 font-semibold',
+                                    $signal->score >= 0.4   => 'text-amber-600',
+                                    default                  => 'text-red-500',
+                                };
+                            @endphp
+                            <tr
+                                data-source="{{ $signal->source_type }}"
+                                x-show="filter === 'all' || filter === '{{ $signal->source_type }}'"
+                                class="transition hover:bg-(--color-surface-alt)/50"
+                            >
+                                <td class="px-4 py-2.5">
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $badge }}">
+                                        {{ ucfirst(str_replace('_', ' ', $signal->source_type)) }}
+                                    </span>
+                                    @if(($signal->duplicate_count ?? 0) > 0)
+                                        <span class="ml-1 text-xs text-(--color-on-surface-muted)">×{{ $signal->duplicate_count + 1 }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2.5 max-w-xs">
+                                    <span class="block truncate font-mono text-xs text-(--color-on-surface)" title="{{ $signal->source_identifier }}">
+                                        {{ $signal->source_identifier ?: '—' }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2.5">
+                                    @if(!empty($signal->tags))
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach(array_slice((array)$signal->tags, 0, 3) as $tag)
+                                                <span class="inline-flex items-center rounded-full bg-(--color-surface-alt) px-2 py-0.5 text-xs text-(--color-on-surface-muted)">
+                                                    {{ $tag }}
+                                                </span>
+                                            @endforeach
+                                            @if(count((array)$signal->tags) > 3)
+                                                <span class="text-xs text-(--color-on-surface-muted)">+{{ count((array)$signal->tags) - 3 }}</span>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <span class="text-xs text-(--color-on-surface-muted)">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2.5">
+                                    <span class="text-sm {{ $scoreColor }}">
+                                        {{ $signal->score !== null ? number_format($signal->score, 2) : '—' }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2.5 text-sm text-(--color-on-surface-muted)" title="{{ $signal->received_at }}">
+                                    {{ $signal->received_at?->diffForHumans() ?? '—' }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+
     {{-- Setup panel (sibling Livewire component) --}}
     @livewire('signals.connector-setup-panel')
 </div>
