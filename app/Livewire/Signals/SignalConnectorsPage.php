@@ -35,15 +35,15 @@ class SignalConnectorsPage extends Component
      * Declared as private so Livewire does not try to hydrate/dehydrate it.
      */
     private array $webhookConnectors = [
-        'github' => ['label' => 'GitHub',    'category' => 'Code & Issues',  'env_key' => 'services.github.webhook_secret',  'path' => '/api/signals/github'],
-        'slack' => ['label' => 'Slack',     'category' => 'Chat',           'env_key' => 'services.slack.signing_secret',   'path' => '/api/signals/slack'],
-        'jira' => ['label' => 'Jira',      'category' => 'Issues',         'env_key' => 'services.jira.webhook_secret',    'path' => '/api/signals/jira'],
-        'linear' => ['label' => 'Linear',    'category' => 'Issues',         'env_key' => 'services.linear.webhook_secret',  'path' => '/api/signals/linear'],
-        'discord' => ['label' => 'Discord',   'category' => 'Chat',           'env_key' => 'services.discord.webhook_secret', 'path' => '/api/signals/discord'],
-        'sentry' => ['label' => 'Sentry',    'category' => 'Errors',         'env_key' => 'services.sentry.webhook_secret',  'path' => '/api/signals/sentry'],
-        'pagerduty' => ['label' => 'PagerDuty', 'category' => 'Incidents',      'env_key' => 'services.pagerduty.auth_token',   'path' => '/api/signals/pagerduty'],
-        'datadog' => ['label' => 'Datadog',   'category' => 'Monitoring',     'env_key' => null,                              'path' => '/api/signals/datadog/{secret}'],
-        'whatsapp' => ['label' => 'WhatsApp',  'category' => 'Chat',           'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
+        'github'    => ['label' => 'GitHub',    'category' => 'Code & Issues', 'icon' => 'github',    'env_key' => 'services.github.webhook_secret',  'path' => '/api/signals/github'],
+        'slack'     => ['label' => 'Slack',     'category' => 'Chat',          'icon' => 'slack',     'env_key' => 'services.slack.signing_secret',   'path' => '/api/signals/slack'],
+        'jira'      => ['label' => 'Jira',      'category' => 'Issues',        'icon' => 'jira',      'env_key' => 'services.jira.webhook_secret',    'path' => '/api/signals/jira'],
+        'linear'    => ['label' => 'Linear',    'category' => 'Issues',        'icon' => 'linear',    'env_key' => 'services.linear.webhook_secret',  'path' => '/api/signals/linear'],
+        'discord'   => ['label' => 'Discord',   'category' => 'Chat',          'icon' => 'discord',   'env_key' => 'services.discord.webhook_secret', 'path' => '/api/signals/discord'],
+        'sentry'    => ['label' => 'Sentry',    'category' => 'Errors',        'icon' => 'sentry',    'env_key' => 'services.sentry.webhook_secret',  'path' => '/api/signals/sentry'],
+        'pagerduty' => ['label' => 'PagerDuty', 'category' => 'Incidents',     'icon' => 'pagerduty', 'env_key' => 'services.pagerduty.auth_token',   'path' => '/api/signals/pagerduty'],
+        'datadog'   => ['label' => 'Datadog',   'category' => 'Monitoring',    'icon' => 'datadog',   'env_key' => null,                              'path' => '/api/signals/datadog/{secret}'],
+        'whatsapp'  => ['label' => 'WhatsApp',  'category' => 'Chat',          'icon' => 'whatsapp',  'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
     ];
 
     public function mount(): void

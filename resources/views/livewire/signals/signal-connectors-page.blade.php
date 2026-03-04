@@ -39,8 +39,14 @@
                     {{-- Header --}}
                     <div class="flex items-start justify-between">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg {{ $card['secret_configured'] ? 'bg-primary-50 text-primary-700' : 'bg-(--color-surface-alt) text-(--color-on-surface-muted)' }}">
-                                <span class="text-sm font-bold">{{ strtoupper(substr($card['label'], 0, 2)) }}</span>
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-(--color-surface-alt)">
+                                <img
+                                    src="https://cdn.simpleicons.org/{{ $card['icon'] }}"
+                                    alt="{{ $card['label'] }}"
+                                    class="h-5 w-5 {{ $card['secret_configured'] ? '' : 'opacity-40' }}"
+                                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                                />
+                                <span class="hidden text-sm font-bold text-(--color-on-surface-muted) items-center justify-center w-full h-full">{{ strtoupper(substr($card['label'], 0, 2)) }}</span>
                             </div>
                             <div>
                                 <p class="text-sm font-semibold text-(--color-on-surface)">{{ $card['label'] }}</p>
