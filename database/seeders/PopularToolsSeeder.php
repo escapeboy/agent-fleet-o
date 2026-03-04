@@ -7,6 +7,7 @@ use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
+use Cloud\Providers\CloudServiceProvider;
 use Illuminate\Database\Seeder;
 
 class PopularToolsSeeder extends Seeder
@@ -15,7 +16,7 @@ class PopularToolsSeeder extends Seeder
     {
         // Cloud mode: create as platform tools (team_id = null, is_platform = true)
         // Community mode: create as team tools for the default team
-        $isPlatform = class_exists(\Cloud\Providers\CloudServiceProvider::class);
+        $isPlatform = class_exists(CloudServiceProvider::class);
 
         $team = $isPlatform ? null : Team::first();
 

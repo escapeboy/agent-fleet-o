@@ -41,7 +41,7 @@ class SignalIngestTool extends Tool
         }
 
         try {
-            $teamId = auth()->user()?->current_team_id
+            $teamId = auth()->user()->current_team_id
                 ?? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
             if (! $teamId) {

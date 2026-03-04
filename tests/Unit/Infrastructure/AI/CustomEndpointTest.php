@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -130,7 +131,7 @@ class CustomEndpointTest extends TestCase
             'is_active' => true,
         ]);
 
-        $resolver = app(\App\Infrastructure\AI\Services\ProviderResolver::class);
+        $resolver = app(ProviderResolver::class);
         $endpoints = $resolver->customEndpointsForTeam($team);
 
         $this->assertCount(2, $endpoints);
@@ -140,7 +141,7 @@ class CustomEndpointTest extends TestCase
 
     public function test_provider_resolver_returns_empty_for_null_team(): void
     {
-        $resolver = app(\App\Infrastructure\AI\Services\ProviderResolver::class);
+        $resolver = app(ProviderResolver::class);
         $endpoints = $resolver->customEndpointsForTeam(null);
 
         $this->assertTrue($endpoints->isEmpty());

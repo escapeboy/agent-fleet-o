@@ -38,7 +38,7 @@ class KmsWrapperService
         }
 
         // Layer 2: Redis cache (DEK encrypted with APP_KEY)
-        $cacheKey = self::CACHE_PREFIX . $teamId;
+        $cacheKey = self::CACHE_PREFIX.$teamId;
         $cached = Cache::get($cacheKey);
         if ($cached) {
             try {
@@ -119,7 +119,7 @@ class KmsWrapperService
      */
     public function flushCache(string $teamId): void
     {
-        Cache::forget(self::CACHE_PREFIX . $teamId);
+        Cache::forget(self::CACHE_PREFIX.$teamId);
 
         if (isset($this->dekCache[$teamId])) {
             if (is_string($this->dekCache[$teamId])) {

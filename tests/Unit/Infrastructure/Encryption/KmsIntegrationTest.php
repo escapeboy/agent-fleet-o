@@ -14,10 +14,8 @@ use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Infrastructure\Encryption\Kms\Contracts\KmsWrapperInterface;
 use App\Infrastructure\Encryption\Kms\Exceptions\KmsUnavailableException;
 use App\Infrastructure\Encryption\Kms\KmsWrapperFactory;
-use App\Infrastructure\Encryption\Kms\KmsWrapperService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class KmsIntegrationTest extends TestCase
@@ -53,7 +51,7 @@ class KmsIntegrationTest extends TestCase
                     throw new KmsUnavailableException('mock', 'Mock KMS failure');
                 }
 
-                return base64_encode('mock-wrapped:' . $plaintextDek);
+                return base64_encode('mock-wrapped:'.$plaintextDek);
             }
 
             public function unwrap(string $wrappedDek, array $config): string
@@ -232,6 +230,9 @@ class KmsIntegrationTest extends TestCase
         $config = TeamKmsConfig::where('team_id', $this->team->id)->first();
         $originalWrappedDek = $config->wrapped_dek;
         $originalTimestamp = $config->dek_wrapped_at;
+
+        // Advance time so dek_wrapped_at differs
+        $this->travel(1)->seconds();
 
         // Re-wrap
         $result = app(RewrapTeamDekAction::class)->execute($this->team->id);

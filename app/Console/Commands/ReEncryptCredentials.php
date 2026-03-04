@@ -101,7 +101,7 @@ class ReEncryptCredentials extends Command
         $total = $query->count();
 
         if ($total === 0) {
-            $this->components->info("  No records to process.");
+            $this->components->info('  No records to process.');
 
             return;
         }

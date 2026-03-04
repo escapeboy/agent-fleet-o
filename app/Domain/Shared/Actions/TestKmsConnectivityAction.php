@@ -2,7 +2,6 @@
 
 namespace App\Domain\Shared\Actions;
 
-use App\Domain\Shared\Enums\KmsConfigStatus;
 use App\Domain\Shared\Enums\KmsProvider;
 use App\Domain\Shared\Models\TeamKmsConfig;
 use App\Infrastructure\Encryption\CredentialEncryption;

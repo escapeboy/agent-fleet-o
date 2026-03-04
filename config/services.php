@@ -73,4 +73,17 @@ return [
         'webhook_url' => env('GOOGLE_CHAT_WEBHOOK_URL'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Platform AI API Keys (immutable originals for BYOK key restoration)
+    |--------------------------------------------------------------------------
+    */
+    'platform_api_keys' => [
+        'anthropic' => env('ANTHROPIC_API_KEY'),
+        'openai' => env('OPENAI_API_KEY'),
+        'google' => env('GOOGLE_AI_API_KEY'),
+        'groq' => env('GROQ_API_KEY'),
+        'openrouter' => env('OPENROUTER_API_KEY'),
+    ],
+
 ];

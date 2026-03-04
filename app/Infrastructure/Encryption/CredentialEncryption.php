@@ -76,7 +76,7 @@ class CredentialEncryption
 
         if (! $teamKey) {
             throw new \RuntimeException(
-                'Cannot decrypt v2 credential: no team key available.'
+                'Cannot decrypt v2 credential: no team key available.',
             );
         }
 
@@ -89,7 +89,7 @@ class CredentialEncryption
             sodium_memzero($teamKey);
 
             throw new \RuntimeException(
-                'Credential decryption failed: invalid team key or corrupted data.'
+                'Credential decryption failed: invalid team key or corrupted data.',
             );
         }
 
