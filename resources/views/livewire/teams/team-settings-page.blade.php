@@ -392,12 +392,12 @@
     </div>
     @endif
 
-    {{-- Credential Security (cloud only, enterprise feature) --}}
+    {{-- Credential Security (cloud only, Pro+ feature) --}}
     @if(isset($showKmsSecurity) && $showKmsSecurity)
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Credential Security</h2>
         <p class="mb-5 text-sm text-gray-500">
-            Your credentials are encrypted with a dedicated per-team key. Enterprise teams can connect
+            Your credentials are encrypted with a dedicated per-team key. Pro and above plans can connect
             their own KMS for customer-managed encryption.
         </p>
 
