@@ -76,6 +76,7 @@ class SkillListPage extends Component
             'skills' => $query->paginate(20),
             'types' => SkillType::cases(),
             'statuses' => SkillStatus::cases(),
+            'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Skills']);
     }
 }

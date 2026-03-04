@@ -115,6 +115,7 @@ class ToolListPage extends Component
             'types' => ToolType::cases(),
             'statuses' => ToolStatus::cases(),
             'activations' => $activations,
+            'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Tools']);
     }
 }

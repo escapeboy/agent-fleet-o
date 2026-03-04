@@ -163,6 +163,7 @@ class MarketplaceBrowsePage extends Component
             'listings' => $query->paginate(12),
             'categories' => $categories,
             'availableProviders' => $availableProviders,
+            'canPublish' => true,
         ])->layout('layouts.app', ['header' => 'Marketplace']);
     }
 }
