@@ -5,6 +5,7 @@ namespace App\Livewire\Credentials;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Shared\Models\TeamKmsConfig;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -72,10 +73,15 @@ class CredentialListPage extends Component
 
         $query->orderBy($this->sortField, $this->sortDirection);
 
+        $team = auth()->user()?->currentTeam;
+        $kmsConfig = $team ? TeamKmsConfig::where('team_id', $team->id)->first() : null;
+
         return view('livewire.credentials.credential-list-page', [
             'credentials' => $query->paginate(20),
             'types' => CredentialType::cases(),
             'statuses' => CredentialStatus::cases(),
+            'team' => $team,
+            'kmsConfig' => $kmsConfig,
         ])->layout('layouts.app', ['header' => 'Credentials']);
     }
 }
