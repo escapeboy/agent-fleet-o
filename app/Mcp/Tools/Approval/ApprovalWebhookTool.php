@@ -34,7 +34,7 @@ class ApprovalWebhookTool extends Tool
         $validated = $request->validate([
             'approval_id' => 'required|string',
             'callback_url' => 'nullable|url',
-            'callback_secret' => 'nullable|string|max:64',
+            'callback_secret' => 'nullable|string|max:255',
         ]);
 
         $approval = ApprovalRequest::find($validated['approval_id']);
