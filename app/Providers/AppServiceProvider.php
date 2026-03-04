@@ -151,6 +151,9 @@ class AppServiceProvider extends ServiceProvider
         Scramble::configure()
             ->routes(fn (Route $route) => Str::startsWith($route->uri(), 'api/v1/'));
 
+        // Allow public access to the API docs (viewApiDocs gate must pass RestrictedDocsAccess middleware)
+        Gate::define('viewApiDocs', fn () => true);
+
         Scramble::afterOpenApiGenerated(function (OpenApi $openApi) {
             $openApi->secure(
                 SecurityScheme::http('bearer', 'token'),
