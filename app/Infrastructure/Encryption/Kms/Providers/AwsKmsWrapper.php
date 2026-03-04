@@ -5,6 +5,7 @@ namespace App\Infrastructure\Encryption\Kms\Providers;
 use App\Infrastructure\Encryption\Kms\Contracts\KmsWrapperInterface;
 use App\Infrastructure\Encryption\Kms\Exceptions\KmsAccessDeniedException;
 use App\Infrastructure\Encryption\Kms\Exceptions\KmsUnavailableException;
+use Aws\Exception\AwsException;
 use Aws\Kms\KmsClient;
 use Aws\Sts\StsClient;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +23,7 @@ class AwsKmsWrapper implements KmsWrapperInterface
             ]);
 
             return base64_encode($result['CiphertextBlob']);
-        } catch (\Aws\Exception\AwsException $e) {
+        } catch (AwsException $e) {
             $this->handleAwsException($e);
         }
     }
@@ -38,7 +39,7 @@ class AwsKmsWrapper implements KmsWrapperInterface
             ]);
 
             return $result['Plaintext'];
-        } catch (\Aws\Exception\AwsException $e) {
+        } catch (AwsException $e) {
             $this->handleAwsException($e);
         }
     }
@@ -61,7 +62,7 @@ class AwsKmsWrapper implements KmsWrapperInterface
             ]);
 
             return $decrypted['Plaintext'] === $testData;
-        } catch (\Aws\Exception\AwsException $e) {
+        } catch (AwsException $e) {
             $this->handleAwsException($e);
         }
     }
@@ -95,7 +96,7 @@ class AwsKmsWrapper implements KmsWrapperInterface
         try {
             $assumeParams = [
                 'RoleArn' => $config['role_arn'],
-                'RoleSessionName' => 'fleetq-kms-' . substr(md5($config['role_arn']), 0, 8),
+                'RoleSessionName' => 'fleetq-kms-'.substr(md5($config['role_arn']), 0, 8),
                 'DurationSeconds' => 900, // 15 min minimum
             ];
 
@@ -110,7 +111,7 @@ class AwsKmsWrapper implements KmsWrapperInterface
                 'secret' => $result['Credentials']['SecretAccessKey'],
                 'token' => $result['Credentials']['SessionToken'],
             ];
-        } catch (\Aws\Exception\AwsException $e) {
+        } catch (AwsException $e) {
             Log::warning('AWS STS AssumeRole failed', [
                 'role_arn' => $config['role_arn'],
                 'error' => $e->getAwsErrorCode(),
@@ -124,10 +125,7 @@ class AwsKmsWrapper implements KmsWrapperInterface
         }
     }
 
-    /**
-     * @return never
-     */
-    private function handleAwsException(\Aws\Exception\AwsException $e): never
+    private function handleAwsException(AwsException $e): never
     {
         $code = $e->getAwsErrorCode();
 

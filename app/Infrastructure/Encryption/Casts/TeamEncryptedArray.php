@@ -19,8 +19,6 @@ class TeamEncryptedArray implements CastsAttributes
 {
     /**
      * Decrypt the stored value using the team's encryption key.
-     *
-     * @return array|null
      */
     public function get(Model $model, string $key, mixed $value, array $attributes): ?array
     {
@@ -35,8 +33,6 @@ class TeamEncryptedArray implements CastsAttributes
 
     /**
      * Encrypt the value using the team's encryption key.
-     *
-     * @return string|null
      */
     public function set(Model $model, string $key, mixed $value, array $attributes): ?string
     {

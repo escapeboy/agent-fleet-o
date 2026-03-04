@@ -6,12 +6,12 @@ use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
-use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\Encryption\CredentialEncryption;
 use Closure;
 use Prism\Prism\Enums\Provider;
 use Prism\Prism\Exceptions\PrismException;
@@ -333,17 +333,10 @@ class PrismAiGateway implements AiGatewayInterface
             );
         }
 
-        // Explicitly restore the original platform API key (read from the immutable
-        // process environment) to clear any BYOK key set by a prior Horizon job.
+        // Explicitly restore the original platform API key to clear any
+        // BYOK key set by a prior Horizon job.
         if ($configKey) {
-            $platformKey = match ($request->provider) {
-                'anthropic' => env('ANTHROPIC_API_KEY'),
-                'openai' => env('OPENAI_API_KEY'),
-                'google' => env('GOOGLE_AI_API_KEY'),
-                'groq' => env('GROQ_API_KEY'),
-                'openrouter' => env('OPENROUTER_API_KEY'),
-                default => null,
-            };
+            $platformKey = config("services.platform_api_keys.{$request->provider}");
             config([$configKey => $platformKey]);
         }
     }
