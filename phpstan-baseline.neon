@@ -57,6 +57,24 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
 			identifier: property.notFound
+			count: 2
+			path: app/Console/Commands/ReEncryptCredentials.php
+
+		-
+			message: '#^PHPDoc tag @var with type Illuminate\\Database\\Eloquent\\Model is not subtype of native type string\.$#'
+			identifier: varTag.nativeType
+			count: 2
+			path: app/Console/Commands/ReEncryptCredentials.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed~\(0\|0\.0\|''''\|''0''\|array\{\}\|false\|null\) and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Console/Commands/ReEncryptCredentials.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
+			identifier: property.notFound
 			count: 1
 			path: app/Console/Commands/RecoverStuckTasks.php
 
@@ -2773,6 +2791,30 @@ parameters:
 			path: app/Domain/Project/Services/RunOutputCollector.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Shared/Actions/ConfigureTeamKmsAction.php
+
+		-
+			message: '#^Cannot call method label\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Shared/Actions/ConfigureTeamKmsAction.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Domain/Shared/Actions/RemoveTeamKmsAction.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Shared/Actions/RewrapTeamDekAction.php
+
+		-
 			message: '#^Call to an undefined static method NotificationChannels\\WebPush\\WebPushMessage\:\:create\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
@@ -2789,6 +2831,36 @@ parameters:
 			identifier: return.type
 			count: 1
 			path: app/Domain/Shared/Models/Team.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Domain/Shared/Models/TeamProviderCredential.php
+
+		-
+			message: '#^Offset ''api_key'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Shared/Models/TeamProviderCredential.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Shared/Models/TeamProviderCredential.php
+
+		-
+			message: '#^Ternary operator condition is always false\.$#'
+			identifier: ternary.alwaysFalse
+			count: 1
+			path: app/Domain/Shared/Models/TeamProviderCredential.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Shared/Models/TeamProviderCredential.php
 
 		-
 			message: '#^Method App\\Domain\\Shared\\Services\\ContactResolver\:\:resolveOrCreate\(\) should return App\\Domain\\Shared\\Models\\ContactIdentity but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
@@ -2915,6 +2987,24 @@ parameters:
 			identifier: return.type
 			count: 1
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
+
+		-
+			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/CalendarConnector.php
+
+		-
+			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
+			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
 
 		-
 			message: '#^Method App\\Domain\\Signal\\Connectors\\ImapConnector\:\:resolveCredentials\(\) never returns array so it can be removed from the return type\.$#'
@@ -6027,13 +6117,13 @@ parameters:
 		-
 			message: '#^Offset ''api_key'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 1
+			count: 2
 			path: app/Infrastructure/AI/Gateways/PrismAiGateway.php
 
 		-
 			message: '#^Offset ''base_url'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 1
+			count: 2
 			path: app/Infrastructure/AI/Gateways/PrismAiGateway.php
 
 		-
@@ -6163,8 +6253,272 @@ parameters:
 			path: app/Infrastructure/Compute/Services/ComputeCredentialResolver.php
 
 		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Infrastructure/Encryption/CredentialEncryption.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Infrastructure/Encryption/CredentialEncryption.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 2
+			path: app/Infrastructure/Encryption/CredentialEncryption.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Shared\\Enums\\KmsConfigStatus\:\:Active will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Infrastructure/Encryption/CredentialEncryption.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Shared\\Enums\\KmsConfigStatus\:\:Error will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Infrastructure/Encryption/CredentialEncryption.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/KmsWrapperService.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: app/Infrastructure/Encryption/Kms/KmsWrapperService.php
+
+		-
+			message: '#^Cannot assign offset ''external_id'' to string\.$#'
+			identifier: offsetAssign.dimType
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/KmsWrapperService.php
+
+		-
+			message: '#^If condition is always true\.$#'
+			identifier: if.alwaysTrue
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/KmsWrapperService.php
+
+		-
+			message: '#^Parameter \#1 \$provider of method App\\Infrastructure\\Encryption\\Kms\\KmsWrapperFactory\:\:make\(\) expects App\\Domain\\Shared\\Enums\\KmsProvider, string given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Infrastructure/Encryption/Kms/KmsWrapperService.php
+
+		-
+			message: '#^Call to method assumeRole\(\) on an unknown class Aws\\Sts\\StsClient\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Call to method decrypt\(\) on an unknown class Aws\\Kms\\KmsClient\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Call to method encrypt\(\) on an unknown class Aws\\Kms\\KmsClient\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Call to method getAwsErrorCode\(\) on an unknown class Aws\\Exception\\AwsException\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Call to method getAwsErrorMessage\(\) on an unknown class Aws\\Exception\\AwsException\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Caught class Aws\\Exception\\AwsException not found\.$#'
+			identifier: class.notFound
+			count: 4
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Instantiated class Aws\\Kms\\KmsClient not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Instantiated class Aws\\Sts\\StsClient not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Method App\\Infrastructure\\Encryption\\Kms\\Providers\\AwsKmsWrapper\:\:buildKmsClient\(\) has invalid return type Aws\\Kms\\KmsClient\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Parameter \#3 \$previous of class App\\Infrastructure\\Encryption\\Kms\\Exceptions\\KmsAccessDeniedException constructor expects Throwable\|null, Aws\\Exception\\AwsException given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Parameter \#3 \$previous of class App\\Infrastructure\\Encryption\\Kms\\Exceptions\\KmsUnavailableException constructor expects Throwable\|null, Aws\\Exception\\AwsException given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Parameter \$e of method App\\Infrastructure\\Encryption\\Kms\\Providers\\AwsKmsWrapper\:\:handleAwsException\(\) has invalid type Aws\\Exception\\AwsException\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/AwsKmsWrapper.php
+
+		-
+			message: '#^Call to method close\(\) on an unknown class Google\\Cloud\\Kms\\V1\\Client\\KeyManagementServiceClient\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Call to method decrypt\(\) on an unknown class Google\\Cloud\\Kms\\V1\\Client\\KeyManagementServiceClient\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Call to method encrypt\(\) on an unknown class Google\\Cloud\\Kms\\V1\\Client\\KeyManagementServiceClient\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Call to method getCode\(\) on an unknown class Google\\ApiCore\\ApiException\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Call to method getMessage\(\) on an unknown class Google\\ApiCore\\ApiException\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Call to method setName\(\) on an unknown class Google\\Cloud\\Kms\\V1\\DecryptRequest\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Call to method setName\(\) on an unknown class Google\\Cloud\\Kms\\V1\\EncryptRequest\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Caught class Google\\ApiCore\\ApiException not found\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Instantiated class Google\\Cloud\\Kms\\V1\\Client\\KeyManagementServiceClient not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Instantiated class Google\\Cloud\\Kms\\V1\\DecryptRequest not found\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Instantiated class Google\\Cloud\\Kms\\V1\\EncryptRequest not found\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Method App\\Infrastructure\\Encryption\\Kms\\Providers\\GcpKmsWrapper\:\:buildClient\(\) has invalid return type Google\\Cloud\\Kms\\V1\\Client\\KeyManagementServiceClient\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Parameter \#3 \$previous of class App\\Infrastructure\\Encryption\\Kms\\Exceptions\\KmsAccessDeniedException constructor expects Throwable\|null, Google\\ApiCore\\ApiException given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Parameter \#3 \$previous of class App\\Infrastructure\\Encryption\\Kms\\Exceptions\\KmsUnavailableException constructor expects Throwable\|null, Google\\ApiCore\\ApiException given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Parameter \$e of method App\\Infrastructure\\Encryption\\Kms\\Providers\\GcpKmsWrapper\:\:handleGcpException\(\) has invalid type Google\\ApiCore\\ApiException\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Infrastructure/Encryption/Kms/Providers/GcpKmsWrapper.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Jobs/Middleware/CheckKmsAvailable.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Livewire/Agents/AgentDetailPage.php
+
+		-
+			message: '#^Offset ''models'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Agents/AgentDetailPage.php
+
+		-
+			message: '#^Parameter \#1 \$team of method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:customEndpointsForTeam\(\) expects App\\Domain\\Shared\\Models\\Team\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/Agents/AgentDetailPage.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Agents/CreateAgentForm.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Livewire/Agents/CreateAgentForm.php
+
+		-
+			message: '#^Offset ''models'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Agents/CreateAgentForm.php
+
+		-
+			message: '#^Parameter \#1 \$team of method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:customEndpointsForTeam\(\) expects App\\Domain\\Shared\\Models\\Team\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
 			count: 1
 			path: app/Livewire/Agents/CreateAgentForm.php
 
@@ -6247,6 +6601,18 @@ parameters:
 			path: app/Livewire/Assistant/AssistantPanel.php
 
 		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
+			message: '#^Offset ''models'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\),Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
@@ -6255,6 +6621,12 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
+			message: '#^Parameter \#1 \$team of method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:customEndpointsForTeam\(\) expects App\\Domain\\Shared\\Models\\Team\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
 			count: 1
 			path: app/Livewire/Assistant/AssistantPanel.php
 
@@ -6305,6 +6677,12 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Livewire/Credentials/CredentialDetailPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Credentials/CredentialListPage.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -6811,9 +7189,33 @@ parameters:
 			path: app/Livewire/Skills/CreateSkillForm.php
 
 		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Livewire/Skills/CreateSkillForm.php
+
+		-
+			message: '#^Offset ''models'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Skills/CreateSkillForm.php
+
+		-
+			message: '#^Parameter \#1 \$team of method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:customEndpointsForTeam\(\) expects App\\Domain\\Shared\\Models\\Team\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/Skills/CreateSkillForm.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 2
+			path: app/Livewire/Skills/SkillDetailPage.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
 			path: app/Livewire/Skills/SkillDetailPage.php
 
 		-
@@ -6824,6 +7226,12 @@ parameters:
 
 		-
 			message: '#^Offset ''model'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Skills/SkillDetailPage.php
+
+		-
+			message: '#^Offset ''models'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Livewire/Skills/SkillDetailPage.php
@@ -6847,6 +7255,12 @@ parameters:
 			path: app/Livewire/Skills/SkillDetailPage.php
 
 		-
+			message: '#^Parameter \#1 \$team of method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:customEndpointsForTeam\(\) expects App\\Domain\\Shared\\Models\\Team\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/Skills/SkillDetailPage.php
+
+		-
 			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Skill\\Enums\\SkillStatus\:\:Active will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
@@ -6855,7 +7269,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 11
+			count: 13
 			path: app/Livewire/Teams/TeamSettingsPage.php
 
 		-
@@ -7499,6 +7913,30 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Mcp/Tools/RunPod/RunPodManageTool.php
+
+		-
+			message: '#^Cannot assign offset ''base_url'' to string\.$#'
+			identifier: offsetAssign.dimType
+			count: 1
+			path: app/Mcp/Tools/Shared/CustomEndpointManageTool.php
+
+		-
+			message: '#^Offset ''api_key'' on string in empty\(\) does not exist\.$#'
+			identifier: empty.offset
+			count: 1
+			path: app/Mcp/Tools/Shared/CustomEndpointManageTool.php
+
+		-
+			message: '#^Offset ''base_url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Shared/CustomEndpointManageTool.php
+
+		-
+			message: '#^Offset ''models'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Shared/CustomEndpointManageTool.php
 
 		-
 			message: '#^Negated boolean expression is always true\.$#'

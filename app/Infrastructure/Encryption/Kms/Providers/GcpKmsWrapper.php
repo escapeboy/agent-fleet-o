@@ -5,6 +5,7 @@ namespace App\Infrastructure\Encryption\Kms\Providers;
 use App\Infrastructure\Encryption\Kms\Contracts\KmsWrapperInterface;
 use App\Infrastructure\Encryption\Kms\Exceptions\KmsAccessDeniedException;
 use App\Infrastructure\Encryption\Kms\Exceptions\KmsUnavailableException;
+use Google\ApiCore\ApiException;
 use Google\Cloud\Kms\V1\Client\KeyManagementServiceClient;
 use Google\Cloud\Kms\V1\DecryptRequest;
 use Google\Cloud\Kms\V1\EncryptRequest;
@@ -24,7 +25,7 @@ class GcpKmsWrapper implements KmsWrapperInterface
             $response = $client->encrypt($request);
 
             return base64_encode($response->getCiphertext());
-        } catch (\Google\ApiCore\ApiException $e) {
+        } catch (ApiException $e) {
             $this->handleGcpException($e);
         } finally {
             $client->close();
@@ -44,7 +45,7 @@ class GcpKmsWrapper implements KmsWrapperInterface
             $response = $client->decrypt($request);
 
             return $response->getPlaintext();
-        } catch (\Google\ApiCore\ApiException $e) {
+        } catch (ApiException $e) {
             $this->handleGcpException($e);
         } finally {
             $client->close();
@@ -70,7 +71,7 @@ class GcpKmsWrapper implements KmsWrapperInterface
             $decrypted = $client->decrypt($decryptRequest);
 
             return $decrypted->getPlaintext() === $testData;
-        } catch (\Google\ApiCore\ApiException $e) {
+        } catch (ApiException $e) {
             $this->handleGcpException($e);
         } finally {
             $client->close();
@@ -107,10 +108,7 @@ class GcpKmsWrapper implements KmsWrapperInterface
         );
     }
 
-    /**
-     * @return never
-     */
-    private function handleGcpException(\Google\ApiCore\ApiException $e): never
+    private function handleGcpException(ApiException $e): never
     {
         $code = $e->getCode();
 

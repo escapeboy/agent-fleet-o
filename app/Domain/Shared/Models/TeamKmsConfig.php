@@ -35,6 +35,12 @@ class TeamKmsConfig extends Model
     {
         return [
             'provider' => KmsProvider::class,
+            // INTENTIONAL: `encrypted:array` (APP_KEY) is used here instead of TeamEncryptedString.
+            // The KMS credentials are the access keys needed to UNWRAP the team's DEK from the
+            // external KMS provider (AWS KMS / GCP KMS / Azure Key Vault). Encrypting them with
+            // TeamEncryptedString would require the team DEK, which itself requires calling KMS —
+            // creating a circular dependency that would make decryption impossible.
+            // DO NOT "upgrade" this to TeamEncryptedString or TeamEncryptedArray.
             'credentials' => 'encrypted:array',
             'status' => KmsConfigStatus::class,
             'dek_wrapped_at' => 'datetime',

@@ -2,6 +2,9 @@
 
 namespace App\Infrastructure\Encryption\Kms\Contracts;
 
+use App\Infrastructure\Encryption\Kms\Exceptions\KmsAccessDeniedException;
+use App\Infrastructure\Encryption\Kms\Exceptions\KmsUnavailableException;
+
 interface KmsWrapperInterface
 {
     /**
@@ -9,7 +12,7 @@ interface KmsWrapperInterface
      *
      * @param  string  $plaintextDek  Raw binary DEK (32 bytes)
      * @param  array  $config  Provider-specific configuration
-     * @return string  Base64-encoded wrapped DEK
+     * @return string Base64-encoded wrapped DEK
      */
     public function wrap(string $plaintextDek, array $config): string;
 
@@ -18,7 +21,7 @@ interface KmsWrapperInterface
      *
      * @param  string  $wrappedDek  Base64-encoded wrapped DEK
      * @param  array  $config  Provider-specific configuration
-     * @return string  Raw binary DEK (32 bytes)
+     * @return string Raw binary DEK (32 bytes)
      */
     public function unwrap(string $wrappedDek, array $config): string;
 
@@ -26,10 +29,10 @@ interface KmsWrapperInterface
      * Test connectivity and permissions by performing a round-trip wrap/unwrap.
      *
      * @param  array  $config  Provider-specific configuration
-     * @return bool  True if test succeeds
+     * @return bool True if test succeeds
      *
-     * @throws \App\Infrastructure\Encryption\Kms\Exceptions\KmsAccessDeniedException
-     * @throws \App\Infrastructure\Encryption\Kms\Exceptions\KmsUnavailableException
+     * @throws KmsAccessDeniedException
+     * @throws KmsUnavailableException
      */
     public function test(array $config): bool;
 

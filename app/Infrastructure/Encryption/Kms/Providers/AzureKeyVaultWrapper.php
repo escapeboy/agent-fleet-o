@@ -5,6 +5,7 @@ namespace App\Infrastructure\Encryption\Kms\Providers;
 use App\Infrastructure\Encryption\Kms\Contracts\KmsWrapperInterface;
 use App\Infrastructure\Encryption\Kms\Exceptions\KmsAccessDeniedException;
 use App\Infrastructure\Encryption\Kms\Exceptions\KmsUnavailableException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -110,7 +111,7 @@ class AzureKeyVaultWrapper implements KmsWrapperInterface
 
             throw new KmsAccessDeniedException(
                 'azure_key_vault',
-                'Failed to obtain Azure AD token: ' . ($response->json('error_description') ?? 'unknown error'),
+                'Failed to obtain Azure AD token: '.($response->json('error_description') ?? 'unknown error'),
             );
         }
 
@@ -126,13 +127,10 @@ class AzureKeyVaultWrapper implements KmsWrapperInterface
             $keyPath .= "/{$config['key_version']}";
         }
 
-        return $vaultUrl . $keyPath;
+        return $vaultUrl.$keyPath;
     }
 
-    /**
-     * @return never
-     */
-    private function handleErrorResponse(\Illuminate\Http\Client\Response $response): never
+    private function handleErrorResponse(Response $response): never
     {
         $status = $response->status();
         $error = $response->json('error.message') ?? $response->body();

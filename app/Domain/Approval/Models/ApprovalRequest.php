@@ -8,6 +8,7 @@ use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Skill\Models\WorktreeExecution;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Infrastructure\Encryption\Casts\TeamEncryptedString;
 use App\Models\User;
 use Database\Factories\Domain\Approval\ApprovalRequestFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -19,6 +20,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class ApprovalRequest extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids;
+
+    protected $hidden = [
+        'callback_secret',
+    ];
 
     protected $fillable = [
         'team_id',
@@ -57,6 +62,7 @@ class ApprovalRequest extends Model
             'expires_at' => 'datetime',
             'sla_deadline' => 'datetime',
             'reviewed_at' => 'datetime',
+            'callback_secret' => TeamEncryptedString::class,
             'callback_fired_at' => 'datetime',
         ];
     }

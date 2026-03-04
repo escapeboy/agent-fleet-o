@@ -6,6 +6,7 @@ use App\Domain\Credential\Models\Credential;
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Domain\Telegram\Models\TelegramBot;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\Encryption\CredentialEncryption;
@@ -48,6 +49,17 @@ class ReEncryptCredentials extends Command
 
         foreach ($models as [$modelClass, $column]) {
             $this->reEncryptModel($modelClass, $column, $batch, $dryRun, $encryption);
+        }
+
+        // Migrate PHP-serialized string fields (stored via the old `encrypted` cast).
+        // These use a different decryption path because Eloquent's `encrypted` cast
+        // PHP-serializes values, while CredentialEncryption expects JSON-encoded data.
+        $stringModels = [
+            [TelegramBot::class, 'bot_token'],
+        ];
+
+        foreach ($stringModels as [$modelClass, $column]) {
+            $this->reEncryptStringModel($modelClass, $column, $batch, $dryRun, $encryption);
         }
 
         $this->newLine();
@@ -101,7 +113,7 @@ class ReEncryptCredentials extends Command
         $total = $query->count();
 
         if ($total === 0) {
-            $this->components->info("  No records to process.");
+            $this->components->info('  No records to process.');
 
             return;
         }
@@ -167,6 +179,115 @@ class ReEncryptCredentials extends Command
             }
 
             // Clear key cache periodically to limit memory usage
+            $encryption->clearKeyCache();
+        });
+
+        $bar->finish();
+        $this->newLine();
+    }
+
+    /**
+     * Re-encrypt a string column that was previously stored via Eloquent's `encrypted` cast
+     * (PHP-serialized). Migrates to the TeamEncryptedString v2 format ({"_s":"..."} under
+     * the team's DEK), which is what the new TeamEncryptedString cast expects.
+     */
+    private function reEncryptStringModel(
+        string $modelClass,
+        string $column,
+        int $batch,
+        bool $dryRun,
+        CredentialEncryption $encryption,
+    ): void {
+        $shortName = class_basename($modelClass);
+        $this->components->info("Processing {$shortName}.{$column} (string field)...");
+
+        /** @var Model $modelClass */
+        $query = $modelClass::withoutGlobalScopes()
+            ->whereNotNull($column)
+            ->where($column, '!=', '');
+
+        $total = $query->count();
+
+        if ($total === 0) {
+            $this->components->info('  No records to process.');
+
+            return;
+        }
+
+        $bar = $this->output->createProgressBar($total);
+        $bar->start();
+
+        $query->chunkById($batch, function (Collection $records) use ($column, $dryRun, $encryption, $bar) {
+            foreach ($records as $record) {
+                try {
+                    $rawValue = $record->getRawOriginal($column);
+
+                    if (! $rawValue || $rawValue === '') {
+                        $this->skipped++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    // Check if already v2 format ({"_s":"..."} wrapped in team-DEK envelope)
+                    if ($this->isV2Format($rawValue)) {
+                        $this->skipped++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    if ($dryRun) {
+                        $this->reEncrypted++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    $teamId = $record->team_id;
+
+                    // Decrypt with PHP-unserialization (legacy `encrypted` cast format)
+                    try {
+                        $plaintext = app('encrypter')->decrypt($rawValue);
+                    } catch (\Throwable) {
+                        // Not PHP-serialized — try APP_KEY JSON path as a last resort
+                        try {
+                            $json = app('encrypter')->decrypt($rawValue, false);
+                            $decoded = json_decode($json, true);
+                            $plaintext = is_array($decoded) ? ($decoded['_s'] ?? null) : $decoded;
+                        } catch (\Throwable) {
+                            $this->skipped++;
+                            $bar->advance();
+
+                            continue;
+                        }
+                    }
+
+                    if ($plaintext === null) {
+                        $this->skipped++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    // Re-encrypt in TeamEncryptedString v2 format
+                    $encrypted = $encryption->encrypt(['_s' => (string) $plaintext], $teamId);
+
+                    // Direct DB update to avoid Eloquent cast interference
+                    $record->getConnection()
+                        ->table($record->getTable())
+                        ->where($record->getKeyName(), $record->getKey())
+                        ->update([$column => $encrypted]);
+
+                    $this->reEncrypted++;
+                } catch (\Throwable $e) {
+                    $this->failed++;
+                    $this->components->error("  Failed {$record->getKey()}: {$e->getMessage()}");
+                }
+
+                $bar->advance();
+            }
+
             $encryption->clearKeyCache();
         });
 

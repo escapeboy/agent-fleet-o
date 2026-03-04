@@ -7,6 +7,7 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Skill\Models\Skill;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Collection;
 
 class ProviderResolver
 {
@@ -138,9 +139,9 @@ class ProviderResolver
      * Returns credential records with name, masked key, and base_url.
      * These appear as selectable providers in agent/skill forms.
      *
-     * @return \Illuminate\Support\Collection<int, TeamProviderCredential>
+     * @return Collection<int, TeamProviderCredential>
      */
-    public function customEndpointsForTeam(?Team $team): \Illuminate\Support\Collection
+    public function customEndpointsForTeam(?Team $team): Collection
     {
         if (! $team) {
             return collect();
