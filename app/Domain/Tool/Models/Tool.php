@@ -4,6 +4,7 @@ namespace App\Domain\Tool\Models;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentToolPivot;
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
@@ -13,6 +14,7 @@ use Database\Factories\Domain\Tool\ToolFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -28,6 +30,7 @@ class Tool extends Model
 
     protected $fillable = [
         'team_id',
+        'credential_id',
         'is_platform',
         'name',
         'slug',
@@ -58,6 +61,11 @@ class Tool extends Model
             'settings' => 'array',
             'last_health_check' => 'datetime',
         ];
+    }
+
+    public function credential(): BelongsTo
+    {
+        return $this->belongsTo(Credential::class);
     }
 
     public function agents(): BelongsToMany

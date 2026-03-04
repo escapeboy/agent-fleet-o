@@ -144,6 +144,23 @@
                                 @endif
                             </dd>
                         </div>
+                        @if(! $tool->isPlatformTool())
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">Credential</dt>
+                                <dd>
+                                    @if($linkedCredential)
+                                        <a href="{{ route('credentials.show', $linkedCredential->id) }}" class="text-primary-600 hover:text-primary-800 text-xs font-medium">
+                                            {{ $linkedCredential->name }}
+                                            <span class="text-gray-400">({{ $linkedCredential->credential_type->label() }})</span>
+                                        </a>
+                                    @elseif(! empty($tool->credentials))
+                                        <span class="text-xs text-gray-500">Inline key (encrypted)</span>
+                                    @else
+                                        <span class="text-xs text-gray-400">None</span>
+                                    @endif
+                                </dd>
+                            </div>
+                        @endif
                         <div class="flex justify-between">
                             <dt class="text-gray-500">Timeout</dt>
                             <dd class="text-gray-700">{{ $tool->settings['timeout'] ?? 30 }}s</dd>

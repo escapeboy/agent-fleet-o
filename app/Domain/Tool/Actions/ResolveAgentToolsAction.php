@@ -3,6 +3,7 @@
 namespace App\Domain\Tool\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Enums\ToolRiskLevel;
@@ -10,6 +11,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolTranslator;
+use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Livewire\Settings\SecurityPolicyPanel;
 
 class ResolveAgentToolsAction
@@ -81,11 +83,65 @@ class ResolveAgentToolsAction
                     );
                     $tool->transport_config = $config;
                 }
+            } else {
+                // For team-owned tools: inject credentials from credential_id or inline credentials
+                $resolvedSecret = $this->resolveToolCredential($tool);
+
+                if ($resolvedSecret !== null) {
+                    $tool = clone $tool;
+                    $config = $tool->transport_config ?? [];
+                    $envKey = $config['credential_env_var'] ?? 'API_KEY';
+                    $secretValue = $resolvedSecret['api_key']
+                        ?? $resolvedSecret['token']
+                        ?? $resolvedSecret['password']
+                        ?? $resolvedSecret['access_token']
+                        ?? '';
+
+                    if ($secretValue !== '') {
+                        $config['env'] = array_merge($config['env'] ?? [], [$envKey => $secretValue]);
+                        $tool->transport_config = $config;
+                    }
+                }
             }
 
             $prismTools = array_merge($prismTools, $this->translator->toPrismTools($tool, $overrides, $orgPolicy));
         }
 
         return $prismTools;
+    }
+
+    /**
+     * Resolve the secret data for a team-owned tool.
+     * Priority: linked Credential (credential_id) > inline Tool.credentials.
+     *
+     * @return array<string, string>|null
+     */
+    private function resolveToolCredential(Tool $tool): ?array
+    {
+        // Option 1: linked Credential domain record
+        if ($tool->credential_id) {
+            $credential = Credential::find($tool->credential_id);
+
+            if ($credential && $credential->isUsable()) {
+                CredentialEncryption::logAccess(
+                    teamId: $tool->team_id,
+                    subjectType: 'credential',
+                    subjectId: $credential->id,
+                    purpose: 'tool_execution',
+                    extra: ['tool_id' => $tool->id, 'tool_name' => $tool->name],
+                );
+
+                $credential->touchLastUsed();
+
+                return $credential->secret_data;
+            }
+        }
+
+        // Option 2: inline credentials on the tool (already decrypted by TeamEncryptedArray cast)
+        if (! empty($tool->credentials)) {
+            return $tool->credentials;
+        }
+
+        return null;
     }
 }
