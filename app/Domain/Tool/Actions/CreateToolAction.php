@@ -19,9 +19,11 @@ class CreateToolAction
         array $toolDefinitions = [],
         array $settings = [],
         bool $isPlatform = false,
+        ?string $credentialId = null,
     ): Tool {
         return Tool::withoutGlobalScopes()->create([
             'team_id' => $teamId,
+            'credential_id' => $credentialId,
             'is_platform' => $isPlatform || $teamId === null,
             'name' => $name,
             'slug' => Str::slug($name),

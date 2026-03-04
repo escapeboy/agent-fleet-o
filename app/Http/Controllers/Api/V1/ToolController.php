@@ -58,6 +58,7 @@ class ToolController extends Controller
             credentials: $request->input('credentials', []),
             toolDefinitions: $request->input('tool_definitions', []),
             settings: $request->input('settings', []),
+            credentialId: $request->input('credential_id'),
         );
 
         if ($request->has('risk_level') && $request->risk_level) {
@@ -85,6 +86,8 @@ class ToolController extends Controller
             riskLevel: $request->has('risk_level') && $request->risk_level
                 ? ToolRiskLevel::from($request->risk_level)
                 : null,
+            credentialId: $request->input('credential_id'),
+            clearCredentialId: (bool) $request->input('clear_credential_id', false),
         );
 
         if ($request->has('status')) {

@@ -22,6 +22,7 @@ class ToolResource extends JsonResource
             'settings' => $this->settings,
             'health_status' => $this->health_status,
             'last_health_check' => $this->last_health_check?->toISOString(),
+            'credential_id' => $this->credential_id,
             'function_count' => $this->functionCount(),
             'agents_count' => $this->whenCounted('agents'),
             'created_at' => $this->created_at->toISOString(),

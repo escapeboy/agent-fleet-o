@@ -20,6 +20,8 @@ class UpdateToolAction
         ?array $settings = null,
         ?ToolStatus $status = null,
         ?ToolRiskLevel $riskLevel = null,
+        ?string $credentialId = null,
+        bool $clearCredentialId = false,
     ): Tool {
         if ($tool->isPlatformTool()) {
             throw new \RuntimeException('Platform tools cannot be modified by teams.');
@@ -39,6 +41,13 @@ class UpdateToolAction
         // Credentials handled separately to avoid overwriting with null
         if ($credentials !== null) {
             $data['credentials'] = $credentials;
+        }
+
+        // credential_id can be explicitly set or cleared
+        if ($credentialId !== null) {
+            $data['credential_id'] = $credentialId;
+        } elseif ($clearCredentialId) {
+            $data['credential_id'] = null;
         }
 
         $tool->update($data);

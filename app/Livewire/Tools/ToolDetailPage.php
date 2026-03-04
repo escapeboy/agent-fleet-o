@@ -155,10 +155,14 @@ class ToolDetailPage extends Component
     public function render()
     {
         $agents = $this->tool->agents()->get();
+        $linkedCredential = $this->tool->credential_id
+            ? $this->tool->credential()->first(['id', 'name', 'credential_type', 'status'])
+            : null;
 
         return view('livewire.tools.tool-detail-page', [
             'agents' => $agents,
             'riskLevels' => ToolRiskLevel::cases(),
+            'linkedCredential' => $linkedCredential,
         ])->layout('layouts.app', ['header' => $this->tool->name]);
     }
 }

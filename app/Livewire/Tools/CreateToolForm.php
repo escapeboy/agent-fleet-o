@@ -56,7 +56,13 @@ class CreateToolForm extends Component
     public string $sshAllowedCommands = '';
 
     // Credentials (optional)
+    public string $credentialMode = 'inline'; // 'inline' | 'reference'
+
     public string $apiKey = '';
+
+    public string $credentialId = '';
+
+    public string $credentialEnvVar = 'API_KEY';
 
     // Tool definitions (MCP - JSON)
     public string $toolDefinitionsJson = '';
@@ -134,6 +140,7 @@ class CreateToolForm extends Component
             credentials: $credentials ?: null,
             toolDefinitions: $toolDefinitions ?: null,
             settings: $settings,
+            credentialId: $this->credentialMode === 'reference' && $this->credentialId ? $this->credentialId : null,
         );
 
         if ($this->riskLevel) {
@@ -148,15 +155,17 @@ class CreateToolForm extends Component
     private function buildTransportConfig(ToolType $type): array
     {
         return match ($type) {
-            ToolType::McpStdio => [
+            ToolType::McpStdio => array_filter([
                 'command' => $this->mcpCommand,
                 'args' => array_filter(array_map('trim', explode(',', $this->mcpArgs))),
                 'env' => $this->parseKeyValuePairs($this->mcpEnv),
-            ],
-            ToolType::McpHttp => [
+                'credential_env_var' => $this->credentialEnvVar ?: null,
+            ], fn ($v) => $v !== null && $v !== [] && $v !== ''),
+            ToolType::McpHttp => array_filter([
                 'url' => $this->mcpUrl,
                 'headers' => $this->parseKeyValuePairs($this->mcpHeaders),
-            ],
+                'credential_env_var' => $this->credentialEnvVar ?: null,
+            ], fn ($v) => $v !== null && $v !== [] && $v !== ''),
             ToolType::BuiltIn => $this->buildBuiltInConfig(),
         };
     }
@@ -184,6 +193,11 @@ class CreateToolForm extends Component
 
     private function buildCredentials(): array
     {
+        // When using a referenced Credential, don't store an inline API key
+        if ($this->credentialMode === 'reference') {
+            return [];
+        }
+
         return array_filter([
             'api_key' => $this->apiKey ?: null,
         ]);
@@ -228,11 +242,18 @@ class CreateToolForm extends Component
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        // Available credentials for linking (non-SSH, active)
+        $availableCredentials = Credential::whereNotIn('credential_type', [CredentialType::SshKey->value])
+            ->where('status', CredentialStatus::Active)
+            ->orderBy('name')
+            ->get(['id', 'name', 'credential_type']);
+
         return view('livewire.tools.create-tool-form', [
             'types' => $types,
             'builtInKinds' => BuiltInToolKind::cases(),
             'riskLevels' => ToolRiskLevel::cases(),
             'sshCredentials' => $sshCredentials,
+            'availableCredentials' => $availableCredentials,
         ])->layout('layouts.app', ['header' => 'Create Tool']);
     }
 }

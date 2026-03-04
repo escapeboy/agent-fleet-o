@@ -33,6 +33,10 @@ class ToolUpdateTool extends Tool
             'risk_level' => $schema->string()
                 ->description('Risk classification: safe, read, write, destructive')
                 ->enum(['safe', 'read', 'write', 'destructive']),
+            'credential_id' => $schema->string()
+                ->description('UUID of a linked Credential (set to link; omit to leave unchanged)'),
+            'clear_credential_id' => $schema->boolean()
+                ->description('Set true to remove the linked credential from this tool'),
         ];
     }
 
@@ -44,6 +48,8 @@ class ToolUpdateTool extends Tool
             'description' => 'nullable|string',
             'status' => 'nullable|string|in:active,disabled',
             'risk_level' => 'nullable|string|in:safe,read,write,destructive',
+            'credential_id' => 'nullable|uuid|exists:credentials,id',
+            'clear_credential_id' => 'nullable|boolean',
         ]);
 
         $tool = ToolModel::find($validated['tool_id']);
@@ -63,6 +69,8 @@ class ToolUpdateTool extends Tool
                 name: $validated['name'] ?? null,
                 description: $validated['description'] ?? null,
                 riskLevel: isset($validated['risk_level']) ? ToolRiskLevel::from($validated['risk_level']) : null,
+                credentialId: $validated['credential_id'] ?? null,
+                clearCredentialId: (bool) ($validated['clear_credential_id'] ?? false),
             );
 
             return Response::text(json_encode([
