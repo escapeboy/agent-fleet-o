@@ -13,9 +13,13 @@ class PopularToolsSeeder extends Seeder
 {
     public function run(): void
     {
-        $team = Team::first();
+        // Cloud mode: create as platform tools (team_id = null, is_platform = true)
+        // Community mode: create as team tools for the default team
+        $isPlatform = class_exists(\Cloud\Providers\CloudServiceProvider::class);
 
-        if (! $team) {
+        $team = $isPlatform ? null : Team::first();
+
+        if (! $isPlatform && ! $team) {
             $this->command?->warn('No team found. Run app:install first.');
 
             return;
@@ -26,9 +30,15 @@ class PopularToolsSeeder extends Seeder
         $skipped = 0;
 
         foreach ($definitions as $def) {
+            $matchKey = $isPlatform
+                ? ['slug' => $def['slug'], 'is_platform' => true]
+                : ['team_id' => $team->id, 'slug' => $def['slug']];
+
             $tool = Tool::withoutGlobalScopes()->updateOrCreate(
-                ['team_id' => $team->id, 'slug' => $def['slug']],
+                $matchKey,
                 [
+                    'team_id' => $team?->id,
+                    'is_platform' => $isPlatform,
                     'name' => $def['name'],
                     'description' => $def['description'],
                     'type' => $def['type'],
@@ -47,7 +57,8 @@ class PopularToolsSeeder extends Seeder
             }
         }
 
-        $this->command?->info("Tools: {$created} created, {$skipped} already existed.");
+        $mode = $isPlatform ? 'platform' : 'team';
+        $this->command?->info("Tools ({$mode}): {$created} created, {$skipped} already existed.");
     }
 
     protected function toolDefinitions(): array
