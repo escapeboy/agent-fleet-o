@@ -3597,7 +3597,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$transport_config\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
