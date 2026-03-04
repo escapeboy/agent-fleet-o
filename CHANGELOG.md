@@ -9,6 +9,9 @@ All notable changes to Agent Fleet Community Edition are documented here.
 - **Customer-Managed Encryption Keys (BYOKMS)** -- Enterprise teams can bring their own KMS (AWS KMS, GCP Cloud KMS, or Azure Key Vault) to wrap the team's Data Encryption Key (DEK). Credentials encrypted with per-team envelope encryption remain accessible only through the customer's KMS — revoking KMS access immediately revokes data access. Three-layer DEK cache (in-memory, Redis, KMS API) minimizes latency and KMS costs. UI in Team Settings Security tab, `kms_manage` MCP tool, and 5 API endpoints (`/api/v1/team/kms/*`).
 - **KMS Job Middleware** -- `CheckKmsAvailable` middleware on pipeline stage jobs detects KMS errors before job execution and notifies team admins when KMS becomes unreachable.
 - **KMS Plan Downgrade Handling** -- Automatic KMS removal when a team downgrades from Enterprise, ensuring no orphaned KMS configurations.
+- **Five New Local CLI Agents** -- Gemini CLI (Google), Kiro CLI (AWS), Aider (open-source), Amp (Sourcegraph), and OpenCode (open-source) join Claude Code and Codex as supported local execution backends. All auto-detected, zero platform cost, with agent-specific command builders and output parsers.
+- **Plan-Gated Feature Visibility** -- Locked features now appear with a disabled overlay and upgrade CTA instead of being hidden; `x-plan-gate` Blade component with inline/overlay/ghost modes; `canCreate` ghost buttons on all list pages.
+- **49 Platform Tool Integrations** -- Pre-built MCP tool definitions (GitHub, Slack, Notion, Linear, Jira, and more) are now seeded as platform-wide tools visible to all teams, with per-team activation and credential overrides.
 
 ### Security
 
