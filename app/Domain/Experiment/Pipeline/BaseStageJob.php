@@ -12,6 +12,7 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
+use App\Jobs\Middleware\CheckKmsAvailable;
 use App\Jobs\Middleware\EnforceConcurrencyLimit;
 use App\Jobs\Middleware\EnforceExecutionDepth;
 use App\Jobs\Middleware\EnforceExecutionTtl;
@@ -53,6 +54,7 @@ abstract class BaseStageJob implements ShouldQueue
             new EnforceTenantContext,
             new CheckKillSwitch,
             new CheckBudgetAvailable,
+            new CheckKmsAvailable,
             new EnforceExecutionTtl,
             new EnforceExecutionDepth,
             new EnforceConcurrencyLimit,

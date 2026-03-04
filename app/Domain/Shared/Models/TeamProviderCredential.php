@@ -2,6 +2,7 @@
 
 namespace App\Domain\Shared\Models;
 
+use App\Infrastructure\Encryption\Casts\TeamEncryptedArray;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,7 +22,7 @@ class TeamProviderCredential extends Model
     protected function casts(): array
     {
         return [
-            'credentials' => 'encrypted:array',
+            'credentials' => TeamEncryptedArray::class,
             'is_active' => 'boolean',
         ];
     }

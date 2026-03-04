@@ -8,6 +8,7 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
+use App\Infrastructure\Encryption\Casts\TeamEncryptedArray;
 use Database\Factories\Domain\Tool\ToolFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -52,7 +53,7 @@ class Tool extends Model
             'status' => ToolStatus::class,
             'risk_level' => ToolRiskLevel::class,
             'transport_config' => 'array',
-            'credentials' => 'encrypted:array',
+            'credentials' => TeamEncryptedArray::class,
             'tool_definitions' => 'array',
             'settings' => 'array',
             'last_health_check' => 'datetime',
