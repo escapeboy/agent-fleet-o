@@ -63,6 +63,7 @@ class AgentListPage extends Component
         return view('livewire.agents.agent-list-page', [
             'agents' => $query->paginate(20),
             'statuses' => AgentStatus::cases(),
+            'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Agents']);
     }
 }

@@ -100,6 +100,7 @@ class ProjectListPage extends Component
             'projects' => $query->paginate(20),
             'statuses' => ProjectStatus::cases(),
             'types' => ProjectType::cases(),
+            'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Projects']);
     }
 }

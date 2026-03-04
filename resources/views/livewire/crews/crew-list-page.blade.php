@@ -13,10 +13,16 @@
             @endforeach
         </x-form-select>
 
-        <a href="{{ route('crews.create') }}"
-            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-            New Crew
-        </a>
+        @if($canCreate)
+            <a href="{{ route('crews.create') }}"
+                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                New Crew
+            </a>
+        @else
+            <span class="rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-400 cursor-not-allowed" title="Plan limit reached">
+                New Crew
+            </span>
+        @endif
     </div>
 
     {{-- Table --}}

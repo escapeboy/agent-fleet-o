@@ -63,6 +63,7 @@ class CrewListPage extends Component
         return view('livewire.crews.crew-list-page', [
             'crews' => $query->paginate(20),
             'statuses' => CrewStatus::cases(),
+            'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Crews']);
     }
 }
