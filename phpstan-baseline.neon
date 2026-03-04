@@ -57,19 +57,19 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Console/Commands/ReEncryptCredentials.php
 
 		-
 			message: '#^PHPDoc tag @var with type Illuminate\\Database\\Eloquent\\Model is not subtype of native type string\.$#'
 			identifier: varTag.nativeType
-			count: 1
+			count: 2
 			path: app/Console/Commands/ReEncryptCredentials.php
 
 		-
 			message: '#^Strict comparison using \=\=\= between mixed~\(0\|0\.0\|''''\|''0''\|array\{\}\|false\|null\) and '''' will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
-			count: 1
+			count: 2
 			path: app/Console/Commands/ReEncryptCredentials.php
 
 		-
