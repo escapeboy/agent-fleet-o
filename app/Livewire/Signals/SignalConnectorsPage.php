@@ -197,8 +197,18 @@ class SignalConnectorsPage extends Component
             ->orderBy('created_at')
             ->get();
 
+        $recentSignals = Signal::select([
+            'id', 'source_type', 'source_identifier', 'received_at', 'score', 'tags', 'duplicate_count',
+        ])
+            ->latest('received_at')
+            ->limit(100)
+            ->get();
+
+        $availableSourceTypes = $recentSignals->pluck('source_type')->unique()->sort()->values();
+
         return view('livewire.signals.signal-connectors-page', compact(
             'cards', 'httpMonitors', 'rssFeeds', 'imapConnector', 'signalProtocolConnectors', 'matrixConnectors',
+            'recentSignals', 'availableSourceTypes',
         ))->layout('layouts.app', ['header' => 'Signal Sources']);
     }
 }
