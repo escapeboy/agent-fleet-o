@@ -3613,6 +3613,24 @@ parameters:
 			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
+			message: '#^Parameter \#1 \$tool of method App\\Domain\\Tool\\Actions\\ResolveAgentToolsAction\:\:resolveToolCredential\(\) expects App\\Domain\\Tool\\Models\\Tool, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Method App\\Domain\\Tool\\Actions\\ResolveAgentToolsAction\:\:resolveToolCredential\(\) never returns array\<string, string\> so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Method App\\Domain\\Tool\\Actions\\ResolveAgentToolsAction\:\:resolveToolCredential\(\) should return array\<string, string\>\|null but returns string\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
 			message: '#^Parameter \#1 \$tool of method App\\Domain\\Tool\\Services\\ToolTranslator\:\:toPrismTools\(\) expects App\\Domain\\Tool\\Models\\Tool, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 1
@@ -5936,6 +5954,12 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ToolResource\:\:\$tool_definitions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/ToolResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\ToolResource\:\:\$credential_id\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Api/V1/ToolResource.php
