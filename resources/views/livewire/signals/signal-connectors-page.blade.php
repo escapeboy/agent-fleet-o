@@ -317,7 +317,8 @@
         </div>
     </div>
 
-    {{-- ═══ Signal Protocol Connectors ═══ --}}
+    {{-- ═══ Signal Protocol Connectors ═══ (self-hosted only) --}}
+    @if(config('app.deployment_mode') !== 'cloud')
     <div>
         <div class="mb-4">
             <h2 class="text-base font-semibold text-(--color-on-surface)">Signal Protocol</h2>
@@ -353,7 +354,7 @@
         @endif
     </div>
 
-    {{-- ═══ Matrix Connectors ═══ --}}
+    {{-- ═══ Matrix Connectors ═══ (self-hosted only) --}}
     <div>
         <div class="mb-4">
             <h2 class="text-base font-semibold text-(--color-on-surface)">Matrix / Element</h2>
@@ -386,6 +387,7 @@
             </div>
         @endif
     </div>
+    @endif {{-- end self-hosted only --}}
 
     {{-- ═══ Signal Activity Log ═══ --}}
     <div
