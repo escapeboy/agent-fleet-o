@@ -63,7 +63,7 @@ class ApprovalRequest extends Model
             'sla_deadline' => 'datetime',
             'reviewed_at' => 'datetime',
             'callback_secret' => TeamEncryptedString::class,
-        'callback_fired_at' => 'datetime',
+            'callback_fired_at' => 'datetime',
         ];
     }
 
