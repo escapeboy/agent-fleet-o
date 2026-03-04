@@ -82,6 +82,7 @@ class CredentialListPage extends Component
             'statuses' => CredentialStatus::cases(),
             'team' => $team,
             'kmsConfig' => $kmsConfig,
+            'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Credentials']);
     }
 }

@@ -592,11 +592,20 @@
                 </div>
             @endif
         @else
-            <div class="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-4 text-center">
-                <p class="text-sm text-amber-800">Customer-managed KMS is available on the Enterprise plan.
-                    <a href="{{ route('billing') }}" class="font-medium underline">Upgrade</a> to connect your own KMS.
-                </p>
-            </div>
+            <x-plan-gate feature="customer_managed_keys" required-plan="Pro" mode="overlay"
+                upgrade-message="Bring your own encryption keys (AWS KMS, GCP Cloud KMS, or Azure Key Vault).">
+                <div class="rounded-lg border border-dashed border-gray-300 p-4">
+                    <p class="mb-4 text-sm font-medium text-gray-700">Connect Your KMS</p>
+                    <div class="mb-4">
+                        <x-form-select label="KMS Provider" disabled>
+                            <option value="">Select provider...</option>
+                            <option value="aws_kms">AWS KMS</option>
+                            <option value="gcp_kms">GCP Cloud KMS</option>
+                            <option value="azure_key_vault">Azure Key Vault</option>
+                        </x-form-select>
+                    </div>
+                </div>
+            </x-plan-gate>
         @endif
     </div>
     @endif
