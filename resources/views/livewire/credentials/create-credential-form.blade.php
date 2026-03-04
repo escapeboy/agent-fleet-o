@@ -48,7 +48,7 @@
         {{-- Step 2: Secret Data --}}
         @if($step === 2)
             <h3 class="mb-4 text-lg font-semibold text-gray-900">Secret Data</h3>
-            <p class="mb-4 text-sm text-gray-500">All secret data is encrypted at rest using AES-256.</p>
+            <p class="mb-4 text-sm text-gray-500">All secret data is encrypted at rest with per-team envelope encryption (XSalsa20-Poly1305).</p>
             <div class="space-y-4">
                 @if($credentialType === 'basic_auth')
                     <x-form-input wire:model="username" label="Username" type="text"
