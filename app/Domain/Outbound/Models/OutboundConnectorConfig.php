@@ -4,6 +4,7 @@ namespace App\Domain\Outbound\Models;
 
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Infrastructure\Encryption\Casts\TeamEncryptedArray;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,7 +29,7 @@ class OutboundConnectorConfig extends Model
     protected function casts(): array
     {
         return [
-            'credentials' => 'encrypted:array',
+            'credentials' => TeamEncryptedArray::class,
             'is_active' => 'boolean',
             'last_tested_at' => 'datetime',
         ];

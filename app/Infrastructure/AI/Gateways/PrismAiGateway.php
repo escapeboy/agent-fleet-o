@@ -6,6 +6,7 @@ use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
+use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -310,6 +311,14 @@ class PrismAiGateway implements AiGatewayInterface
             ->first();
 
         if ($credential && $configKey && isset($credential->credentials['api_key'])) {
+            CredentialEncryption::logAccess(
+                $request->teamId,
+                'team_provider_credential',
+                $credential->id,
+                'ai_gateway_call',
+                extra: ['provider' => $request->provider, 'model' => $request->model],
+            );
+
             config([$configKey => $credential->credentials['api_key']]);
 
             return;

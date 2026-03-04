@@ -392,6 +392,215 @@
     </div>
     @endif
 
+    {{-- Credential Security (cloud only, enterprise feature) --}}
+    @if(isset($showKmsSecurity) && $showKmsSecurity)
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Credential Security</h2>
+        <p class="mb-5 text-sm text-gray-500">
+            Your credentials are encrypted with a dedicated per-team key. Enterprise teams can connect
+            their own KMS for customer-managed encryption.
+        </p>
+
+        {{-- Encryption status --}}
+        <div class="mb-5 flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                    <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Per-team encryption: Active
+                </span>
+            </div>
+            <div class="flex items-center gap-2">
+                @if($kmsConfig && $kmsConfig->status->value === 'active')
+                    <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                        Customer KMS: {{ $kmsConfig->provider->label() }}
+                    </span>
+                @elseif($kmsConfig && $kmsConfig->status->value === 'error')
+                    <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">
+                        <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> Customer KMS: Error
+                    </span>
+                @else
+                    <span class="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500">Customer KMS: Not configured</span>
+                @endif
+            </div>
+        </div>
+
+        @if($canUseKms ?? false)
+            @if($kmsConfig && in_array($kmsConfig->status->value, ['active', 'error']))
+                {{-- Active KMS display --}}
+                <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-blue-900">{{ $kmsConfig->provider->label() }}</p>
+                            <p class="mt-0.5 text-sm text-blue-700">
+                                Key: <code class="rounded bg-blue-100 px-1 text-xs">{{ $kmsConfig->key_identifier }}</code>
+                            </p>
+                            <p class="mt-0.5 text-xs text-blue-600">
+                                DEK wrapped: {{ $kmsConfig->dek_wrapped_at?->diffForHumans() ?? 'N/A' }}
+                                @if($kmsConfig->last_used_at)
+                                    · Last used: {{ $kmsConfig->last_used_at->diffForHumans() }}
+                                @endif
+                            </p>
+                            @if($kmsEstimatedCost)
+                                <p class="mt-1 text-xs text-blue-600">
+                                    Estimated cost: ~${{ number_format($kmsEstimatedCost, 2) }}/month ({{ $kmsConfig->provider->label() }})
+                                </p>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button wire:click="rewrapDek" wire:confirm="Re-wrap DEK with current CMK version?"
+                                class="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+                                Re-wrap DEK
+                            </button>
+                            <button wire:click="removeKms" wire:confirm="Remove KMS? Credentials will revert to platform encryption."
+                                class="rounded px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
+                                Remove KMS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @else
+                {{-- KMS setup form --}}
+                <div class="rounded-lg border border-dashed border-gray-300 p-4">
+                    <p class="mb-4 text-sm font-medium text-gray-700">Connect Your KMS</p>
+
+                    <div class="mb-4">
+                        <x-form-select wire:model.live="kmsProvider" label="KMS Provider">
+                            <option value="">Select provider...</option>
+                            <option value="aws_kms">AWS KMS</option>
+                            <option value="gcp_kms">GCP Cloud KMS</option>
+                            <option value="azure_key_vault">Azure Key Vault</option>
+                        </x-form-select>
+                    </div>
+
+                    @if($kmsProvider === 'aws_kms')
+                        <div class="space-y-3">
+                            <x-form-input wire:model="kmsRoleArn" label="IAM Role ARN" type="text"
+                                placeholder="arn:aws:iam::123456789012:role/FleetQKMSAccess"
+                                :error="$errors->first('kmsRoleArn')" />
+                            <x-form-input wire:model="kmsKeyArn" label="KMS Key ARN" type="text"
+                                placeholder="arn:aws:kms:us-east-1:123456789012:key/mrk-..."
+                                :error="$errors->first('kmsKeyArn')" />
+                            <x-form-select wire:model="kmsRegion" label="Region">
+                                @foreach(['us-east-1','us-east-2','us-west-1','us-west-2','eu-west-1','eu-west-2','eu-central-1','ap-southeast-1','ap-northeast-1'] as $r)
+                                    <option value="{{ $r }}">{{ $r }}</option>
+                                @endforeach
+                            </x-form-select>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">External ID (for trust policy)</label>
+                                <div class="flex items-center gap-2">
+                                    <code class="flex-1 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">{{ $kmsExternalId }}</code>
+                                    <button onclick="navigator.clipboard.writeText('{{ $kmsExternalId }}')" type="button"
+                                        class="rounded bg-gray-100 px-3 py-2 text-xs text-gray-600 hover:bg-gray-200">
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+                            <details class="rounded border border-gray-200 p-3">
+                                <summary class="cursor-pointer text-sm font-medium text-gray-700">Setup Instructions</summary>
+                                <div class="mt-3 text-xs text-gray-600">
+                                    <p class="mb-2">1. Create an IAM Role in your AWS account with the following trust policy:</p>
+                                    <pre class="mb-2 overflow-x-auto rounded bg-gray-50 p-2 text-xs">{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"AWS": "arn:aws:iam::YOUR_FLEETQ_ACCOUNT:root"},
+    "Action": "sts:AssumeRole",
+    "Condition": {
+      "StringEquals": {"sts:ExternalId": "{{ $kmsExternalId }}"}
+    }
+  }]
+}</pre>
+                                    <p class="mb-2">2. Attach a policy allowing <code>kms:Encrypt</code> and <code>kms:Decrypt</code> on your KMS key.</p>
+                                    <p>3. Paste the Role ARN and Key ARN above, then test the connection.</p>
+                                </div>
+                            </details>
+                        </div>
+                    @elseif($kmsProvider === 'gcp_kms')
+                        <div class="space-y-3">
+                            <x-form-input wire:model="kmsGcpProjectId" label="Project ID" type="text"
+                                placeholder="my-gcp-project" :error="$errors->first('kmsGcpProjectId')" />
+                            <x-form-input wire:model="kmsGcpLocation" label="Location" type="text"
+                                placeholder="us-east1" :error="$errors->first('kmsGcpLocation')" />
+                            <x-form-input wire:model="kmsGcpKeyRing" label="Key Ring" type="text"
+                                placeholder="my-key-ring" :error="$errors->first('kmsGcpKeyRing')" />
+                            <x-form-input wire:model="kmsGcpKeyId" label="Key ID" type="text"
+                                placeholder="my-crypto-key" :error="$errors->first('kmsGcpKeyId')" />
+                            <x-form-textarea wire:model="kmsGcpServiceAccountJson" label="Service Account JSON" mono
+                                placeholder="Paste your service account JSON key here..."
+                                :error="$errors->first('kmsGcpServiceAccountJson')" />
+                            <details class="rounded border border-gray-200 p-3">
+                                <summary class="cursor-pointer text-sm font-medium text-gray-700">Setup Instructions</summary>
+                                <div class="mt-3 text-xs text-gray-600">
+                                    <p class="mb-2">1. Create a service account with the <code>Cloud KMS CryptoKey Encrypter/Decrypter</code> role.</p>
+                                    <p class="mb-2">2. Create a JSON key for the service account and paste it above.</p>
+                                    <p>3. Ensure the key ring and key exist in the specified project and location.</p>
+                                </div>
+                            </details>
+                        </div>
+                    @elseif($kmsProvider === 'azure_key_vault')
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <x-form-input wire:model="kmsAzureTenantId" label="Tenant ID" type="text"
+                                    :error="$errors->first('kmsAzureTenantId')" />
+                                <x-form-input wire:model="kmsAzureClientId" label="Client ID" type="text"
+                                    :error="$errors->first('kmsAzureClientId')" />
+                            </div>
+                            <x-form-input wire:model="kmsAzureClientSecret" label="Client Secret" type="password"
+                                :error="$errors->first('kmsAzureClientSecret')" />
+                            <x-form-input wire:model="kmsAzureVaultUrl" label="Vault URL" type="url"
+                                placeholder="https://my-vault.vault.azure.net"
+                                :error="$errors->first('kmsAzureVaultUrl')" />
+                            <div class="grid grid-cols-2 gap-3">
+                                <x-form-input wire:model="kmsAzureKeyName" label="Key Name" type="text"
+                                    :error="$errors->first('kmsAzureKeyName')" />
+                                <x-form-input wire:model="kmsAzureKeyVersion" label="Key Version (optional)" type="text"
+                                    placeholder="latest" />
+                            </div>
+                            <details class="rounded border border-gray-200 p-3">
+                                <summary class="cursor-pointer text-sm font-medium text-gray-700">Setup Instructions</summary>
+                                <div class="mt-3 text-xs text-gray-600">
+                                    <p class="mb-2">1. Register an app in Azure AD and create a client secret.</p>
+                                    <p class="mb-2">2. In your Key Vault, assign the <strong>Key Vault Crypto Officer</strong> role to the app.</p>
+                                    <p>3. Create an RSA key in the vault and enter the details above.</p>
+                                </div>
+                            </details>
+                        </div>
+                    @endif
+
+                    @if($kmsProvider)
+                        {{-- Test result --}}
+                        @if($kmsTestResult)
+                            <div class="mt-4 rounded-lg p-3 text-sm {{ $kmsTestResult['success'] ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700' }}">
+                                {{ $kmsTestResult['message'] }}
+                            </div>
+                        @endif
+
+                        <div class="mt-4 flex items-center gap-3">
+                            <button wire:click="testKmsConnection" wire:loading.attr="disabled"
+                                class="rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50">
+                                <span wire:loading.remove wire:target="testKmsConnection">Test Connection</span>
+                                <span wire:loading wire:target="testKmsConnection">Testing...</span>
+                            </button>
+                            @if($kmsTestResult && $kmsTestResult['success'])
+                                <button wire:click="enableKms" wire:confirm="Enable KMS encryption? Your DEK will be wrapped with your KMS key."
+                                    class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                                    Enable KMS
+                                </button>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            @endif
+        @else
+            <div class="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-4 text-center">
+                <p class="text-sm text-amber-800">Customer-managed KMS is available on the Enterprise plan.
+                    <a href="{{ route('billing') }}" class="font-medium underline">Upgrade</a> to connect your own KMS.
+                </p>
+            </div>
+        @endif
+    </div>
+    @endif
+
     {{-- Telegram Bot --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Telegram Bot</h2>

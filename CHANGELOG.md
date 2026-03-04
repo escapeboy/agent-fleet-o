@@ -2,6 +2,21 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.3.0] - 2026-03-04
+
+### Added
+
+- **Customer-Managed Encryption Keys (BYOKMS)** -- Enterprise teams can bring their own KMS (AWS KMS, GCP Cloud KMS, or Azure Key Vault) to wrap the team's Data Encryption Key (DEK). Credentials encrypted with per-team envelope encryption remain accessible only through the customer's KMS — revoking KMS access immediately revokes data access. Three-layer DEK cache (in-memory, Redis, KMS API) minimizes latency and KMS costs. UI in Team Settings Security tab, `kms_manage` MCP tool, and 5 API endpoints (`/api/v1/team/kms/*`).
+- **KMS Job Middleware** -- `CheckKmsAvailable` middleware on pipeline stage jobs detects KMS errors before job execution and notifies team admins when KMS becomes unreachable.
+- **KMS Plan Downgrade Handling** -- Automatic KMS removal when a team downgrades from Enterprise, ensuring no orphaned KMS configurations.
+
+### Security
+
+- Per-team credentials now use XSalsa20-Poly1305 envelope encryption (sodium_crypto_secretbox) instead of Laravel's default AES-256-CBC, with per-team DEK isolated from APP_KEY when KMS is active.
+- KMS error state blocks all credential operations (no silent fallback to APP_KEY).
+
+---
+
 ## [1.2.0] - 2026-03-03
 
 ### Added
