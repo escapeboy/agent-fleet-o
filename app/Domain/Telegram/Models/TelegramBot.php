@@ -4,6 +4,7 @@ namespace App\Domain\Telegram\Models;
 
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Infrastructure\Encryption\Casts\TeamEncryptedString;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,10 +28,16 @@ class TelegramBot extends Model
         'last_message_at',
     ];
 
+    protected $hidden = [
+        'bot_token',
+        'webhook_secret',
+    ];
+
     protected function casts(): array
     {
         return [
-            'bot_token' => 'encrypted',
+            'bot_token' => TeamEncryptedString::class,
+            'webhook_secret' => TeamEncryptedString::class,
             'webhook_mode' => 'boolean',
             'last_message_at' => 'datetime',
         ];
