@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-3xl">
     <div class="rounded-xl border border-gray-200 bg-white p-6">
         <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-form-input wire:model="name" label="Name" type="text" placeholder="e.g. Research Assistant"
                     :error="$errors->first('name')" />
                 <x-form-input wire:model="role" label="Role" type="text" placeholder="e.g. Lead Research Analyst"
@@ -13,7 +13,7 @@
 
             <x-form-textarea wire:model="backstory" label="Backstory (optional)" rows="3" placeholder="Background context for the agent..." />
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <x-form-select wire:model.live="provider" label="Provider">
                     @foreach($providers as $key => $provider)
                         <option value="{{ $key }}">{{ $provider['name'] }}</option>
@@ -70,7 +70,7 @@
             <div>
                 <label class="mb-2 block text-sm font-medium text-gray-700">Assign Skills</label>
                 @if($availableSkills->isNotEmpty())
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         @foreach($availableSkills as $skill)
                             <button wire:click="toggleSkill('{{ $skill->id }}')"
                                 class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition
@@ -97,7 +97,7 @@
                 <label class="mb-2 block text-sm font-medium text-gray-700">Assign Tools</label>
                 <p class="mb-3 text-xs text-gray-500">When tools are assigned, the agent uses an agentic loop where the LLM decides which tools to call.</p>
                 @if($availableTools->isNotEmpty())
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         @foreach($availableTools as $tool)
                             <button wire:click="toggleTool('{{ $tool->id }}')"
                                 class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition

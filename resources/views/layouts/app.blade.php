@@ -47,24 +47,46 @@
     </script>
 </head>
 <body class="bg-(--color-surface-alt) font-sans antialiased text-(--color-on-surface)">
-    <div class="flex h-screen overflow-hidden">
+    <div class="flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
+        {{-- Mobile overlay backdrop --}}
+        <div x-show="sidebarOpen"
+             x-transition:enter="transition-opacity ease-linear duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="sidebarOpen = false"
+             class="fixed inset-0 z-40 bg-black/50 lg:hidden"
+             style="display: none;"></div>
+
         {{-- Sidebar --}}
         <x-sidebar />
 
         {{-- Main Content --}}
-        <div class="flex flex-1 flex-col overflow-hidden">
+        <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
             {{-- Top Bar --}}
-            <header class="flex h-16 items-center justify-between border-b border-(--color-header-border) bg-(--color-header-bg) px-6">
-                <h1 class="text-lg font-semibold text-(--color-on-surface)">
-                    {{ $header ?? '' }}
-                </h1>
-                <div class="flex items-center gap-4">
+            <header class="flex h-16 shrink-0 items-center justify-between border-b border-(--color-header-border) bg-(--color-header-bg) px-4 lg:px-6">
+                <div class="flex min-w-0 items-center gap-2">
+                    {{-- Mobile hamburger --}}
+                    <button @click="sidebarOpen = !sidebarOpen"
+                            class="lg:hidden -ml-1 shrink-0 rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                            aria-label="Toggle navigation">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <h1 class="truncate text-base font-semibold text-(--color-on-surface) lg:text-lg">
+                        {{ $header ?? '' }}
+                    </h1>
+                </div>
+                <div class="flex shrink-0 items-center gap-2 lg:gap-4">
                     @auth
                         <x-page-help-button />
                         <livewire:shared.notification-bell />
                         <livewire:components.theme-switcher />
                     @endauth
-                    <span class="text-sm text-gray-500">{{ auth()->user()?->name ?? 'Admin' }}</span>
+                    <span class="hidden text-sm text-gray-500 sm:inline">{{ auth()->user()?->name ?? 'Admin' }}</span>
                     @auth
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -84,7 +106,7 @@
             @endselfhosted
 
             {{-- Page Content --}}
-            <main data-theme-scope class="flex-1 overflow-y-auto p-6">
+            <main data-theme-scope class="flex-1 overflow-y-auto p-4 lg:p-6">
                 <x-page-help />
                 {{ $slot }}
             </main>
