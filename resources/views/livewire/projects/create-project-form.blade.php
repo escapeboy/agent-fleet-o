@@ -12,7 +12,7 @@
                         placeholder="What should this project accomplish?"
                         :error="$errors->first('description')" />
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label class="mb-1.5 block text-sm font-medium text-gray-700">Project Type</label>
                             <div class="flex gap-3">
@@ -79,7 +79,7 @@
                 <div>
                     <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Schedule</h3>
                     <div class="space-y-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
-                        <div class="grid grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <x-form-select wire:model.live="frequency" label="Frequency">
                                 @foreach($frequencies as $freq)
                                     <option value="{{ $freq->value }}">{{ $freq->label() }}</option>
@@ -205,7 +205,7 @@
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Delivery (optional)</h3>
                 <p class="mb-3 text-xs text-gray-500">Automatically deliver workflow results when a run completes.</p>
                 <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <x-form-select wire:model.live="deliveryChannel" label="Delivery Channel">
                             <option value="none">No delivery</option>
                             <option value="email">Email</option>

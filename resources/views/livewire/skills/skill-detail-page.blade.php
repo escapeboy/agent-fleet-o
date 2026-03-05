@@ -13,7 +13,7 @@
 
             <div class="space-y-4">
                 {{-- Name & Type --}}
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <x-form-input wire:model="editName" label="Name" type="text"
                         :error="$errors->first('editName')" />
                     <x-form-select wire:model="editType" label="Type">
@@ -37,7 +37,7 @@
                 </x-form-select>
 
                 {{-- Provider / Model --}}
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <x-form-select wire:model.live="editProvider" label="Provider">
                         <option value="">Platform default</option>
                         @foreach($providers as $key => $p)
@@ -208,6 +208,7 @@
             </div>
         @elseif($activeTab === 'versions')
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -230,9 +231,11 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
         @elseif($activeTab === 'executions')
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -261,6 +264,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
         @endif
     @endif

@@ -13,7 +13,7 @@
 
             <div class="space-y-4">
                 {{-- Name & Role --}}
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <x-form-input wire:model="editName" label="Name" type="text"
                         :error="$errors->first('editName')" />
                     <x-form-input wire:model="editRole" label="Role" type="text"
@@ -28,7 +28,7 @@
                 <x-form-textarea wire:model="editBackstory" label="Backstory (optional)" rows="3" />
 
                 {{-- Provider / Model / Budget --}}
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <x-form-select wire:model.live="editProvider" label="Provider"
                         :error="$errors->first('editProvider')">
                         @foreach($providers as $key => $p)
@@ -90,7 +90,7 @@
                 <div>
                     <label class="mb-2 block text-sm font-medium text-gray-700">Assign Skills</label>
                     @if($availableSkills->isNotEmpty())
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             @foreach($availableSkills as $skill)
                                 <button wire:click="toggleSkill('{{ $skill->id }}')" type="button"
                                     class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition
@@ -117,7 +117,7 @@
                     <label class="mb-2 block text-sm font-medium text-gray-700">Assign Tools</label>
                     <p class="mb-3 text-xs text-gray-500">When tools are assigned, the agent uses an agentic loop where the LLM decides which tools to call.</p>
                     @if($availableTools->isNotEmpty())
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             @foreach($availableTools as $tool)
                                 <button wire:click="toggleTool('{{ $tool->id }}')" type="button"
                                     class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition
@@ -244,7 +244,7 @@
                     </div>
                 @endif
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div class="rounded-xl border border-gray-200 bg-white p-4">
                         <h3 class="mb-2 text-sm font-semibold text-gray-700">Capabilities</h3>
                         @if(!empty($agent->capabilities))
@@ -266,6 +266,7 @@
 
         @elseif($activeTab === 'skills')
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -292,10 +293,12 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
 
         @elseif($activeTab === 'tools')
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -324,10 +327,12 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
 
         @elseif($activeTab === 'executions')
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -360,6 +365,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
         @elseif($activeTab === 'risk')
             @php
@@ -447,7 +453,7 @@
 
                 {{-- Breakdown metrics --}}
                 @if(!empty($profile))
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div class="rounded-xl border border-gray-200 bg-white p-4">
                             <h3 class="mb-3 text-sm font-semibold text-gray-700">7-Day Metrics</h3>
                             <dl class="space-y-2">
