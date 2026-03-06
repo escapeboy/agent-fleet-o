@@ -29,9 +29,13 @@ class AssistantPanel extends Component
 
     public function mount(): void
     {
-        $this->selectedProvider = GlobalSetting::get('assistant_llm_provider')
+        $team = auth()->user()?->currentTeam;
+        $teamSettings = $team?->settings ?? [];
+        $this->selectedProvider = $teamSettings['assistant_llm_provider']
+            ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
-        $this->selectedModel = GlobalSetting::get('assistant_llm_model')
+        $this->selectedModel = $teamSettings['assistant_llm_model']
+            ?? GlobalSetting::get('assistant_llm_model')
             ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
 
         $this->loadRecentConversations();
@@ -47,13 +51,26 @@ class AssistantPanel extends Component
         $models = $providers[$this->selectedProvider]['models'] ?? [];
         $this->selectedModel = array_key_first($models) ?? '';
 
-        GlobalSetting::set('assistant_llm_provider', $this->selectedProvider);
-        GlobalSetting::set('assistant_llm_model', $this->selectedModel);
+        $this->saveAssistantLlmToTeam($this->selectedProvider, $this->selectedModel);
     }
 
     public function updatedSelectedModel(): void
     {
-        GlobalSetting::set('assistant_llm_model', $this->selectedModel);
+        $this->saveAssistantLlmToTeam($this->selectedProvider, $this->selectedModel);
+    }
+
+    private function saveAssistantLlmToTeam(string $provider, string $model): void
+    {
+        $team = auth()->user()?->currentTeam;
+        if ($team) {
+            $settings = $team->settings ?? [];
+            $settings['assistant_llm_provider'] = $provider;
+            $settings['assistant_llm_model'] = $model;
+            $team->update(['settings' => $settings]);
+        } else {
+            GlobalSetting::set('assistant_llm_provider', $provider);
+            GlobalSetting::set('assistant_llm_model', $model);
+        }
     }
 
     public function sendMessage(string $message): void
@@ -79,50 +96,29 @@ class AssistantPanel extends Component
 
             $action = app(SendAssistantMessageAction::class);
 
-            // Local agents (Claude Code, Codex) must go through execute() which runs the
-            // tool loop and strips <tool_call> blocks from the output.
-            // executeStreaming() is text-only and would expose raw <tool_call> tags in the UI.
-            $isLocal = (bool) config("llm_providers.{$this->selectedProvider}.local");
+            // Always use execute() so tool calling works for all providers.
+            // - Local agents (Claude Code): text-based <tool_call> loop, onChunk fires per token.
+            // - Cloud providers: PrismPHP tool calling, onChunk fires once with full content
+            //   (gateway falls back to complete() when tools are present, so no mid-stream calls).
+            $accumulated = '';
 
-            if ($isLocal) {
-                $response = $action->execute(
-                    conversation: $conversation,
-                    userMessage: $message,
-                    user: $user,
-                    contextType: $this->contextType ?: null,
-                    contextId: $this->contextId ?: null,
-                    provider: $this->selectedProvider ?: null,
-                    model: $this->selectedModel ?: null,
-                    onChunk: function (string $cleanText): void {
-                        $this->stream(
-                            to: 'assistant-stream',
-                            content: '<div class="assistant-response prose prose-sm max-w-none">'.Str::markdown($cleanText).'</div>',
-                            replace: true,
-                        );
-                    },
-                );
-            } else {
-                // Cloud providers: stream response token-by-token into the wire:stream target.
-                $accumulated = '';
-
-                $response = $action->executeStreaming(
-                    conversation: $conversation,
-                    userMessage: $message,
-                    user: $user,
-                    contextType: $this->contextType ?: null,
-                    contextId: $this->contextId ?: null,
-                    onChunk: function (string $chunk) use (&$accumulated): void {
-                        $accumulated .= $chunk;
-                        $this->stream(
-                            to: 'assistant-stream',
-                            content: '<div class="assistant-response prose prose-sm max-w-none">'.Str::markdown($accumulated).'</div>',
-                            replace: true,
-                        );
-                    },
-                    provider: $this->selectedProvider ?: null,
-                    model: $this->selectedModel ?: null,
-                );
-            }
+            $response = $action->execute(
+                conversation: $conversation,
+                userMessage: $message,
+                user: $user,
+                contextType: $this->contextType ?: null,
+                contextId: $this->contextId ?: null,
+                provider: $this->selectedProvider ?: null,
+                model: $this->selectedModel ?: null,
+                onChunk: function (string $chunk) use (&$accumulated): void {
+                    $accumulated .= $chunk;
+                    $this->stream(
+                        to: 'assistant-stream',
+                        content: '<div class="assistant-response prose prose-sm max-w-none">'.Str::markdown($accumulated).'</div>',
+                        replace: true,
+                    );
+                },
+            );
 
             // Clear the streaming bubble — the response will now appear in the
             // messages array and be rendered by the standard @foreach loop.

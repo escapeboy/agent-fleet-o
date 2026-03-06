@@ -41,11 +41,14 @@ class SendAssistantMessageAction
         // Save user message
         $this->conversationManager->addMessage($conversation, 'user', $userMessage);
 
-        // Resolve provider/model
+        // Resolve provider/model: team.settings → GlobalSetting → hardcoded default
+        $teamSettings = $user->currentTeam?->settings ?? [];
         $provider = $provider
+            ?? ($teamSettings['assistant_llm_provider'] ?? null)
             ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
         $model = $model
+            ?? ($teamSettings['assistant_llm_model'] ?? null)
             ?? GlobalSetting::get('assistant_llm_model')
             ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
 
@@ -102,7 +105,9 @@ class SendAssistantMessageAction
 
             $response = $this->gateway->complete($request);
         } else {
-            // Cloud providers: PrismPHP handles tool calling natively
+            // Cloud providers: PrismPHP handles tool calling natively.
+            // stream() falls back to complete() when tools are present, so onChunk
+            // won't fire mid-stream — we call it once with the full content afterwards.
             $request = new AiRequestDTO(
                 provider: $provider,
                 model: $model,
@@ -118,6 +123,10 @@ class SendAssistantMessageAction
             );
 
             $response = $this->gateway->complete($request);
+
+            if ($onChunk !== null && $response->content !== null) {
+                $onChunk($response->content);
+            }
         }
 
         // Log tool executions for audit
@@ -160,10 +169,13 @@ class SendAssistantMessageAction
         // Save user message
         $this->conversationManager->addMessage($conversation, 'user', $userMessage);
 
+        $teamSettings = $user->currentTeam?->settings ?? [];
         $provider = $provider
+            ?? ($teamSettings['assistant_llm_provider'] ?? null)
             ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
         $model = $model
+            ?? ($teamSettings['assistant_llm_model'] ?? null)
             ?? GlobalSetting::get('assistant_llm_model')
             ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
 
@@ -472,6 +484,7 @@ class SendAssistantMessageAction
             - When you create something, include its URL in your response.
             - If the user asks about something on the current page, use the context above to answer.
             - You can chain multiple tool calls in a single response to answer complex questions.
+            - You can also help with general tasks (writing, brainstorming, content creation, code, etc.) — you are not limited to platform management.
             - Respond in the same language the user writes in.
             GUIDE
             : <<<'GUIDE'
@@ -481,6 +494,7 @@ class SendAssistantMessageAction
             - When the user asks you to create or modify entities, provide a detailed plan with all parameters.
             - If the user wants direct execution, suggest switching to the **Claude Code** provider in the provider selector.
             - When listing or describing entities, use clean tables or bullet lists.
+            - You can also help with general tasks (writing, brainstorming, content creation, code, etc.) — you are not limited to platform management.
             - Respond in the same language the user writes in.
             GUIDE;
 
@@ -507,6 +521,9 @@ class SendAssistantMessageAction
         - **Outbound**: Delivery channels (email, Telegram, Slack, webhook) for sending experiment results.
         - **Marketplace**: Share and install skills, agents, and workflows.
         - **Audit**: Full audit trail of all platform actions.
+        - **Email Templates & Themes**: Create and manage reusable email templates (subject, HTML/text body, visibility) and themes (colors, fonts) for outbound email delivery.
+        - **Triggers**: Event-driven automation rules that evaluate incoming signals and automatically start experiments or projects when conditions are met.
+        - **Evolution**: AI self-improvement proposals — the platform can suggest and apply improvements to agents, skills, and workflows based on execution history.
 
         ## Current User
         - Name: {$user->name}
@@ -545,6 +562,8 @@ class SendAssistantMessageAction
             - `search_memories` — Search agent memories by keyword
             - `list_recent_memories` — List recent memories, filter by agent/source
             - `get_memory_stats` — Memory statistics per agent and source type
+            - `list_email_templates` — List email templates with optional status/visibility filter
+            - `list_email_themes` — List email themes for the team
             READ,
         ];
 
@@ -572,6 +591,18 @@ class SendAssistantMessageAction
             - `trigger_project_run` — Trigger a new run for a project
             - `approve_request` — Approve a pending approval request
             - `reject_request` — Reject a pending approval request (requires reason)
+            - `activate_project` — Activate a draft project
+            - `start_experiment` — Start a draft experiment immediately
+            - `sync_agent_skills` — Sync a list of skill IDs to an agent (replaces existing)
+            - `sync_agent_tools` — Sync a list of tool IDs to an agent (replaces existing)
+            - `upload_memory_knowledge` — Upload text as a memory/knowledge entry for an agent
+            - `reject_evolution_proposal` — Reject a pending evolution proposal with a reason
+            - `schedule_project` — Set or update the schedule for a continuous project
+            - `delegate_and_notify` — Delegate a task to run asynchronously (fire-and-forget project run)
+            - `get_delegation_results` — Check results of a previously delegated task
+            - `create_email_template` — Create a new email template (name, subject, html_body or mjml_body, visibility)
+            - `update_email_template` — Update an existing email template
+            - `update_global_settings` — Update platform-wide settings (super admin only)
             WRITE;
         }
 
@@ -581,6 +612,12 @@ class SendAssistantMessageAction
             ### Destructive Tools (admin/owner only — your role permits these)
             - `kill_experiment` — Permanently kill/terminate an experiment
             - `archive_project` — Permanently archive a project
+            - `delete_agent` — Permanently delete an agent
+            - `delete_memory` — Delete a memory entry
+            - `delete_connector_binding` — Remove a signal connector binding
+            - `manage_byok_credential` — Add, update, or remove a team BYOK provider credential
+            - `manage_api_token` — Create or revoke a team API token
+            - `delete_email_template` — Permanently delete an email template
             DESTRUCTIVE;
         }
 
@@ -615,6 +652,14 @@ class SendAssistantMessageAction
             - **budget_** — Get budget summary, check budget availability
             - **marketplace_** — Browse, publish, install marketplace listings
             - **memory_** — Search memories, list recent, get stats
+            - **artifact_** — List, get, and download experiment/crew artifacts
+            - **outbound_** — Manage outbound proposals, approvals, and blacklist
+            - **webhook_** — List, create, update, delete outbound webhook endpoints
+            - **trigger_** — List, create, update, delete, and test trigger rules
+            - **evolution_** — List, analyze, apply, or reject evolution proposals
+            - **telegram_** — Manage Telegram bot registrations and bindings
+            - **cache_** — Semantic cache stats and purge
+            - **notification_** / **team_** — Team management, members, notifications
             - **dashboard_kpis** / **system_health** / **audit_log** — System observability
             MCP,
         ];
