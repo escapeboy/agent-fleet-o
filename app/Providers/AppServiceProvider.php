@@ -21,13 +21,17 @@ use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Infrastructure\Mail\TeamAwareMailChannel;
+use Illuminate\Notifications\Channels\MailChannel;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
@@ -45,6 +49,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
+
+        // Replace the default MailChannel with our team-aware variant that applies
+        // the active email theme to all system notification emails.
+        $this->app->bind(MailChannel::class, TeamAwareMailChannel::class);
     }
 
     /**
@@ -126,6 +134,32 @@ class AppServiceProvider extends ServiceProvider
                     EvaluateExecutionJob::dispatch('skill', $execution->id);
                 }
             }
+        });
+
+        // Password reset rate limiting (5/min per IP, 3/min per email+IP)
+        RateLimiter::for('password-reset', function (Request $request) {
+            return [
+                Limit::perMinute(5)->by($request->ip()),
+                Limit::perMinute(3)->by($request->input('email', '').'|'.$request->ip()),
+            ];
+        });
+
+        // Branded password reset email
+        ResetPassword::toMailUsing(function ($user, string $token) {
+            $url = url(route('password.reset', [
+                'token' => $token,
+                'email' => $user->getEmailForPasswordReset(),
+            ], false));
+            $expire = config('auth.passwords.'.config('auth.defaults.passwords').'.expire');
+
+            return (new MailMessage)
+                ->subject('Reset your '.config('app.name').' password')
+                ->greeting('Hello, '.$user->name.'!')
+                ->line('We received a password reset request for your account.')
+                ->action('Reset Password', $url)
+                ->line("This link expires in {$expire} minutes.")
+                ->line('If you did not request this, you can safely ignore this email.')
+                ->salutation('— '.config('app.name'));
         });
 
         // Public marketplace API rate limiting

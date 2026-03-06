@@ -200,6 +200,27 @@
                 <p class="mt-1.5 text-xs text-gray-500">Credits. Leave empty for unlimited. Project auto-pauses when a cap is hit and resumes when the period resets.</p>
             </div>
 
+            {{-- Email Template --}}
+            @if($emailTemplates->isNotEmpty())
+                <div>
+                    <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Email Template (optional)</h3>
+                    <div class="rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                        <x-form-select wire:model="emailTemplateId" label="Outbound Email Template"
+                            hint="When set, outbound emails from this project will use this template instead of raw content.">
+                            <option value="">— No template —</option>
+                            @foreach($emailTemplates as $tmpl)
+                                <option value="{{ $tmpl->id }}">{{ $tmpl->name }}{{ $tmpl->subject ? ' ('.$tmpl->subject.')' : '' }}</option>
+                            @endforeach
+                        </x-form-select>
+                        @if($emailTemplateId)
+                            <p class="mt-2 text-xs text-blue-600">
+                                Use <code class="rounded bg-blue-50 px-1">&#123;&#123;variable&#125;&#125;</code> tokens in your template to interpolate outbound payload fields.
+                            </p>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             {{-- Submit --}}
             <div class="flex items-center justify-between border-t border-gray-200 pt-4">
                 <a href="{{ route('projects.show', $project) }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
