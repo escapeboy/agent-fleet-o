@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Mcp\Tools\Email;
+
+use App\Domain\Email\Actions\DeleteEmailTemplateAction;
+use App\Domain\Email\Models\EmailTemplate;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+
+#[IsDestructive]
+class EmailTemplateDeleteTool extends Tool
+{
+    protected string $name = 'email_template_delete';
+
+    protected string $description = 'Delete an email template (soft delete). The template will be marked as deleted and no longer visible.';
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'id' => $schema->string()
+                ->description('Email template UUID')
+                ->required(),
+        ];
+    }
+
+    public function handle(Request $request): Response
+    {
+        $template = EmailTemplate::find($request->get('id'));
+
+        if (! $template) {
+            return Response::error('Email template not found.');
+        }
+
+        try {
+            app(DeleteEmailTemplateAction::class)->execute($template);
+
+            return Response::text(json_encode([
+                'success' => true,
+                'id' => $request->get('id'),
+                'deleted' => true,
+            ]));
+        } catch (\Throwable $e) {
+            return Response::error($e->getMessage());
+        }
+    }
+}
