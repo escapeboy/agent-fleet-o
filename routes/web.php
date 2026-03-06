@@ -56,6 +56,11 @@ use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
+use App\Http\Controllers\EmailTemplatePreviewController;
+use App\Livewire\Email\EmailTemplateBuilderPage;
+use App\Livewire\Email\EmailTemplateListPage;
+use App\Livewire\Email\EmailThemeDetailPage;
+use App\Livewire\Email\EmailThemeListPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
@@ -190,4 +195,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/triggers/create', CreateTriggerRuleForm::class)->name('triggers.create');
 
     Route::get('/changelog', ChangelogPage::class)->name('changelog');
+
+    // Email themes
+    Route::get('/email/themes', EmailThemeListPage::class)->name('email.themes.index');
+    Route::get('/email/themes/{theme}', EmailThemeDetailPage::class)->name('email.themes.show');
+
+    // Email templates
+    Route::get('/email/templates', EmailTemplateListPage::class)->name('email.templates.index');
+    Route::get('/email/templates/{template}/edit', EmailTemplateBuilderPage::class)->name('email.templates.edit');
+    Route::get('/email/templates/{template}/preview', [EmailTemplatePreviewController::class, 'show'])->name('email.templates.preview');
 });

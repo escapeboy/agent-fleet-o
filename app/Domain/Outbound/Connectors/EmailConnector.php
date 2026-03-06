@@ -2,6 +2,8 @@
 
 namespace App\Domain\Outbound\Connectors;
 
+use App\Domain\Email\Services\EmailTemplateInterpolator;
+use App\Domain\Email\Services\EmailThemeResolver;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
@@ -46,6 +48,16 @@ class EmailConnector implements OutboundConnectorInterface
             } else {
                 $subject = $content['subject'] ?? "Experiment: {$proposal->experiment->title}";
                 $body = $content['body'] ?? 'No content generated.';
+
+                // Apply project email template if one is assigned
+                $project = $proposal->experiment?->projectRun?->project
+                    ?? $proposal->experiment?->project ?? null;
+                $template = app(EmailThemeResolver::class)->resolveForProject($project);
+                if ($template) {
+                    $payload = array_merge($content, $proposal->target ?? []);
+                    $body = app(EmailTemplateInterpolator::class)->interpolate($template->html_cache, $payload);
+                    $subject = $template->subject ?: $subject;
+                }
 
                 Mail::raw($body, function ($message) use ($to, $subject) {
                     $message->to($to)->subject($subject);

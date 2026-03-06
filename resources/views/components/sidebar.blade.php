@@ -73,6 +73,10 @@
             Signal Sources
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.*')" icon="envelope">
+            Email Themes
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">
             Health
         </x-sidebar-link>

@@ -2,6 +2,8 @@
 
 namespace App\Domain\Outbound\Connectors;
 
+use App\Domain\Email\Services\EmailTemplateInterpolator;
+use App\Domain\Email\Services\EmailThemeResolver;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Metrics\Services\TrackingUrlSigner;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
@@ -93,6 +95,16 @@ class SmtpEmailConnector implements OutboundConnectorInterface
             } else {
                 $subject = $content['subject'] ?? "Experiment: {$proposal->experiment->title}";
                 $html = $content['body'] ?? 'No content generated.';
+
+                // Apply project email template if one is assigned
+                $project = $proposal->experiment?->projectRun?->project
+                    ?? $proposal->experiment?->project ?? null;
+                $template = app(EmailThemeResolver::class)->resolveForProject($project);
+                if ($template) {
+                    $payload = array_merge($content, $target ?? []);
+                    $html = app(EmailTemplateInterpolator::class)->interpolate($template->html_cache, $payload);
+                    $subject = $template->subject ?: $subject;
+                }
 
                 // Append tracking pixel if tracking base URL is configured
                 $trackingBaseUrl = config('services.tracking.base_url');
