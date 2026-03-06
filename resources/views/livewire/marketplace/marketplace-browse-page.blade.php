@@ -22,6 +22,8 @@
             <option value="skill">Skills</option>
             <option value="agent">Agents</option>
             <option value="workflow">Workflows</option>
+            <option value="email_theme">Email Themes</option>
+            <option value="email_template">Email Templates</option>
         </x-form-select>
 
         <x-form-select wire:model.live="categoryFilter">
@@ -76,8 +78,15 @@
                             {{ $listing->name }}
                         </a>
                         <span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                            {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : ($listing->type === 'bundle' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800')) }}">
-                            {{ ucfirst($listing->type) }}
+                            {{ match($listing->type) {
+                                'skill' => 'bg-purple-100 text-purple-800',
+                                'workflow' => 'bg-green-100 text-green-800',
+                                'bundle' => 'bg-orange-100 text-orange-800',
+                                'email_theme' => 'bg-pink-100 text-pink-800',
+                                'email_template' => 'bg-rose-100 text-rose-800',
+                                default => 'bg-blue-100 text-blue-800',
+                            } }}">
+                            {{ str_replace('_', ' ', ucfirst($listing->type)) }}
                         </span>
                         @if($listing->isPaid())
                             <span class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
