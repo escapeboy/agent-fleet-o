@@ -3,6 +3,11 @@
 namespace App\Domain\Marketplace\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Email\Enums\EmailTemplateStatus;
+use App\Domain\Email\Enums\EmailTemplateVisibility;
+use App\Domain\Email\Enums\EmailThemeStatus;
+use App\Domain\Email\Models\EmailTemplate;
+use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Marketplace\Models\MarketplaceInstallation;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Skill\Enums\ExecutionType;
@@ -34,6 +39,8 @@ class InstallFromMarketplaceAction
             $installedSkillId = null;
             $installedAgentId = null;
             $installedWorkflowId = null;
+            $installedEmailThemeId = null;
+            $installedEmailTemplateId = null;
 
             if ($listing->type === 'bundle') {
                 $this->installBundle($listing, is_array($snapshot) ? $snapshot : [], $teamId, $userId);
@@ -74,6 +81,45 @@ class InstallFromMarketplaceAction
             } elseif ($listing->type === 'workflow') {
                 $workflow = $this->cloneWorkflowFromSnapshot($listing, $snapshot, $teamId, $userId);
                 $installedWorkflowId = $workflow->id;
+            } elseif ($listing->type === 'email_theme') {
+                $theme = EmailTheme::withoutGlobalScopes()->create([
+                    'team_id' => $teamId,
+                    'name' => $listing->name,
+                    'status' => EmailThemeStatus::Draft,
+                    'logo_url' => $snapshot['logo_url'] ?? null,
+                    'logo_width' => $snapshot['logo_width'] ?? 150,
+                    'background_color' => $snapshot['background_color'] ?? '#f4f4f4',
+                    'canvas_color' => $snapshot['canvas_color'] ?? '#ffffff',
+                    'primary_color' => $snapshot['primary_color'] ?? '#2563eb',
+                    'text_color' => $snapshot['text_color'] ?? '#1f2937',
+                    'heading_color' => $snapshot['heading_color'] ?? '#111827',
+                    'muted_color' => $snapshot['muted_color'] ?? '#6b7280',
+                    'divider_color' => $snapshot['divider_color'] ?? '#e5e7eb',
+                    'font_name' => $snapshot['font_name'] ?? 'Inter',
+                    'font_url' => $snapshot['font_url'] ?? null,
+                    'font_family' => $snapshot['font_family'] ?? 'Inter, Arial, sans-serif',
+                    'heading_font_size' => $snapshot['heading_font_size'] ?? 24,
+                    'body_font_size' => $snapshot['body_font_size'] ?? 16,
+                    'line_height' => $snapshot['line_height'] ?? 1.6,
+                    'email_width' => $snapshot['email_width'] ?? 600,
+                    'content_padding' => $snapshot['content_padding'] ?? 24,
+                    'company_name' => $snapshot['company_name'] ?? null,
+                    'company_address' => $snapshot['company_address'] ?? null,
+                    'footer_text' => $snapshot['footer_text'] ?? null,
+                ]);
+                $installedEmailThemeId = $theme->id;
+            } elseif ($listing->type === 'email_template') {
+                $template = EmailTemplate::withoutGlobalScopes()->create([
+                    'team_id' => $teamId,
+                    'name' => $listing->name,
+                    'subject' => $snapshot['subject'] ?? null,
+                    'preview_text' => $snapshot['preview_text'] ?? null,
+                    'design_json' => $snapshot['design_json'] ?? [],
+                    'html_cache' => $snapshot['html_cache'] ?? null,
+                    'status' => EmailTemplateStatus::Draft,
+                    'visibility' => EmailTemplateVisibility::Private,
+                ]);
+                $installedEmailTemplateId = $template->id;
             }
 
             $listing->increment('install_count');
@@ -86,6 +132,8 @@ class InstallFromMarketplaceAction
                 'installed_skill_id' => $installedSkillId,
                 'installed_agent_id' => $installedAgentId,
                 'installed_workflow_id' => $installedWorkflowId,
+                'installed_email_theme_id' => $installedEmailThemeId,
+                'installed_email_template_id' => $installedEmailTemplateId,
             ]);
         });
     }
@@ -132,6 +180,25 @@ class InstallFromMarketplaceAction
                     'constraints' => $configuration['constraints'] ?? [],
                 ]),
                 'workflow' => $this->cloneWorkflowFromManifest($configuration, $name, $teamId, $userId),
+                'email_theme' => EmailTheme::withoutGlobalScopes()->create(array_merge(
+                    ['team_id' => $teamId, 'name' => $name, 'status' => EmailThemeStatus::Draft],
+                    array_intersect_key($configuration, array_flip([
+                        'logo_url', 'logo_width', 'background_color', 'canvas_color', 'primary_color',
+                        'text_color', 'heading_color', 'muted_color', 'divider_color', 'font_name',
+                        'font_url', 'font_family', 'heading_font_size', 'body_font_size', 'line_height',
+                        'email_width', 'content_padding', 'company_name', 'company_address', 'footer_text',
+                    ])),
+                )),
+                'email_template' => EmailTemplate::withoutGlobalScopes()->create([
+                    'team_id' => $teamId,
+                    'name' => $name,
+                    'subject' => $configuration['subject'] ?? null,
+                    'preview_text' => $configuration['preview_text'] ?? null,
+                    'design_json' => $configuration['design_json'] ?? [],
+                    'html_cache' => $configuration['html_cache'] ?? null,
+                    'status' => EmailTemplateStatus::Draft,
+                    'visibility' => EmailTemplateVisibility::Private,
+                ]),
                 default => throw new \InvalidArgumentException("Unsupported marketplace item type: {$type}"),
             };
         });

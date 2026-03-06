@@ -3,6 +3,8 @@
 namespace App\Domain\Marketplace\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Email\Models\EmailTemplate;
+use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Marketplace\Models\MarketplaceListing;
@@ -13,10 +15,10 @@ use Illuminate\Support\Str;
 class PublishToMarketplaceAction
 {
     /**
-     * Publish a skill, agent, or workflow to the marketplace.
+     * Publish a skill, agent, workflow, email theme, or email template to the marketplace.
      */
     public function execute(
-        Skill|Agent|Workflow $item,
+        Skill|Agent|Workflow|EmailTheme|EmailTemplate $item,
         string $teamId,
         string $userId,
         string $name,
@@ -30,6 +32,8 @@ class PublishToMarketplaceAction
             $item instanceof Skill => 'skill',
             $item instanceof Agent => 'agent',
             $item instanceof Workflow => 'workflow',
+            $item instanceof EmailTheme => 'email_theme',
+            $item instanceof EmailTemplate => 'email_template',
         };
 
         $version = match (true) {
@@ -56,6 +60,34 @@ class PublishToMarketplaceAction
                 'constraints' => $item->constraints,
             ],
             $item instanceof Workflow => $this->snapshotWorkflow($item),
+            $item instanceof EmailTheme => [
+                'logo_url' => $item->logo_url,
+                'logo_width' => $item->logo_width,
+                'background_color' => $item->background_color,
+                'canvas_color' => $item->canvas_color,
+                'primary_color' => $item->primary_color,
+                'text_color' => $item->text_color,
+                'heading_color' => $item->heading_color,
+                'muted_color' => $item->muted_color,
+                'divider_color' => $item->divider_color,
+                'font_name' => $item->font_name,
+                'font_url' => $item->font_url,
+                'font_family' => $item->font_family,
+                'heading_font_size' => $item->heading_font_size,
+                'body_font_size' => $item->body_font_size,
+                'line_height' => $item->line_height,
+                'email_width' => $item->email_width,
+                'content_padding' => $item->content_padding,
+                'company_name' => $item->company_name,
+                'company_address' => $item->company_address,
+                'footer_text' => $item->footer_text,
+            ],
+            $item instanceof EmailTemplate => [
+                'subject' => $item->subject,
+                'preview_text' => $item->preview_text,
+                'design_json' => $item->design_json,
+                'html_cache' => $item->html_cache,
+            ],
         };
 
         return MarketplaceListing::create([

@@ -3,6 +3,8 @@
 namespace App\Livewire\Marketplace;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Email\Models\EmailTemplate;
+use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Marketplace\Actions\PublishBundleAction;
 use App\Domain\Marketplace\Actions\PublishToMarketplaceAction;
 use App\Domain\Marketplace\Enums\ListingVisibility;
@@ -47,7 +49,7 @@ class PublishForm extends Component
         $type = $this->bundleAddType;
         $id = $this->bundleAddId;
 
-        if (! $id || ! in_array($type, ['skill', 'agent', 'workflow'])) {
+        if (! $id || ! in_array($type, ['skill', 'agent', 'workflow', 'email_theme', 'email_template'])) {
             return;
         }
         foreach ($this->bundleItems as $existing) {
@@ -68,7 +70,7 @@ class PublishForm extends Component
     {
         if ($this->itemType === 'bundle') {
             return [
-                'itemType' => 'required|in:skill,agent,workflow,bundle',
+                'itemType' => 'required|in:skill,agent,workflow,email_theme,email_template,bundle',
                 'bundleItems' => 'required|array|min:2',
                 'bundleItems.*.type' => 'required|in:skill,agent,workflow',
                 'bundleItems.*.id' => 'required|uuid',
@@ -82,7 +84,7 @@ class PublishForm extends Component
         }
 
         return [
-            'itemType' => 'required|in:skill,agent,workflow,bundle',
+            'itemType' => 'required|in:skill,agent,workflow,email_theme,email_template,bundle',
             'itemId' => 'required|uuid',
             'name' => 'required|string|min:3|max:100',
             'description' => 'required|string|min:10|max:500',
@@ -107,6 +109,8 @@ class PublishForm extends Component
             'skill' => Skill::find($this->itemId),
             'agent' => Agent::find($this->itemId),
             'workflow' => Workflow::find($this->itemId),
+            'email_theme' => EmailTheme::find($this->itemId),
+            'email_template' => EmailTemplate::find($this->itemId),
             default => null,
         };
 
@@ -150,6 +154,8 @@ class PublishForm extends Component
                 'skill' => Skill::findOrFail($this->itemId),
                 'agent' => Agent::findOrFail($this->itemId),
                 'workflow' => Workflow::findOrFail($this->itemId),
+                'email_theme' => EmailTheme::findOrFail($this->itemId),
+                'email_template' => EmailTemplate::findOrFail($this->itemId),
             };
 
             $listing = app(PublishToMarketplaceAction::class)->execute(
@@ -187,11 +193,15 @@ class PublishForm extends Component
         $skills = Skill::where('status', 'active')->get(['id', 'name']);
         $agents = Agent::where('status', 'active')->get(['id', 'name']);
         $workflows = Workflow::where('status', WorkflowStatus::Active)->get(['id', 'name']);
+        $emailThemes = EmailTheme::where('status', 'active')->orderBy('name')->get(['id', 'name']);
+        $emailTemplates = EmailTemplate::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
         return view('livewire.marketplace.publish-form', [
             'skills' => $skills,
             'agents' => $agents,
             'workflows' => $workflows,
+            'emailThemes' => $emailThemes,
+            'emailTemplates' => $emailTemplates,
             'canPublish' => true,
         ])->layout('layouts.app', ['header' => 'Publish to Marketplace']);
     }
