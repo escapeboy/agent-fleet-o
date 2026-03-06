@@ -40,10 +40,15 @@ use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
 use App\Mcp\Tools\Email\EmailTemplateCreateTool;
+use App\Mcp\Tools\Email\EmailTemplateDeleteTool;
 use App\Mcp\Tools\Email\EmailTemplateGetTool;
 use App\Mcp\Tools\Email\EmailTemplateListTool;
+use App\Mcp\Tools\Email\EmailTemplateUpdateTool;
+use App\Mcp\Tools\Email\EmailThemeCreateTool;
+use App\Mcp\Tools\Email\EmailThemeDeleteTool;
 use App\Mcp\Tools\Email\EmailThemeGetTool;
 use App\Mcp\Tools\Email\EmailThemeListTool;
+use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
@@ -368,12 +373,17 @@ class AgentFleetServer extends Server
         // RunPod (1)
         RunPodManageTool::class,
 
-        // Email (5)
+        // Email (10)
         EmailThemeListTool::class,
         EmailThemeGetTool::class,
+        EmailThemeCreateTool::class,
+        EmailThemeUpdateTool::class,
+        EmailThemeDeleteTool::class,
         EmailTemplateListTool::class,
         EmailTemplateGetTool::class,
         EmailTemplateCreateTool::class,
+        EmailTemplateUpdateTool::class,
+        EmailTemplateDeleteTool::class,
 
         // System (5)
         DashboardKpisTool::class,

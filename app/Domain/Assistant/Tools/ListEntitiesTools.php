@@ -5,6 +5,8 @@ namespace App\Domain\Assistant\Tools;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Email\Models\EmailTemplate;
+use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
 use App\Domain\Skill\Models\Skill;
@@ -27,6 +29,8 @@ class ListEntitiesTools
             self::listCrews(),
             self::listWorkflows(),
             self::listPendingApprovals(),
+            self::listEmailTemplates(),
+            self::listEmailThemes(),
         ];
     }
 
@@ -214,6 +218,69 @@ class ListEntitiesTools
                         'id' => $a->id,
                         'type' => $a->type,
                         'created' => $a->created_at->diffForHumans(),
+                    ])->toArray(),
+                ]);
+            });
+    }
+
+    private static function listEmailTemplates(): PrismToolObject
+    {
+        return PrismTool::as('list_email_templates')
+            ->for('List email templates with optional status or visibility filter')
+            ->withStringParameter('status', 'Filter by status: draft, active, archived')
+            ->withStringParameter('visibility', 'Filter by visibility: private, public')
+            ->withNumberParameter('limit', 'Max results to return (default 10)')
+            ->using(function (?string $status = null, ?string $visibility = null, ?int $limit = null) {
+                $query = EmailTemplate::query()->orderByDesc('updated_at');
+
+                if ($status) {
+                    $query->where('status', $status);
+                }
+
+                if ($visibility) {
+                    $query->where('visibility', $visibility);
+                }
+
+                $templates = $query->limit($limit ?? 10)->get();
+
+                return json_encode([
+                    'count' => $templates->count(),
+                    'templates' => $templates->map(fn ($t) => [
+                        'id' => $t->id,
+                        'name' => $t->name,
+                        'subject' => $t->subject,
+                        'status' => $t->status->value,
+                        'visibility' => $t->visibility->value,
+                        'has_html_cache' => ! empty($t->html_cache),
+                        'updated' => $t->updated_at->diffForHumans(),
+                    ])->toArray(),
+                ]);
+            });
+    }
+
+    private static function listEmailThemes(): PrismToolObject
+    {
+        return PrismTool::as('list_email_themes')
+            ->for('List email themes for the current team')
+            ->withStringParameter('status', 'Filter by status: draft, active, archived')
+            ->withNumberParameter('limit', 'Max results to return (default 10)')
+            ->using(function (?string $status = null, ?int $limit = null) {
+                $query = EmailTheme::query()->orderBy('name');
+
+                if ($status) {
+                    $query->where('status', $status);
+                }
+
+                $themes = $query->limit($limit ?? 10)->get();
+
+                return json_encode([
+                    'count' => $themes->count(),
+                    'themes' => $themes->map(fn ($t) => [
+                        'id' => $t->id,
+                        'name' => $t->name,
+                        'status' => $t->status->value,
+                        'primary_color' => $t->primary_color,
+                        'font_name' => $t->font_name,
                     ])->toArray(),
                 ]);
             });
