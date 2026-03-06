@@ -3,6 +3,7 @@
 namespace App\Domain\Assistant\Actions;
 
 use App\Domain\Assistant\Models\AssistantConversation;
+use App\Domain\Assistant\Services\AssistantIntentClassifier;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\Assistant\Services\ContextResolver;
 use App\Domain\Assistant\Services\ConversationManager;
@@ -23,6 +24,7 @@ class SendAssistantMessageAction
         private readonly ConversationManager $conversationManager,
         private readonly ContextResolver $contextResolver,
         private readonly AssistantToolRegistry $toolRegistry,
+        private readonly AssistantIntentClassifier $intentClassifier,
     ) {}
 
     /**
@@ -106,8 +108,22 @@ class SendAssistantMessageAction
             $response = $this->gateway->complete($request);
         } else {
             // Cloud providers: PrismPHP handles tool calling natively.
-            // stream() falls back to complete() when tools are present, so onChunk
-            // won't fire mid-stream — we call it once with the full content afterwards.
+            // Use intent classification to force toolChoice='any' when the message
+            // requires a platform action — this ensures models like Gemini call the
+            // tool instead of generating the content as text.
+            $toolChoice = null;
+            if (! empty($tools)) {
+                $needsTool = $this->intentClassifier->requiresToolCall(
+                    message: $userMessage,
+                    tools: $tools,
+                    provider: $provider,
+                    model: $model,
+                    userId: $user->id,
+                    teamId: $user->current_team_id,
+                );
+                $toolChoice = $needsTool ? 'any' : null;
+            }
+
             $request = new AiRequestDTO(
                 provider: $provider,
                 model: $model,
@@ -120,6 +136,7 @@ class SendAssistantMessageAction
                 tools: $tools ?: null,
                 maxSteps: 5,
                 temperature: 0.3,
+                toolChoice: $toolChoice,
             );
 
             $response = $this->gateway->complete($request);
