@@ -67,6 +67,9 @@ class FallbackAiGateway implements AiGatewayInterface
                     temperature: $request->temperature,
                     teamId: $request->teamId,
                     fallbackChain: $request->fallbackChain,
+                    tools: $request->tools,
+                    maxSteps: $request->maxSteps,
+                    toolChoice: $request->toolChoice,
                 );
 
                 $response = $this->gateway->complete($adjustedRequest);
@@ -135,6 +138,9 @@ class FallbackAiGateway implements AiGatewayInterface
                     temperature: $request->temperature,
                     teamId: $request->teamId,
                     fallbackChain: $request->fallbackChain,
+                    tools: $request->tools,
+                    maxSteps: $request->maxSteps,
+                    toolChoice: $request->toolChoice,
                 );
 
                 $response = $this->gateway->stream($adjustedRequest, $onChunk);
