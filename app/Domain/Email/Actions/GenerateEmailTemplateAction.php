@@ -6,14 +6,13 @@ use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Email\Services\MjmlRenderer;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
-use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Log;
 
 class GenerateEmailTemplateAction
 {
     public function __construct(
         private readonly AiGatewayInterface $gateway,
-        private readonly ProviderResolver $providerResolver,
         private readonly MjmlRenderer $mjmlRenderer,
     ) {}
 
@@ -30,11 +29,16 @@ class GenerateEmailTemplateAction
         ?string $teamId = null,
     ): array {
         $systemPrompt = $this->buildSystemPrompt($theme, $tone);
-        $resolved = $this->providerResolver->resolve();
+
+        // Use assistant LLM (same as chat panel) — creative generation task, not agent execution
+        $provider = GlobalSetting::get('assistant_llm_provider')
+            ?? GlobalSetting::get('default_llm_provider', 'anthropic');
+        $model = GlobalSetting::get('assistant_llm_model')
+            ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
 
         $response = $this->gateway->complete(new AiRequestDTO(
-            provider: $resolved['provider'],
-            model: $resolved['model'],
+            provider: $provider,
+            model: $model,
             systemPrompt: $systemPrompt,
             userPrompt: $description,
             maxTokens: 8192,
