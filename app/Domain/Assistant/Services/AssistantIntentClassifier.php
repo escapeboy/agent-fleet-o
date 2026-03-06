@@ -2,24 +2,21 @@
 
 namespace App\Domain\Assistant\Services;
 
-use App\Infrastructure\AI\Contracts\AiGatewayInterface;
-use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Prism\Prism\Tool as PrismToolObject;
-use Throwable;
 
 /**
  * Lightweight intent classifier that determines whether a user message
  * requires a platform tool call or is purely conversational/informational.
  *
- * Uses the same provider/model as the main request so BYOK credentials
- * are applied automatically. The call is minimal: maxTokens=5, temperature=0.
+ * Uses local pattern matching (no extra API call) to avoid consuming rate
+ * limit quota, adding latency, or failing when the provider is rate limited.
+ *
+ * Detects action-oriented messages (create, update, delete, list, show…)
+ * in English and Bulgarian and returns true to force toolChoice=Any on
+ * providers (e.g. Gemini) that need explicit forcing to call tools.
  */
 class AssistantIntentClassifier
 {
-    public function __construct(
-        private readonly AiGatewayInterface $gateway,
-    ) {}
-
     /**
      * @param  array<PrismToolObject>  $tools
      */
@@ -35,35 +32,56 @@ class AssistantIntentClassifier
             return false;
         }
 
-        $toolNames = implode(', ', array_map(fn (PrismToolObject $t) => $t->name(), $tools));
+        $lower = mb_strtolower(trim($message));
 
-        try {
-            $response = $this->gateway->complete(new AiRequestDTO(
-                provider: $provider,
-                model: $model,
-                systemPrompt: <<<PROMPT
-                You are an intent classifier for a platform assistant.
-                Determine if the user's message requires calling one of the available tools.
+        // Pure question patterns → conversational, no tool forcing needed.
+        $questionStarters = [
+            'what ', "what's ", 'how ', 'why ', 'when ', 'where ', 'who ',
+            'explain ', 'describe ', 'tell me about', 'can you explain',
+            'is it ', 'are there ', 'does ', 'do you ',
+            // Bulgarian
+            'какво ', 'какво е ', 'как ', 'защо ', 'кога ', 'кой ', 'коя ', 'кои ',
+            'обясни ', 'разкажи ', 'можеш ли да обясниш',
+        ];
 
-                Available tools: {$toolNames}
-
-                Reply with ONLY the single word YES or NO.
-                YES = the user wants to create, update, delete, list, or retrieve platform data.
-                NO  = the user is asking a general question, chatting, or asking for advice only.
-                PROMPT,
-                userPrompt: $message,
-                maxTokens: 5,
-                userId: $userId,
-                teamId: $teamId,
-                purpose: 'assistant_intent_classification',
-                temperature: 0.0,
-            ));
-
-            return str_contains(strtoupper(trim($response->content ?? '')), 'YES');
-        } catch (Throwable) {
-            // On error, default to requiring a tool call so the main request
-            // uses toolChoice='any' — better to force tool use than silently skip it.
-            return true;
+        foreach ($questionStarters as $starter) {
+            if (str_starts_with($lower, $starter)) {
+                return false;
+            }
         }
+
+        if (str_ends_with($lower, '?') && mb_strlen($lower) < 80) {
+            return false;
+        }
+
+        // Action keywords → force tool calling.
+        $actionKeywords = [
+            // English — creation / mutation
+            'create ', 'create a ', 'create an ', 'make a ', 'make an ', 'make me ',
+            'generate ', 'build a ', 'build an ', 'add a ', 'add an ',
+            'update ', 'edit ', 'modify ', 'change ', 'rename ',
+            'delete ', 'remove ', 'archive ', 'kill ', 'disable ', 'enable ',
+            'pause ', 'resume ', 'activate ', 'execute ', 'run ', 'trigger ',
+            'schedule ', 'upload ', 'approve ', 'reject ',
+            // English — retrieval / display
+            'list ', 'show me', 'show my', 'get me', 'find me', 'fetch ',
+            'display ', 'give me the', 'what are my', 'what is my',
+            // Bulgarian — creation / mutation
+            'създай', 'направи', 'генерирай', 'добави', 'нов ', 'нова ', 'ново ',
+            'обнови', 'промени', 'изтрий', 'архивирай', 'спри ', 'пусни',
+            'активирай', 'изпълни', 'стартирай', 'качи ', 'одобри', 'откажи',
+            // Bulgarian — retrieval / display
+            'покажи', 'намери', 'провери', 'изведи', 'вземи',
+        ];
+
+        foreach ($actionKeywords as $keyword) {
+            if (str_contains($lower, $keyword)) {
+                return true;
+            }
+        }
+
+        // Default: don't force a tool call for unrecognised messages.
+        // The CRITICAL system prompt instruction + toolChoice=auto handles the rest.
+        return false;
     }
 }
