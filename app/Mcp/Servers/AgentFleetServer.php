@@ -48,6 +48,7 @@ use App\Mcp\Tools\Email\EmailThemeCreateTool;
 use App\Mcp\Tools\Email\EmailThemeDeleteTool;
 use App\Mcp\Tools\Email\EmailThemeGetTool;
 use App\Mcp\Tools\Email\EmailThemeListTool;
+use App\Mcp\Tools\Email\EmailTemplateGenerateTool;
 use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
@@ -373,7 +374,7 @@ class AgentFleetServer extends Server
         // RunPod (1)
         RunPodManageTool::class,
 
-        // Email (10)
+        // Email (11)
         EmailThemeListTool::class,
         EmailThemeGetTool::class,
         EmailThemeCreateTool::class,
@@ -384,6 +385,7 @@ class AgentFleetServer extends Server
         EmailTemplateCreateTool::class,
         EmailTemplateUpdateTool::class,
         EmailTemplateDeleteTool::class,
+        EmailTemplateGenerateTool::class,
 
         // System (5)
         DashboardKpisTool::class,
