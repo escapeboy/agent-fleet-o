@@ -2,6 +2,27 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.4.0] - 2026-03-07
+
+### Added
+
+- **Password Recovery** -- Forgot-password and reset-password pages powered by Laravel Fortify; "Forgot password?" link on the login page; full email-based reset flow with token validation and expiry.
+- **Assistant LLM Configuration** -- Teams can set a dedicated AI provider and model for the assistant chat in Team Settings, independently of the default workflow LLM. Override applies workspace-wide.
+- **Media Analysis Toggle** -- Per-team setting to enable or disable automatic vision analysis of image and PDF attachments on incoming signals; uses credits when enabled.
+- **Approval Timeout Setting** -- Teams can configure the default number of hours before pending approval requests expire, overriding the platform default.
+- **Collapsible Sidebar Groups** -- Navigation reorganised into five collapsible sections — Build, Run, Integrate, Communicate, System — with open/closed state persisted in `localStorage` per user.
+- **Email Theme & Template System** -- Full email theme and template management: custom branding variables, AI-powered template generation, live preview, and archival. Full MCP tool coverage and API access for programmatic control; plan-gated per workspace.
+- **Responsive List Pages** -- Secondary columns (description, dates, metadata) are hidden on mobile across all entity list pages (agents, skills, crews, tools, credentials, workflows, projects, experiments, signals, and more).
+
+### Fixed
+
+- **Assistant Tool Calling** -- Provider-aware `toolChoice` parameter is now only sent to Anthropic, Google, OpenAI, and OpenRouter; streaming completions no longer lose tool-loop results; OpenRouter `{"text":"..."}` wrapper responses are unwrapped correctly.
+- **Mobile Layout** -- Sidebar opens as a full-height drawer on mobile with a backdrop overlay; team-switcher hidden on mobile; navigation list is scrollable on small screens.
+- **PWA Service Worker** -- `sw.js`, `offline.html`, and `browserconfig.xml` are now correctly included in cloud deployments and served directly by nginx.
+- **Test Isolation** -- `ApiTestCase::tearDown()` flushes the array cache to prevent `RateLimiter` state from bleeding across tests in the same PHP process.
+
+---
+
 ## [1.3.0] - 2026-03-04
 
 ### Added
