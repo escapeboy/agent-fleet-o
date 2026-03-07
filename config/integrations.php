@@ -40,6 +40,8 @@ return [
         'pagerduty'  => ['label' => 'PagerDuty',          'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🚨'],
         'hubspot'    => ['label' => 'HubSpot',            'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '🧡'],
         'salesforce' => ['label' => 'Salesforce',         'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '☁️'],
+        'mailchimp'  => ['label' => 'Mailchimp',          'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🐒'],
+        'klaviyo'    => ['label' => 'Klaviyo',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📧'],
     ],
 
     /*

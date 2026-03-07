@@ -6,6 +6,8 @@ use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
 use App\Domain\Integration\Drivers\Datadog\DatadogIntegrationDriver;
 use App\Domain\Integration\Drivers\HubSpot\HubSpotIntegrationDriver;
+use App\Domain\Integration\Drivers\Klaviyo\KlaviyoIntegrationDriver;
+use App\Domain\Integration\Drivers\Mailchimp\MailchimpIntegrationDriver;
 use App\Domain\Integration\Drivers\Salesforce\SalesforceIntegrationDriver;
 use App\Domain\Integration\Drivers\Discord\DiscordIntegrationDriver;
 use App\Domain\Integration\Drivers\Generic\ApiPollingDriver;
@@ -124,5 +126,15 @@ class IntegrationManager extends Manager
     public function createSalesforceDriver(): IntegrationDriverInterface
     {
         return $this->container->make(SalesforceIntegrationDriver::class);
+    }
+
+    public function createMailchimpDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(MailchimpIntegrationDriver::class);
+    }
+
+    public function createKlaviyoDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(KlaviyoIntegrationDriver::class);
     }
 }
