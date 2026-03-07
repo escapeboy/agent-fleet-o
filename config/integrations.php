@@ -34,7 +34,10 @@ return [
         'discord'   => ['label' => 'Discord',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🎮'],
         'teams'     => ['label' => 'Microsoft Teams',    'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🟦'],
         'whatsapp'  => ['label' => 'WhatsApp Business',  'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💬'],
-        'telegram'  => ['label' => 'Telegram',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '✈️'],
+        'telegram'   => ['label' => 'Telegram',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '✈️'],
+        'datadog'    => ['label' => 'Datadog',            'auth' => 'api_key',      'poll_frequency' => 60,   'icon' => '🐶'],
+        'sentry'     => ['label' => 'Sentry',             'auth' => 'api_key',      'poll_frequency' => 120,  'icon' => '🔍'],
+        'pagerduty'  => ['label' => 'PagerDuty',          'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🚨'],
     ],
 
     /*
