@@ -23,6 +23,7 @@ class LogExperimentTransition
 
         AuditEntry::withoutGlobalScopes()->create([
             'user_id' => $userId,
+            'impersonator_id' => session('impersonating_from'),
             'team_id' => $event->experiment->team_id,
             'event' => 'experiment.transitioned',
             'subject_type' => Experiment::class,
