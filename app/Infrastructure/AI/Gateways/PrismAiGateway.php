@@ -247,8 +247,15 @@ class PrismAiGateway implements AiGatewayInterface
             }
         }
 
-        // Extract <thinking> blocks from Anthropic extended thinking responses
+        // Some OpenRouter/OpenAI-compatible models wrap plain text in {"text": "..."}
+        // when they detect tool schemas in the prompt. Unwrap to get clean content.
         $text = $response->text;
+        if ($text !== '' && str_starts_with(ltrim($text), '{')) {
+            $decoded = json_decode($text, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded) && isset($decoded['text']) && count($decoded) === 1) {
+                $text = $decoded['text'];
+            }
+        }
         if (str_contains($text, '<thinking>')) {
             preg_match_all('/<thinking>(.*?)<\/thinking>/s', $text, $matches);
             if (! empty($matches[1])) {

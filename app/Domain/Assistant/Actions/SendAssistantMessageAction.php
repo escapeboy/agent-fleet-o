@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Prism\Prism\Tool as PrismToolObject;
 use Prism\Prism\ValueObjects\ToolOutput;
 
+
 class SendAssistantMessageAction
 {
     public function __construct(
@@ -29,6 +30,10 @@ class SendAssistantMessageAction
 
     /**
      * Execute with tool calling (synchronous, non-streaming).
+     *
+     * When $placeholderMessageId is provided (async job mode), the user message has already
+     * been saved by the caller and the placeholder assistant message is updated in-place
+     * instead of creating a new one.
      */
     public function execute(
         AssistantConversation $conversation,
@@ -39,9 +44,12 @@ class SendAssistantMessageAction
         ?string $provider = null,
         ?string $model = null,
         ?callable $onChunk = null,
+        ?string $placeholderMessageId = null,
     ): AiResponseDTO {
-        // Save user message
-        $this->conversationManager->addMessage($conversation, 'user', $userMessage);
+        // In async job mode the user message is already saved — skip.
+        if ($placeholderMessageId === null) {
+            $this->conversationManager->addMessage($conversation, 'user', $userMessage);
+        }
 
         // Resolve provider/model: team.settings → GlobalSetting → hardcoded default
         $teamSettings = $user->currentTeam?->settings ?? [];
@@ -121,7 +129,12 @@ class SendAssistantMessageAction
                     userId: $user->id,
                     teamId: $user->current_team_id,
                 );
-                $toolChoice = $needsTool ? 'any' : null;
+                // Force toolChoice='any' for providers that support it.
+                // anthropic/google: natively support 'any' (Anthropic API / Gemini API).
+                // openai/openrouter: PrismPHP maps ToolChoice::Any → "required" (OpenAI spec).
+                // openai_compatible/custom_endpoint: may or may not support it — excluded.
+                $supportsAnyToolChoice = in_array($provider, ['anthropic', 'google', 'openai', 'openrouter'], true);
+                $toolChoice = ($needsTool && $supportsAnyToolChoice) ? 'any' : null;
             }
 
             $request = new AiRequestDTO(
@@ -151,18 +164,31 @@ class SendAssistantMessageAction
             $this->logToolExecutions($conversation, $response, $user);
         }
 
-        // Save assistant response
-        $this->conversationManager->addMessage(
-            conversation: $conversation,
-            role: 'assistant',
-            content: $response->content,
-            toolCalls: $response->toolResults,
-            tokenUsage: [
-                'prompt_tokens' => $response->usage->promptTokens,
-                'completion_tokens' => $response->usage->completionTokens,
-                'cost_credits' => $response->usage->costCredits,
-            ],
-        );
+        // Save assistant response — update existing placeholder (async mode) or create new message
+        if ($placeholderMessageId !== null) {
+            \App\Domain\Assistant\Models\AssistantMessage::where('id', $placeholderMessageId)->update([
+                'content' => $response->content,
+                'tool_calls' => $response->toolResults ? json_encode($response->toolResults) : null,
+                'token_usage' => json_encode([
+                    'prompt_tokens' => $response->usage->promptTokens,
+                    'completion_tokens' => $response->usage->completionTokens,
+                    'cost_credits' => $response->usage->costCredits,
+                ]),
+                'metadata' => json_encode(['status' => 'completed']),
+            ]);
+        } else {
+            $this->conversationManager->addMessage(
+                conversation: $conversation,
+                role: 'assistant',
+                content: $response->content,
+                toolCalls: $response->toolResults,
+                tokenUsage: [
+                    'prompt_tokens' => $response->usage->promptTokens,
+                    'completion_tokens' => $response->usage->completionTokens,
+                    'cost_credits' => $response->usage->costCredits,
+                ],
+            );
+        }
 
         // Auto-generate title from first message
         $this->conversationManager->generateTitle($conversation);

@@ -2,11 +2,11 @@
 
 namespace App\Livewire\Assistant;
 
-use App\Domain\Assistant\Actions\SendAssistantMessageAction;
+use App\Domain\Assistant\Jobs\ProcessAssistantMessageJob;
+use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;
-use Illuminate\Support\Str;
 use Livewire\Component;
 
 class AssistantPanel extends Component
@@ -26,6 +26,9 @@ class AssistantPanel extends Component
     public string $selectedProvider = '';
 
     public string $selectedModel = '';
+
+    /** ID of the pending placeholder assistant message (empty when idle). */
+    public string $pendingMessageId = '';
 
     public function mount(): void
     {
@@ -76,79 +79,90 @@ class AssistantPanel extends Component
     public function sendMessage(string $message): void
     {
         $message = trim($message);
-        if ($message === '') {
+        if ($message === '' || $this->pendingMessageId !== '') {
+            return; // Ignore while a response is pending
+        }
+
+        $user = auth()->user();
+        $manager = app(ConversationManager::class);
+
+        // Get or create conversation
+        $conversation = $manager->getOrCreateConversation(
+            userId: $user->id,
+            teamId: $user->current_team_id,
+            conversationId: $this->conversationId ?: null,
+            contextType: $this->contextType ?: null,
+            contextId: $this->contextId ?: null,
+        );
+        $this->conversationId = $conversation->id;
+
+        // Save user message immediately so it persists before the job runs
+        $manager->addMessage($conversation, 'user', $message);
+
+        // Create a placeholder assistant message — the job will fill it in.
+        // content must be non-null (DB constraint); use '' as sentinel value.
+        $placeholder = AssistantMessage::create([
+            'conversation_id' => $conversation->id,
+            'role' => 'assistant',
+            'content' => '',
+            'metadata' => ['status' => 'pending'],
+            'created_at' => now(),
+        ]);
+
+        $this->pendingMessageId = $placeholder->id;
+
+        // Optimistic UI — show user message + "thinking" bubble immediately
+        $this->messages[] = ['role' => 'user', 'content' => $message];
+        $this->messages[] = ['role' => 'assistant', 'content' => null, 'pending' => true];
+
+        // Dispatch to ai-calls queue (timeout 900s — no HTTP timeout risk)
+        ProcessAssistantMessageJob::dispatch(
+            conversationId: $conversation->id,
+            placeholderMessageId: $placeholder->id,
+            userMessage: $message,
+            userId: $user->id,
+            teamId: $user->current_team_id,
+            provider: $this->selectedProvider ?: null,
+            model: $this->selectedModel ?: null,
+            contextType: $this->contextType ?: null,
+            contextId: $this->contextId ?: null,
+        );
+
+        $this->loadRecentConversations();
+    }
+
+    /**
+     * Called by wire:poll — checks if the pending placeholder has been filled.
+     */
+    public function pollPendingMessage(): void
+    {
+        if ($this->pendingMessageId === '') {
             return;
         }
 
-        try {
-            $user = auth()->user();
-            $manager = app(ConversationManager::class);
+        $msg = AssistantMessage::find($this->pendingMessageId);
 
-            // Get or create conversation
-            $conversation = $manager->getOrCreateConversation(
-                userId: $user->id,
-                teamId: $user->current_team_id,
-                conversationId: $this->conversationId ?: null,
-                contextType: $this->contextType ?: null,
-                contextId: $this->contextId ?: null,
-            );
-            $this->conversationId = $conversation->id;
+        if (! $msg) {
+            $this->pendingMessageId = '';
 
-            $action = app(SendAssistantMessageAction::class);
+            return;
+        }
 
-            // Always use execute() so tool calling works for all providers.
-            // - Local agents (Claude Code): text-based <tool_call> loop, onChunk fires per token.
-            // - Cloud providers: PrismPHP tool calling, onChunk fires once with full content
-            //   (gateway falls back to complete() when tools are present, so no mid-stream calls).
-            $accumulated = '';
+        $status = $msg->metadata['status'] ?? 'pending';
+        if ($status === 'completed' || $status === 'failed') {
+            // Job is done — replace the pending bubble with the real content
+            $lastIndex = array_key_last($this->messages);
+            if ($lastIndex !== null && ($this->messages[$lastIndex]['pending'] ?? false)) {
+                $this->messages[$lastIndex] = [
+                    'role' => 'assistant',
+                    'content' => $msg->content ?? ('Sorry, an error occurred: '.($msg->metadata['error'] ?? 'Unknown error')),
+                    'tool_calls_count' => count($msg->tool_calls ?? []),
+                    'cost_credits' => $msg->token_usage['cost_credits'] ?? 0,
+                ];
+            }
 
-            $response = $action->execute(
-                conversation: $conversation,
-                userMessage: $message,
-                user: $user,
-                contextType: $this->contextType ?: null,
-                contextId: $this->contextId ?: null,
-                provider: $this->selectedProvider ?: null,
-                model: $this->selectedModel ?: null,
-                onChunk: function (string $chunk) use (&$accumulated): void {
-                    $accumulated .= $chunk;
-                    $this->stream(
-                        to: 'assistant-stream',
-                        content: '<div class="assistant-response prose prose-sm max-w-none">'.Str::markdown($accumulated).'</div>',
-                        replace: true,
-                    );
-                },
-            );
-
-            // Clear the streaming bubble — the response will now appear in the
-            // messages array and be rendered by the standard @foreach loop.
-            $this->stream(to: 'assistant-stream', content: '', replace: true);
-
-            // Add both user message and assistant response to the messages array.
-            // Alpine shows the user message optimistically during the request,
-            // and clears it when the server response arrives with both messages.
-            $this->messages[] = [
-                'role' => 'user',
-                'content' => $message,
-            ];
-            $this->messages[] = [
-                'role' => 'assistant',
-                'content' => $response->content,
-                'tool_calls_count' => $response->toolCallsCount,
-                'cost_credits' => $response->usage->costCredits,
-            ];
-
+            $this->pendingMessageId = '';
             $this->loadRecentConversations();
-        } catch (\Throwable $e) {
-            $this->stream(to: 'assistant-stream', content: '', replace: true);
-            $this->messages[] = [
-                'role' => 'user',
-                'content' => $message,
-            ];
-            $this->messages[] = [
-                'role' => 'assistant',
-                'content' => 'Sorry, an error occurred: '.$e->getMessage(),
-            ];
         }
     }
 

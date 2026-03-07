@@ -1264,6 +1264,9 @@ class MutationTools
                 try {
                     $team = auth()->user()->currentTeam;
 
+                    // Sanitize LLM "None" strings for optional UUID fields
+                    $email_theme_id = ($email_theme_id && \Illuminate\Support\Str::isUuid($email_theme_id)) ? $email_theme_id : null;
+
                     $data = array_filter([
                         'name' => $name,
                         'subject' => $subject,
@@ -1326,6 +1329,9 @@ class MutationTools
                 }
 
                 try {
+                    // Sanitize LLM "None" strings for optional UUID fields
+                    $email_theme_id = ($email_theme_id && \Illuminate\Support\Str::isUuid($email_theme_id)) ? $email_theme_id : null;
+
                     $data = array_filter([
                         'name' => $name,
                         'subject' => $subject,
