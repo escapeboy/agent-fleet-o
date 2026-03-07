@@ -47,6 +47,11 @@ Route::post('/integrations/webhook/{slug}', [IntegrationWebhookController::class
     ->name('integrations.webhook')
     ->middleware('throttle:120,1');
 
+// WhatsApp webhook verification challenge (GET hub.challenge)
+Route::get('/integrations/webhook/{slug}', [IntegrationWebhookController::class, 'challenge'])
+    ->name('integrations.webhook.challenge')
+    ->middleware('throttle:30,1');
+
 // Telegram webhook (optional push-mode alternative to polling)
 Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'handle'])
     ->name('telegram.webhook')

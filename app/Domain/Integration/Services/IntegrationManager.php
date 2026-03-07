@@ -4,6 +4,7 @@ namespace App\Domain\Integration\Services;
 
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
+use App\Domain\Integration\Drivers\Discord\DiscordIntegrationDriver;
 use App\Domain\Integration\Drivers\Generic\ApiPollingDriver;
 use App\Domain\Integration\Drivers\Generic\WebhookOnlyDriver;
 use App\Domain\Integration\Drivers\GitHub\GitHubIntegrationDriver;
@@ -11,6 +12,9 @@ use App\Domain\Integration\Drivers\Linear\LinearIntegrationDriver;
 use App\Domain\Integration\Drivers\Notion\NotionIntegrationDriver;
 use App\Domain\Integration\Drivers\Slack\SlackIntegrationDriver;
 use App\Domain\Integration\Drivers\Stripe\StripeIntegrationDriver;
+use App\Domain\Integration\Drivers\Teams\TeamsIntegrationDriver;
+use App\Domain\Integration\Drivers\Telegram\TelegramIntegrationDriver;
+use App\Domain\Integration\Drivers\WhatsApp\WhatsAppIntegrationDriver;
 use Illuminate\Support\Manager;
 
 /**
@@ -70,5 +74,25 @@ class IntegrationManager extends Manager
     public function createLinearDriver(): IntegrationDriverInterface
     {
         return $this->container->make(LinearIntegrationDriver::class);
+    }
+
+    public function createDiscordDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(DiscordIntegrationDriver::class);
+    }
+
+    public function createTeamsDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(TeamsIntegrationDriver::class);
+    }
+
+    public function createWhatsappDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(WhatsAppIntegrationDriver::class);
+    }
+
+    public function createTelegramDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(TelegramIntegrationDriver::class);
     }
 }
