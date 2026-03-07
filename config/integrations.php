@@ -42,6 +42,8 @@ return [
         'salesforce' => ['label' => 'Salesforce',         'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '☁️'],
         'mailchimp'  => ['label' => 'Mailchimp',          'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🐒'],
         'klaviyo'    => ['label' => 'Klaviyo',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📧'],
+        'google'     => ['label' => 'Google Workspace',  'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '🔵'],
+        'jira'       => ['label' => 'Jira',              'auth' => 'api_key',      'poll_frequency' => 120,  'icon' => '🔷'],
     ],
 
     /*
@@ -73,6 +75,17 @@ return [
             'client_secret' => env('SALESFORCE_CLIENT_SECRET'),
             'scopes'        => ['api', 'refresh_token', 'offline_access'],
         ],
+        'google' => [
+            'client_id'     => env('GOOGLE_CLIENT_ID'),
+            'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+            'scopes'        => [
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/calendar.readonly',
+                'https://www.googleapis.com/auth/drive.file',
+                'https://www.googleapis.com/auth/userinfo.email',
+                'openid',
+            ],
+        ],
     ],
 
     /*
@@ -99,6 +112,10 @@ return [
         'salesforce' => [
             'authorize' => 'https://login.salesforce.com/services/oauth2/authorize',
             'token'     => 'https://login.salesforce.com/services/oauth2/token',
+        ],
+        'google' => [
+            'authorize' => 'https://accounts.google.com/o/oauth2/v2/auth',
+            'token'     => 'https://oauth2.googleapis.com/token',
         ],
     ],
 
