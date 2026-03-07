@@ -26,6 +26,7 @@ class AuditEntry extends Model
         'created_at',
         'decision_context',
         'triggered_by',
+        'impersonator_id',
     ];
 
     protected function casts(): array
