@@ -1,5 +1,5 @@
 <div
-    x-data="emailTemplateBuilder(@js($designJson))"
+    x-data="emailTemplateBuilder(@js($designJson), @js($template->html_cache))"
     x-init="init()"
 >
     @if(session('message'))
@@ -101,7 +101,7 @@
 <script src="https://unpkg.com/grapesjs-preset-newsletter@1.0.2/dist/index.js"></script>
 
 <script>
-function emailTemplateBuilder(initialDesign) {
+function emailTemplateBuilder(initialDesign, htmlCache) {
     let editor;
     return {
         init() {
@@ -119,8 +119,12 @@ function emailTemplateBuilder(initialDesign) {
                 width: 'auto',
             });
 
-            if (initialDesign && Object.keys(initialDesign).length) {
+            if (initialDesign && initialDesign.pages) {
+                // GrapesJS native project data (saved via the editor)
                 editor.loadProjectData(initialDesign);
+            } else if (htmlCache) {
+                // Fallback: AI-generated or MJML-compiled HTML — load into canvas
+                editor.setComponents(htmlCache);
             }
         },
 

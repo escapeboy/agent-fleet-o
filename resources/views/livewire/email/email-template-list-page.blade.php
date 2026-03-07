@@ -66,6 +66,11 @@
                                 @endif
                                 <a href="{{ route('email.templates.edit', $template) }}"
                                    class="text-xs text-primary-600 hover:text-primary-700">Edit</a>
+                                <button
+                                    wire:click="delete('{{ $template->id }}')"
+                                    wire:confirm="Delete '{{ $template->name }}'? This cannot be undone."
+                                    class="text-xs text-red-400 hover:text-red-600"
+                                >Delete</button>
                             </div>
                         </td>
                     </tr>
