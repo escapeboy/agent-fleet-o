@@ -71,7 +71,6 @@
 
             this.inputText = '';
             this.sending = true;
-            this.pendingMessage = text;
             this.userScrolled = false;
             this.scrollToBottom();
 
@@ -80,10 +79,12 @@
                 this.$refs.messageInput.style.height = 'auto';
             }
 
+            // sendMessage() dispatches an async job and returns immediately —
+            // no long HTTP wait. The pending bubble appears in messages[] and
+            // wire:poll fills it in when the job completes.
             try {
                 await $wire.sendMessage(text);
             } finally {
-                this.pendingMessage = null;
                 this.sending = false;
                 this.scrollToBottom();
             }
@@ -239,60 +240,51 @@
                 </div>
             @endif
 
+            {{-- Poll for async job completion every 3s when a message is pending --}}
+            @if($pendingMessageId)
+                <div wire:poll.3000ms="pollPendingMessage" class="hidden"></div>
+            @endif
+
             {{-- Server-side messages --}}
             @foreach($messages as $msg)
-                <div class="{{ $msg['role'] === 'user' ? 'flex justify-end' : 'flex justify-start' }}">
-                    <div class="{{ $msg['role'] === 'user'
-                        ? 'max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 text-white'
-                        : 'max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-2.5 text-gray-900' }}">
-                        @if($msg['role'] === 'assistant')
-                            <div class="assistant-response prose prose-sm max-w-none">
-                                {!! \Illuminate\Support\Str::markdown($msg['content']) !!}
-                            </div>
-                            @if(!empty($msg['tool_calls_count']))
-                                <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-3 w-3">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
-                                    </svg>
-                                    {{ $msg['tool_calls_count'] }} tool call{{ $msg['tool_calls_count'] > 1 ? 's' : '' }}
+                @if($msg['role'] === 'assistant' && ($msg['pending'] ?? false))
+                    {{-- Thinking bubble — replaced by pollPendingMessage when job completes --}}
+                    <div class="flex justify-start">
+                        <div class="max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <div class="flex gap-1">
+                                    <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 0ms"></span>
+                                    <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 150ms"></span>
+                                    <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 300ms"></span>
                                 </div>
-                            @endif
-                        @else
-                            <p class="text-sm whitespace-pre-wrap">{{ $msg['content'] }}</p>
-                        @endif
-                    </div>
-                </div>
-            @endforeach
-
-            {{-- Optimistic user message (shown immediately, before server responds) --}}
-            <template x-if="pendingMessage">
-                <div class="flex justify-end">
-                    <div class="max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 text-white">
-                        <p class="text-sm whitespace-pre-wrap" x-text="pendingMessage"></p>
-                    </div>
-                </div>
-            </template>
-
-            {{-- Streaming response (wire:stream) — fills with tokens as they arrive --}}
-            <div class="flex justify-start" wire:stream="assistant-stream">
-                {{-- Livewire streams HTML here token by token --}}
-            </div>
-
-            {{-- Thinking indicator — shown until first tokens arrive --}}
-            <template x-if="sending">
-                <div class="flex justify-start">
-                    <div class="max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3">
-                        <div class="flex items-center gap-2">
-                            <div class="flex gap-1">
-                                <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 0ms"></span>
-                                <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 150ms"></span>
-                                <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 300ms"></span>
+                                <span class="text-xs text-gray-500">Thinking...</span>
                             </div>
-                            <span class="text-xs text-gray-500">Thinking...</span>
                         </div>
                     </div>
-                </div>
-            </template>
+                @else
+                    <div class="{{ $msg['role'] === 'user' ? 'flex justify-end' : 'flex justify-start' }}">
+                        <div class="{{ $msg['role'] === 'user'
+                            ? 'max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 text-white'
+                            : 'max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-2.5 text-gray-900' }}">
+                            @if($msg['role'] === 'assistant')
+                                <div class="assistant-response prose prose-sm max-w-none">
+                                    {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '') !!}
+                                </div>
+                                @if(!empty($msg['tool_calls_count']))
+                                    <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-3 w-3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
+                                        </svg>
+                                        {{ $msg['tool_calls_count'] }} tool call{{ $msg['tool_calls_count'] > 1 ? 's' : '' }}
+                                    </div>
+                                @endif
+                            @else
+                                <p class="text-sm whitespace-pre-wrap">{{ $msg['content'] }}</p>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+            @endforeach
         </div>
 
         {{-- Input Area --}}
@@ -333,13 +325,13 @@
                         class="block w-full resize-none rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                         x-on:keydown.enter.prevent="if (!$event.shiftKey) send()"
                         x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
-                        :disabled="sending"
+                        :disabled="sending || $wire.pendingMessageId !== ''"
                     ></textarea>
                 </div>
                 <button
                     type="button"
                     x-on:click="send()"
-                    :disabled="sending || !inputText.trim()"
+                    :disabled="sending || $wire.pendingMessageId !== '' || !inputText.trim()"
                     class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
