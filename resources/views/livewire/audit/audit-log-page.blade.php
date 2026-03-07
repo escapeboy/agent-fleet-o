@@ -24,10 +24,10 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Event</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Subject</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Triggered By</th>
+                    <th class="hidden md:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Subject</th>
+                    <th class="hidden md:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Triggered By</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">User</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Time</th>
+                    <th class="hidden md:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Time</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"></th>
                 </tr>
             </thead>
@@ -45,8 +45,8 @@
                                 {{ $entry->event }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ $entry->subject_type ? class_basename($entry->subject_type) : '-' }}</td>
-                        <td class="px-6 py-4 text-sm">
+                        <td class="hidden md:table-cell px-6 py-4 text-sm text-gray-500">{{ $entry->subject_type ? class_basename($entry->subject_type) : '-' }}</td>
+                        <td class="hidden md:table-cell px-6 py-4 text-sm">
                             @if($entry->triggered_by)
                                 @php
                                     [$triggerType, $triggerId] = array_pad(explode(':', $entry->triggered_by, 2), 2, null);
@@ -60,7 +60,7 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $entry->user?->name ?? 'System' }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ $entry->created_at->diffForHumans() }}</td>
+                        <td class="hidden md:table-cell px-6 py-4 text-sm text-gray-500">{{ $entry->created_at->diffForHumans() }}</td>
                         <td class="px-6 py-4 text-sm text-gray-400">
                             @if($entry->properties || $entry->decision_context)
                                 <svg class="h-4 w-4 transition {{ $expandedEntryId === $entry->id ? 'rotate-90' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
