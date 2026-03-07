@@ -4,8 +4,11 @@ namespace App\Domain\Integration\Services;
 
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
+use App\Domain\Integration\Drivers\Datadog\DatadogIntegrationDriver;
 use App\Domain\Integration\Drivers\Discord\DiscordIntegrationDriver;
 use App\Domain\Integration\Drivers\Generic\ApiPollingDriver;
+use App\Domain\Integration\Drivers\PagerDuty\PagerDutyIntegrationDriver;
+use App\Domain\Integration\Drivers\Sentry\SentryIntegrationDriver;
 use App\Domain\Integration\Drivers\Generic\WebhookOnlyDriver;
 use App\Domain\Integration\Drivers\GitHub\GitHubIntegrationDriver;
 use App\Domain\Integration\Drivers\Linear\LinearIntegrationDriver;
@@ -94,5 +97,20 @@ class IntegrationManager extends Manager
     public function createTelegramDriver(): IntegrationDriverInterface
     {
         return $this->container->make(TelegramIntegrationDriver::class);
+    }
+
+    public function createDatadogDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(DatadogIntegrationDriver::class);
+    }
+
+    public function createSentryDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(SentryIntegrationDriver::class);
+    }
+
+    public function createPagerdutyDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(PagerDutyIntegrationDriver::class);
     }
 }

@@ -11,6 +11,9 @@ use App\Domain\Signal\DTOs\AlertSignalDTO;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @deprecated Use SentryIntegrationDriver for new integrations.
+ */
 class SentryAlertConnector implements InputConnectorInterface
 {
     public function __construct(

@@ -11,6 +11,9 @@ use App\Domain\Signal\DTOs\AlertSignalDTO;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @deprecated Use DatadogIntegrationDriver for new integrations.
+ */
 class DatadogAlertConnector implements InputConnectorInterface
 {
     public function __construct(
