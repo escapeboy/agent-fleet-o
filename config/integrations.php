@@ -30,7 +30,11 @@ return [
         'stripe' => ['label' => 'Stripe',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💳'],
         'notion' => ['label' => 'Notion',       'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '📝'],
         'airtable' => ['label' => 'Airtable',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '📊'],
-        'linear' => ['label' => 'Linear',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📋'],
+        'linear'    => ['label' => 'Linear',             'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📋'],
+        'discord'   => ['label' => 'Discord',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🎮'],
+        'teams'     => ['label' => 'Microsoft Teams',    'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🟦'],
+        'whatsapp'  => ['label' => 'WhatsApp Business',  'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💬'],
+        'telegram'  => ['label' => 'Telegram',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '✈️'],
     ],
 
     /*
