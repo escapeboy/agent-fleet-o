@@ -5,6 +5,8 @@ namespace App\Domain\Integration\Services;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
 use App\Domain\Integration\Drivers\Datadog\DatadogIntegrationDriver;
+use App\Domain\Integration\Drivers\HubSpot\HubSpotIntegrationDriver;
+use App\Domain\Integration\Drivers\Salesforce\SalesforceIntegrationDriver;
 use App\Domain\Integration\Drivers\Discord\DiscordIntegrationDriver;
 use App\Domain\Integration\Drivers\Generic\ApiPollingDriver;
 use App\Domain\Integration\Drivers\PagerDuty\PagerDutyIntegrationDriver;
@@ -112,5 +114,15 @@ class IntegrationManager extends Manager
     public function createPagerdutyDriver(): IntegrationDriverInterface
     {
         return $this->container->make(PagerDutyIntegrationDriver::class);
+    }
+
+    public function createHubspotDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(HubSpotIntegrationDriver::class);
+    }
+
+    public function createSalesforceDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(SalesforceIntegrationDriver::class);
     }
 }

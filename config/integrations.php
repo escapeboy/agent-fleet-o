@@ -38,6 +38,8 @@ return [
         'datadog'    => ['label' => 'Datadog',            'auth' => 'api_key',      'poll_frequency' => 60,   'icon' => '🐶'],
         'sentry'     => ['label' => 'Sentry',             'auth' => 'api_key',      'poll_frequency' => 120,  'icon' => '🔍'],
         'pagerduty'  => ['label' => 'PagerDuty',          'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🚨'],
+        'hubspot'    => ['label' => 'HubSpot',            'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '🧡'],
+        'salesforce' => ['label' => 'Salesforce',         'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '☁️'],
     ],
 
     /*
@@ -59,6 +61,16 @@ return [
             'client_secret' => env('NOTION_CLIENT_SECRET'),
             'scopes' => [],
         ],
+        'hubspot' => [
+            'client_id'     => env('HUBSPOT_CLIENT_ID'),
+            'client_secret' => env('HUBSPOT_CLIENT_SECRET'),
+            'scopes'        => ['crm.objects.contacts.read', 'crm.objects.contacts.write', 'crm.objects.deals.read', 'crm.objects.deals.write', 'tickets'],
+        ],
+        'salesforce' => [
+            'client_id'     => env('SALESFORCE_CLIENT_ID'),
+            'client_secret' => env('SALESFORCE_CLIENT_SECRET'),
+            'scopes'        => ['api', 'refresh_token', 'offline_access'],
+        ],
     ],
 
     /*
@@ -77,6 +89,14 @@ return [
         'notion' => [
             'authorize' => 'https://api.notion.com/v1/oauth/authorize',
             'token' => 'https://api.notion.com/v1/oauth/token',
+        ],
+        'hubspot' => [
+            'authorize' => 'https://app.hubspot.com/oauth/authorize',
+            'token'     => 'https://api.hubapi.com/oauth/v1/token',
+        ],
+        'salesforce' => [
+            'authorize' => 'https://login.salesforce.com/services/oauth2/authorize',
+            'token'     => 'https://login.salesforce.com/services/oauth2/token',
         ],
     ],
 
