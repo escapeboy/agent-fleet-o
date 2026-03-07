@@ -17,6 +17,7 @@ class LogBudgetEvent
 
         AuditEntry::create([
             'user_id' => $entry->user_id,
+            'impersonator_id' => session('impersonating_from'),
             'event' => 'budget.'.$entry->type->value,
             'subject_type' => CreditLedger::class,
             'subject_id' => $entry->id,

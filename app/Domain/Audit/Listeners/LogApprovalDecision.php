@@ -17,6 +17,7 @@ class LogApprovalDecision
 
         AuditEntry::create([
             'user_id' => $approval->reviewed_by,
+            'impersonator_id' => session('impersonating_from'),
             'event' => 'approval.'.$approval->status->value,
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approval->id,

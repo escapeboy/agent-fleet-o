@@ -18,6 +18,7 @@ class LogAgentEvent
 
         AuditEntry::create([
             'event' => $eventName,
+            'impersonator_id' => session('impersonating_from'),
             'subject_type' => Agent::class,
             'subject_id' => $agent->id,
             'properties' => [

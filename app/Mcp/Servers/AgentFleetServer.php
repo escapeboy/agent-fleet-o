@@ -3,6 +3,13 @@
 namespace App\Mcp\Servers;
 
 use App\Mcp\Concerns\BootstrapsMcpAuth;
+use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
+use App\Mcp\Tools\Admin\AdminBillingRefundTool;
+use App\Mcp\Tools\Admin\AdminSecurityOverviewTool;
+use App\Mcp\Tools\Admin\AdminTeamBillingDetailTool;
+use App\Mcp\Tools\Admin\AdminTeamSuspendTool;
+use App\Mcp\Tools\Admin\AdminUserRevokeSessionsTool;
+use App\Mcp\Tools\Admin\AdminUserSendPasswordResetTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
@@ -393,5 +400,14 @@ class AgentFleetServer extends Server
         SystemVersionCheckTool::class,
         AuditLogTool::class,
         GlobalSettingsUpdateTool::class,
+
+        // Admin (7) — super admin only
+        AdminTeamSuspendTool::class,
+        AdminTeamBillingDetailTool::class,
+        AdminBillingApplyCreditTool::class,
+        AdminBillingRefundTool::class,
+        AdminSecurityOverviewTool::class,
+        AdminUserRevokeSessionsTool::class,
+        AdminUserSendPasswordResetTool::class,
     ];
 }
