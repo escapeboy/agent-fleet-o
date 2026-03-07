@@ -3,6 +3,7 @@
 namespace App\Livewire\Email;
 
 use App\Domain\Email\Actions\CreateEmailTemplateAction;
+use App\Domain\Email\Actions\DeleteEmailTemplateAction;
 use App\Domain\Email\Enums\EmailTemplateStatus;
 use App\Domain\Email\Models\EmailTemplate;
 use Livewire\Attributes\Url;
@@ -51,6 +52,15 @@ class EmailTemplateListPage extends Component
 
         $this->showCreateModal = false;
         $this->redirect(route('email.templates.edit', $template));
+    }
+
+    public function delete(string $id): void
+    {
+        $template = EmailTemplate::findOrFail($id);
+
+        app(DeleteEmailTemplateAction::class)->execute($template);
+
+        session()->flash('message', 'Template deleted.');
     }
 
     public function render()
