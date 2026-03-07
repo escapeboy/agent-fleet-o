@@ -6,6 +6,8 @@ use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
 use App\Domain\Integration\Drivers\Datadog\DatadogIntegrationDriver;
 use App\Domain\Integration\Drivers\Google\GoogleIntegrationDriver;
+use App\Domain\Integration\Drivers\Make\MakeIntegrationDriver;
+use App\Domain\Integration\Drivers\Zapier\ZapierIntegrationDriver;
 use App\Domain\Integration\Drivers\HubSpot\HubSpotIntegrationDriver;
 use App\Domain\Integration\Drivers\Jira\JiraIntegrationDriver;
 use App\Domain\Integration\Drivers\Klaviyo\KlaviyoIntegrationDriver;
@@ -148,5 +150,15 @@ class IntegrationManager extends Manager
     public function createJiraDriver(): IntegrationDriverInterface
     {
         return $this->container->make(JiraIntegrationDriver::class);
+    }
+
+    public function createZapierDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(ZapierIntegrationDriver::class);
+    }
+
+    public function createMakeDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(MakeIntegrationDriver::class);
     }
 }

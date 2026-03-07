@@ -44,6 +44,8 @@ return [
         'klaviyo'    => ['label' => 'Klaviyo',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📧'],
         'google'     => ['label' => 'Google Workspace',  'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '🔵'],
         'jira'       => ['label' => 'Jira',              'auth' => 'api_key',      'poll_frequency' => 120,  'icon' => '🔷'],
+        'zapier'     => ['label' => 'Zapier',            'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '⚡'],
+        'make'       => ['label' => 'Make',              'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🔮'],
     ],
 
     /*
