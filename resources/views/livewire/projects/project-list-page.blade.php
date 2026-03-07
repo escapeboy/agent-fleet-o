@@ -44,7 +44,8 @@
 
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <table class="min-w-full divide-y divide-gray-200">
+        <div class="overflow-x-auto">
+        <table class="w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     @php
@@ -52,41 +53,41 @@
                             ? ($sortDirection === 'asc' ? '&#9650;' : '&#9660;')
                             : '<span class="text-gray-300">&#9650;</span>';
                     @endphp
-                    <th wire:click="sortBy('title')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
+                    <th wire:click="sortBy('title')" class="cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Title {!! $sortIcon('title') !!}
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Schedule</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Last Run</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Success Rate</th>
-                    <th wire:click="sortBy('created_at')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
+                    <th class="px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Schedule</th>
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Last Run</th>
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Success Rate</th>
+                    <th wire:click="sortBy('created_at')" class="hidden md:table-cell cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Created {!! $sortIcon('created_at') !!}
                     </th>
-                    <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
+                    <th class="px-3 py-2 md:px-6 md:py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 @forelse($projects as $project)
                     <tr class="transition hover:bg-gray-50">
-                        <td class="px-6 py-4">
+                        <td class="px-3 py-3 md:px-6 md:py-4">
                             <a href="{{ route('projects.show', $project) }}" class="font-medium text-primary-600 hover:text-primary-800">
                                 {{ $project->title }}
                             </a>
                             @if($project->description)
-                                <p class="mt-0.5 max-w-xs truncate text-xs text-gray-400">{{ $project->description }}</p>
+                                <p class="mt-0.5 truncate text-xs text-gray-400">{{ $project->description }}</p>
                             @endif
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="hidden md:table-cell px-6 py-4">
                             <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium
                                 {{ $project->type === \App\Domain\Project\Enums\ProjectType::Continuous ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700' }}">
                                 {{ $project->type->label() }}
                             </span>
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-3 py-3 md:px-6 md:py-4">
                             <x-status-badge :status="$project->status->value" />
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">
+                        <td class="hidden md:table-cell px-6 py-4 text-sm text-gray-500">
                             @if($project->schedule && $project->type === \App\Domain\Project\Enums\ProjectType::Continuous)
                                 <span class="text-xs">{{ $project->schedule->frequency->label() }}</span>
                                 @if($project->schedule->next_run_at)
@@ -96,14 +97,14 @@
                                 <span class="text-xs text-gray-400">One-shot</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">
+                        <td class="hidden md:table-cell px-6 py-4 text-sm text-gray-500">
                             @if($project->last_run_at)
                                 {{ $project->last_run_at->diffForHumans() }}
                             @else
                                 <span class="text-gray-400">Never</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="hidden md:table-cell px-6 py-4">
                             @php $rate = $project->successRate(); @endphp
                             @if($rate !== null)
                                 <div class="flex items-center gap-2">
@@ -116,8 +117,8 @@
                                 <span class="text-xs text-gray-400">N/A</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ $project->created_at->diffForHumans() }}</td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="hidden md:table-cell px-6 py-4 text-sm text-gray-500">{{ $project->created_at->diffForHumans() }}</td>
+                        <td class="px-3 py-3 md:px-6 md:py-4 text-right">
                             <div class="flex items-center justify-end gap-1">
                                 @if($project->status->canTransitionTo(\App\Domain\Project\Enums\ProjectStatus::Paused))
                                     <button wire:click="pause('{{ $project->id }}')"
@@ -150,6 +151,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 
     <div class="mt-4">

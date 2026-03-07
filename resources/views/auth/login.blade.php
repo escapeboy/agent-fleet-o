@@ -53,8 +53,9 @@
                     <x-form-input label="Password" type="password" id="password" name="password" required />
                 </div>
 
-                <div class="mb-6">
+                <div class="mb-6 flex items-center justify-between">
                     <x-form-checkbox id="remember" name="remember" label="Remember me" />
+                    <a href="{{ route('password.request') }}" class="text-sm text-primary-600 hover:text-primary-700">Forgot password?</a>
                 </div>
 
                 <button type="submit"

@@ -14,7 +14,7 @@
     {{-- Instance Info --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-4 text-lg font-semibold text-gray-900">Instance Settings</h2>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <x-form-input wire:model="teamName" label="Instance Name" type="text" />
             <x-form-input wire:model="teamSlug" label="Slug" type="text" />
         </div>

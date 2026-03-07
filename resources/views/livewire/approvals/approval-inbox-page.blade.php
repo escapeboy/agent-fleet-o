@@ -8,10 +8,10 @@
 
     {{-- Status Tabs --}}
     <div class="mb-6 border-b border-gray-200">
-        <nav class="-mb-px flex gap-6">
+        <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @foreach(['pending', 'approved', 'rejected', 'expired'] as $tab)
                 <button wire:click="$set('statusTab', '{{ $tab }}')"
-                    class="border-b-2 px-1 pb-3 text-sm font-medium transition
+                    class="whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium transition
                     {{ $statusTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                     {{ ucfirst($tab) }}
                     <span class="ml-1 rounded-full {{ $statusTab === $tab ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600' }} px-2 py-0.5 text-xs">{{ $counts[$tab] }}</span>

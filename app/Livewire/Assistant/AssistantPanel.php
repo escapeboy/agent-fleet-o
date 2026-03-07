@@ -2,11 +2,11 @@
 
 namespace App\Livewire\Assistant;
 
-use App\Domain\Assistant\Actions\SendAssistantMessageAction;
+use App\Domain\Assistant\Jobs\ProcessAssistantMessageJob;
+use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;
-use Illuminate\Support\Str;
 use Livewire\Component;
 
 class AssistantPanel extends Component
@@ -27,11 +27,18 @@ class AssistantPanel extends Component
 
     public string $selectedModel = '';
 
+    /** ID of the pending placeholder assistant message (empty when idle). */
+    public string $pendingMessageId = '';
+
     public function mount(): void
     {
-        $this->selectedProvider = GlobalSetting::get('assistant_llm_provider')
+        $team = auth()->user()?->currentTeam;
+        $teamSettings = $team?->settings ?? [];
+        $this->selectedProvider = $teamSettings['assistant_llm_provider']
+            ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
-        $this->selectedModel = GlobalSetting::get('assistant_llm_model')
+        $this->selectedModel = $teamSettings['assistant_llm_model']
+            ?? GlobalSetting::get('assistant_llm_model')
             ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
 
         $this->loadRecentConversations();
@@ -47,112 +54,115 @@ class AssistantPanel extends Component
         $models = $providers[$this->selectedProvider]['models'] ?? [];
         $this->selectedModel = array_key_first($models) ?? '';
 
-        GlobalSetting::set('assistant_llm_provider', $this->selectedProvider);
-        GlobalSetting::set('assistant_llm_model', $this->selectedModel);
+        $this->saveAssistantLlmToTeam($this->selectedProvider, $this->selectedModel);
     }
 
     public function updatedSelectedModel(): void
     {
-        GlobalSetting::set('assistant_llm_model', $this->selectedModel);
+        $this->saveAssistantLlmToTeam($this->selectedProvider, $this->selectedModel);
+    }
+
+    private function saveAssistantLlmToTeam(string $provider, string $model): void
+    {
+        $team = auth()->user()?->currentTeam;
+        if ($team) {
+            $settings = $team->settings ?? [];
+            $settings['assistant_llm_provider'] = $provider;
+            $settings['assistant_llm_model'] = $model;
+            $team->update(['settings' => $settings]);
+        } else {
+            GlobalSetting::set('assistant_llm_provider', $provider);
+            GlobalSetting::set('assistant_llm_model', $model);
+        }
     }
 
     public function sendMessage(string $message): void
     {
         $message = trim($message);
-        if ($message === '') {
+        if ($message === '' || $this->pendingMessageId !== '') {
+            return; // Ignore while a response is pending
+        }
+
+        $user = auth()->user();
+        $manager = app(ConversationManager::class);
+
+        // Get or create conversation
+        $conversation = $manager->getOrCreateConversation(
+            userId: $user->id,
+            teamId: $user->current_team_id,
+            conversationId: $this->conversationId ?: null,
+            contextType: $this->contextType ?: null,
+            contextId: $this->contextId ?: null,
+        );
+        $this->conversationId = $conversation->id;
+
+        // Save user message immediately so it persists before the job runs
+        $manager->addMessage($conversation, 'user', $message);
+
+        // Create a placeholder assistant message — the job will fill it in.
+        // content must be non-null (DB constraint); use '' as sentinel value.
+        $placeholder = AssistantMessage::create([
+            'conversation_id' => $conversation->id,
+            'role' => 'assistant',
+            'content' => '',
+            'metadata' => ['status' => 'pending'],
+            'created_at' => now(),
+        ]);
+
+        $this->pendingMessageId = $placeholder->id;
+
+        // Optimistic UI — show user message + "thinking" bubble immediately
+        $this->messages[] = ['role' => 'user', 'content' => $message];
+        $this->messages[] = ['role' => 'assistant', 'content' => null, 'pending' => true];
+
+        // Dispatch to ai-calls queue (timeout 900s — no HTTP timeout risk)
+        ProcessAssistantMessageJob::dispatch(
+            conversationId: $conversation->id,
+            placeholderMessageId: $placeholder->id,
+            userMessage: $message,
+            userId: $user->id,
+            teamId: $user->current_team_id,
+            provider: $this->selectedProvider ?: null,
+            model: $this->selectedModel ?: null,
+            contextType: $this->contextType ?: null,
+            contextId: $this->contextId ?: null,
+        );
+
+        $this->loadRecentConversations();
+    }
+
+    /**
+     * Called by wire:poll — checks if the pending placeholder has been filled.
+     */
+    public function pollPendingMessage(): void
+    {
+        if ($this->pendingMessageId === '') {
             return;
         }
 
-        try {
-            $user = auth()->user();
-            $manager = app(ConversationManager::class);
+        $msg = AssistantMessage::find($this->pendingMessageId);
 
-            // Get or create conversation
-            $conversation = $manager->getOrCreateConversation(
-                userId: $user->id,
-                teamId: $user->current_team_id,
-                conversationId: $this->conversationId ?: null,
-                contextType: $this->contextType ?: null,
-                contextId: $this->contextId ?: null,
-            );
-            $this->conversationId = $conversation->id;
+        if (! $msg) {
+            $this->pendingMessageId = '';
 
-            $action = app(SendAssistantMessageAction::class);
+            return;
+        }
 
-            // Local agents (Claude Code, Codex) must go through execute() which runs the
-            // tool loop and strips <tool_call> blocks from the output.
-            // executeStreaming() is text-only and would expose raw <tool_call> tags in the UI.
-            $isLocal = (bool) config("llm_providers.{$this->selectedProvider}.local");
-
-            if ($isLocal) {
-                $response = $action->execute(
-                    conversation: $conversation,
-                    userMessage: $message,
-                    user: $user,
-                    contextType: $this->contextType ?: null,
-                    contextId: $this->contextId ?: null,
-                    provider: $this->selectedProvider ?: null,
-                    model: $this->selectedModel ?: null,
-                    onChunk: function (string $cleanText): void {
-                        $this->stream(
-                            to: 'assistant-stream',
-                            content: '<div class="assistant-response prose prose-sm max-w-none">'.Str::markdown($cleanText).'</div>',
-                            replace: true,
-                        );
-                    },
-                );
-            } else {
-                // Cloud providers: stream response token-by-token into the wire:stream target.
-                $accumulated = '';
-
-                $response = $action->executeStreaming(
-                    conversation: $conversation,
-                    userMessage: $message,
-                    user: $user,
-                    contextType: $this->contextType ?: null,
-                    contextId: $this->contextId ?: null,
-                    onChunk: function (string $chunk) use (&$accumulated): void {
-                        $accumulated .= $chunk;
-                        $this->stream(
-                            to: 'assistant-stream',
-                            content: '<div class="assistant-response prose prose-sm max-w-none">'.Str::markdown($accumulated).'</div>',
-                            replace: true,
-                        );
-                    },
-                    provider: $this->selectedProvider ?: null,
-                    model: $this->selectedModel ?: null,
-                );
+        $status = $msg->metadata['status'] ?? 'pending';
+        if ($status === 'completed' || $status === 'failed') {
+            // Job is done — replace the pending bubble with the real content
+            $lastIndex = array_key_last($this->messages);
+            if ($lastIndex !== null && ($this->messages[$lastIndex]['pending'] ?? false)) {
+                $this->messages[$lastIndex] = [
+                    'role' => 'assistant',
+                    'content' => $msg->content ?? ('Sorry, an error occurred: '.($msg->metadata['error'] ?? 'Unknown error')),
+                    'tool_calls_count' => count($msg->tool_calls ?? []),
+                    'cost_credits' => $msg->token_usage['cost_credits'] ?? 0,
+                ];
             }
 
-            // Clear the streaming bubble — the response will now appear in the
-            // messages array and be rendered by the standard @foreach loop.
-            $this->stream(to: 'assistant-stream', content: '', replace: true);
-
-            // Add both user message and assistant response to the messages array.
-            // Alpine shows the user message optimistically during the request,
-            // and clears it when the server response arrives with both messages.
-            $this->messages[] = [
-                'role' => 'user',
-                'content' => $message,
-            ];
-            $this->messages[] = [
-                'role' => 'assistant',
-                'content' => $response->content,
-                'tool_calls_count' => $response->toolCallsCount,
-                'cost_credits' => $response->usage->costCredits,
-            ];
-
+            $this->pendingMessageId = '';
             $this->loadRecentConversations();
-        } catch (\Throwable $e) {
-            $this->stream(to: 'assistant-stream', content: '', replace: true);
-            $this->messages[] = [
-                'role' => 'user',
-                'content' => $message,
-            ];
-            $this->messages[] = [
-                'role' => 'assistant',
-                'content' => 'Sorry, an error occurred: '.$e->getMessage(),
-            ];
         }
     }
 

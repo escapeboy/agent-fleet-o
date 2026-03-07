@@ -268,7 +268,7 @@
                         @endforeach
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <x-form-input wire:model="editMaxIterations" type="number" label="Max Retries" min="1" max="10" :error="$errors->first('editMaxIterations')" />
                         <x-form-input wire:model="editQualityThreshold" type="number" label="Quality Threshold" min="0" max="1" step="0.05" :error="$errors->first('editQualityThreshold')" />
                     </div>

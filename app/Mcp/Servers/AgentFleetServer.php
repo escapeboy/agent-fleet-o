@@ -39,6 +39,17 @@ use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
+use App\Mcp\Tools\Email\EmailTemplateCreateTool;
+use App\Mcp\Tools\Email\EmailTemplateDeleteTool;
+use App\Mcp\Tools\Email\EmailTemplateGetTool;
+use App\Mcp\Tools\Email\EmailTemplateListTool;
+use App\Mcp\Tools\Email\EmailTemplateUpdateTool;
+use App\Mcp\Tools\Email\EmailThemeCreateTool;
+use App\Mcp\Tools\Email\EmailThemeDeleteTool;
+use App\Mcp\Tools\Email\EmailThemeGetTool;
+use App\Mcp\Tools\Email\EmailThemeListTool;
+use App\Mcp\Tools\Email\EmailTemplateGenerateTool;
+use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
@@ -165,7 +176,7 @@ class AgentFleetServer extends Server
 
     public int $maxPaginationLength = 200;
 
-    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, and team settings.';
+    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, email themes, email templates, and team settings.';
 
     protected function boot(): void
     {
@@ -362,6 +373,19 @@ class AgentFleetServer extends Server
 
         // RunPod (1)
         RunPodManageTool::class,
+
+        // Email (11)
+        EmailThemeListTool::class,
+        EmailThemeGetTool::class,
+        EmailThemeCreateTool::class,
+        EmailThemeUpdateTool::class,
+        EmailThemeDeleteTool::class,
+        EmailTemplateListTool::class,
+        EmailTemplateGetTool::class,
+        EmailTemplateCreateTool::class,
+        EmailTemplateUpdateTool::class,
+        EmailTemplateDeleteTool::class,
+        EmailTemplateGenerateTool::class,
 
         // System (5)
         DashboardKpisTool::class,

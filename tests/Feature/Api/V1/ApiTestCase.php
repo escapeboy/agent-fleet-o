@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -15,6 +16,12 @@ abstract class ApiTestCase extends TestCase
     protected User $user;
 
     protected Team $team;
+
+    protected function tearDown(): void
+    {
+        Cache::flush();
+        parent::tearDown();
+    }
 
     protected function setUp(): void
     {

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Shared\Models;
 
+use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Shared\Enums\TeamRole;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Models\User;
@@ -32,6 +33,7 @@ class Team extends Model
         'owner_id',
         'settings',
         'credential_key',
+        'default_email_theme_id',
     ];
 
     protected $hidden = [
@@ -74,6 +76,16 @@ class Team extends Model
             ->where('provider', $provider)
             ->where('is_active', true)
             ->first();
+    }
+
+    public function defaultEmailTheme(): BelongsTo
+    {
+        return $this->belongsTo(EmailTheme::class, 'default_email_theme_id');
+    }
+
+    public function emailThemes(): HasMany
+    {
+        return $this->hasMany(EmailTheme::class);
     }
 
     public function memberRole(User $user): ?TeamRole

@@ -11,7 +11,7 @@
                     <x-form-textarea wire:model="description" label="Description" rows="3"
                         :error="$errors->first('description')" />
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <x-form-select wire:model="agentId" label="Lead Agent" :error="$errors->first('agentId')">
                             <option value="">Select an agent...</option>
                             @foreach($agents as $agent)
@@ -67,7 +67,7 @@
                 <div>
                     <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Schedule</h3>
                     <div class="space-y-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
-                        <div class="grid grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <x-form-select wire:model.live="frequency" label="Frequency">
                                 @foreach($frequencies as $freq)
                                     <option value="{{ $freq->value }}">{{ $freq->label() }}</option>
@@ -118,7 +118,7 @@
             <div>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Result Delivery (optional)</h3>
                 <div class="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <x-form-select wire:model.live="deliveryChannel" label="Delivery Channel">
                             <option value="none">No delivery</option>
                             <option value="email">Email</option>
@@ -199,6 +199,27 @@
                 </div>
                 <p class="mt-1.5 text-xs text-gray-500">Credits. Leave empty for unlimited. Project auto-pauses when a cap is hit and resumes when the period resets.</p>
             </div>
+
+            {{-- Email Template --}}
+            @if($emailTemplates->isNotEmpty())
+                <div>
+                    <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Email Template (optional)</h3>
+                    <div class="rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                        <x-form-select wire:model="emailTemplateId" label="Outbound Email Template"
+                            hint="When set, outbound emails from this project will use this template instead of raw content.">
+                            <option value="">— No template —</option>
+                            @foreach($emailTemplates as $tmpl)
+                                <option value="{{ $tmpl->id }}">{{ $tmpl->name }}{{ $tmpl->subject ? ' ('.$tmpl->subject.')' : '' }}</option>
+                            @endforeach
+                        </x-form-select>
+                        @if($emailTemplateId)
+                            <p class="mt-2 text-xs text-blue-600">
+                                Use <code class="rounded bg-blue-50 px-1">&#123;&#123;variable&#125;&#125;</code> tokens in your template to interpolate outbound payload fields.
+                            </p>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             {{-- Submit --}}
             <div class="flex items-center justify-between border-t border-gray-200 pt-4">

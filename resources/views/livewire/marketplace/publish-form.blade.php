@@ -13,6 +13,8 @@
                     <option value="skill">Skill</option>
                     <option value="agent">Agent</option>
                     <option value="workflow">Workflow</option>
+                    <option value="email_theme">Email Theme</option>
+                    <option value="email_template">Email Template</option>
                     <option value="bundle">Bundle (multiple items)</option>
                 </x-form-select>
             </div>
@@ -20,7 +22,7 @@
             {{-- Select Item (single) --}}
             @if($itemType !== 'bundle')
             <div class="mb-4">
-                <x-form-select wire:model.live="itemId" label="Select {{ ucfirst($itemType) }}"
+                <x-form-select wire:model.live="itemId" label="Select {{ str_replace('_', ' ', ucfirst($itemType)) }}"
                     :error="$errors->first('itemId')">
                     <option value="">Choose...</option>
                     @if($itemType === 'skill')
@@ -34,6 +36,14 @@
                     @elseif($itemType === 'workflow')
                         @foreach($workflows as $wf)
                             <option value="{{ $wf->id }}">{{ $wf->name }}</option>
+                        @endforeach
+                    @elseif($itemType === 'email_theme')
+                        @foreach($emailThemes as $theme)
+                            <option value="{{ $theme->id }}">{{ $theme->name }}</option>
+                        @endforeach
+                    @elseif($itemType === 'email_template')
+                        @foreach($emailTemplates as $tmpl)
+                            <option value="{{ $tmpl->id }}">{{ $tmpl->name }}</option>
                         @endforeach
                     @endif
                 </x-form-select>

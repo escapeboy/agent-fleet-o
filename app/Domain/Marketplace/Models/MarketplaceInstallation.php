@@ -21,6 +21,8 @@ class MarketplaceInstallation extends Model
         'installed_skill_id',
         'installed_agent_id',
         'installed_workflow_id',
+        'installed_email_theme_id',
+        'installed_email_template_id',
         'total_credits_spent',
         'total_revenue_earned',
     ];

@@ -37,6 +37,11 @@ use App\Domain\Skill\Actions\CreateSkillAction;
 use App\Domain\Skill\Actions\UpdateSkillAction;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Email\Actions\CreateEmailTemplateAction;
+use App\Domain\Email\Actions\DeleteEmailTemplateAction;
+use App\Domain\Email\Actions\UpdateEmailTemplateAction;
+use App\Domain\Email\Models\EmailTemplate;
+use App\Domain\Email\Services\MjmlRenderer;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\GenerateWorkflowFromPromptAction;
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
@@ -82,6 +87,8 @@ class MutationTools
             self::updateGlobalSettings(),
             self::rejectEvolutionProposal(),
             self::uploadMemoryKnowledge(),
+            self::createEmailTemplate(),
+            self::updateEmailTemplate(),
         ];
     }
 
@@ -98,6 +105,7 @@ class MutationTools
             self::deleteConnectorBinding(),
             self::manageByokCredential(),
             self::manageApiToken(),
+            self::deleteEmailTemplate(),
         ];
     }
 
@@ -1228,6 +1236,153 @@ class MutationTools
                 }
 
                 return json_encode(['success' => true, 'updated_count' => count($updated), 'changes' => $updated]);
+            });
+    }
+
+    private static function createEmailTemplate(): PrismToolObject
+    {
+        return PrismTool::as('create_email_template')
+            ->for('Create a new email template. Provide html_body (raw HTML) or mjml_body (MJML markup — compiled server-side to HTML). After creation, visit the builder URL to refine visually.')
+            ->withStringParameter('name', 'Template name', required: true)
+            ->withStringParameter('subject', 'Email subject line. Supports merge tags like {{first_name}}')
+            ->withStringParameter('preview_text', 'Short inbox preview text (50–90 characters)')
+            ->withStringParameter('html_body', 'Raw HTML content for the email body')
+            ->withStringParameter('mjml_body', 'Complete MJML document (<mjml>...</mjml>). Compiled automatically to cross-client HTML. Preferred over html_body.')
+            ->withStringParameter('status', 'Status: draft, active, archived (default: draft)')
+            ->withStringParameter('visibility', 'Visibility: private, public (default: private)')
+            ->withStringParameter('email_theme_id', 'UUID of the email theme to apply')
+            ->using(function (
+                string $name,
+                ?string $subject = null,
+                ?string $preview_text = null,
+                ?string $html_body = null,
+                ?string $mjml_body = null,
+                ?string $status = null,
+                ?string $visibility = null,
+                ?string $email_theme_id = null,
+            ) {
+                try {
+                    $team = auth()->user()->currentTeam;
+
+                    // Sanitize LLM "None" strings for optional UUID fields
+                    $email_theme_id = ($email_theme_id && \Illuminate\Support\Str::isUuid($email_theme_id)) ? $email_theme_id : null;
+
+                    $data = array_filter([
+                        'name' => $name,
+                        'subject' => $subject,
+                        'preview_text' => $preview_text,
+                        'status' => $status ?? 'draft',
+                        'visibility' => $visibility ?? 'private',
+                        'email_theme_id' => $email_theme_id,
+                    ], fn ($v) => $v !== null);
+
+                    if ($mjml_body !== null) {
+                        $data['html_cache'] = app(MjmlRenderer::class)->render($mjml_body);
+                        $data['design_json'] = ['type' => 'mjml', 'source' => $mjml_body];
+                    } elseif ($html_body !== null) {
+                        $data['html_cache'] = $html_body;
+                    }
+
+                    $template = app(CreateEmailTemplateAction::class)->execute($team, $data);
+
+                    return json_encode([
+                        'success' => true,
+                        'template_id' => $template->id,
+                        'name' => $template->name,
+                        'status' => $template->status->value,
+                        'has_html_cache' => ! empty($template->html_cache),
+                        'url' => route('email.templates.edit', $template),
+                    ]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
+    }
+
+    private static function updateEmailTemplate(): PrismToolObject
+    {
+        return PrismTool::as('update_email_template')
+            ->for('Update an existing email template metadata or body content. Provide html_body or mjml_body to set HTML content. Only supply fields you want to change — omitted fields are preserved.')
+            ->withStringParameter('template_id', 'Email template UUID', required: true)
+            ->withStringParameter('name', 'Template name')
+            ->withStringParameter('subject', 'Email subject line. Supports merge tags like {{first_name}}')
+            ->withStringParameter('preview_text', 'Short inbox preview text (50–90 characters)')
+            ->withStringParameter('html_body', 'Raw HTML content for the email body')
+            ->withStringParameter('mjml_body', 'Complete MJML document (<mjml>...</mjml>). Compiled automatically to cross-client HTML. Preferred over html_body.')
+            ->withStringParameter('status', 'Status: draft, active, archived')
+            ->withStringParameter('visibility', 'Visibility: private, public')
+            ->withStringParameter('email_theme_id', 'UUID of the email theme to apply')
+            ->using(function (
+                string $template_id,
+                ?string $name = null,
+                ?string $subject = null,
+                ?string $preview_text = null,
+                ?string $html_body = null,
+                ?string $mjml_body = null,
+                ?string $status = null,
+                ?string $visibility = null,
+                ?string $email_theme_id = null,
+            ) {
+                $template = EmailTemplate::find($template_id);
+                if (! $template) {
+                    return json_encode(['error' => 'Email template not found']);
+                }
+
+                try {
+                    // Sanitize LLM "None" strings for optional UUID fields
+                    $email_theme_id = ($email_theme_id && \Illuminate\Support\Str::isUuid($email_theme_id)) ? $email_theme_id : null;
+
+                    $data = array_filter([
+                        'name' => $name,
+                        'subject' => $subject,
+                        'preview_text' => $preview_text,
+                        'status' => $status,
+                        'visibility' => $visibility,
+                        'email_theme_id' => $email_theme_id,
+                    ], fn ($v) => $v !== null);
+
+                    if ($mjml_body !== null) {
+                        $data['html_cache'] = app(MjmlRenderer::class)->render($mjml_body);
+                        $data['design_json'] = ['type' => 'mjml', 'source' => $mjml_body];
+                    } elseif ($html_body !== null) {
+                        $data['html_cache'] = $html_body;
+                    }
+
+                    $template = app(UpdateEmailTemplateAction::class)->execute($template, $data);
+
+                    return json_encode([
+                        'success' => true,
+                        'template_id' => $template->id,
+                        'name' => $template->name,
+                        'status' => $template->status->value,
+                        'has_html_cache' => ! empty($template->html_cache),
+                        'url' => route('email.templates.edit', $template),
+                    ]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
+    }
+
+    private static function deleteEmailTemplate(): PrismToolObject
+    {
+        return PrismTool::as('delete_email_template')
+            ->for('Delete an email template (soft delete). This is a destructive action — the template will be permanently removed from the list.')
+            ->withStringParameter('template_id', 'Email template UUID', required: true)
+            ->using(function (string $template_id) {
+                $template = EmailTemplate::find($template_id);
+                if (! $template) {
+                    return json_encode(['error' => 'Email template not found']);
+                }
+
+                try {
+                    $name = $template->name;
+                    app(DeleteEmailTemplateAction::class)->execute($template);
+
+                    return json_encode(['success' => true, 'message' => "Email template '{$name}' deleted."]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
             });
     }
 }

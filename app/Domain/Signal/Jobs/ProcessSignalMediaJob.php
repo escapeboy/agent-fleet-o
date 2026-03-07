@@ -2,6 +2,7 @@
 
 namespace App\Domain\Signal\Jobs;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Actions\AnalyzeMediaAction;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Bus\Queueable;
@@ -41,10 +42,11 @@ class ProcessSignalMediaJob implements ShouldQueue
             return;
         }
 
+        $team = $signal->team_id ? Team::withoutGlobalScopes()->find($signal->team_id) : null;
         $analyses = [];
 
         foreach ($mediaItems as $media) {
-            $description = $analyzeMedia->execute($media);
+            $description = $analyzeMedia->execute($media, $team);
 
             if ($description) {
                 $analyses[] = [

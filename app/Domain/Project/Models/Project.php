@@ -3,6 +3,7 @@
 namespace App\Domain\Project\Models;
 
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Email\Models\EmailTemplate;
 use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
@@ -62,6 +63,7 @@ class Project extends Model
         'settings',
         'allowed_tool_ids',
         'allowed_credential_ids',
+        'email_template_id',
         'total_runs',
         'successful_runs',
         'failed_runs',
@@ -113,6 +115,11 @@ class Project extends Model
     public function workflow(): BelongsTo
     {
         return $this->belongsTo(Workflow::class);
+    }
+
+    public function emailTemplate(): BelongsTo
+    {
+        return $this->belongsTo(EmailTemplate::class);
     }
 
     public function schedule(): HasOne

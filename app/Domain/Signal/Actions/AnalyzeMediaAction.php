@@ -2,6 +2,7 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Domain\Shared\Models\Team;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Prism;
@@ -15,9 +16,12 @@ class AnalyzeMediaAction
      *
      * Returns a text description/transcription of the media content.
      */
-    public function execute(Media $media): ?string
+    public function execute(Media $media, ?Team $team = null): ?string
     {
-        if (! GlobalSetting::get('media_analysis_enabled', false)) {
+        $teamSettings = $team?->settings ?? [];
+        $enabled = $teamSettings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false);
+
+        if (! $enabled) {
             return null;
         }
 

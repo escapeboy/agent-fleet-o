@@ -13,8 +13,15 @@
             <div class="flex items-center gap-3">
                 <h2 class="text-xl font-semibold text-gray-900">{{ $listing->name }}</h2>
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                    {{ $listing->type === 'skill' ? 'bg-purple-100 text-purple-800' : ($listing->type === 'workflow' ? 'bg-green-100 text-green-800' : ($listing->type === 'bundle' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800')) }}">
-                    {{ ucfirst($listing->type) }}
+                    {{ match($listing->type) {
+                        'skill' => 'bg-purple-100 text-purple-800',
+                        'workflow' => 'bg-green-100 text-green-800',
+                        'bundle' => 'bg-orange-100 text-orange-800',
+                        'email_theme' => 'bg-pink-100 text-pink-800',
+                        'email_template' => 'bg-rose-100 text-rose-800',
+                        default => 'bg-blue-100 text-blue-800',
+                    } }}">
+                    {{ str_replace('_', ' ', ucfirst($listing->type)) }}
                 </span>
                 <span class="text-sm text-gray-400">v{{ $listing->version }}</span>
             </div>
@@ -236,6 +243,73 @@
                                 </div>
                             @endforeach
                         </div>
+                    </div>
+                @endif
+
+            @elseif($listing->type === 'email_theme')
+                {{-- Email theme color/typography preview --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">Theme Configuration</h3>
+                    <dl class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        @foreach([
+                            'Primary Color' => $snapshot['primary_color'] ?? null,
+                            'Background' => $snapshot['background_color'] ?? null,
+                            'Canvas' => $snapshot['canvas_color'] ?? null,
+                            'Text Color' => $snapshot['text_color'] ?? null,
+                            'Heading Color' => $snapshot['heading_color'] ?? null,
+                            'Divider Color' => $snapshot['divider_color'] ?? null,
+                        ] as $label => $color)
+                            @if($color)
+                                <div class="flex items-center gap-2">
+                                    <div class="h-5 w-5 flex-shrink-0 rounded-full border border-gray-200" style="background-color: {{ $color }};"></div>
+                                    <div>
+                                        <dt class="text-xs text-gray-400">{{ $label }}</dt>
+                                        <dd class="font-mono text-xs text-gray-700">{{ $color }}</dd>
+                                    </div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </dl>
+                    @if(!empty($snapshot['font_name']))
+                        <div class="mt-3 border-t border-gray-100 pt-3">
+                            <dt class="text-xs text-gray-400">Font</dt>
+                            <dd class="text-sm text-gray-700">{{ $snapshot['font_name'] }} ({{ $snapshot['body_font_size'] ?? 16 }}px / {{ $snapshot['heading_font_size'] ?? 24 }}px heading)</dd>
+                        </div>
+                    @endif
+                    @if(!empty($snapshot['company_name']) || !empty($snapshot['footer_text']))
+                        <div class="mt-3 border-t border-gray-100 pt-3">
+                            @if(!empty($snapshot['company_name']))
+                                <dt class="text-xs text-gray-400">Company</dt>
+                                <dd class="text-sm text-gray-700">{{ $snapshot['company_name'] }}</dd>
+                            @endif
+                            @if(!empty($snapshot['footer_text']))
+                                <div class="mt-2">
+                                    <dt class="text-xs text-gray-400">Footer Text</dt>
+                                    <dd class="text-sm text-gray-500">{{ Str::limit($snapshot['footer_text'], 120) }}</dd>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+
+            @elseif($listing->type === 'email_template')
+                {{-- Email template: live preview iframe --}}
+                @if(!empty($snapshot['html_cache']))
+                    <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <h3 class="mb-3 text-sm font-semibold text-gray-700">Email Preview</h3>
+                        <div class="overflow-hidden rounded-lg border border-gray-200 bg-gray-50" style="height: 500px;">
+                            <iframe srcdoc="{{ e($snapshot['html_cache']) }}"
+                                class="h-full w-full"
+                                sandbox="allow-same-origin"
+                                title="Email preview"></iframe>
+                        </div>
+                        @if(!empty($snapshot['subject']))
+                            <p class="mt-2 text-xs text-gray-500">Subject: <span class="font-medium text-gray-700">{{ $snapshot['subject'] }}</span></p>
+                        @endif
+                    </div>
+                @else
+                    <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <p class="text-sm text-gray-400">No preview available — template has not been rendered yet.</p>
                     </div>
                 @endif
 

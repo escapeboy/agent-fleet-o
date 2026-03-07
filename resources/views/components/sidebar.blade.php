@@ -1,4 +1,8 @@
-<aside class="flex w-64 flex-col bg-(--color-sidebar) text-white" x-data="{ current: '{{ request()->routeIs('dashboard') ? 'dashboard' : (request()->routeIs('projects.*') ? 'projects' : (request()->routeIs('experiments.*') ? 'experiments' : (request()->routeIs('workflows.*') ? 'workflows' : (request()->routeIs('approvals.*') ? 'approvals' : (request()->routeIs('health') ? 'health' : (request()->routeIs('settings') ? 'settings' : (request()->routeIs('audit') ? 'audit' : (request()->routeIs('team.*') ? 'team' : 'dashboard')))))))) }}' }">
+<aside class="fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-(--color-sidebar) text-white
+              transition-transform duration-200 ease-in-out
+              lg:static lg:z-auto lg:translate-x-0 lg:transition-none"
+       :class="sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'"
+       x-data="{ current: '{{ request()->routeIs('dashboard') ? 'dashboard' : (request()->routeIs('projects.*') ? 'projects' : (request()->routeIs('experiments.*') ? 'experiments' : (request()->routeIs('workflows.*') ? 'workflows' : (request()->routeIs('approvals.*') ? 'approvals' : (request()->routeIs('health') ? 'health' : (request()->routeIs('settings') ? 'settings' : (request()->routeIs('audit') ? 'audit' : (request()->routeIs('team.*') ? 'team' : 'dashboard')))))))) }}' }">
     {{-- Logo --}}
     <div class="flex h-16 items-center gap-2.5 border-b border-gray-800 px-5">
         <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary-600">
@@ -8,7 +12,7 @@
     </div>
 
     {{-- Navigation --}}
-    <nav class="flex-1 space-y-1 px-3 py-4">
+    <nav class="flex-1 overflow-y-auto space-y-1 px-3 py-4">
         <x-sidebar-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')" icon="chart-bar">
             Dashboard
         </x-sidebar-link>
@@ -67,6 +71,10 @@
 
         <x-sidebar-link href="{{ route('signals.connectors') }}" :active="request()->routeIs('signals.connectors')" icon="plug">
             Signal Sources
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.*')" icon="envelope">
+            Email Themes
         </x-sidebar-link>
 
         <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">

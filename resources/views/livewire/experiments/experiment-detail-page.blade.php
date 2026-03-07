@@ -27,7 +27,7 @@
         </div>
 
         {{-- Actions --}}
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Draft)
                 <button wire:click="startExperiment" wire:confirm="Start this run? It will begin the scoring stage."
                     class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">

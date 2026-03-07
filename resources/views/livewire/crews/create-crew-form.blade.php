@@ -95,7 +95,7 @@
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Settings</h3>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-form-input wire:model="maxTaskIterations" type="number" label="Max Task Retries" min="1" max="10"
                     hint="How many times QA can reject before giving up"
                     :error="$errors->first('maxTaskIterations')" />

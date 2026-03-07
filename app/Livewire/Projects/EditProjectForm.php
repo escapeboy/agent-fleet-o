@@ -4,6 +4,7 @@ namespace App\Livewire\Projects;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Email\Models\EmailTemplate;
 use App\Domain\Project\Actions\UpdateProjectAction;
 use App\Domain\Project\Enums\OverlapPolicy;
 use App\Domain\Project\Enums\ProjectExecutionMode;
@@ -56,6 +57,9 @@ class EditProjectForm extends Component
 
     public ?int $monthlyCap = null;
 
+    // Email template
+    public ?string $emailTemplateId = null;
+
     // Tools & Credentials
     public array $selectedToolIds = [];
 
@@ -95,6 +99,9 @@ class EditProjectForm extends Component
         $this->dailyCap = $budget['daily_cap'] ?? null;
         $this->weeklyCap = $budget['weekly_cap'] ?? null;
         $this->monthlyCap = $budget['monthly_cap'] ?? null;
+
+        // Email template
+        $this->emailTemplateId = $project->email_template_id;
 
         // Tools & Credentials
         $this->selectedToolIds = $project->allowed_tool_ids ?? [];
@@ -167,10 +174,11 @@ class EditProjectForm extends Component
 
         app(UpdateProjectAction::class)->execute($this->project, $data);
 
-        // Update tools & credentials
+        // Update tools, credentials, email template
         $this->project->update([
             'allowed_tool_ids' => array_values($this->selectedToolIds),
             'allowed_credential_ids' => array_values($this->selectedCredentialIds),
+            'email_template_id' => $this->emailTemplateId ?: null,
         ]);
 
         session()->flash('message', 'Project updated successfully!');
@@ -194,6 +202,7 @@ class EditProjectForm extends Component
         $overlapPolicies = OverlapPolicy::cases();
         $tools = Tool::where('status', 'active')->orderBy('name')->get(['id', 'name', 'type']);
         $credentials = Credential::where('status', 'active')->orderBy('name')->get(['id', 'name', 'credential_type']);
+        $emailTemplates = EmailTemplate::where('status', 'active')->orderBy('name')->get(['id', 'name', 'subject']);
 
         return view('livewire.projects.edit-project-form', [
             'agents' => $agents,
@@ -202,6 +211,7 @@ class EditProjectForm extends Component
             'overlapPolicies' => $overlapPolicies,
             'tools' => $tools,
             'credentials' => $credentials,
+            'emailTemplates' => $emailTemplates,
             'executionModes' => ProjectExecutionMode::cases(),
             'schedulePreview' => $this->schedulePreview,
         ])->layout('layouts.app', ['header' => 'Edit: '.$this->project->title]);

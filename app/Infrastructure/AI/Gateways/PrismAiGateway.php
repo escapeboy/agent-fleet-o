@@ -14,6 +14,7 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use Closure;
 use Prism\Prism\Enums\Provider;
+use Prism\Prism\Enums\ToolChoice;
 use Prism\Prism\Exceptions\PrismException;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Streaming\Events\StreamEndEvent;
@@ -193,7 +194,16 @@ class PrismAiGateway implements AiGatewayInterface
                 ->withMaxSteps($request->maxSteps);
 
             if ($request->toolChoice !== null) {
-                $builder->withToolChoice($request->toolChoice);
+                // Map string values to ToolChoice enum so all providers get the correct type.
+                // Passing a raw string to PrismPHP is treated as a specific function name,
+                // not as a mode like 'any'/'auto'/'none'.
+                $toolChoice = match ($request->toolChoice) {
+                    'any' => ToolChoice::Any,
+                    'auto' => ToolChoice::Auto,
+                    'none' => ToolChoice::None,
+                    default => $request->toolChoice, // specific tool name — pass as-is
+                };
+                $builder->withToolChoice($toolChoice);
             }
         }
 
@@ -237,8 +247,15 @@ class PrismAiGateway implements AiGatewayInterface
             }
         }
 
-        // Extract <thinking> blocks from Anthropic extended thinking responses
+        // Some OpenRouter/OpenAI-compatible models wrap plain text in {"text": "..."}
+        // when they detect tool schemas in the prompt. Unwrap to get clean content.
         $text = $response->text;
+        if ($text !== '' && str_starts_with(ltrim($text), '{')) {
+            $decoded = json_decode($text, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded) && isset($decoded['text']) && count($decoded) === 1) {
+                $text = $decoded['text'];
+            }
+        }
         if (str_contains($text, '<thinking>')) {
             preg_match_all('/<thinking>(.*?)<\/thinking>/s', $text, $matches);
             if (! empty($matches[1])) {

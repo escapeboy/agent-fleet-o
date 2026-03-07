@@ -36,7 +36,8 @@
 
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <table class="min-w-full divide-y divide-gray-200">
+        <div class="overflow-x-auto">
+        <table class="w-full table-fixed divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     @php
@@ -44,16 +45,16 @@
                             ? ($sortDirection === 'asc' ? '&#9650;' : '&#9660;')
                             : '<span class="text-gray-300">&#9650;</span>';
                     @endphp
-                    <th wire:click="sortBy('title')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
+                    <th wire:click="sortBy('title')" class="cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Title {!! $sortIcon('title') !!}
                     </th>
-                    <th wire:click="sortBy('status')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
+                    <th wire:click="sortBy('status')" class="cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Status {!! $sortIcon('status') !!}
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Track</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Budget</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Iteration</th>
-                    <th wire:click="sortBy('created_at')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Track</th>
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Budget</th>
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Iteration</th>
+                    <th wire:click="sortBy('created_at')" class="hidden md:table-cell cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Created {!! $sortIcon('created_at') !!}
                     </th>
                 </tr>
@@ -61,19 +62,19 @@
             <tbody class="divide-y divide-gray-200">
                 @forelse($experiments as $experiment)
                     <tr class="transition hover:bg-gray-50">
-                        <td class="px-6 py-4">
+                        <td class="px-3 py-3 md:px-6 md:py-4">
                             <a href="{{ route('experiments.show', $experiment) }}" class="font-medium text-primary-600 hover:text-primary-800">
                                 {{ $experiment->title }}
                             </a>
                             @if($experiment->thesis)
-                                <p class="mt-0.5 max-w-xs truncate text-xs text-gray-400">{{ $experiment->thesis }}</p>
+                                <p class="mt-0.5 truncate text-xs text-gray-400">{{ $experiment->thesis }}</p>
                             @endif
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-3 py-3 md:px-6 md:py-4">
                             <x-status-badge :status="$experiment->status->value" />
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ ucfirst($experiment->track->value) }}</td>
-                        <td class="px-6 py-4">
+                        <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4 text-sm text-gray-500">{{ ucfirst($experiment->track->value) }}</td>
+                        <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4">
                             @if($experiment->budget_cap_credits > 0)
                                 @php $pct = min(100, round(($experiment->budget_spent_credits / $experiment->budget_cap_credits) * 100)); @endphp
                                 <div class="flex items-center gap-2">
@@ -86,8 +87,8 @@
                                 <span class="text-xs text-gray-400">No cap</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ $experiment->created_at->diffForHumans() }}</td>
+                        <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4 text-sm text-gray-500">{{ $experiment->current_iteration }}/{{ $experiment->max_iterations }}</td>
+                        <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4 text-sm text-gray-500">{{ $experiment->created_at->diffForHumans() }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -98,6 +99,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 
     <div class="mt-4">

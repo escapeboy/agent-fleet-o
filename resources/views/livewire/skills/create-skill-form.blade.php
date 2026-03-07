@@ -24,7 +24,7 @@
 
                 <x-form-textarea wire:model="description" label="Description" rows="3" placeholder="What does this skill do?" />
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <x-form-select wire:model="type" label="Type">
                         @foreach($types as $t)
                             @if($t->value !== 'browser' || $browserSkillEnabled)
@@ -109,7 +109,7 @@
                         GPU Compute skills route inference requests to external GPU cloud providers. Costs are billed directly to your provider account.
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <x-form-select wire:model="computeProvider" label="GPU Provider">
                             @foreach($computeProviders as $slug => $info)
                                 <option value="{{ $slug }}">{{ $info['label'] ?? $slug }}</option>
@@ -120,7 +120,7 @@
                             placeholder="e.g. abc123def for RunPod" :error="$errors->first('computeEndpointId')" />
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <x-form-input wire:model="computeRoutePath" label="Route Path" type="text"
                             placeholder="/" hint="Path to append to worker URL (Vast.ai / custom). Use / for default." />
 
@@ -132,7 +132,7 @@
                 </div>
             @else
                 <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <x-form-select wire:model.live="provider" label="LLM Provider (optional)">
                             <option value="">Team Default</option>
                             @foreach($providers as $key => $providerConfig)
@@ -164,7 +164,7 @@
                         placeholder="Use @{{field_name}} for variable substitution"
                         hint="Leave empty to pass input as JSON." />
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <x-form-input wire:model.number="maxTokens" label="Max Tokens" type="number" min="100" max="8192" />
                         <x-form-input wire:model.number="temperature" label="Temperature" type="number" min="0" max="2" step="0.1" />
                     </div>

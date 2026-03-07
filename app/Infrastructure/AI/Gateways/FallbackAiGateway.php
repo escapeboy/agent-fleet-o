@@ -39,6 +39,7 @@ class FallbackAiGateway implements AiGatewayInterface
         $chain = $this->getFallbackChain($request->provider, $request->model, $request->fallbackChain);
 
         $lastException = null;
+        $firstException = null;
 
         foreach ($chain as $target) {
             $providerName = $target['provider'];
@@ -67,6 +68,9 @@ class FallbackAiGateway implements AiGatewayInterface
                     temperature: $request->temperature,
                     teamId: $request->teamId,
                     fallbackChain: $request->fallbackChain,
+                    tools: $request->tools,
+                    maxSteps: $request->maxSteps,
+                    toolChoice: $request->toolChoice,
                 );
 
                 $response = $this->gateway->complete($adjustedRequest);
@@ -76,11 +80,21 @@ class FallbackAiGateway implements AiGatewayInterface
                 return $response;
             } catch (PrismRateLimitedException $e) {
                 // Rate limits are temporary — don't break the circuit
+                $firstException ??= $e;
                 $lastException = $e;
                 Log::warning("AI Gateway: {$providerName}/{$modelName} rate limited (not recording CB failure)", [
                     'error' => $e->getMessage(),
                 ]);
+            } catch (\RuntimeException $e) {
+                // Missing BYOK / plan restriction — config error, not a real provider failure.
+                // Don't record a circuit breaker failure for this. Store as last but preserve first.
+                $firstException ??= $e;
+                $lastException = $e;
+                Log::warning("AI Gateway fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
+                    'error' => $e->getMessage(),
+                ]);
             } catch (Throwable $e) {
+                $firstException ??= $e;
                 $lastException = $e;
                 $this->circuitBreaker->recordFailure($providerName);
                 Log::warning("AI Gateway fallback: {$providerName}/{$modelName} failed", [
@@ -89,7 +103,9 @@ class FallbackAiGateway implements AiGatewayInterface
             }
         }
 
-        throw $lastException ?? new \RuntimeException('No available providers in fallback chain');
+        // Throw the first exception so the user sees the root cause (e.g. rate limit),
+        // not a misleading error from a fallback provider they didn't configure.
+        throw $firstException ?? new \RuntimeException('No available providers in fallback chain');
     }
 
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
@@ -108,6 +124,7 @@ class FallbackAiGateway implements AiGatewayInterface
 
         // For cloud providers, try streaming with fallback chain
         $chain = $this->getFallbackChain($request->provider, $request->model, $request->fallbackChain);
+        $firstException = null;
         $lastException = null;
 
         foreach ($chain as $target) {
@@ -135,19 +152,29 @@ class FallbackAiGateway implements AiGatewayInterface
                     temperature: $request->temperature,
                     teamId: $request->teamId,
                     fallbackChain: $request->fallbackChain,
+                    tools: $request->tools,
+                    maxSteps: $request->maxSteps,
+                    toolChoice: $request->toolChoice,
                 );
 
                 $response = $this->gateway->stream($adjustedRequest, $onChunk);
                 $this->circuitBreaker->recordSuccess($providerName);
 
                 return $response;
+            } catch (\RuntimeException $e) {
+                $firstException ??= $e;
+                $lastException = $e;
+                Log::warning("AI Gateway stream fallback: {$providerName}/{$modelName} config error", [
+                    'error' => $e->getMessage(),
+                ]);
             } catch (Throwable $e) {
+                $firstException ??= $e;
                 $lastException = $e;
                 $this->circuitBreaker->recordFailure($providerName);
             }
         }
 
-        throw $lastException ?? new \RuntimeException('No available providers in fallback chain');
+        throw $firstException ?? new \RuntimeException('No available providers in fallback chain');
     }
 
     public function estimateCost(AiRequestDTO $request): int
