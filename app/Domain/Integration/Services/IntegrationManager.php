@@ -5,7 +5,9 @@ namespace App\Domain\Integration\Services;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
 use App\Domain\Integration\Drivers\Datadog\DatadogIntegrationDriver;
+use App\Domain\Integration\Drivers\Google\GoogleIntegrationDriver;
 use App\Domain\Integration\Drivers\HubSpot\HubSpotIntegrationDriver;
+use App\Domain\Integration\Drivers\Jira\JiraIntegrationDriver;
 use App\Domain\Integration\Drivers\Klaviyo\KlaviyoIntegrationDriver;
 use App\Domain\Integration\Drivers\Mailchimp\MailchimpIntegrationDriver;
 use App\Domain\Integration\Drivers\Salesforce\SalesforceIntegrationDriver;
@@ -136,5 +138,15 @@ class IntegrationManager extends Manager
     public function createKlaviyoDriver(): IntegrationDriverInterface
     {
         return $this->container->make(KlaviyoIntegrationDriver::class);
+    }
+
+    public function createGoogleDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(GoogleIntegrationDriver::class);
+    }
+
+    public function createJiraDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(JiraIntegrationDriver::class);
     }
 }
