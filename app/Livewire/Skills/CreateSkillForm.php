@@ -189,6 +189,14 @@ class CreateSkillForm extends Component
             ];
         }
 
+        // Enrich local LLM providers with dynamically discovered models
+        foreach ($providers as $key => &$providerData) {
+            if (! empty($providerData['http_local'])) {
+                $providerData['models'] = $resolver->modelsForProvider($key, $team);
+            }
+        }
+        unset($providerData);
+
         return view('livewire.skills.create-skill-form', [
             'types' => SkillType::cases(),
             'riskLevels' => RiskLevel::cases(),

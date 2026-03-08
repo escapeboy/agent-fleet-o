@@ -223,6 +223,14 @@ class AgentDetailPage extends Component
             ];
         }
 
+        // Enrich local LLM providers with dynamically discovered models
+        foreach ($providers as $key => &$providerData) {
+            if (! empty($providerData['http_local'])) {
+                $providerData['models'] = $resolver->modelsForProvider($key, $team);
+            }
+        }
+        unset($providerData);
+
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
         $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
 

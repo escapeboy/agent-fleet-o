@@ -125,12 +125,43 @@ class ProviderResolver
 
     /**
      * Get models for a specific provider.
+     * For HTTP-local providers (ollama, openai_compatible), merges static config models
+     * with dynamically discovered models from the team's configured endpoint.
      *
      * @return array<string, array{label: string, input_cost: float, output_cost: float}>
      */
-    public function modelsForProvider(string $provider): array
+    public function modelsForProvider(string $provider, ?Team $team = null): array
     {
-        return config("llm_providers.{$provider}.models", []);
+        $static = config("llm_providers.{$provider}.models", []);
+
+        if (! config("llm_providers.{$provider}.http_local") || ! $team) {
+            return $static;
+        }
+
+        $credential = TeamProviderCredential::where('team_id', $team->id)
+            ->where('provider', $provider)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $credential) {
+            return $static;
+        }
+
+        $baseUrl = $credential->credentials['base_url'] ?? null;
+        if (! $baseUrl) {
+            return $static;
+        }
+
+        $apiKey = $credential->credentials['api_key'] ?? null;
+        $discovered = app(LocalLlmDiscovery::class)->discoverModels($provider, $baseUrl, $apiKey ?: null);
+
+        foreach ($discovered as $modelId) {
+            if (! isset($static[$modelId])) {
+                $static[$modelId] = ['label' => $modelId, 'input_cost' => 0, 'output_cost' => 0];
+            }
+        }
+
+        return $static;
     }
 
     /**
