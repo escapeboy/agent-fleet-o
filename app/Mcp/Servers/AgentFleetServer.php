@@ -124,7 +124,9 @@ use App\Mcp\Tools\Signal\KgEntityFactsTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
 use App\Mcp\Tools\Signal\ContactManageTool;
+use App\Mcp\Tools\Signal\EmailReplyTool;
 use App\Mcp\Tools\Signal\HttpMonitorTool;
+use App\Mcp\Tools\Signal\ImapMailboxTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
 use App\Mcp\Tools\Signal\IntentScoreTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
@@ -308,7 +310,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (16)
+        // Signal (18)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -325,6 +327,8 @@ class AgentFleetServer extends Server
         KgSearchTool::class,
         KgEntityFactsTool::class,
         KgAddFactTool::class,
+        ImapMailboxTool::class,
+        EmailReplyTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,
