@@ -131,5 +131,46 @@
                 </ul>
             </div>
         </div>
+
+        {{-- Security highlight row --}}
+        <div class="mx-auto mt-8 max-w-5xl">
+            <div x-data="{ shown: false }"
+                 x-intersect.once="shown = true"
+                 :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'"
+                 class="rounded-2xl border border-gray-200 border-t-2 border-t-indigo-400 bg-white p-8 shadow-sm transition duration-600 ease-out hover:shadow-md hover:border-gray-300"
+                 style="transition-delay: 450ms">
+                <div class="flex flex-col lg:flex-row lg:items-start lg:gap-10">
+                    <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-indigo-50">
+                        <svg class="h-7 w-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                    </div>
+                    <div class="mt-5 lg:mt-0 flex-1">
+                        <h3 class="text-xl font-semibold text-gray-900">Enterprise-Grade Credential Security</h3>
+                        <p class="mt-3 text-[0.9375rem] leading-relaxed text-gray-600">
+                            Your API keys and secrets are encrypted with dedicated per-team keys using XSalsa20-Poly1305. Pro and Enterprise teams can connect their own AWS KMS, GCP Cloud KMS, or Azure Key Vault — you hold the keys, not us.
+                        </p>
+                        <ul class="mt-5 grid grid-cols-1 gap-2.5 text-sm text-gray-600 sm:grid-cols-2 lg:grid-cols-4">
+                            <li class="flex items-start gap-2">
+                                <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                                Per-team XSalsa20-Poly1305 encryption
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                                AWS KMS, GCP Cloud KMS, Azure Key Vault
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                                Revoke KMS → instantly blocks decryption
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                                Credential access audit log on every decryption
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
