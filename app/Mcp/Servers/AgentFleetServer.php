@@ -401,6 +401,10 @@ class AgentFleetServer extends Server
         AuditLogTool::class,
         GlobalSettingsUpdateTool::class,
 
+        // Feedback (2) — super admin only
+        \App\Mcp\Tools\Feedback\FeedbackListTool::class,
+        \App\Mcp\Tools\Feedback\FeedbackUpdateTool::class,
+
         // Admin (7) — super admin only
         AdminTeamSuspendTool::class,
         AdminTeamBillingDetailTool::class,
