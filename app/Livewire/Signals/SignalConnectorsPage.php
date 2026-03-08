@@ -213,16 +213,18 @@ class SignalConnectorsPage extends Component
     public function editImap(string $id): void
     {
         $connector = Connector::where('id', $id)->where('driver', 'imap')->firstOrFail();
+        /** @var array<string, mixed> $config */
+        $config = (array) $connector->config;
         $this->editingImapId = $id;
         $this->imapName = $connector->name;
-        $this->imapHost = $connector->config['host'] ?? '';
-        $this->imapPort = (int) ($connector->config['port'] ?? 993);
-        $this->imapEncryption = $connector->config['encryption'] ?? 'ssl';
-        $this->imapFolder = $connector->config['folder'] ?? 'INBOX';
-        $this->imapUsername = $connector->config['username'] ?? '';
+        $this->imapHost = $config['host'] ?? '';
+        $this->imapPort = (int) ($config['port'] ?? 993);
+        $this->imapEncryption = $config['encryption'] ?? 'ssl';
+        $this->imapFolder = $config['folder'] ?? 'INBOX';
+        $this->imapUsername = $config['username'] ?? '';
         $this->imapPassword = '';  // Never echo password back
-        $this->imapMaxPerPoll = (int) ($connector->config['max_per_poll'] ?? 50);
-        $this->imapTags = implode(', ', (array) ($connector->config['tags'] ?? ['email']));
+        $this->imapMaxPerPoll = (int) ($config['max_per_poll'] ?? 50);
+        $this->imapTags = implode(', ', (array) ($config['tags'] ?? ['email']));
         $this->showImapForm = true;
         $this->imapTestResult = null;
     }
@@ -243,7 +245,8 @@ class SignalConnectorsPage extends Component
 
         $connector = Connector::where('id', $this->editingImapId)->where('driver', 'imap')->firstOrFail();
 
-        $config = $connector->config;
+        /** @var array<string, mixed> $config */
+        $config = (array) $connector->config;
         $config['host'] = $this->imapHost;
         $config['port'] = $this->imapPort;
         $config['encryption'] = $this->imapEncryption;
@@ -295,7 +298,9 @@ class SignalConnectorsPage extends Component
         // For edits, fall back to stored password if no new one entered
         if (empty($password) && $this->editingImapId) {
             $stored = Connector::find($this->editingImapId);
-            $password = $stored?->config['password'] ?? '';
+            /** @var array<string, mixed> $storedConfig */
+            $storedConfig = (array) ($stored?->config ?? []);
+            $password = $storedConfig['password'] ?? '';
         }
 
         if (empty($password)) {

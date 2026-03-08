@@ -70,12 +70,14 @@ class ImapMailboxTool extends Tool
         }
 
         try {
-            $client = $this->buildClient($connector->config);
+            /** @var array<string, mixed> $config */
+            $config = (array) $connector->config;
+            $client = $this->buildClient($config);
             $client->connect();
 
             $result = match ($request->get('action')) {
-                'search' => $this->handleSearch($client, $request, $connector->config),
-                'read' => $this->handleRead($client, $request, $connector->config),
+                'search' => $this->handleSearch($client, $request, $config),
+                'read' => $this->handleRead($client, $request, $config),
                 'list_folders' => $this->handleListFolders($client),
                 default => null,
             };

@@ -2317,6 +2317,36 @@ parameters:
 			path: app/Domain/Outbound/Actions/CheckBlacklistAction.php
 
 		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 2
+			path: app/Domain/Outbound/Actions/ReplyToEmailSignalAction.php
+
+		-
+			message: '#^Offset ''from'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Actions/ReplyToEmailSignalAction.php
+
+		-
+			message: '#^Property App\\Domain\\Outbound\\Actions\\ReplyToEmailSignalAction\:\:\$send is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Outbound/Actions/ReplyToEmailSignalAction.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Outbound/Actions/ReplyToEmailSignalAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Outbound/Actions/ReplyToEmailSignalAction.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 2
@@ -8005,6 +8035,24 @@ parameters:
 			path: app/Livewire/Signals/SignalConnectorsPage.php
 
 		-
+			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
+			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>config" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
 			message: '#^Using nullsafe property access "\?\-\>total" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -9145,6 +9193,18 @@ parameters:
 			path: app/Mcp/Tools/Signal/ContactManageTool.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Signal/EmailReplyTool.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>current_team_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Signal/EmailReplyTool.php
+
+		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 2
@@ -9179,6 +9239,24 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
+
+		-
+			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Mcp/Tools/Signal/ImapMailboxTool.php
+
+		-
+			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Mcp/Tools/Signal/ImapMailboxTool.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>mail" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Mcp/Tools/Signal/ImapMailboxTool.php
 
 		-
 			message: '#^Access to an undefined property App\\Domain\\Signal\\Models\\Signal\:\:\$total\.$#'
