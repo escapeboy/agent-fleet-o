@@ -48,6 +48,7 @@ use App\Mcp\Tools\Crew\CrewListTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
 use App\Mcp\Tools\Email\EmailTemplateCreateTool;
 use App\Mcp\Tools\Email\EmailTemplateDeleteTool;
+use App\Mcp\Tools\Email\EmailTemplateGenerateTool;
 use App\Mcp\Tools\Email\EmailTemplateGetTool;
 use App\Mcp\Tools\Email\EmailTemplateListTool;
 use App\Mcp\Tools\Email\EmailTemplateUpdateTool;
@@ -55,7 +56,6 @@ use App\Mcp\Tools\Email\EmailThemeCreateTool;
 use App\Mcp\Tools\Email\EmailThemeDeleteTool;
 use App\Mcp\Tools\Email\EmailThemeGetTool;
 use App\Mcp\Tools\Email\EmailThemeListTool;
-use App\Mcp\Tools\Email\EmailTemplateGenerateTool;
 use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
@@ -74,6 +74,8 @@ use App\Mcp\Tools\Experiment\ExperimentShareTool;
 use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
+use App\Mcp\Tools\Feedback\FeedbackListTool;
+use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
 use App\Mcp\Tools\Integration\IntegrationManageTool;
 use App\Mcp\Tools\Marketplace\MarketplaceAnalyticsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
@@ -400,6 +402,10 @@ class AgentFleetServer extends Server
         SystemVersionCheckTool::class,
         AuditLogTool::class,
         GlobalSettingsUpdateTool::class,
+
+        // Feedback (2) — super admin only
+        FeedbackListTool::class,
+        FeedbackUpdateTool::class,
 
         // Admin (7) — super admin only
         AdminTeamSuspendTool::class,

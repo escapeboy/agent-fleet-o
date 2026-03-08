@@ -29,10 +29,10 @@ abstract class WebhookTriggerDriver implements IntegrationDriverInterface
         $urlKey = $this->webhookUrlConfigKey();
 
         return [
-            $urlKey          => ['type' => 'url',      'required' => false, 'label' => 'Outbound Webhook URL',
-                                  'hint' => 'Paste the webhook URL from your automation platform to send events TO it.'],
+            $urlKey => ['type' => 'url',      'required' => false, 'label' => 'Outbound Webhook URL',
+                'hint' => 'Paste the webhook URL from your automation platform to send events TO it.'],
             'webhook_secret' => ['type' => 'password', 'required' => false, 'label' => 'Webhook Secret (optional)',
-                                  'hint' => 'If set, verified against X-Webhook-Secret header on inbound requests.'],
+                'hint' => 'If set, verified against X-Webhook-Secret header on inbound requests.'],
         ];
     }
 
@@ -60,7 +60,7 @@ abstract class WebhookTriggerDriver implements IntegrationDriverInterface
         $start = microtime(true);
         try {
             $response = Http::timeout(10)->post($url, ['source' => 'fleetq', 'type' => 'ping']);
-            $latency  = (int) ((microtime(true) - $start) * 1000);
+            $latency = (int) ((microtime(true) - $start) * 1000);
 
             return $response->successful()
                 ? HealthResult::ok($latency)

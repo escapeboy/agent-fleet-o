@@ -44,10 +44,10 @@ class TelegramIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'bot_token'      => ['type' => 'password', 'required' => true,  'label' => 'Bot Token',
-                                  'hint' => 'From @BotFather → /newbot → token'],
+            'bot_token' => ['type' => 'password', 'required' => true,  'label' => 'Bot Token',
+                'hint' => 'From @BotFather → /newbot → token'],
             'webhook_secret' => ['type' => 'string',   'required' => false, 'label' => 'Webhook Secret Token',
-                                  'hint' => 'Set in setWebhook call; Telegram sends it as X-Telegram-Bot-Api-Secret-Token'],
+                'hint' => 'Set in setWebhook call; Telegram sends it as X-Telegram-Bot-Api-Secret-Token'],
         ];
     }
 
@@ -77,7 +77,7 @@ class TelegramIntegrationDriver implements IntegrationDriverInterface
         $start = microtime(true);
         try {
             $response = Http::timeout(10)->get("https://api.telegram.org/bot{$token}/getMe");
-            $latency  = (int) ((microtime(true) - $start) * 1000);
+            $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful() && $response->json('ok')) {
                 $botName = $response->json('result.username', 'bot');
@@ -94,9 +94,9 @@ class TelegramIntegrationDriver implements IntegrationDriverInterface
     public function triggers(): array
     {
         return [
-            new TriggerDefinition('message_received',  'Message Received',  'A user sent a message to the bot.'),
-            new TriggerDefinition('command_received',   'Command Received',  'A user sent a /command to the bot.'),
-            new TriggerDefinition('callback_query',     'Button Clicked',    'A user clicked an inline keyboard button.'),
+            new TriggerDefinition('message_received', 'Message Received', 'A user sent a message to the bot.'),
+            new TriggerDefinition('command_received', 'Command Received', 'A user sent a /command to the bot.'),
+            new TriggerDefinition('callback_query', 'Button Clicked', 'A user clicked an inline keyboard button.'),
         ];
     }
 
@@ -104,18 +104,18 @@ class TelegramIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             new ActionDefinition('send_message', 'Send Message', 'Send a message to a Telegram chat.', [
-                'chat_id'    => ['type' => 'string', 'required' => true,  'label' => 'Chat ID or @username'],
-                'text'       => ['type' => 'string', 'required' => true,  'label' => 'Message text (Markdown supported)'],
+                'chat_id' => ['type' => 'string', 'required' => true,  'label' => 'Chat ID or @username'],
+                'text' => ['type' => 'string', 'required' => true,  'label' => 'Message text (Markdown supported)'],
                 'parse_mode' => ['type' => 'string', 'required' => false, 'label' => 'Parse mode: Markdown or HTML'],
             ]),
             new ActionDefinition('send_photo', 'Send Photo', 'Send a photo to a Telegram chat.', [
                 'chat_id' => ['type' => 'string', 'required' => true, 'label' => 'Chat ID'],
-                'photo'   => ['type' => 'string', 'required' => true, 'label' => 'Photo URL or file_id'],
+                'photo' => ['type' => 'string', 'required' => true, 'label' => 'Photo URL or file_id'],
                 'caption' => ['type' => 'string', 'required' => false, 'label' => 'Caption text'],
             ]),
             new ActionDefinition('answer_callback', 'Answer Callback', 'Acknowledge an inline button click.', [
                 'callback_query_id' => ['type' => 'string', 'required' => true, 'label' => 'Callback query ID'],
-                'text'              => ['type' => 'string', 'required' => false, 'label' => 'Toast notification text'],
+                'text' => ['type' => 'string', 'required' => false, 'label' => 'Toast notification text'],
             ]),
         ];
     }
@@ -159,9 +159,9 @@ class TelegramIntegrationDriver implements IntegrationDriverInterface
         return [
             [
                 'source_type' => 'telegram',
-                'source_id'   => (string) ($payload['update_id'] ?? uniqid('tg_', true)),
-                'payload'     => $payload,
-                'tags'        => $tags,
+                'source_id' => (string) ($payload['update_id'] ?? uniqid('tg_', true)),
+                'payload' => $payload,
+                'tags' => $tags,
             ],
         ];
     }
@@ -172,19 +172,19 @@ class TelegramIntegrationDriver implements IntegrationDriverInterface
         abort_unless($token, 422, 'Telegram bot token not configured.');
 
         return match ($action) {
-            'send_message'   => $this->apiCall($token, 'sendMessage', [
-                'chat_id'    => $params['chat_id'],
-                'text'       => $params['text'],
+            'send_message' => $this->apiCall($token, 'sendMessage', [
+                'chat_id' => $params['chat_id'],
+                'text' => $params['text'],
                 'parse_mode' => $params['parse_mode'] ?? 'Markdown',
             ]),
-            'send_photo'     => $this->apiCall($token, 'sendPhoto', [
+            'send_photo' => $this->apiCall($token, 'sendPhoto', [
                 'chat_id' => $params['chat_id'],
-                'photo'   => $params['photo'],
+                'photo' => $params['photo'],
                 'caption' => $params['caption'] ?? '',
             ]),
             'answer_callback' => $this->apiCall($token, 'answerCallbackQuery', [
                 'callback_query_id' => $params['callback_query_id'],
-                'text'              => $params['text'] ?? '',
+                'text' => $params['text'] ?? '',
             ]),
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

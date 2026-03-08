@@ -42,6 +42,7 @@ class AdminSecurityOverviewTool extends Tool
         $suspiciousIps = [];
         // Since we can't efficiently SCAN all IP keys, we return what we have for the current hour
         $currentHour = $now->format('Y-m-d-H');
+
         // Return summary with what's available
         return Response::text(json_encode([
             'total_failed_logins_24h' => $totalFailed24h,

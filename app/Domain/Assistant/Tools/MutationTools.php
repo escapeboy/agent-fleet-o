@@ -11,6 +11,11 @@ use App\Domain\Crew\Actions\CreateCrewAction;
 use App\Domain\Crew\Actions\ExecuteCrewAction;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Email\Actions\CreateEmailTemplateAction;
+use App\Domain\Email\Actions\DeleteEmailTemplateAction;
+use App\Domain\Email\Actions\UpdateEmailTemplateAction;
+use App\Domain\Email\Models\EmailTemplate;
+use App\Domain\Email\Services\MjmlRenderer;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Experiment\Actions\CreateExperimentAction;
@@ -37,11 +42,6 @@ use App\Domain\Skill\Actions\CreateSkillAction;
 use App\Domain\Skill\Actions\UpdateSkillAction;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
-use App\Domain\Email\Actions\CreateEmailTemplateAction;
-use App\Domain\Email\Actions\DeleteEmailTemplateAction;
-use App\Domain\Email\Actions\UpdateEmailTemplateAction;
-use App\Domain\Email\Models\EmailTemplate;
-use App\Domain\Email\Services\MjmlRenderer;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\GenerateWorkflowFromPromptAction;
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
@@ -49,6 +49,7 @@ use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Models\Workflow;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
 
@@ -1265,7 +1266,7 @@ class MutationTools
                     $team = auth()->user()->currentTeam;
 
                     // Sanitize LLM "None" strings for optional UUID fields
-                    $email_theme_id = ($email_theme_id && \Illuminate\Support\Str::isUuid($email_theme_id)) ? $email_theme_id : null;
+                    $email_theme_id = ($email_theme_id && Str::isUuid($email_theme_id)) ? $email_theme_id : null;
 
                     $data = array_filter([
                         'name' => $name,
@@ -1330,7 +1331,7 @@ class MutationTools
 
                 try {
                     // Sanitize LLM "None" strings for optional UUID fields
-                    $email_theme_id = ($email_theme_id && \Illuminate\Support\Str::isUuid($email_theme_id)) ? $email_theme_id : null;
+                    $email_theme_id = ($email_theme_id && Str::isUuid($email_theme_id)) ? $email_theme_id : null;
 
                     $data = array_filter([
                         'name' => $name,

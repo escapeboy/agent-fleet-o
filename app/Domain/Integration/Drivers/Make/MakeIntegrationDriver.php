@@ -41,16 +41,16 @@ class MakeIntegrationDriver extends WebhookTriggerDriver
     {
         return [
             'make_webhook_url' => [
-                'type'     => 'url',
+                'type' => 'url',
                 'required' => false,
-                'label'    => 'Make Webhook URL',
-                'hint'     => 'From Make → Webhooks → Custom webhook → copy URL. The scenario must be active to receive events.',
+                'label' => 'Make Webhook URL',
+                'hint' => 'From Make → Webhooks → Custom webhook → copy URL. The scenario must be active to receive events.',
             ],
             'webhook_secret' => [
-                'type'     => 'password',
+                'type' => 'password',
                 'required' => false,
-                'label'    => 'Inbound Webhook Secret',
-                'hint'     => 'Set a shared secret in your Make scenario header X-Webhook-Secret to verify inbound requests.',
+                'label' => 'Inbound Webhook Secret',
+                'hint' => 'Set a shared secret in your Make scenario header X-Webhook-Secret to verify inbound requests.',
             ],
         ];
     }
@@ -59,7 +59,7 @@ class MakeIntegrationDriver extends WebhookTriggerDriver
     {
         return [
             new TriggerDefinition('scenario_triggered', 'Scenario Triggered', 'A Make scenario sent data to FleetQ.'),
-            new TriggerDefinition('data_received',      'Data Received',      'Make sent a generic data payload to FleetQ.'),
+            new TriggerDefinition('data_received', 'Data Received', 'Make sent a generic data payload to FleetQ.'),
         ];
     }
 
@@ -80,9 +80,9 @@ class MakeIntegrationDriver extends WebhookTriggerDriver
         return [
             [
                 'source_type' => 'make',
-                'source_id'   => 'make:'.(string) ($payload['id'] ?? uniqid('make_', true)),
-                'payload'     => $payload,
-                'tags'        => ['make', 'scenario_triggered'],
+                'source_id' => 'make:'.(string) ($payload['id'] ?? uniqid('make_', true)),
+                'payload' => $payload,
+                'tags' => ['make', 'scenario_triggered'],
             ],
         ];
     }

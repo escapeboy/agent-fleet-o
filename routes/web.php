@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
@@ -23,6 +24,10 @@ use App\Livewire\Crews\CrewDetailPage;
 use App\Livewire\Crews\CrewExecutionPage;
 use App\Livewire\Crews\CrewListPage;
 use App\Livewire\Dashboard\DashboardPage;
+use App\Livewire\Email\EmailTemplateBuilderPage;
+use App\Livewire\Email\EmailTemplateListPage;
+use App\Livewire\Email\EmailThemeDetailPage;
+use App\Livewire\Email\EmailThemeListPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
 use App\Livewire\Experiments\ExperimentListPage;
 use App\Livewire\Health\HealthPage;
@@ -56,11 +61,6 @@ use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
-use App\Http\Controllers\EmailTemplatePreviewController;
-use App\Livewire\Email\EmailTemplateBuilderPage;
-use App\Livewire\Email\EmailTemplateListPage;
-use App\Livewire\Email\EmailThemeDetailPage;
-use App\Livewire\Email\EmailThemeListPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;

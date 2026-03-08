@@ -8,6 +8,7 @@ use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\DTOs\TriggerDefinition;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Http;
 class KlaviyoIntegrationDriver implements IntegrationDriverInterface
 {
     private const API_BASE = 'https://a.klaviyo.com/api';
+
     private const REVISION = '2024-02-15';
 
     public function key(): string
@@ -45,10 +47,10 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'api_key'        => ['type' => 'password', 'required' => true,  'label' => 'Private API Key',
-                                  'hint' => 'From Klaviyo → Account → Settings → API Keys → Create Private API Key'],
+            'api_key' => ['type' => 'password', 'required' => true,  'label' => 'Private API Key',
+                'hint' => 'From Klaviyo → Account → Settings → API Keys → Create Private API Key'],
             'webhook_secret' => ['type' => 'password', 'required' => false, 'label' => 'Webhook Signing Secret',
-                                  'hint' => 'From Klaviyo → Integrations → Webhooks → signing secret'],
+                'hint' => 'From Klaviyo → Integrations → Webhooks → signing secret'],
         ];
     }
 
@@ -78,7 +80,7 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
         $start = microtime(true);
         try {
             $response = $this->request($apiKey)->get(self::API_BASE.'/accounts/');
-            $latency  = (int) ((microtime(true) - $start) * 1000);
+            $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
                 $name = $response->json('data.0.attributes.contact_information.organization_name', 'Klaviyo');
@@ -95,11 +97,11 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
     public function triggers(): array
     {
         return [
-            new TriggerDefinition('profile.created',      'Profile Created',     'A new Klaviyo profile was created.'),
-            new TriggerDefinition('profile.subscribed',   'Profile Subscribed',  'A profile subscribed to a list.'),
-            new TriggerDefinition('profile.unsubscribed', 'Profile Unsubscribed','A profile unsubscribed from a list.'),
-            new TriggerDefinition('event.created',        'Event Created',       'A custom metric event was recorded (e.g. Placed Order).'),
-            new TriggerDefinition('flow.send',            'Flow Message Sent',   'A flow message was sent to a profile.'),
+            new TriggerDefinition('profile.created', 'Profile Created', 'A new Klaviyo profile was created.'),
+            new TriggerDefinition('profile.subscribed', 'Profile Subscribed', 'A profile subscribed to a list.'),
+            new TriggerDefinition('profile.unsubscribed', 'Profile Unsubscribed', 'A profile unsubscribed from a list.'),
+            new TriggerDefinition('event.created', 'Event Created', 'A custom metric event was recorded (e.g. Placed Order).'),
+            new TriggerDefinition('flow.send', 'Flow Message Sent', 'A flow message was sent to a profile.'),
         ];
     }
 
@@ -107,27 +109,27 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             new ActionDefinition('create_profile', 'Create/Update Profile', 'Upsert a Klaviyo profile by email.', [
-                'email'      => ['type' => 'string', 'required' => true,  'label' => 'Email address'],
+                'email' => ['type' => 'string', 'required' => true,  'label' => 'Email address'],
                 'first_name' => ['type' => 'string', 'required' => false, 'label' => 'First name'],
-                'last_name'  => ['type' => 'string', 'required' => false, 'label' => 'Last name'],
-                'phone'      => ['type' => 'string', 'required' => false, 'label' => 'Phone (E.164)'],
+                'last_name' => ['type' => 'string', 'required' => false, 'label' => 'Last name'],
+                'phone' => ['type' => 'string', 'required' => false, 'label' => 'Phone (E.164)'],
                 'properties' => ['type' => 'array',  'required' => false, 'label' => 'Custom properties map'],
             ]),
             new ActionDefinition('add_to_list', 'Add to List', 'Subscribe a profile to a Klaviyo list.', [
                 'list_id' => ['type' => 'string', 'required' => true, 'label' => 'List ID'],
-                'email'   => ['type' => 'string', 'required' => true, 'label' => 'Email address'],
+                'email' => ['type' => 'string', 'required' => true, 'label' => 'Email address'],
             ]),
             new ActionDefinition('remove_from_list', 'Remove from List', 'Unsubscribe a profile from a list.', [
                 'list_id' => ['type' => 'string', 'required' => true, 'label' => 'List ID'],
-                'email'   => ['type' => 'string', 'required' => true, 'label' => 'Email address'],
+                'email' => ['type' => 'string', 'required' => true, 'label' => 'Email address'],
             ]),
             new ActionDefinition('track_event', 'Track Event', 'Record a custom metric event for a profile.', [
-                'email'       => ['type' => 'string', 'required' => true,  'label' => 'Profile email'],
-                'metric'      => ['type' => 'string', 'required' => true,  'label' => 'Metric name (e.g. Placed Order)'],
-                'properties'  => ['type' => 'array',  'required' => false, 'label' => 'Event properties map'],
+                'email' => ['type' => 'string', 'required' => true,  'label' => 'Profile email'],
+                'metric' => ['type' => 'string', 'required' => true,  'label' => 'Metric name (e.g. Placed Order)'],
+                'properties' => ['type' => 'array',  'required' => false, 'label' => 'Event properties map'],
             ]),
             new ActionDefinition('update_profile_properties', 'Update Profile Properties', 'Patch custom properties on a profile.', [
-                'email'      => ['type' => 'string', 'required' => true, 'label' => 'Profile email'],
+                'email' => ['type' => 'string', 'required' => true, 'label' => 'Profile email'],
                 'properties' => ['type' => 'array',  'required' => true, 'label' => 'Properties to update'],
             ]),
         ];
@@ -178,9 +180,9 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
         return [
             [
                 'source_type' => 'klaviyo',
-                'source_id'   => 'kl:'.($payload['data']['id'] ?? uniqid('kl_', true)),
-                'payload'     => $payload,
-                'tags'        => ['klaviyo', str_replace('.', '_', $type)],
+                'source_id' => 'kl:'.($payload['data']['id'] ?? uniqid('kl_', true)),
+                'payload' => $payload,
+                'tags' => ['klaviyo', str_replace('.', '_', $type)],
             ],
         ];
     }
@@ -193,12 +195,12 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
         return match ($action) {
             'create_profile' => $this->request($apiKey)->post(self::API_BASE.'/profile-import/', [
                 'data' => [
-                    'type'       => 'profile',
+                    'type' => 'profile',
                     'attributes' => array_filter([
-                        'email'      => $params['email'],
+                        'email' => $params['email'],
                         'first_name' => $params['first_name'] ?? null,
-                        'last_name'  => $params['last_name'] ?? null,
-                        'phone'      => $params['phone'] ?? null,
+                        'last_name' => $params['last_name'] ?? null,
+                        'phone' => $params['phone'] ?? null,
                         'properties' => $params['properties'] ?? [],
                     ]),
                 ],
@@ -206,26 +208,26 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
 
             'add_to_list' => $this->request($apiKey)->post(self::API_BASE."/lists/{$params['list_id']}/relationships/profiles/", [
                 'data' => [[
-                    'type'       => 'profile',
+                    'type' => 'profile',
                     'attributes' => ['email' => $params['email']],
                 ]],
             ])->json(),
 
             'remove_from_list' => $this->request($apiKey)->delete(self::API_BASE."/lists/{$params['list_id']}/relationships/profiles/", [
                 'data' => [[
-                    'type'       => 'profile',
+                    'type' => 'profile',
                     'attributes' => ['email' => $params['email']],
                 ]],
             ])->json(),
 
             'track_event' => $this->request($apiKey)->post(self::API_BASE.'/events/', [
                 'data' => [
-                    'type'       => 'event',
+                    'type' => 'event',
                     'attributes' => [
-                        'metric'     => ['data' => ['type' => 'metric', 'attributes' => ['name' => $params['metric']]]],
-                        'profile'    => ['data' => ['type' => 'profile', 'attributes' => ['email' => $params['email']]]],
+                        'metric' => ['data' => ['type' => 'metric', 'attributes' => ['name' => $params['metric']]]],
+                        'profile' => ['data' => ['type' => 'profile', 'attributes' => ['email' => $params['email']]]],
                         'properties' => $params['properties'] ?? [],
-                        'time'       => now()->toIso8601String(),
+                        'time' => now()->toIso8601String(),
                     ],
                 ],
             ])->json(),
@@ -236,11 +238,11 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
         };
     }
 
-    private function request(string $apiKey): \Illuminate\Http\Client\PendingRequest
+    private function request(string $apiKey): PendingRequest
     {
         return Http::withHeaders([
             'Klaviyo-API-Key' => $apiKey,
-            'revision'        => self::REVISION,
+            'revision' => self::REVISION,
         ])->timeout(15)->acceptJson();
     }
 
@@ -258,8 +260,8 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
 
         return $this->request($apiKey)->patch(self::API_BASE."/profiles/{$profileId}/", [
             'data' => [
-                'type'       => 'profile',
-                'id'         => $profileId,
+                'type' => 'profile',
+                'id' => $profileId,
                 'attributes' => ['properties' => $properties],
             ],
         ])->json();

@@ -47,20 +47,20 @@ class WhatsAppIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             'phone_number_id' => ['type' => 'string',   'required' => true,  'label' => 'Phone Number ID',
-                                   'hint' => 'From Meta Developer Console → WhatsApp → Getting Started'],
-            'access_token'    => ['type' => 'password', 'required' => true,  'label' => 'Access Token',
-                                   'hint' => 'Permanent System User access token from Meta Business'],
-            'verify_token'    => ['type' => 'string',   'required' => false, 'label' => 'Webhook Verify Token',
-                                   'hint' => 'Set the same value in your Meta webhook configuration'],
-            'webhook_secret'  => ['type' => 'password', 'required' => false, 'label' => 'App Secret',
-                                   'hint' => 'For X-Hub-Signature-256 verification (Meta App Secret)'],
+                'hint' => 'From Meta Developer Console → WhatsApp → Getting Started'],
+            'access_token' => ['type' => 'password', 'required' => true,  'label' => 'Access Token',
+                'hint' => 'Permanent System User access token from Meta Business'],
+            'verify_token' => ['type' => 'string',   'required' => false, 'label' => 'Webhook Verify Token',
+                'hint' => 'Set the same value in your Meta webhook configuration'],
+            'webhook_secret' => ['type' => 'password', 'required' => false, 'label' => 'App Secret',
+                'hint' => 'For X-Hub-Signature-256 verification (Meta App Secret)'],
         ];
     }
 
     public function validateCredentials(array $credentials): bool
     {
         $phoneNumberId = $credentials['phone_number_id'] ?? null;
-        $accessToken   = $credentials['access_token'] ?? null;
+        $accessToken = $credentials['access_token'] ?? null;
 
         if (! $phoneNumberId || ! $accessToken) {
             return false;
@@ -110,7 +110,7 @@ class WhatsAppIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             new TriggerDefinition('message_received', 'Message Received', 'A customer sent a WhatsApp message.'),
-            new TriggerDefinition('status_update',    'Status Update',    'A message delivery status changed (sent/delivered/read).'),
+            new TriggerDefinition('status_update', 'Status Update', 'A message delivery status changed (sent/delivered/read).'),
         ];
     }
 
@@ -118,14 +118,14 @@ class WhatsAppIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             new ActionDefinition('send_message', 'Send Message', 'Send a text message to a WhatsApp number.', [
-                'to'      => ['type' => 'string', 'required' => true, 'label' => 'Recipient phone number (E.164 format)'],
+                'to' => ['type' => 'string', 'required' => true, 'label' => 'Recipient phone number (E.164 format)'],
                 'message' => ['type' => 'string', 'required' => true, 'label' => 'Message text'],
             ]),
             new ActionDefinition('send_template', 'Send Template', 'Send a pre-approved template message.', [
-                'to'            => ['type' => 'string', 'required' => true, 'label' => 'Recipient phone number'],
+                'to' => ['type' => 'string', 'required' => true, 'label' => 'Recipient phone number'],
                 'template_name' => ['type' => 'string', 'required' => true, 'label' => 'Template name'],
                 'language_code' => ['type' => 'string', 'required' => true, 'label' => 'Language code (e.g. en_US)'],
-                'components'    => ['type' => 'array',  'required' => false, 'label' => 'Template components (variables)'],
+                'components' => ['type' => 'array',  'required' => false, 'label' => 'Template components (variables)'],
             ]),
         ];
     }
@@ -167,25 +167,25 @@ class WhatsAppIntegrationDriver implements IntegrationDriverInterface
 
         foreach ($payload['entry'] ?? [] as $entry) {
             foreach ($entry['changes'] ?? [] as $change) {
-                $value    = $change['value'] ?? [];
+                $value = $change['value'] ?? [];
                 $messages = $value['messages'] ?? [];
                 $statuses = $value['statuses'] ?? [];
 
                 foreach ($messages as $msg) {
                     $signals[] = [
                         'source_type' => 'whatsapp',
-                        'source_id'   => $msg['id'] ?? uniqid('wa_', true),
-                        'payload'     => $msg + ['contacts' => $value['contacts'] ?? []],
-                        'tags'        => ['whatsapp', 'message_received'],
+                        'source_id' => $msg['id'] ?? uniqid('wa_', true),
+                        'payload' => $msg + ['contacts' => $value['contacts'] ?? []],
+                        'tags' => ['whatsapp', 'message_received'],
                     ];
                 }
 
                 foreach ($statuses as $status) {
                     $signals[] = [
                         'source_type' => 'whatsapp',
-                        'source_id'   => $status['id'] ?? uniqid('wa_s_', true),
-                        'payload'     => $status,
-                        'tags'        => ['whatsapp', 'status_update', $status['status'] ?? 'unknown'],
+                        'source_id' => $status['id'] ?? uniqid('wa_s_', true),
+                        'payload' => $status,
+                        'tags' => ['whatsapp', 'status_update', $status['status'] ?? 'unknown'],
                     ];
                 }
             }
@@ -203,9 +203,9 @@ class WhatsAppIntegrationDriver implements IntegrationDriverInterface
         abort_unless($phoneNumberId && $accessToken, 422, 'WhatsApp credentials not configured.');
 
         return match ($action) {
-            'send_message'  => $this->sendTextMessage($accessToken, $phoneNumberId, $params['to'], $params['message']),
+            'send_message' => $this->sendTextMessage($accessToken, $phoneNumberId, $params['to'], $params['message']),
             'send_template' => $this->sendTemplateMessage($accessToken, $phoneNumberId, $params),
-            default         => throw new \InvalidArgumentException("Unknown action: {$action}"),
+            default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };
     }
 
@@ -214,9 +214,9 @@ class WhatsAppIntegrationDriver implements IntegrationDriverInterface
         return Http::withToken($token)
             ->post(self::API_BASE."/{$phoneNumberId}/messages", [
                 'messaging_product' => 'whatsapp',
-                'to'                => $to,
-                'type'              => 'text',
-                'text'              => ['body' => $message],
+                'to' => $to,
+                'type' => 'text',
+                'text' => ['body' => $message],
             ])
             ->json();
     }
@@ -226,11 +226,11 @@ class WhatsAppIntegrationDriver implements IntegrationDriverInterface
         return Http::withToken($token)
             ->post(self::API_BASE."/{$phoneNumberId}/messages", [
                 'messaging_product' => 'whatsapp',
-                'to'                => $params['to'],
-                'type'              => 'template',
-                'template'          => [
-                    'name'       => $params['template_name'],
-                    'language'   => ['code' => $params['language_code']],
+                'to' => $params['to'],
+                'type' => 'template',
+                'template' => [
+                    'name' => $params['template_name'],
+                    'language' => ['code' => $params['language_code']],
                     'components' => $params['components'] ?? [],
                 ],
             ])

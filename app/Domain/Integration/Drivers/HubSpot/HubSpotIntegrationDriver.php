@@ -45,10 +45,10 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'access_token'  => ['type' => 'password', 'required' => true,  'label' => 'Access Token'],
+            'access_token' => ['type' => 'password', 'required' => true,  'label' => 'Access Token'],
             'refresh_token' => ['type' => 'password', 'required' => false, 'label' => 'Refresh Token'],
-            'expires_at'    => ['type' => 'string',   'required' => false, 'label' => 'Token Expiry (ISO 8601)'],
-            'portal_id'     => ['type' => 'string',   'required' => false, 'label' => 'Portal / Account ID'],
+            'expires_at' => ['type' => 'string',   'required' => false, 'label' => 'Token Expiry (ISO 8601)'],
+            'portal_id' => ['type' => 'string',   'required' => false, 'label' => 'Portal / Account ID'],
         ];
     }
 
@@ -100,11 +100,11 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
     public function triggers(): array
     {
         return [
-            new TriggerDefinition('contact.creation',       'Contact Created',       'A new contact was created in HubSpot.'),
-            new TriggerDefinition('contact.propertyChange', 'Contact Updated',       'A contact property was changed.'),
-            new TriggerDefinition('deal.creation',          'Deal Created',          'A new deal was created.'),
-            new TriggerDefinition('deal.propertyChange',    'Deal Updated',          'A deal property or stage changed.'),
-            new TriggerDefinition('ticket.creation',        'Ticket Created',        'A new support ticket was opened.'),
+            new TriggerDefinition('contact.creation', 'Contact Created', 'A new contact was created in HubSpot.'),
+            new TriggerDefinition('contact.propertyChange', 'Contact Updated', 'A contact property was changed.'),
+            new TriggerDefinition('deal.creation', 'Deal Created', 'A new deal was created.'),
+            new TriggerDefinition('deal.propertyChange', 'Deal Updated', 'A deal property or stage changed.'),
+            new TriggerDefinition('ticket.creation', 'Ticket Created', 'A new support ticket was opened.'),
         ];
     }
 
@@ -112,23 +112,23 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             new ActionDefinition('create_contact', 'Create Contact', 'Create a new HubSpot contact.', [
-                'email'      => ['type' => 'string', 'required' => true,  'label' => 'Email address'],
+                'email' => ['type' => 'string', 'required' => true,  'label' => 'Email address'],
                 'first_name' => ['type' => 'string', 'required' => false, 'label' => 'First name'],
-                'last_name'  => ['type' => 'string', 'required' => false, 'label' => 'Last name'],
-                'phone'      => ['type' => 'string', 'required' => false, 'label' => 'Phone number'],
+                'last_name' => ['type' => 'string', 'required' => false, 'label' => 'Last name'],
+                'phone' => ['type' => 'string', 'required' => false, 'label' => 'Phone number'],
             ]),
             new ActionDefinition('update_deal', 'Update Deal', 'Update a HubSpot deal properties.', [
-                'deal_id'    => ['type' => 'string', 'required' => true, 'label' => 'Deal ID'],
+                'deal_id' => ['type' => 'string', 'required' => true, 'label' => 'Deal ID'],
                 'properties' => ['type' => 'array',  'required' => true, 'label' => 'Properties map (key → value)'],
             ]),
             new ActionDefinition('create_note', 'Create Note', 'Log an activity note on a CRM object.', [
                 'object_type' => ['type' => 'string', 'required' => true, 'label' => 'Object type: contacts|deals|tickets'],
-                'object_id'   => ['type' => 'string', 'required' => true, 'label' => 'Object ID'],
-                'body'        => ['type' => 'string', 'required' => true, 'label' => 'Note body'],
+                'object_id' => ['type' => 'string', 'required' => true, 'label' => 'Object ID'],
+                'body' => ['type' => 'string', 'required' => true, 'label' => 'Note body'],
             ]),
             new ActionDefinition('create_task', 'Create Task', 'Create a follow-up task in HubSpot.', [
-                'subject'  => ['type' => 'string', 'required' => true,  'label' => 'Task subject'],
-                'body'     => ['type' => 'string', 'required' => false, 'label' => 'Task description'],
+                'subject' => ['type' => 'string', 'required' => true,  'label' => 'Task subject'],
+                'body' => ['type' => 'string', 'required' => false, 'label' => 'Task description'],
                 'due_date' => ['type' => 'string', 'required' => false, 'label' => 'Due date (ISO 8601 or Unix ms)'],
             ]),
         ];
@@ -157,7 +157,7 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
      */
     public function verifyWebhookSignature(string $rawBody, array $headers, string $secret): bool
     {
-        $version   = $headers['x-hubspot-signature-version'] ?? 'v1';
+        $version = $headers['x-hubspot-signature-version'] ?? 'v1';
         $signature = $headers['x-hubspot-signature'] ?? '';
 
         if ($version === 'v1') {
@@ -181,16 +181,16 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
     public function parseWebhookPayload(array $payload, array $headers): array
     {
         // HubSpot sends an array of subscription events
-        $events  = is_array($payload[0] ?? null) ? $payload : [$payload];
+        $events = is_array($payload[0] ?? null) ? $payload : [$payload];
         $signals = [];
 
         foreach ($events as $event) {
             $trigger = $event['subscriptionType'] ?? 'unknown';
             $signals[] = [
                 'source_type' => 'hubspot',
-                'source_id'   => 'hs:'.($event['eventId'] ?? uniqid('hs_', true)),
-                'payload'     => $event,
-                'tags'        => ['hubspot', str_replace('.', '_', $trigger)],
+                'source_id' => 'hs:'.($event['eventId'] ?? uniqid('hs_', true)),
+                'payload' => $event,
+                'tags' => ['hubspot', str_replace('.', '_', $trigger)],
             ];
         }
 
@@ -205,10 +205,10 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
             'create_contact' => Http::withToken($token)->timeout(15)
                 ->post(self::API_BASE.'/crm/v3/objects/contacts', [
                     'properties' => array_filter([
-                        'email'     => $params['email'],
+                        'email' => $params['email'],
                         'firstname' => $params['first_name'] ?? null,
-                        'lastname'  => $params['last_name'] ?? null,
-                        'phone'     => $params['phone'] ?? null,
+                        'lastname' => $params['last_name'] ?? null,
+                        'phone' => $params['phone'] ?? null,
                     ]),
                 ])->json(),
 
@@ -221,7 +221,7 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
                 ->post(self::API_BASE.'/crm/v3/objects/notes', [
                     'properties' => ['hs_note_body' => $params['body'], 'hs_timestamp' => now()->toIso8601String()],
                     'associations' => [[
-                        'to'   => ['id' => $params['object_id']],
+                        'to' => ['id' => $params['object_id']],
                         'types' => [['associationCategory' => 'HUBSPOT_DEFINED', 'associationTypeId' => $this->noteAssocType($params['object_type'])]],
                     ]],
                 ])->json(),
@@ -230,10 +230,10 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
                 ->post(self::API_BASE.'/crm/v3/objects/tasks', [
                     'properties' => array_filter([
                         'hs_task_subject' => $params['subject'],
-                        'hs_task_body'    => $params['body'] ?? null,
-                        'hs_timestamp'    => $params['due_date'] ?? now()->toIso8601String(),
-                        'hs_task_status'  => 'NOT_STARTED',
-                        'hs_task_type'    => 'TODO',
+                        'hs_task_body' => $params['body'] ?? null,
+                        'hs_timestamp' => $params['due_date'] ?? now()->toIso8601String(),
+                        'hs_task_status' => 'NOT_STARTED',
+                        'hs_task_type' => 'TODO',
                     ]),
                 ])->json(),
 
@@ -246,8 +246,8 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
      */
     private function resolveAccessToken(Integration $integration): string
     {
-        $creds      = $integration->credential?->secret_data ?? [];
-        $expiresAt  = $creds['expires_at'] ?? null;
+        $creds = $integration->credential?->secret_data ?? [];
+        $expiresAt = $creds['expires_at'] ?? null;
         $accessToken = $creds['access_token'] ?? null;
 
         if ($accessToken && (! $expiresAt || Carbon::parse($expiresAt)->gt(now()->addMinutes(2)))) {
@@ -258,8 +258,8 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
         abort_unless($refreshToken, 422, 'HubSpot access token expired and no refresh token available.');
 
         $response = Http::asForm()->timeout(15)->post('https://api.hubapi.com/oauth/v1/token', [
-            'grant_type'    => 'refresh_token',
-            'client_id'     => config('integrations.oauth.hubspot.client_id'),
+            'grant_type' => 'refresh_token',
+            'client_id' => config('integrations.oauth.hubspot.client_id'),
             'client_secret' => config('integrations.oauth.hubspot.client_secret'),
             'refresh_token' => $refreshToken,
         ]);
@@ -268,7 +268,7 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
 
         $newCreds = array_merge($creds, [
             'access_token' => $response->json('access_token'),
-            'expires_at'   => now()->addSeconds($response->json('expires_in', 1800))->toIso8601String(),
+            'expires_at' => now()->addSeconds($response->json('expires_in', 1800))->toIso8601String(),
         ]);
 
         if ($integration->credential) {
@@ -282,9 +282,9 @@ class HubSpotIntegrationDriver implements IntegrationDriverInterface
     {
         return match ($objectType) {
             'contacts' => 202,
-            'deals'    => 214,
-            'tickets'  => 216,
-            default    => 202,
+            'deals' => 214,
+            'tickets' => 216,
+            default => 202,
         };
     }
 }

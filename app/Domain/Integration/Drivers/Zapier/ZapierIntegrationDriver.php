@@ -40,16 +40,16 @@ class ZapierIntegrationDriver extends WebhookTriggerDriver
     {
         return [
             'zapier_webhook_url' => [
-                'type'     => 'url',
+                'type' => 'url',
                 'required' => false,
-                'label'    => 'Zapier Catch Hook URL',
-                'hint'     => 'From Zapier → "Webhooks by Zapier" → "Catch Hook" trigger → copy URL.',
+                'label' => 'Zapier Catch Hook URL',
+                'hint' => 'From Zapier → "Webhooks by Zapier" → "Catch Hook" trigger → copy URL.',
             ],
             'webhook_secret' => [
-                'type'     => 'password',
+                'type' => 'password',
                 'required' => false,
-                'label'    => 'Inbound Webhook Secret',
-                'hint'     => 'Set a shared secret in your Zapier Webhooks action header X-Webhook-Secret to verify inbound requests.',
+                'label' => 'Inbound Webhook Secret',
+                'hint' => 'Set a shared secret in your Zapier Webhooks action header X-Webhook-Secret to verify inbound requests.',
             ],
         ];
     }
@@ -69,7 +69,7 @@ class ZapierIntegrationDriver extends WebhookTriggerDriver
             ]),
             new ActionDefinition('trigger_zap', 'Trigger Zap', 'Send a named event to Zapier with structured data.', [
                 'event_name' => ['type' => 'string', 'required' => true,  'label' => 'Event name / type identifier'],
-                'data'       => ['type' => 'array',  'required' => false, 'label' => 'Event data payload'],
+                'data' => ['type' => 'array',  'required' => false, 'label' => 'Event data payload'],
             ]),
         ];
     }
@@ -79,9 +79,9 @@ class ZapierIntegrationDriver extends WebhookTriggerDriver
         return [
             [
                 'source_type' => 'zapier',
-                'source_id'   => 'zap:'.(string) ($payload['id'] ?? uniqid('zap_', true)),
-                'payload'     => $payload,
-                'tags'        => ['zapier', 'webhook_received'],
+                'source_id' => 'zap:'.(string) ($payload['id'] ?? uniqid('zap_', true)),
+                'payload' => $payload,
+                'tags' => ['zapier', 'webhook_received'],
             ],
         ];
     }
