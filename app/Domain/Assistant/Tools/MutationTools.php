@@ -49,6 +49,7 @@ use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Models\Workflow;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
 
@@ -1265,7 +1266,7 @@ class MutationTools
                     $team = auth()->user()->currentTeam;
 
                     // Sanitize LLM "None" strings for optional UUID fields
-                    $email_theme_id = ($email_theme_id && \Illuminate\Support\Str::isUuid($email_theme_id)) ? $email_theme_id : null;
+                    $email_theme_id = ($email_theme_id && Str::isUuid($email_theme_id)) ? $email_theme_id : null;
 
                     $data = array_filter([
                         'name' => $name,
@@ -1330,7 +1331,7 @@ class MutationTools
 
                 try {
                     // Sanitize LLM "None" strings for optional UUID fields
-                    $email_theme_id = ($email_theme_id && \Illuminate\Support\Str::isUuid($email_theme_id)) ? $email_theme_id : null;
+                    $email_theme_id = ($email_theme_id && Str::isUuid($email_theme_id)) ? $email_theme_id : null;
 
                     $data = array_filter([
                         'name' => $name,

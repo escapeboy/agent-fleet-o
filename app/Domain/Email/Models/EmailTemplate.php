@@ -4,6 +4,7 @@ namespace App\Domain\Email\Models;
 
 use App\Domain\Email\Enums\EmailTemplateStatus;
 use App\Domain\Email\Enums\EmailTemplateVisibility;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -37,7 +38,7 @@ class EmailTemplate extends Model
 
     public function team(): BelongsTo
     {
-        return $this->belongsTo(\App\Domain\Shared\Models\Team::class);
+        return $this->belongsTo(Team::class);
     }
 
     public function emailTheme(): BelongsTo

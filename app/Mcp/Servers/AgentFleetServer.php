@@ -74,6 +74,8 @@ use App\Mcp\Tools\Experiment\ExperimentShareTool;
 use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
+use App\Mcp\Tools\Feedback\FeedbackListTool;
+use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
 use App\Mcp\Tools\Integration\IntegrationManageTool;
 use App\Mcp\Tools\Marketplace\MarketplaceAnalyticsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
@@ -402,8 +404,8 @@ class AgentFleetServer extends Server
         GlobalSettingsUpdateTool::class,
 
         // Feedback (2) — super admin only
-        \App\Mcp\Tools\Feedback\FeedbackListTool::class,
-        \App\Mcp\Tools\Feedback\FeedbackUpdateTool::class,
+        FeedbackListTool::class,
+        FeedbackUpdateTool::class,
 
         // Admin (7) — super admin only
         AdminTeamSuspendTool::class,
