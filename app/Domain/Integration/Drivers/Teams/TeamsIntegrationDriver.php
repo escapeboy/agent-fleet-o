@@ -5,7 +5,6 @@ namespace App\Domain\Integration\Drivers\Teams;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
-use App\Domain\Integration\DTOs\TriggerDefinition;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
 use Illuminate\Support\Facades\Http;
@@ -42,7 +41,7 @@ class TeamsIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             'webhook_url' => ['type' => 'url', 'required' => true, 'label' => 'Incoming Webhook URL',
-                               'hint' => 'From Teams channel → Connectors → Incoming Webhook'],
+                'hint' => 'From Teams channel → Connectors → Incoming Webhook'],
         ];
     }
 
@@ -69,9 +68,9 @@ class TeamsIntegrationDriver implements IntegrationDriverInterface
         $start = microtime(true);
         try {
             $response = Http::timeout(10)->post($url, [
-                '@type'    => 'MessageCard',
+                '@type' => 'MessageCard',
                 '@context' => 'http://schema.org/extensions',
-                'text'     => 'FleetQ integration health check.',
+                'text' => 'FleetQ integration health check.',
             ]);
             $latency = (int) ((microtime(true) - $start) * 1000);
 
@@ -93,9 +92,9 @@ class TeamsIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             new ActionDefinition('send_message', 'Send Message', 'Post a message card to a Teams channel.', [
-                'text'    => ['type' => 'string', 'required' => true,  'label' => 'Message text'],
-                'title'   => ['type' => 'string', 'required' => false, 'label' => 'Card title (optional)'],
-                'color'   => ['type' => 'string', 'required' => false, 'label' => 'Theme colour hex (e.g. 0076D7)'],
+                'text' => ['type' => 'string', 'required' => true,  'label' => 'Message text'],
+                'title' => ['type' => 'string', 'required' => false, 'label' => 'Card title (optional)'],
+                'color' => ['type' => 'string', 'required' => false, 'label' => 'Theme colour hex (e.g. 0076D7)'],
             ]),
             new ActionDefinition('send_adaptive_card', 'Send Adaptive Card', 'Post a structured Adaptive Card to Teams.', [
                 'card_body' => ['type' => 'array', 'required' => true, 'label' => 'Adaptive Card body array'],
@@ -136,20 +135,20 @@ class TeamsIntegrationDriver implements IntegrationDriverInterface
         abort_unless($url, 422, 'Teams webhook URL not configured.');
 
         return match ($action) {
-            'send_message'      => $this->sendMessageCard($url, $params['text'], $params['title'] ?? null, $params['color'] ?? null),
+            'send_message' => $this->sendMessageCard($url, $params['text'], $params['title'] ?? null, $params['color'] ?? null),
             'send_adaptive_card' => $this->sendAdaptiveCard($url, $params['card_body']),
-            default             => throw new \InvalidArgumentException("Unknown action: {$action}"),
+            default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };
     }
 
     private function sendMessageCard(string $url, string $text, ?string $title, ?string $color): array
     {
         $payload = [
-            '@type'       => 'MessageCard',
-            '@context'    => 'http://schema.org/extensions',
-            'summary'     => $title ?? $text,
-            'themeColor'  => $color ?? '0076D7',
-            'text'        => $text,
+            '@type' => 'MessageCard',
+            '@context' => 'http://schema.org/extensions',
+            'summary' => $title ?? $text,
+            'themeColor' => $color ?? '0076D7',
+            'text' => $text,
         ];
 
         if ($title) {
@@ -164,14 +163,14 @@ class TeamsIntegrationDriver implements IntegrationDriverInterface
     private function sendAdaptiveCard(string $url, array $cardBody): array
     {
         $payload = [
-            'type'        => 'message',
+            'type' => 'message',
             'attachments' => [[
                 'contentType' => 'application/vnd.microsoft.card.adaptive',
-                'content'     => [
-                    'type'    => 'AdaptiveCard',
+                'content' => [
+                    'type' => 'AdaptiveCard',
                     '$schema' => 'http://adaptivecards.io/schemas/adaptive-card.json',
                     'version' => '1.3',
-                    'body'    => $cardBody,
+                    'body' => $cardBody,
                 ],
             ]],
         ];

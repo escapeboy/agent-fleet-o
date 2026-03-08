@@ -20,10 +20,13 @@ use Illuminate\Support\Facades\Http;
  */
 class GoogleIntegrationDriver implements IntegrationDriverInterface
 {
-    private const SHEETS_BASE   = 'https://sheets.googleapis.com/v4/spreadsheets';
+    private const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
+
     private const CALENDAR_BASE = 'https://www.googleapis.com/calendar/v3';
-    private const DRIVE_BASE    = 'https://www.googleapis.com/drive/v3';
-    private const DOCS_BASE     = 'https://docs.googleapis.com/v1/documents';
+
+    private const DRIVE_BASE = 'https://www.googleapis.com/drive/v3';
+
+    private const DOCS_BASE = 'https://docs.googleapis.com/v1/documents';
 
     public function key(): string
     {
@@ -48,10 +51,10 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'access_token'  => ['type' => 'password', 'required' => true,  'label' => 'Access Token'],
+            'access_token' => ['type' => 'password', 'required' => true,  'label' => 'Access Token'],
             'refresh_token' => ['type' => 'password', 'required' => false, 'label' => 'Refresh Token'],
-            'expires_at'    => ['type' => 'string',   'required' => false, 'label' => 'Token Expiry (ISO 8601)'],
-            'email'         => ['type' => 'string',   'required' => false, 'label' => 'Google Account Email (display only)'],
+            'expires_at' => ['type' => 'string',   'required' => false, 'label' => 'Token Expiry (ISO 8601)'],
+            'email' => ['type' => 'string',   'required' => false, 'label' => 'Google Account Email (display only)'],
         ];
     }
 
@@ -103,9 +106,9 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
     public function triggers(): array
     {
         return [
-            new TriggerDefinition('new_sheet_row',         'New Sheet Row',          'A new row was appended to a configured Google Sheet.'),
+            new TriggerDefinition('new_sheet_row', 'New Sheet Row', 'A new row was appended to a configured Google Sheet.'),
             new TriggerDefinition('calendar_event_starting', 'Calendar Event Starting', 'A calendar event is starting within the configured window.'),
-            new TriggerDefinition('new_drive_file',        'New Drive File',         'A new file was added to a watched Drive folder.'),
+            new TriggerDefinition('new_drive_file', 'New Drive File', 'A new file was added to a watched Drive folder.'),
         ];
     }
 
@@ -114,29 +117,29 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
         return [
             new ActionDefinition('append_sheet_row', 'Append Sheet Row', 'Append a row to a Google Sheets spreadsheet.', [
                 'spreadsheet_id' => ['type' => 'string', 'required' => true, 'label' => 'Spreadsheet ID'],
-                'sheet_name'     => ['type' => 'string', 'required' => true, 'label' => 'Sheet name (tab)'],
-                'values'         => ['type' => 'array',  'required' => true, 'label' => 'Row values (flat array)'],
+                'sheet_name' => ['type' => 'string', 'required' => true, 'label' => 'Sheet name (tab)'],
+                'values' => ['type' => 'array',  'required' => true, 'label' => 'Row values (flat array)'],
             ]),
             new ActionDefinition('update_sheet_row', 'Update Sheet Range', 'Write data to a specific range in a spreadsheet.', [
                 'spreadsheet_id' => ['type' => 'string', 'required' => true, 'label' => 'Spreadsheet ID'],
-                'range'          => ['type' => 'string', 'required' => true, 'label' => 'A1 notation range (e.g. Sheet1!A2:C2)'],
-                'values'         => ['type' => 'array',  'required' => true, 'label' => '2D array of values'],
+                'range' => ['type' => 'string', 'required' => true, 'label' => 'A1 notation range (e.g. Sheet1!A2:C2)'],
+                'values' => ['type' => 'array',  'required' => true, 'label' => '2D array of values'],
             ]),
             new ActionDefinition('read_sheet_range', 'Read Sheet Range', 'Read a range of cells from a Google Sheet.', [
                 'spreadsheet_id' => ['type' => 'string', 'required' => true, 'label' => 'Spreadsheet ID'],
-                'range'          => ['type' => 'string', 'required' => true, 'label' => 'A1 notation range'],
+                'range' => ['type' => 'string', 'required' => true, 'label' => 'A1 notation range'],
             ]),
             new ActionDefinition('create_calendar_event', 'Create Calendar Event', 'Create a Google Calendar event.', [
                 'calendar_id' => ['type' => 'string', 'required' => false, 'label' => 'Calendar ID (default: primary)'],
-                'summary'     => ['type' => 'string', 'required' => true,  'label' => 'Event title'],
-                'start'       => ['type' => 'string', 'required' => true,  'label' => 'Start datetime (ISO 8601)'],
-                'end'         => ['type' => 'string', 'required' => true,  'label' => 'End datetime (ISO 8601)'],
+                'summary' => ['type' => 'string', 'required' => true,  'label' => 'Event title'],
+                'start' => ['type' => 'string', 'required' => true,  'label' => 'Start datetime (ISO 8601)'],
+                'end' => ['type' => 'string', 'required' => true,  'label' => 'End datetime (ISO 8601)'],
                 'description' => ['type' => 'string', 'required' => false, 'label' => 'Event description'],
-                'attendees'   => ['type' => 'array',  'required' => false, 'label' => 'Attendee emails'],
+                'attendees' => ['type' => 'array',  'required' => false, 'label' => 'Attendee emails'],
             ]),
             new ActionDefinition('create_drive_doc', 'Create Drive Document', 'Create a Google Docs document in Drive.', [
-                'name'      => ['type' => 'string', 'required' => true,  'label' => 'Document name'],
-                'content'   => ['type' => 'string', 'required' => false, 'label' => 'Initial document text'],
+                'name' => ['type' => 'string', 'required' => true,  'label' => 'Document name'],
+                'content' => ['type' => 'string', 'required' => false, 'label' => 'Initial document text'],
                 'folder_id' => ['type' => 'string', 'required' => false, 'label' => 'Parent folder ID'],
             ]),
         ];
@@ -159,24 +162,24 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
 
         // Poll new sheet rows
         $spreadsheetId = $integration->config['spreadsheet_id'] ?? null;
-        $sheetName     = $integration->config['sheet_name'] ?? 'Sheet1';
-        $lastRow       = (int) ($integration->config['last_row'] ?? 1);
+        $sheetName = $integration->config['sheet_name'] ?? 'Sheet1';
+        $lastRow = (int) ($integration->config['last_row'] ?? 1);
 
         if ($spreadsheetId) {
-            $range    = urlencode("{$sheetName}!A".($lastRow + 1).':Z');
+            $range = urlencode("{$sheetName}!A".($lastRow + 1).':Z');
             $response = Http::withToken($token)->timeout(15)
                 ->get(self::SHEETS_BASE."/{$spreadsheetId}/values/{$range}");
 
             if ($response->successful()) {
-                $rows    = $response->json('values') ?? [];
+                $rows = $response->json('values') ?? [];
                 $newLast = $lastRow + count($rows);
 
                 foreach ($rows as $index => $row) {
                     $signals[] = [
                         'source_type' => 'google',
-                        'source_id'   => "sheets:{$spreadsheetId}:".($lastRow + $index + 1),
-                        'payload'     => ['row' => $row, 'row_number' => $lastRow + $index + 1, 'spreadsheet_id' => $spreadsheetId],
-                        'tags'        => ['google', 'new_sheet_row'],
+                        'source_id' => "sheets:{$spreadsheetId}:".($lastRow + $index + 1),
+                        'payload' => ['row' => $row, 'row_number' => $lastRow + $index + 1, 'spreadsheet_id' => $spreadsheetId],
+                        'tags' => ['google', 'new_sheet_row'],
                     ];
                 }
 
@@ -187,26 +190,26 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
         }
 
         // Poll upcoming calendar events
-        $calendarId   = $integration->config['calendar_id'] ?? 'primary';
+        $calendarId = $integration->config['calendar_id'] ?? 'primary';
         $lookAheadMin = (int) ($integration->config['calendar_lookahead_minutes'] ?? 15);
-        $lastSynced   = $integration->config['calendar_last_synced'] ?? now()->subMinutes($lookAheadMin + 6)->toIso8601String();
+        $lastSynced = $integration->config['calendar_last_synced'] ?? now()->subMinutes($lookAheadMin + 6)->toIso8601String();
 
         $calResponse = Http::withToken($token)->timeout(15)
             ->get(self::CALENDAR_BASE."/calendars/{$calendarId}/events", [
-                'timeMin'      => $lastSynced,
-                'timeMax'      => now()->addMinutes($lookAheadMin)->toIso8601String(),
+                'timeMin' => $lastSynced,
+                'timeMax' => now()->addMinutes($lookAheadMin)->toIso8601String(),
                 'singleEvents' => 'true',
-                'orderBy'      => 'startTime',
-                'maxResults'   => 50,
+                'orderBy' => 'startTime',
+                'maxResults' => 50,
             ]);
 
         if ($calResponse->successful()) {
             foreach ($calResponse->json('items') ?? [] as $event) {
                 $signals[] = [
                     'source_type' => 'google',
-                    'source_id'   => 'cal:'.$event['id'],
-                    'payload'     => $event,
-                    'tags'        => ['google', 'calendar_event_starting'],
+                    'source_id' => 'cal:'.$event['id'],
+                    'payload' => $event,
+                    'tags' => ['google', 'calendar_event_starting'],
                 ];
             }
             $integration->update(['config' => array_merge($integration->config ?? [], [
@@ -245,9 +248,9 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
 
             'update_sheet_row' => Http::withToken($token)->timeout(15)
                 ->put(self::SHEETS_BASE."/{$params['spreadsheet_id']}/values/".urlencode($params['range']).'?valueInputOption=USER_ENTERED', [
-                    'range'          => $params['range'],
+                    'range' => $params['range'],
                     'majorDimension' => 'ROWS',
-                    'values'         => $params['values'],
+                    'values' => $params['values'],
                 ])->json(),
 
             'read_sheet_range' => Http::withToken($token)->timeout(15)
@@ -256,11 +259,11 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
 
             'create_calendar_event' => Http::withToken($token)->timeout(15)
                 ->post(self::CALENDAR_BASE.'/calendars/'.($params['calendar_id'] ?? 'primary').'/events', array_filter([
-                    'summary'     => $params['summary'],
+                    'summary' => $params['summary'],
                     'description' => $params['description'] ?? null,
-                    'start'       => ['dateTime' => $params['start'], 'timeZone' => 'UTC'],
-                    'end'         => ['dateTime' => $params['end'],   'timeZone' => 'UTC'],
-                    'attendees'   => isset($params['attendees'])
+                    'start' => ['dateTime' => $params['start'], 'timeZone' => 'UTC'],
+                    'end' => ['dateTime' => $params['end'],   'timeZone' => 'UTC'],
+                    'attendees' => isset($params['attendees'])
                         ? array_map(fn ($e) => ['email' => $e], $params['attendees'])
                         : null,
                 ]))->json(),
@@ -293,7 +296,7 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
         if ($docId && ! empty($params['folder_id'])) {
             Http::withToken($token)->timeout(15)
                 ->patch(self::DRIVE_BASE."/files/{$docId}", [], [
-                    'addParents'    => $params['folder_id'],
+                    'addParents' => $params['folder_id'],
                     'removeParents' => 'root',
                 ]);
         }
@@ -303,8 +306,8 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
 
     private function resolveAccessToken(Integration $integration): string
     {
-        $creds       = $integration->credential?->secret_data ?? [];
-        $expiresAt   = $creds['expires_at'] ?? null;
+        $creds = $integration->credential?->secret_data ?? [];
+        $expiresAt = $creds['expires_at'] ?? null;
         $accessToken = $creds['access_token'] ?? null;
 
         if ($accessToken && (! $expiresAt || Carbon::parse($expiresAt)->gt(now()->addMinutes(2)))) {
@@ -315,8 +318,8 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
         abort_unless($refreshToken, 422, 'Google access token expired and no refresh token available.');
 
         $response = Http::asForm()->timeout(15)->post('https://oauth2.googleapis.com/token', [
-            'grant_type'    => 'refresh_token',
-            'client_id'     => config('integrations.oauth.google.client_id'),
+            'grant_type' => 'refresh_token',
+            'client_id' => config('integrations.oauth.google.client_id'),
             'client_secret' => config('integrations.oauth.google.client_secret'),
             'refresh_token' => $refreshToken,
         ]);
@@ -325,7 +328,7 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
 
         $newCreds = array_merge($creds, [
             'access_token' => $response->json('access_token'),
-            'expires_at'   => now()->addSeconds($response->json('expires_in', 3600))->toIso8601String(),
+            'expires_at' => now()->addSeconds($response->json('expires_in', 3600))->toIso8601String(),
         ]);
 
         if ($integration->credential) {

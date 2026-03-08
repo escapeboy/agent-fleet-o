@@ -35,7 +35,7 @@ class IntegrationWebhookController extends Controller
         }
 
         $verifyToken = $webhookRoute->integration?->getCredentialSecret('verify_token') ?? '';
-        $incoming    = $request->query('hub_verify_token') ?? $request->query('hub.verify_token', '');
+        $incoming = $request->query('hub_verify_token') ?? $request->query('hub.verify_token', '');
 
         if (! hash_equals($verifyToken, (string) $incoming)) {
             return response()->json(['error' => 'Verify token mismatch.'], 403);

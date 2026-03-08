@@ -17,26 +17,47 @@ class EmailThemeDetailPage extends Component
 
     // Editable fields
     public string $editName = '';
+
     public string $editStatus = 'draft';
+
     public string $editLogoUrl = '';
+
     public int $editLogoWidth = 150;
+
     public string $editBackgroundColor = '#f4f4f4';
+
     public string $editCanvasColor = '#ffffff';
+
     public string $editPrimaryColor = '#2563eb';
+
     public string $editTextColor = '#1f2937';
+
     public string $editHeadingColor = '#111827';
+
     public string $editMutedColor = '#6b7280';
+
     public string $editDividerColor = '#e5e7eb';
+
     public string $editFontName = 'Inter';
+
     public string $editFontUrl = '';
+
     public string $editFontFamily = 'Inter, Arial, sans-serif';
+
     public int $editHeadingFontSize = 24;
+
     public int $editBodyFontSize = 16;
+
     public float $editLineHeight = 1.6;
+
     public int $editEmailWidth = 600;
+
     public int $editContentPadding = 24;
+
     public string $editCompanyName = '';
+
     public string $editCompanyAddress = '';
+
     public string $editFooterText = '';
 
     public function mount(EmailTheme $theme): void
