@@ -682,6 +682,14 @@ class LocalAgentGateway implements AiGatewayInterface
             'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
             'amp' => "{$binaryPath} -x --stream-json{$escapedPrompt}",
             'opencode' => "{$binaryPath} run --format json".($model ? ' -m '.escapeshellarg($model) : '').$escapedPrompt,
+            // -p is a boolean flag (print/headless mode); prompt is a positional argument appended at the end.
+            // --force skips file-write confirmations (equivalent to --dangerously-skip-permissions in Claude Code).
+            // --trust grants workspace access without interactive confirmation.
+            // --approve-mcps prevents hanging on MCP approval prompts.
+            // Skip --model when 'auto' (Cursor's default behavior routes to best available model).
+            'cursor' => "{$binaryPath} -p --output-format stream-json --force --trust --approve-mcps"
+                .($model && $model !== 'auto' ? ' --model '.escapeshellarg($model) : '')
+                .$escapedPrompt,
             default => throw new RuntimeException("No command template for agent: {$agentKey}"),
         };
     }
@@ -914,6 +922,7 @@ class LocalAgentGateway implements AiGatewayInterface
                 'aider' => 'aider',
                 'amp' => 'amp',
                 'opencode' => 'opencode',
+                'cursor' => 'cursor',
             ];
 
             if ($model && isset($knownModels[$model])) {

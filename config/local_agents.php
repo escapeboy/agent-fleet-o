@@ -66,6 +66,15 @@ return [
             'capabilities' => ['code_generation', 'file_editing', 'shell_execution', 'git'],
             'supported_modes' => ['sync'],
         ],
+        'cursor' => [
+            'name' => 'Cursor',
+            'binary' => 'agent',
+            'description' => 'AI coding agent by Cursor (Anysphere)',
+            'detect_command' => 'agent --version',
+            'requires_env' => 'CURSOR_API_KEY',
+            'capabilities' => ['code_generation', 'file_editing', 'shell_execution', 'git', 'mcp', 'web_search'],
+            'supported_modes' => ['sync', 'streaming'],
+        ],
     ],
 
     // Host bridge — allows Docker containers to reach host-installed agents
