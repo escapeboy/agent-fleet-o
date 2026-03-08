@@ -123,11 +123,24 @@ class SmtpEmailConnector implements OutboundConnectorInterface
             $unsubscribeAddress = preg_replace('/[\r\n<>]/', '', $fromAddress);
             $listUnsubscribe = "<mailto:{$unsubscribeAddress}?subject=unsubscribe>";
 
+            // Auto-prefix subject with Re: when replying in-thread
+            if (! empty($target['reply_subject']) && empty($target['subject'] ?? null)) {
+                $replySubject = $target['reply_subject'];
+                $subject = str_starts_with($replySubject, 'Re:') ? $replySubject : 'Re: '.$replySubject;
+            }
+
             $email = (new Email)
                 ->from(new Address($fromAddress, $fromName))
                 ->to($to)
                 ->subject($subject)
                 ->html($html);
+
+            // Thread headers for in-reply-to context (RFC 2822 §3.6.4)
+            if (! empty($target['in_reply_to'])) {
+                $email->getHeaders()->addTextHeader('In-Reply-To', $target['in_reply_to']);
+                $references = $target['references'] ?? $target['in_reply_to'];
+                $email->getHeaders()->addTextHeader('References', $references);
+            }
 
             $email->getHeaders()->addTextHeader('List-Unsubscribe', $listUnsubscribe);
             $email->getHeaders()->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
