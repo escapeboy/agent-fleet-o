@@ -392,6 +392,94 @@
     </div>
     @endif
 
+    {{-- Custom AI Endpoints --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <div class="mb-4 flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Custom AI Endpoints</h2>
+                <p class="mt-0.5 text-sm text-gray-500">
+                    Connect any OpenAI-compatible service — proxy servers, vLLM, LM Studio, OpenRouter, CCProxy, and more.
+                </p>
+            </div>
+        </div>
+
+        @if($customEndpoints->isEmpty())
+            <div class="rounded-lg border border-dashed border-gray-200 p-6 text-center">
+                <p class="text-sm text-gray-500">No custom endpoints configured yet.</p>
+                <p class="mt-1 text-xs text-gray-400">Any /v1/chat/completions-compatible endpoint works. Models you list here will appear in agent and skill provider dropdowns.</p>
+            </div>
+        @else
+            <div class="mb-4 space-y-3">
+                @foreach($customEndpoints as $ep)
+                    <div class="flex items-start justify-between rounded-lg border border-gray-100 p-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-900">{{ $ep->name }}</span>
+                                @if($ep->is_active)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Active
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span> Inactive
+                                    </span>
+                                @endif
+                            </div>
+                            <p class="mt-0.5 truncate text-xs text-gray-400">{{ $ep->credentials['base_url'] ?? '—' }}</p>
+                            @if(!empty($ep->credentials['models']))
+                                <p class="mt-0.5 text-xs text-gray-400">Models: {{ implode(', ', $ep->credentials['models']) }}</p>
+                            @endif
+                        </div>
+                        <div class="ml-3 flex shrink-0 items-center gap-2">
+                            <button wire:click="toggleCustomEndpoint('{{ $ep->id }}')"
+                                class="text-xs text-gray-500 hover:text-gray-700">
+                                {{ $ep->is_active ? 'Disable' : 'Enable' }}
+                            </button>
+                            <button wire:click="removeCustomEndpoint('{{ $ep->id }}')"
+                                wire:confirm="Remove this custom endpoint? Agents using it will fail."
+                                class="text-xs text-red-600 hover:text-red-800">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        {{-- Add form --}}
+        <div x-data="{ open: false }" class="mt-4">
+            <button @click="open = !open" class="text-sm font-medium text-primary-600 hover:text-primary-700">
+                <span x-show="!open">+ Add Endpoint</span>
+                <span x-show="open">— Cancel</span>
+            </button>
+
+            <div x-show="open" x-cloak class="mt-4 space-y-3 rounded-lg border border-gray-100 p-4">
+                <x-form-input wire:model="customEndpointName" label="Name (identifier)" type="text"
+                    placeholder="my-openrouter"
+                    hint="Lowercase letters, numbers, hyphens, underscores. Used to identify this endpoint in agent config."
+                    :error="$errors->first('customEndpointName')" />
+                <x-form-input wire:model="customEndpointBaseUrl" label="Base URL" type="url"
+                    placeholder="https://openrouter.ai/api/v1"
+                    hint="The /v1 endpoint root. Do not include /chat/completions."
+                    :error="$errors->first('customEndpointBaseUrl')" />
+                <x-form-input wire:model="customEndpointApiKey" label="API Key (optional)" type="password"
+                    placeholder="sk-..."
+                    hint="Leave empty for unauthenticated endpoints."
+                    :error="$errors->first('customEndpointApiKey')" />
+                <x-form-input wire:model="customEndpointModels" label="Available Models (comma-separated)" type="text"
+                    placeholder="meta-llama/llama-3.3-70b-instruct, mistralai/mistral-7b-instruct"
+                    hint="Model IDs exactly as the endpoint expects them."
+                    :error="$errors->first('customEndpointModels')" />
+                <div class="flex justify-end">
+                    <button wire:click="addCustomEndpoint" @click="open = false"
+                        class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                        Save Endpoint
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Credential Security (cloud only, Pro+ feature) --}}
     @if(isset($showKmsSecurity) && $showKmsSecurity)
     <div class="rounded-lg border border-gray-200 bg-white p-6">
