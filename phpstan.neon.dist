@@ -18,3 +18,5 @@ parameters:
     ignoreErrors:
         # Feedback MCP tools reference Cloud-namespace classes not present in the base repo
         - '#Cloud\\Domain\\Feedback\\#'
+        # Admin billing tool references Stripe SDK which is a cloud-only dependency
+        - '#Stripe\\\\#'
