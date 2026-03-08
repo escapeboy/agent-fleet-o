@@ -162,6 +162,35 @@
             </div>
         </div>
 
+        {{-- Local LLM Providers --}}
+        @if($localLlmStats['enabled'])
+            <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <h3 class="text-sm font-medium text-gray-500">Local LLM Providers</h3>
+                <div class="mt-4 space-y-3">
+                    @foreach($localLlmStats['providers'] as $provider => $info)
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ $info['name'] }}</p>
+                                <p class="text-xs text-gray-500">
+                                    @if($info['base_url'])
+                                        <code class="rounded bg-gray-100 px-1">{{ $info['base_url'] }}</code>
+                                        @if($info['reachable'])
+                                            &middot; {{ $info['model_count'] }} model(s) available
+                                        @else
+                                            &middot; <span class="text-red-500">Unreachable</span>
+                                        @endif
+                                    @else
+                                        Not configured
+                                    @endif
+                                </p>
+                            </div>
+                            <span class="inline-flex h-2 w-2 rounded-full {{ $info['reachable'] ? 'bg-green-400' : ($info['base_url'] ? 'bg-red-400' : 'bg-gray-300') }}"></span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         {{-- Recent Errors --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h3 class="text-sm font-medium text-gray-500">Recent Errors</h3>

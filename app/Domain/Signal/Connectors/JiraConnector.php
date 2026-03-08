@@ -10,6 +10,9 @@ use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @deprecated Use JiraIntegrationDriver for new integrations.
+ */
 class JiraConnector implements InputConnectorInterface
 {
     public function __construct(

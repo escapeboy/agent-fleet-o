@@ -3,6 +3,7 @@
 namespace App\Domain\Webhook\Models;
 
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Infrastructure\Encryption\Casts\TeamEncryptedString;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -31,7 +32,7 @@ class WebhookEndpoint extends Model
             'headers' => 'array',
             'retry_config' => 'array',
             'is_active' => 'boolean',
-            'secret' => 'encrypted',
+            'secret' => TeamEncryptedString::class,
             'last_triggered_at' => 'datetime',
             'failure_count' => 'integer',
         ];

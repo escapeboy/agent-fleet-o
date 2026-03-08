@@ -30,7 +30,22 @@ return [
         'stripe' => ['label' => 'Stripe',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💳'],
         'notion' => ['label' => 'Notion',       'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '📝'],
         'airtable' => ['label' => 'Airtable',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '📊'],
-        'linear' => ['label' => 'Linear',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📋'],
+        'linear'    => ['label' => 'Linear',             'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📋'],
+        'discord'   => ['label' => 'Discord',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🎮'],
+        'teams'     => ['label' => 'Microsoft Teams',    'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🟦'],
+        'whatsapp'  => ['label' => 'WhatsApp Business',  'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💬'],
+        'telegram'   => ['label' => 'Telegram',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '✈️'],
+        'datadog'    => ['label' => 'Datadog',            'auth' => 'api_key',      'poll_frequency' => 60,   'icon' => '🐶'],
+        'sentry'     => ['label' => 'Sentry',             'auth' => 'api_key',      'poll_frequency' => 120,  'icon' => '🔍'],
+        'pagerduty'  => ['label' => 'PagerDuty',          'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🚨'],
+        'hubspot'    => ['label' => 'HubSpot',            'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '🧡'],
+        'salesforce' => ['label' => 'Salesforce',         'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '☁️'],
+        'mailchimp'  => ['label' => 'Mailchimp',          'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🐒'],
+        'klaviyo'    => ['label' => 'Klaviyo',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📧'],
+        'google'     => ['label' => 'Google Workspace',  'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '🔵'],
+        'jira'       => ['label' => 'Jira',              'auth' => 'api_key',      'poll_frequency' => 120,  'icon' => '🔷'],
+        'zapier'     => ['label' => 'Zapier',            'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '⚡'],
+        'make'       => ['label' => 'Make',              'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🔮'],
     ],
 
     /*
@@ -52,6 +67,27 @@ return [
             'client_secret' => env('NOTION_CLIENT_SECRET'),
             'scopes' => [],
         ],
+        'hubspot' => [
+            'client_id'     => env('HUBSPOT_CLIENT_ID'),
+            'client_secret' => env('HUBSPOT_CLIENT_SECRET'),
+            'scopes'        => ['crm.objects.contacts.read', 'crm.objects.contacts.write', 'crm.objects.deals.read', 'crm.objects.deals.write', 'tickets'],
+        ],
+        'salesforce' => [
+            'client_id'     => env('SALESFORCE_CLIENT_ID'),
+            'client_secret' => env('SALESFORCE_CLIENT_SECRET'),
+            'scopes'        => ['api', 'refresh_token', 'offline_access'],
+        ],
+        'google' => [
+            'client_id'     => env('GOOGLE_CLIENT_ID'),
+            'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+            'scopes'        => [
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/calendar.readonly',
+                'https://www.googleapis.com/auth/drive.file',
+                'https://www.googleapis.com/auth/userinfo.email',
+                'openid',
+            ],
+        ],
     ],
 
     /*
@@ -70,6 +106,18 @@ return [
         'notion' => [
             'authorize' => 'https://api.notion.com/v1/oauth/authorize',
             'token' => 'https://api.notion.com/v1/oauth/token',
+        ],
+        'hubspot' => [
+            'authorize' => 'https://app.hubspot.com/oauth/authorize',
+            'token'     => 'https://api.hubapi.com/oauth/v1/token',
+        ],
+        'salesforce' => [
+            'authorize' => 'https://login.salesforce.com/services/oauth2/authorize',
+            'token'     => 'https://login.salesforce.com/services/oauth2/token',
+        ],
+        'google' => [
+            'authorize' => 'https://accounts.google.com/o/oauth2/v2/auth',
+            'token'     => 'https://oauth2.googleapis.com/token',
         ],
     ],
 

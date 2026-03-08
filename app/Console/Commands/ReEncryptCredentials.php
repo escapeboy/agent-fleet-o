@@ -9,6 +9,7 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Webhook\Models\WebhookEndpoint;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
@@ -56,6 +57,7 @@ class ReEncryptCredentials extends Command
         // PHP-serializes values, while CredentialEncryption expects JSON-encoded data.
         $stringModels = [
             [TelegramBot::class, 'bot_token'],
+            [WebhookEndpoint::class, 'secret'],
         ];
 
         foreach ($stringModels as [$modelClass, $column]) {

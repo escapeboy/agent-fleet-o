@@ -8,7 +8,9 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Signal\Models\Signal;
+use App\Infrastructure\AI\Services\LocalLlmDiscovery;
 use App\Models\Connector;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redis;
@@ -25,6 +27,7 @@ class HealthPage extends Component
             'spendStats' => $this->getSpendStats(),
             'stuckExperiments' => $this->getStuckExperiments(),
             'connectorStats' => $this->getConnectorStats(),
+            'localLlmStats' => $this->getLocalLlmStats(),
         ])->layout('layouts.app', ['header' => 'System Health']);
     }
 
@@ -161,6 +164,49 @@ class HealthPage extends Component
                     || ($connector->last_success_at && $connector->last_success_at > $connector->last_error_at),
             ];
         });
+    }
+
+    private function getLocalLlmStats(): array
+    {
+        if (! config('local_llm.enabled', false)) {
+            return ['enabled' => false, 'providers' => []];
+        }
+
+        $discovery = app(LocalLlmDiscovery::class);
+        $team = auth()->user()?->currentTeam;
+        $credentials = $team
+            ? TeamProviderCredential::where('team_id', $team->id)
+                ->whereIn('provider', ['ollama', 'openai_compatible'])
+                ->where('is_active', true)
+                ->get()
+                ->keyBy('provider')
+            : collect();
+
+        $providers = [];
+        foreach (['ollama', 'openai_compatible'] as $provider) {
+            $credential = $credentials->get($provider);
+            $baseUrl = $credential?->credentials['base_url'] ?? config("llm_providers.{$provider}.default_url");
+
+            if ($baseUrl) {
+                $reachable = $discovery->isReachable($provider, $baseUrl);
+                $models = $reachable
+                    ? $discovery->discoverModels($provider, $baseUrl, $credential?->credentials['api_key'] ?? null)
+                    : [];
+            } else {
+                $reachable = false;
+                $models = [];
+            }
+
+            $providers[$provider] = [
+                'name' => config("llm_providers.{$provider}.name", $provider),
+                'base_url' => $baseUrl,
+                'configured' => $credential !== null,
+                'reachable' => $reachable,
+                'model_count' => count($models),
+            ];
+        }
+
+        return ['enabled' => true, 'providers' => $providers];
     }
 
     private function getSpendStats(): array

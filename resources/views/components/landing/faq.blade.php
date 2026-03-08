@@ -28,7 +28,11 @@
         ],
         [
             'question' => 'Is my data secure?',
-            'answer' => 'All API keys are encrypted at rest with AES-256. With Bring Your Own Key (BYOK), your LLM credentials never leave your infrastructure. The platform enforces rate limiting, budget caps, target blacklists, a complete audit trail, and role-based access control with four permission levels.',
+            'answer' => 'All API keys and secrets are encrypted at rest using dedicated per-team keys with XSalsa20-Poly1305 authenticated encryption. Pro and Enterprise teams can connect their own AWS KMS, GCP Cloud KMS, or Azure Key Vault — revoking KMS access in your cloud provider immediately blocks all credential decryption. The platform also enforces rate limiting, budget caps, target blacklists, a complete audit trail, and role-based access control with four permission levels.',
+        ],
+        [
+            'question' => 'How are my API keys and credentials protected?',
+            'answer' => 'Every team\'s credentials are encrypted with a dedicated key using XSalsa20-Poly1305 authenticated encryption. Pro and Enterprise teams can bring their own AWS KMS, GCP Cloud KMS, or Azure Key Vault to wrap the encryption key — revoking KMS access in your cloud provider immediately blocks all credential decryption.',
         ],
     ];
     $items = array_merge($baseItems, $extraItems);
