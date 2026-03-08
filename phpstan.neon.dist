@@ -14,3 +14,7 @@ parameters:
 
     excludePaths:
         - app/Console/Commands/InstallCommand.php
+
+    ignoreErrors:
+        # Feedback MCP tools reference Cloud-namespace classes not present in the base repo
+        - '#Cloud\\Domain\\Feedback\\#'
