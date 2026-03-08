@@ -46,17 +46,17 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             'auth_token' => ['type' => 'password', 'required' => true,  'label' => 'Auth Token',
-                              'hint' => 'Sentry Internal Integration → Tokens → Create Token'],
-            'org_slug'   => ['type' => 'string',   'required' => true,  'label' => 'Organisation Slug',
-                              'hint' => 'From your Sentry URL: sentry.io/organizations/{slug}/'],
+                'hint' => 'Sentry Internal Integration → Tokens → Create Token'],
+            'org_slug' => ['type' => 'string',   'required' => true,  'label' => 'Organisation Slug',
+                'hint' => 'From your Sentry URL: sentry.io/organizations/{slug}/'],
             'client_secret' => ['type' => 'password', 'required' => false, 'label' => 'Client Secret',
-                                  'hint' => 'Internal Integration client secret — used for webhook signature verification'],
+                'hint' => 'Internal Integration client secret — used for webhook signature verification'],
         ];
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        $token   = $credentials['auth_token'] ?? null;
+        $token = $credentials['auth_token'] ?? null;
         $orgSlug = $credentials['org_slug'] ?? null;
 
         if (! $token || ! $orgSlug) {
@@ -76,7 +76,7 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $token   = $integration->getCredentialSecret('auth_token');
+        $token = $integration->getCredentialSecret('auth_token');
         $orgSlug = $integration->config['org_slug']
             ?? $integration->getCredentialSecret('org_slug');
 
@@ -106,10 +106,10 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
     public function triggers(): array
     {
         return [
-            new TriggerDefinition('issue_created',          'Issue Created',          'A new Sentry issue was detected.'),
-            new TriggerDefinition('issue_resolved',         'Issue Resolved',         'A Sentry issue was marked as resolved.'),
-            new TriggerDefinition('error_alert_triggered',  'Error Alert Triggered',  'A Sentry alert rule fired.'),
-            new TriggerDefinition('comment_created',        'Comment Created',        'A comment was added to a Sentry issue.'),
+            new TriggerDefinition('issue_created', 'Issue Created', 'A new Sentry issue was detected.'),
+            new TriggerDefinition('issue_resolved', 'Issue Resolved', 'A Sentry issue was marked as resolved.'),
+            new TriggerDefinition('error_alert_triggered', 'Error Alert Triggered', 'A Sentry alert rule fired.'),
+            new TriggerDefinition('comment_created', 'Comment Created', 'A comment was added to a Sentry issue.'),
         ];
     }
 
@@ -125,11 +125,11 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
             ]),
             new ActionDefinition('create_note', 'Create Note', 'Add a comment to a Sentry issue.', [
                 'issue_id' => ['type' => 'string', 'required' => true, 'label' => 'Issue ID'],
-                'text'     => ['type' => 'string', 'required' => true, 'label' => 'Comment text'],
+                'text' => ['type' => 'string', 'required' => true, 'label' => 'Comment text'],
             ]),
             new ActionDefinition('update_issue', 'Update Issue', 'Update issue status and priority.', [
                 'issue_id' => ['type' => 'string', 'required' => true,  'label' => 'Issue ID'],
-                'status'   => ['type' => 'string', 'required' => false, 'label' => 'Status: resolved|ignored|unresolved'],
+                'status' => ['type' => 'string', 'required' => false, 'label' => 'Status: resolved|ignored|unresolved'],
                 'priority' => ['type' => 'string', 'required' => false, 'label' => 'Priority: critical|high|medium|low'],
             ]),
         ];
@@ -142,7 +142,7 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
     public function poll(Integration $integration): array
     {
-        $token   = $integration->getCredentialSecret('auth_token');
+        $token = $integration->getCredentialSecret('auth_token');
         $orgSlug = $integration->config['org_slug']
             ?? $integration->getCredentialSecret('org_slug');
 
@@ -155,7 +155,7 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
                 ->timeout(15)
                 ->get(self::API_BASE."/organizations/{$orgSlug}/issues/", [
                     'is_unhandled' => true,
-                    'limit'        => 25,
+                    'limit' => 25,
                 ]);
 
             if (! $response->successful()) {
@@ -164,9 +164,9 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
             return array_map(fn ($issue) => [
                 'source_type' => 'sentry',
-                'source_id'   => 'sentry:'.$issue['id'],
-                'payload'     => $issue,
-                'tags'        => ['sentry', 'issue', $issue['level'] ?? 'error'],
+                'source_id' => 'sentry:'.$issue['id'],
+                'payload' => $issue,
+                'tags' => ['sentry', 'issue', $issue['level'] ?? 'error'],
             ], $response->json() ?? []);
         } catch (\Throwable) {
             return [];
@@ -184,22 +184,22 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
     public function verifyWebhookSignature(string $rawBody, array $headers, string $secret): bool
     {
         $signature = $headers['sentry-hook-signature'] ?? '';
-        $expected  = hash_hmac('sha256', $rawBody, $secret);
+        $expected = hash_hmac('sha256', $rawBody, $secret);
 
         return hash_equals($expected, $signature);
     }
 
     public function parseWebhookPayload(array $payload, array $headers): array
     {
-        $action   = $payload['action'] ?? 'unknown';
+        $action = $payload['action'] ?? 'unknown';
         $resource = $headers['sentry-hook-resource'] ?? 'unknown';
 
         $trigger = match ("{$resource}.{$action}") {
-            'issue.created'   => 'issue_created',
-            'issue.resolved'  => 'issue_resolved',
-            'error.created'   => 'error_alert_triggered',
+            'issue.created' => 'issue_created',
+            'issue.resolved' => 'issue_resolved',
+            'error.created' => 'error_alert_triggered',
             'comment.created' => 'comment_created',
-            default           => "{$resource}_{$action}",
+            default => "{$resource}_{$action}",
         };
 
         $issueId = $payload['data']['issue']['id']
@@ -209,16 +209,16 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
         return [
             [
                 'source_type' => 'sentry',
-                'source_id'   => 'sentry:'.$issueId,
-                'payload'     => $payload,
-                'tags'        => ['sentry', $trigger],
+                'source_id' => 'sentry:'.$issueId,
+                'payload' => $payload,
+                'tags' => ['sentry', $trigger],
             ],
         ];
     }
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $token   = $integration->getCredentialSecret('auth_token');
+        $token = $integration->getCredentialSecret('auth_token');
         $orgSlug = $integration->config['org_slug']
             ?? $integration->getCredentialSecret('org_slug');
 
@@ -239,7 +239,7 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
             'update_issue' => Http::withToken($token)->timeout(15)
                 ->put(self::API_BASE."/issues/{$params['issue_id']}/", array_filter([
-                    'status'   => $params['status'] ?? null,
+                    'status' => $params['status'] ?? null,
                     'priority' => $params['priority'] ?? null,
                 ]))->json(),
 

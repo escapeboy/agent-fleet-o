@@ -43,18 +43,18 @@ class JiraIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'email'        => ['type' => 'email',    'required' => true, 'label' => 'Jira Account Email'],
-            'api_token'    => ['type' => 'password', 'required' => true, 'label' => 'API Token',
-                                'hint' => 'Generate at id.atlassian.net/manage-profile/security/api-tokens'],
+            'email' => ['type' => 'email',    'required' => true, 'label' => 'Jira Account Email'],
+            'api_token' => ['type' => 'password', 'required' => true, 'label' => 'API Token',
+                'hint' => 'Generate at id.atlassian.net/manage-profile/security/api-tokens'],
             'instance_url' => ['type' => 'url',      'required' => true, 'label' => 'Jira Instance URL',
-                                'hint' => 'e.g. https://myorg.atlassian.net'],
+                'hint' => 'e.g. https://myorg.atlassian.net'],
         ];
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        $email       = $credentials['email'] ?? null;
-        $token       = $credentials['api_token'] ?? null;
+        $email = $credentials['email'] ?? null;
+        $token = $credentials['api_token'] ?? null;
         $instanceUrl = $credentials['instance_url'] ?? null;
 
         if (! $email || ! $token || ! $instanceUrl) {
@@ -102,9 +102,9 @@ class JiraIntegrationDriver implements IntegrationDriverInterface
     public function triggers(): array
     {
         return [
-            new TriggerDefinition('issue_created',     'Issue Created',     'A new Jira issue was created in the configured project.'),
-            new TriggerDefinition('issue_updated',     'Issue Updated',     'An existing Jira issue was updated.'),
-            new TriggerDefinition('issue_transitioned','Issue Transitioned','A Jira issue moved to a new status.'),
+            new TriggerDefinition('issue_created', 'Issue Created', 'A new Jira issue was created in the configured project.'),
+            new TriggerDefinition('issue_updated', 'Issue Updated', 'An existing Jira issue was updated.'),
+            new TriggerDefinition('issue_transitioned', 'Issue Transitioned', 'A Jira issue moved to a new status.'),
         ];
     }
 
@@ -113,25 +113,25 @@ class JiraIntegrationDriver implements IntegrationDriverInterface
         return [
             new ActionDefinition('create_issue', 'Create Issue', 'Create a new Jira issue.', [
                 'project_key' => ['type' => 'string', 'required' => true,  'label' => 'Project key (e.g. ENG)'],
-                'summary'     => ['type' => 'string', 'required' => true,  'label' => 'Issue summary/title'],
+                'summary' => ['type' => 'string', 'required' => true,  'label' => 'Issue summary/title'],
                 'description' => ['type' => 'string', 'required' => false, 'label' => 'Issue description'],
-                'issue_type'  => ['type' => 'string', 'required' => false, 'label' => 'Issue type (Bug, Story, Task...)'],
-                'priority'    => ['type' => 'string', 'required' => false, 'label' => 'Priority (Highest, High, Medium, Low)'],
+                'issue_type' => ['type' => 'string', 'required' => false, 'label' => 'Issue type (Bug, Story, Task...)'],
+                'priority' => ['type' => 'string', 'required' => false, 'label' => 'Priority (Highest, High, Medium, Low)'],
             ]),
             new ActionDefinition('update_issue', 'Update Issue', 'Update fields on an existing Jira issue.', [
                 'issue_key' => ['type' => 'string', 'required' => true, 'label' => 'Issue key (e.g. ENG-42)'],
-                'fields'    => ['type' => 'array',  'required' => true, 'label' => 'Fields map to update'],
+                'fields' => ['type' => 'array',  'required' => true, 'label' => 'Fields map to update'],
             ]),
             new ActionDefinition('transition_issue', 'Transition Issue', 'Move a Jira issue to a new status.', [
-                'issue_key'     => ['type' => 'string', 'required' => true, 'label' => 'Issue key'],
+                'issue_key' => ['type' => 'string', 'required' => true, 'label' => 'Issue key'],
                 'transition_id' => ['type' => 'string', 'required' => true, 'label' => 'Transition ID (from Get Transitions)'],
             ]),
             new ActionDefinition('add_comment', 'Add Comment', 'Add a comment to a Jira issue.', [
                 'issue_key' => ['type' => 'string', 'required' => true, 'label' => 'Issue key'],
-                'body'      => ['type' => 'string', 'required' => true, 'label' => 'Comment body (plain text)'],
+                'body' => ['type' => 'string', 'required' => true, 'label' => 'Comment body (plain text)'],
             ]),
             new ActionDefinition('assign_issue', 'Assign Issue', 'Assign a Jira issue to a team member.', [
-                'issue_key'  => ['type' => 'string', 'required' => true, 'label' => 'Issue key'],
+                'issue_key' => ['type' => 'string', 'required' => true, 'label' => 'Issue key'],
                 'account_id' => ['type' => 'string', 'required' => true, 'label' => 'Assignee account ID'],
             ]),
         ];
@@ -149,33 +149,33 @@ class JiraIntegrationDriver implements IntegrationDriverInterface
             return [];
         }
 
-        $projectKey  = $integration->config['project_key'] ?? null;
+        $projectKey = $integration->config['project_key'] ?? null;
         $lastCreated = $integration->config['last_created'] ?? now()->subMinutes(3)->format('Y-m-d H:i');
-        $jql         = $projectKey
+        $jql = $projectKey
             ? "project = \"{$projectKey}\" AND created >= \"{$lastCreated}\" ORDER BY created ASC"
             : "created >= \"{$lastCreated}\" ORDER BY created ASC";
 
         try {
             $response = Http::withBasicAuth($email, $token)->timeout(15)
                 ->get("{$instanceUrl}/rest/api/3/search", [
-                    'jql'        => $jql,
+                    'jql' => $jql,
                     'maxResults' => 50,
-                    'fields'     => 'summary,status,priority,assignee,reporter,created,updated',
+                    'fields' => 'summary,status,priority,assignee,reporter,created,updated',
                 ]);
 
             if (! $response->successful()) {
                 return [];
             }
 
-            $issues  = $response->json('issues') ?? [];
+            $issues = $response->json('issues') ?? [];
             $signals = [];
 
             foreach ($issues as $issue) {
                 $signals[] = [
                     'source_type' => 'jira',
-                    'source_id'   => 'jira:'.$issue['id'],
-                    'payload'     => $issue,
-                    'tags'        => ['jira', 'issue_created'],
+                    'source_id' => 'jira:'.$issue['id'],
+                    'payload' => $issue,
+                    'tags' => ['jira', 'issue_created'],
                 ];
             }
 
@@ -213,15 +213,15 @@ class JiraIntegrationDriver implements IntegrationDriverInterface
             'create_issue' => Http::withBasicAuth($email, $token)->timeout(15)
                 ->post("{$instanceUrl}/rest/api/3/issue", [
                     'fields' => array_filter([
-                        'project'     => ['key' => $params['project_key']],
-                        'summary'     => $params['summary'],
+                        'project' => ['key' => $params['project_key']],
+                        'summary' => $params['summary'],
                         'description' => isset($params['description']) ? [
-                            'type'    => 'doc',
+                            'type' => 'doc',
                             'version' => 1,
                             'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $params['description']]]]],
                         ] : null,
-                        'issuetype'   => ['name' => $params['issue_type'] ?? 'Task'],
-                        'priority'    => isset($params['priority']) ? ['name' => $params['priority']] : null,
+                        'issuetype' => ['name' => $params['issue_type'] ?? 'Task'],
+                        'priority' => isset($params['priority']) ? ['name' => $params['priority']] : null,
                     ]),
                 ])->json(),
 
@@ -238,7 +238,7 @@ class JiraIntegrationDriver implements IntegrationDriverInterface
             'add_comment' => Http::withBasicAuth($email, $token)->timeout(15)
                 ->post("{$instanceUrl}/rest/api/3/issue/{$params['issue_key']}/comment", [
                     'body' => [
-                        'type'    => 'doc',
+                        'type' => 'doc',
                         'version' => 1,
                         'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $params['body']]]]],
                     ],

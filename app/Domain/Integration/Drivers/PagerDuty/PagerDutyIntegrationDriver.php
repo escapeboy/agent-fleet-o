@@ -45,12 +45,12 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'api_key'        => ['type' => 'password', 'required' => true,  'label' => 'REST API Key',
-                                  'hint' => 'From PagerDuty → Integrations → API Access Keys'],
+            'api_key' => ['type' => 'password', 'required' => true,  'label' => 'REST API Key',
+                'hint' => 'From PagerDuty → Integrations → API Access Keys'],
             'webhook_secret' => ['type' => 'password', 'required' => false, 'label' => 'Webhook Secret',
-                                  'hint' => 'From PagerDuty → Integrations → Generic Webhooks (V3) → secret'],
-            'service_id'     => ['type' => 'string',   'required' => false, 'label' => 'Default Service ID',
-                                  'hint' => 'Used by create_incident action when no service_id is provided'],
+                'hint' => 'From PagerDuty → Integrations → Generic Webhooks (V3) → secret'],
+            'service_id' => ['type' => 'string',   'required' => false, 'label' => 'Default Service ID',
+                'hint' => 'Used by create_incident action when no service_id is provided'],
         ];
     }
 
@@ -101,11 +101,11 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
     public function triggers(): array
     {
         return [
-            new TriggerDefinition('incident.triggered',    'Incident Triggered',    'A new PagerDuty incident was created.'),
+            new TriggerDefinition('incident.triggered', 'Incident Triggered', 'A new PagerDuty incident was created.'),
             new TriggerDefinition('incident.acknowledged', 'Incident Acknowledged', 'An incident was acknowledged.'),
-            new TriggerDefinition('incident.resolved',     'Incident Resolved',     'An incident was resolved.'),
-            new TriggerDefinition('incident.escalated',    'Incident Escalated',    'An incident was escalated.'),
-            new TriggerDefinition('incident.reassigned',   'Incident Reassigned',   'An incident was reassigned.'),
+            new TriggerDefinition('incident.resolved', 'Incident Resolved', 'An incident was resolved.'),
+            new TriggerDefinition('incident.escalated', 'Incident Escalated', 'An incident was escalated.'),
+            new TriggerDefinition('incident.reassigned', 'Incident Reassigned', 'An incident was reassigned.'),
         ];
     }
 
@@ -114,30 +114,30 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
         return [
             new ActionDefinition('acknowledge_incident', 'Acknowledge Incident', 'Acknowledge a PagerDuty incident.', [
                 'incident_id' => ['type' => 'string', 'required' => true, 'label' => 'Incident ID'],
-                'from'        => ['type' => 'string', 'required' => true, 'label' => 'Acknowledger email'],
+                'from' => ['type' => 'string', 'required' => true, 'label' => 'Acknowledger email'],
             ]),
             new ActionDefinition('resolve_incident', 'Resolve Incident', 'Resolve a PagerDuty incident with an optional note.', [
                 'incident_id' => ['type' => 'string', 'required' => true,  'label' => 'Incident ID'],
-                'from'        => ['type' => 'string', 'required' => true,  'label' => 'Resolver email'],
-                'resolution'  => ['type' => 'string', 'required' => false, 'label' => 'Resolution note'],
+                'from' => ['type' => 'string', 'required' => true,  'label' => 'Resolver email'],
+                'resolution' => ['type' => 'string', 'required' => false, 'label' => 'Resolution note'],
             ]),
             new ActionDefinition('create_incident', 'Create Incident', 'Trigger a new PagerDuty incident.', [
-                'title'      => ['type' => 'string', 'required' => true,  'label' => 'Incident title'],
+                'title' => ['type' => 'string', 'required' => true,  'label' => 'Incident title'],
                 'service_id' => ['type' => 'string', 'required' => false, 'label' => 'Service ID (overrides default)'],
-                'urgency'    => ['type' => 'string', 'required' => false, 'label' => 'Urgency: high|low'],
-                'body'       => ['type' => 'string', 'required' => false, 'label' => 'Incident details'],
-                'from'       => ['type' => 'string', 'required' => true,  'label' => 'Creator email'],
+                'urgency' => ['type' => 'string', 'required' => false, 'label' => 'Urgency: high|low'],
+                'body' => ['type' => 'string', 'required' => false, 'label' => 'Incident details'],
+                'from' => ['type' => 'string', 'required' => true,  'label' => 'Creator email'],
             ]),
             new ActionDefinition('add_note', 'Add Note', 'Add a timeline note to an incident.', [
                 'incident_id' => ['type' => 'string', 'required' => true, 'label' => 'Incident ID'],
-                'content'     => ['type' => 'string', 'required' => true, 'label' => 'Note text'],
-                'from'        => ['type' => 'string', 'required' => true, 'label' => 'Author email'],
+                'content' => ['type' => 'string', 'required' => true, 'label' => 'Note text'],
+                'from' => ['type' => 'string', 'required' => true, 'label' => 'Author email'],
             ]),
             new ActionDefinition('create_override', 'Create Override', 'Create an on-call schedule override.', [
                 'schedule_id' => ['type' => 'string', 'required' => true, 'label' => 'Schedule ID'],
-                'user_id'     => ['type' => 'string', 'required' => true, 'label' => 'Override user ID'],
-                'start'       => ['type' => 'string', 'required' => true, 'label' => 'Override start (ISO 8601)'],
-                'end'         => ['type' => 'string', 'required' => true, 'label' => 'Override end (ISO 8601)'],
+                'user_id' => ['type' => 'string', 'required' => true, 'label' => 'Override user ID'],
+                'start' => ['type' => 'string', 'required' => true, 'label' => 'Override start (ISO 8601)'],
+                'end' => ['type' => 'string', 'required' => true, 'label' => 'Override end (ISO 8601)'],
             ]),
         ];
     }
@@ -163,8 +163,8 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
      */
     public function verifyWebhookSignature(string $rawBody, array $headers, string $secret): bool
     {
-        $header    = $headers['x-pagerduty-signature'] ?? '';
-        $expected  = hash_hmac('sha256', $rawBody, $secret);
+        $header = $headers['x-pagerduty-signature'] ?? '';
+        $expected = hash_hmac('sha256', $rawBody, $secret);
         $signatures = explode(',', $header);
 
         foreach ($signatures as $sig) {
@@ -182,15 +182,15 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
         $signals = [];
 
         foreach ($payload['events'] ?? [$payload] as $event) {
-            $eventType  = $event['event_type'] ?? 'unknown';
-            $data       = $event['data'] ?? [];
+            $eventType = $event['event_type'] ?? 'unknown';
+            $data = $event['data'] ?? [];
             $incidentId = $data['id'] ?? uniqid('pd_', true);
 
             $signals[] = [
                 'source_type' => 'pagerduty',
-                'source_id'   => 'pd:'.$incidentId,
-                'payload'     => $event,
-                'tags'        => ['pagerduty', str_replace('.', '_', $eventType)],
+                'source_id' => 'pd:'.$incidentId,
+                'payload' => $event,
+                'tags' => ['pagerduty', str_replace('.', '_', $eventType)],
             ];
         }
 
@@ -215,8 +215,8 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
                 ->timeout(15)
                 ->put(self::API_BASE."/incidents/{$params['incident_id']}", [
                     'incident' => array_filter([
-                        'type'       => 'incident_reference',
-                        'status'     => 'resolved',
+                        'type' => 'incident_reference',
+                        'status' => 'resolved',
                         'resolution' => $params['resolution'] ?? null,
                     ]),
                 ])->json(),
@@ -225,11 +225,11 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
                 ->timeout(15)
                 ->post(self::API_BASE.'/incidents', [
                     'incident' => array_filter([
-                        'type'    => 'incident',
-                        'title'   => $params['title'],
+                        'type' => 'incident',
+                        'title' => $params['title'],
                         'service' => ['id' => $params['service_id'] ?? $integration->config['service_id'] ?? '', 'type' => 'service_reference'],
                         'urgency' => $params['urgency'] ?? 'high',
-                        'body'    => isset($params['body']) ? ['type' => 'incident_body', 'details' => $params['body']] : null,
+                        'body' => isset($params['body']) ? ['type' => 'incident_body', 'details' => $params['body']] : null,
                     ]),
                 ])->json(),
 
@@ -244,8 +244,8 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
                 ->post(self::API_BASE."/schedules/{$params['schedule_id']}/overrides", [
                     'override' => [
                         'start' => $params['start'],
-                        'end'   => $params['end'],
-                        'user'  => ['id' => $params['user_id'], 'type' => 'user_reference'],
+                        'end' => $params['end'],
+                        'user' => ['id' => $params['user_id'], 'type' => 'user_reference'],
                     ],
                 ])->json(),
 

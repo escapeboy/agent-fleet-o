@@ -46,7 +46,7 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             'api_key' => ['type' => 'password', 'required' => true, 'label' => 'API Key',
-                           'hint' => 'From Mailchimp → Account → Extras → API Keys. Datacenter (e.g. us6) is auto-extracted from the key.'],
+                'hint' => 'From Mailchimp → Account → Extras → API Keys. Datacenter (e.g. us6) is auto-extracted from the key.'],
         ];
     }
 
@@ -97,10 +97,10 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
     public function triggers(): array
     {
         return [
-            new TriggerDefinition('subscribe',   'Subscriber Added',   'A new subscriber was added to a Mailchimp list.'),
+            new TriggerDefinition('subscribe', 'Subscriber Added', 'A new subscriber was added to a Mailchimp list.'),
             new TriggerDefinition('unsubscribe', 'Subscriber Removed', 'A subscriber unsubscribed from a list.'),
-            new TriggerDefinition('profile',     'Profile Updated',    'A subscriber profile was updated.'),
-            new TriggerDefinition('cleaned',     'Email Cleaned',      'An email address hard-bounced and was cleaned.'),
+            new TriggerDefinition('profile', 'Profile Updated', 'A subscriber profile was updated.'),
+            new TriggerDefinition('cleaned', 'Email Cleaned', 'An email address hard-bounced and was cleaned.'),
         ];
     }
 
@@ -108,25 +108,25 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             new ActionDefinition('add_subscriber', 'Add Subscriber', 'Add or update a subscriber in a Mailchimp audience.', [
-                'list_id'    => ['type' => 'string', 'required' => true,  'label' => 'Audience/List ID'],
-                'email'      => ['type' => 'string', 'required' => true,  'label' => 'Email address'],
+                'list_id' => ['type' => 'string', 'required' => true,  'label' => 'Audience/List ID'],
+                'email' => ['type' => 'string', 'required' => true,  'label' => 'Email address'],
                 'first_name' => ['type' => 'string', 'required' => false, 'label' => 'First name'],
-                'last_name'  => ['type' => 'string', 'required' => false, 'label' => 'Last name'],
-                'tags'       => ['type' => 'array',  'required' => false, 'label' => 'Tags to apply'],
+                'last_name' => ['type' => 'string', 'required' => false, 'label' => 'Last name'],
+                'tags' => ['type' => 'array',  'required' => false, 'label' => 'Tags to apply'],
             ]),
             new ActionDefinition('update_subscriber_tags', 'Update Tags', 'Add or remove tags on a subscriber.', [
                 'list_id' => ['type' => 'string', 'required' => true, 'label' => 'Audience/List ID'],
-                'email'   => ['type' => 'string', 'required' => true, 'label' => 'Email address'],
-                'tags'    => ['type' => 'array',  'required' => true, 'label' => 'Tags array — each: {name, status: active|inactive}'],
+                'email' => ['type' => 'string', 'required' => true, 'label' => 'Email address'],
+                'tags' => ['type' => 'array',  'required' => true, 'label' => 'Tags array — each: {name, status: active|inactive}'],
             ]),
             new ActionDefinition('remove_subscriber', 'Remove Subscriber', 'Unsubscribe a member from a list.', [
                 'list_id' => ['type' => 'string', 'required' => true, 'label' => 'Audience/List ID'],
-                'email'   => ['type' => 'string', 'required' => true, 'label' => 'Email address'],
+                'email' => ['type' => 'string', 'required' => true, 'label' => 'Email address'],
             ]),
             new ActionDefinition('trigger_automation', 'Trigger Automation', 'Add a subscriber to a classic automation queue.', [
                 'workflow_id' => ['type' => 'string', 'required' => true, 'label' => 'Automation workflow ID'],
-                'email_id'    => ['type' => 'string', 'required' => true, 'label' => 'Automation email ID'],
-                'email'       => ['type' => 'string', 'required' => true, 'label' => 'Subscriber email address'],
+                'email_id' => ['type' => 'string', 'required' => true, 'label' => 'Automation email ID'],
+                'email' => ['type' => 'string', 'required' => true, 'label' => 'Subscriber email address'],
             ]),
         ];
     }
@@ -165,9 +165,9 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
         return [
             [
                 'source_type' => 'mailchimp',
-                'source_id'   => 'mc:'.($payload['data']['email'] ?? uniqid('mc_', true)),
-                'payload'     => $payload,
-                'tags'        => ['mailchimp', $type],
+                'source_id' => 'mc:'.($payload['data']['email'] ?? uniqid('mc_', true)),
+                'payload' => $payload,
+                'tags' => ['mailchimp', $type],
             ],
         ];
     }
@@ -185,8 +185,8 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
                 ->put("{$base}/lists/{$params['list_id']}/members/{$this->subscriberHash($params['email'])}", array_filter([
                     'email_address' => $params['email'],
                     'status_if_new' => 'subscribed',
-                    'status'        => 'subscribed',
-                    'merge_fields'  => array_filter([
+                    'status' => 'subscribed',
+                    'merge_fields' => array_filter([
                         'FNAME' => $params['first_name'] ?? null,
                         'LNAME' => $params['last_name'] ?? null,
                     ]),

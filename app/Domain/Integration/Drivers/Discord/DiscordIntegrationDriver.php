@@ -37,11 +37,11 @@ class DiscordIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'bot_token'      => ['type' => 'password', 'required' => true,  'label' => 'Bot Token',
-                                  'hint' => 'From the Discord Developer Portal → Bot → Token'],
+            'bot_token' => ['type' => 'password', 'required' => true,  'label' => 'Bot Token',
+                'hint' => 'From the Discord Developer Portal → Bot → Token'],
             'application_id' => ['type' => 'string',   'required' => false, 'label' => 'Application ID'],
-            'public_key'     => ['type' => 'string',   'required' => false, 'label' => 'Public Key',
-                                  'hint' => 'Required for webhook signature verification'],
+            'public_key' => ['type' => 'string',   'required' => false, 'label' => 'Public Key',
+                'hint' => 'Required for webhook signature verification'],
         ];
     }
 
@@ -93,8 +93,8 @@ class DiscordIntegrationDriver implements IntegrationDriverInterface
     {
         return [
             new TriggerDefinition('message_created', 'Message Received', 'A message was posted in a channel.'),
-            new TriggerDefinition('reaction_added',  'Reaction Added',   'A reaction was added to a message.'),
-            new TriggerDefinition('thread_created',  'Thread Created',   'A new thread was created.'),
+            new TriggerDefinition('reaction_added', 'Reaction Added', 'A reaction was added to a message.'),
+            new TriggerDefinition('thread_created', 'Thread Created', 'A new thread was created.'),
         ];
     }
 
@@ -103,8 +103,8 @@ class DiscordIntegrationDriver implements IntegrationDriverInterface
         return [
             new ActionDefinition('send_message', 'Send Message', 'Post a message to a Discord channel.', [
                 'channel_id' => ['type' => 'string', 'required' => true,  'label' => 'Channel ID'],
-                'content'    => ['type' => 'string', 'required' => true,  'label' => 'Message text'],
-                'embed'      => ['type' => 'array',  'required' => false, 'label' => 'Embed object (optional)'],
+                'content' => ['type' => 'string', 'required' => true,  'label' => 'Message text'],
+                'embed' => ['type' => 'array',  'required' => false, 'label' => 'Embed object (optional)'],
             ]),
             new ActionDefinition('send_dm', 'Send DM', 'Send a direct message to a Discord user.', [
                 'user_id' => ['type' => 'string', 'required' => true, 'label' => 'User ID'],
@@ -135,7 +135,7 @@ class DiscordIntegrationDriver implements IntegrationDriverInterface
     public function verifyWebhookSignature(string $rawBody, array $headers, string $secret): bool
     {
         $signature = $headers['x-signature-ed25519'] ?? '';
-        $timestamp  = $headers['x-signature-timestamp'] ?? '';
+        $timestamp = $headers['x-signature-timestamp'] ?? '';
 
         if (! $signature || ! $timestamp) {
             return false;
@@ -159,9 +159,9 @@ class DiscordIntegrationDriver implements IntegrationDriverInterface
         return [
             [
                 'source_type' => 'discord',
-                'source_id'   => $payload['id'] ?? uniqid('dc_', true),
-                'payload'     => $payload,
-                'tags'        => ['discord', strtolower($type)],
+                'source_id' => $payload['id'] ?? uniqid('dc_', true),
+                'payload' => $payload,
+                'tags' => ['discord', strtolower($type)],
             ],
         ];
     }
@@ -172,8 +172,8 @@ class DiscordIntegrationDriver implements IntegrationDriverInterface
 
         return match ($action) {
             'send_message' => $this->sendMessage($token, $params['channel_id'], $params['content'], $params['embed'] ?? null),
-            'send_dm'      => $this->sendDm($token, $params['user_id'], $params['content']),
-            default        => throw new \InvalidArgumentException("Unknown action: {$action}"),
+            'send_dm' => $this->sendDm($token, $params['user_id'], $params['content']),
+            default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };
     }
 

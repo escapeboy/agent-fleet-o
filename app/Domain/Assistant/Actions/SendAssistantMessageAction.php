@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Log;
 use Prism\Prism\Tool as PrismToolObject;
 use Prism\Prism\ValueObjects\ToolOutput;
 
-
 class SendAssistantMessageAction
 {
     public function __construct(
