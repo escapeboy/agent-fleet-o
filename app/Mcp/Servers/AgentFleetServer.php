@@ -115,7 +115,9 @@ use App\Mcp\Tools\Signal\AlertConnectorTool;
 use App\Mcp\Tools\Signal\ConnectorBindingDeleteTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
 use App\Mcp\Tools\Signal\ContactManageTool;
+use App\Mcp\Tools\Signal\EmailReplyTool;
 use App\Mcp\Tools\Signal\HttpMonitorTool;
+use App\Mcp\Tools\Signal\ImapMailboxTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
@@ -298,7 +300,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (11)
+        // Signal (13)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -310,6 +312,8 @@ class AgentFleetServer extends Server
         ConnectorBindingTool::class,
         ConnectorBindingDeleteTool::class,
         ContactManageTool::class,
+        ImapMailboxTool::class,
+        EmailReplyTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,
