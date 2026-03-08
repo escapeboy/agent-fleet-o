@@ -3,6 +3,7 @@
 namespace App\Domain\Email\Models;
 
 use App\Domain\Email\Enums\EmailThemeStatus;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -56,7 +57,7 @@ class EmailTheme extends Model
 
     public function team(): BelongsTo
     {
-        return $this->belongsTo(\App\Domain\Shared\Models\Team::class);
+        return $this->belongsTo(Team::class);
     }
 
     public function isActive(): bool

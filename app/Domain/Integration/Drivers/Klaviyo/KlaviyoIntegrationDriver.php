@@ -8,6 +8,7 @@ use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\DTOs\TriggerDefinition;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -237,7 +238,7 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
         };
     }
 
-    private function request(string $apiKey): \Illuminate\Http\Client\PendingRequest
+    private function request(string $apiKey): PendingRequest
     {
         return Http::withHeaders([
             'Klaviyo-API-Key' => $apiKey,

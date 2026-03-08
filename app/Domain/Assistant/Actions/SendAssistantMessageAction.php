@@ -3,6 +3,7 @@
 namespace App\Domain\Assistant\Actions;
 
 use App\Domain\Assistant\Models\AssistantConversation;
+use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\AssistantIntentClassifier;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\Assistant\Services\ContextResolver;
@@ -165,7 +166,7 @@ class SendAssistantMessageAction
 
         // Save assistant response — update existing placeholder (async mode) or create new message
         if ($placeholderMessageId !== null) {
-            \App\Domain\Assistant\Models\AssistantMessage::where('id', $placeholderMessageId)->update([
+            AssistantMessage::where('id', $placeholderMessageId)->update([
                 'content' => $response->content,
                 'tool_calls' => $response->toolResults ? json_encode($response->toolResults) : null,
                 'token_usage' => json_encode([
