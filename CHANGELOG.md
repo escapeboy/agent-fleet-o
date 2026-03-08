@@ -2,6 +2,30 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.5.0] - 2026-03-08
+
+### Added
+
+- **20 New Integration Drivers** -- Extended the Integration domain with production-ready drivers across six categories:
+  - *Messaging*: Discord (OAuth2, slash commands), Microsoft Teams (webhook + Graph API), WhatsApp Business (Cloud API), Telegram (bot messages).
+  - *Monitoring & Alerting*: Datadog (events, alerts, metrics), Sentry (issues, alerts, DSN capture), PagerDuty (incident management, on-call routing).
+  - *CRM*: HubSpot (contacts, deals, companies, OAuth2), Salesforce (contacts, opportunities, SOQL, OAuth2).
+  - *Email Marketing*: Mailchimp (lists, campaigns, subscribers, OAuth2), Klaviyo (profiles, flows, events, API key).
+  - *Productivity*: Google Workspace (Gmail, Drive, Calendar, Sheets — OAuth2), Jira (projects, issues, comments, OAuth2).
+  - *Automation Platforms*: Zapier (webhook triggers + Zap API), Make.com (webhooks + scenario control).
+- **LocalLlmDiscovery Service** -- Automatic discovery of locally running Ollama instances; dynamically merges available models into the provider list at runtime; health check endpoint in the platform health page.
+- **Custom Endpoint Model Discovery** -- Custom OpenAI-compatible endpoints now support dynamic model discovery; the team settings UI shows the model path input and validates the URL before saving.
+
+### Fixed
+
+- **WebhookEndpoint Secret Encryption** -- `WebhookEndpoint.secret` upgraded from APP_KEY AES-256-CBC to per-team XSalsa20-Poly1305 (`TeamEncryptedString` cast); `credentials:re-encrypt` command extended to migrate existing records.
+
+### Security
+
+- Webhook endpoint secrets now protected by the same per-team envelope encryption as API credentials, isolating them from APP_KEY compromise.
+
+---
+
 ## [1.4.0] - 2026-03-07
 
 ### Added
