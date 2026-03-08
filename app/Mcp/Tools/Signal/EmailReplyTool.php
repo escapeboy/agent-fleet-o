@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Outbound\Actions\ReplyToEmailSignalAction;
+use App\Domain\Outbound\Models\OutboundProposal;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -47,12 +48,14 @@ class EmailReplyTool extends Tool
             return Response::error('body is required');
         }
 
-        $teamId = auth()->user()?->currentTeam?->id ?? app('mcp.team_id') ?? null;
+        $teamId = auth()->user()?->current_team_id
+            ?? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         if (! $teamId) {
             return Response::error('No active team context. Ensure you are authenticated with a team.');
         }
 
         try {
+            /** @var OutboundProposal $proposal */
             $proposal = app(ReplyToEmailSignalAction::class)->execute(
                 signalId: $signalId,
                 body: $body,

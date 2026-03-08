@@ -26,6 +26,7 @@ class ReplyToEmailSignalAction
         ?string $experimentId = null,
         bool $autoSend = false,
     ): OutboundProposal {
+        /** @var Signal $signal */
         $signal = Signal::withoutGlobalScopes()
             ->where('id', $signalId)
             ->where('team_id', $teamId)
