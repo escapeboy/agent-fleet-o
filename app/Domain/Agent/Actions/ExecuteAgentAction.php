@@ -2,7 +2,9 @@
 
 namespace App\Domain\Agent\Actions;
 
+use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Approval\Enums\ApprovalStatus;
@@ -40,6 +42,7 @@ class ExecuteAgentAction
         private readonly InjectMemoryContext $injectMemoryContext,
         private readonly SummarizeContext $summarizeContext,
         private readonly DetectClarificationNeeded $detectClarification,
+        private readonly ResolveTierConfigAction $resolveTierConfig,
     ) {}
 
     /**
@@ -95,11 +98,20 @@ class ExecuteAgentAction
             return $this->executeDirectPrompt($agent, $input, $teamId, $userId, $experimentId, $stepId, $ctx->systemPromptParts);
         }
 
-        // Resolve tools for this agent (filtered by project restrictions)
-        $tools = $this->resolveTools->execute($agent, $project);
+        // Resolve tools for this agent (filtered by project restrictions).
+        // Generate a sandbox ID so each execution gets an isolated filesystem workspace.
+        $sandboxId = (string) \Illuminate\Support\Str::uuid();
+        $tools = $this->resolveTools->execute($agent, $project, $sandboxId);
 
         if (! empty($tools)) {
-            return $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project, $ctx->systemPromptParts);
+            try {
+                return $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project, $ctx->systemPromptParts);
+            } finally {
+                // Teardown sandbox regardless of success or failure
+                if ($agent->team_id) {
+                    (new SandboxedWorkspace($sandboxId, $agent->id, $agent->team_id))->teardown();
+                }
+            }
         }
 
         // Fallback: existing skill-chain execution
@@ -129,20 +141,26 @@ class ExecuteAgentAction
             $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input, $systemPromptParts);
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
+            $tierConfig = $this->resolveTierConfig->execute($agent);
+
+            // Tier preference applies only when agent model is set to 'auto' or not set
+            $model = ($agent->model !== null && $agent->model !== 'auto')
+                ? $agent->model
+                : $tierConfig['model_preference'];
 
             $request = new AiRequestDTO(
                 provider: $resolved['provider'],
-                model: $resolved['model'],
+                model: $model,
                 systemPrompt: $systemPrompt,
                 userPrompt: json_encode($input),
-                maxTokens: $agent->config['max_tokens'] ?? 4096,
+                maxTokens: $tierConfig['max_tokens'],
                 teamId: $teamId,
                 agentId: $agent->id,
                 experimentId: $experimentId,
                 purpose: 'agent.execute_with_tools',
-                temperature: $agent->config['temperature'] ?? 0.7,
+                temperature: $tierConfig['temperature'],
                 tools: $tools,
-                maxSteps: $agent->config['max_steps'] ?? 10,
+                maxSteps: $tierConfig['max_steps'],
             );
 
             $response = $this->gateway->complete($request);
@@ -169,6 +187,7 @@ class ExecuteAgentAction
                 'llm_steps_count' => $response->stepsCount,
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
+                'quality_details' => ['tier' => $tierConfig['tier']->value],
             ]);
 
             ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)
@@ -224,18 +243,23 @@ class ExecuteAgentAction
 
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
+            $tierConfig = $this->resolveTierConfig->execute($agent);
+
+            $model = ($agent->model !== null && $agent->model !== 'auto')
+                ? $agent->model
+                : $tierConfig['model_preference'];
 
             $request = new AiRequestDTO(
                 provider: $resolved['provider'],
-                model: $resolved['model'],
+                model: $model,
                 systemPrompt: $systemPrompt,
                 userPrompt: implode("\n\n", $userPromptParts),
-                maxTokens: $agent->config['max_tokens'] ?? 8192,
+                maxTokens: $tierConfig['max_tokens'],
                 teamId: $teamId,
                 agentId: $agent->id,
                 experimentId: $experimentId,
                 purpose: 'agent.workflow_step',
-                temperature: $agent->config['temperature'] ?? 0.7,
+                temperature: $tierConfig['temperature'],
             );
 
             // Use streaming when we have a step ID (enables real-time output in UI)
@@ -265,6 +289,7 @@ class ExecuteAgentAction
                 'output' => ['result' => $response->content],
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
+                'quality_details' => ['tier' => $tierConfig['tier']->value],
             ]);
 
             ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)

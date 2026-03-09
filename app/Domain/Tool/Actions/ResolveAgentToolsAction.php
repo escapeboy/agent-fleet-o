@@ -3,6 +3,7 @@
 namespace App\Domain\Tool\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Models\Project;
@@ -25,8 +26,12 @@ class ResolveAgentToolsAction
      *
      * @return array<\Prism\Prism\Tool>
      */
-    public function execute(Agent $agent, ?Project $project = null): array
+    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null): array
     {
+        $workspace = ($executionId && $agent->team_id)
+            ? new SandboxedWorkspace($executionId, $agent->id, $agent->team_id)
+            : null;
+
         $agentTools = $agent->tools()
             ->where('status', ToolStatus::Active->value)
             ->get();
@@ -104,7 +109,7 @@ class ResolveAgentToolsAction
                 }
             }
 
-            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($tool, $overrides, $orgPolicy));
+            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($tool, $overrides, $orgPolicy, $workspace));
         }
 
         return $prismTools;
