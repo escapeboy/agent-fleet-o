@@ -108,7 +108,7 @@ class BridgeRequestRegistry
                 return ['chunk' => '', 'done' => true, 'usage' => null];
             }
 
-            return ['chunk' => $payload['text'] ?? '', 'done' => $done, 'usage' => null];
+            return ['chunk' => $this->stripAnsi($payload['text'] ?? ''), 'done' => $done, 'usage' => null];
         }
 
         // FrameLLMResponseChunk = 0x0002 — LLMResponseChunk{request_id, delta, done}
@@ -131,5 +131,15 @@ class BridgeRequestRegistry
     public function isExpired(string $requestId): bool
     {
         return Redis::connection('bridge')->ttl("bridge:pending:{$requestId}") <= 0;
+    }
+
+    /**
+     * Strip ANSI escape sequences (colours, cursor movement, etc.) from agent output.
+     * Many CLI agents (kiro, claude-code) emit coloured terminal output.
+     */
+    private function stripAnsi(string $text): string
+    {
+        // Matches ESC[ sequences (CSI), ESC] sequences (OSC), and bare ESC codes
+        return (string) preg_replace('/\x1B(?:\[[0-9;?]*[ -\/]*[@-~]|\][^\x07\x1B]*(?:\x07|\x1B\\\\)|[@-_])/u', '', $text);
     }
 }
