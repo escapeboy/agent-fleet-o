@@ -10,7 +10,7 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Exceptions\BridgeExecutionException;
 use App\Infrastructure\AI\Exceptions\BridgeTimeoutException;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
-use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -67,14 +67,15 @@ class LocalBridgeGateway implements AiGatewayInterface
         $startedAt = now();
         $requestId = Str::uuid()->toString();
 
-        // Register in-flight request so HandleBridgeRelayResponse can push chunks into it
+        // Register in-flight request so the relay binary can push chunks into it
         $this->registry->register($requestId, $request->teamId);
 
-        // Broadcast the request to the daemon over its private channel
-        Broadcast::on("private-daemon.{$request->teamId}")
-            ->as('agent.request')
-            ->with($this->buildPayload($requestId, $request))
-            ->sendNow();
+        // Push the request to the Redis queue — the relay binary reads via BLPOP
+        // and forwards to the bridge daemon over the WebSocket connection.
+        Redis::connection('default')->rpush(
+            "bridge:req:{$request->teamId}",
+            json_encode($this->buildPayload($requestId, $request)),
+        );
 
         // Consume the Redis chunk stream via BLPOP
         $content = '';

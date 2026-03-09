@@ -154,6 +154,9 @@ return [
         ],
 
         // Queues (DB 0)
+        // read_write_timeout=-1 prevents PHP's default 60s socket timeout from
+        // killing BLPOP calls that intentionally block for up to 90 seconds
+        // (used by LocalBridgeGateway to wait for relay responses).
         'default' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
@@ -161,6 +164,7 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
+            'read_write_timeout' => -1,
         ],
 
         // Cache (DB 1)
