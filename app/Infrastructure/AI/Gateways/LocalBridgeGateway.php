@@ -130,6 +130,22 @@ class LocalBridgeGateway implements AiGatewayInterface
 
     private function buildPayload(string $requestId, AiRequestDTO $request, BridgeConnection $connection): array
     {
+        // bridge_agent → FrameAgentRequest (0x0010 = 16)
+        if ($request->provider === 'bridge_agent') {
+            return [
+                'request_id' => $requestId,
+                'frame_type' => 0x0010,
+                'payload' => [
+                    'request_id'   => $requestId,
+                    'agent_key'    => $request->model, // model = agent key (e.g. "claude-code")
+                    'prompt'       => $request->userPrompt ?? '',
+                    'system_prompt' => $request->systemPrompt ?? '',
+                    'stream'       => true,
+                ],
+            ];
+        }
+
+        // bridge_llm → FrameLLMRequest (0x0001 = 1)
         // Build OpenAI-compatible messages array from system/user prompts
         $messages = [];
         if ($request->systemPrompt) {
@@ -139,34 +155,32 @@ class LocalBridgeGateway implements AiGatewayInterface
             $messages[] = ['role' => 'user', 'content' => $request->userPrompt];
         }
 
-        // Relay expects requestEnvelope{request_id, frame_type (uint16), payload (json.RawMessage)}
-        // FrameLLMRequest = 0x0001 = 1
         return [
             'request_id' => $requestId,
-            'frame_type' => 1,
+            'frame_type' => 0x0001,
             'payload' => [
-                'request_id'  => $requestId,
-                'endpoint_url' => $this->resolveEndpointUrl($request->provider, $connection),
-                'model'       => $request->model,
-                'messages'    => $messages,
-                'max_tokens'  => $request->maxTokens ?? 8192,
-                'temperature' => $request->temperature ?? 0.7,
-                'stream'      => true,
+                'request_id'   => $requestId,
+                'endpoint_url' => $this->resolveEndpointUrl($request->model, $connection),
+                'model'        => $request->model,
+                'messages'     => $messages,
+                'max_tokens'   => $request->maxTokens ?? 8192,
+                'temperature'  => $request->temperature ?? 0.7,
+                'stream'       => true,
             ],
         ];
     }
 
     /**
-     * Find the base_url of a discovered LLM endpoint by matching provider name,
-     * falling back to the first online endpoint, then a sensible default.
+     * Find the base_url of a discovered LLM endpoint by matching model name against
+     * each endpoint's models list, falling back to the first online endpoint.
      */
-    private function resolveEndpointUrl(string $provider, BridgeConnection $connection): string
+    private function resolveEndpointUrl(string $model, BridgeConnection $connection): string
     {
         $endpoints = $connection->llmEndpoints();
 
-        // Match by name first (e.g. provider="ollama" → endpoint with name "ollama")
+        // Match by model name in endpoint's models array
         foreach ($endpoints as $ep) {
-            if (($ep['name'] ?? '') === $provider && ($ep['online'] ?? false)) {
+            if (($ep['online'] ?? false) && in_array($model, $ep['models'] ?? [], true)) {
                 return $ep['base_url'];
             }
         }
