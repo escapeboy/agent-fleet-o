@@ -28,6 +28,10 @@ use App\Mcp\Tools\Artifact\ArtifactContentTool;
 use App\Mcp\Tools\Artifact\ArtifactDownloadTool;
 use App\Mcp\Tools\Artifact\ArtifactGetTool;
 use App\Mcp\Tools\Artifact\ArtifactListTool;
+use App\Mcp\Tools\Bridge\BridgeDisconnectTool;
+use App\Mcp\Tools\Bridge\BridgeEndpointListTool;
+use App\Mcp\Tools\Bridge\BridgeEndpointToggleTool;
+use App\Mcp\Tools\Bridge\BridgeStatusTool;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
 use App\Mcp\Tools\Budget\BudgetForecastTool;
 use App\Mcp\Tools\Budget\BudgetSummaryTool;
@@ -376,6 +380,12 @@ class AgentFleetServer extends Server
 
         // Integration (1)
         IntegrationManageTool::class,
+
+        // Bridge (4)
+        BridgeStatusTool::class,
+        BridgeEndpointListTool::class,
+        BridgeEndpointToggleTool::class,
+        BridgeDisconnectTool::class,
 
         // Compute (1)
         ComputeManageTool::class,

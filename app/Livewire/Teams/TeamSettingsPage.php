@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Teams;
 
+use App\Domain\Bridge\Actions\TerminateBridgeConnection;
+use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
@@ -451,6 +453,23 @@ class TeamSettingsPage extends Component
         }
     }
 
+    // Bridge
+    public function disconnectBridge(): void
+    {
+        $team = auth()->user()->currentTeam;
+
+        $connection = BridgeConnection::where('team_id', $team->id)
+            ->active()
+            ->orderByDesc('connected_at')
+            ->first();
+
+        if ($connection) {
+            app(TerminateBridgeConnection::class)->execute($connection);
+        }
+
+        session()->flash('message', 'FleetQ Bridge disconnected.');
+    }
+
     // Telegram bot settings
     public string $telegramBotToken = '';
 
@@ -519,6 +538,11 @@ class TeamSettingsPage extends Component
                     ->latest()
                     ->get()
                 : collect(),
+            'bridgeConnection' => $team
+                ? BridgeConnection::where('team_id', $team->id)
+                    ->orderByDesc('connected_at')
+                    ->first()
+                : null,
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

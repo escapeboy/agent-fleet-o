@@ -6,6 +6,7 @@ use App\Domain\Budget\Services\CostCalculator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Gateways\FallbackAiGateway;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
+use App\Infrastructure\AI\Gateways\LocalBridgeGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
@@ -52,6 +53,8 @@ class AiServiceProvider extends ServiceProvider
             ]);
         });
 
+        $this->app->singleton(LocalBridgeGateway::class);
+
         $this->app->singleton(AiGatewayInterface::class, function ($app) {
             return new FallbackAiGateway(
                 gateway: $app->make(PrismAiGateway::class),
@@ -73,6 +76,7 @@ class AiServiceProvider extends ServiceProvider
                 localGateway: config('local_agents.enabled')
                     ? $app->make(LocalAgentGateway::class)
                     : null,
+                bridgeGateway: $app->make(LocalBridgeGateway::class),
             );
         });
     }

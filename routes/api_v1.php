@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AgentController;
 use App\Http\Controllers\Api\V1\ApprovalController;
+use App\Http\Controllers\Api\V1\BridgeController;
 use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -163,4 +164,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Budget
     Route::get('/budget', [BudgetController::class, 'index']);
+
+    // Bridge
+    Route::get('/bridge/status', [BridgeController::class, 'status']);
+    Route::post('/bridge/register', [BridgeController::class, 'register']);
+    Route::post('/bridge/endpoints', [BridgeController::class, 'updateEndpoints']);
+    Route::post('/bridge/heartbeat', [BridgeController::class, 'heartbeat']);
+    Route::delete('/bridge', [BridgeController::class, 'disconnect']);
 });
