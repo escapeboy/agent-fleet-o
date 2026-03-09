@@ -5,6 +5,11 @@ namespace App\Domain\Agent\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
+use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Experiment\Actions\TransitionExperimentAction;
+use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Memory\Jobs\ExtractMemoryJob;
 use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
 use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
@@ -20,6 +25,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Pipeline;
 use Prism\Prism\Tool;
 
@@ -77,10 +83,7 @@ class ExecuteAgentAction
             ->thenReturn();
 
         if ($ctx->requiresClarification) {
-            return $this->failExecution(
-                $agent, $teamId, $experimentId, $ctx->input,
-                "Agent requires clarification: {$ctx->clarificationQuestion}",
-            );
+            return $this->requestClarification($ctx, $stepId);
         }
 
         // Use the (potentially summarized) input going forward
@@ -470,6 +473,84 @@ class ExecuteAgentAction
                 $e->getMessage(), $durationMs, $totalCost, $skillResults,
             );
         }
+    }
+
+    /**
+     * Create an ApprovalRequest of type 'clarification', transition the experiment to
+     * AwaitingApproval, and return a synthetic AgentExecution with status 'awaiting_clarification'.
+     *
+     * The ApproveAction (or CompleteHumanTaskAction for clarification type) will re-dispatch
+     * the playbook step job with the operator's answer injected into input['clarification_answer'].
+     *
+     * @return array{execution: AgentExecution, output: array}
+     */
+    private function requestClarification(AgentExecutionContext $ctx, ?string $stepId): array
+    {
+        $question = $ctx->clarificationQuestion ?? 'Please clarify your request.';
+
+        try {
+            $experiment = $ctx->experimentId
+                ? Experiment::withoutGlobalScopes()->find($ctx->experimentId)
+                : null;
+
+            if ($experiment) {
+                ApprovalRequest::withoutGlobalScopes()->create([
+                    'experiment_id' => $experiment->id,
+                    'team_id' => $experiment->team_id,
+                    'status' => ApprovalStatus::Pending,
+                    'context' => [
+                        'type' => 'clarification',
+                        'node_label' => 'Agent Clarification Required',
+                        'instructions' => 'The agent needs clarification before proceeding. Please answer the question below.',
+                        'question' => $question,
+                        'agent_id' => $ctx->agent->id,
+                        'step_id' => $stepId,
+                        'original_input' => $ctx->input,
+                        'experiment_title' => $experiment->title,
+                    ],
+                    'form_schema' => [
+                        'fields' => [
+                            [
+                                'name' => 'answer',
+                                'label' => $question,
+                                'type' => 'textarea',
+                                'required' => true,
+                                'rows' => 4,
+                            ],
+                        ],
+                    ],
+                    'expires_at' => now()->addHours(48),
+                ]);
+
+                app(TransitionExperimentAction::class)->execute(
+                    experiment: $experiment,
+                    toState: ExperimentStatus::AwaitingApproval,
+                    reason: "Agent requires clarification: {$question}",
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('ExecuteAgentAction: failed to create clarification request', [
+                'agent_id' => $ctx->agent->id,
+                'experiment_id' => $ctx->experimentId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $execution = AgentExecution::create([
+            'agent_id' => $ctx->agent->id,
+            'experiment_id' => $ctx->experimentId,
+            'team_id' => $ctx->teamId,
+            'status' => 'awaiting_clarification',
+            'input' => $ctx->input,
+            'output' => ['awaiting_clarification' => true, 'question' => $question],
+            'duration_ms' => 0,
+            'cost_credits' => 0,
+        ]);
+
+        return [
+            'execution' => $execution,
+            'output' => ['awaiting_clarification' => true, 'question' => $question],
+        ];
     }
 
     /**

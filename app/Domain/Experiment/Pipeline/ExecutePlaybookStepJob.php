@@ -37,6 +37,8 @@ class ExecutePlaybookStepJob implements ShouldQueue
         public readonly string $stepId,
         public readonly string $experimentId,
         public readonly ?string $teamId = null,
+        /** Optional input overrides merged into the resolved input (e.g. clarification_answer) */
+        public readonly array $inputOverrides = [],
     ) {
         $this->onQueue('ai-calls');
     }
@@ -225,6 +227,24 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 $stopHeartbeat();
             }
 
+            // Detect clarification interrupt — agent paused to wait for human input.
+            // Reset step to pending so it will be re-executed after clarification is provided.
+            if (($result['output']['awaiting_clarification'] ?? false) === true) {
+                Log::info('ExecutePlaybookStepJob: clarification required, resetting step to pending', [
+                    'step_id' => $this->stepId,
+                    'question' => $result['output']['question'] ?? '',
+                ]);
+
+                $checkpointManager->clearCheckpoint($this->stepId);
+                $step->update([
+                    'status' => 'pending',
+                    'started_at' => null,
+                    'idempotency_key' => null,
+                ]);
+
+                return;
+            }
+
             Log::info('ExecutePlaybookStepJob: completed', [
                 'step_id' => $this->stepId,
                 'success' => $result['output'] !== null,
@@ -345,11 +365,11 @@ class ExecutePlaybookStepJob implements ShouldQueue
         if (empty($mapping)) {
             // For workflow-driven steps, build input from experiment thesis + node prompt + previous outputs
             if ($step->workflow_node_id) {
-                return $this->buildWorkflowStepInput($step, $experiment);
+                return array_merge($this->buildWorkflowStepInput($step, $experiment), $this->inputOverrides);
             }
 
             // Default: use experiment constraints as input
-            return $experiment->constraints ?? [];
+            return array_merge($experiment->constraints ?? [], $this->inputOverrides);
         }
 
         $resolved = [];
@@ -392,7 +412,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
             }
         }
 
-        return $resolved;
+        return array_merge($resolved, $this->inputOverrides);
     }
 
     /**
