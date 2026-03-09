@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Integration\Models\WebhookRoute;
+use App\Models\Connector;
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
@@ -46,6 +48,7 @@ class ReEncryptCredentials extends Command
             [Tool::class, 'credentials'],
             [OutboundConnectorConfig::class, 'credentials'],
             [TeamToolActivation::class, 'credential_overrides'],
+            [Connector::class, 'config'],
         ];
 
         foreach ($models as [$modelClass, $column]) {
@@ -63,6 +66,10 @@ class ReEncryptCredentials extends Command
         foreach ($stringModels as [$modelClass, $column]) {
             $this->reEncryptStringModel($modelClass, $column, $batch, $dryRun, $encryption);
         }
+
+        // WebhookRoute.signing_secret has no direct team_id column (linked via integration),
+        // so we eager-load the integration relation to resolve team_id without N+1.
+        $this->reEncryptWebhookRoutes($batch, $dryRun, $encryption);
 
         $this->newLine();
         $this->components->info("Re-encryption complete: {$this->reEncrypted} migrated, {$this->skipped} already v2, {$this->failed} failed.");
@@ -280,6 +287,104 @@ class ReEncryptCredentials extends Command
                         ->table($record->getTable())
                         ->where($record->getKeyName(), $record->getKey())
                         ->update([$column => $encrypted]);
+
+                    $this->reEncrypted++;
+                } catch (\Throwable $e) {
+                    $this->failed++;
+                    $this->components->error("  Failed {$record->getKey()}: {$e->getMessage()}");
+                }
+
+                $bar->advance();
+            }
+
+            $encryption->clearKeyCache();
+        });
+
+        $bar->finish();
+        $this->newLine();
+    }
+
+    /**
+     * Re-encrypt WebhookRoute.signing_secret, which has no direct team_id column.
+     * Eager-loads the integration relation to resolve team_id without N+1 queries.
+     */
+    private function reEncryptWebhookRoutes(int $batch, bool $dryRun, CredentialEncryption $encryption): void
+    {
+        $this->components->info('Processing WebhookRoute.signing_secret (string field, via integration)...');
+
+        $query = WebhookRoute::withoutGlobalScopes()
+            ->with('integration')
+            ->whereNotNull('signing_secret')
+            ->where('signing_secret', '!=', '');
+
+        $total = $query->count();
+
+        if ($total === 0) {
+            $this->components->info('  No records to process.');
+
+            return;
+        }
+
+        $bar = $this->output->createProgressBar($total);
+        $bar->start();
+
+        $query->chunkById($batch, function (Collection $records) use ($dryRun, $encryption, $bar) {
+            foreach ($records as $record) {
+                try {
+                    $rawValue = $record->getRawOriginal('signing_secret');
+
+                    if (! $rawValue || $rawValue === '') {
+                        $this->skipped++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    if ($this->isV2Format($rawValue)) {
+                        $this->skipped++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    if ($dryRun) {
+                        $this->reEncrypted++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    $teamId = $record->integration?->team_id;
+
+                    // Decrypt from legacy PHP-serialized `encrypted` cast
+                    try {
+                        $plaintext = app('encrypter')->decrypt($rawValue);
+                    } catch (\Throwable) {
+                        try {
+                            $json = app('encrypter')->decrypt($rawValue, false);
+                            $decoded = json_decode($json, true);
+                            $plaintext = is_array($decoded) ? ($decoded['_s'] ?? null) : $decoded;
+                        } catch (\Throwable) {
+                            $this->skipped++;
+                            $bar->advance();
+
+                            continue;
+                        }
+                    }
+
+                    if ($plaintext === null) {
+                        $this->skipped++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    $encrypted = $encryption->encrypt(['_s' => (string) $plaintext], $teamId);
+
+                    $record->getConnection()
+                        ->table($record->getTable())
+                        ->where($record->getKeyName(), $record->getKey())
+                        ->update(['signing_secret' => $encrypted]);
 
                     $this->reEncrypted++;
                 } catch (\Throwable $e) {
