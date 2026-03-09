@@ -21,9 +21,9 @@ use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Skill\Models\SkillExecution;
-use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
+use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -36,12 +36,12 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
-use Laravel\Reverb\Events\MessageReceived;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Reverb\Events\MessageReceived;
 
 class AppServiceProvider extends ServiceProvider
 {
