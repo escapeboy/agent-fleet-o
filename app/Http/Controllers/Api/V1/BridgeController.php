@@ -89,16 +89,19 @@ class BridgeController extends Controller
     public function updateEndpoints(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'session_id' => 'required|string|max:255',
+            'session_id' => 'nullable|string|max:255',
             'endpoints' => 'nullable|array',
         ]);
 
         $teamId = $request->user()->current_team_id;
 
-        $connection = BridgeConnection::where('team_id', $teamId)
-            ->where('session_id', $validated['session_id'])
-            ->active()
-            ->first();
+        $query = BridgeConnection::where('team_id', $teamId)->active();
+
+        if (! empty($validated['session_id'])) {
+            $query->where('session_id', $validated['session_id']);
+        }
+
+        $connection = $query->orderByDesc('connected_at')->first();
 
         if (! $connection) {
             return response()->json(['error' => 'No active bridge session found.'], 404);
