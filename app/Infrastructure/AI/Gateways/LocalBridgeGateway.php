@@ -7,10 +7,19 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Exceptions\BridgeExecutionException;
+use App\Infrastructure\AI\Exceptions\BridgeTimeoutException;
+use App\Infrastructure\Bridge\BridgeRequestRegistry;
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class LocalBridgeGateway implements AiGatewayInterface
 {
+    private const RELAY_TIMEOUT = 90;
+
+    public function __construct(private readonly BridgeRequestRegistry $registry) {}
+
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
         $connection = $this->requireActiveConnection($request->teamId);
@@ -55,16 +64,81 @@ class LocalBridgeGateway implements AiGatewayInterface
 
     private function routeRequest(BridgeConnection $connection, AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
-        // TODO: Route the request through the WebSocket relay to the connected bridge.
-        // This requires the relay WebSocket server (Laravel Reverb or equivalent) to be running.
-        // The relay sends an LLM_REQUEST or AGENT_REQUEST frame to the bridge daemon,
-        // which forwards it to the local LLM/agent and streams the response back.
-        //
-        // For now, throw a descriptive error until the relay is implemented.
-        throw new RuntimeException(
-            'FleetQ Bridge relay not yet configured. '
-            .'The bridge is connected but the relay server needs to be started. '
-            .'Bridge version: '.($connection->bridge_version ?? 'unknown')
+        $startedAt = now();
+        $requestId = Str::uuid()->toString();
+
+        // Register in-flight request so HandleBridgeRelayResponse can push chunks into it
+        $this->registry->register($requestId, $request->teamId);
+
+        // Broadcast the request to the daemon over its private channel
+        Broadcast::on("private-daemon.{$request->teamId}")
+            ->as('agent.request')
+            ->with($this->buildPayload($requestId, $request))
+            ->sendNow();
+
+        // Consume the Redis chunk stream via BLPOP
+        $content = '';
+        $promptTokens = 0;
+        $completionTokens = 0;
+
+        while (true) {
+            $item = $this->registry->popChunk($requestId, self::RELAY_TIMEOUT);
+
+            if ($item === null) {
+                throw new BridgeTimeoutException($requestId, self::RELAY_TIMEOUT);
+            }
+
+            $chunk = $item['chunk'] ?? '';
+
+            if ($onChunk !== null && $chunk !== '') {
+                $onChunk($chunk);
+            }
+
+            $content .= $chunk;
+
+            if ($item['done'] ?? false) {
+                // Check for error sentinel stored by HandleBridgeRelayResponse
+                $usage = $this->registry->getUsage($requestId);
+
+                if (isset($usage['__error'])) {
+                    throw new BridgeExecutionException($usage['__error'], $requestId);
+                }
+
+                if ($usage) {
+                    $promptTokens = (int) ($usage['prompt_tokens'] ?? 0);
+                    $completionTokens = (int) ($usage['completion_tokens'] ?? 0);
+                }
+
+                break;
+            }
+        }
+
+        return new AiResponseDTO(
+            content: $content,
+            parsedOutput: null,
+            usage: new AiUsageDTO(
+                promptTokens: $promptTokens,
+                completionTokens: $completionTokens,
+                costCredits: 0,
+            ),
+            provider: $request->provider,
+            model: $request->model,
+            latencyMs: (int) $startedAt->diffInMilliseconds(now()),
         );
+    }
+
+    private function buildPayload(string $requestId, AiRequestDTO $request): array
+    {
+        return [
+            'request_id' => $requestId,
+            'type' => 'llm',
+            'provider' => $request->provider,
+            'model' => $request->model,
+            'system_prompt' => $request->systemPrompt,
+            'user_prompt' => $request->userPrompt,
+            'max_tokens' => $request->maxTokens,
+            'temperature' => $request->temperature,
+            'tools' => [],
+        ];
     }
 }

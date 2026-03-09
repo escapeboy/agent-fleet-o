@@ -75,6 +75,10 @@ class BridgeController extends Controller
         return response()->json(['data' => [
             'session_id' => $connection->session_id,
             'connected_at' => $connection->connected_at->toISOString(),
+            'reverb' => [
+                'app_key' => config('reverb.apps.apps.0.key'),
+                'relay_url' => $this->buildReverbUrl(),
+            ],
         ]], 201);
     }
 
@@ -127,6 +131,16 @@ class BridgeController extends Controller
         $connection->update(['last_seen_at' => now()]);
 
         return response()->json(['data' => ['alive' => true]]);
+    }
+
+    private function buildReverbUrl(): string
+    {
+        $scheme = config('reverb.apps.apps.0.options.scheme', 'https');
+        $host = config('reverb.apps.apps.0.options.host');
+        $port = config('reverb.apps.apps.0.options.port', 443);
+        $wsScheme = $scheme === 'https' ? 'wss' : 'ws';
+
+        return "{$wsScheme}://{$host}:{$port}";
     }
 
     /**

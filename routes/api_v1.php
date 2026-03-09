@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AgentController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\BridgeController;
+use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -171,4 +172,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/bridge/endpoints', [BridgeController::class, 'updateEndpoints']);
     Route::post('/bridge/heartbeat', [BridgeController::class, 'heartbeat']);
     Route::delete('/bridge', [BridgeController::class, 'disconnect']);
+
+    // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
+    // its private channel subscription (POST with socket_id + channel_name, returns auth token)
+    Route::post('/broadcasting/auth', fn () => Broadcast::auth(request()));
 });

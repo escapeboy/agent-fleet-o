@@ -17,6 +17,7 @@ use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
+use App\Infrastructure\Bridge\BridgeRequestRegistry;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use Illuminate\Support\ServiceProvider;
 use Prism\Prism\PrismManager;
@@ -53,7 +54,13 @@ class AiServiceProvider extends ServiceProvider
             ]);
         });
 
-        $this->app->singleton(LocalBridgeGateway::class);
+        $this->app->singleton(BridgeRequestRegistry::class);
+
+        $this->app->singleton(LocalBridgeGateway::class, function ($app) {
+            return new LocalBridgeGateway(
+                registry: $app->make(BridgeRequestRegistry::class),
+            );
+        });
 
         $this->app->singleton(AiGatewayInterface::class, function ($app) {
             return new FallbackAiGateway(
