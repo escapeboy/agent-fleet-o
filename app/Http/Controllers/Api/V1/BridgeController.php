@@ -90,7 +90,7 @@ class BridgeController extends Controller
     {
         $validated = $request->validate([
             'session_id' => 'required|string|max:255',
-            'endpoints' => 'required|array',
+            'endpoints' => 'nullable|array',
         ]);
 
         $teamId = $request->user()->current_team_id;
@@ -104,7 +104,7 @@ class BridgeController extends Controller
             return response()->json(['error' => 'No active bridge session found.'], 404);
         }
 
-        app(UpdateBridgeEndpoints::class)->execute($connection, $validated['endpoints']);
+        app(UpdateBridgeEndpoints::class)->execute($connection, $validated['endpoints'] ?? []);
 
         return response()->json(['data' => ['updated' => true]]);
     }
