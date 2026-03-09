@@ -29,6 +29,9 @@ class MemoryUploadKnowledgeTool extends Tool
                 ->description('Source type label for categorization (e.g. knowledge_base, manual_upload, documentation)'),
             'tags' => $schema->object()
                 ->description('Optional metadata tags as a key-value object'),
+            'confidence' => $schema->number()
+                ->description('Confidence score for this knowledge item (0.0–1.0, default 1.0 for manually uploaded facts)')
+                ->default(1.0),
         ];
     }
 
@@ -52,6 +55,8 @@ class MemoryUploadKnowledgeTool extends Tool
             'uploaded_at' => now()->toIso8601String(),
         ], fn ($v) => $v !== null);
 
+        $confidence = min(1.0, max(0.0, (float) $request->get('confidence', 1.0)));
+
         try {
             $memory = Memory::create([
                 'team_id' => $teamId,
@@ -60,6 +65,8 @@ class MemoryUploadKnowledgeTool extends Tool
                 'content' => trim($content),
                 'source_type' => $request->get('source_type', 'manual_upload'),
                 'metadata' => $metadata ?: null,
+                'confidence' => $confidence,
+                'tags' => [],
             ]);
 
             return Response::text(json_encode([

@@ -5,6 +5,7 @@ namespace App\Domain\Agent\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
+use App\Domain\Memory\Jobs\ExtractMemoryJob;
 use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
 use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
@@ -167,6 +168,9 @@ class ExecuteAgentAction
                 'cost_credits' => $costCredits,
             ]);
 
+            ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)
+                ->delay(now()->addSeconds(30));
+
             return [
                 'execution' => $execution,
                 'output' => ['result' => $response->content],
@@ -259,6 +263,9 @@ class ExecuteAgentAction
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
             ]);
+
+            ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)
+                ->delay(now()->addSeconds(30));
 
             return [
                 'execution' => $execution,
@@ -442,6 +449,9 @@ class ExecuteAgentAction
                 'duration_ms' => $durationMs,
                 'cost_credits' => $totalCost,
             ]);
+
+            ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)
+                ->delay(now()->addSeconds(30));
 
             return [
                 'execution' => $execution,

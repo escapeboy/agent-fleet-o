@@ -52,10 +52,28 @@ class MemoryStatsTool extends Tool
             ])
             ->toArray();
 
+        $avgConfidence = DB::table('memories')->avg('confidence');
+
+        // Tag breakdown: unnest the JSONB tags array (PostgreSQL only; returns empty on SQLite)
+        $byTag = [];
+        try {
+            $byTag = DB::table('memories')
+                ->selectRaw("jsonb_array_elements_text(tags) as tag, count(*) as count")
+                ->groupBy('tag')
+                ->orderByDesc('count')
+                ->get()
+                ->map(fn ($row) => ['tag' => $row->tag, 'count' => (int) $row->count])
+                ->toArray();
+        } catch (\Throwable) {
+            // SQLite or pgvector-less environments — skip tag breakdown
+        }
+
         return Response::text(json_encode([
             'total_memories' => $totalMemories,
+            'avg_confidence' => round((float) $avgConfidence, 3),
             'by_agent' => $byAgent,
             'by_source_type' => $bySourceType,
+            'fact_count_by_tag' => $byTag,
         ]));
     }
 }

@@ -29,6 +29,9 @@ class MemorySearchTool extends Tool
             'limit' => $schema->integer()
                 ->description('Max results to return (default 10, max 100)')
                 ->default(10),
+            'min_confidence' => $schema->number()
+                ->description('Minimum confidence score to filter results (0.0–1.0, default 0.0 to include all)')
+                ->default(0.0),
         ];
     }
 
@@ -48,6 +51,11 @@ class MemorySearchTool extends Tool
             $query->where('agent_id', $agentId);
         }
 
+        $minConfidence = (float) $request->get('min_confidence', 0.0);
+        if ($minConfidence > 0.0) {
+            $query->where('confidence', '>=', $minConfidence);
+        }
+
         $limit = min((int) ($request->get('limit', 10)), 100);
 
         $memories = $query->limit($limit)->get();
@@ -60,6 +68,8 @@ class MemorySearchTool extends Tool
                 'project' => $m->project?->title,
                 'source_type' => $m->source_type,
                 'content' => mb_substr($m->content, 0, 300),
+                'confidence' => $m->confidence,
+                'tags' => $m->tags ?? [],
                 'created' => $m->created_at?->diffForHumans(),
             ])->toArray(),
         ]));
