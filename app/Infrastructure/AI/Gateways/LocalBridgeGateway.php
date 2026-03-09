@@ -72,7 +72,7 @@ class LocalBridgeGateway implements AiGatewayInterface
 
         // Push the request to the Redis queue — the relay binary reads via BLPOP
         // and forwards to the bridge daemon over the WebSocket connection.
-        Redis::connection('default')->rpush(
+        Redis::connection('bridge')->rpush(
             "bridge:req:{$request->teamId}",
             json_encode($this->buildPayload($requestId, $request)),
         );

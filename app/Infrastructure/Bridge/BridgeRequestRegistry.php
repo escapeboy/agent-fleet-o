@@ -20,7 +20,7 @@ class BridgeRequestRegistry
 
     public function register(string $requestId, string $teamId): void
     {
-        Redis::connection('default')->setex(
+        Redis::connection('bridge')->setex(
             "bridge:pending:{$requestId}",
             self::PENDING_TTL,
             $teamId,
@@ -34,7 +34,7 @@ class BridgeRequestRegistry
     {
         $payload = json_encode(['chunk' => $chunk, 'done' => $done, 'usage' => $usage]);
 
-        $conn = Redis::connection('default');
+        $conn = Redis::connection('bridge');
         $conn->rpush("bridge:stream:{$requestId}", $payload);
         $conn->expire("bridge:stream:{$requestId}", self::STREAM_TTL);
     }
@@ -44,7 +44,7 @@ class BridgeRequestRegistry
      */
     public function storeUsage(string $requestId, array $usage): void
     {
-        Redis::connection('default')->setex(
+        Redis::connection('bridge')->setex(
             "bridge:usage:{$requestId}",
             self::STREAM_TTL,
             json_encode($usage),
@@ -59,7 +59,7 @@ class BridgeRequestRegistry
      */
     public function popChunk(string $requestId, int $timeoutSeconds = 90): ?array
     {
-        $result = Redis::connection('default')->blpop(["bridge:stream:{$requestId}"], $timeoutSeconds);
+        $result = Redis::connection('bridge')->blpop(["bridge:stream:{$requestId}"], $timeoutSeconds);
 
         if (! $result) {
             return null;
@@ -76,13 +76,13 @@ class BridgeRequestRegistry
      */
     public function getUsage(string $requestId): ?array
     {
-        $raw = Redis::connection('default')->get("bridge:usage:{$requestId}");
+        $raw = Redis::connection('bridge')->get("bridge:usage:{$requestId}");
 
         return $raw ? json_decode($raw, true) : null;
     }
 
     public function isExpired(string $requestId): bool
     {
-        return Redis::connection('default')->ttl("bridge:pending:{$requestId}") <= 0;
+        return Redis::connection('bridge')->ttl("bridge:pending:{$requestId}") <= 0;
     }
 }
