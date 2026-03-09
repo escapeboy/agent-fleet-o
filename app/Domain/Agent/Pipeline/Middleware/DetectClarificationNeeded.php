@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Pipeline\Middleware;
 
+use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -37,8 +38,9 @@ class DetectClarificationNeeded
     {
         $config = $ctx->agent->config ?? [];
 
-        // Skip if: opt-out, or a clarification answer was already provided (resume path)
-        if (! ($config[self::CONFIG_ENABLED_KEY] ?? false)
+        // Skip if: Flash tier (too expensive relative to task cost), opt-out, or answer already provided
+        if (ExecutionTier::fromConfig($config) === ExecutionTier::Flash
+            || ! ($config[self::CONFIG_ENABLED_KEY] ?? false)
             || isset($ctx->input['clarification_answer'])
         ) {
             return $next($ctx);

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Pipeline\Middleware;
 
+use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -28,6 +29,11 @@ class SummarizeContext
 
     public function handle(AgentExecutionContext $ctx, Closure $next): AgentExecutionContext
     {
+        // Flash tier skips summarization — not worth the extra LLM call for fast/cheap runs
+        if (ExecutionTier::fromConfig($ctx->agent->config ?? []) === ExecutionTier::Flash) {
+            return $next($ctx);
+        }
+
         $encoded = json_encode($ctx->input);
 
         if ($encoded === false || strlen($encoded) <= self::CONTEXT_CHAR_THRESHOLD) {

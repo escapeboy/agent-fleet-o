@@ -70,6 +70,8 @@
                             @if($agent->goal)
                                 <p class="mt-0.5 truncate text-xs text-gray-400">{{ $agent->goal }}</p>
                             @endif
+                            @php $tier = \App\Domain\Agent\Enums\ExecutionTier::fromConfig($agent->config ?? []); @endphp
+                            <span class="mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold {{ $tier->badgeClass() }}">{{ $tier->shortLabel() }}</span>
                         </td>
                         <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4 text-sm text-gray-500">{{ $agent->role ?? '-' }}</td>
                         <td class="px-3 py-3 md:px-6 md:py-4">
