@@ -74,7 +74,7 @@ class LocalBridgeGateway implements AiGatewayInterface
         // and forwards to the bridge daemon over the WebSocket connection.
         Redis::connection('bridge')->rpush(
             "bridge:req:{$request->teamId}",
-            json_encode($this->buildPayload($requestId, $request)),
+            json_encode($this->buildPayload($requestId, $request, $connection)),
         );
 
         // Consume the Redis chunk stream via BLPOP
@@ -128,18 +128,57 @@ class LocalBridgeGateway implements AiGatewayInterface
         );
     }
 
-    private function buildPayload(string $requestId, AiRequestDTO $request): array
+    private function buildPayload(string $requestId, AiRequestDTO $request, BridgeConnection $connection): array
     {
+        // Build OpenAI-compatible messages array from system/user prompts
+        $messages = [];
+        if ($request->systemPrompt) {
+            $messages[] = ['role' => 'system', 'content' => $request->systemPrompt];
+        }
+        if ($request->userPrompt) {
+            $messages[] = ['role' => 'user', 'content' => $request->userPrompt];
+        }
+
+        // Relay expects requestEnvelope{request_id, frame_type (uint16), payload (json.RawMessage)}
+        // FrameLLMRequest = 0x0001 = 1
         return [
             'request_id' => $requestId,
-            'type' => 'llm',
-            'provider' => $request->provider,
-            'model' => $request->model,
-            'system_prompt' => $request->systemPrompt,
-            'user_prompt' => $request->userPrompt,
-            'max_tokens' => $request->maxTokens,
-            'temperature' => $request->temperature,
-            'tools' => [],
+            'frame_type' => 1,
+            'payload' => [
+                'request_id'  => $requestId,
+                'endpoint_url' => $this->resolveEndpointUrl($request->provider, $connection),
+                'model'       => $request->model,
+                'messages'    => $messages,
+                'max_tokens'  => $request->maxTokens ?? 8192,
+                'temperature' => $request->temperature ?? 0.7,
+                'stream'      => true,
+            ],
         ];
+    }
+
+    /**
+     * Find the base_url of a discovered LLM endpoint by matching provider name,
+     * falling back to the first online endpoint, then a sensible default.
+     */
+    private function resolveEndpointUrl(string $provider, BridgeConnection $connection): string
+    {
+        $endpoints = $connection->llmEndpoints();
+
+        // Match by name first (e.g. provider="ollama" → endpoint with name "ollama")
+        foreach ($endpoints as $ep) {
+            if (($ep['name'] ?? '') === $provider && ($ep['online'] ?? false)) {
+                return $ep['base_url'];
+            }
+        }
+
+        // Fall back to first online endpoint
+        foreach ($endpoints as $ep) {
+            if ($ep['online'] ?? false) {
+                return $ep['base_url'];
+            }
+        }
+
+        // Last resort — Ollama default
+        return 'http://localhost:11434';
     }
 }

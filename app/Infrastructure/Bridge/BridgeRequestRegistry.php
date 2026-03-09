@@ -55,6 +55,17 @@ class BridgeRequestRegistry
      * Blocking pop — waits up to $timeoutSeconds for the next chunk.
      * Returns null on timeout.
      *
+     * The relay binary writes responseEnvelope{frame_type uint16, payload []byte, done bool}.
+     * Go's json.Marshal encodes []byte as base64, so we must base64-decode the payload field
+     * before JSON-decoding the actual frame contents (LLMResponseChunk, AgentEvent, etc.).
+     *
+     * Frame type constants (from tunnel/framing.go):
+     *   0x0002 FrameLLMResponseChunk  — streaming delta, payload = LLMResponseChunk{delta, done}
+     *   0x0003 FrameLLMResponseEnd    — final frame, payload = (empty or usage JSON)
+     *   0x0011 FrameAgentEvent        — agent output, payload = AgentEvent{kind, text, error}
+     *   0x0012 FrameAgentDone         — agent done
+     *   0x00FF FrameError             — bridge error, payload = ErrorPayload{code, message}
+     *
      * @return array{chunk: string, done: bool, usage: array|null}|null
      */
     public function popChunk(string $requestId, int $timeoutSeconds = 90): ?array
@@ -66,7 +77,43 @@ class BridgeRequestRegistry
         }
 
         // blpop returns [key, value]
-        return json_decode($result[1], true);
+        $envelope = json_decode($result[1], true);
+        if (! is_array($envelope)) {
+            return null;
+        }
+
+        $frameType = (int) ($envelope['frame_type'] ?? 0);
+        $done      = (bool) ($envelope['done'] ?? false);
+
+        // Go's json.Marshal encodes []byte as standard base64 string
+        $rawPayload = $envelope['payload'] ?? '';
+        $payloadBytes = $rawPayload !== '' ? base64_decode($rawPayload, strict: true) : '';
+        $payload = ($payloadBytes !== false && $payloadBytes !== '')
+            ? json_decode($payloadBytes, true)
+            : [];
+
+        // FrameError = 0x00FF — store error so getUsage() returns the sentinel
+        if ($frameType === 0x00FF) {
+            $this->storeUsage($requestId, ['__error' => $payload['message'] ?? 'Bridge error']);
+
+            return ['chunk' => '', 'done' => true, 'usage' => null];
+        }
+
+        // FrameAgentEvent = 0x0011 / FrameAgentDone = 0x0012
+        if ($frameType === 0x0011 || $frameType === 0x0012) {
+            $error = $payload['error'] ?? '';
+            if ($error !== '') {
+                $this->storeUsage($requestId, ['__error' => $error]);
+
+                return ['chunk' => '', 'done' => true, 'usage' => null];
+            }
+
+            return ['chunk' => $payload['text'] ?? '', 'done' => $done, 'usage' => null];
+        }
+
+        // FrameLLMResponseChunk = 0x0002 — LLMResponseChunk{request_id, delta, done}
+        // FrameLLMResponseEnd   = 0x0003 — final frame
+        return ['chunk' => $payload['delta'] ?? '', 'done' => $done, 'usage' => null];
     }
 
     /**
