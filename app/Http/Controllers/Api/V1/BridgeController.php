@@ -95,13 +95,24 @@ class BridgeController extends Controller
 
         $teamId = $request->user()->current_team_id;
 
+        // Primary: find the active connection (prefer matching session_id)
         $query = BridgeConnection::where('team_id', $teamId)->active();
 
         if (! empty($validated['session_id'])) {
-            $query->where('session_id', $validated['session_id']);
+            $connection = (clone $query)->where('session_id', $validated['session_id'])->first()
+                ?? $query->orderByDesc('connected_at')->first();
+        } else {
+            $connection = $query->orderByDesc('connected_at')->first();
         }
 
-        $connection = $query->orderByDesc('connected_at')->first();
+        // Fallback: the relay may call endpoints before register completes (race condition),
+        // so also check the most-recent connection within the last 30 seconds regardless of status.
+        if (! $connection) {
+            $connection = BridgeConnection::where('team_id', $teamId)
+                ->where('connected_at', '>=', now()->subSeconds(30))
+                ->orderByDesc('connected_at')
+                ->first();
+        }
 
         if (! $connection) {
             return response()->json(['error' => 'No active bridge session found.'], 404);
