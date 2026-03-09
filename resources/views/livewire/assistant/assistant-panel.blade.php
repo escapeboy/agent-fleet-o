@@ -268,7 +268,11 @@
                             : 'max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-2.5 text-gray-900' }}">
                             @if($msg['role'] === 'assistant')
                                 <div class="assistant-response prose prose-sm max-w-none">
-                                    {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '') !!}
+                                    @if(($msg['content'] ?? '') === '')
+                                        <span class="text-gray-400 text-xs italic">No response from agent. Check agent authentication and configuration.</span>
+                                    @else
+                                        {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '') !!}
+                                    @endif
                                 </div>
                                 @if(!empty($msg['tool_calls_count']))
                                     <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
