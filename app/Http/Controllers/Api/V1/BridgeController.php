@@ -9,6 +9,7 @@ use App\Domain\Bridge\Models\BridgeConnection;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redis;
 
 /**
  * @tags Bridge
@@ -94,6 +95,7 @@ class BridgeController extends Controller
         ]);
 
         $teamId = $request->user()->current_team_id;
+        $endpoints = $validated['endpoints'] ?? [];
 
         // Primary: find the active connection (prefer matching session_id)
         $query = BridgeConnection::where('team_id', $teamId)->active();
@@ -105,8 +107,7 @@ class BridgeController extends Controller
             $connection = $query->orderByDesc('connected_at')->first();
         }
 
-        // Fallback: the relay may call endpoints before register completes (race condition),
-        // so also check the most-recent connection within the last 30 seconds regardless of status.
+        // Fallback: check the most-recent connection within the last 30 seconds regardless of status.
         if (! $connection) {
             $connection = BridgeConnection::where('team_id', $teamId)
                 ->where('connected_at', '>=', now()->subSeconds(30))
@@ -114,11 +115,17 @@ class BridgeController extends Controller
                 ->first();
         }
 
-        if (! $connection) {
-            return response()->json(['error' => 'No active bridge session found.'], 404);
+        if ($connection) {
+            app(UpdateBridgeEndpoints::class)->execute($connection, $endpoints);
+        } else {
+            // The relay calls endpoints before the daemon calls register — cache in Redis
+            // so register can pick it up and apply it immediately on connection creation.
+            Redis::connection('bridge')->setex(
+                "bridge:pending_endpoints:{$teamId}",
+                60,
+                json_encode($endpoints),
+            );
         }
-
-        app(UpdateBridgeEndpoints::class)->execute($connection, $validated['endpoints'] ?? []);
 
         return response()->json(['data' => ['updated' => true]]);
     }

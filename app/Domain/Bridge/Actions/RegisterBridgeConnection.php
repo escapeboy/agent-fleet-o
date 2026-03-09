@@ -4,6 +4,7 @@ namespace App\Domain\Bridge\Actions;
 
 use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Bridge\Models\BridgeConnection;
+use Illuminate\Support\Facades\Redis;
 
 class RegisterBridgeConnection
 {
@@ -21,6 +22,15 @@ class RegisterBridgeConnection
                 'status' => BridgeConnectionStatus::Disconnected->value,
                 'disconnected_at' => now(),
             ]);
+
+        // Check for endpoints pre-cached by the relay (which calls /bridge/endpoints
+        // before the daemon calls /bridge/register — a timing quirk in the relay binary).
+        $pendingKey = "bridge:pending_endpoints:{$teamId}";
+        $pending = Redis::connection('bridge')->get($pendingKey);
+        if ($pending) {
+            $endpoints = json_decode($pending, true) ?: $endpoints;
+            Redis::connection('bridge')->del($pendingKey);
+        }
 
         return BridgeConnection::create([
             'team_id' => $teamId,
