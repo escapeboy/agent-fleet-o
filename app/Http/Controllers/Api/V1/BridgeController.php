@@ -74,6 +74,7 @@ class BridgeController extends Controller
 
         return response()->json(['data' => [
             'session_id' => $connection->session_id,
+            'team_id' => $teamId,
             'connected_at' => $connection->connected_at->toISOString(),
             'reverb' => [
                 'app_key' => config('reverb.apps.apps.0.key'),
