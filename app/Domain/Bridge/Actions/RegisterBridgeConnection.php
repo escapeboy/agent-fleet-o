@@ -32,6 +32,21 @@ class RegisterBridgeConnection
             Redis::connection('bridge')->del($pendingKey);
         }
 
+        // If the relay sent empty endpoints (current relay binary behaviour — it always
+        // reports [] on connection before local-agent discovery runs), fall back to the
+        // most-recent connection's endpoints so that previously-discovered agents are
+        // preserved across relay restarts.
+        if (empty($endpoints)) {
+            $previous = BridgeConnection::where('team_id', $teamId)
+                ->where('status', BridgeConnectionStatus::Disconnected->value)
+                ->orderByDesc('connected_at')
+                ->value('endpoints');
+
+            if (! empty($previous)) {
+                $endpoints = $previous;
+            }
+        }
+
         return BridgeConnection::create([
             'team_id' => $teamId,
             'session_id' => $sessionId,
