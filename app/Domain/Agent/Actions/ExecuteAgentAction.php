@@ -4,9 +4,12 @@ namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Agent\Pipeline\AgentExecutionContext;
+use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
+use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
+use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
-use App\Domain\Memory\Services\MemoryContextInjector;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
@@ -16,6 +19,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Pipeline;
 use Prism\Prism\Tool;
 
 class ExecuteAgentAction
@@ -26,7 +30,9 @@ class ExecuteAgentAction
         private readonly ResolveAgentToolsAction $resolveTools,
         private readonly ResolveProjectCredentialsAction $resolveCredentials,
         private readonly ProviderResolver $providerResolver,
-        private readonly MemoryContextInjector $memoryInjector,
+        private readonly InjectMemoryContext $injectMemoryContext,
+        private readonly SummarizeContext $summarizeContext,
+        private readonly DetectClarificationNeeded $detectClarification,
     ) {}
 
     /**
@@ -49,17 +55,47 @@ class ExecuteAgentAction
             return $this->failExecution($agent, $teamId, $experimentId, $input, 'Agent budget cap reached');
         }
 
+        // Run the semantic middleware pipeline to enrich / gate the execution context.
+        // Each middleware may add system prompt parts, summarize input, or request clarification.
+        $ctx = new AgentExecutionContext(
+            agent: $agent,
+            teamId: $teamId,
+            userId: $userId,
+            experimentId: $experimentId,
+            project: $project,
+            input: $input,
+        );
+
+        /** @var AgentExecutionContext $ctx */
+        $ctx = Pipeline::send($ctx)
+            ->through([
+                $this->injectMemoryContext,
+                $this->summarizeContext,
+                $this->detectClarification,
+            ])
+            ->thenReturn();
+
+        if ($ctx->requiresClarification) {
+            return $this->failExecution(
+                $agent, $teamId, $experimentId, $ctx->input,
+                "Agent requires clarification: {$ctx->clarificationQuestion}",
+            );
+        }
+
+        // Use the (potentially summarized) input going forward
+        $input = $ctx->input;
+
         // Workflow-driven execution: if input has a 'task' key (from workflow node prompt),
         // execute directly with LLM instead of skill chain
         if (! empty($input['task'])) {
-            return $this->executeDirectPrompt($agent, $input, $teamId, $userId, $experimentId, $stepId);
+            return $this->executeDirectPrompt($agent, $input, $teamId, $userId, $experimentId, $stepId, $ctx->systemPromptParts);
         }
 
         // Resolve tools for this agent (filtered by project restrictions)
         $tools = $this->resolveTools->execute($agent, $project);
 
         if (! empty($tools)) {
-            return $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project);
+            return $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project, $ctx->systemPromptParts);
         }
 
         // Fallback: existing skill-chain execution
@@ -70,6 +106,7 @@ class ExecuteAgentAction
      * Agentic execution: LLM decides what to do using tools.
      *
      * @param  array<Tool>  $tools
+     * @param  array<string>  $systemPromptParts  Extra sections injected by pipeline middleware
      * @return array{execution: AgentExecution, output: array|null}
      */
     private function executeWithTools(
@@ -80,11 +117,12 @@ class ExecuteAgentAction
         string $userId,
         ?string $experimentId,
         ?Project $project = null,
+        array $systemPromptParts = [],
     ): array {
         $startTime = hrtime(true);
 
         try {
-            $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input);
+            $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input, $systemPromptParts);
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
 
@@ -148,6 +186,7 @@ class ExecuteAgentAction
      * Used for workflow-driven steps where the node config provides the task.
      * When $stepId is provided, streams output to Redis for real-time UI updates.
      *
+     * @param  array<string>  $systemPromptParts  Extra sections injected by pipeline middleware
      * @return array{execution: AgentExecution, output: array|null}
      */
     private function executeDirectPrompt(
@@ -157,11 +196,12 @@ class ExecuteAgentAction
         string $userId,
         ?string $experimentId,
         ?string $stepId = null,
+        array $systemPromptParts = [],
     ): array {
         $startTime = hrtime(true);
 
         try {
-            $systemPrompt = $this->buildAgentSystemPrompt($agent, null, $input);
+            $systemPrompt = $this->buildAgentSystemPrompt($agent, null, $input, $systemPromptParts);
 
             // Build user prompt from task + goal + context
             $userPromptParts = [];
@@ -236,8 +276,10 @@ class ExecuteAgentAction
 
     /**
      * Build a rich system prompt that gives the agent its identity and context.
+     *
+     * @param  array<string>  $extraParts  Additional sections injected by the pipeline middleware
      */
-    private function buildAgentSystemPrompt(Agent $agent, ?Project $project = null, array $input = []): string
+    private function buildAgentSystemPrompt(Agent $agent, ?Project $project = null, array $input = [], array $extraParts = []): string
     {
         $parts = [];
 
@@ -303,10 +345,11 @@ class ExecuteAgentAction
             $parts[] = "## Available Credentials\nYou have access to the following credentials for authenticating with external services. Request a credential by its ID when you need to authenticate.\n\n{$credentialList}";
         }
 
-        // Inject relevant memories from past executions
-        $memoryContext = $this->memoryInjector->buildContext($agent->id, $input, $project?->id);
-        if ($memoryContext) {
-            $parts[] = $memoryContext;
+        // Append sections injected by the semantic pipeline middleware (e.g. memory context)
+        foreach ($extraParts as $part) {
+            if ($part !== '') {
+                $parts[] = $part;
+            }
         }
 
         $parts[] = 'Use the available tools to accomplish the task. Be thorough but efficient.';
