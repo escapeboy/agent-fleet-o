@@ -28,8 +28,6 @@ class RecalculateIntentScoreJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public string $queue = 'metrics';
-
     public int $tries = 3;
 
     public int $timeout = 60;
@@ -38,7 +36,9 @@ class RecalculateIntentScoreJob implements ShouldQueue
         public readonly string $teamId,
         public readonly string $entityKey,
         public readonly string $entityType,
-    ) {}
+    ) {
+        $this->onQueue('metrics');
+    }
 
     public function handle(SignalStackingEngine $engine, IngestSignalAction $ingestAction): void
     {

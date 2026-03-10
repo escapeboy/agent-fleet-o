@@ -9,6 +9,7 @@ use App\Http\Controllers\IntegrationWebhookController;
 use App\Http\Controllers\JiraWebhookController;
 use App\Http\Controllers\LinearWebhookController;
 use App\Http\Controllers\PagerDutyWebhookController;
+use App\Http\Controllers\PerTeamSignalWebhookController;
 use App\Http\Controllers\SentryAlertWebhookController;
 use App\Http\Controllers\SignalWebhookController;
 use App\Http\Controllers\SlackWebhookController;
@@ -17,7 +18,15 @@ use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
-// Signal ingestion (public webhook — HMAC validated in controller)
+// Per-team signal webhooks — unique URL per team per driver, secret stored in DB
+// POST /api/signals/{driver}/{teamId}  (e.g. /api/signals/github/01927f3c-...)
+// Must be registered BEFORE the legacy single-team routes to avoid shadowing.
+Route::post('/signals/{driver}/{teamId}', PerTeamSignalWebhookController::class)
+    ->name('signals.per_team')
+    ->middleware('throttle:120,1')
+    ->whereUuid('teamId');
+
+// Legacy signal ingestion (single-team / self-hosted — HMAC validated in controller)
 Route::post('/signals/webhook', SignalWebhookController::class)->name('signals.webhook');
 
 // Slack Events API (HMAC-SHA256 + URL verification challenge)

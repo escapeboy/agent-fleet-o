@@ -3,6 +3,7 @@
 namespace App\Livewire\Signals;
 
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Signal\Models\SignalConnectorSetting;
 use App\Models\Connector;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -141,23 +142,31 @@ class SignalConnectorsPage extends Component
             ->get()
             ->keyBy('source_type');
 
+        // Load per-team DB connector settings (keyed by driver) for status checks.
+        $dbSettings = SignalConnectorSetting::where('is_active', true)
+            ->get()
+            ->keyBy('driver');
+
         // Build enriched card data for the webhook connector grid.
         $cards = [];
         foreach ($this->webhookConnectors as $driver => $def) {
-            $secretConfigured = $def['env_key'] ? (bool) config($def['env_key']) : false;
-            $stats = $signalStats->get($driver);
-            $lastReceived = $stats?->last_received_at ? Carbon::parse($stats->last_received_at) : null;
-            $totalSignals = (int) ($stats?->total ?? 0);
+            $dbSetting = $dbSettings->get($driver);
 
-            // Datadog uses a URL-embedded secret stored in a Connector record instead of an env var.
-            if ($driver === 'datadog') {
-                $ddConnector = Connector::where('driver', 'datadog')->where('type', 'input')->first();
-                $secretConfigured = $ddConnector !== null;
-            }
+            // Prefer DB-stored secret status; fall back to env/config for self-hosted deployments.
+            $secretConfigured = $dbSetting !== null
+                ? (bool) $dbSetting->webhook_secret
+                : ($def['env_key'] ? (bool) config($def['env_key']) : false);
+
+            // Use DB last_signal_at when available (avoids extra JOIN on signals).
+            $stats = $signalStats->get($driver);
+            $lastReceived = $dbSetting?->last_signal_at
+                ?? ($stats?->last_received_at ? Carbon::parse($stats->last_received_at) : null);
+            $totalSignals = $dbSetting?->signal_count
+                ?? (int) ($stats?->total ?? 0);
 
             $status = match (true) {
                 ! $secretConfigured && $totalSignals > 0 => 'unsecured',
-                $secretConfigured && $lastReceived?->gt(now()->subHours(24)) => 'active',
+                $secretConfigured && $lastReceived instanceof Carbon && $lastReceived->gt(now()->subHours(24)) => 'active',
                 $secretConfigured && $totalSignals > 0 => 'stale',
                 $secretConfigured => 'configured',
                 default => 'not_configured',
