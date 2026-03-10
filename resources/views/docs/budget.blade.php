@@ -76,28 +76,85 @@
     </div>
 
     {{-- Plan structural limits --}}
+    @php
+        $tiers = config('plans.tiers', []);
+        $displayTiers = array_filter($tiers, fn($k) => $k !== 'enterprise', ARRAY_FILTER_USE_KEY);
+        $fmt = fn(int $v) => $v === -1 ? '∞' : number_format($v);
+        $structuralRows = [
+            'team_members'       => 'Team members',
+            'agents'             => 'Agents',
+            'skills'             => 'Skills',
+            'crews'              => 'Crews',
+            'active_experiments' => 'Active experiments',
+            'projects'           => 'Projects',
+            'saved_workflows'    => 'Saved workflows',
+            'tools'              => 'Tools',
+            'credentials'        => 'Credentials',
+            'memories'           => 'Memory entries',
+        ];
+        $usageRows = [
+            'runs'              => 'Runs / month',
+            'crew_executions'   => 'Crew executions / month',
+            'outbound_sends'    => 'Outbound sends / month',
+            'skill_executions'  => 'Skill executions / month',
+        ];
+    @endphp
     <h2 class="mt-10 text-xl font-bold text-gray-900">Plan structural limits</h2>
     <p class="mt-2 text-sm text-gray-600">
-        Beyond credit budgets, plans enforce hard caps on the number of entities you can create:
+        Beyond credit budgets, plans enforce hard caps on the number of entities you can create.
+        Enterprise plans have custom limits negotiated per team.
     </p>
-    <div class="mt-3 overflow-hidden rounded-xl border border-gray-200">
+    @if($tiers)
+    <div class="mt-3 overflow-x-auto rounded-xl border border-gray-200">
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-200 bg-gray-50">
                     <th class="py-3 pl-4 pr-4 text-left font-semibold text-gray-700">Metric</th>
-                    <th class="py-3 pr-4 text-center font-semibold text-gray-700">Free</th>
-                    <th class="py-3 pr-4 text-center font-semibold text-gray-700">Starter</th>
-                    <th class="py-3 pr-4 text-center font-semibold text-gray-700">Pro</th>
+                    @foreach($displayTiers as $key => $tier)
+                        <th class="py-3 pr-4 text-center font-semibold text-gray-700">{{ $tier['name'] }}</th>
+                    @endforeach
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 text-center text-xs">
-                <tr><td class="py-2.5 pl-4 pr-4 text-left text-gray-700">Team members</td><td class="py-2.5 pr-4 text-gray-600">3</td><td class="py-2.5 pr-4 text-gray-600">10</td><td class="py-2.5 pr-4 text-gray-600">Unlimited</td></tr>
-                <tr><td class="py-2.5 pl-4 pr-4 text-left text-gray-700">Agents</td><td class="py-2.5 pr-4 text-gray-600">5</td><td class="py-2.5 pr-4 text-gray-600">25</td><td class="py-2.5 pr-4 text-gray-600">Unlimited</td></tr>
-                <tr><td class="py-2.5 pl-4 pr-4 text-left text-gray-700">Active experiments</td><td class="py-2.5 pr-4 text-gray-600">2</td><td class="py-2.5 pr-4 text-gray-600">10</td><td class="py-2.5 pr-4 text-gray-600">Unlimited</td></tr>
-                <tr><td class="py-2.5 pl-4 pr-4 text-left text-gray-700">Saved workflows</td><td class="py-2.5 pr-4 text-gray-600">3</td><td class="py-2.5 pr-4 text-gray-600">15</td><td class="py-2.5 pr-4 text-gray-600">Unlimited</td></tr>
+            <tbody class="divide-y divide-gray-100 text-xs">
+                @foreach($structuralRows as $metric => $label)
+                <tr>
+                    <td class="py-2 pl-4 pr-4 text-left text-gray-700">{{ $label }}</td>
+                    @foreach($displayTiers as $tier)
+                        <td class="py-2 pr-4 text-center text-gray-600">{{ $fmt($tier['structural_limits'][$metric] ?? -1) }}</td>
+                    @endforeach
+                </tr>
+                @endforeach
             </tbody>
         </table>
     </div>
+
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Monthly usage limits</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Usage counters reset at the start of each billing month. Extra capacity is available as add-on packs on paid plans.
+    </p>
+    <div class="mt-3 overflow-x-auto rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-4 text-left font-semibold text-gray-700">Metric</th>
+                    @foreach($displayTiers as $key => $tier)
+                        <th class="py-3 pr-4 text-center font-semibold text-gray-700">{{ $tier['name'] }}</th>
+                    @endforeach
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-xs">
+                @foreach($usageRows as $metric => $label)
+                <tr>
+                    <td class="py-2 pl-4 pr-4 text-left text-gray-700">{{ $label }}</td>
+                    @foreach($displayTiers as $tier)
+                        <td class="py-2 pr-4 text-center text-gray-600">{{ $fmt($tier['usage_limits'][$metric] ?? -1) }}</td>
+                    @endforeach
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
 
     {{-- Viewing budget --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Viewing your budget</h2>

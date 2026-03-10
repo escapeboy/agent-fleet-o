@@ -32,7 +32,7 @@
                                 prose-h3:text-base prose-h3:mt-5
                                 prose-ul:mt-2 prose-li:my-0.5
                                 prose-a:text-primary-600 hover:prose-a:underline">
-                        {!! Str::markdown($entry['body'] ?? '') !!}
+                        {!! $entry['content_html'] ?? '' !!}
                     </div>
                 </div>
             @endforeach
