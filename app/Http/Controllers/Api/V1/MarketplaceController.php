@@ -7,6 +7,7 @@ use App\Domain\Marketplace\Actions\InstallFromMarketplaceAction;
 use App\Domain\Marketplace\Actions\PublishToMarketplaceAction;
 use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
+use App\Domain\Marketplace\Models\MarketplaceInstallation;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Marketplace\Models\MarketplaceReview;
 use App\Domain\Skill\Models\Skill;
@@ -157,9 +158,15 @@ class MarketplaceController extends Controller
      */
     public function install(Request $request, MarketplaceListing $listing, InstallFromMarketplaceAction $action): JsonResponse
     {
+        $teamId = $request->user()->current_team_id;
+
+        if (MarketplaceInstallation::where('listing_id', $listing->id)->where('team_id', $teamId)->exists()) {
+            return response()->json(['message' => 'Already installed.'], 409);
+        }
+
         $installation = $action->execute(
             listing: $listing,
-            teamId: $request->user()->current_team_id,
+            teamId: $teamId,
             userId: $request->user()->id,
         );
 

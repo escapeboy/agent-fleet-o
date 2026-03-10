@@ -115,7 +115,12 @@
 
             {{-- Category & Tags --}}
             <div class="mb-4 grid grid-cols-2 gap-4">
-                <x-form-input wire:model="category" label="Category" type="text" placeholder="e.g. productivity, data, marketing" />
+                <x-form-select wire:model="category" label="Category">
+                    <option value="">No category</option>
+                    @foreach(config('marketplace-categories', []) as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </x-form-select>
                 <x-form-input wire:model="tagsInput" label="Tags (comma-separated)" type="text" placeholder="e.g. ai, email, automation" />
             </div>
 

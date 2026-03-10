@@ -27,6 +27,8 @@ class PublishToMarketplaceAction
         ?string $category = null,
         array $tags = [],
         ListingVisibility $visibility = ListingVisibility::Public,
+        ?string $canonicalSlug = null,
+        bool $isOfficial = false,
     ): MarketplaceListing {
         $type = match (true) {
             $item instanceof Skill => 'skill',
@@ -96,7 +98,8 @@ class PublishToMarketplaceAction
             'type' => $type,
             'listable_id' => $item->id,
             'name' => $name,
-            'slug' => Str::slug($name).'-'.Str::random(6),
+            'slug' => $canonicalSlug ?? Str::slug($name).'-'.Str::random(6),
+            'is_official' => $isOfficial,
             'description' => $description,
             'readme' => $readme,
             'category' => $category,

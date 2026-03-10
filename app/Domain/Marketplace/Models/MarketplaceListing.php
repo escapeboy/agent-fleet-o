@@ -47,6 +47,7 @@ class MarketplaceListing extends Model
         'usage_trend',
         'price_per_run_credits',
         'monetization_enabled',
+        'is_official',
     ];
 
     protected function casts(): array
@@ -65,6 +66,7 @@ class MarketplaceListing extends Model
             'avg_duration_ms' => 'decimal:2',
             'price_per_run_credits' => 'decimal:4',
             'monetization_enabled' => 'boolean',
+            'is_official' => 'boolean',
             'review_count' => 'integer',
         ];
     }

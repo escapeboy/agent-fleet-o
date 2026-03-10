@@ -25,12 +25,19 @@ class Team extends Model
                 $team->credential_key = CredentialEncryption::generateKey();
             }
         });
+
+        static::deleting(function (self $team) {
+            if ($team->is_platform) {
+                throw new \RuntimeException('The platform team cannot be deleted.');
+            }
+        });
     }
 
     protected $fillable = [
         'name',
         'slug',
         'owner_id',
+        'is_platform',
         'settings',
         'credential_key',
         'default_email_theme_id',
@@ -43,6 +50,7 @@ class Team extends Model
     protected function casts(): array
     {
         return [
+            'is_platform' => 'boolean',
             'settings' => 'array',
             'credential_key' => 'encrypted',
         ];
