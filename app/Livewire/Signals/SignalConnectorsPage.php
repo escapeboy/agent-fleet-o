@@ -43,7 +43,8 @@ class SignalConnectorsPage extends Component
         'sentry' => ['label' => 'Sentry',    'category' => 'Errors',        'icon' => 'sentry',    'domain' => 'sentry.io',       'env_key' => 'services.sentry.webhook_secret',  'path' => '/api/signals/sentry'],
         'pagerduty' => ['label' => 'PagerDuty', 'category' => 'Incidents',     'icon' => 'pagerduty', 'domain' => 'pagerduty.com',   'env_key' => 'services.pagerduty.auth_token',   'path' => '/api/signals/pagerduty'],
         'datadog' => ['label' => 'Datadog',   'category' => 'Monitoring',    'icon' => 'datadog',   'domain' => 'datadoghq.com',   'env_key' => null,                              'path' => '/api/signals/datadog/{secret}'],
-        'whatsapp' => ['label' => 'WhatsApp',  'category' => 'Chat',          'icon' => 'whatsapp',  'domain' => 'whatsapp.com',    'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
+        'whatsapp'  => ['label' => 'WhatsApp',  'category' => 'Chat',          'icon' => 'whatsapp',  'domain' => 'whatsapp.com',    'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
+        'clearcue'  => ['label' => 'ClearCue',  'category' => 'GTM Intent',    'icon' => null,        'domain' => 'clearcue.ai',     'env_key' => 'services.clearcue.webhook_secret', 'path' => '/api/signals/clearcue'],
     ];
 
     public function mount(): void

@@ -117,11 +117,13 @@ use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
+use App\Mcp\Tools\Signal\ClearCueConnectorTool;
 use App\Mcp\Tools\Signal\ConnectorBindingDeleteTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
 use App\Mcp\Tools\Signal\ContactManageTool;
 use App\Mcp\Tools\Signal\HttpMonitorTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
+use App\Mcp\Tools\Signal\IntentScoreTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
@@ -303,7 +305,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (11)
+        // Signal (13)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -315,6 +317,8 @@ class AgentFleetServer extends Server
         ConnectorBindingTool::class,
         ConnectorBindingDeleteTool::class,
         ContactManageTool::class,
+        ClearCueConnectorTool::class,
+        IntentScoreTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,

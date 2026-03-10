@@ -43,6 +43,8 @@ class ConnectorBindingGate
         'datadog',
         'pagerduty',
         'http_monitor',
+        'clearcue',
+        'intent_score',
     ];
 
     /**

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ClearCueWebhookController;
 use App\Http\Controllers\DatadogAlertWebhookController;
 use App\Http\Controllers\DiscordWebhookController;
 use App\Http\Controllers\GitHubIssueWebhookController;
@@ -34,6 +35,9 @@ Route::post('/signals/github', GitHubWebhookController::class)->name('signals.gi
 Route::post('/signals/github-issues', GitHubIssueWebhookController::class)->name('signals.github-issues'); // backward compat (issues only)
 Route::post('/signals/jira', JiraWebhookController::class)->name('signals.jira');
 Route::post('/signals/linear', LinearWebhookController::class)->name('signals.linear');
+
+// GTM intent connectors (ClearCue — HMAC validated in controller)
+Route::post('/signals/clearcue', ClearCueWebhookController::class)->name('signals.clearcue');
 
 // Alert connectors (Sentry, Datadog, PagerDuty — validated in each controller)
 Route::post('/signals/sentry', SentryAlertWebhookController::class)->name('signals.sentry');
