@@ -60,10 +60,8 @@ GET /api/v1/experiments?per_page=20&cursor=eyJpZCI6Miwic3RhcnQiOmZhbHNlfQ</x-doc
 {
   "data": [...],
   "links": {
-    "first": "...",
-    "last":  "...",
-    "prev":  null,
-    "next":  "https://fleetq.net/api/v1/experiments?cursor=..."
+    "prev": null,
+    "next": "https://fleetq.net/api/v1/experiments?cursor=eyJpZCI6Miwic3RhcnQiOmZhbHNlfQ"
   },
   "meta": {
     "per_page": 20,

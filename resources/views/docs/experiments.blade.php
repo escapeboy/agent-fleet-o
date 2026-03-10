@@ -1,11 +1,11 @@
 <x-layouts.docs
     title="Experiments"
-    description="FleetQ experiments are AI pipeline runs with a 20-state engine. Learn how to create, monitor, pause, retry, and kill experiments."
+    description="FleetQ experiments are AI pipeline runs with a 22-state engine. Learn how to create, monitor, pause, retry, and kill experiments."
     page="experiments"
 >
     <h1 class="text-3xl font-bold tracking-tight text-gray-900">Experiments — The AI Pipeline Engine</h1>
     <p class="mt-4 text-gray-600">
-        An <strong>Experiment</strong> is a single run of an AI workflow. It moves through up to 20 states —
+        An <strong>Experiment</strong> is a single run of an AI workflow. It moves through up to 22 states —
         from <em>Draft</em> all the way to <em>Completed</em> — with automatic checkpointing, budget enforcement,
         human approval gates, and a full audit trail at every step.
     </p>
@@ -17,7 +17,7 @@
     </p>
 
     {{-- Pipeline states --}}
-    <h2 class="mt-10 text-xl font-bold text-gray-900">The 20-state pipeline</h2>
+    <h2 class="mt-10 text-xl font-bold text-gray-900">The 22-state pipeline</h2>
     <p class="mt-2 text-sm text-gray-600">
         Every experiment progresses through an explicit state machine. Transitions are validated before execution —
         you can never skip states or create inconsistent data.
@@ -33,12 +33,15 @@
             </thead>
             <tbody class="divide-y divide-gray-100 text-xs">
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">Draft</td><td class="py-2.5 pr-4 text-gray-600">Created, not yet submitted for processing.</td></tr>
+                <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">SignalDetected</td><td class="py-2.5 pr-4 text-gray-600">Created automatically from an inbound signal via a Trigger Rule.</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">Scoring</td><td class="py-2.5 pr-4 text-gray-600">AI evaluates the goal and assigns a feasibility score.</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">Planning</td><td class="py-2.5 pr-4 text-gray-600">Breaks the goal into a step-by-step execution plan.</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">Building</td><td class="py-2.5 pr-4 text-gray-600">Constructs the execution environment and validates resources.</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">AwaitingApproval</td><td class="py-2.5 pr-4 text-gray-600">Paused for human review before execution.</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">Approved / Rejected</td><td class="py-2.5 pr-4 text-gray-600">Human decision recorded. Rejected experiments loop back to Planning.</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">Executing</td><td class="py-2.5 pr-4 text-gray-600">Agent is actively running the plan. Live logs available.</td></tr>
+                <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">AwaitingChildren</td><td class="py-2.5 pr-4 text-gray-600">Waiting for parallel workflow branches (dynamic_fork nodes) to complete.</td></tr>
+                <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">ExecutionFailed</td><td class="py-2.5 pr-4 text-gray-600">A stage failed during execution. Retryable from any checkpoint step.</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">CollectingMetrics</td><td class="py-2.5 pr-4 text-gray-600">Output gathered, token costs settled.</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">Evaluating</td><td class="py-2.5 pr-4 text-gray-600">Quality check — did the output meet the goal?</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-mono font-medium text-gray-900">Iterating</td><td class="py-2.5 pr-4 text-gray-600">Auto-revision loop when output quality is insufficient.</td></tr>
@@ -98,15 +101,23 @@ curl -X POST {{ url('/api/v1/experiments/EXPERIMENT_ID/retry-from-step') }} \
 
     {{-- Tracks --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Experiment tracks</h2>
-    <div class="mt-3 grid gap-3 sm:grid-cols-2">
-        <div class="rounded-lg border border-gray-200 p-4">
-            <p class="font-semibold text-gray-900">Standard track</p>
-            <p class="mt-1 text-sm text-gray-600">A single agent runs a freeform goal. Best for open-ended tasks where you want the agent to decide the approach.</p>
+    <p class="mt-2 text-sm text-gray-600">
+        Tracks classify what kind of business outcome an experiment targets. This enables filtering, reporting,
+        and metric attribution by business goal:
+    </p>
+    <div class="mt-3 grid gap-2 sm:grid-cols-3">
+        @foreach([
+            ['growth',      'Acquisition, activation, and new revenue experiments.'],
+            ['retention',   'Churn prevention, win-back, and engagement experiments.'],
+            ['revenue',     'Upsell, expansion, and monetisation experiments.'],
+            ['engagement',  'Product usage, content, and community experiments.'],
+            ['debug',       'Internal diagnostics, testing, and platform experiments.'],
+        ] as [$track, $desc])
+        <div class="rounded-lg border border-gray-200 p-3">
+            <p class="font-mono text-xs font-semibold text-gray-900">{{ $track }}</p>
+            <p class="mt-1 text-xs text-gray-600">{{ $desc }}</p>
         </div>
-        <div class="rounded-lg border border-gray-200 p-4">
-            <p class="font-semibold text-gray-900">Workflow track</p>
-            <p class="mt-1 text-sm text-gray-600">Runs a pre-defined workflow DAG. The pipeline advances node by node, with branching, loops, and human tasks.</p>
-        </div>
+        @endforeach
     </div>
 
     {{-- Artifacts --}}

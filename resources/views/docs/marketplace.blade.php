@@ -44,7 +44,7 @@ curl -X POST {{ url('/api/v1/marketplace/seo-content-analyzer/install') }} \
     <x-docs.badge text="Pro" color="purple" />
     <p class="mt-3 text-sm text-gray-600">
         Share your skills, agents, and workflows with the community.
-        Navigate to <a href="/app/marketplace/publish" class="text-primary-600 hover:underline">/app/marketplace/publish</a>
+        Navigate to <a href="/marketplace/publish" class="text-primary-600 hover:underline">/marketplace/publish</a>
         or use the API:
     </p>
 

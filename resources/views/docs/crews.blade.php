@@ -35,12 +35,8 @@
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Executes assigned tasks. The workhorse of the crew.</td>
                 </tr>
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">reviewer</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">qa</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Validates output quality. Can request revisions before the coordinator synthesises.</td>
-                </tr>
-                <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">specialist</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Deep-domain expert invoked for specific sub-tasks (e.g. legal review, translation).</td>
                 </tr>
             </tbody>
         </table>
@@ -95,8 +91,8 @@ curl -X POST {{ url('/api/v1/crews/CREW_ID/execute') }} \
     </p>
     <div class="mt-4 space-y-2">
         <x-docs.step number="1" title="DecomposeGoal">The coordinator agent breaks the goal into discrete tasks assigned to each crew member.</x-docs.step>
-        <x-docs.step number="2" title="Execute tasks">Workers and specialists execute their assigned tasks (in parallel or sequentially, based on process type).</x-docs.step>
-        <x-docs.step number="3" title="ValidateTaskOutput">The reviewer checks each output. Failed validations trigger a retry of that specific task.</x-docs.step>
+        <x-docs.step number="2" title="Execute tasks">Workers execute their assigned tasks (in parallel or sequentially, based on process type).</x-docs.step>
+        <x-docs.step number="3" title="ValidateTaskOutput">The QA agent validates each output. Failed validations trigger a retry of that specific task.</x-docs.step>
         <x-docs.step number="4" title="SynthesizeResult">The coordinator merges all validated outputs into the final result and saves it as an Artifact.</x-docs.step>
     </div>
 </x-layouts.docs>

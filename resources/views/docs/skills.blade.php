@@ -46,6 +46,30 @@
                     <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">guardrail</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Validates or blocks output that doesn't meet quality/safety criteria.</td>
                 </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">multi_model_consensus</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Calls multiple LLM providers and merges or majority-votes the results for higher accuracy.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">code_execution</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Runs generated code in a sandboxed environment and returns the output.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">browser</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Controls a headless browser to scrape pages, fill forms, or interact with web UIs.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">runpod_endpoint</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Calls a serverless RunPod endpoint for GPU-accelerated inference or custom model serving.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">runpod_pod</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Spins up a persistent RunPod pod for long-running GPU workloads.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">gpu_compute</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Generic GPU compute skill — fine-tuning, embedding generation, or batch inference.</td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -71,7 +95,7 @@
     <p class="mt-2 text-sm text-gray-600">
         Each skill has a risk level that determines whether human approval is required before execution:
     </p>
-    <div class="mt-3 grid gap-3 sm:grid-cols-3">
+    <div class="mt-3 grid gap-3 sm:grid-cols-4">
         <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
             <p class="font-semibold text-green-800">Low</p>
             <p class="mt-1 text-xs text-green-700">Auto-execute. No approval needed.</p>
@@ -83,6 +107,10 @@
         <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-center">
             <p class="font-semibold text-red-800">High</p>
             <p class="mt-1 text-xs text-red-700">Always requires human approval before execution.</p>
+        </div>
+        <div class="rounded-lg border border-red-300 bg-red-100 p-3 text-center">
+            <p class="font-semibold text-red-900">Critical</p>
+            <p class="mt-1 text-xs text-red-800">Requires approval + owner confirmation. Reserved for irreversible actions.</p>
         </div>
     </div>
 

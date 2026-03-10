@@ -38,7 +38,7 @@
     {{-- Schedule frequencies --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Schedule frequencies</h2>
     <div class="mt-3 grid gap-2 sm:grid-cols-3">
-        @foreach(['hourly', 'daily', 'weekly', 'monthly', 'cron'] as $freq)
+        @foreach(['once', 'every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron'] as $freq)
         <div class="rounded-lg border border-gray-200 px-3 py-2 text-center font-mono text-sm text-gray-700">{{ $freq }}</div>
         @endforeach
     </div>
@@ -68,8 +68,8 @@
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Queue the new run. Starts as soon as the previous run completes.</td>
                 </tr>
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">cancel_previous</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Kill the running run and start the new one immediately.</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">allow</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Allow concurrent runs. Both the in-progress and new run execute simultaneously.</td>
                 </tr>
             </tbody>
         </table>

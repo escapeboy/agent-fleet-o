@@ -6,14 +6,13 @@
     <h1 class="text-3xl font-bold tracking-tight text-gray-900">Triggers — Automatic Reactions to Signals</h1>
     <p class="mt-4 text-gray-600">
         <strong>Trigger Rules</strong> are if-then automation rules evaluated on every incoming signal.
-        When conditions match, FleetQ takes the configured action — launching an experiment, triggering
-        a project run, or sending a notification.
+        When conditions match, FleetQ triggers a project run automatically — no manual intervention needed.
     </p>
 
     <p class="mt-3 text-gray-600">
         <strong>Scenario:</strong> <em>When a signal arrives with a ClearCue intent score above 80,
-        FleetQ automatically starts the "High-Intent Outreach" experiment with the company name
-        injected into the goal.</em>
+        FleetQ automatically triggers the "High-Intent Outreach" project run, passing the signal
+        data as context.</em>
     </p>
 
     {{-- How it works --}}
@@ -27,7 +26,7 @@
     {{-- Condition operators --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Condition operators</h2>
     <div class="mt-3 grid gap-2 sm:grid-cols-3">
-        @foreach(['equals', 'not_equals', 'contains', 'not_contains', 'gt', 'gte', 'lt', 'lte', 'regex', 'exists', 'not_exists'] as $op)
+        @foreach(['eq', 'neq', 'gte', 'lte', 'contains', 'not_contains', 'exists'] as $op)
         <div class="rounded-lg border border-gray-200 px-3 py-2 text-center font-mono text-xs text-gray-700">{{ $op }}</div>
         @endforeach
     </div>
@@ -47,20 +46,8 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">create_experiment</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Start an experiment with the signal content interpolated into the goal.</td>
-                </tr>
-                <tr>
                     <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">create_project_run</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Trigger an immediate run of a continuous project.</td>
-                </tr>
-                <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">send_notification</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Send an in-app or email notification to a team member.</td>
-                </tr>
-                <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">send_webhook</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">POST the signal data to a configured outbound webhook endpoint.</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Trigger an immediate run of a continuous project, passing the signal as context.</td>
                 </tr>
             </tbody>
         </table>
@@ -71,24 +58,23 @@
 
     <x-docs.code lang="json" title="Create via API">
 {
-  "name": "High-Intent Auto-Launch",
+  "name": "High-Intent Auto-Run",
   "status": "active",
   "conditions": [
     {
       "field": "content.score",
-      "operator": "gt",
+      "operator": "gte",
       "value": 80
     },
     {
       "field": "source",
-      "operator": "equals",
+      "operator": "eq",
       "value": "clearcue"
     }
   ],
-  "action": "create_experiment",
+  "action": "create_project_run",
   "action_config": {
-    "agent_id": "01jf4a2b-...",
-    "goal": "Draft personalised outreach email for @{{signal.content.company}}"
+    "project_id": "01jf4a2b-..."
   }
 }</x-docs.code>
 
@@ -104,15 +90,8 @@
         click <strong>Test Rule</strong> on any active rule and provide a sample signal payload.
         FleetQ evaluates the conditions and shows which would fire — without actually executing the action.
     </p>
-
-    <x-docs.code lang="bash">
-curl -X POST {{ url('/api/v1/triggers/RULE_ID/test') }} \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{
-    "signal": {
-      "title": "Test lead",
-      "source": "clearcue",
-      "content": { "company": "Acme Corp", "score": 92 }
-    }
-  }'</x-docs.code>
+    <x-docs.callout type="info">
+        Rule testing is also available via the MCP tool <code class="text-xs">trigger_rule_test</code> —
+        useful for automated validation pipelines and agent-driven workflows.
+    </x-docs.callout>
 </x-layouts.docs>

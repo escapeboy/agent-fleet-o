@@ -1,6 +1,6 @@
 <x-layouts.docs
     title="MCP Server"
-    description="Connect AI agents directly to FleetQ via MCP (Model Context Protocol). 143 tools across 24 domains, available via stdio or HTTP/SSE."
+    description="Connect AI agents directly to FleetQ via MCP (Model Context Protocol). 177 tools across 22 domains, available via stdio or HTTP/SSE."
     page="mcp-server"
 >
     <h1 class="text-3xl font-bold tracking-tight text-gray-900">MCP Server — Connect AI Agents Directly</h1>
@@ -88,29 +88,36 @@ php artisan mcp:start agent-fleet</x-docs.code>
 }</x-docs.code>
 
     {{-- Tool list --}}
-    <h2 class="mt-10 text-xl font-bold text-gray-900">143 tools across 24 domains</h2>
+    <h2 class="mt-10 text-xl font-bold text-gray-900">177 tools across 22 domains</h2>
     <p class="mt-2 text-sm text-gray-600">Every platform capability is available as an MCP tool:</p>
 
     <div class="mt-4 grid gap-2 sm:grid-cols-2">
         @foreach([
-            ['Agent',       9,  'agent_list, agent_create, agent_update, agent_toggle_status'],
-            ['Experiment',  13, 'experiment_list, experiment_create, pause, resume, retry, kill, retry_from_step'],
-            ['Crew',        7,  'crew_list, crew_create, crew_execute, execution_status'],
-            ['Skill',       9,  'skill_list, skill_create, skill_update, versions'],
-            ['Tool',        7,  'tool_list, tool_create, tool_update, tool_delete'],
-            ['Credential',  5,  'credential_list, credential_create, credential_rotate'],
-            ['Workflow',    11, 'workflow_list, create, validate, generate, estimate_cost'],
-            ['Project',     9,  'project_list, project_create, pause, resume, trigger_run'],
-            ['Signal',      13, 'signal_list, signal_ingest, connector_binding, intent_score_query'],
-            ['Budget',      3,  'budget_summary, budget_check, budget_forecast'],
-            ['Marketplace', 6,  'marketplace_browse, install, publish, review'],
-            ['System',      4,  'system_dashboard_kpis, system_health, audit_log'],
-        ] as [$domain, $count, $examples])
+            ['Agent',       'agent_list, agent_create, agent_update, agent_toggle_status'],
+            ['Experiment',  'experiment_list, experiment_create, pause, resume, retry, kill, retry_from_step'],
+            ['Crew',        'crew_list, crew_create, crew_execute, execution_status'],
+            ['Skill',       'skill_list, skill_create, skill_update, versions'],
+            ['Tool',        'tool_list, tool_create, tool_update, tool_delete'],
+            ['Credential',  'credential_list, credential_create, credential_rotate'],
+            ['Workflow',    'workflow_list, create, validate, generate, estimate_cost'],
+            ['Project',     'project_list, project_create, pause, resume, trigger_run'],
+            ['Approval',    'approval_list, approval_approve, approval_reject, complete_human_task'],
+            ['Signal',      'signal_list, signal_ingest, connector_binding, intent_score_query'],
+            ['Outbound',    'outbound_proposal_list, approve, reject, blacklist_manage'],
+            ['Budget',      'budget_summary, budget_check, budget_forecast'],
+            ['Marketplace', 'marketplace_browse, install, publish, review'],
+            ['Memory',      'memory_search, memory_list_recent, memory_stats'],
+            ['Artifact',    'artifact_list, artifact_get, artifact_content, artifact_download_info'],
+            ['Webhook',     'webhook_list, webhook_create, webhook_update, webhook_delete'],
+            ['Trigger',     'trigger_rule_list, create, update, delete, trigger_rule_test'],
+            ['Telegram',    'telegram_bot_manage'],
+            ['Shared',      'notification_manage, team_get, team_update, team_members'],
+            ['Cache',       'semantic_cache_stats, semantic_cache_purge'],
+            ['Evolution',   'evolution_proposal_list, evolution_analyze, evolution_apply'],
+            ['System',      'system_dashboard_kpis, system_health, system_audit_log'],
+        ] as [$domain, $examples])
         <div class="rounded-lg border border-gray-200 p-3">
-            <div class="flex items-center justify-between">
-                <span class="font-medium text-gray-900 text-sm">{{ $domain }}</span>
-                <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{{ $count }} tools</span>
-            </div>
+            <span class="font-medium text-gray-900 text-sm">{{ $domain }}</span>
             <p class="mt-1 text-xs text-gray-500">{{ $examples }}</p>
         </div>
         @endforeach

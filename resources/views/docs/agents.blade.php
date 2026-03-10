@@ -79,8 +79,9 @@
     <h2 class="mt-10 text-xl font-bold text-gray-900">Health checks (behind the scenes)</h2>
     <p class="mt-2 text-sm text-gray-600">
         Every 5 minutes, the platform runs a silent health check on all active agents. If an agent fails
-        (e.g. the underlying model is unreachable), it's automatically disabled and a notification is sent.
-        You won't see this in the UI unless a check fails — healthy agents show no indicator.
+        (e.g. the underlying model is unreachable), its status is set to <strong>degraded</strong>.
+        Degraded agents are flagged in the UI and excluded from new experiment assignments until a subsequent
+        health check passes. Healthy agents show no indicator.
     </p>
 
     {{-- Disabling --}}
