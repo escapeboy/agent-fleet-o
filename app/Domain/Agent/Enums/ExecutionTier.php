@@ -10,10 +10,10 @@ namespace App\Domain\Agent\Enums;
  */
 enum ExecutionTier: string
 {
-    case Flash    = 'flash';
+    case Flash = 'flash';
     case Standard = 'standard';
-    case Pro      = 'pro';
-    case Ultra    = 'ultra';
+    case Pro = 'pro';
+    case Ultra = 'ultra';
 
     /**
      * @return array{
@@ -30,35 +30,35 @@ enum ExecutionTier: string
         return match ($this) {
             self::Flash => [
                 'model_preference' => 'claude-haiku-4-5',
-                'max_tokens'       => 2048,
-                'max_steps'        => 5,
-                'temperature'      => 0.3,
+                'max_tokens' => 2048,
+                'max_steps' => 5,
+                'temperature' => 0.3,
                 'allow_sub_agents' => false,
-                'planning_depth'   => 1,
+                'planning_depth' => 1,
             ],
             self::Standard => [
                 'model_preference' => 'claude-sonnet-4-5',
-                'max_tokens'       => 4096,
-                'max_steps'        => 10,
-                'temperature'      => 0.7,
+                'max_tokens' => 4096,
+                'max_steps' => 10,
+                'temperature' => 0.7,
                 'allow_sub_agents' => false,
-                'planning_depth'   => 2,
+                'planning_depth' => 2,
             ],
             self::Pro => [
                 'model_preference' => 'claude-sonnet-4-5',
-                'max_tokens'       => 8192,
-                'max_steps'        => 20,
-                'temperature'      => 0.7,
+                'max_tokens' => 8192,
+                'max_steps' => 20,
+                'temperature' => 0.7,
                 'allow_sub_agents' => true,
-                'planning_depth'   => 3,
+                'planning_depth' => 3,
             ],
             self::Ultra => [
                 'model_preference' => 'claude-opus-4-6',
-                'max_tokens'       => 8192,
-                'max_steps'        => 50,
-                'temperature'      => 0.8,
+                'max_tokens' => 8192,
+                'max_steps' => 50,
+                'temperature' => 0.8,
                 'allow_sub_agents' => true,
-                'planning_depth'   => 5,
+                'planning_depth' => 5,
             ],
         };
     }
@@ -78,10 +78,10 @@ enum ExecutionTier: string
     public function label(): string
     {
         return match ($this) {
-            self::Flash    => 'Flash — Fast & cheap (Haiku)',
+            self::Flash => 'Flash — Fast & cheap (Haiku)',
             self::Standard => 'Standard — Balanced (Sonnet)',
-            self::Pro      => 'Pro — Deep reasoning (Sonnet + sub-agents)',
-            self::Ultra    => 'Ultra — Maximum capability (Opus + sub-agents)',
+            self::Pro => 'Pro — Deep reasoning (Sonnet + sub-agents)',
+            self::Ultra => 'Ultra — Maximum capability (Opus + sub-agents)',
         };
     }
 
@@ -91,10 +91,10 @@ enum ExecutionTier: string
     public function shortLabel(): string
     {
         return match ($this) {
-            self::Flash    => 'Flash',
+            self::Flash => 'Flash',
             self::Standard => 'Standard',
-            self::Pro      => 'Pro',
-            self::Ultra    => 'Ultra',
+            self::Pro => 'Pro',
+            self::Ultra => 'Ultra',
         };
     }
 
@@ -104,10 +104,10 @@ enum ExecutionTier: string
     public function badgeClass(): string
     {
         return match ($this) {
-            self::Flash    => 'bg-gray-100 text-gray-600',
+            self::Flash => 'bg-gray-100 text-gray-600',
             self::Standard => 'bg-blue-100 text-blue-700',
-            self::Pro      => 'bg-purple-100 text-purple-700',
-            self::Ultra    => 'bg-amber-100 text-amber-700',
+            self::Pro => 'bg-purple-100 text-purple-700',
+            self::Ultra => 'bg-amber-100 text-amber-700',
         };
     }
 }

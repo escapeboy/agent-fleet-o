@@ -3,7 +3,6 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
-use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;

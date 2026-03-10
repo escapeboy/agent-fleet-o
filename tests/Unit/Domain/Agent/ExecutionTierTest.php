@@ -7,13 +7,13 @@ use PHPUnit\Framework\TestCase;
 
 class ExecutionTierTest extends TestCase
 {
-    public function test_fromConfig_defaults_to_standard(): void
+    public function test_from_config_defaults_to_standard(): void
     {
         $tier = ExecutionTier::fromConfig([]);
         $this->assertSame(ExecutionTier::Standard, $tier);
     }
 
-    public function test_fromConfig_returns_correct_tier(): void
+    public function test_from_config_returns_correct_tier(): void
     {
         $this->assertSame(ExecutionTier::Flash, ExecutionTier::fromConfig(['execution_tier' => 'flash']));
         $this->assertSame(ExecutionTier::Standard, ExecutionTier::fromConfig(['execution_tier' => 'standard']));
@@ -21,7 +21,7 @@ class ExecutionTierTest extends TestCase
         $this->assertSame(ExecutionTier::Ultra, ExecutionTier::fromConfig(['execution_tier' => 'ultra']));
     }
 
-    public function test_fromConfig_falls_back_to_standard_on_invalid_value(): void
+    public function test_from_config_falls_back_to_standard_on_invalid_value(): void
     {
         $tier = ExecutionTier::fromConfig(['execution_tier' => 'invalid_value']);
         $this->assertSame(ExecutionTier::Standard, $tier);

@@ -14,12 +14,12 @@ class ResolveTierConfigActionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->action = new ResolveTierConfigAction();
+        $this->action = new ResolveTierConfigAction;
     }
 
     private function makeAgent(array $config): Agent
     {
-        $agent = new Agent();
+        $agent = new Agent;
         $agent->config = $config;
 
         return $agent;

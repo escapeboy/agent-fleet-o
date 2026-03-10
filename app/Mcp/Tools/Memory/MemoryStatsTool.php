@@ -58,7 +58,7 @@ class MemoryStatsTool extends Tool
         $byTag = [];
         try {
             $byTag = DB::table('memories')
-                ->selectRaw("jsonb_array_elements_text(tags) as tag, count(*) as count")
+                ->selectRaw('jsonb_array_elements_text(tags) as tag, count(*) as count')
                 ->groupBy('tag')
                 ->orderByDesc('count')
                 ->get()

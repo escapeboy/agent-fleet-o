@@ -136,11 +136,11 @@ class LocalBridgeGateway implements AiGatewayInterface
                 'request_id' => $requestId,
                 'frame_type' => 0x0010,
                 'payload' => [
-                    'request_id'   => $requestId,
-                    'agent_key'    => $request->model, // model = agent key (e.g. "claude-code")
-                    'prompt'       => $request->userPrompt ?? '',
+                    'request_id' => $requestId,
+                    'agent_key' => $request->model, // model = agent key (e.g. "claude-code")
+                    'prompt' => $request->userPrompt ?? '',
                     'system_prompt' => $request->systemPrompt ?? '',
-                    'stream'       => true,
+                    'stream' => true,
                 ],
             ];
         }
@@ -159,13 +159,13 @@ class LocalBridgeGateway implements AiGatewayInterface
             'request_id' => $requestId,
             'frame_type' => 0x0001,
             'payload' => [
-                'request_id'   => $requestId,
+                'request_id' => $requestId,
                 'endpoint_url' => $this->resolveEndpointUrl($request->model, $connection),
-                'model'        => $request->model,
-                'messages'     => $messages,
-                'max_tokens'   => $request->maxTokens ?? 8192,
-                'temperature'  => $request->temperature ?? 0.7,
-                'stream'       => true,
+                'model' => $request->model,
+                'messages' => $messages,
+                'max_tokens' => $request->maxTokens ?? 8192,
+                'temperature' => $request->temperature ?? 0.7,
+                'stream' => true,
             ],
         ];
     }

@@ -59,7 +59,7 @@ class ClarificationInterruptTest extends TestCase
         ]);
     }
 
-    public function test_approval_request_isClarification_returns_true_when_type_is_clarification(): void
+    public function test_approval_request_is_clarification_returns_true_when_type_is_clarification(): void
     {
         $approval = ApprovalRequest::create([
             'team_id' => $this->team->id,
@@ -82,7 +82,7 @@ class ClarificationInterruptTest extends TestCase
         $this->assertTrue($approval->isHumanTask()); // isHumanTask should also be true
     }
 
-    public function test_approval_request_isClarification_returns_false_for_standard_approvals(): void
+    public function test_approval_request_is_clarification_returns_false_for_standard_approvals(): void
     {
         $approval = ApprovalRequest::create([
             'team_id' => $this->team->id,

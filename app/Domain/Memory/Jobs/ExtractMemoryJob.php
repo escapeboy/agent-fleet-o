@@ -13,7 +13,7 @@ use Illuminate\Foundation\Queue\Queueable;
  * Debounced via ShouldBeUniqueUntilProcessing: only one extraction job runs
  * per agent per 2-minute window, preventing LLM extraction bursts.
  */
-class ExtractMemoryJob implements ShouldQueue, ShouldBeUniqueUntilProcessing
+class ExtractMemoryJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Queueable;
 

@@ -83,7 +83,7 @@ class BridgeRequestRegistry
         }
 
         $frameType = (int) ($envelope['frame_type'] ?? 0);
-        $done      = (bool) ($envelope['done'] ?? false);
+        $done = (bool) ($envelope['done'] ?? false);
 
         // Go's json.Marshal encodes []byte as standard base64 string
         $rawPayload = $envelope['payload'] ?? '';

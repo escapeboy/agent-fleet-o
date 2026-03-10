@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Integration\Models\WebhookRoute;
-use App\Models\Connector;
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
@@ -13,6 +12,7 @@ use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Webhook\Models\WebhookEndpoint;
 use App\Infrastructure\Encryption\CredentialEncryption;
+use App\Models\Connector;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;

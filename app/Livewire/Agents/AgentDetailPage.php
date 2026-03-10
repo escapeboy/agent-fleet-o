@@ -3,7 +3,6 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Enums\AgentStatus;
-use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Skill\Models\Skill;

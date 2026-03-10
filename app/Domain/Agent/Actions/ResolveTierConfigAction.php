@@ -33,10 +33,10 @@ class ResolveTierConfigAction
 
         return array_merge($tierDefaults, [
             // Per-agent explicit overrides win over tier defaults
-            'max_tokens'  => $config['max_tokens']  ?? $tierDefaults['max_tokens'],
-            'max_steps'   => $config['max_steps']   ?? $tierDefaults['max_steps'],
+            'max_tokens' => $config['max_tokens'] ?? $tierDefaults['max_tokens'],
+            'max_steps' => $config['max_steps'] ?? $tierDefaults['max_steps'],
             'temperature' => $config['temperature'] ?? $tierDefaults['temperature'],
-            'tier'        => $tier,
+            'tier' => $tier,
         ]);
     }
 }
