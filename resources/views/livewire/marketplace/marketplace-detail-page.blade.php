@@ -130,14 +130,170 @@
 
     {{-- Tab Content --}}
     @if($activeTab === 'overview')
-        <div class="rounded-xl border border-gray-200 bg-white p-6">
-            @if($listing->readme)
-                <div class="prose max-w-none text-sm text-gray-700">
-                    {!! nl2br(e($listing->readme)) !!}
+        @php $snapshot = $listing->configuration_snapshot ?? []; @endphp
+        <div class="space-y-4">
+
+            {{-- Description (always shown) --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <h3 class="mb-2 text-sm font-semibold text-gray-700">Description</h3>
+                <p class="text-sm text-gray-600">{{ $listing->description }}</p>
+            </div>
+
+            {{-- Skill: system prompt --}}
+            @if($listing->type === 'skill' && !empty($snapshot['system_prompt']))
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">System Prompt</h3>
+                    <pre class="whitespace-pre-wrap rounded-lg bg-gray-50 p-4 font-mono text-xs text-gray-700 leading-relaxed">{{ $snapshot['system_prompt'] }}</pre>
                 </div>
-            @else
-                <p class="text-sm text-gray-400">No README provided.</p>
             @endif
+
+            {{-- Agent: role, goal, backstory --}}
+            @if($listing->type === 'agent')
+                @if(!empty($snapshot['role']) || !empty($snapshot['goal']) || !empty($snapshot['backstory']))
+                    <div class="rounded-xl border border-gray-200 bg-white p-6">
+                        <h3 class="mb-4 text-sm font-semibold text-gray-700">Agent Persona</h3>
+                        <dl class="space-y-4">
+                            @if(!empty($snapshot['role']))
+                                <div>
+                                    <dt class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Role</dt>
+                                    <dd class="text-sm text-gray-700">{{ $snapshot['role'] }}</dd>
+                                </div>
+                            @endif
+                            @if(!empty($snapshot['goal']))
+                                <div>
+                                    <dt class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Goal</dt>
+                                    <dd class="text-sm text-gray-700">{{ $snapshot['goal'] }}</dd>
+                                </div>
+                            @endif
+                            @if(!empty($snapshot['backstory']))
+                                <div>
+                                    <dt class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Backstory</dt>
+                                    <dd class="text-sm text-gray-600 italic">{{ $snapshot['backstory'] }}</dd>
+                                </div>
+                            @endif
+                        </dl>
+                    </div>
+                @endif
+                @if(!empty($snapshot['capabilities']) || !empty($snapshot['constraints']))
+                    <div class="rounded-xl border border-gray-200 bg-white p-6">
+                        <h3 class="mb-4 text-sm font-semibold text-gray-700">Capabilities & Constraints</h3>
+                        @if(!empty($snapshot['capabilities']))
+                            <div class="mb-4">
+                                <h4 class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">Capabilities</h4>
+                                <ul class="space-y-1">
+                                    @foreach($snapshot['capabilities'] as $cap)
+                                        <li class="flex items-start gap-2 text-sm text-gray-700">
+                                            <svg class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                            {{ $cap }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        @if(!empty($snapshot['constraints']))
+                            <div>
+                                <h4 class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">Constraints</h4>
+                                <ul class="space-y-1">
+                                    @foreach($snapshot['constraints'] as $con)
+                                        <li class="flex items-start gap-2 text-sm text-gray-700">
+                                            <svg class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            {{ $con }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            @endif
+
+            {{-- Workflow: description + node list --}}
+            @if($listing->type === 'workflow')
+                @if(!empty($snapshot['description']))
+                    <div class="rounded-xl border border-gray-200 bg-white p-6">
+                        <h3 class="mb-2 text-sm font-semibold text-gray-700">Workflow Description</h3>
+                        <p class="text-sm text-gray-600">{{ $snapshot['description'] }}</p>
+                    </div>
+                @endif
+                @if(!empty($snapshot['nodes']))
+                    <div class="rounded-xl border border-gray-200 bg-white p-6">
+                        <h3 class="mb-3 text-sm font-semibold text-gray-700">Steps</h3>
+                        <ol class="space-y-2">
+                            @foreach(collect($snapshot['nodes'])->sortBy('order')->values() as $i => $node)
+                                @if(!in_array($node['type'], ['start', 'end']))
+                                    <li class="flex items-start gap-3">
+                                        <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">{{ $loop->iteration }}</span>
+                                        <div class="min-w-0 flex-1">
+                                            <span class="text-sm text-gray-700">{{ $node['label'] }}</span>
+                                            @if(!empty($node['config']['description']))
+                                                <p class="mt-0.5 text-xs text-gray-400">{{ $node['config']['description'] }}</p>
+                                            @endif
+                                        </div>
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                                            {{ $node['type'] === 'conditional' ? 'bg-yellow-100 text-yellow-700' :
+                                               ($node['type'] === 'human_task' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700') }}">
+                                            {{ ucfirst(str_replace('_', ' ', $node['type'])) }}
+                                        </span>
+                                    </li>
+                                @endif
+                            @endforeach
+                        </ol>
+                    </div>
+                @endif
+            @endif
+
+            {{-- Email theme: color preview in overview --}}
+            @if($listing->type === 'email_theme' && !empty($snapshot['primary_color']))
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">Color Palette</h3>
+                    <div class="flex flex-wrap gap-3">
+                        @foreach([
+                            'Primary' => $snapshot['primary_color'] ?? null,
+                            'Background' => $snapshot['background_color'] ?? null,
+                            'Canvas' => $snapshot['canvas_color'] ?? null,
+                            'Text' => $snapshot['text_color'] ?? null,
+                        ] as $label => $color)
+                            @if($color)
+                                <div class="flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-2">
+                                    <div class="h-5 w-5 rounded-full border border-gray-200 shadow-sm" style="background-color: {{ $color }};"></div>
+                                    <span class="text-xs text-gray-500">{{ $label }}</span>
+                                    <span class="font-mono text-xs text-gray-700">{{ $color }}</span>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    @if(!empty($snapshot['font_name']))
+                        <p class="mt-3 text-xs text-gray-400">Font: <span class="font-medium text-gray-600">{{ $snapshot['font_name'] }}</span></p>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Email template: live preview in overview --}}
+            @if($listing->type === 'email_template' && !empty($snapshot['html_cache']))
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">Email Preview</h3>
+                    <div class="overflow-hidden rounded-lg border border-gray-200 bg-gray-50" style="height: 500px;">
+                        <iframe srcdoc="{{ e($snapshot['html_cache']) }}"
+                            class="h-full w-full"
+                            sandbox="allow-same-origin"
+                            title="Email preview"></iframe>
+                    </div>
+                    @if(!empty($snapshot['subject']))
+                        <p class="mt-2 text-xs text-gray-500">Subject: <span class="font-medium text-gray-700">{{ $snapshot['subject'] }}</span></p>
+                    @endif
+                </div>
+            @endif
+
+            {{-- README (optional additional docs) --}}
+            @if($listing->readme)
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">README</h3>
+                    <div class="prose max-w-none text-sm text-gray-700">
+                        {!! nl2br(e($listing->readme)) !!}
+                    </div>
+                </div>
+            @endif
+
         </div>
 
     @elseif($activeTab === 'configuration')
