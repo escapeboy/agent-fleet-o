@@ -34,7 +34,7 @@
         <ul class="mt-2 list-disc pl-5 text-sm">
             <li><strong>Name</strong>: Content Summariser</li>
             <li><strong>Type</strong>: LLM</li>
-            <li><strong>Prompt</strong>: <code class="rounded bg-gray-100 px-1 text-xs">Summarise the following article into exactly 3 bullet points. Be concise and focus on the key takeaway:\n\n{{content}}</code></li>
+            <li><strong>Prompt</strong>: <code class="rounded bg-gray-100 px-1 text-xs">Summarise the following article into exactly 3 bullet points. Be concise and focus on the key takeaway:\n\n@{{ content }}</code></li>
         </ul>
         Click <strong>Save Skill</strong>. A version 1.0 is created automatically.
     </x-docs.step>
