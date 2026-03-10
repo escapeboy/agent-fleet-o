@@ -28,6 +28,7 @@ use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Pipeline;
+use Illuminate\Support\Str;
 use Prism\Prism\Tool;
 
 class ExecuteAgentAction
@@ -99,7 +100,7 @@ class ExecuteAgentAction
 
         // Resolve tools for this agent (filtered by project restrictions).
         // Generate a sandbox ID so each execution gets an isolated filesystem workspace.
-        $sandboxId = (string) \Illuminate\Support\Str::uuid();
+        $sandboxId = (string) Str::uuid();
         $tools = $this->resolveTools->execute($agent, $project, $sandboxId);
 
         if (! empty($tools)) {

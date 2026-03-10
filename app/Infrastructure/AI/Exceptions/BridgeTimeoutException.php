@@ -10,7 +10,7 @@ class BridgeTimeoutException extends RuntimeException
     {
         parent::__construct(
             "FleetQ Bridge relay timed out after {$timeoutSeconds}s waiting for request {$requestId}. "
-            .'Ensure the bridge daemon is running and responsive.'
+            .'Ensure the bridge daemon is running and responsive.',
         );
     }
 }
