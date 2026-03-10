@@ -43,7 +43,7 @@ class LocalBridgeGateway implements AiGatewayInterface
     {
         if (! $teamId) {
             throw new RuntimeException(
-                'FleetQ Bridge: No team context available. Ensure the request includes a team ID.'
+                'FleetQ Bridge: No team context available. Ensure the request includes a team ID.',
             );
         }
 
@@ -55,7 +55,7 @@ class LocalBridgeGateway implements AiGatewayInterface
         if (! $connection) {
             throw new RuntimeException(
                 'FleetQ Bridge is not connected. '
-                .'Download and start the bridge daemon: https://github.com/fleetq/fleetq-bridge'
+                .'Download and start the bridge daemon: https://github.com/fleetq/fleetq-bridge',
             );
         }
 

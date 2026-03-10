@@ -48,7 +48,7 @@ final class SandboxedWorkspace
 
         if ($normalized !== $this->rootPath && ! str_starts_with($normalized, $rootWithSep)) {
             throw new \OutOfBoundsException(
-                "Path traversal detected: '{$virtualPath}' escapes sandbox boundary."
+                "Path traversal detected: '{$virtualPath}' escapes sandbox boundary.",
             );
         }
 
