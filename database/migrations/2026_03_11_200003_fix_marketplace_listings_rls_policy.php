@@ -28,8 +28,10 @@ return new class extends Migration
             return;
         }
 
-        // Drop the existing catch-all policy
+        // Drop existing policies (idempotent)
         DB::statement('DROP POLICY IF EXISTS team_isolation ON marketplace_listings');
+        DB::statement('DROP POLICY IF EXISTS marketplace_listings_read ON marketplace_listings');
+        DB::statement('DROP POLICY IF EXISTS marketplace_listings_write ON marketplace_listings');
 
         // Read policy: own listings + any publicly visible listing
         DB::statement("
