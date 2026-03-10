@@ -2,6 +2,7 @@
 
 namespace App\Domain\Signal\Jobs;
 
+use App\Domain\KnowledgeGraph\Jobs\ExtractKnowledgeEdgesJob;
 use App\Domain\Signal\Actions\ExtractEntitiesAction;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Bus\Queueable;
@@ -44,6 +45,11 @@ class ExtractSignalEntitiesJob implements ShouldQueue
             return;
         }
 
-        $action->execute($signal);
+        $entities = $action->execute($signal);
+
+        // Dispatch knowledge graph edge extraction if we found multiple entities
+        if (count($entities) >= 2) {
+            ExtractKnowledgeEdgesJob::dispatch($signal->id);
+        }
     }
 }
