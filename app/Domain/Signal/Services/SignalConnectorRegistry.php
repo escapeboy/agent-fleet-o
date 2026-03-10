@@ -46,7 +46,7 @@ class SignalConnectorRegistry
         if (! isset($this->map[$driver])) {
             throw new \InvalidArgumentException(
                 "No input connector registered for driver: {$driver}. "
-                .'Available: '.implode(', ', array_keys($this->map))
+                .'Available: '.implode(', ', array_keys($this->map)),
             );
         }
 

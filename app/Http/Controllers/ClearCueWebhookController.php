@@ -62,7 +62,7 @@ class ClearCueWebhookController extends Controller
         ]);
 
         return response()->json([
-            'ingested'   => count($signals),
+            'ingested' => count($signals),
             'signal_ids' => array_map(fn ($s) => $s->id, $signals),
         ], count($signals) > 0 ? 201 : 200);
     }

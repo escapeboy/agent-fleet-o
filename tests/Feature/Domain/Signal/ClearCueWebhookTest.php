@@ -14,32 +14,32 @@ class ClearCueWebhookTest extends TestCase
     {
         return array_merge([
             'person' => [
-                'id'           => 'person-abc123',
-                'first_name'   => 'Jane',
-                'last_name'    => 'Doe',
-                'position'     => 'VP of Sales',
-                'seniority'    => 'VP',
-                'company'      => 'Acme Corp',
+                'id' => 'person-abc123',
+                'first_name' => 'Jane',
+                'last_name' => 'Doe',
+                'position' => 'VP of Sales',
+                'seniority' => 'VP',
+                'company' => 'Acme Corp',
                 'linkedin_url' => 'https://linkedin.com/in/janedoe',
-                'about_me'     => 'Building sales teams at B2B SaaS companies.',
+                'about_me' => 'Building sales teams at B2B SaaS companies.',
             ],
             'company' => [
-                'id'           => 'company-xyz789',
+                'id' => 'company-xyz789',
                 'company_name' => 'Acme Corp',
-                'industry'     => 'Software / SaaS',
+                'industry' => 'Software / SaaS',
                 'company_size' => '150-500',
-                'website'      => 'https://acme.com',
+                'website' => 'https://acme.com',
                 'linkedin_url' => 'https://linkedin.com/company/acme',
             ],
             'signal_context' => [
-                'signal_type'     => 'competitor_engagement',
+                'signal_type' => 'competitor_engagement',
                 'signal_category' => 'evaluation',
                 'signal_frequency' => 3,
                 'competitor_mentioned' => 'CompetitorX',
                 'engagement_context' => 'Liked post about switching CRM tools',
             ],
-            'list_id'      => 'list-001',
-            'detected_at'  => now()->toIso8601String(),
+            'list_id' => 'list-001',
+            'detected_at' => now()->toIso8601String(),
         ], $overrides);
     }
 
@@ -57,9 +57,9 @@ class ClearCueWebhookTest extends TestCase
         $response->assertJsonPath('ingested', 1);
 
         $this->assertDatabaseHas('signals', [
-            'source_type'       => 'clearcue',
+            'source_type' => 'clearcue',
             'source_identifier' => 'https://linkedin.com/in/janedoe',
-            'source_native_id'  => 'clearcue:person-abc123',
+            'source_native_id' => 'clearcue:person-abc123',
         ]);
     }
 

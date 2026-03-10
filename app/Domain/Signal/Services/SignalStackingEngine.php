@@ -28,14 +28,14 @@ class SignalStackingEngine
      * Higher = more trusted / intentional signal.
      */
     private const SOURCE_WEIGHTS = [
-        'clearcue'    => 1.0,  // verified AI-qualified buyer intent
-        'manual'      => 0.8,  // human-curated, high confidence
-        'github'      => 0.7,  // technical evaluation signal
-        'linear'      => 0.6,  // issue/project activity
-        'jira'        => 0.6,  // issue/project activity
-        'webhook'     => 0.5,  // generic push, unknown quality
-        'rss'         => 0.4,  // content engagement
-        'sentry'      => 0.3,  // error/alert (weak intent signal)
+        'clearcue' => 1.0,  // verified AI-qualified buyer intent
+        'manual' => 0.8,  // human-curated, high confidence
+        'github' => 0.7,  // technical evaluation signal
+        'linear' => 0.6,  // issue/project activity
+        'jira' => 0.6,  // issue/project activity
+        'webhook' => 0.5,  // generic push, unknown quality
+        'rss' => 0.4,  // content engagement
+        'sentry' => 0.3,  // error/alert (weak intent signal)
         'intent_score' => 0.0, // synthetic — not counted to avoid recursion
     ];
 
@@ -45,13 +45,13 @@ class SignalStackingEngine
      */
     private const CATEGORY_BASE_SCORES = [
         'purchase_intent' => 80,  // demo request, pricing page view
-        'evaluation'      => 55,  // competitor research, job posting
-        'research'        => 30,  // content consumption, news reading
-        'hiring'          => 40,  // job posting for relevant role
-        'social'          => 15,  // LinkedIn engagement
-        'events'          => 20,  // conference RSVP
-        'news'            => 25,  // press mention
-        'weak_indicator'  => 8,   // social follow, newsletter open
+        'evaluation' => 55,  // competitor research, job posting
+        'research' => 30,  // content consumption, news reading
+        'hiring' => 40,  // job posting for relevant role
+        'social' => 15,  // LinkedIn engagement
+        'events' => 20,  // conference RSVP
+        'news' => 25,  // press mention
+        'weak_indicator' => 8,   // social follow, newsletter open
     ];
 
     /**
@@ -70,9 +70,8 @@ class SignalStackingEngine
      * Recalculate the composite intent score for an entity.
      * Fetches all signals for the entity from the last 90 days.
      *
-     * @param  string  $teamId
      * @param  string  $entityKey  LinkedIn URL, company domain, or any stable identifier
-     * @param  string  $entityType 'company' | 'person'
+     * @param  string  $entityType  'company' | 'person'
      */
     public function recalculate(string $teamId, string $entityKey, string $entityType): CompanyIntentScore
     {
@@ -83,14 +82,14 @@ class SignalStackingEngine
             ->where('received_at', '>=', now()->subDays(90))
             ->get();
 
-        $intentScore      = $this->computeIntentScore($signals);
-        $engagementScore  = $this->computeEngagementScore($signals);
-        $signalCount      = $signals->count();
-        $signalDiversity  = $signals->pluck('source_type')->unique()->count();
+        $intentScore = $this->computeIntentScore($signals);
+        $engagementScore = $this->computeEngagementScore($signals);
+        $signalCount = $signals->count();
+        $signalDiversity = $signals->pluck('source_type')->unique()->count();
 
         // FIRE model: Fit is not auto-computed (requires CRM data), defaults to 50
         // Relationship score defaults to 0 (no existing relationship data without CRM)
-        $fitScore          = 50.0;
+        $fitScore = 50.0;
         $relationshipScore = 0.0;
 
         // Composite: weighted average of FIRE dimensions
@@ -107,34 +106,34 @@ class SignalStackingEngine
         $composite = min(round($composite, 2), 100.0);
 
         $breakdown = [
-            'fit_score'         => round($fitScore, 2),
-            'intent_score'      => round($intentScore, 2),
-            'engagement_score'  => round($engagementScore, 2),
+            'fit_score' => round($fitScore, 2),
+            'intent_score' => round($intentScore, 2),
+            'engagement_score' => round($engagementScore, 2),
             'relationship_score' => round($relationshipScore, 2),
-            'signal_count'      => $signalCount,
-            'signal_diversity'  => $signalDiversity,
-            'sources'           => $signals->pluck('source_type')->unique()->values()->all(),
-            'computed_at'       => now()->toIso8601String(),
+            'signal_count' => $signalCount,
+            'signal_diversity' => $signalDiversity,
+            'sources' => $signals->pluck('source_type')->unique()->values()->all(),
+            'computed_at' => now()->toIso8601String(),
         ];
 
         return CompanyIntentScore::updateOrCreate(
             [
-                'team_id'     => $teamId,
-                'entity_key'  => $entityKey,
+                'team_id' => $teamId,
+                'entity_key' => $entityKey,
                 'entity_type' => $entityType,
             ],
             [
-                'composite_score'    => $composite,
-                'fit_score'          => $fitScore,
-                'intent_score'       => round($intentScore, 2),
-                'engagement_score'   => round($engagementScore, 2),
+                'composite_score' => $composite,
+                'fit_score' => $fitScore,
+                'intent_score' => round($intentScore, 2),
+                'engagement_score' => round($engagementScore, 2),
                 'relationship_score' => $relationshipScore,
-                'signal_count'       => $signalCount,
-                'signal_diversity'   => $signalDiversity,
-                'score_breakdown'    => $breakdown,
-                'last_scored_at'     => now(),
-                'recalculate_after'  => now()->addMinutes(15), // debounce
-            ]
+                'signal_count' => $signalCount,
+                'signal_diversity' => $signalDiversity,
+                'score_breakdown' => $breakdown,
+                'last_scored_at' => now(),
+                'recalculate_after' => now()->addMinutes(15), // debounce
+            ],
         );
     }
 
@@ -149,7 +148,7 @@ class SignalStackingEngine
         }
 
         $intentSignals = $signals->filter(
-            fn ($s) => in_array($s->source_type, ['clearcue', 'manual', 'webhook'], true)
+            fn ($s) => in_array($s->source_type, ['clearcue', 'manual', 'webhook'], true),
         );
 
         if ($intentSignals->isEmpty()) {
@@ -160,7 +159,7 @@ class SignalStackingEngine
         $totalWeight = 0.0;
 
         foreach ($intentSignals as $signal) {
-            $category  = $signal->payload['signal_category'] ?? 'weak_indicator';
+            $category = $signal->payload['signal_category'] ?? 'weak_indicator';
             $baseScore = self::CATEGORY_BASE_SCORES[$category] ?? 8;
 
             // Apply ghost job discount for hiring-only signals
@@ -171,8 +170,8 @@ class SignalStackingEngine
             $sourceWeight = self::SOURCE_WEIGHTS[$signal->source_type] ?? 0.5;
             $decayedScore = $this->applyDecay($baseScore, $signal->received_at);
 
-            $weightedSum  += $decayedScore * $sourceWeight;
-            $totalWeight  += $sourceWeight;
+            $weightedSum += $decayedScore * $sourceWeight;
+            $totalWeight += $sourceWeight;
         }
 
         return $totalWeight > 0 ? min($weightedSum / $totalWeight, 100.0) : 0.0;

@@ -64,10 +64,10 @@ class RecalculateIntentScoreJob implements ShouldQueue
                 sourceType: 'intent_score',
                 sourceIdentifier: $this->entityKey,
                 payload: array_merge($score->score_breakdown, [
-                    'entity_key'      => $this->entityKey,
-                    'entity_type'     => $this->entityType,
+                    'entity_key' => $this->entityKey,
+                    'entity_type' => $this->entityType,
                     'composite_score' => $score->composite_score,
-                    'intent_tag'      => $score->intentTag(),
+                    'intent_tag' => $score->intentTag(),
                 ]),
                 tags: ['intent', $score->intentTag()],
                 teamId: $this->teamId,

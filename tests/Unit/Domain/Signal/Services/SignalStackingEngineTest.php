@@ -6,6 +6,7 @@ use App\Domain\Signal\Models\CompanyIntentScore;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\SignalStackingEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class SignalStackingEngineTest extends TestCase
@@ -20,7 +21,7 @@ class SignalStackingEngineTest extends TestCase
     {
         parent::setUp();
         $this->engine = new SignalStackingEngine;
-        $this->teamId = \Illuminate\Support\Str::uuid()->toString();
+        $this->teamId = Str::uuid()->toString();
     }
 
     /** @test */
@@ -49,7 +50,7 @@ class SignalStackingEngineTest extends TestCase
         ]);
 
         $strongScore = $this->engine->recalculate($this->teamId, 'https://acme.com', 'company');
-        $weakScore   = $this->engine->recalculate($this->teamId, 'https://beta.com', 'company');
+        $weakScore = $this->engine->recalculate($this->teamId, 'https://beta.com', 'company');
 
         $this->assertGreaterThan($weakScore->intent_score, $strongScore->intent_score);
     }
@@ -65,7 +66,7 @@ class SignalStackingEngineTest extends TestCase
             $this->createSignal('https://stacked.com', 'clearcue', ['signal_category' => 'evaluation', 'signal_frequency' => $i + 1]);
         }
 
-        $singleScore  = $this->engine->recalculate($this->teamId, 'https://single.com', 'company');
+        $singleScore = $this->engine->recalculate($this->teamId, 'https://single.com', 'company');
         $stackedScore = $this->engine->recalculate($this->teamId, 'https://stacked.com', 'company');
 
         $this->assertGreaterThan($singleScore->composite_score, $stackedScore->composite_score);
@@ -82,7 +83,7 @@ class SignalStackingEngineTest extends TestCase
         $oldSignal->update(['received_at' => now()->subDays(30)]);
 
         $recentScore = $this->engine->recalculate($this->teamId, 'https://acme.com', 'company');
-        $oldScore    = $this->engine->recalculate($this->teamId, 'https://old.com', 'company');
+        $oldScore = $this->engine->recalculate($this->teamId, 'https://old.com', 'company');
 
         $this->assertGreaterThan($oldScore->intent_score, $recentScore->intent_score);
     }
@@ -113,8 +114,8 @@ class SignalStackingEngineTest extends TestCase
         $this->engine->recalculate($this->teamId, 'https://acme.com', 'company');
 
         $this->assertDatabaseHas('company_intent_scores', [
-            'team_id'     => $this->teamId,
-            'entity_key'  => 'https://acme.com',
+            'team_id' => $this->teamId,
+            'entity_key' => 'https://acme.com',
             'entity_type' => 'company',
         ]);
 
@@ -151,13 +152,13 @@ class SignalStackingEngineTest extends TestCase
     private function createSignal(string $identifier, string $sourceType, array $payload = []): Signal
     {
         return Signal::create([
-            'team_id'           => $this->teamId,
-            'source_type'       => $sourceType,
+            'team_id' => $this->teamId,
+            'source_type' => $sourceType,
             'source_identifier' => $identifier,
-            'payload'           => $payload,
-            'content_hash'      => hash('sha256', json_encode([$identifier, $sourceType, $payload, uniqid()])),
-            'tags'              => [],
-            'received_at'       => now(),
+            'payload' => $payload,
+            'content_hash' => hash('sha256', json_encode([$identifier, $sourceType, $payload, uniqid()])),
+            'tags' => [],
+            'received_at' => now(),
         ]);
     }
 }

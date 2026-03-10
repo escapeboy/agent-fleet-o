@@ -37,14 +37,14 @@ class CompanyIntentScore extends Model
     ];
 
     protected $casts = [
-        'composite_score'    => 'float',
-        'fit_score'          => 'float',
-        'intent_score'       => 'float',
-        'engagement_score'   => 'float',
+        'composite_score' => 'float',
+        'fit_score' => 'float',
+        'intent_score' => 'float',
+        'engagement_score' => 'float',
         'relationship_score' => 'float',
-        'score_breakdown'    => 'array',
-        'last_scored_at'     => 'datetime',
-        'recalculate_after'  => 'datetime',
+        'score_breakdown' => 'array',
+        'last_scored_at' => 'datetime',
+        'recalculate_after' => 'datetime',
     ];
 
     /**
@@ -79,7 +79,7 @@ class CompanyIntentScore extends Model
             $this->composite_score >= 80 => 'intent.hot',
             $this->composite_score >= 50 => 'intent.warm',
             $this->composite_score >= 20 => 'intent.lukewarm',
-            default                      => 'intent.cold',
+            default => 'intent.cold',
         };
     }
 }

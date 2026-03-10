@@ -27,13 +27,13 @@ class ClearCueConnector implements InputConnectorInterface
      */
     private const CATEGORY_SCORE_MAP = [
         'purchase_intent' => 1.0,
-        'evaluation'      => 0.6,
-        'research'        => 0.3,
-        'hiring'          => 0.4,
-        'social'          => 0.2,
-        'events'          => 0.2,
-        'news'            => 0.3,
-        'weak_indicator'  => 0.1,
+        'evaluation' => 0.6,
+        'research' => 0.3,
+        'hiring' => 0.4,
+        'social' => 0.2,
+        'events' => 0.2,
+        'news' => 0.3,
+        'weak_indicator' => 0.1,
     ];
 
     public function __construct(
@@ -141,35 +141,35 @@ class ClearCueConnector implements InputConnectorInterface
         // Build enriched payload — store full record for maximum context in TriggerRules
         $signalPayload = [
             // Person fields
-            'person_id'         => $personId,
-            'person_name'       => trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? '')),
-            'person_position'   => $person['position'] ?? null,
-            'person_seniority'  => $person['seniority'] ?? null,
-            'person_linkedin'   => $person['linkedin_url'] ?? null,
-            'person_about'      => $person['about_me'] ?? null,
+            'person_id' => $personId,
+            'person_name' => trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? '')),
+            'person_position' => $person['position'] ?? null,
+            'person_seniority' => $person['seniority'] ?? null,
+            'person_linkedin' => $person['linkedin_url'] ?? null,
+            'person_about' => $person['about_me'] ?? null,
 
             // Company fields
-            'company_id'        => $company['id'] ?? null,
-            'company_name'      => $company['company_name'] ?? $company['name'] ?? null,
-            'company_domain'    => $this->extractDomain($company['website'] ?? $company['company_url'] ?? null),
-            'company_website'   => $company['website'] ?? $company['company_url'] ?? null,
-            'company_industry'  => $company['industry'] ?? null,
-            'company_size'      => $company['company_size'] ?? null,
-            'company_location'  => $company['location'] ?? null,
-            'company_funding'   => $company['funding_stage'] ?? null,
+            'company_id' => $company['id'] ?? null,
+            'company_name' => $company['company_name'] ?? $company['name'] ?? null,
+            'company_domain' => $this->extractDomain($company['website'] ?? $company['company_url'] ?? null),
+            'company_website' => $company['website'] ?? $company['company_url'] ?? null,
+            'company_industry' => $company['industry'] ?? null,
+            'company_size' => $company['company_size'] ?? null,
+            'company_location' => $company['location'] ?? null,
+            'company_funding' => $company['funding_stage'] ?? null,
 
             // Signal context
-            'signal_type'       => $signalContext['signal_type'] ?? null,
-            'signal_category'   => $signalContext['signal_category'] ?? null,
-            'signal_frequency'  => $signalContext['signal_frequency'] ?? 1,
-            'competitor'        => $signalContext['competitor_mentioned'] ?? null,
+            'signal_type' => $signalContext['signal_type'] ?? null,
+            'signal_category' => $signalContext['signal_category'] ?? null,
+            'signal_frequency' => $signalContext['signal_frequency'] ?? 1,
+            'competitor' => $signalContext['competitor_mentioned'] ?? null,
             'engagement_context' => $signalContext['engagement_context'] ?? null,
-            'ai_insight'        => $signalContext['ai_qualified_insight'] ?? null,
+            'ai_insight' => $signalContext['ai_qualified_insight'] ?? null,
 
             // Metadata
-            'list_id'           => $record['list_id'] ?? null,
-            'detected_at'       => $detectedAt,
-            'source'            => 'clearcue',
+            'list_id' => $record['list_id'] ?? null,
+            'detected_at' => $detectedAt,
+            'source' => 'clearcue',
         ];
 
         // Remove null values to keep payload clean

@@ -49,17 +49,17 @@ class IntentScoreTool extends Tool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'action'      => 'required|string|in:get_score,list_hot_leads,get_signal_history',
-            'entity_key'  => 'nullable|string|max:500',
+            'action' => 'required|string|in:get_score,list_hot_leads,get_signal_history',
+            'entity_key' => 'nullable|string|max:500',
             'entity_type' => 'nullable|string|in:company,person',
-            'threshold'   => 'nullable|string|in:hot,warm,lukewarm',
-            'limit'       => 'nullable|integer|min:1|max:100',
+            'threshold' => 'nullable|string|in:hot,warm,lukewarm',
+            'limit' => 'nullable|integer|min:1|max:100',
         ]);
 
         try {
             return match ($validated['action']) {
-                'get_score'          => $this->getScore($validated),
-                'list_hot_leads'     => $this->listHotLeads($validated),
+                'get_score' => $this->getScore($validated),
+                'list_hot_leads' => $this->listHotLeads($validated),
                 'get_signal_history' => $this->getSignalHistory($validated),
             };
         } catch (\Throwable $e) {
@@ -78,40 +78,40 @@ class IntentScoreTool extends Tool
 
         if (! $score) {
             return Response::text(json_encode([
-                'entity_key'   => $entityKey,
-                'found'        => false,
-                'message'      => 'No intent score computed yet. Score is calculated when signals arrive for this entity.',
+                'entity_key' => $entityKey,
+                'found' => false,
+                'message' => 'No intent score computed yet. Score is calculated when signals arrive for this entity.',
             ]));
         }
 
         return Response::text(json_encode([
-            'entity_key'       => $entityKey,
-            'entity_type'      => $score->entity_type,
-            'found'            => true,
-            'composite_score'  => $score->composite_score,
-            'intent_tag'       => $score->intentTag(),
-            'threshold'        => $this->classifyThreshold($score->composite_score),
+            'entity_key' => $entityKey,
+            'entity_type' => $score->entity_type,
+            'found' => true,
+            'composite_score' => $score->composite_score,
+            'intent_tag' => $score->intentTag(),
+            'threshold' => $this->classifyThreshold($score->composite_score),
             'dimensions' => [
-                'fit'          => $score->fit_score,
-                'intent'       => $score->intent_score,
-                'engagement'   => $score->engagement_score,
+                'fit' => $score->fit_score,
+                'intent' => $score->intent_score,
+                'engagement' => $score->engagement_score,
                 'relationship' => $score->relationship_score,
             ],
-            'signal_count'     => $score->signal_count,
+            'signal_count' => $score->signal_count,
             'signal_diversity' => $score->signal_diversity,
-            'score_breakdown'  => $score->score_breakdown,
-            'last_scored_at'   => $score->last_scored_at?->toIso8601String(),
-            'recommendation'   => $this->getRecommendation($score->composite_score),
+            'score_breakdown' => $score->score_breakdown,
+            'last_scored_at' => $score->last_scored_at?->toIso8601String(),
+            'recommendation' => $this->getRecommendation($score->composite_score),
         ]));
     }
 
     private function listHotLeads(array $params): Response
     {
         $minScore = match ($params['threshold'] ?? 'warm') {
-            'hot'      => 80,
-            'warm'     => 50,
+            'hot' => 80,
+            'warm' => 50,
             'lukewarm' => 20,
-            default    => 50,
+            default => 50,
         };
 
         $limit = min((int) ($params['limit'] ?? 20), 100);
@@ -121,19 +121,19 @@ class IntentScoreTool extends Tool
             ->limit($limit)
             ->get()
             ->map(fn ($s) => [
-                'entity_key'      => $s->entity_key,
-                'entity_type'     => $s->entity_type,
+                'entity_key' => $s->entity_key,
+                'entity_type' => $s->entity_type,
                 'composite_score' => $s->composite_score,
-                'intent_tag'      => $s->intentTag(),
-                'signal_count'    => $s->signal_count,
+                'intent_tag' => $s->intentTag(),
+                'signal_count' => $s->signal_count,
                 'signal_diversity' => $s->signal_diversity,
-                'last_scored_at'  => $s->last_scored_at?->toIso8601String(),
+                'last_scored_at' => $s->last_scored_at?->toIso8601String(),
             ]);
 
         return Response::text(json_encode([
-            'leads'          => $scores,
-            'count'          => $scores->count(),
-            'min_score'      => $minScore,
+            'leads' => $scores,
+            'count' => $scores->count(),
+            'min_score' => $minScore,
             'threshold_label' => $params['threshold'] ?? 'warm',
         ]));
     }
@@ -152,23 +152,23 @@ class IntentScoreTool extends Tool
             ->limit(50)
             ->get()
             ->map(fn ($s) => [
-                'id'             => $s->id,
-                'source_type'    => $s->source_type,
-                'signal_type'    => $s->payload['signal_type'] ?? null,
+                'id' => $s->id,
+                'source_type' => $s->source_type,
+                'signal_type' => $s->payload['signal_type'] ?? null,
                 'signal_category' => $s->payload['signal_category'] ?? null,
-                'score'          => $s->score,
-                'tags'           => $s->tags,
-                'received_at'    => $s->received_at,
+                'score' => $s->score,
+                'tags' => $s->tags,
+                'received_at' => $s->received_at,
             ]);
 
         $intentScore = CompanyIntentScore::where('entity_key', $entityKey)->first();
 
         return Response::text(json_encode([
-            'entity_key'      => $entityKey,
-            'current_score'   => $intentScore?->composite_score,
-            'intent_tag'      => $intentScore?->intentTag(),
-            'signal_history'  => $signals,
-            'signal_count'    => $signals->count(),
+            'entity_key' => $entityKey,
+            'current_score' => $intentScore?->composite_score,
+            'intent_tag' => $intentScore?->intentTag(),
+            'signal_history' => $signals,
+            'signal_count' => $signals->count(),
         ]));
     }
 
@@ -178,7 +178,7 @@ class IntentScoreTool extends Tool
             $score >= 80 => 'hot',
             $score >= 50 => 'warm',
             $score >= 20 => 'lukewarm',
-            default      => 'cold',
+            default => 'cold',
         };
     }
 
@@ -188,7 +188,7 @@ class IntentScoreTool extends Tool
             $score >= 80 => 'Immediate outreach recommended — company shows strong buying intent across multiple signals.',
             $score >= 50 => 'Enroll in BDR sequence — company is actively evaluating, timing is right for outreach.',
             $score >= 20 => 'Add to nurture flow — company is researching, not yet ready for direct outreach.',
-            default      => 'Monitor only — insufficient intent signals. Wait for more activity before engaging.',
+            default => 'Monitor only — insufficient intent signals. Wait for more activity before engaging.',
         };
     }
 }

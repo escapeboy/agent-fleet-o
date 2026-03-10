@@ -41,8 +41,8 @@ class ClearCueConnectorTool extends Tool
         try {
             return match ($validated['action']) {
                 'get_setup_instructions' => $this->getSetupInstructions(),
-                'get_status'             => $this->getStatus(),
-                'list_recent_signals'    => $this->listRecentSignals(),
+                'get_status' => $this->getStatus(),
+                'list_recent_signals' => $this->listRecentSignals(),
             };
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());
@@ -55,9 +55,9 @@ class ClearCueConnectorTool extends Tool
         $configured = (bool) config('services.clearcue.webhook_secret');
 
         return Response::text(json_encode([
-            'connector'    => 'ClearCue',
-            'webhook_url'  => $webhookUrl,
-            'configured'   => $configured,
+            'connector' => 'ClearCue',
+            'webhook_url' => $webhookUrl,
+            'configured' => $configured,
             'plan_required' => 'Pro (€199/month) or higher — webhooks not available on Starter plan',
             'steps' => [
                 '1. Sign up or log in at https://app.clearcue.ai',
@@ -70,25 +70,25 @@ class ClearCueConnectorTool extends Tool
                 '8. Add to your .env: CLEARCUE_WEBHOOK_SECRET=<signing_secret>',
                 '9. ClearCue will now push buyer intent signals to FleetQ automatically',
             ],
-            'env_var'              => 'CLEARCUE_WEBHOOK_SECRET',
-            'signature_header'     => 'X-ClearCue-Signature (exact name TBC from dashboard)',
-            'mcp_integration'      => [
+            'env_var' => 'CLEARCUE_WEBHOOK_SECRET',
+            'signature_header' => 'X-ClearCue-Signature (exact name TBC from dashboard)',
+            'mcp_integration' => [
                 'description' => 'ClearCue also offers an MCP server for on-demand signal queries',
-                'endpoint'    => 'https://api.tools.clearcue.ai/mcp/sse',
-                'auth'        => 'OAuth 2.1',
-                'setup'       => 'Create a Tool record in FleetQ with type=mcp_http pointing to the MCP endpoint, link OAuth credentials via Credential model',
+                'endpoint' => 'https://api.tools.clearcue.ai/mcp/sse',
+                'auth' => 'OAuth 2.1',
+                'setup' => 'Create a Tool record in FleetQ with type=mcp_http pointing to the MCP endpoint, link OAuth credentials via Credential model',
             ],
             'signal_types' => [
-                'social'          => 'LinkedIn post engagement, competitor interactions',
-                'hiring'          => 'Job postings for relevant roles',
-                'events'          => 'Conference/event RSVPs and appearances',
-                'news'            => 'Press mentions, funding announcements',
-                'evaluation'      => 'Competitor research, review site visits',
+                'social' => 'LinkedIn post engagement, competitor interactions',
+                'hiring' => 'Job postings for relevant roles',
+                'events' => 'Conference/event RSVPs and appearances',
+                'news' => 'Press mentions, funding announcements',
+                'evaluation' => 'Competitor research, review site visits',
                 'purchase_intent' => 'Demo requests, pricing page views (highest value)',
             ],
             'trigger_rule_example' => [
                 'description' => 'Fire when a hot prospect shows evaluation-level intent',
-                'conditions'  => [
+                'conditions' => [
                     ['field' => 'payload.signal_category', 'operator' => 'eq', 'value' => 'evaluation'],
                     ['field' => 'payload.signal_frequency', 'operator' => 'gte', 'value' => 3],
                 ],
@@ -109,12 +109,12 @@ class ClearCueConnectorTool extends Tool
             ->count();
 
         return Response::text(json_encode([
-            'configured'      => $configured,
-            'status'          => $configured ? ($last24h > 0 ? 'active' : 'configured') : 'not_configured',
-            'total_signals'   => (int) ($stats?->total ?? 0),
+            'configured' => $configured,
+            'status' => $configured ? ($last24h > 0 ? 'active' : 'configured') : 'not_configured',
+            'total_signals' => (int) ($stats?->total ?? 0),
             'last_received_at' => $stats?->last_received_at,
             'signals_last_24h' => $last24h,
-            'webhook_url'     => url('/api/signals/clearcue'),
+            'webhook_url' => url('/api/signals/clearcue'),
         ]));
     }
 
@@ -126,19 +126,19 @@ class ClearCueConnectorTool extends Tool
             ->limit(20)
             ->get()
             ->map(fn ($s) => [
-                'id'                => $s->id,
-                'company'           => $s->payload['company_name'] ?? null,
-                'person'            => $s->payload['person_name'] ?? null,
-                'signal_type'       => $s->payload['signal_type'] ?? null,
-                'signal_category'   => $s->payload['signal_category'] ?? null,
-                'score'             => $s->score,
-                'tags'              => $s->tags,
-                'received_at'       => $s->received_at,
+                'id' => $s->id,
+                'company' => $s->payload['company_name'] ?? null,
+                'person' => $s->payload['person_name'] ?? null,
+                'signal_type' => $s->payload['signal_type'] ?? null,
+                'signal_category' => $s->payload['signal_category'] ?? null,
+                'score' => $s->score,
+                'tags' => $s->tags,
+                'received_at' => $s->received_at,
             ]);
 
         return Response::text(json_encode([
             'signals' => $signals,
-            'count'   => $signals->count(),
+            'count' => $signals->count(),
         ]));
     }
 }
