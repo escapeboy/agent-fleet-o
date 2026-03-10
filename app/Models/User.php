@@ -19,7 +19,7 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, WebauthnAuthenticatable, Notifiable;
+    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, Notifiable, WebauthnAuthenticatable;
 
     protected $fillable = [
         'name',
