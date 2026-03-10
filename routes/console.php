@@ -43,4 +43,7 @@ Schedule::command('model:prune')->dailyAt('04:00');
 // Version update check
 Schedule::command('system:check-updates')->hourly()->runInBackground();
 
+// Pre-generate OpenAPI spec so /docs/api.json is served from a static file
+Schedule::command('scramble:export --path=public/api.json')->weeklyOn(1, '03:30');
+
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();

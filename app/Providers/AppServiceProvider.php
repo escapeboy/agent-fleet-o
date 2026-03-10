@@ -198,5 +198,21 @@ class AppServiceProvider extends ServiceProvider
                 SecurityScheme::http('bearer', 'token'),
             );
         });
+
+        // Serve the OpenAPI JSON spec from a pre-generated file when available.
+        // The file is written by `php artisan scramble:export --path=public/api.json`
+        // which runs on every deploy and weekly via the scheduler.
+        // Falls back to live generation when the file doesn't exist yet.
+        Scramble::ignoreDefaultRoutes();
+        Scramble::registerUiRoute(path: 'docs/api');
+        \Illuminate\Support\Facades\Route::get('docs/api.json', function (\Dedoc\Scramble\Generator $generator) {
+            $cached = public_path('api.json');
+            if (file_exists($cached)) {
+                return response(file_get_contents($cached), 200, ['Content-Type' => 'application/json']);
+            }
+            $config = Scramble::getGeneratorConfig('default');
+
+            return response()->json($generator($config), options: JSON_PRETTY_PRINT);
+        })->middleware(config('scramble.middleware', ['web']))->name('scramble.docs.document');
     }
 }

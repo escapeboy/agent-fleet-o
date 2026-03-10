@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
@@ -100,6 +101,10 @@ if (config('app.deployment_mode', 'self-hosted') !== 'cloud') {
         BypassAuth::class,
     ])->match(['GET', 'POST'], '/setup', SetupPage::class)->name('setup');
 }
+
+// Documentation portal (public, no auth)
+Route::get('/docs', fn () => redirect()->route('docs.show', 'introduction'))->name('docs.index');
+Route::get('/docs/{page}', [DocsController::class, 'show'])->name('docs.show');
 
 // Legal pages (public)
 Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
