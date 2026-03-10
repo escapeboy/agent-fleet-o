@@ -253,3 +253,134 @@ window.FleetQArtifactDownload = {
         if (!granted) return; // Browser declined — graceful degradation
     });
 })();
+
+// ─── WebAuthn / Passkeys ────────────────────────────────────────────────────
+// Registration and authentication ceremony helpers.
+// The server endpoints are provided by asbiin/laravel-webauthn.
+// Feature-detected: hidden on browsers without PublicKeyCredential support.
+
+function arrayBufferToBase64Url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let str = '';
+    for (const byte of bytes) str += String.fromCharCode(byte);
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlToArrayBuffer(base64url) {
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    const buffer = new ArrayBuffer(raw.length);
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    return buffer;
+}
+
+// Recursively decode base64url strings in WebAuthn options returned by the server
+function decodeCreationOptions(options) {
+    options.challenge = base64UrlToArrayBuffer(options.challenge);
+    options.user.id = base64UrlToArrayBuffer(options.user.id);
+    if (options.excludeCredentials) {
+        options.excludeCredentials = options.excludeCredentials.map((c) => ({
+            ...c, id: base64UrlToArrayBuffer(c.id),
+        }));
+    }
+    return options;
+}
+
+function decodeRequestOptions(options) {
+    options.challenge = base64UrlToArrayBuffer(options.challenge);
+    if (options.allowCredentials) {
+        options.allowCredentials = options.allowCredentials.map((c) => ({
+            ...c, id: base64UrlToArrayBuffer(c.id),
+        }));
+    }
+    return options;
+}
+
+// Encode a PublicKeyCredential to JSON-serialisable form for the server
+function encodeCredential(credential) {
+    const response = credential.response;
+    const encoded = {
+        id: credential.id,
+        rawId: arrayBufferToBase64Url(credential.rawId),
+        type: credential.type,
+        response: {},
+    };
+    if (response.attestationObject) {
+        encoded.response.attestationObject = arrayBufferToBase64Url(response.attestationObject);
+    }
+    if (response.clientDataJSON) {
+        encoded.response.clientDataJSON = arrayBufferToBase64Url(response.clientDataJSON);
+    }
+    if (response.authenticatorData) {
+        encoded.response.authenticatorData = arrayBufferToBase64Url(response.authenticatorData);
+    }
+    if (response.signature) {
+        encoded.response.signature = arrayBufferToBase64Url(response.signature);
+    }
+    if (response.userHandle) {
+        encoded.response.userHandle = arrayBufferToBase64Url(response.userHandle);
+    }
+    return encoded;
+}
+
+document.addEventListener('alpine:init', () => {
+    // ─── Passkey Registration Component ────────────────────────────────────
+    Alpine.data('passkeyRegister', () => ({
+        supported: !!window.PublicKeyCredential,
+        loading: false,
+        error: null,
+        keyName: '',
+
+        async register() {
+            if (!this.supported || this.loading) return;
+            this.loading = true;
+            this.error = null;
+
+            try {
+                // 1. Fetch creation options from server
+                const optRes = await fetch('/webauthn/register', {
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '' },
+                });
+                if (!optRes.ok) throw new Error('Failed to get registration options');
+                const json = await optRes.json();
+
+                // 2. Create credential via browser API
+                const options = decodeCreationOptions(json.publicKey ?? json);
+                const credential = await navigator.credentials.create({ publicKey: options });
+                if (!credential) throw new Error('Credential creation cancelled');
+
+                // 3. Send attestation to server
+                const storeRes = await fetch('/webauthn/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                    },
+                    body: JSON.stringify({
+                        ...encodeCredential(credential),
+                        name: this.keyName || 'Security Key',
+                    }),
+                });
+
+                if (!storeRes.ok) {
+                    const err = await storeRes.json().catch(() => ({}));
+                    throw new Error(err.message || 'Registration failed');
+                }
+
+                this.keyName = '';
+                this.$dispatch('passkey-registered');
+                window.location.reload(); // Refresh key list in Livewire component
+            } catch (err) {
+                if (err.name === 'NotAllowedError') {
+                    this.error = 'Registration cancelled or timed out.';
+                } else {
+                    this.error = err.message || 'Passkey registration failed.';
+                }
+            } finally {
+                this.loading = false;
+            }
+        },
+    }));
+});

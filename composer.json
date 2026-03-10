@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "dedoc/scramble": "^0.13.12",
+        "asbiin/laravel-webauthn": "^5.4",
         "laravel-notification-channels/webpush": "^10.4",
         "laravel/fortify": "^1.34",
         "laravel/framework": "^12.0",

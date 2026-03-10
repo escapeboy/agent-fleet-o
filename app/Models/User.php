@@ -13,12 +13,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use LaravelWebauthn\Contracts\WebauthnAuthenticatable;
+use LaravelWebauthn\Models\Concerns\HasWebauthn;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
-class User extends Authenticatable
+class User extends Authenticatable implements WebauthnAuthenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, Notifiable;
+    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, HasWebauthn, Notifiable;
 
     protected $fillable = [
         'name',

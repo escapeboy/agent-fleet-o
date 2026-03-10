@@ -10,6 +10,8 @@ use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Models\GlobalSetting;
+use LaravelWebauthn\Models\WebauthnKey;
+use LaravelWebauthn\WebauthnServiceProvider;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -543,6 +545,26 @@ class TeamSettingsPage extends Component
                     ->orderByDesc('connected_at')
                     ->first()
                 : null,
+            'passkeys' => class_exists(WebauthnKey::class)
+                ? WebauthnKey::where('user_id', auth()->id())->latest()->get()
+                : collect(),
+            'webauthnEnabled' => class_exists(WebauthnServiceProvider::class),
         ])->layout('layouts.app', ['header' => 'Settings']);
+    }
+
+    public function deletePasskey(string $keyId): void
+    {
+        if (! class_exists(WebauthnKey::class)) {
+            return;
+        }
+
+        $key = WebauthnKey::where('id', $keyId)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if ($key) {
+            $key->delete();
+            session()->flash('message', 'Passkey removed.');
+        }
     }
 }
