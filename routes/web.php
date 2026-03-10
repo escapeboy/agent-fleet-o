@@ -206,7 +206,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/email/templates/{template}/preview', [EmailTemplatePreviewController::class, 'show'])->name('email.templates.preview');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
-    if (class_exists(\LaravelWebauthn\WebauthnServiceProvider::class)) {
-        \LaravelWebauthn\Facades\Webauthn::routes(['middleware' => ['web', 'auth']]);
-    }
+    // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.
+    // No manual route registration needed here.
 });
