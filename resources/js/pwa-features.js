@@ -338,9 +338,12 @@ document.addEventListener('alpine:init', () => {
             this.error = null;
 
             try {
-                // 1. Fetch creation options from server
-                const optRes = await fetch('/webauthn/register', {
-                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '' },
+                const csrfToken = document.querySelector('meta[name=csrf-token]')?.content ?? '';
+
+                // 1. Fetch creation options from server (POST to /webauthn/keys/options)
+                const optRes = await fetch('/webauthn/keys/options', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 });
                 if (!optRes.ok) throw new Error('Failed to get registration options');
                 const json = await optRes.json();
@@ -350,13 +353,13 @@ document.addEventListener('alpine:init', () => {
                 const credential = await navigator.credentials.create({ publicKey: options });
                 if (!credential) throw new Error('Credential creation cancelled');
 
-                // 3. Send attestation to server
-                const storeRes = await fetch('/webauthn/register', {
+                // 3. Send attestation to server (POST to /webauthn/keys)
+                const storeRes = await fetch('/webauthn/keys', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                        'X-CSRF-TOKEN': csrfToken,
                     },
                     body: JSON.stringify({
                         ...encodeCredential(credential),
