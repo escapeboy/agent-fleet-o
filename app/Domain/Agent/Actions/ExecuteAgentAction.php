@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
+use App\Domain\Agent\Pipeline\Middleware\InjectKnowledgeGraphContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
 use App\Domain\Agent\Services\SandboxedWorkspace;
@@ -40,6 +41,7 @@ class ExecuteAgentAction
         private readonly ResolveProjectCredentialsAction $resolveCredentials,
         private readonly ProviderResolver $providerResolver,
         private readonly InjectMemoryContext $injectMemoryContext,
+        private readonly InjectKnowledgeGraphContext $injectKgContext,
         private readonly SummarizeContext $summarizeContext,
         private readonly DetectClarificationNeeded $detectClarification,
         private readonly ResolveTierConfigAction $resolveTierConfig,
@@ -80,6 +82,7 @@ class ExecuteAgentAction
         $ctx = Pipeline::send($ctx)
             ->through([
                 $this->injectMemoryContext,
+                $this->injectKgContext,
                 $this->summarizeContext,
                 $this->detectClarification,
             ])
