@@ -49,7 +49,9 @@
                                 {{ $approval->experiment->title }}
                             </a>
                             <x-status-badge :status="$approval->status->value" />
-                            @if($approval->isHumanTask())
+                            @if($approval->isClarification())
+                                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Clarification</span>
+                            @elseif($approval->isHumanTask())
                                 <span class="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Human Task</span>
                             @endif
                         </div>
@@ -130,7 +132,7 @@
                             </div>
                         @endif
 
-                        @if($approval->isHumanTask())
+                        @if($approval->isClarification() || $approval->isHumanTask())
                             <div class="mt-3">
                                 <livewire:approvals.human-task-form :task="$approval" :key="'htf-'.$approval->id" />
                             </div>
@@ -156,7 +158,7 @@
                         </div>
                     </div>
 
-                    @if($approval->status === \App\Domain\Approval\Enums\ApprovalStatus::Pending)
+                    @if($approval->status === \App\Domain\Approval\Enums\ApprovalStatus::Pending && ! $approval->isClarification() && ! $approval->isHumanTask())
                         <div class="ml-4 flex shrink-0 gap-2">
                             <button wire:click="approve('{{ $approval->id }}')"
                                 class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">

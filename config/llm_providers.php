@@ -141,4 +141,20 @@ return [
         'url_hint' => 'URL with /v1 suffix — e.g. http://localhost:1234/v1',
         'models' => [], // Dynamic — set by the user when configuring the endpoint
     ],
+
+    // Bridge-backed providers — routed through the FleetQ Bridge daemon
+    'bridge_llm' => [
+        'name' => 'Local LLM (via FleetQ Bridge)',
+        'bridge' => true,
+        'cost_per_token' => ['input' => 0, 'output' => 0],
+        'models' => [], // Populated dynamically from bridge manifest
+    ],
+
+    'bridge_agent' => [
+        'name' => 'Local AI Agent (via FleetQ Bridge)',
+        'bridge' => true,
+        'local' => false, // Not a CLI-based local agent — handled by the bridge
+        'cost_per_token' => ['input' => 0, 'output' => 0],
+        'models' => [], // Populated dynamically from bridge manifest
+    ],
 ];

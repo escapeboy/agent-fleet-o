@@ -35,6 +35,8 @@ class AgentDetailPage extends Component
 
     public array $editFallbackChain = [];
 
+    public string $editExecutionTier = 'standard';
+
     // Personality editing
     public string $editPersonalityTone = '';
 
@@ -75,6 +77,7 @@ class AgentDetailPage extends Component
         $this->editModel = $this->agent->model;
         $this->editBudgetCap = $this->agent->budget_cap_credits;
         $this->editFallbackChain = $this->agent->config['fallback_chain'] ?? [];
+        $this->editExecutionTier = $this->agent->config['execution_tier'] ?? 'standard';
         /** @var array<string, mixed> $personality */
         $personality = $this->agent->personality ?? [];
         $this->editPersonalityTone = $personality['tone'] ?? '';
@@ -143,6 +146,8 @@ class AgentDetailPage extends Component
         } else {
             unset($config['fallback_chain']);
         }
+
+        $config['execution_tier'] = $this->editExecutionTier;
 
         $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");
 

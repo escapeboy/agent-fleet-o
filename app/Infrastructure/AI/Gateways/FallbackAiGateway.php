@@ -20,10 +20,23 @@ class FallbackAiGateway implements AiGatewayInterface
         private readonly CircuitBreaker $circuitBreaker,
         private readonly array $fallbackChains = [],
         private readonly ?LocalAgentGateway $localGateway = null,
+        private readonly ?LocalBridgeGateway $bridgeGateway = null,
     ) {}
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
+        // Route bridge providers through the FleetQ Bridge daemon
+        if ($this->isBridgeProvider($request->provider)) {
+            if (! $this->bridgeGateway) {
+                throw new \RuntimeException(
+                    "Bridge provider '{$request->provider}' is not available. "
+                    .'FleetQ Bridge must be installed and connected.',
+                );
+            }
+
+            return $this->bridgeGateway->complete($request);
+        }
+
         // Route local agent requests directly — no fallback chain
         if ($this->isLocalProvider($request->provider)) {
             if (! $this->localGateway) {
@@ -110,6 +123,18 @@ class FallbackAiGateway implements AiGatewayInterface
 
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
+        // Route bridge providers through the FleetQ Bridge daemon
+        if ($this->isBridgeProvider($request->provider)) {
+            if (! $this->bridgeGateway) {
+                throw new \RuntimeException(
+                    "Bridge provider '{$request->provider}' is not available. "
+                    .'FleetQ Bridge must be installed and connected.',
+                );
+            }
+
+            return $this->bridgeGateway->stream($request, $onChunk);
+        }
+
         // Route local agent requests directly — no fallback chain
         if ($this->isLocalProvider($request->provider)) {
             if (! $this->localGateway) {
@@ -179,7 +204,7 @@ class FallbackAiGateway implements AiGatewayInterface
 
     public function estimateCost(AiRequestDTO $request): int
     {
-        if ($this->isLocalProvider($request->provider)) {
+        if ($this->isBridgeProvider($request->provider) || $this->isLocalProvider($request->provider)) {
             return 0;
         }
 
@@ -205,6 +230,11 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         return $chain;
+    }
+
+    private function isBridgeProvider(string $provider): bool
+    {
+        return (bool) config("llm_providers.{$provider}.bridge");
     }
 
     private function isLocalProvider(string $provider): bool

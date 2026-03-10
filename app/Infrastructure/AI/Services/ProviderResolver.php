@@ -78,7 +78,7 @@ class ProviderResolver
      *
      * @return array<string, array{name: string, models: array}>
      */
-    public function availableProviders(): array
+    public function availableProviders(?Team $team = null): array
     {
         $providers = config('llm_providers', []);
 

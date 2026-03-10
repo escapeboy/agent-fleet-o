@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Infrastructure\Encryption\Casts\TeamEncryptedArray;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,7 +27,7 @@ class Connector extends Model
     protected function casts(): array
     {
         return [
-            'config' => 'encrypted:array',
+            'config' => TeamEncryptedArray::class,
             'last_success_at' => 'datetime',
             'last_error_at' => 'datetime',
         ];

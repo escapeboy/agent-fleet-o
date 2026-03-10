@@ -41,6 +41,8 @@ class CreateAgentForm extends Component
 
     public array $fallbackChain = [];
 
+    public string $executionTier = 'standard';
+
     public function mount(): void
     {
         $templateSlug = request('template');
@@ -90,7 +92,7 @@ class CreateAgentForm extends Component
 
         $team = auth()->user()->currentTeam;
 
-        $config = [];
+        $config = ['execution_tier' => $this->executionTier];
         $filteredChain = array_filter($this->fallbackChain, fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']));
         if (! empty($filteredChain)) {
             $config['fallback_chain'] = array_values($filteredChain);

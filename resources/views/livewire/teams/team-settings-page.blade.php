@@ -698,6 +698,104 @@
     </div>
     @endif
 
+    {{-- FleetQ Bridge --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">FleetQ Bridge</h2>
+        <p class="mb-4 text-sm text-gray-500">Connect your local machine to FleetQ Cloud. The Bridge daemon discovers local LLMs, CLI agents, and MCP servers and routes AI workloads to them.</p>
+
+        @if($bridgeConnection && $bridgeConnection->isActive())
+            <div class="mb-4 rounded-lg bg-green-50 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium text-green-900">Bridge Connected</p>
+                        <p class="mt-0.5 text-sm text-green-700">
+                            Version {{ $bridgeConnection->bridge_version ?? 'unknown' }}
+                            @if($bridgeConnection->connected_at)
+                                · Connected {{ $bridgeConnection->connected_at->diffForHumans() }}
+                            @endif
+                        </p>
+                    </div>
+                    <button wire:click="disconnectBridge" wire:confirm="Disconnect the FleetQ Bridge?"
+                        class="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50">
+                        Disconnect
+                    </button>
+                </div>
+            </div>
+
+            {{-- Discovered endpoints --}}
+            @php
+                $llms = $bridgeConnection->llmEndpoints();
+                $agents = $bridgeConnection->agents();
+                $mcpServers = $bridgeConnection->mcpServers();
+            @endphp
+
+            @if(count($llms) > 0 || count($agents) > 0 || count($mcpServers) > 0)
+                <div class="space-y-3">
+                    @if(count($llms) > 0)
+                        <div>
+                            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">Local LLMs ({{ count($llms) }})</p>
+                            <div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                @foreach($llms as $llm)
+                                    <div class="flex items-center justify-between px-3 py-2 text-sm">
+                                        <span class="font-mono text-gray-800">{{ $llm['name'] ?? $llm['id'] }}</span>
+                                        <span class="text-xs {{ ($llm['status'] ?? '') === 'online' ? 'text-green-600' : 'text-gray-400' }}">
+                                            {{ $llm['status'] ?? 'unknown' }}
+                                        </span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    @if(count($agents) > 0)
+                        <div>
+                            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">AI Agents ({{ count($agents) }})</p>
+                            <div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                @foreach($agents as $agent)
+                                    <div class="flex items-center justify-between px-3 py-2 text-sm">
+                                        <span class="text-gray-800">{{ $agent['name'] ?? $agent['id'] }}</span>
+                                        <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{{ $agent['type'] ?? 'agent' }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    @if(count($mcpServers) > 0)
+                        <div>
+                            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">MCP Servers ({{ count($mcpServers) }})</p>
+                            <div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                @foreach($mcpServers as $mcp)
+                                    <div class="flex items-center justify-between px-3 py-2 text-sm">
+                                        <span class="font-mono text-gray-800">{{ $mcp['name'] ?? $mcp['id'] }}</span>
+                                        <span class="text-xs text-gray-500">{{ $mcp['tool_count'] ?? 0 }} tools</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @else
+                <p class="text-sm text-gray-500">No local endpoints discovered yet. The bridge will auto-detect LLMs, agents, and MCP servers on your machine.</p>
+            @endif
+        @elseif($bridgeConnection)
+            <div class="mb-4 rounded-lg bg-yellow-50 p-4">
+                <p class="font-medium text-yellow-900">Bridge Disconnected</p>
+                <p class="mt-0.5 text-sm text-yellow-700">Last connected {{ $bridgeConnection->connected_at?->diffForHumans() ?? 'never' }}. Restart the bridge daemon to reconnect.</p>
+            </div>
+            <p class="text-sm text-gray-600">Download FleetQ Bridge: <a href="https://github.com/fleetq/fleetq-bridge/releases" target="_blank" class="text-primary-600 hover:underline">github.com/fleetq/fleetq-bridge</a></p>
+        @else
+            <div class="rounded-lg border border-dashed border-gray-300 p-4 text-center">
+                <p class="mb-1 text-sm font-medium text-gray-700">No Bridge Connected</p>
+                <p class="mb-3 text-xs text-gray-500">Install and start the FleetQ Bridge daemon on your machine to connect local LLMs and agents.</p>
+                <a href="https://github.com/fleetq/fleetq-bridge/releases" target="_blank"
+                    class="inline-flex items-center rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-900">
+                    Download FleetQ Bridge
+                </a>
+            </div>
+        @endif
+    </div>
+
     {{-- Telegram Bot --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Telegram Bot</h2>
@@ -743,4 +841,72 @@
             </div>
         @endif
     </div>
+
+    {{-- Passkeys / WebAuthn ──────────────────────────────────────────────── --}}
+    @if($webauthnEnabled)
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <div class="mb-4 flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Passkeys</h2>
+                <p class="mt-0.5 text-sm text-gray-500">Use Face ID, Touch ID, or a hardware security key to sign in without a password.</p>
+            </div>
+        </div>
+
+        {{-- Existing passkeys --}}
+        @if($passkeys->isNotEmpty())
+            <div class="mb-4 space-y-2">
+                @foreach($passkeys as $key)
+                    <div class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 0 1 21.75 8.25Z" />
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ $key->name }}</p>
+                                <p class="text-xs text-gray-500">Added {{ $key->created_at->diffForHumans() }}</p>
+                            </div>
+                        </div>
+                        <button wire:click="deletePasskey('{{ $key->id }}')"
+                            wire:confirm="Remove this passkey?"
+                            class="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">
+                            Remove
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <p class="mb-4 text-sm text-gray-500">No passkeys registered yet.</p>
+        @endif
+
+        {{-- Register new passkey --}}
+        <div x-data="passkeyRegister" class="space-y-3">
+            @if(!$passkeys->count())
+            <div class="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                <strong>Tip:</strong> Add a passkey to enable biometric login (Touch ID, Face ID, Windows Hello) on this device.
+            </div>
+            @endif
+
+            <div class="flex items-end gap-3">
+                <div class="flex-1">
+                    <label class="mb-1 block text-xs font-medium text-gray-600">Key label <span class="text-gray-400">(optional)</span></label>
+                    <input x-model="keyName" type="text" placeholder="e.g. MacBook Touch ID"
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                </div>
+                <button @click="register()" :disabled="loading || !supported"
+                    class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
+                    <span x-show="!loading">Add Passkey</span>
+                    <span x-show="loading">Registering…</span>
+                </button>
+            </div>
+
+            <template x-if="error">
+                <p class="text-sm text-red-600" x-text="error"></p>
+            </template>
+
+            <template x-if="!supported">
+                <p class="text-xs text-gray-400">Your browser does not support passkeys.</p>
+            </template>
+        </div>
+    </div>
+    @endif
 </div>

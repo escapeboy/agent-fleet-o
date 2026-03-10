@@ -111,9 +111,15 @@ class ApprovalRequest extends Model
         return $this->worktreeExecution()->exists();
     }
 
+    public function isClarification(): bool
+    {
+        return ($this->context['type'] ?? null) === 'clarification' && ! empty($this->form_schema);
+    }
+
     public function isHumanTask(): bool
     {
-        return $this->workflow_node_id !== null && ! empty($this->form_schema);
+        return ($this->workflow_node_id !== null && ! empty($this->form_schema))
+            || $this->isClarification();
     }
 
     public function isSlaExpired(): bool

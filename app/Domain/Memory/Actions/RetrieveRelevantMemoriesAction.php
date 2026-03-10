@@ -23,6 +23,7 @@ class RetrieveRelevantMemoriesAction
         ?float $threshold = null,
         string $scope = 'agent',
         ?string $teamId = null,
+        float $minConfidence = 0.3,
     ): Collection {
         if (! config('memory.enabled', true)) {
             return collect();
@@ -36,9 +37,10 @@ class RetrieveRelevantMemoriesAction
 
             $builder = Memory::withoutGlobalScopes()
                 ->select('memories.*')
-                ->selectRaw('1 - (embedding <=> ?) as similarity', [$queryEmbedding])
+                ->selectRaw('(1 - (embedding <=> ?)) * confidence AS weighted_score', [$queryEmbedding])
                 ->havingRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
-                ->orderByRaw('embedding <=> ?', [$queryEmbedding]);
+                ->where('confidence', '>=', $minConfidence)
+                ->orderByDesc('weighted_score');
 
             // Apply scope filtering
             match ($scope) {

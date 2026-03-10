@@ -204,4 +204,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/email/templates', EmailTemplateListPage::class)->name('email.templates.index');
     Route::get('/email/templates/{template}/edit', EmailTemplateBuilderPage::class)->name('email.templates.edit');
     Route::get('/email/templates/{template}/preview', [EmailTemplatePreviewController::class, 'show'])->name('email.templates.preview');
+
+    // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
+    if (class_exists(\LaravelWebauthn\WebauthnServiceProvider::class)) {
+        \LaravelWebauthn\Facades\Webauthn::routes(['middleware' => ['web', 'auth']]);
+    }
 });

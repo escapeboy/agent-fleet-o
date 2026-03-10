@@ -2,6 +2,8 @@
 
 namespace App\Domain\Tool\Services;
 
+use App\Domain\Agent\Services\DockerSandboxExecutor;
+use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Log;
@@ -20,10 +22,10 @@ class ToolTranslator
      *
      * @return array<PrismToolObject>
      */
-    public function toPrismTools(Tool $tool, array $overrides = [], ?array $orgPolicy = null): array
+    public function toPrismTools(Tool $tool, array $overrides = [], ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null): array
     {
         if ($tool->isBuiltIn()) {
-            return $this->translateBuiltInTool($tool, $overrides, $orgPolicy);
+            return $this->translateBuiltInTool($tool, $overrides, $orgPolicy, $workspace);
         }
 
         if ($tool->isMcp()) {
@@ -96,20 +98,20 @@ class ToolTranslator
     /**
      * Build PrismPHP Tools for built-in host capabilities.
      */
-    private function translateBuiltInTool(Tool $tool, array $overrides, ?array $orgPolicy = null): array
+    private function translateBuiltInTool(Tool $tool, array $overrides, ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null): array
     {
         $kind = BuiltInToolKind::tryFrom($tool->transport_config['kind'] ?? 'bash');
 
         return match ($kind) {
-            BuiltInToolKind::Bash => $this->buildBashTools($tool, $overrides, $orgPolicy),
-            BuiltInToolKind::Filesystem => $this->buildFilesystemTools($tool, $overrides),
+            BuiltInToolKind::Bash => $this->buildBashTools($tool, $overrides, $orgPolicy, $workspace),
+            BuiltInToolKind::Filesystem => $this->buildFilesystemTools($tool, $overrides, $workspace),
             BuiltInToolKind::Browser => [],
             BuiltInToolKind::Ssh => $this->buildSshTools($tool, $overrides),
             default => [],
         };
     }
 
-    private function buildBashTools(Tool $tool, array $overrides, ?array $orgPolicy = null): array
+    private function buildBashTools(Tool $tool, array $overrides, ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null): array
     {
         $config = $tool->transport_config;
         $allowedCommands = $config['allowed_commands'] ?? [
@@ -120,15 +122,33 @@ class ToolTranslator
         $timeout = $tool->settings['timeout'] ?? 30;
         $maxOutputChars = 10000;
 
-        $pathDescription = implode(', ', $allowedPaths);
+        $pathDescription = $workspace ? 'sandbox workspace' : implode(', ', $allowedPaths);
         $commandDescription = implode(', ', $allowedCommands);
 
         return [
             PrismTool::as('bash_execute')
                 ->for("Execute a shell command. Allowed commands: {$commandDescription}. Working directory restricted to: {$pathDescription}")
                 ->withStringParameter('command', 'The shell command to execute')
-                ->withStringParameter('working_directory', 'Working directory (must be within allowed paths)', required: false)
-                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy): string {
+                ->withStringParameter('working_directory', 'Working directory relative to sandbox root (sandbox mode) or absolute path', required: false)
+                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy, $workspace): string {
+                    // Docker sandbox mode: run in isolated container
+                    if ($workspace && config('agent.bash_sandbox_mode') === 'docker') {
+                        $executor = app(DockerSandboxExecutor::class);
+                        $result = $executor->execute($command, $workspace, $timeout);
+
+                        return $result['stdout'] ?: $result['stderr'] ?: "(exit {$result['exit_code']})";
+                    }
+
+                    // PHP mode with sandbox: override working directory to sandbox root
+                    if ($workspace) {
+                        $cwd = $working_directory
+                            ? $workspace->resolve($working_directory)
+                            : $workspace->root();
+
+                        return $this->executeBashCommand($command, $cwd, $allowedCommands, [$workspace->root()], $timeout, $maxOutputChars, orgSecurityPolicy: $orgPolicy);
+                    }
+
+                    // Legacy mode: use configured allowed paths
                     return $this->executeBashCommand($command, $working_directory, $allowedCommands, $allowedPaths, $timeout, $maxOutputChars, orgSecurityPolicy: $orgPolicy);
                 }),
         ];
@@ -188,28 +208,34 @@ class ToolTranslator
         return "Command failed (exit {$result->exitCode()}): {$errorOutput}";
     }
 
-    private function buildFilesystemTools(Tool $tool, array $overrides): array
+    private function buildFilesystemTools(Tool $tool, array $overrides, ?SandboxedWorkspace $workspace = null): array
     {
         $config = $tool->transport_config;
         $allowedPaths = $config['allowed_paths'] ?? ['/tmp/agent-workspace'];
         $readOnly = $config['read_only'] ?? false;
         $maxReadSize = 50000;
-        $pathDescription = implode(', ', $allowedPaths);
+        $pathDescription = $workspace ? 'sandbox workspace' : implode(', ', $allowedPaths);
 
         $tools = [];
 
         // Read file
         $tools[] = PrismTool::as('file_read')
             ->for("Read a file's contents. Paths restricted to: {$pathDescription}")
-            ->withStringParameter('path', 'Absolute path to the file to read')
-            ->using(function (string $path) use ($allowedPaths, $maxReadSize): string {
-                if (! $this->isPathAllowed($path, $allowedPaths)) {
+            ->withStringParameter('path', 'Path to the file (relative to sandbox root in sandbox mode, absolute otherwise)')
+            ->using(function (string $path) use ($allowedPaths, $maxReadSize, $workspace): string {
+                try {
+                    $absolute = $workspace ? $workspace->resolve($path) : $path;
+                } catch (\OutOfBoundsException $e) {
+                    return "Error: {$e->getMessage()}";
+                }
+
+                if (! $workspace && ! $this->isPathAllowed($absolute, $allowedPaths)) {
                     return "Error: Path '{$path}' is outside allowed directories.";
                 }
-                if (! file_exists($path)) {
+                if (! file_exists($absolute)) {
                     return "Error: File not found: {$path}";
                 }
-                $content = file_get_contents($path);
+                $content = file_get_contents($absolute);
                 if ($content === false) {
                     return "Error: Could not read file: {$path}";
                 }
@@ -222,15 +248,21 @@ class ToolTranslator
         // List directory
         $tools[] = PrismTool::as('file_list')
             ->for("List files in a directory. Paths restricted to: {$pathDescription}")
-            ->withStringParameter('path', 'Absolute path to the directory to list')
-            ->using(function (string $path) use ($allowedPaths): string {
-                if (! $this->isPathAllowed($path, $allowedPaths)) {
+            ->withStringParameter('path', 'Path to the directory (relative to sandbox root in sandbox mode, absolute otherwise)')
+            ->using(function (string $path) use ($allowedPaths, $workspace): string {
+                try {
+                    $absolute = $workspace ? $workspace->resolve($path) : $path;
+                } catch (\OutOfBoundsException $e) {
+                    return "Error: {$e->getMessage()}";
+                }
+
+                if (! $workspace && ! $this->isPathAllowed($absolute, $allowedPaths)) {
                     return "Error: Path '{$path}' is outside allowed directories.";
                 }
-                if (! is_dir($path)) {
+                if (! is_dir($absolute)) {
                     return "Error: Not a directory: {$path}";
                 }
-                $entries = scandir($path);
+                $entries = scandir($absolute);
 
                 return implode("\n", array_diff($entries ?: [], ['.', '..']));
             });
@@ -239,17 +271,23 @@ class ToolTranslator
         if (! $readOnly) {
             $tools[] = PrismTool::as('file_write')
                 ->for("Write content to a file. Paths restricted to: {$pathDescription}")
-                ->withStringParameter('path', 'Absolute path to the file to write')
+                ->withStringParameter('path', 'Path to the file (relative to sandbox root in sandbox mode, absolute otherwise)')
                 ->withStringParameter('content', 'The content to write')
-                ->using(function (string $path, string $content) use ($allowedPaths): string {
-                    if (! $this->isPathAllowed($path, $allowedPaths)) {
+                ->using(function (string $path, string $content) use ($allowedPaths, $workspace): string {
+                    try {
+                        $absolute = $workspace ? $workspace->resolve($path) : $path;
+                    } catch (\OutOfBoundsException $e) {
+                        return "Error: {$e->getMessage()}";
+                    }
+
+                    if (! $workspace && ! $this->isPathAllowed($absolute, $allowedPaths)) {
                         return "Error: Path '{$path}' is outside allowed directories.";
                     }
-                    $dir = dirname($path);
+                    $dir = dirname($absolute);
                     if (! is_dir($dir)) {
-                        @mkdir($dir, 0755, true);
+                        @mkdir($dir, 0700, true);
                     }
-                    $bytes = file_put_contents($path, $content);
+                    $bytes = file_put_contents($absolute, $content);
 
                     return $bytes !== false
                         ? "Written {$bytes} bytes to {$path}"

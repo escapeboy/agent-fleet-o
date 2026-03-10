@@ -2,12 +2,16 @@
 
 namespace App\Livewire\Teams;
 
+use App\Domain\Bridge\Actions\TerminateBridgeConnection;
+use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Models\GlobalSetting;
+use LaravelWebauthn\Models\WebauthnKey;
+use LaravelWebauthn\WebauthnServiceProvider;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -451,6 +455,23 @@ class TeamSettingsPage extends Component
         }
     }
 
+    // Bridge
+    public function disconnectBridge(): void
+    {
+        $team = auth()->user()->currentTeam;
+
+        $connection = BridgeConnection::where('team_id', $team->id)
+            ->active()
+            ->orderByDesc('connected_at')
+            ->first();
+
+        if ($connection) {
+            app(TerminateBridgeConnection::class)->execute($connection);
+        }
+
+        session()->flash('message', 'FleetQ Bridge disconnected.');
+    }
+
     // Telegram bot settings
     public string $telegramBotToken = '';
 
@@ -519,6 +540,31 @@ class TeamSettingsPage extends Component
                     ->latest()
                     ->get()
                 : collect(),
+            'bridgeConnection' => $team
+                ? BridgeConnection::where('team_id', $team->id)
+                    ->orderByDesc('connected_at')
+                    ->first()
+                : null,
+            'passkeys' => class_exists(WebauthnKey::class)
+                ? WebauthnKey::where('user_id', auth()->id())->latest()->get()
+                : collect(),
+            'webauthnEnabled' => class_exists(WebauthnServiceProvider::class),
         ])->layout('layouts.app', ['header' => 'Settings']);
+    }
+
+    public function deletePasskey(string $keyId): void
+    {
+        if (! class_exists(WebauthnKey::class)) {
+            return;
+        }
+
+        $key = WebauthnKey::where('id', $keyId)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if ($key) {
+            $key->delete();
+            session()->flash('message', 'Passkey removed.');
+        }
     }
 }

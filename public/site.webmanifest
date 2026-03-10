@@ -5,7 +5,7 @@
     "scope": "/",
     "lang": "en",
     "dir": "ltr",
-    "description": "AI Agent Mission Control Platform — build, deploy, and manage autonomous AI agent workflows.",
+    "description": "AI Agent Mission Control — build, orchestrate, and monitor AI agent fleets",
     "start_url": "/dashboard",
     "display": "standalone",
     "background_color": "#0f172a",
@@ -42,34 +42,37 @@
     "shortcuts": [
         {
             "name": "Dashboard",
+            "short_name": "Dashboard",
             "url": "/dashboard",
-            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+            "icons": [{ "src": "/icons/shortcut-dashboard-96.png", "sizes": "96x96", "type": "image/png" }]
         },
         {
             "name": "Experiments",
+            "short_name": "Experiments",
             "url": "/experiments",
-            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+            "icons": [{ "src": "/icons/shortcut-experiment-96.png", "sizes": "96x96", "type": "image/png" }]
         },
         {
             "name": "Approvals",
+            "short_name": "Approvals",
             "url": "/approvals",
-            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
-        }
-    ],
-    "screenshots": [
-        {
-            "src": "/screenshots/desktop-dashboard.png",
-            "sizes": "1280x720",
-            "type": "image/png",
-            "form_factor": "wide",
-            "label": "FleetQ Dashboard"
+            "icons": [{ "src": "/icons/shortcut-approvals-96.png", "sizes": "96x96", "type": "image/png" }]
         },
         {
-            "src": "/screenshots/mobile-dashboard.png",
-            "sizes": "390x844",
-            "type": "image/png",
-            "form_factor": "narrow",
-            "label": "FleetQ Mobile"
+            "name": "New Crew",
+            "short_name": "Crew",
+            "description": "Create a new agent crew",
+            "url": "/crews/create",
+            "icons": [{ "src": "/icons/shortcut-crew-96.png", "sizes": "96x96", "type": "image/png" }]
+        }
+    ],
+    "file_handlers": [
+        {
+            "action": "/workflows/create",
+            "accept": {
+                "application/json": [".json"],
+                "text/yaml": [".yaml", ".yml"]
+            }
         }
     ]
 }

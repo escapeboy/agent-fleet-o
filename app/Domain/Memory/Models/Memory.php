@@ -22,12 +22,16 @@ class Memory extends Model
         'metadata',
         'source_type',
         'source_id',
+        'confidence',
+        'tags',
     ];
 
     protected function casts(): array
     {
         return [
             'metadata' => 'array',
+            'tags' => 'array',
+            'confidence' => 'float',
         ];
     }
 

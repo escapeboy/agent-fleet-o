@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\System;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -18,7 +19,7 @@ class DashboardKpisTool extends Tool
 {
     protected string $name = 'system_dashboard_kpis';
 
-    protected string $description = 'Get dashboard KPIs: experiment counts (total, running, completed, failed, paused), project counts (total, active), agent counts (total, active).';
+    protected string $description = 'Get dashboard KPIs: experiment counts (total, running, completed, failed, paused), project counts (total, active), agent counts (total, active), bridge connection status.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -27,6 +28,8 @@ class DashboardKpisTool extends Tool
 
     public function handle(Request $request): Response
     {
+        $bridge = BridgeConnection::query()->active()->orderByDesc('connected_at')->first();
+
         return Response::text(json_encode([
             'experiments' => [
                 'total' => Experiment::query()->count(),
@@ -47,6 +50,12 @@ class DashboardKpisTool extends Tool
             'agents' => [
                 'total' => Agent::query()->count(),
                 'active' => Agent::query()->where('status', 'active')->count(),
+            ],
+            'bridge' => [
+                'connected' => $bridge !== null,
+                'llm_count' => $bridge?->onlineLlmCount() ?? 0,
+                'agent_count' => $bridge?->foundAgentCount() ?? 0,
+                'last_seen_at' => $bridge?->last_seen_at?->toISOString(),
             ],
         ]));
     }

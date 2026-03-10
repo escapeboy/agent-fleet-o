@@ -31,6 +31,14 @@
                 <x-form-input wire:model.number="budgetCapCredits" label="Budget Cap (credits)" type="number" min="0" placeholder="Leave empty for unlimited" />
             </div>
 
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <x-form-select wire:model="executionTier" label="Execution Tier">
+                    @foreach(\App\Domain\Agent\Enums\ExecutionTier::cases() as $tier)
+                        <option value="{{ $tier->value }}">{{ $tier->label() }}</option>
+                    @endforeach
+                </x-form-select>
+            </div>
+
             @if(!empty($providers[$this->provider]['local']))
                 <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                     Local agent — executes on the host machine using its own CLI process. No per-request API costs.

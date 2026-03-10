@@ -13,6 +13,7 @@ use App\Domain\Crew\Jobs\CoordinatorDecisionJob;
 use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
+use App\Domain\Shared\Services\NotificationService;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
@@ -24,6 +25,7 @@ class CrewOrchestrator
         private readonly ValidateTaskOutputAction $validateTaskOutput,
         private readonly TaskDependencyResolver $dependencyResolver,
         private readonly CollectCrewArtifactsAction $collectArtifacts,
+        private readonly NotificationService $notifications,
     ) {}
 
     /**
@@ -301,6 +303,21 @@ class CrewOrchestrator
                     'duration_ms' => $execution->duration_ms,
                 ])
                 ->log('crew.execution_completed');
+
+            if ($execution->team_id) {
+                $this->notifications->notifyTeam(
+                    teamId: $execution->team_id,
+                    type: 'crew.execution.completed',
+                    title: 'Crew Execution Complete',
+                    body: sprintf(
+                        'Crew "%s" finished successfully (quality score: %s%%).',
+                        $execution->crew?->name ?? 'Crew',
+                        round($finalQa['score'] * 100),
+                    ),
+                    actionUrl: '/crews/'.$execution->crew_id.'/execute',
+                    data: ['crew_execution_id' => $execution->id, 'url' => '/crews/'.$execution->crew_id.'/execute'],
+                );
+            }
         } catch (\Throwable $e) {
             $this->failExecution($execution, 'Synthesis failed: '.$e->getMessage());
         }

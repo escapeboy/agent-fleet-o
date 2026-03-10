@@ -1,4 +1,4 @@
-<div wire:poll.10s>
+<div wire:poll.10s x-data="wakeLock" x-init="{{ $experiment->status->isPausable() ? 'acquire()' : '' }}">
     {{-- Header --}}
     <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -79,10 +79,19 @@
                 @endif
             @endif
 
-            {{-- Share button --}}
+            {{-- Native share / Copy link --}}
+            <div x-data="webShare">
+                <button @click="share('{{ $experiment->name }}', '{{ $experiment->thesis }}', '{{ url()->current() }}')"
+                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                    :title="copied ? 'Link copied!' : 'Share'">
+                    <span x-text="copied ? 'Copied!' : (canShare ? 'Share' : 'Copy link')"></span>
+                </button>
+            </div>
+
+            {{-- Share modal (stakeholder public link) --}}
             <button wire:click="openShareModal"
                 class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                {{ $experiment->share_enabled ? '🔗 Sharing On' : 'Share' }}
+                {{ $experiment->share_enabled ? '🔗 Sharing On' : 'Public Link' }}
             </button>
         </div>
     </div>

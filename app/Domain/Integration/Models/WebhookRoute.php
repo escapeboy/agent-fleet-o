@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Models;
 
+use App\Infrastructure\Encryption\Casts\TeamEncryptedString;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,10 +24,19 @@ class WebhookRoute extends Model
     protected function casts(): array
     {
         return [
-            'signing_secret' => 'encrypted',
+            'signing_secret' => TeamEncryptedString::class,
             'subscribed_events' => 'array',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Resolve team_id via the parent Integration, since webhook_routes has no direct team_id column.
+     * Used by TeamEncryptedString to look up the team's DEK.
+     */
+    public function getTeamIdAttribute(): ?string
+    {
+        return $this->integration?->team_id;
     }
 
     public function integration(): BelongsTo

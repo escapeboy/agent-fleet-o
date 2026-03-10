@@ -144,6 +144,29 @@ services:
     networks:
       - agent-fleet-open
 
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: development
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    volumes:
+      - .:/var/www
+      - vendor_data:/var/www/vendor
+    environment:
+      - APP_ENV=local
+      - RUNNING_IN_DOCKER=true
+    networks:
+      - agent-fleet-open
+      - agent-fleet-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   browserless:
     image: browserless/chrome:1-chrome-stable
     restart: unless-stopped

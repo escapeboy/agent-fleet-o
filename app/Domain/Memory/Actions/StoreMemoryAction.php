@@ -21,6 +21,8 @@ class StoreMemoryAction
         ?string $projectId = null,
         ?string $sourceId = null,
         array $metadata = [],
+        float $confidence = 1.0,
+        array $tags = [],
     ): array {
         if (! config('memory.enabled', true)) {
             return [];
@@ -46,6 +48,8 @@ class StoreMemoryAction
                     'metadata' => $metadata,
                     'source_type' => $sourceType,
                     'source_id' => $sourceId,
+                    'confidence' => $confidence,
+                    'tags' => $tags,
                 ]);
 
                 $memories[] = $memory;

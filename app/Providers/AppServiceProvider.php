@@ -23,6 +23,7 @@ use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
+use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -40,6 +41,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Reverb\Events\MessageReceived;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -80,6 +82,9 @@ class AppServiceProvider extends ServiceProvider
         // Blade directives for deployment mode
         Blade::if('cloud', fn () => app(DeploymentMode::class)->isCloud());
         Blade::if('selfhosted', fn () => app(DeploymentMode::class)->isSelfHosted());
+
+        // Bridge relay: forward Reverb client-relay.* whispers into Redis stream
+        Event::listen(MessageReceived::class, HandleBridgeRelayResponse::class);
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
