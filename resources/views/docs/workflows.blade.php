@@ -67,18 +67,18 @@
     <h2 class="mt-10 text-xl font-bold text-gray-900">Conditional expressions</h2>
     <p class="mt-2 text-sm text-gray-600">
         Conditional and switch nodes evaluate expressions against the current step's output.
-        Use <code class="rounded bg-gray-100 px-1 text-xs">{{'{{'}}variable{{'}}'}}</code> syntax to reference upstream node output:
+        Use <code class="rounded bg-gray-100 px-1 text-xs">@{{variable}}</code> syntax to reference upstream node output:
     </p>
 
     <x-docs.code lang="text">
 {{-- Route high-scoring candidates to fast-track --}}
-{{ '{{output.score}} > 80' }}
+@{{output.score}} > 80
 
 {{-- Check if the summary was generated --}}
-{{ '{{output.summary}} is not empty' }}
+@{{output.summary}} is not empty
 
 {{-- Switch on candidate seniority --}}
-{{ '{{output.level}}' }}   {{-- matches "junior" | "mid" | "senior" --}}</x-docs.code>
+@{{output.level}}   {{-- matches "junior" | "mid" | "senior" --}}</x-docs.code>
 
     {{-- Human task nodes --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Human Task nodes</h2>

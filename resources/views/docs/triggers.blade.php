@@ -88,13 +88,13 @@
   "action": "create_experiment",
   "action_config": {
     "agent_id": "01jf4a2b-...",
-    "goal": "Draft personalised outreach email for {{ '{{signal.content.company}}' }}"
+    "goal": "Draft personalised outreach email for @{{signal.content.company}}"
   }
 }</x-docs.code>
 
     <x-docs.callout type="tip">
-        Use <code class="text-xs">{{ '{{signal.title}}' }}</code>, <code class="text-xs">{{ '{{signal.source}}' }}</code>,
-        and <code class="text-xs">{{ '{{signal.content.*}}' }}</code> interpolation in action configs to pass signal data to the experiment goal.
+        Use <code class="text-xs">@{{signal.title}}</code>, <code class="text-xs">@{{signal.source}}</code>,
+        and <code class="text-xs">@{{signal.content.*}}</code> interpolation in action configs to pass signal data to the experiment goal.
     </x-docs.callout>
 
     {{-- Testing --}}
