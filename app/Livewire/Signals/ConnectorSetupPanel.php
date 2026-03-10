@@ -43,6 +43,7 @@ class ConnectorSetupPanel extends Component
         'pagerduty' => ['label' => 'PagerDuty', 'category' => 'Incidents',      'env_key' => 'services.pagerduty.auth_token',   'path' => '/api/signals/pagerduty', 'env_var' => 'PAGERDUTY_AUTH_TOKEN'],
         'datadog' => ['label' => 'Datadog',   'category' => 'Monitoring',     'env_key' => null,                              'path' => '/api/signals/datadog/',  'env_var' => null],
         'whatsapp' => ['label' => 'WhatsApp',  'category' => 'Chat',           'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp',  'env_var' => 'WHATSAPP_APP_SECRET'],
+        'clearcue' => ['label' => 'ClearCue',  'category' => 'GTM Intent',     'env_key' => 'services.clearcue.webhook_secret', 'path' => '/api/signals/clearcue',  'env_var' => 'CLEARCUE_WEBHOOK_SECRET'],
     ];
 
     /**

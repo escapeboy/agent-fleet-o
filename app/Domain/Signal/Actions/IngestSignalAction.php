@@ -5,6 +5,7 @@ namespace App\Domain\Signal\Actions;
 use App\Domain\Shared\Services\ContactResolver;
 use App\Domain\Signal\Jobs\ExtractSignalEntitiesJob;
 use App\Domain\Signal\Jobs\ProcessSignalMediaJob;
+use App\Domain\Signal\Jobs\RecalculateIntentScoreJob;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\ConnectorBindingGate;
 use App\Domain\Trigger\Jobs\EvaluateTriggerRulesJob;
@@ -147,6 +148,16 @@ class IngestSignalAction
 
         // Evaluate trigger rules asynchronously (zero overhead to HTTP response)
         EvaluateTriggerRulesJob::dispatch($signal->id);
+
+        // Recalculate composite intent score when entity has a stable identifier.
+        // Skips intent_score signals to prevent scoring recursion.
+        if ($teamId !== null && ! empty($sourceIdentifier) && $sourceType !== 'intent_score') {
+            $entityType = str_contains($sourceIdentifier, 'linkedin.com/in/')
+                ? 'person'
+                : 'company';
+
+            RecalculateIntentScoreJob::dispatch($teamId, $sourceIdentifier, $entityType);
+        }
 
         return $signal;
     }

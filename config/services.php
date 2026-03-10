@@ -73,6 +73,10 @@ return [
         'webhook_url' => env('GOOGLE_CHAT_WEBHOOK_URL'),
     ],
 
+    'clearcue' => [
+        'webhook_secret' => env('CLEARCUE_WEBHOOK_SECRET'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Platform AI API Keys (immutable originals for BYOK key restoration)

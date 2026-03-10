@@ -7,7 +7,7 @@ return [
      */
     'rp' => [
         'name' => env('APP_NAME', 'FleetQ'),
-        'id'   => env('WEBAUTHN_ID', 'localhost'),
+        'id' => env('WEBAUTHN_ID', 'localhost'),
     ],
 
     /*
@@ -46,8 +46,8 @@ return [
      */
     'authenticator_selection_criteria' => [
         'authenticator_attachment' => null, // null = platform + cross-platform
-        'resident_key'             => 'preferred',
-        'require_resident_key'     => false,
-        'user_verification'        => 'preferred',
+        'resident_key' => 'preferred',
+        'require_resident_key' => false,
+        'user_verification' => 'preferred',
     ],
 ];
