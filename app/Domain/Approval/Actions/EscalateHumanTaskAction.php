@@ -5,10 +5,13 @@ namespace App\Domain\Approval\Actions;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Shared\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 
 class EscalateHumanTaskAction
 {
+    public function __construct(private readonly NotificationService $notifications) {}
+
     public function execute(ApprovalRequest $approvalRequest): bool
     {
         if ($approvalRequest->status !== ApprovalStatus::Pending) {
@@ -49,6 +52,19 @@ class EscalateHumanTaskAction
             'level' => $nextLevel,
             'assigned_to' => $nextAssignee,
         ]);
+
+        // Notify the newly assigned user (if we have a user ID to target)
+        if ($nextAssignee && $approvalRequest->team_id) {
+            $this->notifications->notify(
+                userId: $nextAssignee,
+                teamId: $approvalRequest->team_id,
+                type: 'approval.escalated',
+                title: 'Human Task Escalated',
+                body: 'A task has been escalated to you and requires your attention.',
+                actionUrl: '/approvals',
+                data: ['approval_id' => $approvalRequest->id, 'url' => '/approvals'],
+            );
+        }
 
         return true;
     }

@@ -136,3 +136,33 @@ html {
         scroll-behavior: auto !important;
     }
 }
+
+/* ─── View Transitions API ─── */
+/* Smooth page transitions when using wire:navigate + startViewTransition */
+@supports (view-transition-name: root) {
+    ::view-transition-old(root) {
+        animation: 120ms ease-in fleetq-fade-out;
+    }
+
+    ::view-transition-new(root) {
+        animation: 180ms ease-out fleetq-fade-in;
+    }
+
+    @keyframes fleetq-fade-out {
+        from { opacity: 1; }
+        to   { opacity: 0; }
+    }
+
+    @keyframes fleetq-fade-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+
+    /* Respect prefers-reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+            animation: none;
+        }
+    }
+}

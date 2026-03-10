@@ -1,4 +1,4 @@
-<div wire:poll.2s>
+<div wire:poll.2s x-data="wakeLock" x-init="acquire()">
     @if(!$execution)
         <p class="text-sm text-gray-400">Execution not found.</p>
     @else

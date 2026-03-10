@@ -8,9 +8,9 @@ import { NetworkFirst, CacheFirst, NetworkOnly } from 'workbox-strategies';
 import { clientsClaim } from 'workbox-core';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
+import { BackgroundSyncPlugin } from 'workbox-background-sync';
 
-// Take control of all clients immediately on install/update
-self.skipWaiting();
+// Take control of all clients as soon as the SW activates (safe — runs after skipWaiting)
 clientsClaim();
 
 // Clean up precaches from older SW versions
@@ -76,6 +76,31 @@ registerRoute(
     })
 );
 
+// ─── Background Sync ────────────────────────────────────────────────────────
+// Retry failed POST requests when connectivity is restored.
+// Approval decisions and signal ingestion are queued offline and replayed on reconnect.
+const approvalSyncPlugin = new BackgroundSyncPlugin('fleetq-approvals-queue', {
+    maxRetentionTime: 24 * 60, // Retry for up to 24 hours (in minutes)
+});
+const signalSyncPlugin = new BackgroundSyncPlugin('fleetq-signals-queue', {
+    maxRetentionTime: 24 * 60,
+});
+
+registerRoute(
+    ({ url, request }) =>
+        url.pathname.match(/^\/api\/v1\/approvals\/[^/]+\/(approve|reject)$/) &&
+        request.method === 'POST',
+    new NetworkOnly({ plugins: [approvalSyncPlugin] }),
+    'POST'
+);
+
+registerRoute(
+    ({ url, request }) =>
+        url.pathname === '/api/v1/signals' && request.method === 'POST',
+    new NetworkOnly({ plugins: [signalSyncPlugin] }),
+    'POST'
+);
+
 // ─── Offline Page Pre-cache ─────────────────────────────────────────────────
 // Ensure /offline.html is always cached separately so the fallback handler finds it
 self.addEventListener('install', (event) => {
@@ -139,5 +164,39 @@ self.addEventListener('notificationclick', function (event) {
                 return clients.openWindow(url);
             }
         })
+    );
+});
+
+// ─── Background Fetch Handlers ──────────────────────────────────────────────
+// Called when a background artifact download completes (even if tab was closed)
+self.addEventListener('backgroundfetchsuccess', (event) => {
+    const bgFetch = event.registration;
+
+    event.waitUntil(async function () {
+        // Cache all fetched responses so the page can retrieve them
+        const cache = await caches.open('fleetq-bg-downloads');
+        const records = await bgFetch.matchAll();
+
+        await Promise.all(
+            records.map(async (record) => {
+                const response = await record.responseReady;
+                await cache.put(record.request, response);
+            })
+        );
+
+        // Notify open windows that the download is available
+        const allClients = await clients.matchAll({ includeUncontrolled: true });
+        const artifactId = bgFetch.id.replace('artifact-', '');
+        for (const client of allClients) {
+            client.postMessage({ type: 'artifact-download-complete', artifactId });
+        }
+
+        await event.updateUI({ title: `${bgFetch.id} — download complete` });
+    }());
+});
+
+self.addEventListener('backgroundfetchfail', (event) => {
+    event.waitUntil(
+        event.updateUI({ title: `Download failed — ${event.registration.id}` })
     );
 });

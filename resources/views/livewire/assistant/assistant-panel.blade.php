@@ -319,7 +319,7 @@
                     <span class="inline-flex items-center rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">Local</span>
                 @endif
             </div>
-            <div class="flex items-end gap-2">
+            <div class="flex items-end gap-2" x-data="speechInput" x-on:speech-result.window="inputText = $event.detail.text">
                 <div class="flex-1">
                     <textarea
                         x-ref="messageInput"
@@ -332,6 +332,19 @@
                         :disabled="sending || $wire.pendingMessageId !== ''"
                     ></textarea>
                 </div>
+                {{-- Mic button — only rendered when SpeechRecognition is supported --}}
+                <button
+                    x-show="isSupported"
+                    type="button"
+                    x-on:click="toggle()"
+                    :title="isListening ? 'Stop recording' : 'Dictate message'"
+                    :class="isListening ? 'bg-red-100 text-red-600 ring-2 ring-red-400' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+                    class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                    </svg>
+                </button>
                 <button
                     type="button"
                     x-on:click="send()"
@@ -345,6 +358,7 @@
             </div>
             <p class="mt-1.5 text-center text-[10px] text-gray-400">
                 Press Enter to send, Shift+Enter for new line
+                <span x-show="isListening" class="ml-2 text-red-500">● Recording…</span>
             </p>
         </div>
     </div>

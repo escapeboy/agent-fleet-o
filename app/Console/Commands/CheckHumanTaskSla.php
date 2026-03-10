@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Domain\Approval\Actions\EscalateHumanTaskAction;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Shared\Services\NotificationService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -14,7 +15,7 @@ class CheckHumanTaskSla extends Command
 
     protected $description = 'Check SLA deadlines for pending human tasks and escalate if overdue';
 
-    public function handle(EscalateHumanTaskAction $escalate): int
+    public function handle(EscalateHumanTaskAction $escalate, NotificationService $notifications): int
     {
         $overdue = ApprovalRequest::withoutGlobalScopes()
             ->where('status', ApprovalStatus::Pending)
@@ -43,6 +44,18 @@ class CheckHumanTaskSla extends Command
                     'experiment_id' => $request->experiment_id,
                     'sla_deadline' => $request->sla_deadline,
                 ]);
+
+                if ($request->assigned_to && $request->team_id) {
+                    $notifications->notify(
+                        userId: $request->assigned_to,
+                        teamId: $request->team_id,
+                        type: 'human_task.sla_breached',
+                        title: 'Human Task SLA Breached',
+                        body: 'A task assigned to you has expired without being completed.',
+                        actionUrl: '/approvals',
+                        data: ['approval_id' => $request->id, 'url' => '/approvals'],
+                    );
+                }
 
                 $expired++;
             }

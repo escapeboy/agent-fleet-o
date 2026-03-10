@@ -11,6 +11,7 @@ use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Models\Workflow;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class WorkflowBuilderPage extends Component
@@ -221,6 +222,45 @@ class WorkflowBuilderPage extends Component
             $this->redirectRoute('workflows.show', $workflow);
         } elseif (! $result['valid']) {
             session()->flash('error', 'Cannot activate: fix validation errors first.');
+        }
+    }
+
+    /**
+     * Handle a workflow file imported via the PWA File Handling API.
+     * Dispatched by pwa-features.js when the user opens a .json/.yaml file with FleetQ.
+     */
+    #[On('file-imported')]
+    public function fileImported(string $content, string $name, string $type): void
+    {
+        try {
+            $data = match (true) {
+                str_ends_with($name, '.json') => json_decode($content, true, flags: JSON_THROW_ON_ERROR),
+                default => [], // YAML parsing requires a package; emit an error for now
+            };
+
+            if (! is_array($data)) {
+                $this->addError('import', 'Invalid file format.');
+
+                return;
+            }
+
+            // Populate graph from imported definition
+            if (! empty($data['name'])) {
+                $this->name = $data['name'];
+            }
+            if (! empty($data['description'])) {
+                $this->description = $data['description'];
+            }
+            if (! empty($data['nodes']) && is_array($data['nodes'])) {
+                $this->nodes = $data['nodes'];
+            }
+            if (! empty($data['edges']) && is_array($data['edges'])) {
+                $this->edges = $data['edges'];
+            }
+
+            session()->flash('success', "Workflow imported from {$name}. Review and save when ready.");
+        } catch (\JsonException $e) {
+            $this->addError('import', 'Could not parse file: '.$e->getMessage());
         }
     }
 

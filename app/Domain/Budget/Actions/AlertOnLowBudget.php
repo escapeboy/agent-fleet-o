@@ -4,11 +4,14 @@ namespace App\Domain\Budget\Actions;
 
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Services\NotificationService;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Log;
 
 class AlertOnLowBudget
 {
+    public function __construct(private readonly NotificationService $notifications) {}
+
     /**
      * Check experiment budget utilization and create an alert if above threshold.
      */
@@ -54,6 +57,22 @@ class AlertOnLowBudget
             'experiment_id' => $experiment->id,
             'pct_used' => round($pctUsed, 1),
         ]);
+
+        if ($experiment->team_id && $experiment->user_id) {
+            $this->notifications->notify(
+                userId: $experiment->user_id,
+                teamId: $experiment->team_id,
+                type: 'experiment.budget.warning',
+                title: 'Experiment Budget Warning',
+                body: sprintf(
+                    'Budget %s%% used on "%s". Consider increasing the cap.',
+                    round($pctUsed, 0),
+                    $experiment->name ?? 'Experiment',
+                ),
+                actionUrl: '/experiments/'.$experiment->id,
+                data: ['experiment_id' => $experiment->id, 'url' => '/experiments/'.$experiment->id],
+            );
+        }
 
         return true;
     }
