@@ -24,10 +24,12 @@ return new class extends Migration
         });
 
         // Add vector column (pgvector 1536-dim for text-embedding-3-small / ada-002)
-        DB::statement('ALTER TABLE chatbot_kb_chunks ADD COLUMN embedding vector(1536)');
-
-        // HNSW index for fast approximate nearest-neighbour search (cosine distance)
-        DB::statement('CREATE INDEX chatbot_kb_chunks_embedding_hnsw_idx ON chatbot_kb_chunks USING hnsw (embedding vector_cosine_ops)');
+        // Only if pgvector extension is installed on this system
+        $hasVector = DB::scalar("SELECT COUNT(*) FROM pg_extension WHERE extname = 'vector'") > 0;
+        if ($hasVector) {
+            DB::statement('ALTER TABLE chatbot_kb_chunks ADD COLUMN embedding vector(1536)');
+            DB::statement('CREATE INDEX chatbot_kb_chunks_embedding_hnsw_idx ON chatbot_kb_chunks USING hnsw (embedding vector_cosine_ops)');
+        }
     }
 
     public function down(): void
