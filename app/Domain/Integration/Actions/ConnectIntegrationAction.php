@@ -5,8 +5,10 @@ namespace App\Domain\Integration\Actions;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Models\Integration;
+use App\Domain\Integration\Models\WebhookRoute;
 use App\Domain\Integration\Services\IntegrationManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -55,7 +57,7 @@ class ConnectIntegrationAction
                 $credentialId = $credential->id;
             }
 
-            return Integration::withoutGlobalScopes()->create([
+            $integration = Integration::withoutGlobalScopes()->create([
                 'team_id' => $teamId,
                 'driver' => $driver,
                 'name' => $name,
@@ -64,6 +66,19 @@ class ConnectIntegrationAction
                 'config' => $config,
                 'meta' => [],
             ]);
+
+            // Auto-create a WebhookRoute for webhook-only integrations so the
+            // endpoint URL is immediately visible on the integration detail page.
+            if ($integrationDriver->authType() === AuthType::WebhookOnly) {
+                WebhookRoute::create([
+                    'integration_id' => $integration->id,
+                    'slug' => Str::random(32),
+                    'signing_secret' => Str::random(40),
+                    'is_active' => true,
+                ]);
+            }
+
+            return $integration;
         });
     }
 }
