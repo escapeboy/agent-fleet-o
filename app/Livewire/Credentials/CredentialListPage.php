@@ -93,7 +93,13 @@ class CredentialListPage extends Component
             'credentials' => $query->paginate(20),
             'types' => CredentialType::cases(),
             'statuses' => CredentialStatus::cases(),
+            'team' => $team,
+            'kmsConfig' => $kmsConfig,
+            'canCreate' => true,
             'creatorSources' => CredentialSource::cases(),
             'team' => $team,
             'kmsConfig' => $kmsConfig,
             'canCreate' => true,
+        ])->layout('layouts.app', ['header' => 'Credentials']);
+    }
+}

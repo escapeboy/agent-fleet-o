@@ -106,6 +106,48 @@ return [
             'opencode-default' => ['label' => 'OpenCode (Default)', 'input_cost' => 0, 'output_cost' => 0],
         ],
     ],
+    'gemini-cli' => [
+        'name' => 'Gemini CLI (Local)',
+        'local' => true,
+        'agent_key' => 'gemini-cli',
+        'models' => [
+            'gemini-2.5-pro' => ['label' => 'Gemini 2.5 Pro', 'input_cost' => 0, 'output_cost' => 0],
+            'gemini-2.5-flash' => ['label' => 'Gemini 2.5 Flash', 'input_cost' => 0, 'output_cost' => 0],
+            'gemini-3-pro' => ['label' => 'Gemini 3 Pro', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'kiro' => [
+        'name' => 'Kiro CLI (Local)',
+        'local' => true,
+        'agent_key' => 'kiro',
+        'models' => [
+            'kiro-default' => ['label' => 'Kiro (Default)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'aider' => [
+        'name' => 'Aider (Local)',
+        'local' => true,
+        'agent_key' => 'aider',
+        'models' => [
+            'aider-default' => ['label' => 'Aider (Default)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'amp' => [
+        'name' => 'Amp (Local)',
+        'local' => true,
+        'agent_key' => 'amp',
+        'models' => [
+            'amp-default' => ['label' => 'Amp (Default)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'opencode' => [
+        'name' => 'OpenCode (Local)',
+        'local' => true,
+        'agent_key' => 'opencode',
+        'models' => [
+            'opencode-default' => ['label' => 'OpenCode (Default)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
     'cursor' => [
         'name' => 'Cursor (Local)',
         'local' => true,
@@ -118,3 +160,55 @@ return [
             'composer-1.5'   => ['label' => 'Composer 1.5 (Cursor native)', 'input_cost' => 0, 'output_cost' => 0],
         ],
     ],
+
+    // HTTP-based local LLM providers (Ollama, OpenAI-compatible endpoints)
+    'ollama' => [
+        'name' => 'Ollama',
+        'http_local' => true,
+        'default_url' => 'http://localhost:11434',
+        'url_hint' => 'Root URL without /v1 suffix — e.g. http://localhost:11434',
+        'models' => [
+            'llama3.3' => ['label' => 'Llama 3.3 (70B)',         'input_cost' => 0, 'output_cost' => 0],
+            'llama3.2' => ['label' => 'Llama 3.2 (3B)',          'input_cost' => 0, 'output_cost' => 0],
+            'llama3.1' => ['label' => 'Llama 3.1 (8B)',          'input_cost' => 0, 'output_cost' => 0],
+            'mistral' => ['label' => 'Mistral 7B',              'input_cost' => 0, 'output_cost' => 0],
+            'mistral-nemo' => ['label' => 'Mistral Nemo (12B)',      'input_cost' => 0, 'output_cost' => 0],
+            'qwen2.5' => ['label' => 'Qwen 2.5 (7B)',           'input_cost' => 0, 'output_cost' => 0],
+            'qwen2.5:14b' => ['label' => 'Qwen 2.5 (14B)',          'input_cost' => 0, 'output_cost' => 0],
+            'qwen2.5:32b' => ['label' => 'Qwen 2.5 (32B)',          'input_cost' => 0, 'output_cost' => 0],
+            'qwen2.5-coder' => ['label' => 'Qwen 2.5 Coder (7B)',     'input_cost' => 0, 'output_cost' => 0],
+            'gemma3' => ['label' => 'Gemma 3 (4B)',            'input_cost' => 0, 'output_cost' => 0],
+            'gemma3:12b' => ['label' => 'Gemma 3 (12B)',           'input_cost' => 0, 'output_cost' => 0],
+            'gemma3:27b' => ['label' => 'Gemma 3 (27B)',           'input_cost' => 0, 'output_cost' => 0],
+            'phi4' => ['label' => 'Phi-4 (14B)',             'input_cost' => 0, 'output_cost' => 0],
+            'phi4-mini' => ['label' => 'Phi-4 Mini (3.8B)',       'input_cost' => 0, 'output_cost' => 0],
+            'deepseek-r1' => ['label' => 'DeepSeek R1 (7B)',        'input_cost' => 0, 'output_cost' => 0],
+            'deepseek-r1:14b' => ['label' => 'DeepSeek R1 (14B)',       'input_cost' => 0, 'output_cost' => 0],
+            'codestral' => ['label' => 'Codestral (22B)',         'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+
+    'openai_compatible' => [
+        'name' => 'OpenAI-Compatible',
+        'http_local' => true,
+        'default_url' => 'http://localhost:1234/v1',
+        'url_hint' => 'URL with /v1 suffix — e.g. http://localhost:1234/v1',
+        'models' => [], // Dynamic — set by the user when configuring the endpoint
+    ],
+
+    // Bridge-backed providers — routed through the FleetQ Bridge daemon
+    'bridge_llm' => [
+        'name' => 'Local LLM (via FleetQ Bridge)',
+        'bridge' => true,
+        'cost_per_token' => ['input' => 0, 'output' => 0],
+        'models' => [], // Populated dynamically from bridge manifest
+    ],
+
+    'bridge_agent' => [
+        'name' => 'Local AI Agent (via FleetQ Bridge)',
+        'bridge' => true,
+        'local' => false, // Not a CLI-based local agent — handled by the bridge
+        'cost_per_token' => ['input' => 0, 'output' => 0],
+        'models' => [], // Populated dynamically from bridge manifest
+    ],
+];
