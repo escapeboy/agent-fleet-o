@@ -71,6 +71,21 @@
              class="fixed inset-0 z-40 bg-black/50 lg:hidden"
              style="display: none;"></div>
 
+||||||| 0213205
+    <div class="flex h-screen overflow-hidden">
+    <div class="flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
+        {{-- Mobile overlay backdrop --}}
+        <div x-show="sidebarOpen"
+             x-transition:enter="transition-opacity ease-linear duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="sidebarOpen = false"
+             class="fixed inset-0 z-40 bg-black/50 lg:hidden"
+             style="display: none;"></div>
+
         {{-- Sidebar --}}
         <x-sidebar />
 

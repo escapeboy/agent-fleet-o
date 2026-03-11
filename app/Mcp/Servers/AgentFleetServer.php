@@ -17,6 +17,14 @@ use App\Mcp\Tools\Chatbot\ChatbotListTool;
 use App\Mcp\Tools\Chatbot\ChatbotSessionListTool;
 use App\Mcp\Tools\Chatbot\ChatbotToggleStatusTool;
 use App\Mcp\Tools\Chatbot\ChatbotUpdateTool;
+||||||| 0213205
+use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
+use App\Mcp\Tools\Admin\AdminBillingRefundTool;
+use App\Mcp\Tools\Admin\AdminSecurityOverviewTool;
+use App\Mcp\Tools\Admin\AdminTeamBillingDetailTool;
+use App\Mcp\Tools\Admin\AdminTeamSuspendTool;
+use App\Mcp\Tools\Admin\AdminUserRevokeSessionsTool;
+use App\Mcp\Tools\Admin\AdminUserSendPasswordResetTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
@@ -208,6 +216,9 @@ class AgentFleetServer extends Server
     public int $maxPaginationLength = 200;
 
     protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, chatbots, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, email themes, email templates, and team settings.';
+||||||| 0213205
+    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, and team settings.';
+    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, email themes, email templates, and team settings.';
 
     protected function boot(): void
     {
@@ -332,6 +343,9 @@ class AgentFleetServer extends Server
         ApprovalWebhookTool::class,
 
         // Signal (19)
+||||||| 0213205
+        // Signal (11)
+        // Signal (13)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -349,6 +363,9 @@ class AgentFleetServer extends Server
         KgSearchTool::class,
         KgEntityFactsTool::class,
         KgAddFactTool::class,
+        ImapMailboxTool::class,
+        EmailReplyTool::class,
+||||||| 0213205
         ImapMailboxTool::class,
         EmailReplyTool::class,
 

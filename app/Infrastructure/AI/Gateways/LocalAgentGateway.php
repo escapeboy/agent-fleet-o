@@ -690,6 +690,12 @@ class LocalAgentGateway implements AiGatewayInterface
             'cursor' => "{$binaryPath} -p --output-format stream-json --force --trust --approve-mcps"
                 .($model && $model !== 'auto' ? ' --model '.escapeshellarg($model) : '')
                 .$escapedPrompt,
+||||||| 0213205
+            'gemini-cli' => "{$binaryPath} -p --output-format json".($model ? ' -m '.escapeshellarg($model) : ''),
+            'kiro' => "{$binaryPath} chat --no-interactive{$escapedPrompt}",
+            'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
+            'amp' => "{$binaryPath} -x --stream-json{$escapedPrompt}",
+            'opencode' => "{$binaryPath} run --format json".($model ? ' -m '.escapeshellarg($model) : '').$escapedPrompt,
             default => throw new RuntimeException("No command template for agent: {$agentKey}"),
         };
     }
@@ -923,6 +929,12 @@ class LocalAgentGateway implements AiGatewayInterface
                 'amp' => 'amp',
                 'opencode' => 'opencode',
                 'cursor' => 'cursor',
+||||||| 0213205
+                'gemini-cli' => 'gemini-cli',
+                'kiro' => 'kiro',
+                'aider' => 'aider',
+                'amp' => 'amp',
+                'opencode' => 'opencode',
             ];
 
             if ($model && isset($knownModels[$model])) {

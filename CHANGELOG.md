@@ -71,6 +71,7 @@ All notable changes to Agent Fleet Community Edition are documented here.
 
 ---
 
+
 ## [1.3.0] - 2026-03-04
 
 ### Added

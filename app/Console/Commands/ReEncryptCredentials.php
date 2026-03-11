@@ -71,6 +71,7 @@ class ReEncryptCredentials extends Command
         // so we eager-load the integration relation to resolve team_id without N+1.
         $this->reEncryptWebhookRoutes($batch, $dryRun, $encryption);
 
+
         $this->newLine();
         $this->components->info("Re-encryption complete: {$this->reEncrypted} migrated, {$this->skipped} already v2, {$this->failed} failed.");
 
@@ -401,6 +402,7 @@ class ReEncryptCredentials extends Command
         $bar->finish();
         $this->newLine();
     }
+
 
     private function isV2Format(string $stored): bool
     {

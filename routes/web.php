@@ -3,6 +3,8 @@
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
+||||||| 0213205
+use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
@@ -228,4 +230,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.
     // No manual route registration needed here.
+||||||| 0213205
+
+    // Email themes
+    Route::get('/email/themes', EmailThemeListPage::class)->name('email.themes.index');
+    Route::get('/email/themes/{theme}', EmailThemeDetailPage::class)->name('email.themes.show');
+
+    // Email templates
+    Route::get('/email/templates', EmailTemplateListPage::class)->name('email.templates.index');
+    Route::get('/email/templates/{template}/edit', EmailTemplateBuilderPage::class)->name('email.templates.edit');
+    Route::get('/email/templates/{template}/preview', [EmailTemplatePreviewController::class, 'show'])->name('email.templates.preview');
 });

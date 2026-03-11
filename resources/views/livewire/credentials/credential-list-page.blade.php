@@ -40,6 +40,21 @@
                 New Credential
             </span>
         @endif
+||||||| 0213205
+        <a href="{{ route('credentials.create') }}"
+            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            New Credential
+        </a>
+        @if($canCreate)
+            <a href="{{ route('credentials.create') }}"
+                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                New Credential
+            </a>
+        @else
+            <span class="rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-400 cursor-not-allowed" title="Plan limit reached">
+                New Credential
+            </span>
+        @endif
     </div>
 
     {{-- Encryption Info --}}
@@ -95,6 +110,11 @@
                     <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Source</th>
                     <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Expires</th>
                     <th wire:click="sortBy('last_used_at')" class="hidden md:table-cell cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
+||||||| 0213205
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Expires</th>
+                    <th wire:click="sortBy('last_used_at')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Expires</th>
+                    <th wire:click="sortBy('last_used_at')" class="hidden md:table-cell cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Last Used {!! $sortIcon('last_used_at') !!}
                     </th>
                     <th wire:click="sortBy('created_at')" class="hidden md:table-cell cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
@@ -131,6 +151,9 @@
                                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">Human</span>
                             @endif
                         </td>
+                        <td class="hidden md:table-cell px-6 py-4 text-sm text-gray-500">
+||||||| 0213205
+                        <td class="px-6 py-4 text-sm text-gray-500">
                         <td class="hidden md:table-cell px-6 py-4 text-sm text-gray-500">
                             @if($credential->expires_at)
                                 <span class="{{ $credential->isExpired() ? 'text-red-600 font-medium' : '' }}">
