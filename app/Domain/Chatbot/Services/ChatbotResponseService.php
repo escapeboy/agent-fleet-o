@@ -5,8 +5,10 @@ namespace App\Domain\Chatbot\Services;
 use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Chatbot\Enums\ChatbotType;
+use App\Domain\Chatbot\Jobs\ExecuteChatbotWorkflowJob;
 use App\Domain\Chatbot\Models\Chatbot;
-use App\Domain\Chatbot\Models\ChatbotKbChunk;
+use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use Illuminate\Support\Facades\Cache;
@@ -40,7 +42,7 @@ class ChatbotResponseService
         $startedAt = microtime(true);
 
         // Persist the user message
-        $userMsg = ChatbotMessage::create([
+        ChatbotMessage::create([
             'session_id' => $session->id,
             'chatbot_id' => $chatbot->id,
             'team_id' => $chatbot->team_id,
@@ -59,10 +61,23 @@ class ChatbotResponseService
             $bestRagScore = ! empty($ragChunks) ? (float) ($ragChunks[0]['similarity'] ?? 0.0) : 0.0;
         }
 
+        // Workflow delegation — if a workflow is linked, delegate asynchronously
+        if ($chatbot->workflow_id) {
+            return $this->handleViaWorkflow(
+                chatbot: $chatbot,
+                session: $session,
+                userText: $userText,
+                actorUserId: $actorUserId,
+                startedAt: $startedAt,
+                contextMessages: $contextMessages,
+                ragChunks: $ragChunks,
+            );
+        }
+
         // Prepare input for the agent
         $agentInput = [
             'task' => $userText,
-            'context' => $this->formatContextForAgent($contextMessages, $userText, $ragChunks),
+            'context' => $this->formatContextForAgent($chatbot, $contextMessages, $userText, $ragChunks),
         ];
 
         // Execute the backing agent
@@ -78,6 +93,16 @@ class ChatbotResponseService
 
         // Composite confidence: LLM execution success + RAG best similarity score
         $confidence = $this->estimateConfidence($result, $bestRagScore);
+
+        // help_bot: append fallback message when low confidence and escalation is disabled
+        if (
+            $chatbot->type === ChatbotType::HelpBot
+            && ! $chatbot->human_escalation_enabled
+            && $confidence < (float) $chatbot->confidence_threshold
+            && $chatbot->fallback_message
+        ) {
+            $rawReply = $rawReply."\n\n".$chatbot->fallback_message;
+        }
 
         $needsEscalation = $chatbot->human_escalation_enabled
             && $confidence < (float) $chatbot->confidence_threshold;
@@ -95,7 +120,8 @@ class ChatbotResponseService
                 'was_escalated' => true,
             ]);
 
-            // Create approval request directly (chatbot-specific, not experiment-bound)
+            $timeoutHours = $chatbot->approval_timeout_hours ?? 48;
+
             ApprovalRequest::withoutGlobalScopes()->create([
                 'team_id' => $chatbot->team_id,
                 'chatbot_message_id' => $assistantMsg->id,
@@ -110,7 +136,7 @@ class ChatbotResponseService
                     'confidence' => $confidence,
                     'recent_messages' => array_slice($contextMessages, -5),
                 ],
-                'expires_at' => now()->addHours(48),
+                'expires_at' => now()->addHours($timeoutHours),
             ]);
 
             $this->invalidateContextCache($session);
@@ -118,14 +144,12 @@ class ChatbotResponseService
             return [
                 'message' => $assistantMsg,
                 'escalated' => true,
-                'reply' => null, // placeholder delivered to user
+                'reply' => null,
             ];
         }
 
-        // Normal path: persist and return
-        $ragSourceMeta = ! empty($ragChunks)
-            ? array_map(fn ($c) => ['chunk_id' => $c['id'], 'similarity' => $c['similarity']], $ragChunks)
-            : null;
+        // Normal path: build enriched source metadata and persist
+        $ragSourceMeta = $this->buildRagSourceMeta($chatbot, $ragChunks);
 
         $assistantMsg = ChatbotMessage::create([
             'session_id' => $session->id,
@@ -148,6 +172,53 @@ class ChatbotResponseService
             'message' => $assistantMsg,
             'escalated' => false,
             'reply' => $rawReply,
+        ];
+    }
+
+    /**
+     * Delegate message handling to an async workflow execution.
+     * Returns a pending placeholder — result delivered when workflow completes.
+     *
+     * @return array{message: ChatbotMessage, escalated: bool, reply: string|null}
+     */
+    private function handleViaWorkflow(
+        Chatbot $chatbot,
+        ChatbotSession $session,
+        string $userText,
+        string $actorUserId,
+        float $startedAt,
+        array $contextMessages,
+        array $ragChunks,
+    ): array {
+        $assistantMsg = ChatbotMessage::create([
+            'session_id' => $session->id,
+            'chatbot_id' => $chatbot->id,
+            'team_id' => $chatbot->team_id,
+            'role' => 'assistant',
+            'content' => null,
+            'was_escalated' => true,
+            'latency_ms' => (int) ((microtime(true) - $startedAt) * 1000),
+        ]);
+
+        $context = $this->formatContextForAgent($chatbot, $contextMessages, $userText, $ragChunks);
+
+        ExecuteChatbotWorkflowJob::dispatch(
+            chatbotId: $chatbot->id,
+            sessionId: $session->id,
+            messageId: $assistantMsg->id,
+            workflowId: $chatbot->workflow_id,
+            userText: $userText,
+            context: $context,
+            actorUserId: $actorUserId,
+            teamId: $chatbot->team_id,
+        )->onQueue('ai-calls');
+
+        $this->invalidateContextCache($session);
+
+        return [
+            'message' => $assistantMsg,
+            'escalated' => true,
+            'reply' => null,
         ];
     }
 
@@ -196,13 +267,25 @@ class ChatbotResponseService
         Cache::store('redis')->forget("chatbot:session:{$session->id}:context");
     }
 
-    private function formatContextForAgent(array $contextMessages, string $currentMessage, array $ragChunks = []): string
+    private function formatContextForAgent(Chatbot $chatbot, array $contextMessages, string $currentMessage, array $ragChunks = []): string
     {
         $parts = [];
 
         if (! empty($ragChunks)) {
             $docs = collect($ragChunks)
-                ->map(fn ($c) => "- {$c['content']}")
+                ->map(function ($c) use ($chatbot) {
+                    $content = $c['content'];
+
+                    // developer_assistant: wrap code-level chunks in fenced code blocks
+                    if (
+                        $chatbot->type === ChatbotType::DeveloperAssistant
+                        && ($c['access_level'] ?? '') === 'code'
+                    ) {
+                        $content = "```\n{$content}\n```";
+                    }
+
+                    return "- {$content}";
+                })
                 ->join("\n");
             $parts[] = "Reference documents:\n{$docs}";
         }
@@ -220,9 +303,50 @@ class ChatbotResponseService
     }
 
     /**
+     * Build RAG source metadata array, enriched with source name/URL for support_assistant.
+     */
+    private function buildRagSourceMeta(Chatbot $chatbot, array $ragChunks): ?array
+    {
+        if (empty($ragChunks)) {
+            return null;
+        }
+
+        if ($chatbot->type === ChatbotType::SupportAssistant) {
+            $sourceIds = array_unique(array_column($ragChunks, 'source_id'));
+            $sources = ChatbotKnowledgeSource::whereIn('id', $sourceIds)
+                ->get(['id', 'name', 'source_url'])
+                ->keyBy('id');
+
+            return array_map(fn ($c) => [
+                'chunk_id' => $c['id'],
+                'similarity' => $c['similarity'],
+                'source_name' => $sources[$c['source_id']]?->name ?? null,
+                'source_url' => $sources[$c['source_id']]?->source_url ?? null,
+            ], $ragChunks);
+        }
+
+        return array_map(fn ($c) => [
+            'chunk_id' => $c['id'],
+            'similarity' => $c['similarity'],
+        ], $ragChunks);
+    }
+
+    /**
+     * Returns the allowed access levels for RAG retrieval based on chatbot type.
+     */
+    private function allowedAccessLevels(Chatbot $chatbot): array
+    {
+        return match ($chatbot->type) {
+            ChatbotType::HelpBot => ['public', 'key'],
+            ChatbotType::DeveloperAssistant => ['internal', 'code'],
+            default => ['public', 'key', 'representative', 'internal', 'code'],
+        };
+    }
+
+    /**
      * Retrieve the top relevant KB chunks for a query using pgvector cosine similarity.
      *
-     * @return array<array{id: string, content: string, similarity: float}>
+     * @return array<array{id: string, content: string, similarity: float, access_level: string, source_id: string}>
      */
     private function retrieveRelevantChunks(Chatbot $chatbot, string $query, float $threshold = 0.72, int $topK = 5): array
     {
@@ -235,22 +359,39 @@ class ChatbotResponseService
             $vector = $response->embeddings[0]->embedding;
             $embeddingStr = '['.implode(',', $vector).']';
 
+            $allowedLevels = $this->allowedAccessLevels($chatbot);
+            $placeholders = implode(',', array_fill(0, count($allowedLevels), '?'));
+
+            $params = [
+                $embeddingStr,
+                $chatbot->id,
+                $chatbot->team_id,
+                ...$allowedLevels,
+                $embeddingStr,
+                $threshold,
+                $embeddingStr,
+                $topK,
+            ];
+
             $rows = DB::select(
-                "SELECT id, content, 1 - (embedding <=> ?::vector) AS similarity
+                "SELECT id, content, access_level, source_id, 1 - (embedding <=> ?::vector) AS similarity
                  FROM chatbot_kb_chunks
                  WHERE chatbot_id = ?
                    AND team_id = ?
                    AND embedding IS NOT NULL
+                   AND access_level IN ({$placeholders})
                    AND 1 - (embedding <=> ?::vector) >= ?
                  ORDER BY embedding <=> ?::vector
                  LIMIT ?",
-                [$embeddingStr, $chatbot->id, $chatbot->team_id, $embeddingStr, $threshold, $embeddingStr, $topK]
+                $params
             );
 
             return array_map(fn ($row) => [
                 'id' => $row->id,
                 'content' => $row->content,
                 'similarity' => (float) $row->similarity,
+                'access_level' => $row->access_level,
+                'source_id' => $row->source_id,
             ], $rows);
         } catch (\Throwable $e) {
             Log::warning('ChatbotResponseService: RAG retrieval failed', [

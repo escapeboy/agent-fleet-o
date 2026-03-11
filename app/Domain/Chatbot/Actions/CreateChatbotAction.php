@@ -31,6 +31,8 @@ class CreateChatbotAction
         ?string $fallbackMessage = null,
         array $config = [],
         array $widgetConfig = [],
+        ?string $workflowId = null,
+        ?int $approvalTimeoutHours = null,
     ): array {
         // Resolve or create backing agent
         if ($agentId) {
@@ -55,6 +57,7 @@ class CreateChatbotAction
         $chatbot = Chatbot::create([
             'team_id' => $teamId,
             'agent_id' => $agent->id,
+            'workflow_id' => $workflowId,
             'name' => $name,
             'slug' => $slug,
             'type' => $type,
@@ -64,6 +67,7 @@ class CreateChatbotAction
             'widget_config' => $widgetConfig ?: ['position' => 'bottom-right', 'theme_color' => '#6366f1'],
             'welcome_message' => $welcomeMessage,
             'fallback_message' => $fallbackMessage ?? "I'm not sure how to help with that. Please try rephrasing your question.",
+            'approval_timeout_hours' => $approvalTimeoutHours,
         ]);
 
         // Generate initial API token

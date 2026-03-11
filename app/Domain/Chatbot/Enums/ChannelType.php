@@ -8,6 +8,8 @@ enum ChannelType: string
     case Api = 'api';
     case Telegram = 'telegram';
     case Slack = 'slack';
+    case Webhook = 'webhook';
+    case TicketSystem = 'ticket_system';
 
     public function label(): string
     {
@@ -16,6 +18,8 @@ enum ChannelType: string
             self::Api => 'API',
             self::Telegram => 'Telegram',
             self::Slack => 'Slack',
+            self::Webhook => 'Webhook',
+            self::TicketSystem => 'Ticket System',
         };
     }
 
@@ -26,6 +30,8 @@ enum ChannelType: string
             self::Api => 'code-bracket',
             self::Telegram => 'paper-airplane',
             self::Slack => 'hashtag',
+            self::Webhook => 'arrow-path',
+            self::TicketSystem => 'ticket',
         };
     }
 }
