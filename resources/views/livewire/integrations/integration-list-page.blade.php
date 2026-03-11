@@ -104,10 +104,8 @@
                             <div class="space-y-2">
                                 <div class="flex gap-2">
                                     <input wire:model="credentialKey" placeholder="Field name (e.g. token)"
-                                        wire:keydown.enter="addCredential"
                                         class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none" />
                                     <input wire:model="credentialValue" type="password" placeholder="Value"
-                                        wire:keydown.enter="addCredential"
                                         class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none" />
                                     <button wire:click="addCredential"
                                             class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm hover:bg-gray-200">Add</button>
