@@ -6,6 +6,7 @@ use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Jobs\FireApprovalWebhookJob;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
@@ -32,6 +33,35 @@ class RejectAction
             'reviewer_notes' => $notes,
             'reviewed_at' => now(),
         ]);
+
+        // Credential review rejection: disable the credential
+        if ($approvalRequest->isCredentialReview()) {
+            $credential = $approvalRequest->credential;
+            if ($credential) {
+                $credential->update(['status' => CredentialStatus::Disabled]);
+            }
+
+            AuditEntry::withoutGlobalScopes()->create([
+                'user_id' => $reviewerId,
+                'team_id' => $approvalRequest->team_id,
+                'event' => 'approval.rejected',
+                'subject_type' => ApprovalRequest::class,
+                'subject_id' => $approvalRequest->id,
+                'properties' => [
+                    'credential_id' => $approvalRequest->credential_id,
+                    'reason' => $reason,
+                    'notes' => $notes,
+                ],
+                'created_at' => now(),
+            ]);
+
+            if ($approvalRequest->callback_url) {
+                $approvalRequest->update(['callback_status' => 'pending']);
+                FireApprovalWebhookJob::dispatch($approvalRequest->id);
+            }
+
+            return;
+        }
 
         AuditEntry::create([
             'user_id' => $reviewerId,

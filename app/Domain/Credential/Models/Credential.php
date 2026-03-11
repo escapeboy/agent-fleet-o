@@ -2,6 +2,7 @@
 
 namespace App\Domain\Credential\Models;
 
+use App\Domain\Credential\Enums\CredentialSource;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -10,6 +11,7 @@ use Database\Factories\Domain\Credential\CredentialFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Credential extends Model
@@ -33,6 +35,9 @@ class Credential extends Model
         'expires_at',
         'last_used_at',
         'last_rotated_at',
+        'creator_source',
+        'creator_type',
+        'creator_id',
     ];
 
     protected $hidden = ['secret_data'];
@@ -42,12 +47,18 @@ class Credential extends Model
         return [
             'credential_type' => CredentialType::class,
             'status' => CredentialStatus::class,
+            'creator_source' => CredentialSource::class,
             'secret_data' => TeamEncryptedArray::class,
             'metadata' => 'array',
             'expires_at' => 'datetime',
             'last_used_at' => 'datetime',
             'last_rotated_at' => 'datetime',
         ];
+    }
+
+    public function creator(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     public function isExpired(): bool

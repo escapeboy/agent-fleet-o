@@ -21,6 +21,9 @@ class CredentialResource extends JsonResource
             'is_expired' => $this->isExpired(),
             'last_used_at' => $this->last_used_at?->toISOString(),
             'last_rotated_at' => $this->last_rotated_at?->toISOString(),
+            'creator_source' => $this->creator_source?->value ?? 'human',
+            'creator_type' => $this->creator_type,
+            'creator_id' => $this->creator_id,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];

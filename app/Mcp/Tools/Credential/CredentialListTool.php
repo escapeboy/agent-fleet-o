@@ -16,14 +16,17 @@ class CredentialListTool extends Tool
 {
     protected string $name = 'credential_list';
 
-    protected string $description = 'List credentials with optional status filter. Returns id, name, type, status, and expiry. Never includes secret data.';
+    protected string $description = 'List credentials with optional filters. Returns id, name, type, status, creator_source, and expiry. Never includes secret data.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
             'status' => $schema->string()
-                ->description('Filter by status: active, disabled')
-                ->enum(['active', 'disabled']),
+                ->description('Filter by status: active, disabled, pending_review')
+                ->enum(['active', 'disabled', 'pending_review']),
+            'creator_source' => $schema->string()
+                ->description('Filter by creator source: human, agent, system')
+                ->enum(['human', 'agent', 'system']),
             'limit' => $schema->integer()
                 ->description('Max results to return (default 10, max 100)')
                 ->default(10),
@@ -44,6 +47,10 @@ class CredentialListTool extends Tool
             $query->where('status', $status);
         }
 
+        if ($creatorSource = $request->get('creator_source')) {
+            $query->where('creator_source', $creatorSource);
+        }
+
         $limit = min((int) ($request->get('limit', 10)), 100);
 
         $credentials = $query->limit($limit)->get();
@@ -55,6 +62,7 @@ class CredentialListTool extends Tool
                 'name' => $c->name,
                 'type' => $c->credential_type->value,
                 'status' => $c->status->value,
+                'creator_source' => $c->creator_source?->value ?? 'human',
                 'expires_at' => $c->expires_at?->toIso8601String(),
             ])->toArray(),
         ]));

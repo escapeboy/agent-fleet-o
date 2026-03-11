@@ -20,7 +20,7 @@ class ResolveProjectCredentialsAction
 
         return Credential::withoutGlobalScopes()
             ->whereIn('id', $project->allowed_credential_ids)
-            ->where('status', CredentialStatus::Active)
+            ->where('status', CredentialStatus::Active) // excludes pending_review and disabled
             ->get()
             ->reject(fn (Credential $c) => $c->isExpired())
             ->map(fn (Credential $c) => [
