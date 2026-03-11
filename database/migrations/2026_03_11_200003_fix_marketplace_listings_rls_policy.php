@@ -42,13 +42,13 @@ return new class extends Migration
         ");
 
         // Write policy: own team only (prevents writing to other teams' listings)
-        DB::statement("
+        DB::statement('
             CREATE POLICY marketplace_listings_write ON marketplace_listings
             AS PERMISSIVE
             FOR ALL
             USING (team_id = current_team_id())
             WITH CHECK (team_id = current_team_id())
-        ");
+        ');
     }
 
     public function down(): void
@@ -69,12 +69,12 @@ return new class extends Migration
         DB::statement('DROP POLICY IF EXISTS marketplace_listings_write ON marketplace_listings');
 
         // Restore original strict policy
-        DB::statement("
+        DB::statement('
             CREATE POLICY team_isolation ON marketplace_listings
             AS PERMISSIVE
             FOR ALL
             USING (team_id = current_team_id())
             WITH CHECK (team_id = current_team_id())
-        ");
+        ');
     }
 };

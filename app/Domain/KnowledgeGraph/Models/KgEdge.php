@@ -33,10 +33,10 @@ class KgEdge extends Model
     {
         return [
             'fact_embedding' => 'array',
-            'valid_at'       => 'datetime',
-            'invalid_at'     => 'datetime',
-            'expired_at'     => 'datetime',
-            'attributes'     => 'array',
+            'valid_at' => 'datetime',
+            'invalid_at' => 'datetime',
+            'expired_at' => 'datetime',
+            'attributes' => 'array',
         ];
     }
 

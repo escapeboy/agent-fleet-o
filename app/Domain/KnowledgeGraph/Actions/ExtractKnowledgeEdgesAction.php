@@ -53,8 +53,8 @@ class ExtractKnowledgeEdgesAction
             } catch (\Throwable $e) {
                 Log::warning('ExtractKnowledgeEdgesAction: Failed to store edge', [
                     'signal_id' => $signal->id,
-                    'edge'      => $edge,
-                    'error'     => $e->getMessage(),
+                    'edge' => $edge,
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -101,12 +101,12 @@ class ExtractKnowledgeEdgesAction
 
             // Filter by confidence and required fields
             return array_filter($decoded, fn ($e) => isset($e['source_entity'], $e['relation'], $e['target_entity'], $e['fact'])
-                && ((float) ($e['confidence'] ?? 1.0)) >= 0.7
+                && ((float) ($e['confidence'] ?? 1.0)) >= 0.7,
             );
         } catch (\Throwable $e) {
             Log::warning('ExtractKnowledgeEdgesAction: LLM extraction failed', [
                 'team_id' => $teamId,
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return [];
@@ -154,16 +154,16 @@ class ExtractKnowledgeEdgesAction
         }
 
         KgEdge::create([
-            'team_id'          => $teamId,
+            'team_id' => $teamId,
             'source_entity_id' => $sourceEntity->id,
             'target_entity_id' => $targetEntity->id,
-            'relation_type'    => $relationType,
-            'fact'             => $edge['fact'],
-            'fact_embedding'   => $factEmbedding ? $this->embeddingToArray($factEmbedding) : null,
-            'valid_at'         => $validAt,
-            'invalid_at'       => null,
-            'episode_id'       => $signal->id,
-            'attributes'       => ['confidence' => $edge['confidence'] ?? 1.0],
+            'relation_type' => $relationType,
+            'fact' => $edge['fact'],
+            'fact_embedding' => $factEmbedding ? $this->embeddingToArray($factEmbedding) : null,
+            'valid_at' => $validAt,
+            'invalid_at' => null,
+            'episode_id' => $signal->id,
+            'attributes' => ['confidence' => $edge['confidence'] ?? 1.0],
         ]);
     }
 
@@ -176,14 +176,14 @@ class ExtractKnowledgeEdgesAction
             ->where('type', $type)
             ->where('canonical_name', $canonicalName)
             ->firstOr(fn () => Entity::create([
-                'team_id'        => $teamId,
-                'type'           => $type,
-                'name'           => trim($name),
+                'team_id' => $teamId,
+                'type' => $type,
+                'name' => trim($name),
                 'canonical_name' => $canonicalName,
-                'metadata'       => [],
-                'mention_count'  => 1,
-                'first_seen_at'  => now(),
-                'last_seen_at'   => now(),
+                'metadata' => [],
+                'mention_count' => 1,
+                'first_seen_at' => now(),
+                'last_seen_at' => now(),
             ]));
     }
 

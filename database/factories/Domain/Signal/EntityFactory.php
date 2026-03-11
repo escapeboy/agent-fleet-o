@@ -15,14 +15,14 @@ class EntityFactory extends Factory
         $name = fake()->name();
 
         return [
-            'team_id'        => Team::factory(),
-            'type'           => fake()->randomElement(['person', 'company', 'location', 'product', 'topic']),
-            'name'           => $name,
+            'team_id' => Team::factory(),
+            'type' => fake()->randomElement(['person', 'company', 'location', 'product', 'topic']),
+            'name' => $name,
             'canonical_name' => strtolower($name),
-            'metadata'       => [],
-            'mention_count'  => 1,
-            'first_seen_at'  => now(),
-            'last_seen_at'   => now(),
+            'metadata' => [],
+            'mention_count' => 1,
+            'first_seen_at' => now(),
+            'last_seen_at' => now(),
         ];
     }
 }

@@ -7,7 +7,6 @@ use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Shared\Models\Team;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Collection;
 
 class PlatformEmailThemesSeeder extends Seeder
 {

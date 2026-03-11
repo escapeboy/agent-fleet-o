@@ -42,8 +42,8 @@ class KgEntityFactsTool extends Tool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'entity_name'     => 'required|string|max:255',
-            'entity_type'     => 'nullable|string|in:person,company,location,product,topic',
+            'entity_name' => 'required|string|max:255',
+            'entity_type' => 'nullable|string|in:person,company,location,product,topic',
             'include_history' => 'nullable|boolean',
         ]);
 
@@ -64,8 +64,8 @@ class KgEntityFactsTool extends Tool
             if (! $entity) {
                 return Response::text(json_encode([
                     'entity_name' => $validated['entity_name'],
-                    'found'       => false,
-                    'message'     => 'No entity found with this name in the knowledge graph.',
+                    'found' => false,
+                    'message' => 'No entity found with this name in the knowledge graph.',
                 ]));
             }
 
@@ -79,25 +79,25 @@ class KgEntityFactsTool extends Tool
                 : $service->getCurrentFacts($teamId, $entity->id);
 
             $mapEdge = fn (KgEdge $edge) => [
-                'id'            => $edge->id,
+                'id' => $edge->id,
                 'source_entity' => $edge->sourceEntity?->name,
                 'relation_type' => $edge->relation_type,
                 'target_entity' => $edge->targetEntity?->name,
-                'fact'          => $edge->fact,
-                'valid_at'      => $edge->valid_at?->toIso8601String(),
-                'invalid_at'    => $edge->invalid_at?->toIso8601String(),
-                'is_current'    => $edge->invalid_at === null,
+                'fact' => $edge->fact,
+                'valid_at' => $edge->valid_at?->toIso8601String(),
+                'invalid_at' => $edge->invalid_at?->toIso8601String(),
+                'is_current' => $edge->invalid_at === null,
             ];
 
             return Response::text(json_encode([
                 'entity_name' => $entity->name,
                 'entity_type' => $entity->type,
-                'entity_id'   => $entity->id,
-                'found'       => true,
-                'facts'       => $facts->map($mapEdge)->values()->toArray(),
-                'fact_count'  => $facts->count(),
-                'first_seen'  => $entity->first_seen_at?->toIso8601String(),
-                'last_seen'   => $entity->last_seen_at?->toIso8601String(),
+                'entity_id' => $entity->id,
+                'found' => true,
+                'facts' => $facts->map($mapEdge)->values()->toArray(),
+                'fact_count' => $facts->count(),
+                'first_seen' => $entity->first_seen_at?->toIso8601String(),
+                'last_seen' => $entity->last_seen_at?->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());

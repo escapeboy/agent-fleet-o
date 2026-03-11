@@ -54,13 +54,13 @@ class KnowledgeGraphTest extends TestCase
         $target = Entity::factory()->create(['team_id' => $this->team->id]);
 
         return KgEdge::create(array_merge([
-            'team_id'          => $this->team->id,
+            'team_id' => $this->team->id,
             'source_entity_id' => $source->id,
             'target_entity_id' => $target->id,
-            'relation_type'    => 'works_at',
-            'fact'             => 'Alice works at Acme Corp',
-            'valid_at'         => now()->subDays(10),
-            'invalid_at'       => null,
+            'relation_type' => 'works_at',
+            'fact' => 'Alice works at Acme Corp',
+            'valid_at' => now()->subDays(10),
+            'invalid_at' => null,
         ], $attributes));
     }
 
@@ -84,22 +84,22 @@ class KnowledgeGraphTest extends TestCase
         );
 
         $this->assertDatabaseHas('kg_edges', [
-            'team_id'       => $this->team->id,
+            'team_id' => $this->team->id,
             'relation_type' => 'works_at',
-            'fact'          => 'Alice Chen is VP Engineering at Acme Corp',
-            'invalid_at'    => null,
+            'fact' => 'Alice Chen is VP Engineering at Acme Corp',
+            'invalid_at' => null,
         ]);
 
         $this->assertDatabaseHas('entities', [
-            'team_id'        => $this->team->id,
+            'team_id' => $this->team->id,
             'canonical_name' => 'alice chen',
-            'type'           => 'person',
+            'type' => 'person',
         ]);
 
         $this->assertDatabaseHas('entities', [
-            'team_id'        => $this->team->id,
+            'team_id' => $this->team->id,
             'canonical_name' => 'acme corp',
-            'type'           => 'company',
+            'type' => 'company',
         ]);
 
         $this->assertNotNull($edge->id);
@@ -180,8 +180,8 @@ class KnowledgeGraphTest extends TestCase
 
         // Edge is still created, just without an embedding
         $this->assertDatabaseHas('kg_edges', [
-            'team_id'    => $this->team->id,
-            'fact'       => 'Bob works at Beta Corp',
+            'team_id' => $this->team->id,
+            'fact' => 'Bob works at Beta Corp',
             'invalid_at' => null,
         ]);
         $this->assertNull($edge->fact_embedding);
@@ -197,24 +197,24 @@ class KnowledgeGraphTest extends TestCase
 
         // Current fact
         KgEdge::create([
-            'team_id'          => $this->team->id,
+            'team_id' => $this->team->id,
             'source_entity_id' => $source->id,
             'target_entity_id' => $target->id,
-            'relation_type'    => 'works_at',
-            'fact'             => 'Current fact',
-            'valid_at'         => now()->subDay(),
-            'invalid_at'       => null,
+            'relation_type' => 'works_at',
+            'fact' => 'Current fact',
+            'valid_at' => now()->subDay(),
+            'invalid_at' => null,
         ]);
 
         // Invalidated (historical) fact
         KgEdge::create([
-            'team_id'          => $this->team->id,
+            'team_id' => $this->team->id,
             'source_entity_id' => $source->id,
             'target_entity_id' => $target->id,
-            'relation_type'    => 'works_at',
-            'fact'             => 'Old fact',
-            'valid_at'         => now()->subMonth(),
-            'invalid_at'       => now()->subDay(),
+            'relation_type' => 'works_at',
+            'fact' => 'Old fact',
+            'valid_at' => now()->subMonth(),
+            'invalid_at' => now()->subDay(),
         ]);
 
         $service = app(TemporalKnowledgeGraphService::class);
@@ -316,15 +316,15 @@ class KnowledgeGraphTest extends TestCase
         // An existing fact with an embedding — same direction as new vector so cosine > 0.6
         $existingVector = array_fill(0, 3, 0.7);
         KgEdge::create([
-            'id'               => $oldEdgeId,
-            'team_id'          => $this->team->id,
+            'id' => $oldEdgeId,
+            'team_id' => $this->team->id,
             'source_entity_id' => $source->id,
             'target_entity_id' => $target->id,
-            'relation_type'    => 'works_at',
-            'fact'             => 'Alice works at Acme Corp',
-            'fact_embedding'   => $existingVector,
-            'valid_at'         => now()->subMonth(),
-            'invalid_at'       => null,
+            'relation_type' => 'works_at',
+            'fact' => 'Alice works at Acme Corp',
+            'fact_embedding' => $existingVector,
+            'valid_at' => now()->subMonth(),
+            'invalid_at' => null,
         ]);
 
         // LLM mock: say old edge is contradicted
@@ -355,7 +355,7 @@ class KnowledgeGraphTest extends TestCase
 
         $this->assertContains($oldEdgeId, $invalidated);
         $this->assertDatabaseHas('kg_edges', [
-            'id'         => $oldEdgeId,
+            'id' => $oldEdgeId,
             'invalid_at' => now()->toDateTimeString(),
         ]);
     }
@@ -372,14 +372,14 @@ class KnowledgeGraphTest extends TestCase
 
         // Existing fact with orthogonal embedding → cosine = 0 → below threshold
         KgEdge::create([
-            'team_id'          => $this->team->id,
+            'team_id' => $this->team->id,
             'source_entity_id' => $source->id,
             'target_entity_id' => $target->id,
-            'relation_type'    => 'works_at',
-            'fact'             => 'Alice works at Acme Corp',
-            'fact_embedding'   => [1.0, 0.0, 0.0],
-            'valid_at'         => now()->subMonth(),
-            'invalid_at'       => null,
+            'relation_type' => 'works_at',
+            'fact' => 'Alice works at Acme Corp',
+            'fact_embedding' => [1.0, 0.0, 0.0],
+            'valid_at' => now()->subMonth(),
+            'invalid_at' => null,
         ]);
 
         // LLM should NOT be called since cosine similarity < 0.6

@@ -20,7 +20,7 @@ class CreateSignalConnectorSettingAction
 {
     /**
      * @return array{setting: SignalConnectorSetting, rawSecret: ?string}
-     *               rawSecret is non-null only on first creation.
+     *                                                                    rawSecret is non-null only on first creation.
      */
     public function execute(string $teamId, string $driver): array
     {
