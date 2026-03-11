@@ -264,7 +264,44 @@ class LocalAgentDiscovery
             return null;
         }
 
-        $version = $this->version($key) ?? 'unknown';
+        // Run the detect command and capture raw output for both version parsing
+        // and identity verification (e.g. collision detection for generic binary names).
+        $detectCommand = $config['detect_command'];
+        $rawOutput = '';
+
+        try {
+            $process = Process::fromShellCommandline($detectCommand);
+            $process->setTimeout(10);
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                $rawOutput = $process->getOutput();
+            }
+        } catch (\Throwable $e) {
+            Log::debug("LocalAgentDiscovery: detect command failed for {$key}", [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        if (! $rawOutput) {
+            return null;
+        }
+
+        // The Cursor CLI binary is named 'agent' — a generic name that other tools may also use.
+        // Verify that the detected binary is actually Cursor's CLI by checking that its
+        // raw version output contains the word "cursor" (case-insensitive).
+        // NOTE: We check rawOutput, not the parsed version number, because parseVersion()
+        // strips the identifier prefix and returns only the numeric part (e.g. "0.48.1").
+        if ($key === 'cursor' && ! str_contains(strtolower($rawOutput), 'cursor')) {
+            Log::debug('LocalAgentDiscovery: agent binary found but does not identify as Cursor CLI', [
+                'path' => $path,
+                'raw_output' => trim($rawOutput),
+            ]);
+
+            return null;
+        }
+
+        $version = $this->parseVersion($rawOutput);
 
         return [
             'name' => $config['name'],

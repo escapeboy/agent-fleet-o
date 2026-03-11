@@ -151,6 +151,35 @@ function get_version(string $command): ?string
     return strtok($stdout, "\n") ?: $stdout;
 }
 
+/**
+ * Run a command and return its raw stdout.
+ * Used for identity verification (e.g. collision detection) where we need
+ * the full output, not just the parsed version number.
+ */
+function get_raw_output(string $command): ?string
+{
+    $descriptors = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($command, $descriptors, $pipes);
+
+    if (! is_resource($process)) {
+        return null;
+    }
+
+    fclose($pipes[0]);
+    $stdout = trim(stream_get_contents($pipes[1]));
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    proc_close($process);
+
+    return $stdout !== '' ? $stdout : null;
+}
+
 function build_command(string $agentKey, string $binaryPath, bool $streaming = false, ?string $purpose = null, ?string $model = null): ?string
 {
     $bin = escapeshellarg($binaryPath);
@@ -296,8 +325,20 @@ if ($method === 'GET' && $path === '/discover') {
         }
 
         $version = 'unknown';
+        $rawVersionOutput = '';
         if (! empty($agentConfig['detect_command'])) {
-            $version = get_version($agentConfig['detect_command']) ?? 'unknown';
+            $rawVersionOutput = get_raw_output($agentConfig['detect_command']) ?? '';
+            if ($rawVersionOutput !== '') {
+                $version = get_version($agentConfig['detect_command']) ?? 'unknown';
+            }
+        }
+
+        // The Cursor CLI binary is named 'agent' — a generic name that other tools may also use.
+        // Verify the binary is actually Cursor's CLI before reporting it as detected.
+        // We check raw output (not the parsed version number) because get_version() strips
+        // the identifier prefix and returns only the numeric part (e.g. "0.48.1").
+        if ($key === 'cursor' && stripos($rawVersionOutput, 'cursor') === false) {
+            continue;
         }
 
         $detected[$key] = [
@@ -390,6 +431,31 @@ if ($method === 'POST' && $path === '/execute') {
         error_log('Bridge: command = '.implode(' ', array_map('escapeshellarg', $ccAssistant['command'])));
 
         $process = proc_open($ccAssistant['command'], $descriptors, $pipes, $cwd, $ccAssistant['env']);
+    } elseif ($agentKey === 'cursor') {
+        // Cursor CLI does not read from stdin — the prompt must be passed as a positional argument.
+        // Write the prompt to a temp file and inject it via shell command substitution to safely
+        // handle long or complex prompts without hitting OS argument length limits.
+        $tmpPromptFile = tempnam(sys_get_temp_dir(), 'fleetq_cursor_');
+        file_put_contents($tmpPromptFile, $prompt);
+        register_shutdown_function(static function () use ($tmpPromptFile): void {
+            @unlink($tmpPromptFile);
+        });
+
+        $outputFormat = $streaming ? 'stream-json' : 'json';
+        $modelFlag = $model && $model !== 'auto' ? ' --model '.escapeshellarg($model) : '';
+        $closeInherited = 'for fd in $(seq 3 20); do eval "exec ${fd}<&-" 2>/dev/null; done;';
+        $command = $closeInherited.' '.escapeshellarg($binaryPath)
+            .' -p "$(cat '.escapeshellarg($tmpPromptFile).')"'
+            .' --output-format '.$outputFormat
+            .' --force --trust --approve-mcps'
+            .$modelFlag;
+
+        $stdinContent = ''; // Cursor ignores stdin in -p mode
+
+        error_log("Bridge: executing [cursor] streaming=".($streaming ? 'yes' : 'no'));
+        error_log("Bridge: command = {$command}");
+
+        $process = proc_open($command, $descriptors, $pipes, $cwd);
     } else {
         $command = build_command($agentKey, $binaryPath, $streaming, $purpose, $model);
 

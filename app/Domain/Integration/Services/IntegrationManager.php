@@ -26,6 +26,23 @@ use App\Domain\Integration\Drivers\Teams\TeamsIntegrationDriver;
 use App\Domain\Integration\Drivers\Telegram\TelegramIntegrationDriver;
 use App\Domain\Integration\Drivers\WhatsApp\WhatsAppIntegrationDriver;
 use App\Domain\Integration\Drivers\Zapier\ZapierIntegrationDriver;
+use App\Domain\Integration\Drivers\Typeform\TypeformIntegrationDriver;
+use App\Domain\Integration\Drivers\Calendly\CalendlyIntegrationDriver;
+use App\Domain\Integration\Drivers\PostHog\PostHogIntegrationDriver;
+use App\Domain\Integration\Drivers\Attio\AttioIntegrationDriver;
+use App\Domain\Integration\Drivers\Freshdesk\FreshdeskIntegrationDriver;
+use App\Domain\Integration\Drivers\Segment\SegmentIntegrationDriver;
+use App\Domain\Integration\Drivers\GitLab\GitLabIntegrationDriver;
+use App\Domain\Integration\Drivers\Shopify\ShopifyIntegrationDriver;
+use App\Domain\Integration\Drivers\ClickUp\ClickUpIntegrationDriver;
+use App\Domain\Integration\Drivers\Pipedrive\PipedriveIntegrationDriver;
+use App\Domain\Integration\Drivers\Confluence\ConfluenceIntegrationDriver;
+use App\Domain\Integration\Drivers\Bitbucket\BitbucketIntegrationDriver;
+use App\Domain\Integration\Drivers\Zendesk\ZendeskIntegrationDriver;
+use App\Domain\Integration\Drivers\Intercom\IntercomIntegrationDriver;
+use App\Domain\Integration\Drivers\Monday\MondayIntegrationDriver;
+use App\Domain\Integration\Drivers\Asana\AsanaIntegrationDriver;
+use App\Domain\Integration\Drivers\Twilio\TwilioIntegrationDriver;
 use Illuminate\Support\Manager;
 
 /**
@@ -160,5 +177,90 @@ class IntegrationManager extends Manager
     public function createMakeDriver(): IntegrationDriverInterface
     {
         return $this->container->make(MakeIntegrationDriver::class);
+    }
+
+    public function createTypeformDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(TypeformIntegrationDriver::class);
+    }
+
+    public function createCalendlyDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(CalendlyIntegrationDriver::class);
+    }
+
+    public function createPosthogDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(PostHogIntegrationDriver::class);
+    }
+
+    public function createAttioDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(AttioIntegrationDriver::class);
+    }
+
+    public function createFreshdeskDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(FreshdeskIntegrationDriver::class);
+    }
+
+    public function createSegmentDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(SegmentIntegrationDriver::class);
+    }
+
+    public function createGitlabDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(GitLabIntegrationDriver::class);
+    }
+
+    public function createShopifyDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(ShopifyIntegrationDriver::class);
+    }
+
+    public function createClickupDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(ClickUpIntegrationDriver::class);
+    }
+
+    public function createPipedriveDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(PipedriveIntegrationDriver::class);
+    }
+
+    public function createConfluenceDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(ConfluenceIntegrationDriver::class);
+    }
+
+    public function createBitbucketDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(BitbucketIntegrationDriver::class);
+    }
+
+    public function createZendeskDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(ZendeskIntegrationDriver::class);
+    }
+
+    public function createIntercomDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(IntercomIntegrationDriver::class);
+    }
+
+    public function createMondayDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(MondayIntegrationDriver::class);
+    }
+
+    public function createAsanaDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(AsanaIntegrationDriver::class);
+    }
+
+    public function createTwilioDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(TwilioIntegrationDriver::class);
     }
 }

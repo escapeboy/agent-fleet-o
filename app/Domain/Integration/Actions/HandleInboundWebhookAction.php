@@ -60,10 +60,14 @@ class HandleInboundWebhookAction
             }
         }
 
-        // Layer 2: Idempotency check (by X-Delivery-Id or similar header)
-        $deliveryId = $headers['x-delivery-id']
-            ?? $headers['x-github-delivery']
-            ?? $headers['x-slack-request-timestamp']
+        // Layer 2: Idempotency check (delivery ID from service-specific headers)
+        $deliveryId = $headers['x-delivery-id']           // generic
+            ?? $headers['x-github-delivery']              // GitHub
+            ?? $headers['x-shopify-webhook-id']           // Shopify
+            ?? $headers['x-gitlab-event-uuid']            // GitLab
+            ?? $headers['x-zendesk-webhook-id']           // Zendesk
+            ?? $headers['x-asana-request-id']             // Asana
+            ?? $headers['x-calendly-webhook-id']          // Calendly
             ?? null;
 
         if ($deliveryId && $this->verifier->isAlreadyProcessed((string) $deliveryId)) {
@@ -77,6 +81,23 @@ class HandleInboundWebhookAction
         // Layer 3: Parse payload into signals and ingest
         $payload = $request->json()->all() ?: $request->all();
         $signals = $driver->parseWebhookPayload($payload, $headers);
+
+        // Fallback dedup: derive key from the first signal's source_id (scoped to integration)
+        // Covers services that have no delivery ID header (Typeform, Segment, Attio, Freshdesk, etc.)
+        if (! $deliveryId && ! empty($signals)) {
+            $firstSourceId = $signals[0]['source_id'] ?? null;
+            if ($firstSourceId) {
+                $deliveryId = $integration->getKey().':'.$firstSourceId;
+            }
+        }
+
+        if ($deliveryId && $this->verifier->isAlreadyProcessed((string) $deliveryId)) {
+            Log::info('HandleInboundWebhookAction: duplicate (payload-derived), skipping', [
+                'delivery_id' => $deliveryId,
+            ]);
+
+            return Response::HTTP_OK;
+        }
 
         $integrationDriver = $integration->getAttribute('driver');
         $teamId = $integration->getAttribute('team_id');

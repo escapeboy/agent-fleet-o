@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Domain\Credential\Enums\CredentialSource;
 use App\Domain\Credential\Enums\CredentialType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
@@ -22,6 +23,8 @@ class StoreCredentialRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'metadata' => ['sometimes', 'nullable', 'array'],
             'expires_at' => ['sometimes', 'nullable', 'date'],
+            'creator_source' => ['sometimes', new Enum(CredentialSource::class)],
+            'agent_id' => ['sometimes', 'nullable', 'uuid'],
         ];
     }
 }

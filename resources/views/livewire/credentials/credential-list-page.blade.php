@@ -23,6 +23,13 @@
             @endforeach
         </x-form-select>
 
+        <x-form-select wire:model.live="creatorSourceFilter">
+            <option value="">All Sources</option>
+            @foreach($creatorSources as $source)
+                <option value="{{ $source->value }}">{{ $source->label() }}</option>
+            @endforeach
+        </x-form-select>
+
         @if($canCreate)
             <a href="{{ route('credentials.create') }}"
                 class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
@@ -85,6 +92,7 @@
                     <th wire:click="sortBy('status')" class="cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Status {!! $sortIcon('status') !!}
                     </th>
+                    <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Source</th>
                     <th class="hidden md:table-cell px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Expires</th>
                     <th wire:click="sortBy('last_used_at')" class="hidden md:table-cell cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Last Used {!! $sortIcon('last_used_at') !!}
@@ -113,6 +121,16 @@
                         <td class="px-3 py-3 md:px-6 md:py-4">
                             <x-status-badge :status="$credential->status->value" />
                         </td>
+                        <td class="hidden md:table-cell px-6 py-4">
+                            @php $source = $credential->creator_source; @endphp
+                            @if($source)
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $source->color() }}">
+                                    {{ $source->label() }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">Human</span>
+                            @endif
+                        </td>
                         <td class="hidden md:table-cell px-6 py-4 text-sm text-gray-500">
                             @if($credential->expires_at)
                                 <span class="{{ $credential->isExpired() ? 'text-red-600 font-medium' : '' }}">
@@ -129,7 +147,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
+                        <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-400">
                             No credentials found. Create your first one!
                         </td>
                     </tr>

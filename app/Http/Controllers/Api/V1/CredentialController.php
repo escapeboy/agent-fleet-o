@@ -6,6 +6,7 @@ use App\Domain\Credential\Actions\CreateCredentialAction;
 use App\Domain\Credential\Actions\DeleteCredentialAction;
 use App\Domain\Credential\Actions\RotateCredentialSecretAction;
 use App\Domain\Credential\Actions\UpdateCredentialAction;
+use App\Domain\Credential\Enums\CredentialSource;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
@@ -30,6 +31,7 @@ class CredentialController extends Controller
             ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('credential_type'),
+                AllowedFilter::exact('creator_source'),
                 AllowedFilter::partial('name'),
             ])
             ->allowedSorts(['created_at', 'updated_at', 'name', 'last_used_at'])
@@ -46,6 +48,16 @@ class CredentialController extends Controller
 
     public function store(StoreCredentialRequest $request, CreateCredentialAction $action): JsonResponse
     {
+        $creatorSource = CredentialSource::tryFrom($request->input('creator_source', 'human'))
+            ?? CredentialSource::Human;
+
+        $creatorType = null;
+        $creatorId = null;
+        if ($creatorSource === CredentialSource::Agent && $request->input('agent_id')) {
+            $creatorType = 'agent';
+            $creatorId = $request->input('agent_id');
+        }
+
         $credential = $action->execute(
             teamId: $request->user()->current_team_id,
             name: $request->name,
@@ -54,6 +66,9 @@ class CredentialController extends Controller
             description: $request->input('description'),
             metadata: $request->input('metadata', []),
             expiresAt: $request->input('expires_at'),
+            creatorSource: $creatorSource,
+            creatorType: $creatorType,
+            creatorId: $creatorId,
         );
 
         return (new CredentialResource($credential))

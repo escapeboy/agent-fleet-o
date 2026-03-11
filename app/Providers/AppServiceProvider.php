@@ -29,8 +29,11 @@ use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use App\Domain\Agent\Models\Agent;
+use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Channels\MailChannel;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -67,6 +70,12 @@ class AppServiceProvider extends ServiceProvider
         if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
+
+        // Polymorphic morph map for credential creator tracking
+        Relation::morphMap([
+            'user' => User::class,
+            'agent' => Agent::class,
+        ]);
 
         // Community edition: all authenticated users have full access
         Gate::define('manage-team', fn ($user) => true);

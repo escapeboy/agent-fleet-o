@@ -2,6 +2,10 @@
 
 namespace App\Livewire\Credentials;
 
+use App\Domain\Approval\Actions\ApproveAction;
+use App\Domain\Approval\Actions\RejectAction;
+use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Credential\Actions\DeleteCredentialAction;
 use App\Domain\Credential\Actions\RotateCredentialSecretAction;
 use App\Domain\Credential\Actions\UpdateCredentialAction;
@@ -66,6 +70,41 @@ class CredentialDetailPage extends Component
 
         app(UpdateCredentialAction::class)->execute($this->credential, status: $newStatus);
         $this->credential->refresh();
+    }
+
+    public function approveCredential(): void
+    {
+        $approvalRequest = ApprovalRequest::withoutGlobalScopes()
+            ->where('credential_id', $this->credential->id)
+            ->where('status', ApprovalStatus::Pending)
+            ->first();
+
+        if ($approvalRequest) {
+            app(ApproveAction::class)->execute($approvalRequest, auth()->id());
+        } else {
+            // No pending approval request — activate directly
+            app(UpdateCredentialAction::class)->execute($this->credential, status: CredentialStatus::Active);
+        }
+
+        $this->credential->refresh();
+        session()->flash('message', 'Credential approved and activated.');
+    }
+
+    public function rejectCredential(string $reason = 'Rejected by reviewer'): void
+    {
+        $approvalRequest = ApprovalRequest::withoutGlobalScopes()
+            ->where('credential_id', $this->credential->id)
+            ->where('status', ApprovalStatus::Pending)
+            ->first();
+
+        if ($approvalRequest) {
+            app(RejectAction::class)->execute($approvalRequest, auth()->id(), $reason);
+        } else {
+            app(UpdateCredentialAction::class)->execute($this->credential, status: CredentialStatus::Disabled);
+        }
+
+        $this->credential->refresh();
+        session()->flash('message', 'Credential rejected and disabled.');
     }
 
     public function startEdit(): void
@@ -194,8 +233,17 @@ class CredentialDetailPage extends Component
             ->whereJsonContains('allowed_credential_ids', $this->credential->id)
             ->get();
 
+        $pendingApproval = null;
+        if ($this->credential->status === CredentialStatus::PendingReview) {
+            $pendingApproval = ApprovalRequest::withoutGlobalScopes()
+                ->where('credential_id', $this->credential->id)
+                ->where('status', ApprovalStatus::Pending)
+                ->first();
+        }
+
         return view('livewire.credentials.credential-detail-page', [
             'projects' => $projects,
+            'pendingApproval' => $pendingApproval,
         ])->layout('layouts.app', ['header' => $this->credential->name]);
     }
 }
