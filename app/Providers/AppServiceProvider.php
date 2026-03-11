@@ -24,6 +24,8 @@ use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
+use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
+use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
@@ -127,6 +129,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Memory: extract learnings from completed experiments
         Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);
+
+        // Chatbot: capture operator corrections as learning entries
+        Event::listen(ChatbotResponseApprovedEvent::class, CaptureResponseCorrectionListener::class);
 
         // Agent memory: store execution output as memory after completion
         AgentExecution::created(function (AgentExecution $execution) {

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\ChatbotSlackWebhookController;
 use App\Http\Controllers\ChatbotTelegramWebhookController;
+use App\Http\Controllers\ChatbotTicketWebhookController;
+use App\Http\Controllers\ChatbotWebhookController;
 use App\Http\Controllers\ClearCueWebhookController;
 use App\Http\Controllers\DatadogAlertWebhookController;
 use App\Http\Controllers\DiscordWebhookController;
@@ -92,6 +94,16 @@ Route::post('/chatbot/telegram/{tokenPrefix}', [ChatbotTelegramWebhookController
 // Slack Events API: url_verification + message events, HMAC-SHA256 verified per-channel
 Route::post('/chatbot/slack/{tokenPrefix}', [ChatbotSlackWebhookController::class, 'handle'])
     ->name('chatbot.slack.webhook')
+    ->middleware('throttle:120,1');
+
+// Generic webhook channel: HMAC-SHA256 validated, payload mapping via channel config
+Route::post('/chatbot/webhook/{tokenPrefix}', [ChatbotWebhookController::class, 'handle'])
+    ->name('chatbot.webhook')
+    ->middleware('throttle:120,1');
+
+// Ticket system channel: accepts ticket payloads, field mapping via channel config
+Route::post('/chatbot/ticket/{tokenPrefix}', [ChatbotTicketWebhookController::class, 'handle'])
+    ->name('chatbot.ticket.webhook')
     ->middleware('throttle:120,1');
 
 // Tracking endpoints (public, no auth — rate-limited per IP as defence-in-depth)

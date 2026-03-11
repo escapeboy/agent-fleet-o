@@ -13,7 +13,7 @@ class ChatbotUpdateTool extends Tool
 {
     protected string $name = 'chatbot_update';
 
-    protected string $description = 'Update chatbot name, description, config, widget_config, escalation settings, or LLM parameters.';
+    protected string $description = 'Update chatbot name, description, config, widget_config, escalation settings, workflow, or LLM parameters.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -37,6 +37,10 @@ class ChatbotUpdateTool extends Tool
                 ->description('New system prompt (updates backing agent)'),
             'widget_config' => $schema->object()
                 ->description('Widget config: {position, theme_color, title}'),
+            'workflow_id' => $schema->string()
+                ->description('Workflow UUID to delegate message processing (null to use direct agent)'),
+            'approval_timeout_hours' => $schema->integer()
+                ->description('Hours before escalated approval request expires (default 48)'),
         ];
     }
 
@@ -58,10 +62,23 @@ class ChatbotUpdateTool extends Tool
             'human_escalation_enabled' => 'nullable|boolean',
             'system_prompt' => 'nullable|string',
             'widget_config' => 'nullable|array',
+            'workflow_id' => 'nullable|uuid',
+            'approval_timeout_hours' => 'nullable|integer|min:1|max:720',
         ]);
 
         try {
-            $updated = app(UpdateChatbotAction::class)->execute($chatbot, array_filter($validated, fn ($v) => $v !== null));
+            $updated = app(UpdateChatbotAction::class)->execute(
+                chatbot: $chatbot,
+                name: $validated['name'] ?? null,
+                description: $validated['description'] ?? null,
+                welcomeMessage: $validated['welcome_message'] ?? null,
+                fallbackMessage: $validated['fallback_message'] ?? null,
+                confidenceThreshold: $validated['confidence_threshold'] ?? null,
+                humanEscalationEnabled: $validated['human_escalation_enabled'] ?? null,
+                widgetConfig: $validated['widget_config'] ?? null,
+                workflowId: $validated['workflow_id'] ?? null,
+                approvalTimeoutHours: $validated['approval_timeout_hours'] ?? null,
+            );
 
             return Response::text(json_encode([
                 'success' => true,

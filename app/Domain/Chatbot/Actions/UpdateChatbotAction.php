@@ -16,6 +16,8 @@ class UpdateChatbotAction
         ?bool $humanEscalationEnabled = null,
         ?array $config = null,
         ?array $widgetConfig = null,
+        ?string $workflowId = null,
+        ?int $approvalTimeoutHours = null,
     ): Chatbot {
         $data = array_filter([
             'name' => $name,
@@ -24,6 +26,8 @@ class UpdateChatbotAction
             'fallback_message' => $fallbackMessage,
             'confidence_threshold' => $confidenceThreshold,
             'human_escalation_enabled' => $humanEscalationEnabled,
+            'workflow_id' => $workflowId,
+            'approval_timeout_hours' => $approvalTimeoutHours,
         ], fn ($v) => $v !== null);
 
         if ($config !== null) {

@@ -30,6 +30,13 @@ class ExpireStaleApprovalsAction
                 'reviewed_at' => now(),
             ]);
 
+            // Chatbot escalation approvals have no experiment — skip experiment-specific steps
+            if ($request->experiment_id === null) {
+                $expired++;
+
+                continue;
+            }
+
             // Expire associated proposals
             $request->experiment->outboundProposals()
                 ->where('status', OutboundProposalStatus::PendingApproval)

@@ -75,6 +75,10 @@ class ChatController extends Controller
             return response()->json(['error' => 'Chatbot is not active.'], 503);
         }
 
+        if (! $chatbot->hasBudgetRemaining()) {
+            return response()->json(['error' => 'Budget exhausted. Please contact support.'], 429);
+        }
+
         $session = ChatbotSession::where('id', $sessionId)
             ->where('chatbot_id', $chatbot->id)
             ->first();

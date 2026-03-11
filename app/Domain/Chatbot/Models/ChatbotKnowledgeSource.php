@@ -22,6 +22,7 @@ class ChatbotKnowledgeSource extends Model
         'team_id',
         'type',
         'name',
+        'access_level',
         'source_url',
         'source_data',
         'status',

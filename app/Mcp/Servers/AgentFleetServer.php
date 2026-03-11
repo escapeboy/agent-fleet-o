@@ -13,6 +13,7 @@ use App\Mcp\Tools\Admin\AdminUserSendPasswordResetTool;
 use App\Mcp\Tools\Chatbot\ChatbotAnalyticsSummaryTool;
 use App\Mcp\Tools\Chatbot\ChatbotCreateTool;
 use App\Mcp\Tools\Chatbot\ChatbotGetTool;
+use App\Mcp\Tools\Chatbot\ChatbotLearningEntriesListTool;
 use App\Mcp\Tools\Chatbot\ChatbotListTool;
 use App\Mcp\Tools\Chatbot\ChatbotSessionListTool;
 use App\Mcp\Tools\Chatbot\ChatbotToggleStatusTool;
@@ -442,6 +443,7 @@ class AgentFleetServer extends Server
         ChatbotToggleStatusTool::class,
         ChatbotSessionListTool::class,
         ChatbotAnalyticsSummaryTool::class,
+        ChatbotLearningEntriesListTool::class,
 
         // Bridge (4)
         BridgeStatusTool::class,

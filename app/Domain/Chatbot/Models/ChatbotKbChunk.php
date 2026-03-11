@@ -20,6 +20,7 @@ class ChatbotKbChunk extends Model
         'content',
         'embedding',
         'chunk_index',
+        'access_level',
         'metadata',
     ];
 
