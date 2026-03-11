@@ -10,6 +10,13 @@ use App\Mcp\Tools\Admin\AdminTeamBillingDetailTool;
 use App\Mcp\Tools\Admin\AdminTeamSuspendTool;
 use App\Mcp\Tools\Admin\AdminUserRevokeSessionsTool;
 use App\Mcp\Tools\Admin\AdminUserSendPasswordResetTool;
+use App\Mcp\Tools\Chatbot\ChatbotAnalyticsSummaryTool;
+use App\Mcp\Tools\Chatbot\ChatbotCreateTool;
+use App\Mcp\Tools\Chatbot\ChatbotGetTool;
+use App\Mcp\Tools\Chatbot\ChatbotListTool;
+use App\Mcp\Tools\Chatbot\ChatbotSessionListTool;
+use App\Mcp\Tools\Chatbot\ChatbotToggleStatusTool;
+use App\Mcp\Tools\Chatbot\ChatbotUpdateTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
@@ -200,7 +207,7 @@ class AgentFleetServer extends Server
 
     public int $maxPaginationLength = 200;
 
-    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, email themes, email templates, and team settings.';
+    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, chatbots, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, email themes, email templates, and team settings.';
 
     protected function boot(): void
     {
@@ -208,6 +215,15 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
+        // Chatbot (7)
+        ChatbotListTool::class,
+        ChatbotGetTool::class,
+        ChatbotCreateTool::class,
+        ChatbotUpdateTool::class,
+        ChatbotToggleStatusTool::class,
+        ChatbotSessionListTool::class,
+        ChatbotAnalyticsSummaryTool::class,
+
         // Agent (9)
         AgentListTool::class,
         AgentGetTool::class,

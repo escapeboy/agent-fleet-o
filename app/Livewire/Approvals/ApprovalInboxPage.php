@@ -21,6 +21,10 @@ class ApprovalInboxPage extends Component
 
     public string $rejectionReason = '';
 
+    public ?string $editingChatbotApprovalId = null;
+
+    public string $editedChatbotContent = '';
+
     public function approve(string $approvalId): void
     {
         $approval = ApprovalRequest::findOrFail($approvalId);
@@ -29,6 +33,33 @@ class ApprovalInboxPage extends Component
         $action->execute($approval, auth()->id());
 
         session()->flash('message', 'Approved successfully.');
+    }
+
+    public function startEditChatbotResponse(string $approvalId): void
+    {
+        $approval = ApprovalRequest::findOrFail($approvalId);
+        $this->editingChatbotApprovalId = $approvalId;
+        $this->editedChatbotContent = $approval->chatbotMessage?->draft_content ?? '';
+    }
+
+    public function approveWithEdit(string $approvalId): void
+    {
+        $approval = ApprovalRequest::findOrFail($approvalId);
+        $approval->update(['edited_content' => $this->editedChatbotContent]);
+
+        $action = app(ApproveAction::class);
+        $action->execute($approval, auth()->id());
+
+        $this->editingChatbotApprovalId = null;
+        $this->editedChatbotContent = '';
+
+        session()->flash('message', 'Approved with edits successfully.');
+    }
+
+    public function cancelEditChatbot(): void
+    {
+        $this->editingChatbotApprovalId = null;
+        $this->editedChatbotContent = '';
     }
 
     public function openRejectModal(string $approvalId): void
@@ -62,7 +93,7 @@ class ApprovalInboxPage extends Component
 
     public function render()
     {
-        $query = ApprovalRequest::with(['experiment', 'outboundProposal', 'reviewer', 'worktreeExecution'])
+        $query = ApprovalRequest::with(['experiment', 'outboundProposal', 'reviewer', 'worktreeExecution', 'chatbotMessage'])
             ->where('status', $this->statusTab)
             ->latest();
 

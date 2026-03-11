@@ -50,6 +50,9 @@ class TeamSettingsPage extends Component
 
     public string $assistantModel = 'claude-sonnet-4-5';
 
+    // Chatbot feature flag
+    public bool $chatbotEnabled = false;
+
     // Media analysis
     public bool $mediaAnalysisEnabled = false;
 
@@ -79,6 +82,7 @@ class TeamSettingsPage extends Component
         $this->defaultModel = $settings['default_llm_model'] ?? '';
         $this->assistantProvider = $settings['assistant_llm_provider'] ?? GlobalSetting::get('assistant_llm_provider', 'anthropic') ?? 'anthropic';
         $this->assistantModel = $settings['assistant_llm_model'] ?? GlobalSetting::get('assistant_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
+        $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
     }
@@ -150,6 +154,16 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Approval settings saved.');
+    }
+
+    public function saveChatbotSettings(): void
+    {
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['chatbot_enabled'] = $this->chatbotEnabled;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Chatbot settings saved.');
     }
 
     public function addProviderCredential(): void

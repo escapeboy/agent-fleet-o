@@ -31,6 +31,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->middleware('api')
                 ->name('api.v1.')
                 ->group(base_path('routes/api_v1.php'));
+
+            Route::prefix('api')
+                ->middleware('api')
+                ->group(base_path('routes/chatbot.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

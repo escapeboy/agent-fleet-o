@@ -135,6 +135,14 @@ class Agent extends Model
         return $this->hasMany(EvolutionProposal::class)->orderByDesc('created_at');
     }
 
+    public function scopeNotChatbotAgent($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('config->is_chatbot_agent')
+              ->orWhere('config->is_chatbot_agent', false);
+        });
+    }
+
     protected static function newFactory()
     {
         return AgentFactory::new();
