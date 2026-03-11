@@ -72,6 +72,25 @@ class IntegrationListPage extends Component
         }
     }
 
+    public function addCredential(): void
+    {
+        $key = trim($this->credentialKey);
+        $value = trim($this->credentialValue);
+
+        if ($key === '' || $value === '') {
+            return;
+        }
+
+        $this->connectCredentials[$key] = $value;
+        $this->credentialKey = '';
+        $this->credentialValue = '';
+    }
+
+    public function removeCredential(string $key): void
+    {
+        unset($this->connectCredentials[$key]);
+    }
+
     public function connect(ConnectIntegrationAction $action): void
     {
         $this->validate([

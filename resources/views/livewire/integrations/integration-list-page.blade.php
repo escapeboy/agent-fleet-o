@@ -104,16 +104,18 @@
                             <div class="space-y-2">
                                 <div class="flex gap-2">
                                     <input wire:model="credentialKey" placeholder="Field name (e.g. token)"
+                                        wire:keydown.enter="addCredential"
                                         class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none" />
                                     <input wire:model="credentialValue" type="password" placeholder="Value"
+                                        wire:keydown.enter="addCredential"
                                         class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none" />
-                                    <button wire:click="$set('connectCredentials.' + credentialKey, credentialValue)"
+                                    <button wire:click="addCredential"
                                             class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm hover:bg-gray-200">Add</button>
                                 </div>
                                 @foreach($connectCredentials as $key => $value)
                                     <div class="flex items-center justify-between rounded bg-gray-50 px-3 py-1.5 text-sm">
                                         <span class="text-gray-700">{{ $key }}: <span class="text-gray-400">••••••••</span></span>
-                                        <button wire:click="$set('connectCredentials.{{ $key }}', '')" class="text-red-400 hover:text-red-600">&times;</button>
+                                        <button wire:click="removeCredential('{{ $key }}')" class="text-red-400 hover:text-red-600">&times;</button>
                                     </div>
                                 @endforeach
                             </div>
