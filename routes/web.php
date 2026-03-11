@@ -14,6 +14,7 @@ use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
 use App\Livewire\Agents\CreateAgentForm;
+use App\Livewire\Chatbots\ChatbotAnalyticsPage;
 use App\Livewire\Chatbots\ChatbotConversationListPage;
 use App\Livewire\Chatbots\ChatbotDetailPage;
 use App\Livewire\Chatbots\ChatbotKnowledgeBasePage;
@@ -152,6 +153,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/chatbots', ChatbotListPage::class)->name('chatbots.index');
     Route::get('/chatbots/create', CreateChatbotForm::class)->name('chatbots.create');
+    Route::get('/chatbots/{chatbot}/analytics', ChatbotAnalyticsPage::class)->name('chatbots.analytics');
     Route::get('/chatbots/{chatbot}/conversations', ChatbotConversationListPage::class)->name('chatbots.conversations');
     Route::get('/chatbots/{chatbot}/knowledge', ChatbotKnowledgeBasePage::class)->name('chatbots.knowledge');
     Route::get('/chatbots/{chatbot}', ChatbotDetailPage::class)->name('chatbots.show');

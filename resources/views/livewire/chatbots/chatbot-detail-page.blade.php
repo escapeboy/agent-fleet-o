@@ -51,7 +51,7 @@
     {{-- Tabs --}}
     <div class="mb-6 border-b border-gray-200">
         <nav class="-mb-px flex gap-6">
-            @foreach(['overview' => 'Overview', 'configuration' => 'Configuration', 'tokens' => 'API Tokens', 'channels' => 'Channels', 'widget' => 'Widget', 'conversations' => 'Conversations', 'knowledge' => 'Knowledge Base'] as $tab => $label)
+            @foreach(['overview' => 'Overview', 'configuration' => 'Configuration', 'tokens' => 'API Tokens', 'channels' => 'Channels', 'widget' => 'Widget', 'conversations' => 'Conversations', 'knowledge' => 'Knowledge Base', 'analytics' => 'Analytics'] as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="border-b-2 pb-3 text-sm font-medium transition
                             {{ $activeTab === $tab
@@ -368,6 +368,20 @@
                     No ready knowledge sources yet. Add documents or URLs so the chatbot can answer questions from your content.
                 </p>
             @endif
+        </div>
+    @elseif($activeTab === 'analytics')
+        {{-- Analytics Tab --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">Analytics</p>
+                    <p class="text-sm text-gray-500">Containment rate, confidence trends, and unanswered questions.</p>
+                </div>
+                <a href="{{ route('chatbots.analytics', $chatbot) }}"
+                   class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                    Open Analytics
+                </a>
+            </div>
         </div>
     @endif
 </div>
