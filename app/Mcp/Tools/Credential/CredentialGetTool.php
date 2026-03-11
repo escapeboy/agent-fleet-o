@@ -49,6 +49,9 @@ class CredentialGetTool extends Tool
             'description' => $credential->description,
             'expires_at' => $credential->expires_at?->toIso8601String(),
             'created_at' => $credential->created_at?->toIso8601String(),
+            'creator_source' => $credential->creator_source?->value ?? 'human',
+            'creator_type' => $credential->creator_type,
+            'creator_id' => $credential->creator_id,
             'note' => 'Secret data is masked for security.',
         ]));
     }

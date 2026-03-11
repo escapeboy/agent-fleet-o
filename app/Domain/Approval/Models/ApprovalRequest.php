@@ -3,6 +3,7 @@
 namespace App\Domain\Approval\Models;
 
 use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -29,6 +30,7 @@ class ApprovalRequest extends Model
         'team_id',
         'experiment_id',
         'outbound_proposal_id',
+        'credential_id',
         'workflow_node_id',
         'reviewed_by',
         'assigned_to',
@@ -77,6 +79,11 @@ class ApprovalRequest extends Model
         return $this->belongsTo(Experiment::class);
     }
 
+    public function credential(): BelongsTo
+    {
+        return $this->belongsTo(Credential::class);
+    }
+
     public function outboundProposal(): BelongsTo
     {
         return $this->belongsTo(OutboundProposal::class);
@@ -104,6 +111,11 @@ class ApprovalRequest extends Model
     public function worktreeExecution(): HasOne
     {
         return $this->hasOne(WorktreeExecution::class);
+    }
+
+    public function isCredentialReview(): bool
+    {
+        return $this->credential_id !== null;
     }
 
     public function isCodeExecution(): bool

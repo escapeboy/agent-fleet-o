@@ -41,6 +41,8 @@ use App\Mcp\Tools\Compute\ComputeManageTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
 use App\Mcp\Tools\Credential\CredentialListTool;
+use App\Mcp\Tools\Credential\CredentialOAuthFinalizeTool;
+use App\Mcp\Tools\Credential\CredentialOAuthInitiateTool;
 use App\Mcp\Tools\Credential\CredentialRotateTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
@@ -271,12 +273,14 @@ class AgentFleetServer extends Server
         ToolSshFingerprintsTool::class,
         ToolBashPolicyTool::class,
 
-        // Credential (5)
+        // Credential (7)
         CredentialListTool::class,
         CredentialGetTool::class,
         CredentialCreateTool::class,
         CredentialUpdateTool::class,
         CredentialRotateTool::class,
+        CredentialOAuthInitiateTool::class,
+        CredentialOAuthFinalizeTool::class,
 
         // Workflow (11)
         WorkflowListTool::class,

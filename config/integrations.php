@@ -46,6 +46,31 @@ return [
         'jira' => ['label' => 'Jira',              'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '🔷'],
         'zapier' => ['label' => 'Zapier',            'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '⚡'],
         'make' => ['label' => 'Make',              'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🔮'],
+
+        // Phase 1 — Simple drivers
+        'typeform' => ['label' => 'Typeform',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📋'],
+        'calendly' => ['label' => 'Calendly',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📅'],
+        'posthog' => ['label' => 'PostHog',         'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🦔'],
+        'attio' => ['label' => 'Attio',             'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🔗'],
+        'freshdesk' => ['label' => 'Freshdesk',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '🎧'],
+        'segment' => ['label' => 'Segment',         'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '◼'],
+
+        // Phase 2 — Standard drivers
+        'gitlab' => ['label' => 'GitLab',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🦊'],
+        'shopify' => ['label' => 'Shopify',         'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🛍️'],
+        'clickup' => ['label' => 'ClickUp',         'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '✅'],
+        'pipedrive' => ['label' => 'Pipedrive',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '🔄'],
+        'confluence' => ['label' => 'Confluence',   'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '📖'],
+        'bitbucket' => ['label' => 'Bitbucket',     'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🪣'],
+
+        // Phase 3 — Complex drivers
+        'zendesk' => ['label' => 'Zendesk',         'auth' => 'api_key',      'poll_frequency' => 120,  'icon' => '🎫'],
+        'intercom' => ['label' => 'Intercom',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💬'],
+        'monday' => ['label' => 'Monday.com',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📆'],
+        'asana' => ['label' => 'Asana',             'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🔴'],
+
+        // Phase 4 — Advanced drivers
+        'twilio' => ['label' => 'Twilio',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📱'],
     ],
 
     /*

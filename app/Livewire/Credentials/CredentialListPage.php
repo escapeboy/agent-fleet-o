@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Credentials;
 
+use App\Domain\Credential\Enums\CredentialSource;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
@@ -22,6 +23,9 @@ class CredentialListPage extends Component
 
     #[Url]
     public string $statusFilter = '';
+
+    #[Url]
+    public string $creatorSourceFilter = '';
 
     public string $sortField = 'created_at';
 
@@ -52,6 +56,11 @@ class CredentialListPage extends Component
         $this->resetPage();
     }
 
+    public function updatedCreatorSourceFilter(): void
+    {
+        $this->resetPage();
+    }
+
     public function render()
     {
         $query = Credential::query();
@@ -71,6 +80,10 @@ class CredentialListPage extends Component
             $query->where('status', $this->statusFilter);
         }
 
+        if ($this->creatorSourceFilter) {
+            $query->where('creator_source', $this->creatorSourceFilter);
+        }
+
         $query->orderBy($this->sortField, $this->sortDirection);
 
         $team = auth()->user()?->currentTeam;
@@ -80,6 +93,7 @@ class CredentialListPage extends Component
             'credentials' => $query->paginate(20),
             'types' => CredentialType::cases(),
             'statuses' => CredentialStatus::cases(),
+            'creatorSources' => CredentialSource::cases(),
             'team' => $team,
             'kmsConfig' => $kmsConfig,
             'canCreate' => true,

@@ -2,7 +2,9 @@
 
 namespace App\Mcp\Tools\Credential;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Credential\Actions\CreateCredentialAction;
+use App\Domain\Credential\Enums\CredentialSource;
 use App\Domain\Credential\Enums\CredentialType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -13,7 +15,7 @@ class CredentialCreateTool extends Tool
 {
     protected string $name = 'credential_create';
 
-    protected string $description = 'Creates a credential. WARNING: secret_data will be stored encrypted but flows through the current session.';
+    protected string $description = 'Creates a credential. Pass agent_id when an agent is the creator — the credential will start as pending_review and require human approval before use. WARNING: secret_data is stored encrypted but flows through the current session.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -32,6 +34,8 @@ class CredentialCreateTool extends Tool
                 ->description('Credential description'),
             'expires_at' => $schema->string()
                 ->description('Expiration date in ISO 8601 format (e.g. 2025-12-31T23:59:59Z)'),
+            'agent_id' => $schema->string()
+                ->description('UUID of the agent creating this credential. Sets creator_source=agent and status=pending_review until a human approves it.'),
         ];
     }
 
@@ -43,9 +47,28 @@ class CredentialCreateTool extends Tool
             'secret_data' => 'required|array',
             'description' => 'nullable|string',
             'expires_at' => 'nullable|string|date',
+            'agent_id' => 'nullable|uuid',
         ]);
 
         try {
+            $creatorSource = CredentialSource::Human;
+            $creatorType = null;
+            $creatorId = null;
+
+            if (! empty($validated['agent_id'])) {
+                $agent = Agent::withoutGlobalScopes()
+                    ->where('team_id', auth()->user()->current_team_id)
+                    ->find($validated['agent_id']);
+
+                if (! $agent) {
+                    return Response::error('Agent not found.');
+                }
+
+                $creatorSource = CredentialSource::Agent;
+                $creatorType = 'agent';
+                $creatorId = $agent->id;
+            }
+
             $credential = app(CreateCredentialAction::class)->execute(
                 teamId: auth()->user()->current_team_id,
                 name: $validated['name'],
@@ -53,6 +76,9 @@ class CredentialCreateTool extends Tool
                 secretData: $validated['secret_data'],
                 description: $validated['description'] ?? null,
                 expiresAt: $validated['expires_at'] ?? null,
+                creatorSource: $creatorSource,
+                creatorType: $creatorType,
+                creatorId: $creatorId,
             );
 
             return Response::text(json_encode([
@@ -60,6 +86,11 @@ class CredentialCreateTool extends Tool
                 'credential_id' => $credential->id,
                 'name' => $credential->name,
                 'type' => $credential->credential_type->value,
+                'status' => $credential->status->value,
+                'creator_source' => $credential->creator_source->value,
+                'note' => $creatorSource === CredentialSource::Agent
+                    ? 'Credential is pending_review. A human must approve it before it can be used.'
+                    : null,
             ]));
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());

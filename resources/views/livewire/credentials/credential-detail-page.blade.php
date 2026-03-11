@@ -6,6 +6,39 @@
         </div>
     @endif
 
+    {{-- Pending Review Banner --}}
+    @if($credential->status === \App\Domain\Credential\Enums\CredentialStatus::PendingReview && !$editing)
+        <div class="mb-6 rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <div class="flex items-start gap-3">
+                <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-orange-900">Pending Review</h4>
+                    <p class="mt-0.5 text-sm text-orange-700">
+                        @if($pendingApproval && !empty($pendingApproval->context['description']))
+                            {{ $pendingApproval->context['description'] }}
+                        @else
+                            This credential was created by an automated process and requires human review before it can be used by agents.
+                        @endif
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <button wire:click="approveCredential"
+                        wire:confirm="Approve this credential and make it available for use?"
+                        class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
+                        Approve
+                    </button>
+                    <button wire:click="rejectCredential"
+                        wire:confirm="Reject this credential? It will be disabled."
+                        class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">
+                        Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if($editing)
         {{-- ====== EDIT MODE ====== --}}
         <div class="rounded-xl border border-primary-200 bg-white p-6">
@@ -110,6 +143,27 @@
                             <dt class="text-gray-500">Status</dt>
                             <dd><x-status-badge :status="$credential->status->value" /></dd>
                         </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-500">Source</dt>
+                            <dd>
+                                @php $source = $credential->creator_source; @endphp
+                                @if($source)
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $source->color() }}">
+                                        {{ $source->label() }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">Human</span>
+                                @endif
+                            </dd>
+                        </div>
+                        @if($credential->creator_id)
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">Created by</dt>
+                                <dd class="font-mono text-xs text-gray-500 truncate max-w-[180px]" title="{{ $credential->creator_id }}">
+                                    {{ $credential->creator?->name ?? $credential->creator_id }}
+                                </dd>
+                            </div>
+                        @endif
                         <div class="flex justify-between">
                             <dt class="text-gray-500">Expires</dt>
                             <dd class="text-gray-700">
