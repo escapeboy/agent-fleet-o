@@ -49,6 +49,7 @@ use App\Livewire\Setup\SetupPage;
 use App\Livewire\Shared\NotificationInboxPage;
 use App\Livewire\Shared\NotificationPreferencesPage;
 use App\Livewire\Signals\ConnectorBindingsPage;
+use App\Livewire\Signals\ConnectorSubscriptionsPage;
 use App\Livewire\Signals\ContactDetailPage;
 use App\Livewire\Signals\ContactsPage;
 use App\Livewire\Signals\EntityBrowserPage;
@@ -180,6 +181,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
     Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
+    Route::get('/signals/subscriptions', ConnectorSubscriptionsPage::class)->name('signals.subscriptions');
     Route::get('/signals/bindings', ConnectorBindingsPage::class)->name('signals.bindings');
 
     Route::get('/contacts', ContactsPage::class)->name('contacts.index');

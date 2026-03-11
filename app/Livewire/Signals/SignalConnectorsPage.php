@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Signals;
 
+use App\Domain\Signal\Models\ConnectorSignalSubscription;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Models\SignalConnectorSetting;
 use App\Models\Connector;
@@ -63,6 +64,9 @@ class SignalConnectorsPage extends Component
      * Static webhook connector definitions.
      * Declared as private so Livewire does not try to hydrate/dehydrate it.
      */
+    /** Drivers that also support per-subscription OAuth webhooks */
+    private const SUBSCRIBABLE_DRIVERS = ['github', 'linear'];
+
     private array $webhookConnectors = [
         'github' => ['label' => 'GitHub',    'category' => 'Code & Issues', 'icon' => 'github',    'domain' => 'github.com',      'env_key' => 'services.github.webhook_secret',  'path' => '/api/signals/github'],
         'slack' => ['label' => 'Slack',     'category' => 'Chat',          'icon' => null,        'domain' => 'slack.com',       'env_key' => 'services.slack.signing_secret',   'path' => '/api/signals/slack'],
@@ -348,6 +352,14 @@ class SignalConnectorsPage extends Component
             ->keyBy('driver');
 
         // Build enriched card data for the webhook connector grid.
+        // Subscription counts per driver (for subscribable drivers like github, linear)
+        $subscriptionCounts = ConnectorSignalSubscription::selectRaw('driver, COUNT(*) as total')
+            ->where('is_active', true)
+            ->whereIn('driver', self::SUBSCRIBABLE_DRIVERS)
+            ->groupBy('driver')
+            ->get()
+            ->pluck('total', 'driver');
+
         $cards = [];
         foreach ($this->webhookConnectors as $driver => $def) {
             $dbSetting = $dbSettings->get($driver);
@@ -379,6 +391,8 @@ class SignalConnectorsPage extends Component
                 'last_received_at' => $lastReceived,
                 'total_signals' => $totalSignals,
                 'secret_configured' => $secretConfigured,
+                'subscription_count' => (int) ($subscriptionCounts->get($driver, 0)),
+                'supports_subscriptions' => in_array($driver, self::SUBSCRIBABLE_DRIVERS, true),
             ];
         }
 

@@ -120,6 +120,7 @@ use App\Mcp\Tools\Signal\AlertConnectorTool;
 use App\Mcp\Tools\Signal\ClearCueConnectorTool;
 use App\Mcp\Tools\Signal\ConnectorBindingDeleteTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
+use App\Mcp\Tools\Signal\ConnectorSubscriptionTool;
 use App\Mcp\Tools\Signal\ContactManageTool;
 use App\Mcp\Tools\Signal\EmailReplyTool;
 use App\Mcp\Tools\Signal\HttpMonitorTool;
@@ -321,6 +322,7 @@ class AgentFleetServer extends Server
         InboundConnectorManageTool::class,
         ConnectorBindingTool::class,
         ConnectorBindingDeleteTool::class,
+        ConnectorSubscriptionTool::class,
         ContactManageTool::class,
         ClearCueConnectorTool::class,
         IntentScoreTool::class,
