@@ -11,7 +11,7 @@ enum LearningEntryStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PendingReview => 'Pending Review',
             self::Accepted => 'Accepted',
             self::Rejected => 'Rejected',
@@ -21,7 +21,7 @@ enum LearningEntryStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PendingReview => 'yellow',
             self::Accepted => 'green',
             self::Rejected => 'red',

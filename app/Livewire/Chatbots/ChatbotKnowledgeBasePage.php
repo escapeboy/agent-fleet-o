@@ -6,13 +6,12 @@ use App\Domain\Chatbot\Actions\CreateKnowledgeSourceAction;
 use App\Domain\Chatbot\Actions\DeleteKnowledgeSourceAction;
 use App\Domain\Chatbot\Jobs\IndexKnowledgeSourceJob;
 use App\Domain\Chatbot\Models\Chatbot;
-use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Prism\Prism\Facades\Prism;
 
 class ChatbotKnowledgeBasePage extends Component
 {
@@ -108,7 +107,7 @@ class ChatbotKnowledgeBasePage extends Component
             $embedding = $this->generateTestEmbedding($this->testQuery);
 
             $rows = DB::select(
-                "SELECT ckc.id, ckc.content, ckc.chunk_index, cks.name as source_name,
+                'SELECT ckc.id, ckc.content, ckc.chunk_index, cks.name as source_name,
                         1 - (ckc.embedding <=> ?::vector) AS similarity
                  FROM chatbot_kb_chunks ckc
                  JOIN chatbot_knowledge_sources cks ON cks.id = ckc.source_id
@@ -117,8 +116,8 @@ class ChatbotKnowledgeBasePage extends Component
                    AND ckc.embedding IS NOT NULL
                    AND 1 - (ckc.embedding <=> ?::vector) >= 0.5
                  ORDER BY ckc.embedding <=> ?::vector
-                 LIMIT 5",
-                [$embedding, $this->chatbot->id, $this->chatbot->team_id, $embedding, $embedding]
+                 LIMIT 5',
+                [$embedding, $this->chatbot->id, $this->chatbot->team_id, $embedding, $embedding],
             );
 
             $this->testResults = array_map(fn ($row) => [
@@ -138,7 +137,7 @@ class ChatbotKnowledgeBasePage extends Component
 
     private function generateTestEmbedding(string $text): string
     {
-        $response = \Prism\Prism\Facades\Prism::embeddings()
+        $response = Prism::embeddings()
             ->using('openai', 'text-embedding-3-small')
             ->fromInput($text)
             ->asEmbeddings();

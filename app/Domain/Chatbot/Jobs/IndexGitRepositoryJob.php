@@ -3,6 +3,7 @@
 namespace App\Domain\Chatbot\Jobs;
 
 use App\Domain\Chatbot\Enums\KnowledgeSourceStatus;
+use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -53,7 +54,7 @@ class IndexGitRepositoryJob implements ShouldQueue
 
             // Clone repository (shallow, single branch)
             $result = Process::run(
-                "git clone --depth 1 --branch {$branch} --single-branch ".escapeshellarg($repoUrl)." ".escapeshellarg($cloneDir)
+                "git clone --depth 1 --branch {$branch} --single-branch ".escapeshellarg($repoUrl).' '.escapeshellarg($cloneDir),
             );
 
             if (! $result->successful()) {
@@ -63,7 +64,7 @@ class IndexGitRepositoryJob implements ShouldQueue
             $chunks = $this->collectCodeChunks($cloneDir);
 
             // Delete existing chunks for this source (re-indexing)
-            \App\Domain\Chatbot\Models\ChatbotKbChunk::where('source_id', $source->id)->delete();
+            ChatbotKbChunk::where('source_id', $source->id)->delete();
 
             $totalChunks = 0;
             foreach (array_chunk($chunks, 20) as $batch) {
@@ -89,7 +90,7 @@ class IndexGitRepositoryJob implements ShouldQueue
         } finally {
             // Clean up clone directory
             if (is_dir($cloneDir)) {
-                Process::run("rm -rf ".escapeshellarg($cloneDir));
+                Process::run('rm -rf '.escapeshellarg($cloneDir));
             }
         }
     }
@@ -134,7 +135,7 @@ class IndexGitRepositoryJob implements ShouldQueue
     {
         $files = [];
         $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS)
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
         );
 
         foreach ($iterator as $file) {

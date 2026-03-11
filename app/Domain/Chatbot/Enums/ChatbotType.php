@@ -11,7 +11,7 @@ enum ChatbotType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::HelpBot => 'Help Bot',
             self::SupportAssistant => 'Support Assistant',
             self::DeveloperAssistant => 'Developer Assistant',

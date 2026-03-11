@@ -216,7 +216,7 @@ class PipedriveIntegrationDriver implements IntegrationDriverInterface
             'create_deal' => Http::timeout(15)
                 ->post(self::API_BASE.'/deals', array_merge(
                     array_filter(['value' => $params['value'] ?? null, 'person_id' => $params['person_id'] ?? null]),
-                    ['title' => $params['title'], 'api_token' => $token]
+                    ['title' => $params['title'], 'api_token' => $token],
                 ))->json(),
 
             'update_deal' => Http::timeout(15)

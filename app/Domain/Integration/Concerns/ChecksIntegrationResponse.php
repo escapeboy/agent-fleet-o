@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Concerns;
 
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 
 /**
@@ -17,7 +18,7 @@ trait ChecksIntegrationResponse
      * Asserts that the HTTP response is not an auth error or rate limit.
      * Returns the response unchanged so it can be chained.
      *
-     * @throws \Illuminate\Http\Client\RequestException
+     * @throws RequestException
      */
     protected function checked(Response $response): Response
     {

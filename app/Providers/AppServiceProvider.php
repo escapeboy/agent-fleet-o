@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
+use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
+use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
 use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
@@ -23,17 +26,14 @@ use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
-use App\Infrastructure\Mail\TeamAwareMailChannel;
-use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
-use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
+use App\Infrastructure\Mail\TeamAwareMailChannel;
+use App\Models\User;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Auth\Notifications\ResetPassword;
-use App\Domain\Agent\Models\Agent;
-use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;

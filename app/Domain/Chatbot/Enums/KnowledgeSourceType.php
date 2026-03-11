@@ -11,7 +11,7 @@ enum KnowledgeSourceType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::Document => 'Document',
             self::Url => 'URL',
             self::Sitemap => 'Sitemap',

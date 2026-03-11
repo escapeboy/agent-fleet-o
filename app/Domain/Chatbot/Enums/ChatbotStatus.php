@@ -11,7 +11,7 @@ enum ChatbotStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::Draft => 'Draft',
             self::Active => 'Active',
             self::Inactive => 'Inactive',
@@ -21,7 +21,7 @@ enum ChatbotStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::Draft => 'gray',
             self::Active => 'green',
             self::Inactive => 'yellow',

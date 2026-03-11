@@ -121,12 +121,12 @@ class PostHogIntegrationDriver implements IntegrationDriverInterface
             new TriggerDefinition(
                 'action_performed',
                 'Action Performed',
-                'A PostHog action was triggered by user behaviour.'
+                'A PostHog action was triggered by user behaviour.',
             ),
             new TriggerDefinition(
                 'event_ingested',
                 'Event Ingested',
-                'A custom PostHog event was captured and forwarded via a Destination webhook.'
+                'A custom PostHog event was captured and forwarded via a Destination webhook.',
             ),
         ];
     }

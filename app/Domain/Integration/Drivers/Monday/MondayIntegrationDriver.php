@@ -213,7 +213,7 @@ class MondayIntegrationDriver implements IntegrationDriverInterface
                     'boardId' => $params['board_id'],
                     'itemName' => $params['item_name'],
                     'groupId' => $params['group_id'] ?? null,
-                ]
+                ],
             ),
 
             'update_status' => $this->graphql($integration,
@@ -225,14 +225,14 @@ class MondayIntegrationDriver implements IntegrationDriverInterface
                     'boardId' => $params['board_id'],
                     'columnId' => $params['column_id'],
                     'value' => $params['value'],
-                ]
+                ],
             ),
 
             'create_update' => $this->graphql($integration,
                 'mutation ($itemId: ID!, $body: String!) {
                     create_update (item_id: $itemId, body: $body) { id }
                 }',
-                ['itemId' => $params['item_id'], 'body' => $params['body']]
+                ['itemId' => $params['item_id'], 'body' => $params['body']],
             ),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),

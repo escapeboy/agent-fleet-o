@@ -2,10 +2,10 @@
 
 namespace App\Mcp\Tools\Signal;
 
+use App\Domain\Integration\Models\Integration;
 use App\Domain\Signal\Actions\CreateConnectorSubscriptionAction;
 use App\Domain\Signal\Actions\DeleteConnectorSubscriptionAction;
 use App\Domain\Signal\Models\ConnectorSignalSubscription;
-use App\Domain\Integration\Models\Integration;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -46,7 +46,7 @@ class ConnectorSubscriptionTool extends Tool
                     'Driver-specific filter config. '.
                     'GitHub: {repo, filter_branches, event_types}. '.
                     'Linear: {team_id, resource_types, filter_actions}. '.
-                    'Jira: {project_key, webhook_events}.'
+                    'Jira: {project_key, webhook_events}.',
                 ),
         ];
     }
