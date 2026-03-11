@@ -51,8 +51,8 @@ class SearchKgFactsAction
         } catch (\Throwable $e) {
             Log::warning('SearchKgFactsAction: Search failed', [
                 'team_id' => $teamId,
-                'query'   => $query,
-                'error'   => $e->getMessage(),
+                'query' => $query,
+                'error' => $e->getMessage(),
             ]);
 
             return collect();

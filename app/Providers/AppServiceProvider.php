@@ -25,6 +25,7 @@ use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
+use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -205,7 +206,7 @@ class AppServiceProvider extends ServiceProvider
         // Falls back to live generation when the file doesn't exist yet.
         Scramble::ignoreDefaultRoutes();
         Scramble::registerUiRoute(path: 'docs/api');
-        \Illuminate\Support\Facades\Route::get('docs/api.json', function (\Dedoc\Scramble\Generator $generator) {
+        \Illuminate\Support\Facades\Route::get('docs/api.json', function (Generator $generator) {
             $cached = public_path('api.json');
             if (file_exists($cached)) {
                 return response(file_get_contents($cached), 200, ['Content-Type' => 'application/json']);

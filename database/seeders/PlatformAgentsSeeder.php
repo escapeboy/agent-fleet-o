@@ -7,7 +7,6 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Models\Skill;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Collection;
 
 class PlatformAgentsSeeder extends Seeder
 {
