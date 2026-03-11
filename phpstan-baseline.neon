@@ -163,6 +163,12 @@ parameters:
 			path: app/Domain/Agent/Actions/UpdateAgentRiskProfileAction.php
 
 		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Domain/Agent/Pipeline/Middleware/InjectKnowledgeGraphContext.php
+
+		-
 			message: '#^Property App\\Domain\\Approval\\Actions\\ApproveAction\:\:\$transition is never read, only written\.$#'
 			identifier: property.onlyWritten
 			count: 1
@@ -1805,6 +1811,90 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Domain/Integration/Models/WebhookRoute.php
+
+		-
+			message: '#^Parameter \#2 \$b of method App\\Domain\\KnowledgeGraph\\Actions\\DetectContradictionAction\:\:cosineSimilarity\(\) expects array, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/DetectContradictionAction.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Signal\\Models\\Signal\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''body'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''content'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''description'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''subject'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''summary'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''text'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''title'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Parameter \#1 \$array \(array\{'''', ''''\}\) to function array_filter contains falsy values only, the result will always be an empty array\.$#'
+			identifier: arrayFilter.alwaysEmpty
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{name\: string, type\: string\}, Closure\(App\\Domain\\Signal\\Models\\Entity\)\: array\{name\: string, type\: string\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Domain/KnowledgeGraph/Services/TemporalKnowledgeGraphService.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/KnowledgeGraph/Services/TemporalKnowledgeGraphService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Domain/KnowledgeGraph/Services/TemporalKnowledgeGraphService.php
 
 		-
 			message: '#^Access to an undefined property App\\Domain\\Marketplace\\Models\\MarketplaceUsageRecord\:\:\$avg_cost\.$#'
@@ -3719,6 +3809,12 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Domain/Signal/Models/Signal.php
+
+		-
+			message: '#^Cannot call method addHour\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Signal/Models/SignalConnectorSetting.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -8023,9 +8119,15 @@ parameters:
 			path: app/Livewire/Shared/NotificationInboxPage.php
 
 		-
-			message: '#^Offset ''secret'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Livewire/Signals/ConnectorSetupPanel.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
 			path: app/Livewire/Signals/ConnectorSetupPanel.php
 
 		-
@@ -8035,19 +8137,19 @@ parameters:
 			path: app/Livewire/Signals/SignalConnectorsPage.php
 
 		-
-			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Livewire/Signals/SignalConnectorsPage.php
-
-		-
-			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Livewire/Signals/SignalConnectorsPage.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>config" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>last_signal_at" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>signal_count" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Signals/SignalConnectorsPage.php
@@ -8785,12 +8887,6 @@ parameters:
 			path: app/Mcp/Tools/Experiment/ExperimentStepsTool.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Mcp/Tools/Feedback/FeedbackListTool.php
-
-		-
 			message: '#^Access to an undefined property App\\Domain\\Marketplace\\Models\\MarketplaceUsageRecord\:\:\$count\.$#'
 			identifier: property.notFound
 			count: 2
@@ -9241,18 +9337,6 @@ parameters:
 			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
 
 		-
-			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Mcp/Tools/Signal/ImapMailboxTool.php
-
-		-
-			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Mcp/Tools/Signal/ImapMailboxTool.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>mail" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 2
@@ -9311,6 +9395,60 @@ parameters:
 			identifier: ternary.alwaysFalse
 			count: 1
 			path: app/Mcp/Tools/Signal/IntentScoreTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Signal/KgAddFactTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Signal/KgEntityFactsTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 4
+			path: app/Mcp/Tools/Signal/KgEntityFactsTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Signal/KgEntityFactsTool.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Mcp/Tools/Signal/KgEntityFactsTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Signal/KgSearchTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Signal/KgSearchTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Signal/KgSearchTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Domain\\KnowledgeGraph\\Models\\KgEdge\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Signal/KgSearchTool.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
