@@ -371,8 +371,6 @@ class JiraIntegrationDriver implements IntegrationDriverInterface, SubscribableC
         return $integration->getCredentialSecret('cloud_id');
     }
 }
-||||||| 0213205
-=======
 <?php
 
 namespace App\Domain\Integration\Drivers\Jira;
