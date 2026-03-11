@@ -29,6 +29,12 @@
             Agents
         </x-sidebar-link>
 
+        @if(auth()->user()?->currentTeam?->settings['chatbot_enabled'] ?? false)
+            <x-sidebar-link href="{{ route('chatbots.index') }}" :active="request()->routeIs('chatbots.*')" icon="chat-bubble-left-right">
+                Chatbots
+            </x-sidebar-link>
+        @endif
+
         <x-sidebar-link href="{{ route('crews.index') }}" :active="request()->routeIs('crews.*')" icon="user-group">
             Crews
         </x-sidebar-link>
@@ -77,6 +83,11 @@
             Subscriptions
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.*')" icon="envelope">
+            Email Themes
+        </x-sidebar-link>
+
+||||||| 0213205
         <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.*')" icon="envelope">
             Email Themes
         </x-sidebar-link>

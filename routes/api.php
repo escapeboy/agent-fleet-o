@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\ChatbotSlackWebhookController;
+use App\Http\Controllers\ChatbotTelegramWebhookController;
 use App\Http\Controllers\ClearCueWebhookController;
 use App\Http\Controllers\DatadogAlertWebhookController;
 use App\Http\Controllers\DiscordWebhookController;
@@ -80,6 +82,17 @@ Route::get('/integrations/webhook/{slug}', [IntegrationWebhookController::class,
 Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'handle'])
     ->name('telegram.webhook')
     ->middleware('throttle:60,1');
+
+// Chatbot channel webhooks — identified by chatbot token prefix in the URL
+// Telegram: each chatbot's Telegram bot uses its own webhook path to avoid cross-chatbot routing
+Route::post('/chatbot/telegram/{tokenPrefix}', [ChatbotTelegramWebhookController::class, 'handle'])
+    ->name('chatbot.telegram.webhook')
+    ->middleware('throttle:120,1');
+
+// Slack Events API: url_verification + message events, HMAC-SHA256 verified per-channel
+Route::post('/chatbot/slack/{tokenPrefix}', [ChatbotSlackWebhookController::class, 'handle'])
+    ->name('chatbot.slack.webhook')
+    ->middleware('throttle:120,1');
 
 // Tracking endpoints (public, no auth — rate-limited per IP as defence-in-depth)
 Route::middleware('throttle:60,1')->group(function () {

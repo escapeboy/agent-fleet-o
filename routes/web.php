@@ -3,6 +3,8 @@
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
+||||||| 0213205
+use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
@@ -14,6 +16,12 @@ use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
 use App\Livewire\Agents\CreateAgentForm;
+use App\Livewire\Chatbots\ChatbotAnalyticsPage;
+use App\Livewire\Chatbots\ChatbotConversationListPage;
+use App\Livewire\Chatbots\ChatbotDetailPage;
+use App\Livewire\Chatbots\ChatbotKnowledgeBasePage;
+use App\Livewire\Chatbots\ChatbotListPage;
+use App\Livewire\Chatbots\CreateChatbotForm;
 use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Livewire\Audit\AuditLogPage;
 use App\Livewire\Changelog\ChangelogPage;
@@ -145,6 +153,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
 
+    Route::get('/chatbots', ChatbotListPage::class)->name('chatbots.index');
+    Route::get('/chatbots/create', CreateChatbotForm::class)->name('chatbots.create');
+    Route::get('/chatbots/{chatbot}/analytics', ChatbotAnalyticsPage::class)->name('chatbots.analytics');
+    Route::get('/chatbots/{chatbot}/conversations', ChatbotConversationListPage::class)->name('chatbots.conversations');
+    Route::get('/chatbots/{chatbot}/knowledge', ChatbotKnowledgeBasePage::class)->name('chatbots.knowledge');
+    Route::get('/chatbots/{chatbot}', ChatbotDetailPage::class)->name('chatbots.show');
+
     Route::get('/tools', ToolListPage::class)->name('tools.index');
     Route::get('/tools/create', CreateToolForm::class)->name('tools.create');
     Route::get('/tools/{tool}', ToolDetailPage::class)->name('tools.show');
@@ -215,4 +230,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.
     // No manual route registration needed here.
+||||||| 0213205
+
+    // Email themes
+    Route::get('/email/themes', EmailThemeListPage::class)->name('email.themes.index');
+    Route::get('/email/themes/{theme}', EmailThemeDetailPage::class)->name('email.themes.show');
+
+    // Email templates
+    Route::get('/email/templates', EmailTemplateListPage::class)->name('email.templates.index');
+    Route::get('/email/templates/{template}/edit', EmailTemplateBuilderPage::class)->name('email.templates.edit');
+    Route::get('/email/templates/{template}/preview', [EmailTemplatePreviewController::class, 'show'])->name('email.templates.preview');
 });

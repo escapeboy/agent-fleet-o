@@ -43,6 +43,11 @@ use App\Domain\Integration\Drivers\Intercom\IntercomIntegrationDriver;
 use App\Domain\Integration\Drivers\Monday\MondayIntegrationDriver;
 use App\Domain\Integration\Drivers\Asana\AsanaIntegrationDriver;
 use App\Domain\Integration\Drivers\Twilio\TwilioIntegrationDriver;
+||||||| 0213205
+use App\Domain\Integration\Drivers\Teams\TeamsIntegrationDriver;
+use App\Domain\Integration\Drivers\Telegram\TelegramIntegrationDriver;
+use App\Domain\Integration\Drivers\WhatsApp\WhatsAppIntegrationDriver;
+use App\Domain\Integration\Drivers\Zapier\ZapierIntegrationDriver;
 use Illuminate\Support\Manager;
 
 /**
@@ -262,5 +267,81 @@ class IntegrationManager extends Manager
     public function createTwilioDriver(): IntegrationDriverInterface
     {
         return $this->container->make(TwilioIntegrationDriver::class);
+    }
+||||||| 0213205
+
+    public function createDiscordDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(DiscordIntegrationDriver::class);
+    }
+
+    public function createTeamsDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(TeamsIntegrationDriver::class);
+    }
+
+    public function createWhatsappDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(WhatsAppIntegrationDriver::class);
+    }
+
+    public function createTelegramDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(TelegramIntegrationDriver::class);
+    }
+
+    public function createDatadogDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(DatadogIntegrationDriver::class);
+    }
+
+    public function createSentryDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(SentryIntegrationDriver::class);
+    }
+
+    public function createPagerdutyDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(PagerDutyIntegrationDriver::class);
+    }
+
+    public function createHubspotDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(HubSpotIntegrationDriver::class);
+    }
+
+    public function createSalesforceDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(SalesforceIntegrationDriver::class);
+    }
+
+    public function createMailchimpDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(MailchimpIntegrationDriver::class);
+    }
+
+    public function createKlaviyoDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(KlaviyoIntegrationDriver::class);
+    }
+
+    public function createGoogleDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(GoogleIntegrationDriver::class);
+    }
+
+    public function createJiraDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(JiraIntegrationDriver::class);
+    }
+
+    public function createZapierDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(ZapierIntegrationDriver::class);
+    }
+
+    public function createMakeDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(MakeIntegrationDriver::class);
     }
 }

@@ -44,7 +44,7 @@ class AgentListPage extends Component
 
     public function render()
     {
-        $query = Agent::query()->withCount('skills');
+        $query = Agent::query()->notChatbotAgent()->withCount('skills');
 
         if ($this->search) {
             $query->where(function ($q) {

@@ -3,6 +3,7 @@
 namespace App\Domain\Approval\Models;
 
 use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Models\OutboundProposal;
@@ -50,6 +51,8 @@ class ApprovalRequest extends Model
         'callback_secret',
         'callback_fired_at',
         'callback_status',
+        'chatbot_message_id',
+        'edited_content',
     ];
 
     protected function casts(): array
@@ -113,9 +116,19 @@ class ApprovalRequest extends Model
         return $this->hasOne(WorktreeExecution::class);
     }
 
+    public function chatbotMessage(): BelongsTo
+    {
+        return $this->belongsTo(ChatbotMessage::class);
+    }
+
     public function isCredentialReview(): bool
     {
         return $this->credential_id !== null;
+    }
+
+    public function isChatbotResponse(): bool
+    {
+        return $this->chatbot_message_id !== null;
     }
 
     public function isCodeExecution(): bool

@@ -12,6 +12,8 @@ use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Models\GlobalSetting;
 use LaravelWebauthn\Models\WebauthnKey;
 use LaravelWebauthn\WebauthnServiceProvider;
+||||||| 0213205
+use App\Models\GlobalSetting;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -50,6 +52,21 @@ class TeamSettingsPage extends Component
 
     public string $assistantModel = 'claude-sonnet-4-5';
 
+    // Chatbot feature flag
+    public bool $chatbotEnabled = false;
+
+    // Media analysis
+    public bool $mediaAnalysisEnabled = false;
+
+    // Approval settings
+    public int $approvalTimeoutHours = 48;
+
+||||||| 0213205
+    // Assistant LLM
+    public string $assistantProvider = 'anthropic';
+
+    public string $assistantModel = 'claude-sonnet-4-5';
+
     // Media analysis
     public bool $mediaAnalysisEnabled = false;
 
@@ -77,6 +94,12 @@ class TeamSettingsPage extends Component
         $settings = $team->settings ?? [];
         $this->defaultProvider = $settings['default_llm_provider'] ?? '';
         $this->defaultModel = $settings['default_llm_model'] ?? '';
+        $this->assistantProvider = $settings['assistant_llm_provider'] ?? GlobalSetting::get('assistant_llm_provider', 'anthropic') ?? 'anthropic';
+        $this->assistantModel = $settings['assistant_llm_model'] ?? GlobalSetting::get('assistant_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
+        $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+        $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
+        $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
+||||||| 0213205
         $this->assistantProvider = $settings['assistant_llm_provider'] ?? GlobalSetting::get('assistant_llm_provider', 'anthropic') ?? 'anthropic';
         $this->assistantModel = $settings['assistant_llm_model'] ?? GlobalSetting::get('assistant_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
@@ -112,6 +135,57 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'Default LLM provider saved.');
     }
 
+    public function saveAssistantLlm(): void
+    {
+        $this->validate([
+            'assistantProvider' => 'required|string',
+            'assistantModel' => 'required|string',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['assistant_llm_provider'] = $this->assistantProvider;
+        $settings['assistant_llm_model'] = $this->assistantModel;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Assistant LLM saved.');
+    }
+
+    public function saveMediaAnalysis(): void
+    {
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['media_analysis_enabled'] = $this->mediaAnalysisEnabled;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Media analysis settings saved.');
+    }
+
+    public function saveApprovalSettings(): void
+    {
+        $this->validate([
+            'approvalTimeoutHours' => 'required|integer|min:1',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['approval_timeout_hours'] = $this->approvalTimeoutHours;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Approval settings saved.');
+    }
+
+    public function saveChatbotSettings(): void
+    {
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['chatbot_enabled'] = $this->chatbotEnabled;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Chatbot settings saved.');
+    }
+
+||||||| 0213205
     public function saveAssistantLlm(): void
     {
         $this->validate([

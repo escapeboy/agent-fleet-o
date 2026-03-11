@@ -132,11 +132,76 @@
                             </div>
                         @endif
 
+                        {{-- Chatbot Response Approval --}}
+                        @if($approval->isChatbotResponse() && $approval->chatbotMessage)
+                            @php $ctx = $approval->context ?? []; @endphp
+                            <div class="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">Chatbot Response</span>
+                                    <span class="text-xs text-blue-600">{{ $ctx['chatbot_name'] ?? '' }}</span>
+                                    @if(isset($ctx['confidence']))
+                                        <span class="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
+                                            Confidence: {{ number_format((float)$ctx['confidence'] * 100, 0) }}%
+                                        </span>
+                                    @endif
+                                </div>
+
+                                {{-- User message --}}
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500 mb-1">User asked:</p>
+                                    <div class="rounded bg-white border border-gray-200 px-3 py-2 text-sm text-gray-800">
+                                        {{ $ctx['user_message'] ?? '' }}
+                                    </div>
+                                </div>
+
+                                {{-- Draft response --}}
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500 mb-1">AI Draft Response:</p>
+                                    <div class="rounded bg-white border border-gray-200 px-3 py-2 text-sm text-gray-800 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                                        {{ $approval->chatbotMessage->draft_content ?? '' }}
+                                    </div>
+                                </div>
+
+                                {{-- Recent conversation context --}}
+                                @if(!empty($ctx['recent_messages']))
+                                    <details class="text-xs">
+                                        <summary class="cursor-pointer font-medium text-gray-500 hover:text-gray-700">Show conversation context ({{ count($ctx['recent_messages']) }} messages)</summary>
+                                        <div class="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                                            @foreach($ctx['recent_messages'] as $msg)
+                                                <div class="flex gap-2">
+                                                    <span class="font-medium {{ ($msg['role'] ?? '') === 'user' ? 'text-blue-600' : 'text-gray-600' }}">{{ ucfirst($msg['role'] ?? '') }}:</span>
+                                                    <span class="text-gray-700">{{ \Illuminate\Support\Str::limit($msg['content'] ?? '', 120) }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </details>
+                                @endif
+
+                                {{-- Edit & Approve inline form --}}
+                                @if($editingChatbotApprovalId === $approval->id)
+                                    <div class="space-y-2">
+                                        <p class="text-xs font-medium text-gray-700">Edit response before approving:</p>
+                                        <x-form-textarea wire:model="editedChatbotContent" rows="4" />
+                                        <div class="flex gap-2">
+                                            <button wire:click="approveWithEdit('{{ $approval->id }}')"
+                                                    class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
+                                                Approve with Edits
+                                            </button>
+                                            <button wire:click="cancelEditChatbot"
+                                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+
                         @if($approval->isClarification() || $approval->isHumanTask())
                             <div class="mt-3">
                                 <livewire:approvals.human-task-form :task="$approval" :key="'htf-'.$approval->id" />
                             </div>
-                        @elseif($approval->context)
+                        @elseif($approval->context && !$approval->isChatbotResponse())
                             <div class="mt-2 text-xs text-gray-500">
                                 @if(isset($approval->context['proposal_count']))
                                     <span>{{ $approval->context['proposal_count'] }} proposal(s)</span>
@@ -159,11 +224,17 @@
                     </div>
 
                     @if($approval->status === \App\Domain\Approval\Enums\ApprovalStatus::Pending && ! $approval->isClarification() && ! $approval->isHumanTask())
-                        <div class="ml-4 flex shrink-0 gap-2">
+                        <div class="ml-4 flex shrink-0 flex-col gap-2">
                             <button wire:click="approve('{{ $approval->id }}')"
                                 class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
                                 Approve
                             </button>
+                            @if($approval->isChatbotResponse())
+                                <button wire:click="startEditChatbotResponse('{{ $approval->id }}')"
+                                    class="rounded-lg border border-blue-300 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                                    Edit &amp; Approve
+                                </button>
+                            @endif
                             <button wire:click="openRejectModal('{{ $approval->id }}')"
                                 class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">
                                 Reject

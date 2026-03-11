@@ -97,6 +97,10 @@ class CredentialListPage extends Component
             'team' => $team,
             'kmsConfig' => $kmsConfig,
             'canCreate' => true,
+||||||| 0213205
+            'team' => $team,
+            'kmsConfig' => $kmsConfig,
+            'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Credentials']);
     }
 }

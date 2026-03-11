@@ -118,6 +118,49 @@ return [
             'composer-1.5'   => ['label' => 'Composer 1.5 (Cursor native)', 'input_cost' => 0, 'output_cost' => 0],
         ],
     ],
+||||||| 0213205
+    'gemini-cli' => [
+        'name' => 'Gemini CLI (Local)',
+        'local' => true,
+        'agent_key' => 'gemini-cli',
+        'models' => [
+            'gemini-2.5-pro' => ['label' => 'Gemini 2.5 Pro', 'input_cost' => 0, 'output_cost' => 0],
+            'gemini-2.5-flash' => ['label' => 'Gemini 2.5 Flash', 'input_cost' => 0, 'output_cost' => 0],
+            'gemini-3-pro' => ['label' => 'Gemini 3 Pro', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'kiro' => [
+        'name' => 'Kiro CLI (Local)',
+        'local' => true,
+        'agent_key' => 'kiro',
+        'models' => [
+            'kiro-default' => ['label' => 'Kiro (Default)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'aider' => [
+        'name' => 'Aider (Local)',
+        'local' => true,
+        'agent_key' => 'aider',
+        'models' => [
+            'aider-default' => ['label' => 'Aider (Default)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'amp' => [
+        'name' => 'Amp (Local)',
+        'local' => true,
+        'agent_key' => 'amp',
+        'models' => [
+            'amp-default' => ['label' => 'Amp (Default)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+    'opencode' => [
+        'name' => 'OpenCode (Local)',
+        'local' => true,
+        'agent_key' => 'opencode',
+        'models' => [
+            'opencode-default' => ['label' => 'OpenCode (Default)', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
 
     // HTTP-based local LLM providers (Ollama, OpenAI-compatible endpoints)
     'ollama' => [

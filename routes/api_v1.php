@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AgentController;
+use App\Http\Controllers\Api\V1\ChatbotInstanceController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AuditController;
@@ -156,6 +157,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::apiResource('outbound-connectors', OutboundConnectorConfigController::class)
         ->parameters(['outbound-connectors' => 'outboundConnectorConfig']);
     Route::post('/outbound-connectors/{outboundConnectorConfig}/test', [OutboundConnectorConfigController::class, 'test']);
+
+    // Chatbot instances (management API, Sanctum auth)
+    Route::apiResource('chatbot-instances', ChatbotInstanceController::class)
+        ->parameters(['chatbot-instances' => 'chatbot']);
+    Route::post('/chatbot-instances/{chatbot}/tokens', [ChatbotInstanceController::class, 'createToken']);
+    Route::delete('/chatbot-instances/{chatbot}/tokens/{token}', [ChatbotInstanceController::class, 'revokeToken']);
+    Route::get('/chatbot-instances/{chatbot}/conversations', [ChatbotInstanceController::class, 'conversations']);
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);

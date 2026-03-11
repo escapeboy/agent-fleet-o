@@ -78,6 +78,25 @@ class SignalConnectorsPage extends Component
         'datadog' => ['label' => 'Datadog',   'category' => 'Monitoring',    'icon' => 'datadog',   'domain' => 'datadoghq.com',   'env_key' => null,                              'path' => '/api/signals/datadog/{secret}'],
         'whatsapp' => ['label' => 'WhatsApp',  'category' => 'Chat',          'icon' => 'whatsapp',  'domain' => 'whatsapp.com',    'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
         'clearcue' => ['label' => 'ClearCue',  'category' => 'GTM Intent',    'icon' => null,        'domain' => 'clearcue.ai',     'env_key' => 'services.clearcue.webhook_secret', 'path' => '/api/signals/clearcue'],
+||||||| 0213205
+        'github' => ['label' => 'GitHub',    'category' => 'Code & Issues',  'env_key' => 'services.github.webhook_secret',  'path' => '/api/signals/github'],
+        'slack' => ['label' => 'Slack',     'category' => 'Chat',           'env_key' => 'services.slack.signing_secret',   'path' => '/api/signals/slack'],
+        'jira' => ['label' => 'Jira',      'category' => 'Issues',         'env_key' => 'services.jira.webhook_secret',    'path' => '/api/signals/jira'],
+        'linear' => ['label' => 'Linear',    'category' => 'Issues',         'env_key' => 'services.linear.webhook_secret',  'path' => '/api/signals/linear'],
+        'discord' => ['label' => 'Discord',   'category' => 'Chat',           'env_key' => 'services.discord.webhook_secret', 'path' => '/api/signals/discord'],
+        'sentry' => ['label' => 'Sentry',    'category' => 'Errors',         'env_key' => 'services.sentry.webhook_secret',  'path' => '/api/signals/sentry'],
+        'pagerduty' => ['label' => 'PagerDuty', 'category' => 'Incidents',      'env_key' => 'services.pagerduty.auth_token',   'path' => '/api/signals/pagerduty'],
+        'datadog' => ['label' => 'Datadog',   'category' => 'Monitoring',     'env_key' => null,                              'path' => '/api/signals/datadog/{secret}'],
+        'whatsapp' => ['label' => 'WhatsApp',  'category' => 'Chat',           'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
+        'github' => ['label' => 'GitHub',    'category' => 'Code & Issues', 'icon' => 'github',    'domain' => 'github.com',      'env_key' => 'services.github.webhook_secret',  'path' => '/api/signals/github'],
+        'slack' => ['label' => 'Slack',     'category' => 'Chat',          'icon' => null,        'domain' => 'slack.com',       'env_key' => 'services.slack.signing_secret',   'path' => '/api/signals/slack'],
+        'jira' => ['label' => 'Jira',      'category' => 'Issues',        'icon' => 'jira',      'domain' => 'atlassian.com',   'env_key' => 'services.jira.webhook_secret',    'path' => '/api/signals/jira'],
+        'linear' => ['label' => 'Linear',    'category' => 'Issues',        'icon' => 'linear',    'domain' => 'linear.app',      'env_key' => 'services.linear.webhook_secret',  'path' => '/api/signals/linear'],
+        'discord' => ['label' => 'Discord',   'category' => 'Chat',          'icon' => 'discord',   'domain' => 'discord.com',     'env_key' => 'services.discord.webhook_secret', 'path' => '/api/signals/discord'],
+        'sentry' => ['label' => 'Sentry',    'category' => 'Errors',        'icon' => 'sentry',    'domain' => 'sentry.io',       'env_key' => 'services.sentry.webhook_secret',  'path' => '/api/signals/sentry'],
+        'pagerduty' => ['label' => 'PagerDuty', 'category' => 'Incidents',     'icon' => 'pagerduty', 'domain' => 'pagerduty.com',   'env_key' => 'services.pagerduty.auth_token',   'path' => '/api/signals/pagerduty'],
+        'datadog' => ['label' => 'Datadog',   'category' => 'Monitoring',    'icon' => 'datadog',   'domain' => 'datadoghq.com',   'env_key' => null,                              'path' => '/api/signals/datadog/{secret}'],
+        'whatsapp' => ['label' => 'WhatsApp',  'category' => 'Chat',          'icon' => 'whatsapp',  'domain' => 'whatsapp.com',    'env_key' => 'services.whatsapp.app_secret',    'path' => '/api/signals/whatsapp'],
     ];
 
     public function mount(): void
