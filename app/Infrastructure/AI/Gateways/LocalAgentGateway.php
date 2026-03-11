@@ -682,6 +682,11 @@ class LocalAgentGateway implements AiGatewayInterface
             'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
             'amp' => "{$binaryPath} -x --stream-json{$escapedPrompt}",
             'opencode' => "{$binaryPath} run --format json".($model ? ' -m '.escapeshellarg($model) : '').$escapedPrompt,
+            'gemini-cli' => "{$binaryPath} -p --output-format json".($model ? ' -m '.escapeshellarg($model) : ''),
+            'kiro' => "{$binaryPath} chat --no-interactive{$escapedPrompt}",
+            'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
+            'amp' => "{$binaryPath} -x --stream-json{$escapedPrompt}",
+            'opencode' => "{$binaryPath} run --format json".($model ? ' -m '.escapeshellarg($model) : '').$escapedPrompt,
             // -p is a boolean flag (print/headless mode); prompt is a positional argument appended at the end.
             // --force skips file-write confirmations (equivalent to --dangerously-skip-permissions in Claude Code).
             // --trust grants workspace access without interactive confirmation.
@@ -690,3 +695,268 @@ class LocalAgentGateway implements AiGatewayInterface
             'cursor' => "{$binaryPath} -p --output-format stream-json --force --trust --approve-mcps"
                 .($model && $model !== 'auto' ? ' --model '.escapeshellarg($model) : '')
                 .$escapedPrompt,
+            default => throw new RuntimeException("No command template for agent: {$agentKey}"),
+        };
+    }
+
+    /**
+     * Build Claude Code process arguments for assistant mode.
+     *
+     * Uses --system-prompt flag and --tools "" to ensure proper system/user
+     * prompt separation (avoids prompt injection detection) and disable
+     * built-in tools so the agent uses text-based <tool_call> format.
+     *
+     * @return array<string>
+     */
+    private function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null): array
+    {
+        $args = [
+            $binaryPath,
+            '--print',
+            '--output-format', 'json',
+            '--system-prompt', $systemPrompt,
+            '--tools', '',
+            '--dangerously-skip-permissions',
+            '--no-session-persistence',
+            '--strict-mcp-config',
+            '--mcp-config', '{"mcpServers":{}}',
+        ];
+
+        if ($model) {
+            $args[] = '--model';
+            $args[] = $model;
+        }
+
+        return $args;
+    }
+
+    /**
+     * Parse output from the local agent CLI.
+     *
+     * @return array{content: string, structured: array|null}
+     */
+    private function parseOutput(string $agentKey, string $rawOutput): array
+    {
+        $rawOutput = trim($rawOutput);
+
+        if (empty($rawOutput)) {
+            return ['content' => '', 'structured' => null];
+        }
+
+        // Try JSON parse first (single JSON object)
+        $json = json_decode($rawOutput, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
+            return $this->extractFromJson($agentKey, $json);
+        }
+
+        // JSONL: parse all lines and extract content from the event stream.
+        // Supports both Codex (`exec --json`) and Claude Code (`--output-format stream-json`).
+        $lines = explode("\n", $rawOutput);
+        $agentMessages = [];
+        $allEvents = [];
+        $usageEvent = null;
+        $resultEvent = null;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) {
+                continue;
+            }
+
+            $decoded = json_decode($line, true);
+            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
+                continue;
+            }
+
+            $allEvents[] = $decoded;
+            $eventType = $decoded['type'] ?? '';
+
+            // Codex: collect agent_message text from item.completed events
+            if ($eventType === 'item.completed'
+                && ($decoded['item']['type'] ?? '') === 'agent_message'
+                && isset($decoded['item']['text'])) {
+                $agentMessages[] = $decoded['item']['text'];
+            }
+
+            // Claude Code stream-json: extract text from assistant messages
+            if ($eventType === 'assistant' && isset($decoded['message']['content'])) {
+                foreach ($decoded['message']['content'] as $block) {
+                    if (($block['type'] ?? '') === 'text' && ! empty($block['text'])) {
+                        $agentMessages[] = $block['text'];
+                    }
+                }
+            }
+
+            // Claude Code stream-json: result event with final content
+            if ($eventType === 'result' && isset($decoded['result'])) {
+                $resultEvent = $decoded;
+            }
+
+            // Codex: capture usage from turn.completed
+            if ($eventType === 'turn.completed') {
+                $usageEvent = $decoded;
+            }
+        }
+
+        // If we found a result event (Claude Code stream-json), prefer it
+        if ($resultEvent) {
+            $resultContent = is_string($resultEvent['result'])
+                ? $resultEvent['result']
+                : json_encode($resultEvent['result']);
+
+            return [
+                'content' => $resultContent,
+                'structured' => $resultEvent,
+            ];
+        }
+
+        // If we found agent messages in the event stream, use them
+        if (! empty($agentMessages)) {
+            $content = implode("\n\n", $agentMessages);
+
+            return [
+                'content' => $content,
+                'structured' => [
+                    'type' => 'result',
+                    'result' => $content,
+                    'usage' => $usageEvent['usage'] ?? null,
+                ],
+            ];
+        }
+
+        // Fallback: use the last valid JSON event (for Claude Code or other formats)
+        $lastEvent = end($allEvents) ?: null;
+
+        if ($lastEvent) {
+            return $this->extractFromJson($agentKey, $lastEvent);
+        }
+
+        // Raw text fallback
+        return ['content' => $rawOutput, 'structured' => null];
+    }
+
+    /**
+     * Extract content from a parsed JSON result.
+     *
+     * @return array{content: string, structured: array|null}
+     */
+    private function extractFromJson(string $agentKey, array $json): array
+    {
+        // Claude Code JSON output: { "result": "...", "cost_usd": 0.01, ... }
+        // Or it may be an array of message objects
+        if (isset($json['result'])) {
+            return [
+                'content' => is_string($json['result']) ? $json['result'] : json_encode($json['result']),
+                'structured' => $json,
+            ];
+        }
+
+        // Gemini CLI JSON output: { "response": { "text": "..." } } or { "text": "..." }
+        if (isset($json['response']['text'])) {
+            return [
+                'content' => $json['response']['text'],
+                'structured' => $json,
+            ];
+        }
+        if (isset($json['text']) && is_string($json['text'])) {
+            return [
+                'content' => $json['text'],
+                'structured' => $json,
+            ];
+        }
+
+        // Amp --stream-json: { "type": "assistant", "content": "..." }
+        // or final message with content field
+        if (isset($json['content'])) {
+            return [
+                'content' => is_string($json['content']) ? $json['content'] : json_encode($json['content']),
+                'structured' => $json,
+            ];
+        }
+
+        // OpenCode JSON output: { "output": "..." } or { "message": "..." }
+        if (isset($json['output']) && is_string($json['output'])) {
+            return [
+                'content' => $json['output'],
+                'structured' => $json,
+            ];
+        }
+        if (isset($json['message']) && is_string($json['message'])) {
+            return [
+                'content' => $json['message'],
+                'structured' => $json,
+            ];
+        }
+
+        // If it's an array of messages, get the last assistant message
+        if (isset($json[0]) && is_array($json[0])) {
+            $assistantMessages = array_filter($json, fn ($m) => ($m['role'] ?? '') === 'assistant');
+            $last = end($assistantMessages);
+
+            if ($last && isset($last['content'])) {
+                $content = is_array($last['content'])
+                    ? collect($last['content'])->where('type', 'text')->pluck('text')->implode("\n")
+                    : $last['content'];
+
+                return ['content' => $content, 'structured' => $json];
+            }
+        }
+
+        // Generic fallback: stringify the whole thing
+        return [
+            'content' => json_encode($json, JSON_PRETTY_PRINT),
+            'structured' => $json,
+        ];
+    }
+
+    /**
+     * Resolve the local_agents.php agent key from the llm_providers config.
+     * If the generic "local" provider is used, resolve to the first available local agent.
+     */
+    private function resolveAgentKey(string $provider, ?string $model = null): string
+    {
+        if ($provider === 'local') {
+            // If a specific model is requested that maps to a known agent key, use it directly
+            // without calling detect() (which can block on single-threaded bridge)
+            $knownModels = [
+                'claude-code' => 'claude-code',
+                'codex' => 'codex',
+                'gemini-cli' => 'gemini-cli',
+                'kiro' => 'kiro',
+                'aider' => 'aider',
+                'amp' => 'amp',
+                'opencode' => 'opencode',
+                'gemini-cli' => 'gemini-cli',
+                'kiro' => 'kiro',
+                'aider' => 'aider',
+                'amp' => 'amp',
+                'opencode' => 'opencode',
+                'cursor' => 'cursor',
+            ];
+
+            if ($model && isset($knownModels[$model])) {
+                return $knownModels[$model];
+            }
+
+            $detected = $this->discovery->detect();
+            if (empty($detected)) {
+                throw new RuntimeException(
+                    'No local agents detected. Install Codex or Claude Code CLI.',
+                );
+            }
+
+            return array_key_first($detected);
+        }
+
+        return config("llm_providers.{$provider}.agent_key", $provider);
+    }
+
+    /**
+     * Rough token estimate (4 chars per token).
+     */
+    private function estimateTokens(string $text): int
+    {
+        return (int) ceil(strlen($text) / 4);
+    }
+}
