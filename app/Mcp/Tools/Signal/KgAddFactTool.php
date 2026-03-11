@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\KnowledgeGraph\Actions\AddKnowledgeFactAction;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -53,18 +54,18 @@ class KgAddFactTool extends Tool
     {
         $validated = $request->validate([
             'source_entity' => 'required|string|max:255',
-            'source_type'   => 'required|string|in:person,company,location,product,topic',
+            'source_type' => 'required|string|in:person,company,location,product,topic',
             'relation_type' => 'required|string|max:80',
             'target_entity' => 'required|string|max:255',
-            'target_type'   => 'required|string|in:person,company,location,product,topic',
-            'fact'          => 'required|string|max:1000',
-            'valid_at'      => 'nullable|string',
+            'target_type' => 'required|string|in:person,company,location,product,topic',
+            'fact' => 'required|string|max:1000',
+            'valid_at' => 'nullable|string',
         ]);
 
         try {
             $validAt = null;
             if (! empty($validated['valid_at'])) {
-                $validAt = \Illuminate\Support\Carbon::parse($validated['valid_at']);
+                $validAt = Carbon::parse($validated['valid_at']);
             }
 
             /** @var AddKnowledgeFactAction $action */
@@ -82,12 +83,12 @@ class KgAddFactTool extends Tool
             );
 
             return Response::text(json_encode([
-                'success'       => true,
-                'edge_id'       => $edge->id,
-                'fact'          => $edge->fact,
+                'success' => true,
+                'edge_id' => $edge->id,
+                'fact' => $edge->fact,
                 'relation_type' => $edge->relation_type,
-                'valid_at'      => $edge->valid_at?->toIso8601String(),
-                'message'       => 'Fact added to the knowledge graph. Any conflicting current facts have been invalidated.',
+                'valid_at' => $edge->valid_at?->toIso8601String(),
+                'message' => 'Fact added to the knowledge graph. Any conflicting current facts have been invalidated.',
             ]));
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());

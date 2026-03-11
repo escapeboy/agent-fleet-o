@@ -2,6 +2,30 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.6.0] - 2026-03-11
+
+### Added
+
+- **Multi-Mode Signal Connectors (OAuth + Multi-Subscription)** — Teams can now connect GitHub, Linear, and Jira via OAuth and create multiple independent signal subscriptions per account. Each subscription has its own webhook URL, per-source filter config, and encrypted HMAC secret.
+  - *GitHub*: Per-repo webhook registration via GitHub REST API. Supports event type filtering (issues, PRs, push, workflow runs, releases), label filters, and branch filters. Multiple repos per OAuth account.
+  - *Linear*: OAuth2 flow (replacing API key); per-team webhook subscriptions via GraphQL `webhookCreate`/`webhookDelete` mutations. Filter by resource type and actions.
+  - *Jira*: Atlassian 3LO OAuth with automatic `cloudId` resolution via the accessible-resources API. Dynamic REST webhook registration with 30-day expiry tracking and automatic refresh.
+- **ConnectorSignalSubscription Model** — New `connector_signal_subscriptions` table bridges the Integration domain (OAuth accounts) to the Signal ingestion pipeline. Each subscription tracks `webhook_id`, encrypted `webhook_secret`, `webhook_status`, `webhook_expires_at`, `signal_count`, and `last_signal_at`.
+- **SubscriptionWebhookController** — New endpoint `POST /api/signals/subscription/{id}` receives inbound payloads from OAuth-registered webhooks. Routes via `IntegrationSignalBridge` → `IngestSignalAction`. Null webhook secrets (Jira) skip HMAC verification; the opaque UUIDv7 in the URL provides security.
+- **RefreshExpiringWebhooksJob** — Scheduled weekly job that queries subscriptions expiring within 5 days, deregisters the old webhook at the provider, registers a fresh one, and updates the subscription record. Prevents silent Jira webhook expiry.
+- **ConnectorSubscriptionsPage** — New Livewire page at `/signals/subscriptions` for managing per-integration subscriptions with driver-aware filter forms (repo name + event types for GitHub, team ID for Linear, project key for Jira).
+- **`connector_subscription_manage` MCP Tool** — Agents can list, get, create, toggle, and delete connector signal subscriptions programmatically. Returns webhook URL and status in responses.
+- **`SubscribableConnectorInterface`** — New integration driver contract with `registerWebhook`, `deregisterWebhook`, `verifySubscriptionSignature`, and `mapPayloadToSignalDTO` methods. Implemented by GitHub, Linear, and Jira drivers.
+- **`IntegrationSignalBridge` Service** — Routes inbound payloads to matching active subscriptions, applying per-driver mapping and filter logic before calling `IngestSignalAction`.
+- **Jira OAuth (Atlassian 3LO)** — `OAuthConnectAction` now supports `extra_params` per driver config (used for Atlassian's required `audience` and `prompt=consent`). `OAuthCallbackAction` resolves and stores `cloud_id` after token exchange.
+
+### Fixed
+
+- **`WebhookRegistrationDTO::webhookSecret`** — Made nullable (`?string`) to support providers (Jira) that don't issue a signing secret. Existing drivers are unaffected.
+- **`RefreshExpiringWebhooksJob` schedule** — Fixed `twiceWeekly()` not existing on `CallbackEvent`; changed to `weekly()` which works correctly for job-based schedules.
+
+---
+
 ## [1.5.0] - 2026-03-08
 
 ### Added

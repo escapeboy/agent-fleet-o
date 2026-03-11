@@ -42,6 +42,11 @@ class OAuthConnectAction
             $params['scope'] = implode(' ', $oauthConfig['scopes']);
         }
 
+        // Driver-specific extra query params (e.g. Atlassian needs audience + prompt=consent)
+        if (! empty($oauthConfig['extra_params'])) {
+            $params = array_merge($params, $oauthConfig['extra_params']);
+        }
+
         return $authorizeUrl.'?'.http_build_query($params);
     }
 }

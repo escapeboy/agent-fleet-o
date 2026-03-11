@@ -52,22 +52,22 @@ class AddKnowledgeFactAction
         }
 
         $edge = KgEdge::create([
-            'team_id'          => $teamId,
+            'team_id' => $teamId,
             'source_entity_id' => $sourceEntity->id,
             'target_entity_id' => $targetEntity->id,
-            'relation_type'    => $relationType,
-            'fact'             => $fact,
-            'fact_embedding'   => $factEmbedding ? $this->embeddingToArray($factEmbedding) : null,
-            'valid_at'         => $validAt,
-            'invalid_at'       => null,
-            'episode_id'       => $episodeId,
-            'attributes'       => $attributes,
+            'relation_type' => $relationType,
+            'fact' => $fact,
+            'fact_embedding' => $factEmbedding ? $this->embeddingToArray($factEmbedding) : null,
+            'valid_at' => $validAt,
+            'invalid_at' => null,
+            'episode_id' => $episodeId,
+            'attributes' => $attributes,
         ]);
 
         Log::info('AddKnowledgeFactAction: Fact added', [
-            'team_id'       => $teamId,
+            'team_id' => $teamId,
             'relation_type' => $relationType,
-            'fact'          => $fact,
+            'fact' => $fact,
         ]);
 
         return $edge;
@@ -84,14 +84,14 @@ class AddKnowledgeFactAction
             ->where('type', $type)
             ->where('canonical_name', $canonicalName)
             ->firstOr(fn () => Entity::create([
-                'team_id'        => $teamId,
-                'type'           => $type,
-                'name'           => trim($name),
+                'team_id' => $teamId,
+                'type' => $type,
+                'name' => trim($name),
                 'canonical_name' => $canonicalName,
-                'metadata'       => [],
-                'mention_count'  => 1,
-                'first_seen_at'  => now(),
-                'last_seen_at'   => now(),
+                'metadata' => [],
+                'mention_count' => 1,
+                'first_seen_at' => now(),
+                'last_seen_at' => now(),
             ]));
     }
 

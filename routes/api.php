@@ -13,10 +13,21 @@ use App\Http\Controllers\PerTeamSignalWebhookController;
 use App\Http\Controllers\SentryAlertWebhookController;
 use App\Http\Controllers\SignalWebhookController;
 use App\Http\Controllers\SlackWebhookController;
+use App\Http\Controllers\SubscriptionWebhookController;
 use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
+
+// Subscription-based signal webhooks — per-subscription URL, per-subscription HMAC secret.
+// POST /api/signals/subscription/{subscriptionId}
+// Used by OAuth-connected integrations (GitHub OAuth App, Linear, Jira) where each
+// ConnectorSignalSubscription has its own webhook registration at the provider.
+// Must be registered BEFORE the wildcard per-team route to avoid shadowing.
+Route::post('/signals/subscription/{subscription}', SubscriptionWebhookController::class)
+    ->name('signals.subscription')
+    ->middleware('throttle:120,1')
+    ->whereUuid('subscription');
 
 // Per-team signal webhooks — unique URL per team per driver, secret stored in DB
 // POST /api/signals/{driver}/{teamId}  (e.g. /api/signals/github/01927f3c-...)

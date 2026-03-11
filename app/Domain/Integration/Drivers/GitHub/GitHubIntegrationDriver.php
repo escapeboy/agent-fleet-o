@@ -3,14 +3,18 @@
 namespace App\Domain\Integration\Drivers\GitHub;
 
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
+use App\Domain\Integration\Contracts\SubscribableConnectorInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\DTOs\TriggerDefinition;
+use App\Domain\Integration\DTOs\WebhookRegistrationDTO;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
+use App\Domain\Signal\DTOs\SignalDTO;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
-class GitHubIntegrationDriver implements IntegrationDriverInterface
+class GitHubIntegrationDriver implements IntegrationDriverInterface, SubscribableConnectorInterface
 {
     private const API_BASE = 'https://api.github.com';
 
@@ -183,5 +187,209 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface
             ]);
 
         return $response->json();
+    }
+
+    // -----------------------------------------------------------------------
+    // SubscribableConnectorInterface
+    // -----------------------------------------------------------------------
+
+    public function registerWebhook(Integration $integration, array $filterConfig, string $callbackUrl): WebhookRegistrationDTO
+    {
+        $token = $integration->getCredentialSecret('token');
+        $repo = $filterConfig['repo'] ?? null;
+
+        if (! $repo) {
+            throw new \InvalidArgumentException('GitHub subscription requires filter_config.repo (e.g. "owner/repo").');
+        }
+
+        $secret = Str::random(40);
+
+        $events = $this->resolveWebhookEvents($filterConfig);
+
+        $response = Http::withToken((string) $token)
+            ->timeout(15)
+            ->post(self::API_BASE."/repos/{$repo}/hooks", [
+                'name' => 'web',
+                'active' => true,
+                'events' => $events,
+                'config' => [
+                    'url' => $callbackUrl,
+                    'content_type' => 'json',
+                    'secret' => $secret,
+                    'insecure_ssl' => '0',
+                ],
+            ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException("GitHub webhook registration failed for {$repo}: HTTP {$response->status()} — {$response->body()}");
+        }
+
+        return new WebhookRegistrationDTO(
+            webhookId: (string) $response->json('id'),
+            webhookSecret: $secret,
+        );
+    }
+
+    public function deregisterWebhook(Integration $integration, string $webhookId, array $filterConfig): void
+    {
+        $token = $integration->getCredentialSecret('token');
+        $repo = $filterConfig['repo'] ?? null;
+
+        if (! $repo) {
+            return;
+        }
+
+        Http::withToken((string) $token)
+            ->timeout(15)
+            ->delete(self::API_BASE."/repos/{$repo}/hooks/{$webhookId}");
+    }
+
+    public function verifySubscriptionSignature(string $rawBody, array $headers, string $webhookSecret): bool
+    {
+        $signature = $headers['x-hub-signature-256'] ?? '';
+
+        if (! $signature) {
+            return false;
+        }
+
+        return hash_equals('sha256='.hash_hmac('sha256', $rawBody, $webhookSecret), $signature);
+    }
+
+    public function mapPayloadToSignalDTO(array $payload, array $headers, array $filterConfig): ?SignalDTO
+    {
+        $event = $headers['x-github-event'] ?? 'unknown';
+        $repo = $payload['repository']['full_name'] ?? ($filterConfig['repo'] ?? 'unknown');
+
+        return match ($event) {
+            'issues' => $this->mapIssueEvent($payload, $repo, $filterConfig),
+            'pull_request' => $this->mapPullRequestEvent($payload, $repo, $filterConfig),
+            'push' => $this->mapPushEvent($payload, $repo, $filterConfig),
+            'workflow_run' => $this->mapWorkflowRunEvent($payload, $repo),
+            'release' => $this->mapReleaseEvent($payload, $repo),
+            default => null,
+        };
+    }
+
+    private function mapIssueEvent(array $payload, string $repo, array $filterConfig): ?SignalDTO
+    {
+        $action = $payload['action'] ?? null;
+        $filterActions = $filterConfig['filter_actions'] ?? [];
+        $filterLabels = $filterConfig['filter_labels'] ?? [];
+
+        if ($filterActions && ! in_array($action, $filterActions, true)) {
+            return null;
+        }
+
+        if ($filterLabels) {
+            $issueLabels = array_column($payload['issue']['labels'] ?? [], 'name');
+            if (! array_intersect($filterLabels, $issueLabels)) {
+                return null;
+            }
+        }
+
+        $issueNumber = $payload['issue']['number'] ?? null;
+        $repoNodeId = $payload['repository']['node_id'] ?? null;
+        $issueNodeId = $payload['issue']['node_id'] ?? null;
+
+        return new SignalDTO(
+            sourceIdentifier: "{$repo}#{$issueNumber}",
+            sourceNativeId: $repoNodeId && $issueNodeId ? "issues.{$action}.{$repoNodeId}.{$issueNodeId}" : null,
+            payload: array_merge($payload, ['github_event' => 'issues']),
+            tags: ['github', 'issues', $action ?? 'unknown'],
+        );
+    }
+
+    private function mapPullRequestEvent(array $payload, string $repo, array $filterConfig): ?SignalDTO
+    {
+        $action = $payload['action'] ?? null;
+        $filterActions = $filterConfig['filter_actions'] ?? [];
+
+        if ($filterActions && ! in_array($action, $filterActions, true)) {
+            return null;
+        }
+
+        $prNumber = $payload['pull_request']['number'] ?? null;
+
+        return new SignalDTO(
+            sourceIdentifier: "{$repo}#PR-{$prNumber}",
+            sourceNativeId: null,
+            payload: array_merge($payload, ['github_event' => 'pull_request']),
+            tags: ['github', 'pull_request', $action ?? 'unknown'],
+        );
+    }
+
+    private function mapPushEvent(array $payload, string $repo, array $filterConfig): ?SignalDTO
+    {
+        $ref = $payload['ref'] ?? null;
+        $filterBranches = $filterConfig['filter_branches'] ?? [];
+
+        if ($filterBranches && $ref) {
+            $branch = str_replace('refs/heads/', '', $ref);
+            if (! in_array($branch, $filterBranches, true)) {
+                return null;
+            }
+        }
+
+        $afterSha = $payload['after'] ?? null;
+
+        return new SignalDTO(
+            sourceIdentifier: "{$repo}:{$ref}",
+            sourceNativeId: $afterSha ? "push.{$afterSha}" : null,
+            payload: array_merge($payload, ['github_event' => 'push']),
+            tags: ['github', 'push'],
+        );
+    }
+
+    private function mapWorkflowRunEvent(array $payload, string $repo): ?SignalDTO
+    {
+        $action = $payload['action'] ?? null;
+
+        if ($action !== 'completed') {
+            return null;
+        }
+
+        $runId = $payload['workflow_run']['id'] ?? null;
+        $conclusion = $payload['workflow_run']['conclusion'] ?? null;
+
+        return new SignalDTO(
+            sourceIdentifier: "{$repo}/workflow-run-{$runId}",
+            sourceNativeId: null,
+            payload: array_merge($payload, ['github_event' => 'workflow_run']),
+            tags: array_filter(['github', 'workflow_run', $conclusion]),
+        );
+    }
+
+    private function mapReleaseEvent(array $payload, string $repo): ?SignalDTO
+    {
+        $action = $payload['action'] ?? null;
+
+        if ($action !== 'published') {
+            return null;
+        }
+
+        $tagName = $payload['release']['tag_name'] ?? null;
+
+        return new SignalDTO(
+            sourceIdentifier: "{$repo}@{$tagName}",
+            sourceNativeId: null,
+            payload: array_merge($payload, ['github_event' => 'release']),
+            tags: ['github', 'release'],
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $filterConfig
+     * @return string[]
+     */
+    private function resolveWebhookEvents(array $filterConfig): array
+    {
+        $eventTypes = $filterConfig['event_types'] ?? [];
+
+        if ($eventTypes) {
+            return $eventTypes;
+        }
+
+        // Default: subscribe to all supported event types.
+        return ['issues', 'pull_request', 'push', 'workflow_run', 'release'];
     }
 }

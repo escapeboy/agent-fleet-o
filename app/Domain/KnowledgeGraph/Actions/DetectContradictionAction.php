@@ -19,7 +19,7 @@ class DetectContradictionAction
      * Find active edges that contradict a new fact and invalidate them.
      *
      * @param  string  $newFactEmbeddingStr  pgvector-formatted string e.g. "[0.1,0.2,...]"
-     * @return string[]  IDs of invalidated edges
+     * @return string[] IDs of invalidated edges
      */
     public function execute(
         string $teamId,
@@ -73,9 +73,9 @@ class DetectContradictionAction
             ]);
 
         Log::info('DetectContradictionAction: Invalidated edges', [
-            'team_id'        => $teamId,
-            'relation_type'  => $relationType,
-            'new_fact'       => $newFact,
+            'team_id' => $teamId,
+            'relation_type' => $relationType,
+            'new_fact' => $newFact,
             'invalidated_ids' => $toInvalidate,
         ]);
 
@@ -90,7 +90,7 @@ class DetectContradictionAction
     private function llmContradictionCheck(string $teamId, string $newFact, Collection $candidates): array
     {
         $existingFacts = $candidates->map(fn (KgEdge $e) => [
-            'id'   => $e->id,
+            'id' => $e->id,
             'fact' => $e->fact,
         ])->values()->toArray();
 

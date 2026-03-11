@@ -31,7 +31,7 @@ class DocsController extends Controller
     {
         abort_unless(in_array($page, $this->pages, true), 404);
 
-        $view = 'docs.' . $page;
+        $view = 'docs.'.$page;
 
         abort_unless(view()->exists($view), 404);
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Project\Jobs\DispatchScheduledProjectsJob;
+use App\Domain\Signal\Jobs\RefreshExpiringWebhooksJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -47,3 +48,6 @@ Schedule::command('system:check-updates')->hourly()->runInBackground();
 Schedule::command('scramble:export --path=public/api.json')->weeklyOn(1, '03:30');
 
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
+
+// Refresh webhooks with expiring TTLs (e.g. Jira Cloud 30-day webhook expiry)
+Schedule::job(new RefreshExpiringWebhooksJob)->weekly();
