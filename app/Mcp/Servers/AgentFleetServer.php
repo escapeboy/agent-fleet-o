@@ -315,7 +315,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (18)
+        // Signal (19)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,

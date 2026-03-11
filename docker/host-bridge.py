@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
@@ -38,12 +39,25 @@ AGENTS = {
         "binary": "codex",
         "detect_command": "codex --version",
         "command_template": "{binary} exec --json --full-auto",
+        "stdin": True,
     },
     "claude-code": {
         "name": "Claude Code",
         "binary": "claude",
         "detect_command": "claude --version",
         "command_template": "{binary} --print --output-format json --dangerously-skip-permissions",
+        "stdin": True,
+    },
+    "cursor": {
+        "name": "Cursor",
+        "binary": "agent",
+        "detect_command": "agent --version",
+        # Prompt is injected via a temp file (Cursor does not read from stdin).
+        # The {prompt_file} placeholder is replaced at execution time.
+        "command_template": '{binary} -p "$(cat {prompt_file})" --output-format json --force --trust --approve-mcps',
+        "stdin": False,
+        # Verify the binary identifies itself as Cursor before accepting it.
+        "version_check": "cursor",
     },
 }
 
@@ -78,6 +92,19 @@ def get_version(command: str) -> str | None:
         if match:
             return match.group(1)
         return output.split("\n")[0]
+    except Exception:
+        return None
+
+
+def get_raw_output(command: str) -> str | None:
+    """Run a command and return its raw stdout (for identity verification)."""
+    try:
+        result = subprocess.run(
+            command, shell=True, capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout.strip() or None
     except Exception:
         return None
 
@@ -133,6 +160,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 binary_path = which(agent["binary"])
                 if not binary_path:
                     continue
+                # For agents with a version_check requirement, verify the binary
+                # identifies itself accordingly (guards against name collisions).
+                # Use raw output for the identity check because get_version() strips
+                # the identifier prefix and returns only the numeric part (e.g. "0.48.1").
+                check = agent.get("version_check")
+                if check:
+                    raw = get_raw_output(agent["detect_command"]) or ""
+                    if check.lower() not in raw.lower():
+                        continue
                 version = get_version(agent["detect_command"]) or "unknown"
                 detected[key] = {
                     "name": agent["name"],
@@ -186,10 +222,25 @@ class BridgeHandler(BaseHTTPRequestHandler):
             if model and agent_key == "codex":
                 # --model is an exec subcommand flag
                 template = template + " --model " + model
-            command = template.format(binary=binary_path)
+            if model and model != "auto" and agent_key == "cursor":
+                template = template + " --model " + model
 
             # Resolve working directory
             cwd = workdir if workdir and os.path.isdir(workdir) else str(CONFIG_PATH.parent.parent)
+
+            # Cursor CLI does not read from stdin — write prompt to a temp file
+            # and inject the path into the command template.
+            tmp_prompt_file = None
+            uses_stdin = agent.get("stdin", True)
+            if not uses_stdin:
+                tmp_fd, tmp_prompt_file = tempfile.mkstemp(prefix="fleetq_cursor_")
+                try:
+                    os.write(tmp_fd, prompt.encode())
+                finally:
+                    os.close(tmp_fd)
+                command = template.format(binary=binary_path, prompt_file=tmp_prompt_file)
+            else:
+                command = template.format(binary=binary_path)
 
             start = time.monotonic_ns()
 
@@ -197,7 +248,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 proc = subprocess.run(
                     command,
                     shell=True,
-                    input=prompt,
+                    input=prompt if uses_stdin else None,
                     capture_output=True,
                     text=True,
                     timeout=timeout,
@@ -219,6 +270,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     "exit_code": -1,
                 }, 500)
                 return
+            finally:
+                # Clean up the temp prompt file used for Cursor CLI
+                if tmp_prompt_file:
+                    try:
+                        os.unlink(tmp_prompt_file)
+                    except OSError:
+                        pass
 
             elapsed_ms = int((time.monotonic_ns() - start) / 1_000_000)
 

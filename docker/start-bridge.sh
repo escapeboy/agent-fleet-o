@@ -114,7 +114,7 @@ detect_runtime() {
 load_agent_env_keys() {
     if [ ! -f "$ENV_FILE" ]; then return; fi
 
-    for key in OPENAI_API_KEY ANTHROPIC_API_KEY GOOGLE_AI_API_KEY; do
+    for key in OPENAI_API_KEY ANTHROPIC_API_KEY GOOGLE_AI_API_KEY CURSOR_API_KEY AMP_API_KEY; do
         # Skip if already exported
         eval "current=\$$key"
         if [ -n "$current" ]; then continue; fi
