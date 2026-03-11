@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Intercom;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Http;
  */
 class IntercomIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     private const API_BASE = 'https://api.intercom.io';
 
     public function key(): string
@@ -200,32 +203,32 @@ class IntercomIntegrationDriver implements IntegrationDriverInterface
             ->timeout(15);
 
         return match ($action) {
-            'reply_to_conversation' => $http->post(
+            'reply_to_conversation' => $this->checked($http->post(
                 self::API_BASE."/conversations/{$params['conversation_id']}/reply",
                 [
                     'message_type' => $params['message_type'] ?? 'comment',
                     'type' => 'admin',
                     'body' => $params['body'],
                 ]
-            )->json(),
+            ))->json(),
 
-            'create_note' => $http->post(
+            'create_note' => $this->checked($http->post(
                 self::API_BASE."/conversations/{$params['conversation_id']}/reply",
                 ['message_type' => 'note', 'type' => 'admin', 'body' => $params['body']]
-            )->json(),
+            ))->json(),
 
-            'update_contact' => $http->put(self::API_BASE."/contacts/{$params['contact_id']}", array_filter([
+            'update_contact' => $this->checked($http->put(self::API_BASE."/contacts/{$params['contact_id']}", array_filter([
                 'name' => $params['name'] ?? null,
                 'email' => $params['email'] ?? null,
                 'custom_attributes' => isset($params['custom_attributes'])
                     ? json_decode($params['custom_attributes'], true)
                     : null,
-            ]))->json(),
+            ])))->json(),
 
-            'tag_contact' => $http->post(self::API_BASE.'/tags', [
+            'tag_contact' => $this->checked($http->post(self::API_BASE.'/tags', [
                 'name' => $params['tag_name'],
                 'users' => [['id' => $params['contact_id']]],
-            ])->json(),
+            ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

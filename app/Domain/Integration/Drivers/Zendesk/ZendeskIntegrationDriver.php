@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Zendesk;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Http;
  */
 class ZendeskIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     public function key(): string
     {
         return 'zendesk';
@@ -236,31 +239,31 @@ class ZendeskIntegrationDriver implements IntegrationDriverInterface
         $http = Http::withHeaders(['Authorization' => "Basic {$auth}"])->timeout(15);
 
         return match ($action) {
-            'create_ticket' => $http->post("{$base}/tickets.json", ['ticket' => array_filter([
+            'create_ticket' => $this->checked($http->post("{$base}/tickets.json", ['ticket' => array_filter([
                 'subject' => $params['subject'],
                 'comment' => ['body' => $params['body']],
                 'requester' => ['email' => $params['requester_email']],
                 'priority' => $params['priority'] ?? null,
-            ])])->json(),
+            ])]))->json(),
 
-            'update_ticket' => $http->put("{$base}/tickets/{$params['ticket_id']}.json", [
+            'update_ticket' => $this->checked($http->put("{$base}/tickets/{$params['ticket_id']}.json", [
                 'ticket' => array_filter([
                     'status' => $params['status'] ?? null,
                     'priority' => $params['priority'] ?? null,
                     'assignee_email' => $params['assignee_email'] ?? null,
                 ]),
-            ])->json(),
+            ]))->json(),
 
-            'add_comment' => $http->put("{$base}/tickets/{$params['ticket_id']}.json", [
+            'add_comment' => $this->checked($http->put("{$base}/tickets/{$params['ticket_id']}.json", [
                 'ticket' => ['comment' => [
                     'body' => $params['body'],
                     'public' => ($params['public'] ?? 'true') === 'true',
                 ]],
-            ])->json(),
+            ]))->json(),
 
-            'close_ticket' => $http->put("{$base}/tickets/{$params['ticket_id']}.json", [
+            'close_ticket' => $this->checked($http->put("{$base}/tickets/{$params['ticket_id']}.json", [
                 'ticket' => ['status' => 'closed'],
-            ])->json(),
+            ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

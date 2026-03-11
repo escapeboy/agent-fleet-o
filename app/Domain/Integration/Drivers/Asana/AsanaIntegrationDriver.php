@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Asana;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Contracts\SubscribableConnectorInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
@@ -25,6 +26,8 @@ use Illuminate\Support\Str;
  */
 class AsanaIntegrationDriver implements IntegrationDriverInterface, SubscribableConnectorInterface
 {
+    use ChecksIntegrationResponse;
+
     private const API_BASE = 'https://app.asana.com/api/1.0';
 
     public function key(): string
@@ -254,27 +257,27 @@ class AsanaIntegrationDriver implements IntegrationDriverInterface, Subscribable
         $http = $this->withAuth($integration);
 
         return match ($action) {
-            'create_task' => $http->post(self::API_BASE.'/tasks', ['data' => array_filter([
+            'create_task' => $this->checked($http->post(self::API_BASE.'/tasks', ['data' => array_filter([
                 'name' => $params['name'],
                 'notes' => $params['notes'] ?? null,
                 'assignee' => $params['assignee'] ?? null,
                 'projects' => [$params['project_id']],
-            ])])->json(),
+            ])]))->json(),
 
-            'complete_task' => $http->put(self::API_BASE."/tasks/{$params['task_id']}", [
+            'complete_task' => $this->checked($http->put(self::API_BASE."/tasks/{$params['task_id']}", [
                 'data' => ['completed' => true],
-            ])->json(),
+            ]))->json(),
 
-            'add_follower' => $http->post(self::API_BASE."/tasks/{$params['task_id']}/addFollowers", [
+            'add_follower' => $this->checked($http->post(self::API_BASE."/tasks/{$params['task_id']}/addFollowers", [
                 'data' => ['followers' => [$params['user']]],
-            ])->json(),
+            ]))->json(),
 
-            'update_task' => $http->put(self::API_BASE."/tasks/{$params['task_id']}", [
+            'update_task' => $this->checked($http->put(self::API_BASE."/tasks/{$params['task_id']}", [
                 'data' => array_filter([
                     'notes' => $params['notes'] ?? null,
                     'due_on' => $params['due_on'] ?? null,
                 ]),
-            ])->json(),
+            ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

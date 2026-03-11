@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\GitLab;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Contracts\SubscribableConnectorInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
@@ -23,6 +24,8 @@ use Illuminate\Support\Str;
  */
 class GitLabIntegrationDriver implements IntegrationDriverInterface, SubscribableConnectorInterface
 {
+    use ChecksIntegrationResponse;
+
     private const DEFAULT_BASE = 'https://gitlab.com';
 
     public function key(): string
@@ -260,24 +263,24 @@ class GitLabIntegrationDriver implements IntegrationDriverInterface, Subscribabl
         abort_unless($token, 422, 'GitLab access token not configured.');
 
         return match ($action) {
-            'create_issue' => Http::withToken($token)->timeout(15)
+            'create_issue' => $this->checked(Http::withToken($token)->timeout(15)
                 ->post("{$base}/projects/{$projectId}/issues", array_filter([
                     'title' => $params['title'],
                     'description' => $params['description'] ?? null,
                     'labels' => $params['labels'] ?? null,
-                ]))->json(),
+                ])))->json(),
 
-            'add_comment' => Http::withToken($token)->timeout(15)
+            'add_comment' => $this->checked(Http::withToken($token)->timeout(15)
                 ->post("{$base}/projects/{$projectId}/{$params['type']}/{$params['iid']}/notes", [
                     'body' => $params['body'],
-                ])->json(),
+                ]))->json(),
 
-            'create_merge_request' => Http::withToken($token)->timeout(15)
+            'create_merge_request' => $this->checked(Http::withToken($token)->timeout(15)
                 ->post("{$base}/projects/{$projectId}/merge_requests", [
                     'title' => $params['title'],
                     'source_branch' => $params['source_branch'],
                     'target_branch' => $params['target_branch'],
-                ])->json(),
+                ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

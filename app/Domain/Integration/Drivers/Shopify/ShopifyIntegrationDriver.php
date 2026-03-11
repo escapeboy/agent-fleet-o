@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Shopify;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Contracts\SubscribableConnectorInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
@@ -23,6 +24,8 @@ use Illuminate\Support\Str;
  */
 class ShopifyIntegrationDriver implements IntegrationDriverInterface, SubscribableConnectorInterface
 {
+    use ChecksIntegrationResponse;
+
     private const API_VERSION = '2024-01';
 
     public function key(): string
@@ -249,23 +252,22 @@ class ShopifyIntegrationDriver implements IntegrationDriverInterface, Subscribab
         abort_unless($token, 422, 'Shopify access token not configured.');
 
         return match ($action) {
-            'get_order' => Http::withHeaders(['X-Shopify-Access-Token' => $token])
+            'get_order' => $this->checked(Http::withHeaders(['X-Shopify-Access-Token' => $token])
                 ->timeout(15)
-                ->get("{$base}/orders/{$params['order_id']}.json")
-                ->json(),
+                ->get("{$base}/orders/{$params['order_id']}.json"))->json(),
 
-            'update_order_status' => Http::withHeaders(['X-Shopify-Access-Token' => $token])
+            'update_order_status' => $this->checked(Http::withHeaders(['X-Shopify-Access-Token' => $token])
                 ->timeout(15)
                 ->put("{$base}/orders/{$params['order_id']}.json", ['order' => array_filter([
                     'note' => $params['note'] ?? null,
                     'tags' => $params['tags'] ?? null,
-                ])])->json(),
+                ])]))->json(),
 
-            'create_discount_code' => Http::withHeaders(['X-Shopify-Access-Token' => $token])
+            'create_discount_code' => $this->checked(Http::withHeaders(['X-Shopify-Access-Token' => $token])
                 ->timeout(15)
                 ->post("{$base}/price_rules/{$params['price_rule_id']}/discount_codes.json", [
                     'discount_code' => ['code' => $params['code']],
-                ])->json(),
+                ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

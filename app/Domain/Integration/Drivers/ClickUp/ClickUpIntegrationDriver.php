@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\ClickUp;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Contracts\SubscribableConnectorInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
@@ -23,6 +24,8 @@ use Illuminate\Support\Str;
  */
 class ClickUpIntegrationDriver implements IntegrationDriverInterface, SubscribableConnectorInterface
 {
+    use ChecksIntegrationResponse;
+
     private const API_BASE = 'https://api.clickup.com/api/v2';
 
     public function key(): string
@@ -242,19 +245,19 @@ class ClickUpIntegrationDriver implements IntegrationDriverInterface, Subscribab
         $http = Http::withHeaders(['Authorization' => $token])->timeout(15);
 
         return match ($action) {
-            'create_task' => $http->post(self::API_BASE."/list/{$params['list_id']}/task", array_filter([
+            'create_task' => $this->checked($http->post(self::API_BASE."/list/{$params['list_id']}/task", array_filter([
                 'name' => $params['name'],
                 'description' => $params['description'] ?? null,
                 'priority' => isset($params['priority']) ? (int) $params['priority'] : null,
+            ])))->json(),
+
+            'update_task_status' => $this->checked($http->put(self::API_BASE."/task/{$params['task_id']}", [
+                'status' => $params['status'],
             ]))->json(),
 
-            'update_task_status' => $http->put(self::API_BASE."/task/{$params['task_id']}", [
-                'status' => $params['status'],
-            ])->json(),
-
-            'post_comment' => $http->post(self::API_BASE."/task/{$params['task_id']}/comment", [
+            'post_comment' => $this->checked($http->post(self::API_BASE."/task/{$params['task_id']}/comment", [
                 'comment_text' => $params['comment_text'],
-            ])->json(),
+            ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

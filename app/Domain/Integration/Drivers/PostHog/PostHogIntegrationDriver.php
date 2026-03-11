@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\PostHog;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Http;
  */
 class PostHogIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     private const DEFAULT_BASE = 'https://app.posthog.com';
 
     public function key(): string
@@ -187,14 +190,14 @@ class PostHogIntegrationDriver implements IntegrationDriverInterface
         $base = rtrim($integration->getCredentialSecret('base_url') ?? self::DEFAULT_BASE, '/');
 
         return match ($action) {
-            'capture_event' => Http::withHeaders(['Authorization' => "Bearer {$personalKey}"])
+            'capture_event' => $this->checked(Http::withHeaders(['Authorization' => "Bearer {$personalKey}"])
                 ->timeout(10)
                 ->post("{$base}/capture/", [
                     'api_key' => $projectKey,
                     'distinct_id' => $params['distinct_id'],
                     'event' => $params['event'],
                     'properties' => json_decode($params['properties'] ?? '{}', true) ?? [],
-                ])->json(),
+                ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

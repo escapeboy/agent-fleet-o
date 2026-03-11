@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Confluence;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Http;
  */
 class ConfluenceIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     public function key(): string
     {
         return 'confluence';
@@ -225,31 +228,31 @@ class ConfluenceIntegrationDriver implements IntegrationDriverInterface
         $http = Http::withHeaders(['Authorization' => "Basic {$auth}"])->timeout(15);
 
         return match ($action) {
-            'create_page' => $http->post("{$base}/content", [
+            'create_page' => $this->checked($http->post("{$base}/content", [
                 'type' => 'page',
                 'title' => $params['title'],
                 'space' => ['key' => $params['space_key']],
                 'ancestors' => isset($params['parent_id']) ? [['id' => $params['parent_id']]] : [],
                 'body' => ['storage' => ['value' => $params['body'], 'representation' => 'storage']],
-            ])->json(),
+            ]))->json(),
 
-            'update_page' => $http->put("{$base}/content/{$params['page_id']}", [
+            'update_page' => $this->checked($http->put("{$base}/content/{$params['page_id']}", [
                 'version' => ['number' => (int) $params['version']],
                 'title' => $params['title'],
                 'type' => 'page',
                 'body' => ['storage' => ['value' => $params['body'], 'representation' => 'storage']],
-            ])->json(),
+            ]))->json(),
 
-            'add_comment' => $http->post("{$base}/content", [
+            'add_comment' => $this->checked($http->post("{$base}/content", [
                 'type' => 'comment',
                 'container' => ['id' => $params['page_id'], 'type' => 'page'],
                 'body' => ['storage' => ['value' => $params['body'], 'representation' => 'storage']],
-            ])->json(),
+            ]))->json(),
 
-            'search_content' => $http->get("{$base}/content/search", [
+            'search_content' => $this->checked($http->get("{$base}/content/search", [
                 'cql' => $params['cql'],
                 'limit' => (int) ($params['limit'] ?? 10),
-            ])->json(),
+            ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

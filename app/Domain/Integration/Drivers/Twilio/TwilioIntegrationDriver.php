@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Twilio;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -26,6 +27,8 @@ use Illuminate\Support\Facades\Http;
  */
 class TwilioIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     private const API_BASE = 'https://api.twilio.com/2010-04-01';
 
     public function key(): string
@@ -227,19 +230,19 @@ class TwilioIntegrationDriver implements IntegrationDriverInterface
         $http = Http::withBasicAuth($sid, $token)->timeout(15);
 
         return match ($action) {
-            'send_sms' => $http->asForm()
+            'send_sms' => $this->checked($http->asForm()
                 ->post(self::API_BASE."/Accounts/{$sid}/Messages.json", [
                     'To' => $params['to'],
                     'From' => $params['from'] ?? $defaultFrom,
                     'Body' => $params['body'],
-                ])->json(),
+                ]))->json(),
 
-            'make_call' => $http->asForm()
+            'make_call' => $this->checked($http->asForm()
                 ->post(self::API_BASE."/Accounts/{$sid}/Calls.json", [
                     'To' => $params['to'],
                     'From' => $params['from'] ?? $defaultFrom,
                     'Url' => $params['twiml_url'],
-                ])->json(),
+                ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

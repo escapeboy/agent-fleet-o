@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Bitbucket;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Contracts\SubscribableConnectorInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
@@ -23,6 +24,8 @@ use Illuminate\Support\Str;
  */
 class BitbucketIntegrationDriver implements IntegrationDriverInterface, SubscribableConnectorInterface
 {
+    use ChecksIntegrationResponse;
+
     private const API_BASE = 'https://api.bitbucket.org/2.0';
 
     public function key(): string
@@ -256,20 +259,20 @@ class BitbucketIntegrationDriver implements IntegrationDriverInterface, Subscrib
         $http = $this->withAuth($integration);
 
         return match ($action) {
-            'create_issue' => $http->post(self::API_BASE."/repositories/{$workspace}/{$repoSlug}/issues", [
+            'create_issue' => $this->checked($http->post(self::API_BASE."/repositories/{$workspace}/{$repoSlug}/issues", [
                 'title' => $params['title'],
                 'content' => ['raw' => $params['content'] ?? ''],
                 'priority' => $params['priority'] ?? 'major',
-            ])->json(),
+            ]))->json(),
 
-            'add_comment' => $http->post(
+            'add_comment' => $this->checked($http->post(
                 self::API_BASE."/repositories/{$workspace}/{$repoSlug}/pullrequests/{$params['pr_id']}/comments",
                 ['content' => ['raw' => $params['content']]]
-            )->json(),
+            ))->json(),
 
-            'approve_pull_request' => $http->post(
+            'approve_pull_request' => $this->checked($http->post(
                 self::API_BASE."/repositories/{$workspace}/{$repoSlug}/pullrequests/{$params['pr_id']}/approve"
-            )->json(),
+            ))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

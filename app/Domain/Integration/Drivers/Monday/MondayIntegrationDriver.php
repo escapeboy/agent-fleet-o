@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Monday;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Http;
  */
 class MondayIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     private const API_URL = 'https://api.monday.com/v2';
 
     public function key(): string
@@ -60,7 +63,7 @@ class MondayIntegrationDriver implements IntegrationDriverInterface
             ->timeout(15)
             ->post(self::API_URL, ['query' => $query, 'variables' => $variables]);
 
-        return $response->json() ?? [];
+        return $this->checked($response)->json() ?? [];
     }
 
     public function validateCredentials(array $credentials): bool

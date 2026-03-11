@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Segment;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Http;
  */
 class SegmentIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     private const TRACK_URL = 'https://api.segment.io/v1/track';
 
     private const IDENTIFY_URL = 'https://api.segment.io/v1/identify';
@@ -178,20 +181,20 @@ class SegmentIntegrationDriver implements IntegrationDriverInterface
         abort_unless($writeKey, 422, 'Segment write key not configured.');
 
         return match ($action) {
-            'track_event' => Http::withBasicAuth($writeKey, '')
+            'track_event' => $this->checked(Http::withBasicAuth($writeKey, '')
                 ->timeout(10)
                 ->post(self::TRACK_URL, [
                     'userId' => $params['user_id'],
                     'event' => $params['event'],
                     'properties' => json_decode($params['properties'] ?? '{}', true) ?? [],
-                ])->json(),
+                ]))->json(),
 
-            'identify_user' => Http::withBasicAuth($writeKey, '')
+            'identify_user' => $this->checked(Http::withBasicAuth($writeKey, '')
                 ->timeout(10)
                 ->post(self::IDENTIFY_URL, [
                     'userId' => $params['user_id'],
                     'traits' => json_decode($params['traits'] ?? '{}', true) ?? [],
-                ])->json(),
+                ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

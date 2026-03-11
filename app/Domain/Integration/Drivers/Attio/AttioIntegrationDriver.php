@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Attio;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Http;
  */
 class AttioIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     private const API_BASE = 'https://api.attio.com/v2';
 
     public function key(): string
@@ -182,17 +185,17 @@ class AttioIntegrationDriver implements IntegrationDriverInterface
         abort_unless($token, 422, 'Attio access token not configured.');
 
         return match ($action) {
-            'create_record' => Http::withToken($token)->timeout(15)
+            'create_record' => $this->checked(Http::withToken($token)->timeout(15)
                 ->post(self::API_BASE."/objects/{$params['object_slug']}/records", [
                     'data' => ['values' => json_decode($params['values'], true) ?? []],
-                ])->json(),
+                ]))->json(),
 
-            'update_record' => Http::withToken($token)->timeout(15)
+            'update_record' => $this->checked(Http::withToken($token)->timeout(15)
                 ->patch(self::API_BASE."/objects/{$params['object_slug']}/records/{$params['record_id']}", [
                     'data' => ['values' => json_decode($params['values'], true) ?? []],
-                ])->json(),
+                ]))->json(),
 
-            'add_note' => Http::withToken($token)->timeout(15)
+            'add_note' => $this->checked(Http::withToken($token)->timeout(15)
                 ->post(self::API_BASE.'/notes', [
                     'data' => [
                         'parent_object' => $params['parent_object'],
@@ -202,7 +205,7 @@ class AttioIntegrationDriver implements IntegrationDriverInterface
                             ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $params['content']]]],
                         ]]],
                     ],
-                ])->json(),
+                ]))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

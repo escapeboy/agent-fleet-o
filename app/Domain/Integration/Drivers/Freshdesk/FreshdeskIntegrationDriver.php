@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Drivers\Freshdesk;
 
+use App\Domain\Integration\Concerns\ChecksIntegrationResponse;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Http;
  */
 class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 {
+    use ChecksIntegrationResponse;
+
     public function key(): string
     {
         return 'freshdesk';
@@ -232,7 +235,7 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
         $base = $this->apiBase($integration);
 
         return match ($action) {
-            'create_ticket' => Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            'create_ticket' => $this->checked(Http::withHeaders(['Authorization' => "Basic {$auth}"])
                 ->timeout(15)
                 ->post("{$base}/tickets", array_filter([
                     'subject' => $params['subject'],
@@ -240,27 +243,27 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
                     'email' => $params['email'],
                     'priority' => isset($params['priority']) ? (int) $params['priority'] : null,
                     'status' => 2,
-                ]))->json(),
+                ])))->json(),
 
-            'update_ticket' => Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            'update_ticket' => $this->checked(Http::withHeaders(['Authorization' => "Basic {$auth}"])
                 ->timeout(15)
                 ->put("{$base}/tickets/{$params['ticket_id']}", array_filter([
                     'status' => isset($params['status']) ? (int) $params['status'] : null,
                     'priority' => isset($params['priority']) ? (int) $params['priority'] : null,
-                ]))->json(),
+                ])))->json(),
 
-            'reply_to_ticket' => Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            'reply_to_ticket' => $this->checked(Http::withHeaders(['Authorization' => "Basic {$auth}"])
                 ->timeout(15)
                 ->post("{$base}/tickets/{$params['ticket_id']}/reply", [
                     'body' => $params['body'],
-                ])->json(),
+                ]))->json(),
 
-            'assign_ticket' => Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            'assign_ticket' => $this->checked(Http::withHeaders(['Authorization' => "Basic {$auth}"])
                 ->timeout(15)
                 ->put("{$base}/tickets/{$params['ticket_id']}", array_filter([
                     'responder_id' => isset($params['responder_id']) ? (int) $params['responder_id'] : null,
                     'group_id' => isset($params['group_id']) ? (int) $params['group_id'] : null,
-                ]))->json(),
+                ])))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };
