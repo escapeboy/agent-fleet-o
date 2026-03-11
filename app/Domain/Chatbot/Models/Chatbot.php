@@ -98,6 +98,16 @@ class Chatbot extends Model
         return $this->hasMany(ChatbotMessage::class);
     }
 
+    public function knowledgeSources(): HasMany
+    {
+        return $this->hasMany(ChatbotKnowledgeSource::class);
+    }
+
+    public function kbChunks(): HasMany
+    {
+        return $this->hasMany(ChatbotKbChunk::class);
+    }
+
     public function activeChannels(): HasMany
     {
         return $this->hasMany(ChatbotChannel::class)->where('is_active', true);

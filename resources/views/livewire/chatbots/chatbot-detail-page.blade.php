@@ -51,7 +51,7 @@
     {{-- Tabs --}}
     <div class="mb-6 border-b border-gray-200">
         <nav class="-mb-px flex gap-6">
-            @foreach(['overview' => 'Overview', 'configuration' => 'Configuration', 'tokens' => 'API Tokens', 'channels' => 'Channels', 'widget' => 'Widget', 'conversations' => 'Conversations'] as $tab => $label)
+            @foreach(['overview' => 'Overview', 'configuration' => 'Configuration', 'tokens' => 'API Tokens', 'channels' => 'Channels', 'widget' => 'Widget', 'conversations' => 'Conversations', 'knowledge' => 'Knowledge Base'] as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="border-b-2 pb-3 text-sm font-medium transition
                             {{ $activeTab === $tab
@@ -334,6 +334,40 @@
                     <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ number_format($messagesCount) }}</dd>
                 </div>
             </dl>
+        </div>
+
+    {{-- Knowledge Base Tab --}}
+    @elseif($activeTab === 'knowledge')
+        <div class="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">Knowledge Base</p>
+                    <p class="text-sm text-gray-500">Upload documents and URLs to enable RAG-powered answers.</p>
+                </div>
+                <a href="{{ route('chatbots.knowledge', $chatbot) }}"
+                   class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                    Manage Knowledge Base
+                </a>
+            </div>
+            @php
+                $kbSourceCount = $chatbot->knowledgeSources()->where('status', 'ready')->count();
+                $kbChunkCount = $chatbot->kbChunks()->count();
+            @endphp
+            <dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div class="rounded-lg bg-gray-50 p-4">
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Ready Sources</dt>
+                    <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $kbSourceCount }}</dd>
+                </div>
+                <div class="rounded-lg bg-gray-50 p-4">
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Indexed Chunks</dt>
+                    <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ number_format($kbChunkCount) }}</dd>
+                </div>
+            </dl>
+            @if($kbSourceCount === 0)
+                <p class="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    No ready knowledge sources yet. Add documents or URLs so the chatbot can answer questions from your content.
+                </p>
+            @endif
         </div>
     @endif
 </div>

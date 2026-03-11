@@ -6,9 +6,13 @@ use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Chatbot\Models\Chatbot;
+use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Prism\Prism\Facades\Prism;
 
 class ChatbotResponseService
 {
@@ -47,10 +51,18 @@ class ChatbotResponseService
         // Build conversation context from Redis or DB
         $contextMessages = $this->loadContext($session, $chatbot);
 
+        // RAG retrieval — only if chatbot has indexed knowledge sources
+        $ragChunks = [];
+        $bestRagScore = 0.0;
+        if ($chatbot->knowledgeSources()->where('status', 'ready')->exists()) {
+            $ragChunks = $this->retrieveRelevantChunks($chatbot, $userText);
+            $bestRagScore = ! empty($ragChunks) ? (float) ($ragChunks[0]['similarity'] ?? 0.0) : 0.0;
+        }
+
         // Prepare input for the agent
         $agentInput = [
             'task' => $userText,
-            'context' => $this->formatContextForAgent($contextMessages, $userText),
+            'context' => $this->formatContextForAgent($contextMessages, $userText, $ragChunks),
         ];
 
         // Execute the backing agent
@@ -64,9 +76,8 @@ class ChatbotResponseService
         $latencyMs = (int) ((microtime(true) - $startedAt) * 1000);
         $rawReply = $result['output']['content'] ?? ($result['output']['result'] ?? '');
 
-        // Simple confidence scoring: ask the LLM to rate its own confidence
-        // Phase 3 will add RAG retrieval score as a second signal
-        $confidence = $this->estimateConfidence($result);
+        // Composite confidence: LLM execution success + RAG best similarity score
+        $confidence = $this->estimateConfidence($result, $bestRagScore);
 
         $needsEscalation = $chatbot->human_escalation_enabled
             && $confidence < (float) $chatbot->confidence_threshold;
@@ -112,6 +123,10 @@ class ChatbotResponseService
         }
 
         // Normal path: persist and return
+        $ragSourceMeta = ! empty($ragChunks)
+            ? array_map(fn ($c) => ['chunk_id' => $c['id'], 'similarity' => $c['similarity']], $ragChunks)
+            : null;
+
         $assistantMsg = ChatbotMessage::create([
             'session_id' => $session->id,
             'chatbot_id' => $chatbot->id,
@@ -120,6 +135,7 @@ class ChatbotResponseService
             'content' => $rawReply,
             'confidence' => $confidence,
             'latency_ms' => $latencyMs,
+            'metadata' => $ragSourceMeta ? ['sources' => $ragSourceMeta] : null,
         ]);
 
         $this->updateContextCache($session, $chatbot, $userText, $rawReply);
@@ -180,32 +196,90 @@ class ChatbotResponseService
         Cache::store('redis')->forget("chatbot:session:{$session->id}:context");
     }
 
-    private function formatContextForAgent(array $contextMessages, string $currentMessage): string
+    private function formatContextForAgent(array $contextMessages, string $currentMessage, array $ragChunks = []): string
     {
-        if (empty($contextMessages)) {
-            return $currentMessage;
+        $parts = [];
+
+        if (! empty($ragChunks)) {
+            $docs = collect($ragChunks)
+                ->map(fn ($c) => "- {$c['content']}")
+                ->join("\n");
+            $parts[] = "Reference documents:\n{$docs}";
         }
 
-        $history = collect($contextMessages)
-            ->map(fn ($m) => ucfirst($m['role']).': '.$m['content'])
-            ->join("\n");
+        if (! empty($contextMessages)) {
+            $history = collect($contextMessages)
+                ->map(fn ($m) => ucfirst($m['role']).': '.$m['content'])
+                ->join("\n");
+            $parts[] = "Conversation history:\n{$history}";
+        }
 
-        return "Conversation history:\n{$history}\n\nUser: {$currentMessage}";
+        $parts[] = "User: {$currentMessage}";
+
+        return implode("\n\n", $parts);
     }
 
-    private function estimateConfidence(array $executionResult): float
+    /**
+     * Retrieve the top relevant KB chunks for a query using pgvector cosine similarity.
+     *
+     * @return array<array{id: string, content: string, similarity: float}>
+     */
+    private function retrieveRelevantChunks(Chatbot $chatbot, string $query, float $threshold = 0.72, int $topK = 5): array
     {
-        // Check if execution returned a structured confidence
+        try {
+            $response = Prism::embeddings()
+                ->using('openai', 'text-embedding-3-small')
+                ->fromInput($query)
+                ->asEmbeddings();
+
+            $vector = $response->embeddings[0]->embedding;
+            $embeddingStr = '['.implode(',', $vector).']';
+
+            $rows = DB::select(
+                "SELECT id, content, 1 - (embedding <=> ?::vector) AS similarity
+                 FROM chatbot_kb_chunks
+                 WHERE chatbot_id = ?
+                   AND team_id = ?
+                   AND embedding IS NOT NULL
+                   AND 1 - (embedding <=> ?::vector) >= ?
+                 ORDER BY embedding <=> ?::vector
+                 LIMIT ?",
+                [$embeddingStr, $chatbot->id, $chatbot->team_id, $embeddingStr, $threshold, $embeddingStr, $topK]
+            );
+
+            return array_map(fn ($row) => [
+                'id' => $row->id,
+                'content' => $row->content,
+                'similarity' => (float) $row->similarity,
+            ], $rows);
+        } catch (\Throwable $e) {
+            Log::warning('ChatbotResponseService: RAG retrieval failed', [
+                'chatbot_id' => $chatbot->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Composite confidence: LLM execution quality + RAG retrieval signal.
+     */
+    private function estimateConfidence(array $executionResult, float $ragScore = 0.0): float
+    {
         if (isset($executionResult['output']['confidence'])) {
-            return (float) $executionResult['output']['confidence'];
+            $llmScore = (float) $executionResult['output']['confidence'];
+        } elseif (! empty($executionResult['output'])) {
+            $llmScore = 0.85;
+        } else {
+            $llmScore = 0.30;
         }
 
-        // Default: execution succeeded → high confidence
-        // Phase 3 will add RAG retrieval score combination
-        if (! empty($executionResult['output'])) {
-            return 0.85;
+        if ($ragScore > 0.0) {
+            // Weighted average: 60% LLM score, 40% RAG score
+            return round(($llmScore * 0.6) + ($ragScore * 0.4), 4);
         }
 
-        return 0.30;
+        return $llmScore;
     }
 }
