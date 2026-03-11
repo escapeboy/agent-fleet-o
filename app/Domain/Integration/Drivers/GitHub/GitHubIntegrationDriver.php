@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 
 class GitHubIntegrationDriver implements IntegrationDriverInterface, SubscribableConnectorInterface
 {
-    private const API_BASE = 'https://api.github.com';
+    private const DEFAULT_BASE = 'https://api.github.com';
 
     public function key(): string
     {
@@ -41,8 +41,29 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
     public function credentialSchema(): array
     {
         return [
-            'token' => ['type' => 'string', 'required' => true, 'label' => 'Personal Access Token', 'hint' => 'github.com → Settings → Developer settings → Personal access tokens'],
+            'base_url' => ['type' => 'string', 'required' => false, 'label' => 'GitHub URL',
+                'default' => 'https://github.com',
+                'hint' => 'Leave as-is for GitHub.com. For GitHub Enterprise: https://github.mycompany.com'],
+            'token' => ['type' => 'password', 'required' => true, 'label' => 'Personal Access Token',
+                'hint' => 'Settings → Developer settings → Personal access tokens (classic)'],
         ];
+    }
+
+    private function apiBase(Integration|array $source): string
+    {
+        $url = $source instanceof Integration
+            ? ($source->getCredentialSecret('base_url') ?? '')
+            : ($source['base_url'] ?? '');
+
+        $url = rtrim((string) $url, '/');
+
+        // Convert web URL (https://github.mycompany.com) to API URL (/api/v3)
+        // GitHub.com uses api.github.com, GHE uses {host}/api/v3
+        if ($url === '' || $url === 'https://github.com') {
+            return self::DEFAULT_BASE;
+        }
+
+        return $url.'/api/v3';
     }
 
     public function validateCredentials(array $credentials): bool
@@ -54,7 +75,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
         }
 
         try {
-            $response = Http::withToken($token)->timeout(10)->get(self::API_BASE.'/user');
+            $response = Http::withToken($token)->timeout(10)->get($this->apiBase($credentials).'/user');
 
             return $response->successful();
         } catch (\Throwable) {
@@ -73,7 +94,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
         $start = microtime(true);
 
         try {
-            $response = Http::withToken($token)->timeout(10)->get(self::API_BASE.'/user');
+            $response = Http::withToken($token)->timeout(10)->get($this->apiBase($integration).'/user');
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
@@ -159,18 +180,19 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
     public function execute(Integration $integration, string $action, array $params): mixed
     {
         $token = $integration->getCredentialSecret('token');
+        $apiBase = $this->apiBase($integration);
 
         return match ($action) {
-            'create_issue' => $this->createIssue($token, $params),
-            'add_comment' => $this->addComment($token, $params),
+            'create_issue' => $this->createIssue($token, $params, $apiBase),
+            'add_comment' => $this->addComment($token, $params, $apiBase),
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };
     }
 
-    private function createIssue(?string $token, array $params): array
+    private function createIssue(?string $token, array $params, string $apiBase): array
     {
         $response = Http::withToken((string) $token)
-            ->post(self::API_BASE."/repos/{$params['owner']}/{$params['repo']}/issues", array_filter([
+            ->post("{$apiBase}/repos/{$params['owner']}/{$params['repo']}/issues", array_filter([
                 'title' => $params['title'],
                 'body' => $params['body'] ?? null,
                 'labels' => $params['labels'] ?? null,
@@ -179,10 +201,10 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
         return $response->json();
     }
 
-    private function addComment(?string $token, array $params): array
+    private function addComment(?string $token, array $params, string $apiBase): array
     {
         $response = Http::withToken((string) $token)
-            ->post(self::API_BASE."/repos/{$params['owner']}/{$params['repo']}/issues/{$params['issue_number']}/comments", [
+            ->post("{$apiBase}/repos/{$params['owner']}/{$params['repo']}/issues/{$params['issue_number']}/comments", [
                 'body' => $params['body'],
             ]);
 
@@ -208,7 +230,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
         $response = Http::withToken((string) $token)
             ->timeout(15)
-            ->post(self::API_BASE."/repos/{$repo}/hooks", [
+            ->post($this->apiBase($integration)."/repos/{$repo}/hooks", [
                 'name' => 'web',
                 'active' => true,
                 'events' => $events,
@@ -241,7 +263,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
         Http::withToken((string) $token)
             ->timeout(15)
-            ->delete(self::API_BASE."/repos/{$repo}/hooks/{$webhookId}");
+            ->delete($this->apiBase($integration)."/repos/{$repo}/hooks/{$webhookId}");
     }
 
     public function verifySubscriptionSignature(string $rawBody, array $headers, string $webhookSecret): bool
