@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Chatbot;
 
 use App\Domain\Chatbot\Actions\CreateChatbotAction;
+use App\Domain\Chatbot\Enums\ChatbotType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -41,6 +42,10 @@ class ChatbotCreateTool extends Tool
                 ->description('Confidence threshold for escalation (0.0-1.0, default 0.7)'),
             'human_escalation_enabled' => $schema->boolean()
                 ->description('Enable human escalation for low-confidence responses'),
+            'workflow_id' => $schema->string()
+                ->description('Optional workflow UUID to delegate message processing'),
+            'approval_timeout_hours' => $schema->integer()
+                ->description('Hours before escalated approval expires (default 48)'),
         ];
     }
 
@@ -56,20 +61,21 @@ class ChatbotCreateTool extends Tool
             'welcome_message' => 'nullable|string',
             'confidence_threshold' => 'nullable|numeric|between:0,1',
             'human_escalation_enabled' => 'nullable|boolean',
+            'workflow_id' => 'nullable|uuid',
+            'approval_timeout_hours' => 'nullable|integer|min:1|max:720',
         ]);
 
         try {
             $result = app(CreateChatbotAction::class)->execute(
                 teamId: auth()->user()->current_team_id,
                 name: $validated['name'],
-                type: $validated['type'],
+                type: ChatbotType::from($validated['type']),
                 systemPrompt: $validated['system_prompt'],
                 provider: $validated['provider'] ?? 'anthropic',
                 model: $validated['model'] ?? 'claude-haiku-4-5',
-                description: $validated['description'] ?? null,
                 welcomeMessage: $validated['welcome_message'] ?? null,
-                confidenceThreshold: $validated['confidence_threshold'] ?? 0.7,
-                humanEscalationEnabled: $validated['human_escalation_enabled'] ?? false,
+                workflowId: $validated['workflow_id'] ?? null,
+                approvalTimeoutHours: $validated['approval_timeout_hours'] ?? null,
             );
 
             return Response::text(json_encode([

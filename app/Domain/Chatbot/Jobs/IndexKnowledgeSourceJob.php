@@ -177,6 +177,7 @@ class IndexKnowledgeSourceJob implements ShouldQueue
                 'content' => $text,
                 'embedding' => DB::raw("'{$embeddingStr}'::vector"),
                 'chunk_index' => $startIndex + $idx,
+                'access_level' => $source->access_level ?? 'public',
                 'metadata' => json_encode($chunk['metadata'] ?? []),
                 'created_at' => now(),
                 'updated_at' => now(),
