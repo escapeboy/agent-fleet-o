@@ -30,7 +30,7 @@ return [
         'stripe' => ['label' => 'Stripe',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💳'],
         'notion' => ['label' => 'Notion',       'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '📝'],
         'airtable' => ['label' => 'Airtable',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '📊'],
-        'linear' => ['label' => 'Linear',             'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📋'],
+        'linear' => ['label' => 'Linear',             'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '📋'],
         'discord' => ['label' => 'Discord',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🎮'],
         'teams' => ['label' => 'Microsoft Teams',    'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🟦'],
         'whatsapp' => ['label' => 'WhatsApp Business',  'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '💬'],
@@ -43,7 +43,7 @@ return [
         'mailchimp' => ['label' => 'Mailchimp',          'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🐒'],
         'klaviyo' => ['label' => 'Klaviyo',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📧'],
         'google' => ['label' => 'Google Workspace',  'auth' => 'oauth2',       'poll_frequency' => 300,  'icon' => '🔵'],
-        'jira' => ['label' => 'Jira',              'auth' => 'api_key',      'poll_frequency' => 120,  'icon' => '🔷'],
+        'jira' => ['label' => 'Jira',              'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '🔷'],
         'zapier' => ['label' => 'Zapier',            'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '⚡'],
         'make' => ['label' => 'Make',              'auth' => 'webhook_only', 'poll_frequency' => 0,    'icon' => '🔮'],
     ],
@@ -88,6 +88,20 @@ return [
                 'openid',
             ],
         ],
+        'linear' => [
+            'client_id' => env('LINEAR_CLIENT_ID'),
+            'client_secret' => env('LINEAR_CLIENT_SECRET'),
+            // read: read user data; write: create/update issues; issues:create for webhook scope
+            'scopes' => ['read', 'write', 'issues:create'],
+        ],
+        'jira' => [
+            'client_id' => env('JIRA_CLIENT_ID'),
+            'client_secret' => env('JIRA_CLIENT_SECRET'),
+            // offline_access → refresh tokens; manage:jira-webhook → register webhooks
+            'scopes' => ['read:jira-work', 'write:jira-work', 'offline_access', 'manage:jira-webhook'],
+            // Atlassian requires audience and prompt=consent for refresh tokens
+            'extra_params' => ['audience' => 'api.atlassian.com', 'prompt' => 'consent'],
+        ],
     ],
 
     /*
@@ -118,6 +132,14 @@ return [
         'google' => [
             'authorize' => 'https://accounts.google.com/o/oauth2/v2/auth',
             'token' => 'https://oauth2.googleapis.com/token',
+        ],
+        'linear' => [
+            'authorize' => 'https://linear.app/oauth/authorize',
+            'token' => 'https://api.linear.app/oauth/token',
+        ],
+        'jira' => [
+            'authorize' => 'https://auth.atlassian.com/authorize',
+            'token' => 'https://auth.atlassian.com/oauth/token',
         ],
     ],
 

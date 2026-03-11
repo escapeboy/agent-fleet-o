@@ -11,7 +11,6 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillVersion;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Collection;
 
 class PlatformSkillsSeeder extends Seeder
 {

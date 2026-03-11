@@ -93,6 +93,33 @@ class OAuthCallbackAction
     }
 
     /**
+     * Fetch the first accessible Jira Cloud site and return its id + url.
+     * Returns null if the API call fails or returns no sites.
+     *
+     * @return array{id: string, url: string}|null
+     */
+    private function resolveJiraCloudId(string $accessToken): ?array
+    {
+        try {
+            $response = Http::withToken($accessToken)
+                ->timeout(10)
+                ->get('https://api.atlassian.com/oauth/token/accessible-resources');
+
+            if ($response->successful()) {
+                /** @var array<int, array{id: string, url: string}> $sites */
+                $sites = $response->json() ?? [];
+                if (! empty($sites[0]['id'])) {
+                    return ['id' => (string) $sites[0]['id'], 'url' => (string) ($sites[0]['url'] ?? '')];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('OAuthCallbackAction: could not resolve Jira cloudId', ['error' => $e->getMessage()]);
+        }
+
+        return null;
+    }
+
+    /**
      * Normalize token response into a credential secret_data array.
      *
      * @param  array<string, mixed>  $tokens
@@ -135,6 +162,23 @@ class OAuthCallbackAction
             }
             if (! empty($tokens['bot_id'])) {
                 $credentials['bot_id'] = (string) $tokens['bot_id'];
+            }
+        }
+
+        // Linear: scope and token type are useful for diagnostics
+        if ($driver === 'linear') {
+            if (! empty($tokens['scope'])) {
+                $credentials['scope'] = (string) $tokens['scope'];
+            }
+        }
+
+        // Jira: resolve the Atlassian cloudId from the accessible-resources endpoint.
+        // cloudId is required for all Jira Cloud API calls and webhook registration.
+        if ($driver === 'jira') {
+            $cloudInfo = $this->resolveJiraCloudId((string) ($credentials['access_token']));
+            if ($cloudInfo) {
+                $credentials['cloud_id'] = $cloudInfo['id'];
+                $credentials['cloud_url'] = rtrim($cloudInfo['url'], '/');
             }
         }
 

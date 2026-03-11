@@ -44,11 +44,11 @@ class KgSearchTool extends Tool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'query'           => 'required|string|max:500',
-            'relation_type'   => 'nullable|string|max:80',
-            'entity_type'     => 'nullable|string|in:person,company,location,product,topic',
+            'query' => 'required|string|max:500',
+            'relation_type' => 'nullable|string|max:80',
+            'entity_type' => 'nullable|string|in:person,company,location,product,topic',
             'include_history' => 'nullable|boolean',
-            'limit'           => 'nullable|integer|min:1|max:50',
+            'limit' => 'nullable|integer|min:1|max:50',
         ]);
 
         try {
@@ -65,16 +65,16 @@ class KgSearchTool extends Tool
             );
 
             $results = $facts->map(fn (KgEdge $edge) => [
-                'id'            => $edge->id,
+                'id' => $edge->id,
                 'source_entity' => $edge->sourceEntity?->name,
-                'source_type'   => $edge->sourceEntity?->type,
+                'source_type' => $edge->sourceEntity?->type,
                 'relation_type' => $edge->relation_type,
-                'fact'          => $edge->fact,
+                'fact' => $edge->fact,
                 'target_entity' => $edge->targetEntity?->name,
-                'target_type'   => $edge->targetEntity?->type,
-                'valid_at'      => $edge->valid_at?->toIso8601String(),
-                'invalid_at'    => $edge->invalid_at?->toIso8601String(),
-                'similarity'    => round((float) ($edge->similarity ?? 0), 4),
+                'target_type' => $edge->targetEntity?->type,
+                'valid_at' => $edge->valid_at?->toIso8601String(),
+                'invalid_at' => $edge->invalid_at?->toIso8601String(),
+                'similarity' => round((float) ($edge->similarity ?? 0), 4),
             ])->values()->toArray();
 
             return Response::text(json_encode([

@@ -21,7 +21,7 @@ class PlatformTeamSeeder extends Seeder
                 'name' => 'FleetQ Platform',
                 'password' => Hash::make(Str::random(64)),
                 'email_verified_at' => now(),
-            ]
+            ],
         );
 
         $team = Team::withoutGlobalScopes()->firstOrCreate(
@@ -30,7 +30,7 @@ class PlatformTeamSeeder extends Seeder
                 'name' => 'FleetQ Platform',
                 'owner_id' => $user->id,
                 'is_platform' => true,
-            ]
+            ],
         );
 
         // Ensure is_platform is set on existing teams (idempotent)

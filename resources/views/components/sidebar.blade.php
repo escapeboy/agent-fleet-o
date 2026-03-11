@@ -73,6 +73,10 @@
             Signal Sources
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('signals.subscriptions') }}" :active="request()->routeIs('signals.subscriptions')" icon="plug">
+            Subscriptions
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.*')" icon="envelope">
             Email Themes
         </x-sidebar-link>

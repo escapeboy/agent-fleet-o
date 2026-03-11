@@ -43,7 +43,7 @@ class InjectKnowledgeGraphContext
             // Graceful degradation — KG context is additive, never blocking
             Log::warning('InjectKnowledgeGraphContext: Failed to inject KG context', [
                 'agent_id' => $ctx->agent->id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 

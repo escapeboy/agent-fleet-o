@@ -83,6 +83,19 @@
                         @endif
                     </div>
 
+                    {{-- Subscription badge for OAuth-capable drivers --}}
+                    @if($card['supports_subscriptions'])
+                        <div class="mt-3">
+                            <a href="{{ route('signals.subscriptions') }}"
+                                class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-100">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                </svg>
+                                {{ $card['subscription_count'] }} {{ Str::plural('subscription', $card['subscription_count']) }}
+                            </a>
+                        </div>
+                    @endif
+
                     {{-- CTA --}}
                     <button
                         wire:click="openSetupPanel('{{ $driver }}')"
@@ -290,40 +303,141 @@
 
         {{-- IMAP --}}
         <div>
-            <div class="mb-4">
-                <h2 class="text-base font-semibold text-(--color-on-surface)">Email (IMAP)</h2>
-                <p class="text-sm text-(--color-on-surface-muted)">Monitor an inbox for incoming messages as signals.</p>
+            <div class="mb-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-semibold text-(--color-on-surface)">Email (IMAP)</h2>
+                    <p class="text-sm text-(--color-on-surface-muted)">Monitor an inbox for incoming messages as signals. Polls every 15 minutes.</p>
+                </div>
+                @unless($showImapForm)
+                    <button wire:click="$set('showImapForm', true)"
+                        class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
+                        Add Account
+                    </button>
+                @endunless
             </div>
 
-            @if($imapConnector)
-                <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-5">
-                    <div class="flex items-center gap-2">
-                        <span class="h-2 w-2 rounded-full {{ $imapConnector->last_error_at && $imapConnector->last_error_at->gt($imapConnector->last_success_at ?? now()->subYear()) ? 'bg-red-500' : 'bg-green-500' }}"></span>
-                        <span class="text-sm font-medium text-(--color-on-surface)">{{ $imapConnector->name }}</span>
+            {{-- Existing IMAP connectors list --}}
+            @if($imapConnectors->isNotEmpty())
+                <div class="mb-3 space-y-2">
+                    @foreach($imapConnectors as $imap)
+                        @php
+                            $imapError = $imap->last_error_at && $imap->last_error_at->gt($imap->last_success_at ?? now()->subYear());
+                            $imapDot = $imapError ? 'bg-red-500' : ($imap->last_success_at ? 'bg-green-500' : 'bg-gray-300');
+                        @endphp
+                        <div class="flex items-center justify-between rounded-lg border border-(--color-theme-border) bg-(--color-surface-raised) px-4 py-3">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <span class="h-2 w-2 shrink-0 rounded-full {{ $imapDot }}"></span>
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium text-(--color-on-surface)">{{ $imap->name }}</p>
+                                    <p class="truncate text-xs text-(--color-on-surface-muted)">
+                                        {{ $imap->config['host'] ?? '—' }}:{{ $imap->config['port'] ?? 993 }} · {{ $imap->config['folder'] ?? 'INBOX' }}
+                                    </p>
+                                    @if($imap->last_error_message && $imapError)
+                                        <p class="truncate text-xs text-red-600">{{ $imap->last_error_message }}</p>
+                                    @elseif($imap->last_success_at)
+                                        <p class="text-xs text-(--color-on-surface-muted)">Last polled {{ $imap->last_success_at->diffForHumans() }}</p>
+                                    @else
+                                        <p class="text-xs italic text-(--color-on-surface-muted)">Pending first poll</p>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="ml-3 flex shrink-0 gap-3">
+                                <button wire:click="editImap('{{ $imap->id }}')"
+                                    class="text-xs text-primary-600 hover:text-primary-800">
+                                    Edit
+                                </button>
+                                <button wire:click="removeImapConnector('{{ $imap->id }}')"
+                                    wire:confirm="Remove IMAP account {{ $imap->name }}?"
+                                    class="text-xs text-red-600 hover:text-red-800">
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            {{-- Add/Edit IMAP Form --}}
+            @if($showImapForm)
+                <div class="space-y-4 rounded-xl border border-primary-200 bg-primary-50/50 p-5">
+                    <h3 class="text-sm font-semibold text-(--color-on-surface)">
+                        {{ $editingImapId ? 'Edit IMAP Account' : 'Add IMAP Account' }}
+                    </h3>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-form-input wire:model="imapName" label="Account Name (optional)" type="text"
+                            placeholder="Work Gmail" />
+                        <x-form-input wire:model="imapHost" label="IMAP Host" type="text"
+                            placeholder="imap.gmail.com"
+                            :error="$errors->first('imapHost')" />
                     </div>
-                    <div class="mt-2 space-y-1">
-                        <p class="text-xs text-(--color-on-surface-muted)">Host: {{ $imapConnector->config['host'] ?? '—' }}</p>
-                        <p class="text-xs text-(--color-on-surface-muted)">Folder: {{ $imapConnector->config['folder'] ?? 'INBOX' }}</p>
-                        @if($imapConnector->last_success_at)
-                            <p class="text-xs text-(--color-on-surface-muted)">Last polled {{ $imapConnector->last_success_at->diffForHumans() }}</p>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <x-form-input wire:model="imapPort" label="Port" type="number"
+                            placeholder="993"
+                            :error="$errors->first('imapPort')" />
+                        <x-form-select wire:model="imapEncryption" label="Encryption">
+                            <option value="ssl">SSL (port 993)</option>
+                            <option value="tls">STARTTLS (port 143)</option>
+                            <option value="none">None</option>
+                        </x-form-select>
+                        <x-form-input wire:model="imapFolder" label="Folder" type="text"
+                            placeholder="INBOX"
+                            :error="$errors->first('imapFolder')" />
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-form-input wire:model="imapUsername" label="Username / Email" type="text"
+                            placeholder="you@example.com"
+                            :error="$errors->first('imapUsername')" />
+                        <x-form-input wire:model="imapPassword" label="{{ $editingImapId ? 'Password (leave blank to keep current)' : 'Password' }}" type="password"
+                            placeholder="••••••••"
+                            :error="$errors->first('imapPassword')" />
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-form-input wire:model="imapMaxPerPoll" label="Max emails per poll" type="number"
+                            placeholder="50"
+                            :error="$errors->first('imapMaxPerPoll')" />
+                        <x-form-input wire:model="imapTags" label="Tags (comma-separated)" type="text"
+                            placeholder="email, support" />
+                    </div>
+
+                    {{-- Test result --}}
+                    @if($imapTestResult)
+                        <div class="rounded-lg {{ $imapTestOk ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800' }} px-4 py-2 text-sm">
+                            {{ $imapTestResult }}
+                        </div>
+                    @endif
+
+                    <div class="flex flex-wrap gap-2">
+                        @if($editingImapId)
+                            <button wire:click="updateImapConnector"
+                                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                                Save Changes
+                            </button>
+                        @else
+                            <button wire:click="addImapConnector"
+                                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                                Add Account
+                            </button>
                         @endif
-                        @if($imapConnector->last_error_message)
-                            <p class="text-xs text-red-600">{{ $imapConnector->last_error_message }}</p>
-                        @endif
+                        <button wire:click="testImapConnection"
+                            wire:loading.attr="disabled"
+                            class="rounded-lg border border-(--color-theme-border-strong) px-4 py-2 text-sm font-medium text-(--color-on-surface) hover:bg-(--color-surface-alt) disabled:opacity-50">
+                            <span wire:loading wire:target="testImapConnection">Testing…</span>
+                            <span wire:loading.remove wire:target="testImapConnection">Test Connection</span>
+                        </button>
+                        <button wire:click="$set('showImapForm', false)"
+                            class="rounded-lg border border-(--color-theme-border-strong) px-4 py-2 text-sm font-medium text-(--color-on-surface) hover:bg-(--color-surface-alt)">
+                            Cancel
+                        </button>
                     </div>
                 </div>
-            @else
-                <div class="space-y-3 rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-5">
-                    <p class="text-sm text-(--color-on-surface-muted)">No IMAP connector configured.</p>
-                    <p class="text-sm text-(--color-on-surface-muted)">
-                        IMAP connectors require a
-                        <a href="{{ route('credentials.index') }}" class="text-primary-600 underline hover:text-primary-700">Credential</a>
-                        with your mail server details. Create one first, then configure the connector via the API or MCP.
-                    </p>
-                    <div class="space-y-1 rounded-lg bg-(--color-surface-alt) p-3 font-mono text-xs text-(--color-on-surface-muted)">
-                        <p># Create a Credential first, then create the Connector via MCP:</p>
-                        <p>driver: imap, config: &#123; credential_id, host, port: 993, encryption: ssl, folder: INBOX &#125;</p>
-                    </div>
+            @elseif($imapConnectors->isEmpty())
+                <div class="rounded-xl border border-dashed border-(--color-theme-border) py-8 text-center">
+                    <p class="text-sm text-(--color-on-surface-muted)">No IMAP accounts configured.</p>
+                    <p class="text-xs text-(--color-on-surface-muted)">Click "Add Account" to monitor an email inbox.</p>
                 </div>
             @endif
         </div>
