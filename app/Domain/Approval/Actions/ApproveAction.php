@@ -6,6 +6,8 @@ use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Jobs\FireApprovalWebhookJob;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
+use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
@@ -33,6 +35,31 @@ class ApproveAction
             'reviewer_notes' => $notes,
             'reviewed_at' => now(),
         ]);
+
+        // Chatbot response approval: deliver approved content via event
+        if ($approvalRequest->isChatbotResponse()) {
+            $message = ChatbotMessage::find($approvalRequest->chatbot_message_id);
+            if ($message) {
+                $approvedContent = $approvalRequest->edited_content ?? $message->draft_content ?? '';
+                $message->update([
+                    'content' => $approvedContent,
+                    'was_escalated' => true,
+                ]);
+
+                ChatbotResponseApprovedEvent::dispatch(
+                    chatbotMessageId: $message->id,
+                    sessionId: $message->session_id,
+                    approvedContent: $approvedContent,
+                );
+            }
+
+            if ($approvalRequest->callback_url) {
+                $approvalRequest->update(['callback_status' => 'pending']);
+                FireApprovalWebhookJob::dispatch($approvalRequest->id);
+            }
+
+            return;
+        }
 
         // Credential review approval: activate the credential
         if ($approvalRequest->isCredentialReview()) {

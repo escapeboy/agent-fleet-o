@@ -29,6 +29,12 @@
             Agents
         </x-sidebar-link>
 
+        @if(auth()->user()?->currentTeam?->settings['chatbot_enabled'] ?? false)
+            <x-sidebar-link href="{{ route('chatbots.index') }}" :active="request()->routeIs('chatbots.*')" icon="chat-bubble-left-right">
+                Chatbots
+            </x-sidebar-link>
+        @endif
+
         <x-sidebar-link href="{{ route('crews.index') }}" :active="request()->routeIs('crews.*')" icon="user-group">
             Crews
         </x-sidebar-link>
