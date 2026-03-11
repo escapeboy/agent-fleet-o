@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Http;
  */
 class SentryIntegrationDriver implements IntegrationDriverInterface
 {
-    private const API_BASE = 'https://sentry.io/api/0';
+    private const DEFAULT_BASE = 'https://sentry.io';
 
     public function key(): string
     {
@@ -45,13 +45,27 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'auth_token' => ['type' => 'password', 'required' => true,  'label' => 'Auth Token',
+            'base_url' => ['type' => 'string', 'required' => false, 'label' => 'Sentry URL',
+                'default' => self::DEFAULT_BASE,
+                'hint' => 'Leave as-is for sentry.io. For self-hosted: https://sentry.yourdomain.com'],
+            'auth_token' => ['type' => 'password', 'required' => true, 'label' => 'Auth Token',
                 'hint' => 'Sentry Internal Integration → Tokens → Create Token'],
-            'org_slug' => ['type' => 'string',   'required' => true,  'label' => 'Organisation Slug',
-                'hint' => 'From your Sentry URL: sentry.io/organizations/{slug}/'],
+            'org_slug' => ['type' => 'string', 'required' => true, 'label' => 'Organisation Slug',
+                'hint' => 'From your Sentry URL: {base}/organizations/{slug}/'],
             'client_secret' => ['type' => 'password', 'required' => false, 'label' => 'Client Secret',
                 'hint' => 'Internal Integration client secret — used for webhook signature verification'],
         ];
+    }
+
+    private function apiBase(Integration|array $integration): string
+    {
+        $url = $integration instanceof Integration
+            ? ($integration->getCredentialSecret('base_url') ?? '')
+            : ($integration['base_url'] ?? '');
+
+        $url = rtrim((string) $url, '/');
+
+        return ($url !== '' ? $url : self::DEFAULT_BASE).'/api/0';
     }
 
     public function validateCredentials(array $credentials): bool
@@ -64,9 +78,10 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
         }
 
         try {
+            $apiBase = $this->apiBase($credentials);
             $response = Http::withToken($token)
                 ->timeout(10)
-                ->get(self::API_BASE."/organizations/{$orgSlug}/");
+                ->get("{$apiBase}/organizations/{$orgSlug}/");
 
             return $response->successful();
         } catch (\Throwable) {
@@ -86,9 +101,10 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
         $start = microtime(true);
         try {
+            $apiBase = $this->apiBase($integration);
             $response = Http::withToken($token)
                 ->timeout(10)
-                ->get(self::API_BASE."/organizations/{$orgSlug}/");
+                ->get("{$apiBase}/organizations/{$orgSlug}/");
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
@@ -151,9 +167,10 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
         }
 
         try {
+            $apiBase = $this->apiBase($integration);
             $response = Http::withToken($token)
                 ->timeout(15)
-                ->get(self::API_BASE."/organizations/{$orgSlug}/issues/", [
+                ->get("{$apiBase}/organizations/{$orgSlug}/issues/", [
                     'is_unhandled' => true,
                     'limit' => 25,
                 ]);
@@ -224,21 +241,23 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
         abort_unless($token && $orgSlug, 422, 'Sentry credentials not configured.');
 
+        $apiBase = $this->apiBase($integration);
+
         return match ($action) {
             'resolve_issue' => Http::withToken($token)->timeout(15)
-                ->put(self::API_BASE."/issues/{$params['issue_id']}/", ['status' => 'resolved'])
+                ->put("{$apiBase}/issues/{$params['issue_id']}/", ['status' => 'resolved'])
                 ->json(),
 
             'assign_issue' => Http::withToken($token)->timeout(15)
-                ->put(self::API_BASE."/issues/{$params['issue_id']}/", ['assignedTo' => $params['assignee']])
+                ->put("{$apiBase}/issues/{$params['issue_id']}/", ['assignedTo' => $params['assignee']])
                 ->json(),
 
             'create_note' => Http::withToken($token)->timeout(15)
-                ->post(self::API_BASE."/issues/{$params['issue_id']}/comments/", ['text' => $params['text']])
+                ->post("{$apiBase}/issues/{$params['issue_id']}/comments/", ['text' => $params['text']])
                 ->json(),
 
             'update_issue' => Http::withToken($token)->timeout(15)
-                ->put(self::API_BASE."/issues/{$params['issue_id']}/", array_filter([
+                ->put("{$apiBase}/issues/{$params['issue_id']}/", array_filter([
                     'status' => $params['status'] ?? null,
                     'priority' => $params['priority'] ?? null,
                 ]))->json(),

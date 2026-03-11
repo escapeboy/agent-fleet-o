@@ -45,8 +45,11 @@ class IntegrationListPage extends Component
         try {
             $schema = app(IntegrationManager::class)->driver($driver)->credentialSchema();
             $this->credentialSchema = $schema;
-            // Pre-populate keys so wire:model bindings exist
-            $this->connectCredentials = array_fill_keys(array_keys($schema), '');
+            // Pre-populate keys with defaults so wire:model bindings exist
+            $this->connectCredentials = array_map(
+                fn ($field) => $field['default'] ?? '',
+                $schema,
+            );
         } catch (\Throwable) {
             $this->credentialSchema = [];
             $this->connectCredentials = [];
