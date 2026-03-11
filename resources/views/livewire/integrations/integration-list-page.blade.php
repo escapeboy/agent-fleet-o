@@ -95,28 +95,54 @@
                             <p class="font-medium">OAuth2 Authorization Required</p>
                             <p class="mt-1 text-blue-600">You'll be redirected to {{ ucfirst($connectDriver) }} to authorize access. Make sure to return here after authorizing.</p>
                         </div>
-                    @elseif(($driverConfig['auth'] ?? '') !== 'webhook_only')
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Credentials</label>
-                            <p class="mb-2 text-xs text-gray-500">
-                                Enter the credentials required for this integration.
-                            </p>
-                            <div class="space-y-2">
-                                <div class="flex gap-2">
-                                    <input wire:model="credentialKey" placeholder="Field name (e.g. token)"
-                                        class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none" />
-                                    <input wire:model="credentialValue" type="password" placeholder="Value"
-                                        class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none" />
-                                    <button wire:click="addCredential"
-                                            class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm hover:bg-gray-200">Add</button>
+                    @elseif(($driverConfig['auth'] ?? '') === 'webhook_only')
+                        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
+                            <p class="font-medium text-gray-700">No credentials required</p>
+                            <p class="mt-1">This integration receives data via webhook. After connecting, you'll get a unique URL to paste into {{ ucfirst($connectDriver) }}.</p>
+                        </div>
+                    @elseif(!empty($credentialSchema))
+                        <div class="space-y-3">
+                            @foreach($credentialSchema as $fieldKey => $field)
+                                @php
+                                    $fieldType = ($field['type'] ?? 'string') === 'password' ? 'password' : 'text';
+                                    $isRequired = $field['required'] ?? false;
+                                @endphp
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-gray-700">
+                                        {{ $field['label'] ?? $fieldKey }}
+                                        @if(!$isRequired)
+                                            <span class="ml-1 text-xs font-normal text-gray-400">optional</span>
+                                        @endif
+                                    </label>
+                                    <input
+                                        wire:model="connectCredentials.{{ $fieldKey }}"
+                                        type="{{ $fieldType }}"
+                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none"
+                                        {{ $isRequired ? 'required' : '' }}
+                                    />
+                                    @if(!empty($field['hint']))
+                                        <p class="mt-1 text-xs text-gray-500">{{ $field['hint'] }}</p>
+                                    @endif
                                 </div>
-                                @foreach($connectCredentials as $key => $value)
-                                    <div class="flex items-center justify-between rounded bg-gray-50 px-3 py-1.5 text-sm">
-                                        <span class="text-gray-700">{{ $key }}: <span class="text-gray-400">••••••••</span></span>
-                                        <button wire:click="removeCredential('{{ $key }}')" class="text-red-400 hover:text-red-600">&times;</button>
-                                    </div>
-                                @endforeach
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="space-y-2">
+                            <label class="mb-1 block text-sm font-medium text-gray-700">Credentials</label>
+                            <div class="flex gap-2">
+                                <input wire:model="credentialKey" placeholder="Field name"
+                                    class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none" />
+                                <input wire:model="credentialValue" type="password" placeholder="Value"
+                                    class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none" />
+                                <button wire:click="addCredential"
+                                        class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm hover:bg-gray-200">Add</button>
                             </div>
+                            @foreach($connectCredentials as $key => $value)
+                                <div class="flex items-center justify-between rounded bg-gray-50 px-3 py-1.5 text-sm">
+                                    <span class="text-gray-700">{{ $key }}: <span class="text-gray-400">••••••••</span></span>
+                                    <button wire:click="removeCredential('{{ $key }}')" class="text-red-400 hover:text-red-600">&times;</button>
+                                </div>
+                            @endforeach
                         </div>
                     @endif
                 </div>

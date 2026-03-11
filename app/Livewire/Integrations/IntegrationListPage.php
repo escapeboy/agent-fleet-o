@@ -26,6 +26,9 @@ class IntegrationListPage extends Component
 
     public string $credentialValue = '';
 
+    /** @var array<string, array{type: string, required: bool, label: string, hint?: string}> */
+    public array $credentialSchema = [];
+
     public function mount(): void
     {
         //
@@ -35,10 +38,20 @@ class IntegrationListPage extends Component
     {
         $this->connectDriver = $driver;
         $this->connectName = ucfirst($driver).' Integration';
-        $this->connectCredentials = [];
         $this->connectConfig = [];
         $this->credentialKey = '';
         $this->credentialValue = '';
+
+        try {
+            $schema = app(IntegrationManager::class)->driver($driver)->credentialSchema();
+            $this->credentialSchema = $schema;
+            // Pre-populate keys so wire:model bindings exist
+            $this->connectCredentials = array_fill_keys(array_keys($schema), '');
+        } catch (\Throwable) {
+            $this->credentialSchema = [];
+            $this->connectCredentials = [];
+        }
+
         $this->showConnectForm = true;
     }
 
