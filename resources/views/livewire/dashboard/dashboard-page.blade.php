@@ -177,4 +177,36 @@
             </div>
         </div>
     @endif
+
+    {{-- Chatbot KPIs (only when chatbot feature is enabled) --}}
+    @if($chatbotEnabled && $chatbotKpis)
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-900">Chatbots</h3>
+                <a href="{{ route('chatbots.index') }}" class="text-xs text-primary-600 hover:text-primary-800">View all</a>
+            </div>
+            <dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Active Chatbots</dt>
+                    <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $chatbotKpis['active_chatbots'] }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Sessions Today</dt>
+                    <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ number_format($chatbotKpis['sessions_today']) }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Escalations Today</dt>
+                    <dd class="mt-1 text-2xl font-semibold {{ $chatbotKpis['escalations_today'] > 0 ? 'text-amber-600' : 'text-gray-900' }}">
+                        {{ $chatbotKpis['escalations_today'] }}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Avg Confidence (7d)</dt>
+                    <dd class="mt-1 text-2xl font-semibold text-gray-900">
+                        {{ $chatbotKpis['avg_confidence_7d'] ? number_format((float)$chatbotKpis['avg_confidence_7d'] * 100, 0).'%' : '—' }}
+                    </dd>
+                </div>
+            </dl>
+        </div>
+    @endif
 </div>

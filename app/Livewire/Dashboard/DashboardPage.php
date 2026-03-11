@@ -4,6 +4,9 @@ namespace App\Livewire\Dashboard;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Chatbot\Models\Chatbot;
+use App\Domain\Chatbot\Models\ChatbotMessage;
+use App\Domain\Chatbot\Models\ChatbotSession;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Budget\Services\SpendForecaster;
@@ -73,10 +76,33 @@ class DashboardPage extends Component
                 ->exists();
         });
 
+        $team = auth()->user()->currentTeam;
+        $chatbotEnabled = (bool) ($team->settings['chatbot_enabled'] ?? false);
+
+        $chatbotKpis = null;
+        if ($chatbotEnabled) {
+            $chatbotKpis = Cache::remember("dashboard.chatbot_kpis:{$teamId}", 60, function () {
+                return [
+                    'active_chatbots' => Chatbot::where('status', 'active')->count(),
+                    'sessions_today' => ChatbotSession::where('created_at', '>=', now()->startOfDay())->count(),
+                    'escalations_today' => ChatbotMessage::where('role', 'assistant')
+                        ->where('was_escalated', true)
+                        ->where('created_at', '>=', now()->startOfDay())
+                        ->count(),
+                    'avg_confidence_7d' => ChatbotMessage::where('role', 'assistant')
+                        ->whereNotNull('confidence')
+                        ->where('created_at', '>=', now()->subDays(7))
+                        ->avg('confidence'),
+                ];
+            });
+        }
+
         return view('livewire.dashboard.dashboard-page', array_merge($kpis, [
             'activeExperiments' => $activeExperiments,
             'alerts' => $alerts,
             'hasProviderKeys' => $hasProviderKeys,
+            'chatbotKpis' => $chatbotKpis,
+            'chatbotEnabled' => $chatbotEnabled,
         ]))->layout('layouts.app', ['header' => 'Dashboard']);
     }
 
