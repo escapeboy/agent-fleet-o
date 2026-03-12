@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Signal\Models\Signal;
 use App\Domain\Trigger\Actions\CreateTriggerRuleAction;
 use App\Domain\Trigger\Actions\DeleteTriggerRuleAction;
 use App\Domain\Trigger\Actions\UpdateTriggerRuleAction;
 use App\Domain\Trigger\Enums\TriggerRuleStatus;
 use App\Domain\Trigger\Models\TriggerRule;
+use App\Domain\Trigger\Services\TriggerConditionEvaluator;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\TriggerRuleResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use App\Domain\Signal\Models\Signal;
-use App\Domain\Trigger\Services\TriggerConditionEvaluator;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
