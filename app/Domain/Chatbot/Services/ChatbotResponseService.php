@@ -159,7 +159,7 @@ class ChatbotResponseService
             'content' => $rawReply,
             'confidence' => $confidence,
             'latency_ms' => $latencyMs,
-            'metadata' => $ragSourceMeta ? ['sources' => $ragSourceMeta] : null,
+            'metadata' => $ragSourceMeta ? ['sources' => $ragSourceMeta] : [],
         ]);
 
         $this->updateContextCache($session, $chatbot, $userText, $rawReply);
