@@ -288,6 +288,8 @@ $agent->forgetPluginMeta('acme-crm-sync', 'hubspot_contact_id');</x-docs.code>
 
     {{-- Installation & enable/disable --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Installing a plugin</h2>
+
+    <h3 class="mt-4 text-base font-semibold text-gray-900">Self-hosted</h3>
     <p class="mt-2 text-sm text-gray-600">
         Install via Composer and run migrations if the plugin ships any:
     </p>
@@ -299,6 +301,15 @@ php artisan migrate</x-docs.code>
     <p class="mt-3 text-sm text-gray-600">
         On the next request, FleetQ auto-discovers the service provider and registers the plugin.
         You'll see it appear in <strong>Settings → Plugins</strong> where you can enable or disable it.
+    </p>
+
+    <h3 class="mt-6 text-base font-semibold text-gray-900">Cloud (managed)</h3>
+    <p class="mt-2 text-sm text-gray-600">
+        On the managed cloud, teams cannot run <code class="rounded bg-gray-100 px-1 text-xs">composer require</code>.
+        The platform operator pre-installs and whitelists plugins via
+        <code class="rounded bg-gray-100 px-1 text-xs">FLEET_CLOUD_PLUGINS</code>. Each team can then
+        <strong>enable or disable</strong> any whitelisted plugin from <strong>Settings → Plugins</strong>
+        — no server access required.
     </p>
 
     <x-docs.callout type="warning">
