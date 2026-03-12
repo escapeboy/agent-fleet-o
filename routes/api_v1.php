@@ -11,9 +11,13 @@ use App\Http\Controllers\Api\V1\ChatbotInstanceController;
 use App\Http\Controllers\Api\V1\CredentialController;
 use App\Http\Controllers\Api\V1\CrewController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\EmailTemplateController;
+use App\Http\Controllers\Api\V1\EmailThemeController;
+use App\Http\Controllers\Api\V1\EvolutionController;
 use App\Http\Controllers\Api\V1\ExperimentController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
+use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\SignalController;
@@ -21,6 +25,7 @@ use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\SshFingerprintController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ToolController;
+use App\Http\Controllers\Api\V1\TriggerController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Broadcast;
@@ -116,6 +121,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/approvals/{approval}', [ApprovalController::class, 'show']);
     Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve']);
     Route::post('/approvals/{approval}/reject', [ApprovalController::class, 'reject']);
+    Route::post('/approvals/{approval}/complete-human-task', [ApprovalController::class, 'completeHumanTask']);
+    Route::post('/approvals/{approval}/escalate', [ApprovalController::class, 'escalate']);
 
     // Workflows
     Route::apiResource('workflows', WorkflowController::class);
@@ -168,6 +175,34 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/chatbot-instances/{chatbot}/tokens', [ChatbotInstanceController::class, 'createToken']);
     Route::delete('/chatbot-instances/{chatbot}/tokens/{token}', [ChatbotInstanceController::class, 'revokeToken']);
     Route::get('/chatbot-instances/{chatbot}/conversations', [ChatbotInstanceController::class, 'conversations']);
+
+    // Triggers
+    Route::apiResource('triggers', TriggerController::class);
+    Route::patch('/triggers/{trigger}/status', [TriggerController::class, 'toggleStatus']);
+    Route::post('/triggers/{trigger}/test', [TriggerController::class, 'test']);
+
+    // Memory
+    Route::get('/memories', [MemoryController::class, 'index']);
+    Route::get('/memories/stats', [MemoryController::class, 'stats']);
+    Route::get('/memories/{memory}', [MemoryController::class, 'show']);
+    Route::post('/memories', [MemoryController::class, 'store']);
+    Route::delete('/memories/{memory}', [MemoryController::class, 'destroy']);
+    Route::post('/memories/search', [MemoryController::class, 'search']);
+
+    // Evolution proposals
+    Route::get('/evolution', [EvolutionController::class, 'index']);
+    Route::get('/evolution/{evolution}', [EvolutionController::class, 'show']);
+    Route::post('/evolution/{evolution}/apply', [EvolutionController::class, 'apply']);
+    Route::post('/evolution/{evolution}/reject', [EvolutionController::class, 'reject']);
+
+    // Email templates
+    Route::apiResource('email-templates', EmailTemplateController::class)
+        ->parameters(['email-templates' => 'emailTemplate']);
+    Route::post('/email-templates/{emailTemplate}/generate', [EmailTemplateController::class, 'generate']);
+
+    // Email themes
+    Route::apiResource('email-themes', EmailThemeController::class)
+        ->parameters(['email-themes' => 'emailTheme']);
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);

@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Approval\Actions\ApproveAction;
+use App\Domain\Approval\Actions\CompleteHumanTaskAction;
+use App\Domain\Approval\Actions\EscalateHumanTaskAction;
 use App\Domain\Approval\Actions\RejectAction;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ApprovalResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -66,5 +69,32 @@ class ApprovalController extends Controller
         );
 
         return new ApprovalResource($approval->fresh());
+    }
+
+    public function completeHumanTask(Request $request, ApprovalRequest $approval, CompleteHumanTaskAction $action): JsonResponse
+    {
+        $request->validate([
+            'form_response' => ['sometimes', 'array'],
+            'notes'         => ['sometimes', 'nullable', 'string', 'max:1000'],
+        ]);
+
+        $action->execute(
+            approvalRequest: $approval,
+            formResponse: $request->input('form_response', []),
+            reviewerId: $request->user()->id,
+            notes: $request->notes,
+        );
+
+        return response()->json(['success' => true, 'approval_id' => $approval->id]);
+    }
+
+    public function escalate(ApprovalRequest $approval, EscalateHumanTaskAction $action): JsonResponse
+    {
+        $escalated = $action->execute($approval);
+
+        return response()->json([
+            'success'    => $escalated,
+            'approval_id'=> $approval->id,
+        ]);
     }
 }
