@@ -3,6 +3,8 @@
 namespace App\Domain\Signal\Actions;
 
 use App\Domain\Shared\Services\ContactResolver;
+use App\Domain\Signal\Events\SignalIngested;
+use App\Domain\Signal\Events\SignalIngesting;
 use App\Domain\Signal\Jobs\ExtractSignalEntitiesJob;
 use App\Domain\Signal\Jobs\ProcessSignalMediaJob;
 use App\Domain\Signal\Jobs\RecalculateIntentScoreJob;
@@ -102,6 +104,20 @@ class IngestSignalAction
             return null;
         }
 
+        // Plugin hook: allow plugins to inspect/mutate or cancel ingest
+        $ingesting = new SignalIngesting($sourceType, $sourceIdentifier, $payload, $tags);
+        event($ingesting);
+        if ($ingesting->cancel) {
+            Log::info('IngestSignalAction: signal cancelled by plugin', [
+                'source_type' => $sourceType,
+                'reason' => $ingesting->cancelReason,
+            ]);
+
+            return null;
+        }
+        $payload = $ingesting->payload;
+        $tags = $ingesting->tags;
+
         // Resolve cross-channel contact identity for gated channels with known senders.
         $contactIdentityId = null;
         if (in_array($sourceType, self::GATED_CHANNELS, true) && $teamId !== null && $sourceIdentifier !== '') {
@@ -148,6 +164,9 @@ class IngestSignalAction
 
         // Evaluate trigger rules asynchronously (zero overhead to HTTP response)
         EvaluateTriggerRulesJob::dispatch($signal->id);
+
+        // Plugin hook: notify plugins a new signal was created
+        event(new SignalIngested($signal));
 
         // Recalculate composite intent score when entity has a stable identifier.
         // Skips intent_score signals to prevent scoring recursion.

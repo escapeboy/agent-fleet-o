@@ -212,6 +212,13 @@ class AgentFleetServer extends Server
     protected function boot(): void
     {
         $this->bootstrapMcpAuth();
+
+        // Append plugin-contributed MCP tools (registered via FleetPluginServiceProvider::$mcpTools)
+        foreach (app('fleet.mcp.tool_classes') as $toolClass) {
+            if (! in_array($toolClass, $this->tools, true)) {
+                $this->tools[] = $toolClass;
+            }
+        }
     }
 
     protected array $tools = [

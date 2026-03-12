@@ -5,6 +5,7 @@ namespace App\Domain\Agent\Models;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
@@ -40,7 +41,7 @@ use Illuminate\Support\Carbon;
  */
 class Agent extends Model
 {
-    use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
+    use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'team_id',
@@ -68,12 +69,14 @@ class Agent extends Model
         'risk_score',
         'risk_profile',
         'risk_profile_updated_at',
+        'meta',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => AgentStatus::class,
+            'meta' => 'array',
             'personality' => 'array',
             'config' => 'array',
             'capabilities' => 'array',

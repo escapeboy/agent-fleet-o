@@ -14,6 +14,8 @@ use App\Domain\Outbound\Connectors\TelegramConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
 use App\Domain\Outbound\Connectors\WhatsAppConnector;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
+use App\Domain\Outbound\Events\OutboundSending;
+use App\Domain\Outbound\Events\OutboundSent;
 use App\Domain\Outbound\Exceptions\BlacklistedException;
 use App\Domain\Outbound\Exceptions\RateLimitExceededException;
 use App\Domain\Outbound\Middleware\ChannelRateLimit;
@@ -43,8 +45,14 @@ class SendOutboundAction
             new WebhookOutboundConnector,
             new SignalProtocolConnector,
             new MatrixConnector,
-            new DummyConnector,  // Fallback — must be last
         ];
+
+        // Append plugin-registered outbound connectors (tagged in service providers)
+        foreach (app()->tagged('fleet.outbound.connectors.plugin') as $connector) {
+            $this->connectors[] = $connector;
+        }
+
+        $this->connectors[] = new DummyConnector;  // Fallback — must be last
     }
 
     public function execute(OutboundProposal $proposal): OutboundAction
@@ -69,10 +77,22 @@ class SendOutboundAction
             );
         }
 
+        // Plugin hook: allow plugins to cancel outbound delivery
+        $sending = new OutboundSending($proposal);
+        event($sending);
+        if ($sending->cancel) {
+            throw new BlacklistedException($sending->cancelReason ?? 'Cancelled by plugin');
+        }
+
         $channel = $proposal->channel->value;
         $connector = $this->resolveConnector($channel);
 
-        return $connector->send($proposal);
+        $action = $connector->send($proposal);
+
+        // Plugin hook: notify plugins of delivery result
+        event(new OutboundSent($proposal, $action, $action->status === 'delivered'));
+
+        return $action;
     }
 
     private function resolveConnector(string $channel): OutboundConnectorInterface

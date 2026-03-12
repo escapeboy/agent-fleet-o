@@ -51,6 +51,7 @@ use App\Livewire\Projects\ProjectDetailPage;
 use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
+use App\Livewire\Settings\PluginsPage;
 use App\Livewire\Setup\SetupPage;
 use App\Livewire\Shared\NotificationInboxPage;
 use App\Livewire\Shared\NotificationPreferencesPage;
@@ -206,6 +207,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/health', HealthPage::class)->name('health');
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
+    Route::get('/plugins', PluginsPage::class)->name('plugins');
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
 
     Route::get('/notifications', NotificationInboxPage::class)->name('notifications.index');

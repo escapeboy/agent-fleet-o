@@ -8,6 +8,8 @@ use App\Domain\Budget\Actions\SettleBudgetAction;
 use App\Domain\Marketplace\Actions\RecordMarketplaceUsageAction;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Enums\SkillType;
+use App\Domain\Skill\Events\SkillExecuted;
+use App\Domain\Skill\Events\SkillExecuting;
 use App\Domain\Skill\Exceptions\SkillProviderIncompatibleException;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
@@ -82,6 +84,14 @@ class ExecuteSkillAction
         if ($skill->type === SkillType::GpuCompute->value) {
             return $this->executeGpuCompute->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
+
+        // Plugin hook: allow plugins to inspect input or cancel skill execution
+        $executing = new SkillExecuting($skill, $input);
+        event($executing);
+        if ($executing->cancel) {
+            return $this->failExecution($skill, $teamId, $agentId, $experimentId, $input, $executing->cancelReason ?? 'Cancelled by plugin');
+        }
+        $input = $executing->input;
 
         // 0. Check provider compatibility (if requirements declared)
         if (! empty($skill->provider_requirements)) {
@@ -187,6 +197,9 @@ class ExecuteSkillAction
                 $this->recordMarketplaceUsage->execute($execution);
             }
 
+            // Plugin hook: notify plugins of successful skill execution
+            event(new SkillExecuted($skill, $execution, true));
+
             return [
                 'execution' => $execution,
                 'output' => $output,
@@ -201,6 +214,9 @@ class ExecuteSkillAction
             $skill->recordExecution(false, $durationMs);
 
             $failResult = $this->failExecution($skill, $teamId, $agentId, $experimentId, $input, $e->getMessage(), $durationMs);
+
+            // Plugin hook: notify plugins of failed skill execution
+            event(new SkillExecuted($skill, $failResult['execution'], false));
 
             // Record failed marketplace usage
             if ($skill->source_listing_id) {

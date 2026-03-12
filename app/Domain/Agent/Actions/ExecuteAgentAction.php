@@ -2,6 +2,8 @@
 
 namespace App\Domain\Agent\Actions;
 
+use App\Domain\Agent\Events\AgentExecuted;
+use App\Domain\Agent\Events\AgentExecuting;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
@@ -67,6 +69,14 @@ class ExecuteAgentAction
             return $this->failExecution($agent, $teamId, $experimentId, $input, 'Agent budget cap reached');
         }
 
+        // Plugin hook: allow plugins to inspect/mutate context or cancel execution
+        $executing = new AgentExecuting($agent, $input);
+        event($executing);
+        if ($executing->cancel) {
+            return $this->failExecution($agent, $teamId, $experimentId, $input, $executing->cancelReason ?? 'Cancelled by plugin');
+        }
+        $input = $executing->context;
+
         // Run the semantic middleware pipeline to enrich / gate the execution context.
         // Each middleware may add system prompt parts, summarize input, or request clarification.
         $ctx = new AgentExecutionContext(
@@ -98,27 +108,32 @@ class ExecuteAgentAction
         // Workflow-driven execution: if input has a 'task' key (from workflow node prompt),
         // execute directly with LLM instead of skill chain
         if (! empty($input['task'])) {
-            return $this->executeDirectPrompt($agent, $input, $teamId, $userId, $experimentId, $stepId, $ctx->systemPromptParts);
-        }
+            $result = $this->executeDirectPrompt($agent, $input, $teamId, $userId, $experimentId, $stepId, $ctx->systemPromptParts);
+        } else {
+            // Resolve tools for this agent (filtered by project restrictions).
+            // Generate a sandbox ID so each execution gets an isolated filesystem workspace.
+            $sandboxId = (string) Str::uuid();
+            $tools = $this->resolveTools->execute($agent, $project, $sandboxId);
 
-        // Resolve tools for this agent (filtered by project restrictions).
-        // Generate a sandbox ID so each execution gets an isolated filesystem workspace.
-        $sandboxId = (string) Str::uuid();
-        $tools = $this->resolveTools->execute($agent, $project, $sandboxId);
-
-        if (! empty($tools)) {
-            try {
-                return $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project, $ctx->systemPromptParts);
-            } finally {
-                // Teardown sandbox regardless of success or failure
-                if ($agent->team_id) {
-                    (new SandboxedWorkspace($sandboxId, $agent->id, $agent->team_id))->teardown();
+            if (! empty($tools)) {
+                try {
+                    $result = $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project, $ctx->systemPromptParts);
+                } finally {
+                    // Teardown sandbox regardless of success or failure
+                    if ($agent->team_id) {
+                        (new SandboxedWorkspace($sandboxId, $agent->id, $agent->team_id))->teardown();
+                    }
                 }
+            } else {
+                // Fallback: existing skill-chain execution
+                $result = $this->executeSkillChain($agent, $input, $teamId, $userId, $experimentId);
             }
         }
 
-        // Fallback: existing skill-chain execution
-        return $this->executeSkillChain($agent, $input, $teamId, $userId, $experimentId);
+        // Plugin hook: notify plugins of execution result
+        event(new AgentExecuted($agent, $result['execution'], $result['output'] !== null));
+
+        return $result;
     }
 
     /**
