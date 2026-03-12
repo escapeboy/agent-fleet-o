@@ -34,33 +34,33 @@ class AssistantController extends Controller
             ->orderBy('created_at')
             ->get()
             ->map(fn (AssistantMessage $m) => [
-                'id'           => $m->id,
-                'role'         => $m->role,
-                'content'      => $m->content,
-                'token_usage'  => $m->token_usage,
-                'created_at'   => $m->created_at,
+                'id' => $m->id,
+                'role' => $m->role,
+                'content' => $m->content,
+                'token_usage' => $m->token_usage,
+                'created_at' => $m->created_at,
             ]);
 
         return response()->json([
             'conversation' => new AssistantConversationResource($conversation),
-            'messages'     => $messages,
+            'messages' => $messages,
         ]);
     }
 
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'title'        => ['sometimes', 'string', 'max:255'],
+            'title' => ['sometimes', 'string', 'max:255'],
             'context_type' => ['sometimes', 'nullable', 'string', 'max:64'],
-            'context_id'   => ['sometimes', 'nullable', 'string'],
+            'context_id' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $conversation = AssistantConversation::create([
-            'team_id'      => $request->user()->current_team_id,
-            'user_id'      => $request->user()->id,
-            'title'        => $request->input('title', 'API Conversation'),
+            'team_id' => $request->user()->current_team_id,
+            'user_id' => $request->user()->id,
+            'title' => $request->input('title', 'API Conversation'),
             'context_type' => $request->input('context_type'),
-            'context_id'   => $request->input('context_id'),
+            'context_id' => $request->input('context_id'),
         ]);
 
         return (new AssistantConversationResource($conversation))
@@ -82,9 +82,9 @@ class AssistantController extends Controller
     public function send(Request $request, AssistantConversation $conversation, SendAssistantMessageAction $action): JsonResponse
     {
         $request->validate([
-            'message'      => ['required', 'string', 'min:1'],
+            'message' => ['required', 'string', 'min:1'],
             'context_type' => ['sometimes', 'nullable', 'string', 'max:64'],
-            'context_id'   => ['sometimes', 'nullable', 'string'],
+            'context_id' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $response = $action->execute(
@@ -102,12 +102,12 @@ class AssistantController extends Controller
             ->first();
 
         return response()->json([
-            'reply'       => $reply ? [
-                'id'          => $reply->id,
-                'role'        => $reply->role,
-                'content'     => $reply->content,
+            'reply' => $reply ? [
+                'id' => $reply->id,
+                'role' => $reply->role,
+                'content' => $reply->content,
                 'token_usage' => $reply->token_usage,
-                'created_at'  => $reply->created_at,
+                'created_at' => $reply->created_at,
             ] : null,
             'total_tokens' => $response->usage->totalTokens ?? null,
         ]);

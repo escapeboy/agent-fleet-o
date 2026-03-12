@@ -47,11 +47,11 @@ class IntegrationListTool extends Tool
         }
 
         $integrations = $query->get()->map(fn (Integration $i) => [
-            'id'             => $i->id,
-            'driver'         => $i->driver,
-            'name'           => $i->name,
-            'status'         => $i->status->value,
-            'error_count'    => $i->error_count,
+            'id' => $i->id,
+            'driver' => $i->driver,
+            'name' => $i->name,
+            'status' => $i->status->value,
+            'error_count' => $i->error_count,
             'last_pinged_at' => $i->last_pinged_at?->toIso8601String(),
         ]);
 

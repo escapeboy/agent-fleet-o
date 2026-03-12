@@ -49,7 +49,7 @@ class EvolutionController extends Controller
         // Auto-approve then apply if still pending
         if ($evolution->status === EvolutionProposalStatus::Pending) {
             $evolution->update([
-                'status'      => EvolutionProposalStatus::Approved,
+                'status' => EvolutionProposalStatus::Approved,
                 'reviewed_by' => $request->user()->id,
                 'reviewed_at' => now(),
             ]);
@@ -58,9 +58,9 @@ class EvolutionController extends Controller
         $agent = $action->execute($evolution->fresh(), $request->user()->id);
 
         return response()->json([
-            'success'     => true,
+            'success' => true,
             'proposal_id' => $evolution->id,
-            'agent_id'    => $agent->id,
+            'agent_id' => $agent->id,
         ]);
     }
 
@@ -73,13 +73,13 @@ class EvolutionController extends Controller
         }
 
         $evolution->update([
-            'status'      => EvolutionProposalStatus::Rejected,
+            'status' => EvolutionProposalStatus::Rejected,
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
         ]);
 
         return response()->json([
-            'success'     => true,
+            'success' => true,
             'proposal_id' => $evolution->id,
         ]);
     }

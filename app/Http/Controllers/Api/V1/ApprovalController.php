@@ -75,7 +75,7 @@ class ApprovalController extends Controller
     {
         $request->validate([
             'form_response' => ['sometimes', 'array'],
-            'notes'         => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ]);
 
         $action->execute(
@@ -93,8 +93,8 @@ class ApprovalController extends Controller
         $escalated = $action->execute($approval);
 
         return response()->json([
-            'success'    => $escalated,
-            'approval_id'=> $approval->id,
+            'success' => $escalated,
+            'approval_id' => $approval->id,
         ]);
     }
 }

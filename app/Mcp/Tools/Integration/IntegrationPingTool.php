@@ -48,8 +48,8 @@ class IntegrationPingTool extends Tool
         $result = $this->action->execute($integration);
 
         return Response::text(json_encode([
-            'healthy'    => $result->healthy,
-            'message'    => $result->message,
+            'healthy' => $result->healthy,
+            'message' => $result->message,
             'latency_ms' => $result->latencyMs,
             'checked_at' => $result->checkedAt?->toIso8601String(),
         ]));

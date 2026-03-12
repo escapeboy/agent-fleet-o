@@ -55,19 +55,19 @@ class AssistantConversationGetTool extends Tool
             ->limit($limit)
             ->get()
             ->map(fn (AssistantMessage $m) => [
-                'id'         => $m->id,
-                'role'       => $m->role,
-                'content'    => $m->content,
+                'id' => $m->id,
+                'role' => $m->role,
+                'content' => $m->content,
                 'created_at' => $m->created_at,
             ]);
 
         return Response::text(json_encode([
             'conversation' => [
-                'id'    => $conversation->id,
+                'id' => $conversation->id,
                 'title' => $conversation->title,
             ],
             'messages' => $messages,
-            'total'    => $messages->count(),
+            'total' => $messages->count(),
         ]));
     }
 }

@@ -24,7 +24,7 @@ class RecordAgentConfigRevisionAction
      * The action snapshots the current state, then computes the diff.
      *
      * @param  array<string, mixed>  $newData  The data being applied to the agent
-     * @return AgentConfigRevision|null  null if no tracked fields changed
+     * @return AgentConfigRevision|null null if no tracked fields changed
      */
     public function execute(
         Agent $agent,

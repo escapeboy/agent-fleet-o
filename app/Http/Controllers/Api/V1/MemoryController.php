@@ -45,12 +45,12 @@ class MemoryController extends Controller
     public function search(Request $request, RetrieveRelevantMemoriesAction $action): JsonResponse
     {
         $request->validate([
-            'query'      => ['required', 'string', 'min:1', 'max:500'],
-            'agent_id'   => ['sometimes', 'string'],
+            'query' => ['required', 'string', 'min:1', 'max:500'],
+            'agent_id' => ['sometimes', 'string'],
             'project_id' => ['sometimes', 'nullable', 'string'],
-            'top_k'      => ['sometimes', 'integer', 'min:1', 'max:50'],
-            'threshold'  => ['sometimes', 'numeric', 'min:0', 'max:1'],
-            'scope'      => ['sometimes', 'in:agent,team,project'],
+            'top_k' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            'threshold' => ['sometimes', 'numeric', 'min:0', 'max:1'],
+            'scope' => ['sometimes', 'in:agent,team,project'],
         ]);
 
         $memories = $action->execute(
@@ -64,7 +64,7 @@ class MemoryController extends Controller
         );
 
         return response()->json([
-            'data'  => MemoryResource::collection($memories),
+            'data' => MemoryResource::collection($memories),
             'query' => $request->input('query'),
             'total' => $memories->count(),
         ]);
@@ -91,23 +91,23 @@ class MemoryController extends Controller
             ->pluck('count', 'agent_id');
 
         return response()->json([
-            'total'          => $total,
+            'total' => $total,
             'by_source_type' => $bySourceType,
-            'by_agent'       => $byAgent,
+            'by_agent' => $byAgent,
         ]);
     }
 
     public function store(Request $request, StoreMemoryAction $action): JsonResponse
     {
         $request->validate([
-            'agent_id'    => ['required', 'string'],
-            'content'     => ['required', 'string', 'min:1'],
+            'agent_id' => ['required', 'string'],
+            'content' => ['required', 'string', 'min:1'],
             'source_type' => ['sometimes', 'string', 'max:64'],
-            'project_id'  => ['sometimes', 'nullable', 'string'],
-            'source_id'   => ['sometimes', 'nullable', 'string'],
-            'metadata'    => ['sometimes', 'array'],
-            'tags'        => ['sometimes', 'array'],
-            'confidence'  => ['sometimes', 'numeric', 'min:0', 'max:1'],
+            'project_id' => ['sometimes', 'nullable', 'string'],
+            'source_id' => ['sometimes', 'nullable', 'string'],
+            'metadata' => ['sometimes', 'array'],
+            'tags' => ['sometimes', 'array'],
+            'confidence' => ['sometimes', 'numeric', 'min:0', 'max:1'],
         ]);
 
         $memories = $action->execute(
@@ -123,7 +123,7 @@ class MemoryController extends Controller
         );
 
         return response()->json([
-            'data'  => MemoryResource::collection(collect($memories)),
+            'data' => MemoryResource::collection(collect($memories)),
             'count' => count($memories),
         ], 201);
     }

@@ -36,7 +36,7 @@ class IntegrationCapabilitiesTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         $integrationId = $request->get('integration_id');
-        $driverSlug    = $request->get('driver');
+        $driverSlug = $request->get('driver');
 
         if ($integrationId) {
             $integration = Integration::withoutGlobalScopes()
@@ -59,16 +59,16 @@ class IntegrationCapabilitiesTool extends Tool
             $driver = $this->manager->driver($driverSlug);
 
             return Response::text(json_encode([
-                'driver'   => $driverSlug,
-                'actions'  => array_map(fn ($a) => [
-                    'key'          => $a->key,
-                    'label'        => $a->label,
-                    'description'  => $a->description,
+                'driver' => $driverSlug,
+                'actions' => array_map(fn ($a) => [
+                    'key' => $a->key,
+                    'label' => $a->label,
+                    'description' => $a->description,
                     'input_schema' => $a->inputSchema,
                 ], $driver->actions()),
                 'triggers' => array_map(fn ($t) => [
-                    'key'         => $t->key,
-                    'label'       => $t->label,
+                    'key' => $t->key,
+                    'label' => $t->label,
                     'description' => $t->description,
                 ], $driver->triggers()),
             ]));

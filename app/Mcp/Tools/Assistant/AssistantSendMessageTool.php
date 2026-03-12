@@ -61,11 +61,11 @@ class AssistantSendMessageTool extends Tool
             }
         } else {
             $conversation = AssistantConversation::withoutGlobalScopes()->create([
-                'team_id'      => $teamId,
-                'user_id'      => null, // MCP context — no user
-                'title'        => mb_strimwidth($message, 0, 80, '…'),
+                'team_id' => $teamId,
+                'user_id' => null, // MCP context — no user
+                'title' => mb_strimwidth($message, 0, 80, '…'),
                 'context_type' => $request->get('context_type'),
-                'context_id'   => $request->get('context_id'),
+                'context_id' => $request->get('context_id'),
             ]);
         }
 
@@ -94,8 +94,8 @@ class AssistantSendMessageTool extends Tool
 
             return Response::text(json_encode([
                 'conversation_id' => $conversation->id,
-                'reply'           => $reply?->content,
-                'total_tokens'    => $aiResponse->usage->totalTokens ?? null,
+                'reply' => $reply?->content,
+                'total_tokens' => $aiResponse->usage->totalTokens ?? null,
             ]));
         } catch (\Throwable $e) {
             return Response::error('Assistant error: '.$e->getMessage());

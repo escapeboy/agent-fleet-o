@@ -1,9 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AgentController;
-use App\Http\Controllers\Api\V1\AssistantController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\ArtifactController;
+use App\Http\Controllers\Api\V1\AssistantController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BridgeController;
@@ -15,9 +15,9 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EmailTemplateController;
 use App\Http\Controllers\Api\V1\EmailThemeController;
 use App\Http\Controllers\Api\V1\EvolutionController;
-use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\ExperimentController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;

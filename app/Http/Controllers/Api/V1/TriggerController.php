@@ -43,13 +43,13 @@ class TriggerController extends Controller
     public function store(Request $request, CreateTriggerRuleAction $action): JsonResponse
     {
         $request->validate([
-            'name'             => ['required', 'string', 'max:255'],
-            'project_id'       => ['sometimes', 'nullable', 'string', 'exists:projects,id'],
-            'source_type'      => ['sometimes', 'string', 'max:64'],
-            'conditions'       => ['sometimes', 'nullable', 'array'],
-            'input_mapping'    => ['sometimes', 'nullable', 'array'],
+            'name' => ['required', 'string', 'max:255'],
+            'project_id' => ['sometimes', 'nullable', 'string', 'exists:projects,id'],
+            'source_type' => ['sometimes', 'string', 'max:64'],
+            'conditions' => ['sometimes', 'nullable', 'array'],
+            'input_mapping' => ['sometimes', 'nullable', 'array'],
             'cooldown_seconds' => ['sometimes', 'integer', 'min:0'],
-            'max_concurrent'   => ['sometimes', 'integer', 'min:1'],
+            'max_concurrent' => ['sometimes', 'integer', 'min:1'],
         ]);
 
         $trigger = $action->execute(
@@ -71,13 +71,13 @@ class TriggerController extends Controller
     public function update(Request $request, TriggerRule $trigger, UpdateTriggerRuleAction $action): TriggerRuleResource
     {
         $request->validate([
-            'name'             => ['sometimes', 'string', 'max:255'],
-            'project_id'       => ['sometimes', 'nullable', 'string', 'exists:projects,id'],
-            'source_type'      => ['sometimes', 'string', 'max:64'],
-            'conditions'       => ['sometimes', 'nullable', 'array'],
-            'input_mapping'    => ['sometimes', 'nullable', 'array'],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'project_id' => ['sometimes', 'nullable', 'string', 'exists:projects,id'],
+            'source_type' => ['sometimes', 'string', 'max:64'],
+            'conditions' => ['sometimes', 'nullable', 'array'],
+            'input_mapping' => ['sometimes', 'nullable', 'array'],
             'cooldown_seconds' => ['sometimes', 'integer', 'min:0'],
-            'max_concurrent'   => ['sometimes', 'integer', 'min:1'],
+            'max_concurrent' => ['sometimes', 'integer', 'min:1'],
         ]);
 
         $trigger = $action->execute($trigger, $request->only([
@@ -118,26 +118,26 @@ class TriggerController extends Controller
     {
         $request->validate([
             'source_type' => ['sometimes', 'string', 'max:64'],
-            'payload'     => ['sometimes', 'array'],
+            'payload' => ['sometimes', 'array'],
         ]);
 
         $sourceType = $request->input('source_type', 'manual');
-        $payload    = $request->input('payload', []);
+        $payload = $request->input('payload', []);
 
         // Build a transient Signal model (not persisted) for evaluation.
         $signal = new \App\Domain\Signal\Models\Signal([
-            'team_id'     => $trigger->team_id,
+            'team_id' => $trigger->team_id,
             'source_type' => $sourceType,
-            'payload'     => $payload,
+            'payload' => $payload,
         ]);
 
         $evaluator = app(\App\Domain\Trigger\Services\TriggerConditionEvaluator::class);
-        $matched   = $trigger->matchesSourceType($sourceType)
+        $matched = $trigger->matchesSourceType($sourceType)
             && $evaluator->evaluate($trigger->conditions, $signal);
 
         return response()->json([
-            'matched'   => $matched,
-            'rule_id'   => $trigger->id,
+            'matched' => $matched,
+            'rule_id' => $trigger->id,
             'rule_name' => $trigger->name,
         ]);
     }

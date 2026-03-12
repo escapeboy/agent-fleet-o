@@ -46,14 +46,14 @@ class EmailTemplateController extends Controller
     public function store(Request $request, CreateEmailTemplateAction $action): JsonResponse
     {
         $request->validate([
-            'name'           => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'email_theme_id' => ['sometimes', 'nullable', 'string', 'exists:email_themes,id'],
-            'subject'        => ['sometimes', 'nullable', 'string', 'max:255'],
-            'preview_text'   => ['sometimes', 'nullable', 'string', 'max:255'],
-            'design_json'    => ['sometimes', 'array'],
-            'html_cache'     => ['sometimes', 'nullable', 'string'],
-            'status'         => ['sometimes', 'in:draft,active,archived'],
-            'visibility'     => ['sometimes', 'in:private,public'],
+            'subject' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'preview_text' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'design_json' => ['sometimes', 'array'],
+            'html_cache' => ['sometimes', 'nullable', 'string'],
+            'status' => ['sometimes', 'in:draft,active,archived'],
+            'visibility' => ['sometimes', 'in:private,public'],
         ]);
 
         $team = Team::findOrFail($request->user()->current_team_id);
@@ -70,14 +70,14 @@ class EmailTemplateController extends Controller
     public function update(Request $request, EmailTemplate $emailTemplate, UpdateEmailTemplateAction $action): EmailTemplateResource
     {
         $request->validate([
-            'name'           => ['sometimes', 'string', 'max:255'],
+            'name' => ['sometimes', 'string', 'max:255'],
             'email_theme_id' => ['sometimes', 'nullable', 'string', 'exists:email_themes,id'],
-            'subject'        => ['sometimes', 'nullable', 'string', 'max:255'],
-            'preview_text'   => ['sometimes', 'nullable', 'string', 'max:255'],
-            'design_json'    => ['sometimes', 'array'],
-            'html_cache'     => ['sometimes', 'nullable', 'string'],
-            'status'         => ['sometimes', 'in:draft,active,archived'],
-            'visibility'     => ['sometimes', 'in:private,public'],
+            'subject' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'preview_text' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'design_json' => ['sometimes', 'array'],
+            'html_cache' => ['sometimes', 'nullable', 'string'],
+            'status' => ['sometimes', 'in:draft,active,archived'],
+            'visibility' => ['sometimes', 'in:private,public'],
         ]);
 
         $template = $action->execute($emailTemplate, $request->only([
@@ -107,7 +107,7 @@ class EmailTemplateController extends Controller
     {
         $request->validate([
             'description' => ['required', 'string', 'min:10'],
-            'tone'        => ['sometimes', 'in:professional,friendly,promotional,transactional'],
+            'tone' => ['sometimes', 'in:professional,friendly,promotional,transactional'],
         ]);
 
         $theme = $emailTemplate->email_theme_id

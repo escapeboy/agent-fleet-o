@@ -43,17 +43,17 @@ class AssistantConversationListTool extends Tool
             ->limit($limit)
             ->get()
             ->map(fn (AssistantConversation $c) => [
-                'id'              => $c->id,
-                'title'           => $c->title,
-                'context_type'    => $c->context_type,
-                'context_id'      => $c->context_id,
+                'id' => $c->id,
+                'title' => $c->title,
+                'context_type' => $c->context_type,
+                'context_id' => $c->context_id,
                 'last_message_at' => $c->last_message_at?->toIso8601String(),
-                'created_at'      => $c->created_at->toIso8601String(),
+                'created_at' => $c->created_at->toIso8601String(),
             ]);
 
         return Response::text(json_encode([
             'conversations' => $conversations,
-            'total'         => $conversations->count(),
+            'total' => $conversations->count(),
         ]));
     }
 }

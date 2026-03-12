@@ -44,10 +44,10 @@ class IntegrationController extends Controller
     public function connect(Request $request, ConnectIntegrationAction $action): JsonResponse
     {
         $request->validate([
-            'driver'      => ['required', 'string', 'max:64'],
-            'name'        => ['required', 'string', 'max:255'],
+            'driver' => ['required', 'string', 'max:64'],
+            'name' => ['required', 'string', 'max:255'],
             'credentials' => ['sometimes', 'array'],
-            'config'      => ['sometimes', 'array'],
+            'config' => ['sometimes', 'array'],
         ]);
 
         try {
@@ -82,8 +82,8 @@ class IntegrationController extends Controller
         $result = $action->execute($integration);
 
         return response()->json([
-            'healthy'    => $result->healthy,
-            'message'    => $result->message,
+            'healthy' => $result->healthy,
+            'message' => $result->message,
             'latency_ms' => $result->latencyMs,
             'checked_at' => $result->checkedAt?->toISOString(),
         ]);
@@ -120,16 +120,16 @@ class IntegrationController extends Controller
         $driver = $manager->driver($integration->driver);
 
         return response()->json([
-            'driver'   => $integration->driver,
-            'actions'  => array_map(fn ($a) => [
-                'key'          => $a->key,
-                'label'        => $a->label,
-                'description'  => $a->description,
+            'driver' => $integration->driver,
+            'actions' => array_map(fn ($a) => [
+                'key' => $a->key,
+                'label' => $a->label,
+                'description' => $a->description,
                 'input_schema' => $a->inputSchema,
             ], $driver->actions()),
             'triggers' => array_map(fn ($t) => [
-                'key'         => $t->key,
-                'label'       => $t->label,
+                'key' => $t->key,
+                'label' => $t->label,
                 'description' => $t->description,
             ], $driver->triggers()),
         ]);

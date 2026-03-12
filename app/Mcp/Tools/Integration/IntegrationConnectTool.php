@@ -41,7 +41,7 @@ class IntegrationConnectTool extends Tool
         }
 
         $driver = $request->get('driver');
-        $name   = $request->get('name');
+        $name = $request->get('name');
 
         if (! $driver || ! $name) {
             return Response::error('driver and name are required.');
@@ -57,11 +57,11 @@ class IntegrationConnectTool extends Tool
             );
 
             return Response::text(json_encode([
-                'success'        => true,
+                'success' => true,
                 'integration_id' => $integration->id,
-                'driver'         => $integration->driver,
-                'name'           => $integration->name,
-                'status'         => $integration->status->value,
+                'driver' => $integration->driver,
+                'name' => $integration->name,
+                'status' => $integration->status->value,
             ]));
         } catch (\Throwable $e) {
             return Response::error('Connection failed: '.$e->getMessage());

@@ -132,19 +132,19 @@ class AgentController extends Controller
             ->limit($limit)
             ->get()
             ->map(fn (AgentConfigRevision $r) => [
-                'id'                           => $r->id,
-                'source'                       => $r->source,
-                'changed_keys'                 => $r->changed_keys,
-                'before_config'                => $r->before_config,
-                'after_config'                 => $r->after_config,
+                'id' => $r->id,
+                'source' => $r->source,
+                'changed_keys' => $r->changed_keys,
+                'before_config' => $r->before_config,
+                'after_config' => $r->after_config,
                 'rolled_back_from_revision_id' => $r->rolled_back_from_revision_id,
-                'notes'                        => $r->notes,
-                'created_at'                   => $r->created_at?->toISOString(),
+                'notes' => $r->notes,
+                'created_at' => $r->created_at?->toISOString(),
             ]);
 
         return response()->json([
-            'agent_id'  => $agent->id,
-            'total'     => AgentConfigRevision::where('agent_id', $agent->id)->count(),
+            'agent_id' => $agent->id,
+            'total' => AgentConfigRevision::where('agent_id', $agent->id)->count(),
             'revisions' => $revisions,
         ]);
     }
@@ -167,10 +167,10 @@ class AgentController extends Controller
         );
 
         return response()->json([
-            'success'                => true,
-            'agent_id'               => $agent->id,
-            'rolled_back_to_revision'=> $revision->id,
-            'restored_config'        => $revision->before_config,
+            'success' => true,
+            'agent_id' => $agent->id,
+            'rolled_back_to_revision' => $revision->id,
+            'restored_config' => $revision->before_config,
         ]);
     }
 
@@ -183,14 +183,14 @@ class AgentController extends Controller
         }
 
         return response()->json([
-            'agent_id'            => $agent->id,
-            'session_id'          => $state->session_id,
-            'total_executions'    => $state->total_executions,
-            'total_input_tokens'  => $state->total_input_tokens,
+            'agent_id' => $agent->id,
+            'session_id' => $state->session_id,
+            'total_executions' => $state->total_executions,
+            'total_input_tokens' => $state->total_input_tokens,
             'total_output_tokens' => $state->total_output_tokens,
-            'total_cost_credits'  => $state->total_cost_credits,
-            'last_error'          => $state->last_error,
-            'last_active_at'      => $state->last_active_at?->toISOString(),
+            'total_cost_credits' => $state->total_cost_credits,
+            'last_error' => $state->last_error,
+            'last_active_at' => $state->last_active_at?->toISOString(),
         ]);
     }
 
