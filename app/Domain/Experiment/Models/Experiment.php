@@ -10,6 +10,7 @@ use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Metrics\Models\Metric;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Workflow\Models\Workflow;
 use App\Models\Artifact;
@@ -50,7 +51,7 @@ use Illuminate\Support\Carbon;
  */
 class Experiment extends Model
 {
-    use BelongsToTeam, HasFactory, HasUuids;
+    use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids;
 
     protected $fillable = [
         'team_id',
@@ -79,11 +80,13 @@ class Experiment extends Model
         'share_token',
         'share_enabled',
         'share_config',
+        'meta',
     ];
 
     protected function casts(): array
     {
         return [
+            'meta' => 'array',
             'status' => ExperimentStatus::class,
             'track' => ExperimentTrack::class,
             'constraints' => 'array',

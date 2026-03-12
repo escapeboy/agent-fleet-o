@@ -18,16 +18,55 @@ use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
+use App\Domain\Outbound\Connectors\DiscordConnector;
+use App\Domain\Outbound\Connectors\GoogleChatConnector;
+use App\Domain\Outbound\Connectors\SlackConnector;
+use App\Domain\Outbound\Connectors\SmtpEmailConnector;
+use App\Domain\Outbound\Connectors\TeamsConnector;
+use App\Domain\Outbound\Connectors\TelegramConnector;
+use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
+use App\Domain\Outbound\Connectors\WhatsAppConnector;
 use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use App\Domain\Shared\Services\DeploymentMode;
+use App\Domain\Shared\Services\NavigationRegistry;
+use App\Domain\Shared\Services\PluginRegistry;
+use App\Domain\Signal\Connectors\ApiPollingConnector;
+use App\Domain\Signal\Connectors\CalendarConnector;
+use App\Domain\Signal\Connectors\ClearCueConnector;
+use App\Domain\Signal\Connectors\DatadogAlertConnector;
+use App\Domain\Signal\Connectors\DiscordWebhookConnector;
+use App\Domain\Signal\Connectors\GitHubIssuesConnector;
+use App\Domain\Signal\Connectors\GitHubWebhookConnector;
+use App\Domain\Signal\Connectors\HttpMonitorConnector;
+use App\Domain\Signal\Connectors\ImapConnector;
+use App\Domain\Signal\Connectors\JiraConnector;
+use App\Domain\Signal\Connectors\LinearConnector;
+use App\Domain\Signal\Connectors\ManualSignalConnector;
+use App\Domain\Signal\Connectors\MatrixConnector;
+use App\Domain\Signal\Connectors\PagerDutyConnector;
+use App\Domain\Signal\Connectors\RssConnector;
+use App\Domain\Signal\Connectors\SentryAlertConnector;
+use App\Domain\Signal\Connectors\SignalProtocolConnector;
+use App\Domain\Signal\Connectors\SlackWebhookConnector;
+use App\Domain\Signal\Connectors\TelegramSignalConnector;
+use App\Domain\Signal\Connectors\WebhookConnector;
+use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
+use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
+use App\Infrastructure\AI\Middleware\BudgetEnforcement;
+use App\Infrastructure\AI\Middleware\IdempotencyCheck;
+use App\Infrastructure\AI\Middleware\RateLimiting;
+use App\Infrastructure\AI\Middleware\SchemaValidation;
+use App\Infrastructure\AI\Middleware\SemanticCache;
+use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
+use App\Livewire\Hooks\PluginDispatchHook;
 use App\Models\User;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
@@ -48,6 +87,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Reverb\Events\MessageReceived;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -57,6 +97,68 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
+
+        // Plugin extension points
+        $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);
+        $this->app->singleton(NavigationRegistry::class, fn () => new NavigationRegistry);
+
+        // Accumulator for plugin-contributed MCP tool class names
+        $this->app->instance('fleet.mcp.tool_classes', []);
+
+        // Tag all built-in signal connectors so plugins and the registry can discover them
+        $this->app->tag([
+            WebhookConnector::class,
+            RssConnector::class,
+            ManualSignalConnector::class,
+            ImapConnector::class,
+            ApiPollingConnector::class,
+            TelegramSignalConnector::class,
+            SlackWebhookConnector::class,
+            DiscordWebhookConnector::class,
+            WhatsAppWebhookConnector::class,
+            GitHubWebhookConnector::class,
+            GitHubIssuesConnector::class,
+            LinearConnector::class,
+            JiraConnector::class,
+            PagerDutyConnector::class,
+            SentryAlertConnector::class,
+            DatadogAlertConnector::class,
+            ClearCueConnector::class,
+            MatrixConnector::class,
+            SignalProtocolConnector::class,
+            HttpMonitorConnector::class,
+            CalendarConnector::class,
+        ], 'fleet.signal.connectors');
+
+        // Bind SignalConnectorRegistry to resolve all tagged signal connectors
+        $this->app->singleton(
+            SignalConnectorRegistry::class,
+            fn ($app) => new SignalConnectorRegistry($app->tagged('fleet.signal.connectors')),
+        );
+
+        // Tag all built-in outbound connectors (plugins can add their own)
+        $this->app->tag([
+            SmtpEmailConnector::class,
+            TelegramConnector::class,
+            SlackConnector::class,
+            WhatsAppConnector::class,
+            DiscordConnector::class,
+            TeamsConnector::class,
+            GoogleChatConnector::class,
+            WebhookOutboundConnector::class,
+            \App\Domain\Outbound\Connectors\SignalProtocolConnector::class,
+            \App\Domain\Outbound\Connectors\MatrixConnector::class,
+        ], 'fleet.outbound.connectors');
+
+        // Tag all built-in AI gateway middleware (plugins can prepend their own)
+        $this->app->tag([
+            RateLimiting::class,
+            BudgetEnforcement::class,
+            IdempotencyCheck::class,
+            SemanticCache::class,
+            SchemaValidation::class,
+            UsageTracking::class,
+        ], 'fleet.ai.middleware');
 
         // Replace the default MailChannel with our team-aware variant that applies
         // the active email theme to all system notification emails.
@@ -94,6 +196,9 @@ class AppServiceProvider extends ServiceProvider
         // Blade directives for deployment mode
         Blade::if('cloud', fn () => app(DeploymentMode::class)->isCloud());
         Blade::if('selfhosted', fn () => app(DeploymentMode::class)->isSelfHosted());
+
+        // Plugin lifecycle hook: allows plugins to react to Livewire component events
+        Livewire::componentHook(PluginDispatchHook::class);
 
         // Bridge relay: forward Reverb client-relay.* whispers into Redis stream
         Event::listen(MessageReceived::class, HandleBridgeRelayResponse::class);

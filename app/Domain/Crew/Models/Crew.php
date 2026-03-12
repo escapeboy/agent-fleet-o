@@ -7,6 +7,7 @@ use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Models\User;
 use Database\Factories\Domain\Crew\CrewFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Crew extends Model
 {
-    use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
+    use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids, SoftDeletes;
 
     protected static function newFactory()
     {
@@ -38,11 +39,13 @@ class Crew extends Model
         'quality_threshold',
         'status',
         'settings',
+        'meta',
     ];
 
     protected function casts(): array
     {
         return [
+            'meta' => 'array',
             'process_type' => CrewProcessType::class,
             'status' => CrewStatus::class,
             'settings' => 'array',

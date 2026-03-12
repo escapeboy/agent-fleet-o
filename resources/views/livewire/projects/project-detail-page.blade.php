@@ -286,4 +286,7 @@
     <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6">
         <livewire:projects.project-expansion-panel :project="$project" :key="'expansion-' . $project->id" />
     </div>
+
+    {{-- Plugin extension point: inject custom content into project detail --}}
+    @stack('fleet.project.detail')
 </div>

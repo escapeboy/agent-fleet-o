@@ -8,6 +8,7 @@ use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Workflow\Models\Workflow;
 use App\Models\User;
 use Database\Factories\Domain\Project\ProjectFactory;
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Project extends Model
 {
-    use BelongsToTeam, HasFactory, HasUuids;
+    use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids;
 
     protected static function newFactory()
     {
@@ -73,11 +74,13 @@ class Project extends Model
         'completed_at',
         'last_run_at',
         'next_run_at',
+        'meta',
     ];
 
     protected function casts(): array
     {
         return [
+            'meta' => 'array',
             'type' => ProjectType::class,
             'execution_mode' => ProjectExecutionMode::class,
             'status' => ProjectStatus::class,

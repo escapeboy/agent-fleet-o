@@ -9,6 +9,7 @@ use App\Domain\Crew\Actions\ValidateTaskOutputAction;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewTaskStatus;
+use App\Domain\Crew\Events\CrewExecuted;
 use App\Domain\Crew\Jobs\CoordinatorDecisionJob;
 use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
 use App\Domain\Crew\Models\CrewExecution;
@@ -294,6 +295,9 @@ class CrewOrchestrator
 
             // Collect artifacts from task outputs
             $this->collectArtifacts->execute($execution);
+
+            // Plugin hook: notify plugins of completed crew execution
+            event(new CrewExecuted($execution->crew, $execution));
 
             activity()
                 ->performedOn($execution)

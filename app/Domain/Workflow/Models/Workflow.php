@@ -4,6 +4,7 @@ namespace App\Domain\Workflow\Models;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Models\User;
 use Database\Factories\Domain\Workflow\WorkflowFactory;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Workflow extends Model
 {
-    use BelongsToTeam, HasFactory, HasUuids;
+    use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids;
 
     protected static function newFactory()
     {
@@ -33,11 +34,13 @@ class Workflow extends Model
         'max_loop_iterations',
         'estimated_cost_credits',
         'settings',
+        'meta',
     ];
 
     protected function casts(): array
     {
         return [
+            'meta' => 'array',
             'status' => WorkflowStatus::class,
             'version' => 'integer',
             'max_loop_iterations' => 'integer',

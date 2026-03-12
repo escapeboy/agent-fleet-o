@@ -268,4 +268,7 @@
             </div>
         @endif
     @endif
+
+    {{-- Plugin extension point: inject custom content into skill detail --}}
+    @stack('fleet.skill.detail')
 </div>
