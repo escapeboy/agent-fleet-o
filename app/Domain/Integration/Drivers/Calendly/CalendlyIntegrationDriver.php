@@ -3,7 +3,6 @@
 namespace App\Domain\Integration\Drivers\Calendly;
 
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
-use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\DTOs\TriggerDefinition;
 use App\Domain\Integration\Enums\AuthType;
@@ -98,12 +97,12 @@ class CalendlyIntegrationDriver implements IntegrationDriverInterface
             new TriggerDefinition(
                 'invitee_created',
                 'Booking Made',
-                'An invitee has scheduled a meeting via Calendly.'
+                'An invitee has scheduled a meeting via Calendly.',
             ),
             new TriggerDefinition(
                 'invitee_canceled',
                 'Booking Canceled',
-                'An invitee has canceled a scheduled Calendly meeting.'
+                'An invitee has canceled a scheduled Calendly meeting.',
             ),
         ];
     }

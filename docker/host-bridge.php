@@ -452,7 +452,7 @@ if ($method === 'POST' && $path === '/execute') {
 
         $stdinContent = ''; // Cursor ignores stdin in -p mode
 
-        error_log("Bridge: executing [cursor] streaming=".($streaming ? 'yes' : 'no'));
+        error_log('Bridge: executing [cursor] streaming='.($streaming ? 'yes' : 'no'));
         error_log("Bridge: command = {$command}");
 
         $process = proc_open($command, $descriptors, $pipes, $cwd);

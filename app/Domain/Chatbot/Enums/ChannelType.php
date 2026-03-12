@@ -13,7 +13,7 @@ enum ChannelType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::WebWidget => 'Web Widget',
             self::Api => 'API',
             self::Telegram => 'Telegram',
@@ -25,7 +25,7 @@ enum ChannelType: string
 
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::WebWidget => 'chat-bubble-left-right',
             self::Api => 'code-bracket',
             self::Telegram => 'paper-airplane',

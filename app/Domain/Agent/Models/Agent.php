@@ -139,7 +139,7 @@ class Agent extends Model
     {
         return $query->where(function ($q) {
             $q->whereNull('config->is_chatbot_agent')
-              ->orWhere('config->is_chatbot_agent', false);
+                ->orWhere('config->is_chatbot_agent', false);
         });
     }
 

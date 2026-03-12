@@ -37,11 +37,11 @@ class LocalAgentGatewayTest extends TestCase
             'local' => true,
             'agent_key' => 'cursor',
             'models' => [
-                'auto'           => ['label' => 'Auto', 'input_cost' => 0, 'output_cost' => 0],
-                'sonnet-4'       => ['label' => 'Claude Sonnet 4', 'input_cost' => 0, 'output_cost' => 0],
-                'gpt-5'          => ['label' => 'GPT-5', 'input_cost' => 0, 'output_cost' => 0],
+                'auto' => ['label' => 'Auto', 'input_cost' => 0, 'output_cost' => 0],
+                'sonnet-4' => ['label' => 'Claude Sonnet 4', 'input_cost' => 0, 'output_cost' => 0],
+                'gpt-5' => ['label' => 'GPT-5', 'input_cost' => 0, 'output_cost' => 0],
                 'gemini-2.5-pro' => ['label' => 'Gemini 2.5 Pro', 'input_cost' => 0, 'output_cost' => 0],
-                'composer-1.5'   => ['label' => 'Composer 1.5', 'input_cost' => 0, 'output_cost' => 0],
+                'composer-1.5' => ['label' => 'Composer 1.5', 'input_cost' => 0, 'output_cost' => 0],
             ],
         ]]);
     }

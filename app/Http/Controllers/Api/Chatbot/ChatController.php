@@ -141,7 +141,7 @@ class ChatController extends Controller
         ];
 
         return response()->stream(function () use ($session) {
-            echo "data: " . json_encode(['type' => 'connected', 'session_id' => $session->id]) . "\n\n";
+            echo 'data: '.json_encode(['type' => 'connected', 'session_id' => $session->id])."\n\n";
             ob_flush();
             flush();
 

@@ -5,6 +5,7 @@ namespace App\Domain\Signal\Jobs;
 use App\Domain\Integration\Contracts\SubscribableConnectorInterface;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Domain\Signal\Models\ConnectorSignalSubscription;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -76,7 +77,7 @@ class RegisterSubscriptionWebhookJob implements ShouldQueue
                 'webhook_secret' => $registration->webhookSecret,
                 'webhook_status' => 'registered',
                 'webhook_expires_at' => $registration->expiresAt
-                    ? \Carbon\Carbon::instance($registration->expiresAt)
+                    ? Carbon::instance($registration->expiresAt)
                     : null,
             ]);
 

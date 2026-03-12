@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Prism\Prism\Facades\Prism;
 
 class IndexKnowledgeSourceJob implements ShouldQueue
@@ -170,7 +171,7 @@ class IndexKnowledgeSourceJob implements ShouldQueue
             $embeddingStr = '['.implode(',', $vector).']';
 
             DB::table('chatbot_kb_chunks')->insert([
-                'id' => \Illuminate\Support\Str::orderedUuid(),
+                'id' => Str::orderedUuid(),
                 'source_id' => $source->id,
                 'chatbot_id' => $source->chatbot_id,
                 'team_id' => $source->team_id,

@@ -12,6 +12,7 @@ use App\Domain\Integration\DTOs\WebhookRegistrationDTO;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Signal\DTOs\SignalDTO;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -56,7 +57,7 @@ class ClickUpIntegrationDriver implements IntegrationDriverInterface, Subscribab
         ];
     }
 
-    private function withAuth(Integration $integration): \Illuminate\Http\Client\PendingRequest
+    private function withAuth(Integration $integration): PendingRequest
     {
         // ClickUp uses Authorization header without Bearer prefix
         return Http::withHeaders(['Authorization' => $integration->getCredentialSecret('api_token')])

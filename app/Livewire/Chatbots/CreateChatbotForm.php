@@ -46,7 +46,7 @@ class CreateChatbotForm extends Component
     {
         return [
             'name' => 'required|min:2|max:255',
-            'type' => 'required|in:' . implode(',', array_column(ChatbotType::cases(), 'value')),
+            'type' => 'required|in:'.implode(',', array_column(ChatbotType::cases(), 'value')),
             'agentMode' => 'required|in:new,existing',
             'existingAgentId' => 'required_if:agentMode,existing|nullable|exists:agents,id',
             'provider' => 'required_if:agentMode,new|nullable|string',

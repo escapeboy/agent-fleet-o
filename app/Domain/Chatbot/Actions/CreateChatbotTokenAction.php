@@ -25,7 +25,7 @@ class CreateChatbotTokenAction
             $chatbot->activeTokens()->update(['expires_at' => now()->addHours(48)]);
         }
 
-        $plaintext = 'fq_cb_' . Str::random(48);
+        $plaintext = 'fq_cb_'.Str::random(48);
         $hash = hash('sha256', $plaintext);
         $prefix = substr($plaintext, 0, 12); // "fq_cb_" + 6 chars
 

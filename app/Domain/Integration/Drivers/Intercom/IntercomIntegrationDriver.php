@@ -209,12 +209,12 @@ class IntercomIntegrationDriver implements IntegrationDriverInterface
                     'message_type' => $params['message_type'] ?? 'comment',
                     'type' => 'admin',
                     'body' => $params['body'],
-                ]
+                ],
             ))->json(),
 
             'create_note' => $this->checked($http->post(
                 self::API_BASE."/conversations/{$params['conversation_id']}/reply",
-                ['message_type' => 'note', 'type' => 'admin', 'body' => $params['body']]
+                ['message_type' => 'note', 'type' => 'admin', 'body' => $params['body']],
             ))->json(),
 
             'update_contact' => $this->checked($http->put(self::API_BASE."/contacts/{$params['contact_id']}", array_filter([

@@ -383,7 +383,7 @@ class ChatbotResponseService
                    AND 1 - (embedding <=> ?::vector) >= ?
                  ORDER BY embedding <=> ?::vector
                  LIMIT ?",
-                $params
+                $params,
             );
 
             return array_map(fn ($row) => [

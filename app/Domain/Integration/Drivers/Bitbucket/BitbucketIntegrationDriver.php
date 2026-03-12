@@ -12,6 +12,7 @@ use App\Domain\Integration\DTOs\WebhookRegistrationDTO;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Signal\DTOs\SignalDTO;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -59,7 +60,7 @@ class BitbucketIntegrationDriver implements IntegrationDriverInterface, Subscrib
         ];
     }
 
-    private function withAuth(Integration|array $source): \Illuminate\Http\Client\PendingRequest
+    private function withAuth(Integration|array $source): PendingRequest
     {
         [$user, $pass] = $source instanceof Integration
             ? [$source->getCredentialSecret('username'), $source->getCredentialSecret('app_password')]
@@ -267,11 +268,11 @@ class BitbucketIntegrationDriver implements IntegrationDriverInterface, Subscrib
 
             'add_comment' => $this->checked($http->post(
                 self::API_BASE."/repositories/{$workspace}/{$repoSlug}/pullrequests/{$params['pr_id']}/comments",
-                ['content' => ['raw' => $params['content']]]
+                ['content' => ['raw' => $params['content']]],
             ))->json(),
 
             'approve_pull_request' => $this->checked($http->post(
-                self::API_BASE."/repositories/{$workspace}/{$repoSlug}/pullrequests/{$params['pr_id']}/approve"
+                self::API_BASE."/repositories/{$workspace}/{$repoSlug}/pullrequests/{$params['pr_id']}/approve",
             ))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),

@@ -3,7 +3,6 @@
 namespace App\Domain\Integration\Drivers\Typeform;
 
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
-use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\DTOs\TriggerDefinition;
 use App\Domain\Integration\Enums\AuthType;
@@ -97,7 +96,7 @@ class TypeformIntegrationDriver implements IntegrationDriverInterface
             new TriggerDefinition(
                 'form_response_submitted',
                 'Form Response Submitted',
-                'A respondent has completed and submitted a Typeform form.'
+                'A respondent has completed and submitted a Typeform form.',
             ),
         ];
     }

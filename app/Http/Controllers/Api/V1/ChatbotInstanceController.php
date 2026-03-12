@@ -6,7 +6,6 @@ use App\Domain\Chatbot\Actions\CreateChatbotAction;
 use App\Domain\Chatbot\Actions\CreateChatbotTokenAction;
 use App\Domain\Chatbot\Actions\DeleteChatbotAction;
 use App\Domain\Chatbot\Actions\RevokeChatbotTokenAction;
-use App\Domain\Chatbot\Actions\ToggleChatbotStatusAction;
 use App\Domain\Chatbot\Actions\UpdateChatbotAction;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Domain\Chatbot\Models\Chatbot;
@@ -48,7 +47,7 @@ class ChatbotInstanceController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|min:2|max:255',
-            'type' => 'required|string|in:' . implode(',', array_column(ChatbotType::cases(), 'value')),
+            'type' => 'required|string|in:'.implode(',', array_column(ChatbotType::cases(), 'value')),
             'agent_id' => 'nullable|uuid|exists:agents,id',
             'provider' => 'nullable|string',
             'model' => 'nullable|string',

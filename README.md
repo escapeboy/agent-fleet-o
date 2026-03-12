@@ -7,6 +7,10 @@ Self-hosted AI Agent Mission Control platform. Build, orchestrate, and monitor A
 [![PHP](https://img.shields.io/badge/PHP-8.4-purple)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/Laravel-12-red)](https://laravel.com/)
 
+## Cloud Version
+
+Prefer not to self-host? **[FleetQ Cloud](https://fleetq.net)** is the fully managed version — no setup, no infrastructure, free to try.
+
 ## Screenshots
 
 <table>

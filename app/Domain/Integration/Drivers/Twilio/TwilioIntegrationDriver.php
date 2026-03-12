@@ -187,7 +187,7 @@ class TwilioIntegrationDriver implements IntegrationDriverInterface
         $data = $url.implode('', array_map(
             fn ($k, $v) => $k.$v,
             array_keys($params),
-            array_values($params)
+            array_values($params),
         ));
 
         $expected = base64_encode(hash_hmac('sha1', $data, $secret, true));

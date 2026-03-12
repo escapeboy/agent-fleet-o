@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Chatbot\Jobs\ProcessChatbotTicketMessageJob;
-use App\Domain\Chatbot\Models\ChatbotChannel;
 use App\Domain\Chatbot\Models\ChatbotToken;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
