@@ -145,32 +145,39 @@ app/
       Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
   Mcp/                           # MCP Server (Model Context Protocol)
     Concerns/                    # BootstrapsMcpAuth (stdio auth bootstrap)
-    Servers/                     # AgentFleetServer (121 tools across 23 domains)
+    Servers/                     # AgentFleetServer (200+ tools across 31 domains)
     Tools/                       # MCP tool implementations
-      Agent/                     # agent_list, agent_get, agent_create, agent_update, agent_toggle_status
-      Experiment/                # experiment_list, experiment_get, experiment_create, experiment_pause, experiment_resume, experiment_retry, experiment_kill, experiment_valid_transitions, experiment_retry_from_step, experiment_steps
+      Agent/                     # agent_list, agent_get, agent_create, agent_update, agent_toggle_status, agent_delete, agent_config_history, agent_rollback, agent_runtime_state, agent_skill_sync, agent_tool_sync, agent_templates_list
+      Experiment/                # experiment_list, experiment_get, experiment_create, experiment_start, experiment_pause, experiment_resume, experiment_retry, experiment_kill, experiment_valid_transitions, experiment_retry_from_step, experiment_steps, experiment_cost, experiment_share
       Crew/                      # crew_list, crew_get, crew_create, crew_update, crew_execute, crew_execution_status, crew_executions_list
-      Skill/                     # skill_list, skill_get, skill_create, skill_update, skill_versions
-      Tool/                      # tool_list, tool_get, tool_create, tool_update, tool_delete
-      Credential/                # credential_list, credential_get, credential_create, credential_update, credential_rotate
-      Workflow/                   # workflow_list, workflow_get, workflow_create, workflow_update, workflow_validate, workflow_generate, workflow_activate, workflow_duplicate, workflow_save_graph, workflow_estimate_cost
-      Project/                   # project_list, project_get, project_create, project_update, project_pause, project_resume, project_trigger_run, project_archive
+      Skill/                     # skill_list, skill_get, skill_create, skill_update, skill_versions, guardrail, multi_model_consensus, code_execution, browser_skill
+      Tool/                      # tool_list, tool_get, tool_create, tool_update, tool_delete, tool_activate, tool_deactivate, tool_discover_mcp, tool_import_mcp, tool_ssh_fingerprints, tool_bash_policy
+      Credential/                # credential_list, credential_get, credential_create, credential_update, credential_rotate, credential_oauth_initiate, credential_oauth_finalize
+      Workflow/                  # workflow_list/get/create/update/validate/generate/activate/duplicate/save_graph/estimate_cost/suggestion/time_gate/execution_chain
+      Project/                   # project_list, project_get, project_create, project_update, project_activate, project_pause, project_resume, project_trigger_run, project_archive
       Approval/                  # approval_list, approval_approve, approval_reject, approval_complete_human_task, approval_webhook_config
       Artifact/                  # artifact_list, artifact_get, artifact_content, artifact_download_info
-      Signal/                    # signal_list, signal_ingest, signal_get
+      Signal/                    # signal_list, signal_ingest, signal_get, connector_binding, contact_manage, imap_mailbox, email_reply, http_monitor, alert_connector, slack_connector, ticket_connector, clearcue_connector, intent_score, kg_search, kg_entity_facts, kg_add_fact, connector_subscription, inbound_connector_manage, connector_binding_delete
       Budget/                    # budget_summary, budget_check, budget_forecast
-      Marketplace/               # marketplace_browse, marketplace_publish, marketplace_install, marketplace_review, marketplace_categories
-      Memory/                    # memory_search, memory_list_recent, memory_stats
-      System/                    # system_dashboard_kpis, system_health, system_audit_log
+      Marketplace/               # marketplace_browse, marketplace_publish, marketplace_install, marketplace_review, marketplace_categories, marketplace_analytics
+      Memory/                    # memory_search, memory_list_recent, memory_stats, memory_delete, memory_upload_knowledge
+      System/                    # system_dashboard_kpis, system_health, system_version_check, system_audit_log, global_settings_update
       Webhook/                   # webhook_list, webhook_create, webhook_update, webhook_delete
-      Shared/                    # notification_manage, team_get, team_update, team_members
-      Evolution/                 # evolution_proposal_list, evolution_analyze, evolution_apply
+      Shared/                    # notification_manage, team_get, team_update, team_members, local_llm, team_byok_credential_manage, custom_endpoint_manage, api_token_manage
+      Evolution/                 # evolution_proposal_list, evolution_analyze, evolution_apply, evolution_reject
       Cache/                     # semantic_cache_stats, semantic_cache_purge
       Telegram/                  # telegram_bot_manage
       Trigger/                   # trigger_rule_list, trigger_rule_create, trigger_rule_update, trigger_rule_delete, trigger_rule_test
-      Outbound/                  # outbound_proposal_list, outbound_action_list, outbound_proposal_approve, outbound_proposal_reject, outbound_blacklist_manage, outbound_channel_stats
+      Outbound/                  # connector_config_list/get/save/delete/test
+      Integration/               # integration_list, integration_connect, integration_disconnect, integration_ping, integration_execute, integration_capabilities
+      Assistant/                 # assistant_conversation_list, assistant_conversation_get, assistant_send_message, assistant_conversation_clear
+      Email/                     # email_theme_list/get/create/update/delete, email_template_list/get/create/update/delete/generate
+      Chatbot/                   # chatbot_list/get/create/update/toggle_status/session_list/analytics_summary/learning_entries
+      Bridge/                    # bridge_status, bridge_endpoint_list, bridge_endpoint_toggle, bridge_disconnect
+      Compute/                   # compute_manage
+      RunPod/                    # runpod_manage
   Http/Controllers/              # SignalWebhookController, TrackingController, ArtifactPreviewController
-  Http/Controllers/Api/V1/      # 20 REST API controllers (122 endpoints)
+  Http/Controllers/Api/V1/      # 30 REST API controllers (~175 endpoints)
   Http/Middleware/               # SetCurrentTeam
   Livewire/                      # Admin panel components
     Dashboard/                   # DashboardPage
@@ -247,7 +254,7 @@ app/
 
 ### API v1 Routes (`/api/v1/`)
 
-122 endpoints across 20 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
+~175 endpoints across 30 controllers, Sanctum bearer token auth, cursor pagination, OpenAPI 3.1 docs at `/docs/api`.
 
 | Group | Endpoints | Purpose |
 |-------|-----------|---------|
@@ -255,14 +262,21 @@ app/
 | Me | `GET /me`, `PUT /me` | Current user |
 | Experiments | `GET`, `GET {id}`, `POST`, `POST {id}/transition`, `POST {id}/pause`, `POST {id}/resume`, `POST {id}/retry`, `POST {id}/kill`, `POST {id}/retry-from-step`, `GET {id}/steps` | Experiment CRUD + transitions + actions |
 | Projects | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/activate`, `POST {id}/pause`, `POST {id}/resume`, `POST {id}/restart`, `POST {id}/trigger`, `GET {id}/runs` | Project CRUD + lifecycle + runs |
-| Agents | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `PATCH {id}/status` | Agent CRUD + toggle |
+| Agents | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `PATCH {id}/status`, `GET {id}/config-history`, `POST {id}/rollback`, `GET {id}/runtime-state` | Agent CRUD + toggle + config history |
 | Skills | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `GET {id}/versions` | Skill CRUD + versions |
-| Tools | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}` | Tool CRUD |
+| Tools | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `GET ssh-fingerprints` | Tool CRUD |
 | Credentials | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/rotate` | Credential CRUD + secret rotation |
 | Crews | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/execute`, `GET {id}/executions`, `GET {id}/executions/{eid}` | Crew CRUD + execution |
 | Workflows | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `PUT {id}/graph`, `POST {id}/validate`, `POST {id}/activate`, `POST {id}/duplicate`, `GET {id}/cost` | Workflow CRUD + graph ops |
 | Signals | `GET`, `GET {id}`, `POST` | Signal CRUD |
-| Approvals | `GET`, `GET {id}`, `POST {id}/approve`, `POST {id}/reject` | Approval management |
+| Approvals | `GET`, `GET {id}`, `POST {id}/approve`, `POST {id}/reject`, `POST {id}/complete-human-task`, `POST {id}/escalate` | Approval + human task management |
+| Triggers | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `PATCH {id}/status`, `POST {id}/test` | Trigger CRUD + toggle + dry-run |
+| Memory | `GET`, `GET {id}`, `POST`, `DELETE {id}`, `POST /search`, `GET /stats` | Memory CRUD + semantic search |
+| Evolution | `GET`, `GET {id}`, `POST {id}/apply`, `POST {id}/reject` | Evolution proposal review |
+| Email Templates | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/generate` | Email template CRUD + AI generate |
+| Email Themes | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}` | Email theme CRUD |
+| Integrations | `GET`, `GET {id}`, `POST /connect`, `POST {id}/disconnect`, `POST {id}/ping`, `POST {id}/execute`, `GET {id}/capabilities` | Integration lifecycle |
+| Assistant | `GET conversations`, `POST conversations`, `GET conversations/{id}`, `DELETE conversations/{id}`, `POST conversations/{id}/messages` | AI assistant chat |
 | Marketplace | `GET`, `GET {slug}`, `POST`, `POST {slug}/install`, `POST {slug}/reviews` | Marketplace browse + publish |
 | Team | `GET`, `PUT`, `GET members`, `DELETE members/{id}`, `GET credentials`, `POST credentials`, `DELETE credentials/{id}`, `GET tokens`, `POST tokens`, `DELETE tokens/{id}` | Team management + BYOK |
 | Dashboard | `GET /dashboard` | KPI summary |
@@ -272,6 +286,8 @@ app/
 | Budget | `GET /budget` | Budget summary |
 | Outbound Connectors | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/test` | Outbound connector CRUD + test |
 | Webhook Endpoints | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}` | Outbound webhook CRUD |
+| Chatbot Instances | `GET`, `GET {id}`, `POST`, `PUT {id}`, `DELETE {id}`, `POST {id}/tokens`, `GET {id}/conversations` | Chatbot management |
+| Bridge | `GET /status`, `POST /register`, `POST /endpoints`, `POST /heartbeat`, `DELETE /` | Bridge agent relay |
 
 ### MCP Routes (`routes/ai.php`)
 
@@ -280,7 +296,7 @@ app/
 | HTTP/SSE | `/mcp` | AgentFleetServer | Sanctum bearer token | Remote MCP clients (Cursor, etc.) |
 | stdio | `agent-fleet` | AgentFleetServer | Auto (default team owner) | Local CLI agents (Codex, Claude Code) |
 
-121 MCP tools across 23 domains. Start local server: `php artisan mcp:start agent-fleet`
+200+ MCP tools across 31 domains. Start local server: `php artisan mcp:start agent-fleet`
 
 ### Legacy API Routes (`/api/`)
 

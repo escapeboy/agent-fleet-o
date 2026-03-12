@@ -144,8 +144,8 @@ Failed tasks display detailed error information including provider, error type, 
 - **Webhooks** -- Inbound signal ingestion (HMAC-SHA256) and outbound webhook delivery with retry and event filtering
 - **Budget Controls** -- Per-experiment and per-project credit ledger with pessimistic locking and auto-pause on overspend
 - **Marketplace** -- Browse, publish, and install shared skills, agents, and workflows
-- **REST API** -- 99 endpoints under `/api/v1/` with Sanctum auth, cursor pagination, and auto-generated OpenAPI 3.1 docs at `/docs/api`
-- **MCP Server** -- 121 Model Context Protocol tools across 17 domains for LLM/agent access (stdio + HTTP/SSE)
+- **REST API** -- 175+ endpoints under `/api/v1/` with Sanctum auth, cursor pagination, and auto-generated OpenAPI 3.1 docs at `/docs/api`
+- **MCP Server** -- 200+ Model Context Protocol tools across 31 domains for LLM/agent access (stdio + HTTP/SSE)
 - **Tool Management** -- MCP servers (stdio/HTTP), built-in tools (bash/filesystem/browser), risk classification, per-agent assignment
 - **Credentials** -- Encrypted credential vault for external services with rotation, expiry tracking, and per-project injection
 - **Testing** -- Regression test suites for agent outputs with automated evaluation
