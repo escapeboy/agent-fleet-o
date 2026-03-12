@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4cf6c65ada1fcbec581439de8586237c",
+    "content-hash": "055432d1e3603a16d3515734c8dc2a9e",
     "packages": [
         {
             "name": "asbiin/laravel-webauthn",
@@ -11409,6 +11409,71 @@
                 }
             ],
             "time": "2025-08-08T12:00:00+00:00"
+        },
+        {
+            "name": "giorgiosironi/eris",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/giorgiosironi/eris.git",
+                "reference": "ffc757f08710b2b8fb1b30cff7b1cf48f5aba11d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/giorgiosironi/eris/zipball/ffc757f08710b2b8fb1b30cff7b1cf48f5aba11d",
+                "reference": "ffc757f08710b2b8fb1b30cff7b1cf48f5aba11d",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.0",
+                "ilario-pierbattista/reverse-regex": "^0.4.0",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^10.0.4",
+                "psalm/phar": "^5.4",
+                "rector/rector": "^0.18",
+                "sebastian/comparator": ">=2.1.3"
+            },
+            "suggest": {
+                "icomefromthenet/reverse-regex": "v0.0.6.3 for the regex() Generator",
+                "ilario-pierbattista/reverse-regex": "0.3.1 for the regex() Generator (alternative to icomefromthenet/reverse-regex) ",
+                "phpunit/phpunit": "Standard way to run generated test cases"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/Generator/functions.php"
+                ],
+                "psr-4": {
+                    "Eris\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Giorgio Sironi",
+                    "email": "info@giorgiosironi.com"
+                },
+                {
+                    "name": "Mirko Bonadei",
+                    "email": "mirko.bonadei@gmail.com"
+                },
+                {
+                    "name": "Gabriele Lana",
+                    "email": "gabriele.lana@gmail.com"
+                }
+            ],
+            "description": "PHP library for property-based testing. Integrates with PHPUnit.",
+            "support": {
+                "issues": "https://github.com/giorgiosironi/eris/issues",
+                "source": "https://github.com/giorgiosironi/eris/tree/1.0.0"
+            },
+            "time": "2024-12-07T08:21:20+00:00"
         },
         {
             "name": "hamcrest/hamcrest-php",
