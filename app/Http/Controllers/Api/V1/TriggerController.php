@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Trigger\Services\TriggerConditionEvaluator;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -132,7 +133,7 @@ class TriggerController extends Controller
             'payload' => $payload,
         ]);
 
-        $evaluator = app(\App\Domain\Trigger\Services\TriggerConditionEvaluator::class);
+        $evaluator = app(TriggerConditionEvaluator::class);
         $matched = $trigger->matchesSourceType($sourceType)
             && $evaluator->evaluate($trigger->conditions, $signal);
 
