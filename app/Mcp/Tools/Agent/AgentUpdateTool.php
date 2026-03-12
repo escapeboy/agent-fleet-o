@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Agent;
 
+use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Models\Agent;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -77,6 +78,12 @@ class AgentUpdateTool extends Tool
         if (empty($data)) {
             return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits.');
         }
+
+        app(RecordAgentConfigRevisionAction::class)->execute(
+            agent: $agent,
+            newConfig: $data,
+            source: 'mcp',
+        );
 
         $agent->update($data);
 

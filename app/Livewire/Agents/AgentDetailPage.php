@@ -2,9 +2,12 @@
 
 namespace App\Livewire\Agents;
 
+use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentConfigRevision;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -164,7 +167,7 @@ class AgentDetailPage extends Component
             'response_format_preference' => $this->editPersonalityResponseFormat ?: null,
         ]);
 
-        $this->agent->update([
+        $newConfig = [
             'name' => $this->editName,
             'role' => $this->editRole,
             'goal' => $this->editGoal,
@@ -176,7 +179,16 @@ class AgentDetailPage extends Component
             'config' => $config,
             'cost_per_1k_input' => $pricing['input'] ?? 0,
             'cost_per_1k_output' => $pricing['output'] ?? 0,
-        ]);
+        ];
+
+        app(RecordAgentConfigRevisionAction::class)->execute(
+            agent: $this->agent,
+            newConfig: $newConfig,
+            source: 'ui',
+            createdBy: auth()->id(),
+        );
+
+        $this->agent->update($newConfig);
 
         // Sync skills
         $this->agent->skills()->sync($this->editSkillIds);
@@ -239,6 +251,16 @@ class AgentDetailPage extends Component
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
         $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
 
+        $revisions = AgentConfigRevision::withoutGlobalScopes()
+            ->where('agent_id', $this->agent->id)
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        $runtimeState = AgentRuntimeState::withoutGlobalScopes()
+            ->where('agent_id', $this->agent->id)
+            ->first();
+
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
             'tools' => $tools,
@@ -246,6 +268,8 @@ class AgentDetailPage extends Component
             'providers' => $providers,
             'availableSkills' => $availableSkills,
             'availableTools' => $availableTools,
+            'revisions' => $revisions,
+            'runtimeState' => $runtimeState,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }

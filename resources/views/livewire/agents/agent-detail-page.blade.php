@@ -219,12 +219,12 @@
                 <div class="text-sm text-gray-500">Tools</div>
             </div>
             <div class="rounded-xl border border-gray-200 bg-white p-4">
-                <div class="text-2xl font-bold text-gray-900">{{ $executions->count() }}</div>
-                <div class="text-sm text-gray-500">Recent Executions</div>
+                <div class="text-2xl font-bold text-gray-900">{{ $runtimeState?->total_executions ?? 0 }}</div>
+                <div class="text-sm text-gray-500">Total Executions</div>
             </div>
             <div class="rounded-xl border border-gray-200 bg-white p-4">
-                <div class="text-2xl font-bold text-gray-900">{{ number_format($agent->budget_spent_credits) }}</div>
-                <div class="text-sm text-gray-500">Credits Spent</div>
+                <div class="text-2xl font-bold text-gray-900">{{ number_format($runtimeState?->total_cost_credits ?? 0) }}</div>
+                <div class="text-sm text-gray-500">Lifetime Credits</div>
             </div>
             <div class="rounded-xl border border-gray-200 bg-white p-4">
                 <div class="text-2xl font-bold text-gray-900">{{ $agent->budget_cap_credits ? number_format($agent->budgetRemainingCredits()) : 'Unlimited' }}</div>
@@ -235,7 +235,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8">
-                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'risk' => 'Risk Profile', 'evolution' => 'Evolution'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -377,6 +377,76 @@
                 </table>
                 </div>
             </div>
+        @elseif($activeTab === 'history')
+            <div class="space-y-4">
+                @if($runtimeState)
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="rounded-xl border border-gray-200 bg-white p-4">
+                            <div class="text-2xl font-bold text-gray-900">{{ number_format($runtimeState->total_executions) }}</div>
+                            <div class="text-sm text-gray-500">Total Executions</div>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-white p-4">
+                            <div class="text-2xl font-bold text-gray-900">{{ number_format($runtimeState->total_input_tokens) }}</div>
+                            <div class="text-sm text-gray-500">Input Tokens</div>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-white p-4">
+                            <div class="text-2xl font-bold text-gray-900">{{ number_format($runtimeState->total_output_tokens) }}</div>
+                            <div class="text-sm text-gray-500">Output Tokens</div>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-white p-4">
+                            <div class="text-2xl font-bold text-gray-900">{{ number_format($runtimeState->total_cost_credits) }}</div>
+                            <div class="text-sm text-gray-500">Lifetime Credits</div>
+                        </div>
+                    </div>
+                    @if($runtimeState->last_error)
+                        <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+                            <h3 class="mb-1 text-sm font-semibold text-red-800">Last Error</h3>
+                            <p class="text-sm text-red-700">{{ $runtimeState->last_error }}</p>
+                        </div>
+                    @endif
+                @endif
+
+                <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                    <div class="border-b border-gray-200 px-6 py-4">
+                        <h3 class="text-sm font-semibold text-gray-700">Configuration History</h3>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ $revisions->count() }} revisions (last 20)</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Source</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Changed Fields</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @forelse($revisions as $revision)
+                                    <tr class="{{ $revision->source === 'rollback' ? 'bg-amber-50' : '' }}">
+                                        <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $revision->created_at->diffForHumans() }}</td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                                                {{ $revision->source === 'rollback' ? 'bg-amber-100 text-amber-700' : ($revision->source === 'mcp' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700') }}">
+                                                {{ $revision->source }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-600">
+                                            {{ implode(', ', $revision->changed_keys ?? []) ?: '—' }}
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">{{ $revision->notes ?? '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-400">No configuration changes recorded yet</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         @elseif($activeTab === 'risk')
             @php
                 $riskScore = (float) ($agent->risk_score ?? 0);

@@ -138,6 +138,16 @@ class Agent extends Model
         return $this->hasMany(EvolutionProposal::class)->orderByDesc('created_at');
     }
 
+    public function configRevisions(): HasMany
+    {
+        return $this->hasMany(AgentConfigRevision::class)->orderByDesc('created_at');
+    }
+
+    public function runtimeState(): HasOne
+    {
+        return $this->hasOne(AgentRuntimeState::class);
+    }
+
     public function scopeNotChatbotAgent($query)
     {
         return $query->where(function ($q) {

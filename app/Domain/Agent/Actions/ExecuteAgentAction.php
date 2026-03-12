@@ -21,6 +21,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
 use App\Domain\Memory\Jobs\ExtractMemoryJob;
 use App\Domain\Project\Models\Project;
+use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Skill\Models\Skill;
@@ -47,6 +48,7 @@ class ExecuteAgentAction
         private readonly SummarizeContext $summarizeContext,
         private readonly DetectClarificationNeeded $detectClarification,
         private readonly ResolveTierConfigAction $resolveTierConfig,
+        private readonly AgentRuntimeStateService $runtimeStateService,
     ) {}
 
     /**
@@ -208,6 +210,8 @@ class ExecuteAgentAction
                 'quality_details' => ['tier' => $tierConfig['tier']->value],
             ]);
 
+            $this->runtimeStateService->recordExecution($agent, $response->usage);
+
             ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)
                 ->delay(now()->addSeconds(30));
 
@@ -309,6 +313,8 @@ class ExecuteAgentAction
                 'cost_credits' => $costCredits,
                 'quality_details' => ['tier' => $tierConfig['tier']->value],
             ]);
+
+            $this->runtimeStateService->recordExecution($agent, $response->usage);
 
             ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)
                 ->delay(now()->addSeconds(30));

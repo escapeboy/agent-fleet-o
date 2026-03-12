@@ -81,6 +81,7 @@ class Experiment extends Model
         'share_enabled',
         'share_config',
         'meta',
+        'delegation_depth',
     ];
 
     protected function casts(): array
@@ -93,6 +94,7 @@ class Experiment extends Model
             'orchestration_config' => 'array',
             'success_criteria' => 'array',
             'nesting_depth' => 'integer',
+            'delegation_depth' => 'integer',
             'budget_cap_credits' => 'integer',
             'budget_spent_credits' => 'integer',
             'max_iterations' => 'integer',

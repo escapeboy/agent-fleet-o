@@ -41,6 +41,7 @@ class ProjectRun extends Model
         'error_message',
         'started_at',
         'completed_at',
+        'delegation_depth',
     ];
 
     protected function casts(): array
@@ -50,6 +51,7 @@ class ProjectRun extends Model
             'run_number' => 'integer',
             'input_data' => 'array',
             'spend_credits' => 'integer',
+            'delegation_depth' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];

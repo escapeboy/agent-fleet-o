@@ -10,10 +10,13 @@ use App\Mcp\Tools\Admin\AdminTeamBillingDetailTool;
 use App\Mcp\Tools\Admin\AdminTeamSuspendTool;
 use App\Mcp\Tools\Admin\AdminUserRevokeSessionsTool;
 use App\Mcp\Tools\Admin\AdminUserSendPasswordResetTool;
+use App\Mcp\Tools\Agent\AgentConfigHistoryTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
 use App\Mcp\Tools\Agent\AgentListTool;
+use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
+use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
@@ -222,7 +225,7 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
-        // Agent (9)
+        // Agent (12)
         AgentListTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
@@ -232,6 +235,9 @@ class AgentFleetServer extends Server
         AgentSkillSyncTool::class,
         AgentToolSyncTool::class,
         AgentDeleteTool::class,
+        AgentConfigHistoryTool::class,
+        AgentRollbackConfigTool::class,
+        AgentRuntimeStateTool::class,
 
         // Evolution (4)
         EvolutionProposalListTool::class,

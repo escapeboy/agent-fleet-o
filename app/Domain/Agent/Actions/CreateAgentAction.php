@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentRuntimeState;
 use Illuminate\Support\Str;
 
 class CreateAgentAction
@@ -44,6 +45,12 @@ class CreateAgentAction
             'budget_spent_credits' => 0,
             'cost_per_1k_input' => $pricing['input'] ?? 0,
             'cost_per_1k_output' => $pricing['output'] ?? 0,
+        ]);
+
+        // Seed runtime state (one-per-agent, tracks lifetime stats)
+        AgentRuntimeState::create([
+            'agent_id' => $agent->id,
+            'team_id' => $teamId,
         ]);
 
         // Attach skills with priority based on array order

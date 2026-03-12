@@ -4,6 +4,7 @@ namespace App\Domain\Crew\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
+use App\Domain\Crew\Exceptions\MaxDelegationDepthExceededException;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -24,6 +25,11 @@ class DecomposeGoalAction
      */
     public function execute(CrewExecution $execution): array
     {
+        $maxDepth = config('app.max_delegation_depth', 5);
+        if ($execution->delegation_depth >= $maxDepth) {
+            throw new MaxDelegationDepthExceededException($execution->delegation_depth, $maxDepth);
+        }
+
         $config = $execution->config_snapshot;
         $coordinator = Agent::withoutGlobalScopes()->find($config['coordinator']['id']);
 

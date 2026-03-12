@@ -29,6 +29,7 @@ class CrewExecution extends Model
         'total_cost_credits',
         'duration_ms',
         'error_message',
+        'delegation_depth',
         'started_at',
         'completed_at',
     ];
@@ -44,6 +45,7 @@ class CrewExecution extends Model
             'coordinator_iterations' => 'integer',
             'total_cost_credits' => 'integer',
             'duration_ms' => 'integer',
+            'delegation_depth' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
