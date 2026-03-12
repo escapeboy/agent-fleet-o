@@ -25,6 +25,7 @@ $sections = [
     'Developer' => [
         ['slug' => 'api-reference', 'label' => 'REST API'],
         ['slug' => 'mcp-server',    'label' => 'MCP Server'],
+        ['slug' => 'plugins',       'label' => 'Plugin System'],
     ],
     'Security & Operations' => [
         ['slug' => 'security',  'label' => 'Security'],
