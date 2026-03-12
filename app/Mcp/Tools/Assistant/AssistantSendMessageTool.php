@@ -71,7 +71,7 @@ class AssistantSendMessageTool extends Tool
 
         // Resolve team owner as the acting user for tool permission checks.
         $user = User::whereHas('teams', fn ($q) => $q->where('teams.id', $teamId)
-            ->where('team_user.role', 'owner')
+            ->where('team_user.role', 'owner'),
         )->first();
 
         if (! $user) {

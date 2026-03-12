@@ -39,7 +39,7 @@ return [
     |
     */
     'cloud_available_ids' => array_values(array_filter(
-        array_map('trim', explode(',', env('FLEET_CLOUD_PLUGINS', '')))
+        array_map('trim', explode(',', env('FLEET_CLOUD_PLUGINS', ''))),
     )),
 
     /*
@@ -59,6 +59,6 @@ return [
     |
     */
     'external_providers' => array_values(array_filter(
-        array_map('trim', explode(',', env('FLEET_EXTERNAL_PLUGIN_PROVIDERS', '')))
+        array_map('trim', explode(',', env('FLEET_EXTERNAL_PLUGIN_PROVIDERS', ''))),
     )),
 ];

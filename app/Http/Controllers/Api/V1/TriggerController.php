@@ -12,6 +12,7 @@ use App\Http\Resources\Api\V1\TriggerRuleResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use App\Domain\Signal\Models\Signal;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -125,7 +126,7 @@ class TriggerController extends Controller
         $payload = $request->input('payload', []);
 
         // Build a transient Signal model (not persisted) for evaluation.
-        $signal = new \App\Domain\Signal\Models\Signal([
+        $signal = new Signal([
             'team_id' => $trigger->team_id,
             'source_type' => $sourceType,
             'payload' => $payload,

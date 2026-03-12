@@ -10,7 +10,7 @@ class MaxDelegationDepthExceededException extends RuntimeException
     {
         parent::__construct(
             "Delegation depth {$currentDepth} exceeds the maximum allowed depth of {$maxDepth}. "
-            .'This prevents runaway recursive agent delegation chains.'
+            .'This prevents runaway recursive agent delegation chains.',
         );
     }
 }
