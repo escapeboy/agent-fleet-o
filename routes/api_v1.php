@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AgentController;
+use App\Http\Controllers\Api\V1\AssistantController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AuditController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EmailTemplateController;
 use App\Http\Controllers\Api\V1\EmailThemeController;
 use App\Http\Controllers\Api\V1\EvolutionController;
+use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\ExperimentController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
@@ -203,6 +205,22 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Email themes
     Route::apiResource('email-themes', EmailThemeController::class)
         ->parameters(['email-themes' => 'emailTheme']);
+
+    // Integrations
+    Route::get('/integrations', [IntegrationController::class, 'index']);
+    Route::get('/integrations/{integration}', [IntegrationController::class, 'show']);
+    Route::post('/integrations/connect', [IntegrationController::class, 'connect']);
+    Route::post('/integrations/{integration}/disconnect', [IntegrationController::class, 'disconnect']);
+    Route::post('/integrations/{integration}/ping', [IntegrationController::class, 'ping']);
+    Route::post('/integrations/{integration}/execute', [IntegrationController::class, 'execute']);
+    Route::get('/integrations/{integration}/capabilities', [IntegrationController::class, 'capabilities']);
+
+    // Assistant conversations
+    Route::get('/assistant/conversations', [AssistantController::class, 'index']);
+    Route::post('/assistant/conversations', [AssistantController::class, 'store']);
+    Route::get('/assistant/conversations/{conversation}', [AssistantController::class, 'show']);
+    Route::delete('/assistant/conversations/{conversation}', [AssistantController::class, 'destroy']);
+    Route::post('/assistant/conversations/{conversation}/messages', [AssistantController::class, 'send']);
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);

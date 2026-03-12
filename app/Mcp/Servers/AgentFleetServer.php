@@ -23,6 +23,10 @@ use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentToolSyncTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
+use App\Mcp\Tools\Assistant\AssistantConversationClearTool;
+use App\Mcp\Tools\Assistant\AssistantConversationGetTool;
+use App\Mcp\Tools\Assistant\AssistantConversationListTool;
+use App\Mcp\Tools\Assistant\AssistantSendMessageTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
 use App\Mcp\Tools\Approval\ApprovalRejectTool;
@@ -93,7 +97,12 @@ use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
-use App\Mcp\Tools\Integration\IntegrationManageTool;
+use App\Mcp\Tools\Integration\IntegrationCapabilitiesTool;
+use App\Mcp\Tools\Integration\IntegrationConnectTool;
+use App\Mcp\Tools\Integration\IntegrationDisconnectTool;
+use App\Mcp\Tools\Integration\IntegrationExecuteTool;
+use App\Mcp\Tools\Integration\IntegrationListTool;
+use App\Mcp\Tools\Integration\IntegrationPingTool;
 use App\Mcp\Tools\Marketplace\MarketplaceAnalyticsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
 use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
@@ -419,8 +428,13 @@ class AgentFleetServer extends Server
         TriggerRuleDeleteTool::class,
         TriggerRuleTestTool::class,
 
-        // Integration (1)
-        IntegrationManageTool::class,
+        // Integration (6)
+        IntegrationListTool::class,
+        IntegrationConnectTool::class,
+        IntegrationDisconnectTool::class,
+        IntegrationPingTool::class,
+        IntegrationExecuteTool::class,
+        IntegrationCapabilitiesTool::class,
 
         // Compute (1)
         ComputeManageTool::class,
@@ -463,6 +477,12 @@ class AgentFleetServer extends Server
         BridgeEndpointListTool::class,
         BridgeEndpointToggleTool::class,
         BridgeDisconnectTool::class,
+
+        // Assistant (4)
+        AssistantConversationListTool::class,
+        AssistantConversationGetTool::class,
+        AssistantSendMessageTool::class,
+        AssistantConversationClearTool::class,
 
         // Feedback (2) — super admin only
         FeedbackListTool::class,
