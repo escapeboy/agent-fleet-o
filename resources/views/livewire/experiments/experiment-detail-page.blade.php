@@ -432,4 +432,7 @@
             @endif
         </div>
     @endif
+
+    {{-- Plugin extension point: inject custom content into experiment detail --}}
+    @stack('fleet.experiment.detail')
 </div>

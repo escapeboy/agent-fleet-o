@@ -159,4 +159,7 @@
             </div>
         </div>
     </div>
+
+    {{-- Plugin extension point: inject custom content into workflow detail --}}
+    @stack('fleet.workflow.detail')
 </div>

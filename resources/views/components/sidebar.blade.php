@@ -59,6 +59,10 @@
             Integrations
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('plugins') }}" :active="request()->routeIs('plugins')" icon="puzzle-piece">
+            Plugins
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*')" icon="circle-stack">
             Memory
         </x-sidebar-link>
@@ -86,3 +90,18 @@
         <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.*')" icon="envelope">
             Email Themes
         </x-sidebar-link>
+
+        {{-- Plugin-contributed navigation items --}}
+        @php $pluginNavItems = app(\App\Domain\Shared\Services\NavigationRegistry::class)->items(); @endphp
+        @foreach($pluginNavItems as $navItem)
+            @if(!$navItem->permission || \Illuminate\Support\Facades\Gate::check($navItem->permission))
+                <x-sidebar-link href="{{ $navItem->route }}" :active="request()->is(ltrim($navItem->route, '/').'*')" icon="{{ $navItem->icon ?? 'puzzle-piece' }}">
+                    {{ $navItem->label }}
+                    @if($navItem->badge)
+                        <span class="ml-auto rounded-full bg-primary-500 px-2 py-0.5 text-xs font-medium">{{ $navItem->badge }}</span>
+                    @endif
+                </x-sidebar-link>
+            @endif
+        @endforeach
+    </nav>
+</aside>

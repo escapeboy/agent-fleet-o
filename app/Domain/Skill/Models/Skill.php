@@ -5,6 +5,7 @@ namespace App\Domain\Skill\Models;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentSkillPivot;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Enums\ExecutionType;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillStatus;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Skill extends Model
 {
-    use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
+    use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids, SoftDeletes;
 
     protected static function newFactory()
     {
@@ -52,11 +53,13 @@ class Skill extends Model
         'success_count',
         'avg_latency_ms',
         'provider_requirements',
+        'meta',
     ];
 
     protected function casts(): array
     {
         return [
+            'meta' => 'array',
             'type' => SkillType::class,
             'execution_type' => ExecutionType::class,
             'status' => SkillStatus::class,

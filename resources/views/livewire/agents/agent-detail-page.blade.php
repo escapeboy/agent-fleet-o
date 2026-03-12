@@ -531,4 +531,7 @@
             </div>
         @endif
     @endif
+
+    {{-- Plugin extension point: inject custom content into agent detail --}}
+    @stack('fleet.agent.detail')
 </div>

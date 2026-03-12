@@ -5,6 +5,7 @@ namespace App\Domain\Crew\Actions;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewStatus;
+use App\Domain\Crew\Events\CrewExecuting;
 use App\Domain\Crew\Jobs\ExecuteCrewJob;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
@@ -20,6 +21,13 @@ class ExecuteCrewAction
     ): CrewExecution {
         if ($crew->status !== CrewStatus::Active) {
             throw new InvalidArgumentException('Crew must be active to execute.');
+        }
+
+        // Plugin hook: allow plugins to inspect or cancel crew execution
+        $executing = new CrewExecuting($crew, ['goal' => $goal]);
+        event($executing);
+        if ($executing->cancel) {
+            throw new InvalidArgumentException($executing->cancelReason ?? 'Crew execution cancelled by plugin');
         }
 
         // Validate coordinator and QA agents are still active
