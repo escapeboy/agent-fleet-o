@@ -6,7 +6,7 @@
     <h1 class="text-3xl font-bold tracking-tight text-gray-900">REST API Reference</h1>
     <p class="mt-4 text-gray-600">
         FleetQ exposes a versioned REST API at <code class="rounded bg-gray-100 px-1 text-sm">/api/v1/</code>
-        with 122 endpoints across 20 resource groups. All endpoints return JSON and follow standard HTTP conventions.
+        with 175+ endpoints across 30 resource groups. All endpoints return JSON and follow standard HTTP conventions.
     </p>
 
     <a href="{{ url('/docs/api') }}"

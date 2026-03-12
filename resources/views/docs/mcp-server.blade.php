@@ -1,6 +1,6 @@
 <x-layouts.docs
     title="MCP Server"
-    description="Connect AI agents directly to FleetQ via MCP (Model Context Protocol). 177 tools across 22 domains, available via stdio or HTTP/SSE."
+    description="Connect AI agents directly to FleetQ via MCP (Model Context Protocol). 200+ tools across 31 domains, available via stdio or HTTP/SSE."
     page="mcp-server"
 >
     <h1 class="text-3xl font-bold tracking-tight text-gray-900">MCP Server — Connect AI Agents Directly</h1>
@@ -88,33 +88,40 @@ php artisan mcp:start agent-fleet</x-docs.code>
 }</x-docs.code>
 
     {{-- Tool list --}}
-    <h2 class="mt-10 text-xl font-bold text-gray-900">177 tools across 22 domains</h2>
+    <h2 class="mt-10 text-xl font-bold text-gray-900">200+ tools across 31 domains</h2>
     <p class="mt-2 text-sm text-gray-600">Every platform capability is available as an MCP tool:</p>
 
     <div class="mt-4 grid gap-2 sm:grid-cols-2">
         @foreach([
-            ['Agent',       'agent_list, agent_create, agent_update, agent_toggle_status'],
-            ['Experiment',  'experiment_list, experiment_create, pause, resume, retry, kill, retry_from_step'],
-            ['Crew',        'crew_list, crew_create, crew_execute, execution_status'],
-            ['Skill',       'skill_list, skill_create, skill_update, versions'],
-            ['Tool',        'tool_list, tool_create, tool_update, tool_delete'],
-            ['Credential',  'credential_list, credential_create, credential_rotate'],
-            ['Workflow',    'workflow_list, create, validate, generate, estimate_cost'],
-            ['Project',     'project_list, project_create, pause, resume, trigger_run'],
-            ['Approval',    'approval_list, approval_approve, approval_reject, complete_human_task'],
-            ['Signal',      'signal_list, signal_ingest, connector_binding, intent_score_query'],
-            ['Outbound',    'outbound_proposal_list, approve, reject, blacklist_manage'],
+            ['Agent',       'agent_list, agent_create, agent_update, agent_toggle_status, agent_delete, agent_rollback, agent_templates_list'],
+            ['Experiment',  'experiment_list, experiment_create, pause, resume, retry, kill, retry_from_step, experiment_share'],
+            ['Crew',        'crew_list, crew_create, crew_execute, execution_status, crew_executions_list'],
+            ['Skill',       'skill_list, skill_create, skill_update, versions, guardrail, multi_model_consensus'],
+            ['Tool',        'tool_list, tool_create, tool_update, tool_delete, tool_activate, tool_discover_mcp, tool_bash_policy'],
+            ['Credential',  'credential_list, credential_create, credential_rotate, oauth_initiate, oauth_finalize'],
+            ['Workflow',    'workflow_list, create, validate, generate, activate, duplicate, estimate_cost, execution_chain'],
+            ['Project',     'project_list, project_create, pause, resume, trigger_run, project_archive'],
+            ['Approval',    'approval_list, approval_approve, approval_reject, complete_human_task, webhook_config'],
+            ['Signal',      'signal_list, signal_ingest, connector_binding, contact_manage, imap_mailbox, intent_score, kg_search'],
+            ['Outbound',    'connector_config_list, connector_config_save, connector_config_test'],
             ['Budget',      'budget_summary, budget_check, budget_forecast'],
-            ['Marketplace', 'marketplace_browse, install, publish, review'],
-            ['Memory',      'memory_search, memory_list_recent, memory_stats'],
+            ['Marketplace', 'marketplace_browse, install, publish, review, categories, analytics'],
+            ['Memory',      'memory_search, memory_list_recent, memory_stats, memory_delete, memory_upload_knowledge'],
             ['Artifact',    'artifact_list, artifact_get, artifact_content, artifact_download_info'],
             ['Webhook',     'webhook_list, webhook_create, webhook_update, webhook_delete'],
             ['Trigger',     'trigger_rule_list, create, update, delete, trigger_rule_test'],
+            ['Integration', 'integration_list, integration_connect, integration_disconnect, integration_ping, integration_execute'],
+            ['Assistant',   'assistant_conversation_list, assistant_conversation_get, assistant_send_message, assistant_conversation_clear'],
+            ['Email',       'email_template_list, email_template_create, email_template_generate, email_theme_list'],
+            ['Chatbot',     'chatbot_list, chatbot_create, chatbot_update, chatbot_toggle_status, chatbot_analytics_summary'],
+            ['Bridge',      'bridge_status, bridge_endpoint_list, bridge_endpoint_toggle, bridge_disconnect'],
             ['Telegram',    'telegram_bot_manage'],
-            ['Shared',      'notification_manage, team_get, team_update, team_members'],
+            ['Shared',      'notification_manage, team_get, team_update, local_llm, team_byok_credential_manage, api_token_manage'],
             ['Cache',       'semantic_cache_stats, semantic_cache_purge'],
-            ['Evolution',   'evolution_proposal_list, evolution_analyze, evolution_apply'],
-            ['System',      'system_dashboard_kpis, system_health, system_audit_log'],
+            ['Evolution',   'evolution_proposal_list, evolution_analyze, evolution_apply, evolution_reject'],
+            ['System',      'system_dashboard_kpis, system_health, system_version_check, system_audit_log'],
+            ['Compute',     'compute_manage'],
+            ['RunPod',      'runpod_manage'],
         ] as [$domain, $examples])
         <div class="rounded-lg border border-gray-200 p-3">
             <span class="font-medium text-gray-900 text-sm">{{ $domain }}</span>
