@@ -24,7 +24,11 @@ return new class extends Migration
         });
 
         // Add vector column (pgvector 1536-dim for text-embedding-3-small / ada-002)
-        // Only if pgvector extension is installed on this system
+        // Only if running on PostgreSQL with pgvector extension installed
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         $hasVector = DB::scalar("SELECT COUNT(*) FROM pg_extension WHERE extname = 'vector'") > 0;
         if ($hasVector) {
             DB::statement('ALTER TABLE chatbot_kb_chunks ADD COLUMN embedding vector(1536)');
