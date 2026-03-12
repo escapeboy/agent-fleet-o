@@ -200,6 +200,15 @@ class AppServiceProvider extends ServiceProvider
         // Plugin lifecycle hook: allows plugins to react to Livewire component events
         Livewire::componentHook(PluginDispatchHook::class);
 
+        // Boot external plugin providers (e.g. Barsy\Plugins\BarsyChatbotPlugin).
+        // Configured via FLEET_EXTERNAL_PLUGIN_PROVIDERS env var — no changes to
+        // this codebase required. The external package handles its own autoloading.
+        foreach (config('plugins.external_providers', []) as $providerClass) {
+            if (class_exists($providerClass)) {
+                $this->app->register($providerClass);
+            }
+        }
+
         // Bridge relay: forward Reverb client-relay.* whispers into Redis stream
         Event::listen(MessageReceived::class, HandleBridgeRelayResponse::class);
 

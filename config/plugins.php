@@ -41,4 +41,24 @@ return [
     'cloud_available_ids' => array_values(array_filter(
         array_map('trim', explode(',', env('FLEET_CLOUD_PLUGINS', '')))
     )),
+
+    /*
+    |--------------------------------------------------------------------------
+    | External Plugin Providers
+    |--------------------------------------------------------------------------
+    |
+    | Comma-separated list of fully-qualified service provider class names to
+    | register at boot. Allows external packages (e.g. Barsy plugins) to hook
+    | into FleetQ without modifying this codebase or its composer.json.
+    |
+    | The package is responsible for its own autoloading (e.g. via its own
+    | composer.json). Only classes that already exist will be registered.
+    |
+    | Example (.env):
+    |   FLEET_EXTERNAL_PLUGIN_PROVIDERS=Barsy\Plugins\BarsyChatbotPlugin
+    |
+    */
+    'external_providers' => array_values(array_filter(
+        array_map('trim', explode(',', env('FLEET_EXTERNAL_PLUGIN_PROVIDERS', '')))
+    )),
 ];
