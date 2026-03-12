@@ -31,6 +31,13 @@ class AgentResource extends JsonResource
                 'type' => $skill->type->value,
                 'priority' => $skill->pivot->priority,
             ])),
+            'runtime_state' => $this->whenLoaded('runtimeState', fn () => $this->runtimeState ? [
+                'total_executions'    => $this->runtimeState->total_executions,
+                'total_input_tokens'  => $this->runtimeState->total_input_tokens,
+                'total_output_tokens' => $this->runtimeState->total_output_tokens,
+                'total_cost_credits'  => $this->runtimeState->total_cost_credits,
+                'last_active_at'      => $this->runtimeState->last_active_at?->toISOString(),
+            ] : null),
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];

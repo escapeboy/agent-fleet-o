@@ -37,18 +37,28 @@ class AgentGetTool extends Tool
             return Response::error('Agent not found.');
         }
 
+        $state = $agent->runtimeState;
+
         return Response::text(json_encode([
-            'id' => $agent->id,
-            'name' => $agent->name,
-            'role' => $agent->role,
-            'goal' => $agent->goal,
-            'backstory' => $agent->backstory,
-            'provider' => $agent->provider,
-            'model' => $agent->model,
-            'status' => $agent->status->value,
+            'id'           => $agent->id,
+            'name'         => $agent->name,
+            'role'         => $agent->role,
+            'goal'         => $agent->goal,
+            'backstory'    => $agent->backstory,
+            'provider'     => $agent->provider,
+            'model'        => $agent->model,
+            'status'       => $agent->status->value,
             'budget_spent' => $agent->budget_spent_credits,
-            'budget_cap' => $agent->budget_cap_credits,
-            'created' => $agent->created_at?->toIso8601String(),
+            'budget_cap'   => $agent->budget_cap_credits,
+            'created'      => $agent->created_at?->toIso8601String(),
+            'runtime_state'=> $state ? [
+                'total_executions'    => $state->total_executions,
+                'total_input_tokens'  => $state->total_input_tokens,
+                'total_output_tokens' => $state->total_output_tokens,
+                'total_cost_credits'  => $state->total_cost_credits,
+                'last_active_at'      => $state->last_active_at?->toIso8601String(),
+                'last_error'          => $state->last_error,
+            ] : null,
         ]));
     }
 }

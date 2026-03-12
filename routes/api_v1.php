@@ -79,6 +79,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Agents
     Route::apiResource('agents', AgentController::class);
     Route::patch('/agents/{agent}/status', [AgentController::class, 'toggleStatus']);
+    Route::get('/agents/{agent}/config-history', [AgentController::class, 'configHistory']);
+    Route::post('/agents/{agent}/rollback', [AgentController::class, 'rollback']);
+    Route::get('/agents/{agent}/runtime-state', [AgentController::class, 'runtimeState']);
+    Route::post('/agents/{agent}/runtime-state/reset-session', [AgentController::class, 'resetRuntimeSession']);
 
     // Skills
     Route::apiResource('skills', SkillController::class);
