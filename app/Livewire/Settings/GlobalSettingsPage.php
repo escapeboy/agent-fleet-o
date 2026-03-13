@@ -290,6 +290,13 @@ class GlobalSettingsPage extends Component
         Gate::authorize('feature.local_agents');
 
         $discovery = app(LocalAgentDiscovery::class);
+
+        if ($discovery->isBridgeMode() && ! $discovery->bridgeHealth()) {
+            session()->flash('error', 'Bridge daemon is not reachable. Start the bridge on your host machine and try again.');
+
+            return;
+        }
+
         $detected = $discovery->detect();
         $count = count($detected);
 
