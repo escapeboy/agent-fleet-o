@@ -288,7 +288,7 @@
                         <h3 class="text-sm font-medium text-(--color-on-surface-muted)">Local Agents</h3>
                         @if($bridgeMode)
                             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $bridgeConnected ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800' }}">
-                                Bridge {{ $bridgeConnected ? 'connected' : 'unreachable' }}
+                                {{ $relayMode ? 'Relay' : 'Bridge' }} {{ $bridgeConnected ? 'connected' : 'unreachable' }}
                             </span>
                         @endif
                     </div>
@@ -302,55 +302,124 @@
 
                 {{-- Relay mode: bridge not connected --}}
                 @if($relayMode && !$bridgeConnected)
-                    <div class="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                    <div class="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                         <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                         </svg>
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <p class="font-medium">FleetQ Bridge not connected</p>
-                            <p class="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
-                                Install and start the bridge on your machine:
+                            <p class="mt-1 text-xs text-amber-700">
+                                <strong>Step 1.</strong> Make sure the relay service is running:
                             </p>
-                            <pre class="mt-2 overflow-x-auto rounded bg-amber-100 p-2 text-xs text-amber-900 dark:bg-amber-900 dark:text-amber-100"># macOS / Linux
+                            <pre class="mt-1 overflow-x-auto rounded bg-amber-100 p-2 text-xs text-amber-900">docker compose --profile relay up -d relay</pre>
+                            <p class="mt-2 text-xs text-amber-700">
+                                <strong>Step 2.</strong> Install and connect the bridge on your machine:
+                            </p>
+                            <pre class="mt-1 overflow-x-auto rounded bg-amber-100 p-2 text-xs text-amber-900"># Download (macOS / Linux)
 curl -sSL https://get.fleetq.net | sh
+
+# Authenticate
 fleetq-bridge login --api-url {{ config('app.url') }} --api-key YOUR_API_TOKEN
+
+# Install as a background service
 fleetq-bridge install</pre>
-                            <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                            <p class="mt-1 text-xs text-amber-700">
                                 Get your API token from <a href="{{ route('team.settings') }}" class="underline">Team Settings → API Tokens</a>.
                             </p>
                         </div>
                     </div>
                 @endif
 
+                {{-- Relay mode: bridge connected --}}
+                @if($relayMode && $bridgeConnected && $bridgeConnection)
+                    <div class="mt-4 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-medium">Bridge connected</p>
+                            <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-green-700">
+                                <span>{{ $bridgeConnection->ip_address }}</span>
+                                @if($bridgeConnection->bridge_version)
+                                    <span>v{{ $bridgeConnection->bridge_version }}</span>
+                                @endif
+                                <span>Connected {{ $bridgeConnection->connected_at?->diffForHumans() }}</span>
+                                <span>Last seen {{ $bridgeConnection->last_seen_at?->diffForHumans() }}</span>
+                            </div>
+                            @php
+                                $llmCount  = $bridgeConnection->onlineLlmCount();
+                                $agentCount = $bridgeConnection->foundAgentCount();
+                                $mcpCount  = count($bridgeConnection->mcpServers());
+                            @endphp
+                            @if($llmCount + $agentCount + $mcpCount > 0)
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    @if($llmCount > 0)
+                                        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                                            {{ $llmCount }} LLM{{ $llmCount !== 1 ? 's' : '' }} online
+                                        </span>
+                                    @endif
+                                    @if($agentCount > 0)
+                                        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                                            {{ $agentCount }} agent{{ $agentCount !== 1 ? 's' : '' }} found
+                                        </span>
+                                    @endif
+                                    @if($mcpCount > 0)
+                                        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                                            {{ $mcpCount }} MCP server{{ $mcpCount !== 1 ? 's' : '' }}
+                                        </span>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Legacy bridge: secret not configured warning (non-relay mode) --}}
                 @if(!$relayMode && $bridgeSecretMissing)
-                    <div class="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                        </svg>
-                        <div>
-                            <p class="font-medium">Bridge not configured</p>
-                            <p class="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
-                                Running inside Docker — local agents require the host bridge.
-                                Add <code class="rounded bg-amber-100 px-1 dark:bg-amber-900">LOCAL_AGENT_BRIDGE_SECRET=your-secret</code> to <code class="rounded bg-amber-100 px-1 dark:bg-amber-900">.env</code>,
-                                then start the bridge on your host:
-                                <code class="rounded bg-amber-100 px-1 dark:bg-amber-900">LOCAL_AGENT_BRIDGE_SECRET=your-secret php -S 0.0.0.0:8065 docker/host-bridge.php</code>
+                    <div class="mt-4 space-y-3">
+                        {{-- Option A: relay (recommended) --}}
+                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                            <p class="font-medium">Option A — Relay <span class="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700">Recommended</span></p>
+                            <p class="mt-1 text-xs text-blue-700">
+                                A Go-based relay daemon runs inside Docker and bridges your local agents over WebSocket. No host port forwarding required.
                             </p>
+                            <ol class="mt-2 list-decimal list-inside space-y-1 text-xs text-blue-700">
+                                <li>Set <code class="rounded bg-blue-100 px-1">RELAY_ENABLED=true</code> in <code class="rounded bg-blue-100 px-1">.env</code></li>
+                                <li>Start the relay: <code class="rounded bg-blue-100 px-1">docker compose --profile relay up -d relay</code></li>
+                                <li>Install the bridge on your machine and authenticate:
+                                    <pre class="mt-1 overflow-x-auto rounded bg-blue-100 p-2 text-xs text-blue-900">fleetq-bridge login --api-url {{ config('app.url') }} --api-key YOUR_API_TOKEN
+fleetq-bridge install</pre>
+                                </li>
+                            </ol>
+                            <p class="mt-1 text-xs text-blue-600">
+                                Get your API token from <a href="{{ route('team.settings') }}" class="underline">Team Settings → API Tokens</a>.
+                            </p>
+                        </div>
+
+                        {{-- Option B: legacy PHP bridge --}}
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            <p class="font-medium">Option B — Legacy PHP bridge</p>
+                            <p class="mt-1 text-xs text-amber-700">
+                                Single-threaded PHP bridge that runs on your host machine. Add to <code class="rounded bg-amber-100 px-1">.env</code>:
+                            </p>
+                            <pre class="mt-1 overflow-x-auto rounded bg-amber-100 p-2 text-xs text-amber-900">LOCAL_AGENT_BRIDGE_SECRET=your-secret</pre>
+                            <p class="mt-1 text-xs text-amber-700">Then start the bridge on your host:</p>
+                            <pre class="mt-1 overflow-x-auto rounded bg-amber-100 p-2 text-xs text-amber-900">LOCAL_AGENT_BRIDGE_SECRET=your-secret php -S 0.0.0.0:8065 docker/host-bridge.php</pre>
                         </div>
                     </div>
                 @endif
 
                 {{-- Legacy bridge: not connected warning (non-relay mode) --}}
                 @if(!$relayMode && $bridgeMode && !$bridgeConnected)
-                    <div class="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                    <div class="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                         <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                         </svg>
                         <div>
                             <p class="font-medium">Bridge daemon is not running</p>
-                            <p class="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+                            <p class="mt-0.5 text-xs text-amber-700">
                                 Local agent scanning requires the FleetQ Bridge daemon to be running on your host machine.
-                                Start it with: <code class="rounded bg-amber-100 px-1 dark:bg-amber-900">php /path/to/host-bridge.php</code>
+                                Start it with: <code class="rounded bg-amber-100 px-1">php /path/to/host-bridge.php</code>
                             </p>
                         </div>
                     </div>
