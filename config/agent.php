@@ -31,6 +31,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Browser Sandbox Mode
+    |--------------------------------------------------------------------------
+    | 'disabled' — Browser tool returns a plan-upgrade prompt (default)
+    | 'cloud'    — Tasks delegated to browser-use Cloud REST API (api.browser-use.com)
+    | 'sidecar'  — Tasks run in a self-hosted Python Docker sidecar (Phase 2)
+    */
+    'browser_sandbox_mode' => env('AGENT_BROWSER_SANDBOX_MODE', 'disabled'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | browser-use Cloud API Key
+    |--------------------------------------------------------------------------
+    | Used when browser_sandbox_mode is 'cloud'. Can also be stored per-team
+    | in Tool.credentials['api_key'] (encrypted via TeamEncryptedArray).
+    | Get your key at: https://cloud.browser-use.com/settings
+    */
+    'browser_use_cloud_api_key' => env('BROWSER_USE_CLOUD_API_KEY', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Browser Sidecar URL & Secret
+    |--------------------------------------------------------------------------
+    | Base URL and bearer token for the browser-use Python sidecar container.
+    | Only used when browser_sandbox_mode is 'sidecar' (Phase 2).
+    */
+    'browser_sidecar_url'    => env('BROWSER_SIDECAR_URL', 'http://browser_sidecar:8090'),
+    'browser_sidecar_secret' => env('BROWSER_SIDECAR_SECRET', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Docker Sandbox Image
     |--------------------------------------------------------------------------
     | The Docker image used when bash_sandbox_mode is 'docker'.
