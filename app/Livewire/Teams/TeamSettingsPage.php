@@ -520,6 +520,10 @@ class TeamSettingsPage extends Component
                     ->get()
                 : collect(),
             'bridgeConnection' => null,
+            'webauthnEnabled' => config('webauthn.enabled', class_exists(\LaravelWebauthn\WebauthnServiceProvider::class)),
+            'passkeys' => class_exists(\LaravelWebauthn\WebauthnServiceProvider::class)
+                ? (auth()->user()?->webauthnKeys ?? collect())
+                : collect(),
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }
