@@ -13,21 +13,39 @@ class ProviderResolver
 {
     /**
      * Resolve provider and model using the hierarchy:
-     * 1. Skill-level override
-     * 2. Agent-level override
-     * 3. Team workspace default
-     * 4. Platform default
+     * 1. Skill split-model override (if model_selection_mode === 'split')
+     * 2. Skill unified override
+     * 3. Agent-level override
+     * 4. Team workspace default
+     * 5. Platform default
      *
+     * @param  string  $purpose  'run' (default, production) or 'build' (design/testing)
      * @return array{provider: string, model: string}
      */
     public function resolve(
         ?Skill $skill = null,
         ?Agent $agent = null,
         ?Team $team = null,
+        string $purpose = 'run',
     ): array {
         // 1. Skill-level override
         if ($skill) {
             $config = $skill->configuration ?? [];
+
+            // Split model: separate build/run models
+            if (($config['model_selection_mode'] ?? 'unified') === 'split') {
+                $key = $purpose === 'build' ? 'build_model' : 'run_model';
+                $modelConfig = $config[$key] ?? null;
+
+                if ($modelConfig && ! empty($modelConfig['provider']) && ! empty($modelConfig['model'])) {
+                    return [
+                        'provider' => $modelConfig['provider'],
+                        'model' => $modelConfig['model'],
+                    ];
+                }
+            }
+
+            // Unified: single model for all executions
             if (! empty($config['provider']) && ! empty($config['model'])) {
                 return [
                     'provider' => $config['provider'],

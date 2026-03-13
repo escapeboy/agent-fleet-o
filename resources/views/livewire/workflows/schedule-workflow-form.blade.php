@@ -37,32 +37,50 @@
             <div>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Schedule</h3>
                 <div class="space-y-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
-                    <div class="grid grid-cols-3 gap-4">
-                        <x-form-select wire:model.live="frequency" label="Frequency">
-                            @foreach($frequencies as $freq)
-                                @if($freq->value !== 'once')
-                                    <option value="{{ $freq->value }}">{{ $freq->label() }}</option>
-                                @endif
-                            @endforeach
-                        </x-form-select>
+                    <x-form-checkbox wire:model.live="useNlpSchedule" label="Describe schedule in plain language" />
 
-                        <x-form-select wire:model="timezone" label="Timezone">
-                            @foreach(['UTC', 'Europe/Sofia', 'Europe/London', 'Europe/Berlin', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney'] as $tz)
-                                <option value="{{ $tz }}">{{ $tz }}</option>
-                            @endforeach
-                        </x-form-select>
+                    @if($useNlpSchedule)
+                        <div>
+                            <x-form-input
+                                wire:model.debounce.800ms="nlpScheduleInput"
+                                wire:blur="parseNlpSchedule"
+                                label="Schedule description"
+                                type="text"
+                                placeholder="e.g. every Monday at 9am Sofia time"
+                                hint="AI will convert this to a schedule automatically"
+                            />
+                            @if($nlpScheduleParsed)
+                                <p class="mt-1.5 text-sm text-green-600">&#10003; {{ $nlpScheduleParsed }}</p>
+                            @endif
+                        </div>
+                    @else
+                        <div class="grid grid-cols-3 gap-4">
+                            <x-form-select wire:model.live="frequency" label="Frequency">
+                                @foreach($frequencies as $freq)
+                                    @if($freq->value !== 'once')
+                                        <option value="{{ $freq->value }}">{{ $freq->label() }}</option>
+                                    @endif
+                                @endforeach
+                            </x-form-select>
 
-                        <x-form-select wire:model="overlapPolicy" label="If Previous Still Running">
-                            @foreach($overlapPolicies as $policy)
-                                <option value="{{ $policy->value }}">{{ $policy->label() }}</option>
-                            @endforeach
-                        </x-form-select>
-                    </div>
+                            <x-form-select wire:model="timezone" label="Timezone">
+                                @foreach(['UTC', 'Europe/Sofia', 'Europe/London', 'Europe/Berlin', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney'] as $tz)
+                                    <option value="{{ $tz }}">{{ $tz }}</option>
+                                @endforeach
+                            </x-form-select>
 
-                    @if($frequency === 'cron')
-                        <x-form-input wire:model="cronExpression" label="Cron Expression" type="text"
-                            placeholder="0 9 * * 1-5" hint="min hour day month weekday — e.g. weekdays at 9am"
-                            :error="$errors->first('cronExpression')" />
+                            <x-form-select wire:model="overlapPolicy" label="If Previous Still Running">
+                                @foreach($overlapPolicies as $policy)
+                                    <option value="{{ $policy->value }}">{{ $policy->label() }}</option>
+                                @endforeach
+                            </x-form-select>
+                        </div>
+
+                        @if($frequency === 'cron')
+                            <x-form-input wire:model="cronExpression" label="Cron Expression" type="text"
+                                placeholder="0 9 * * 1-5" hint="min hour day month weekday — e.g. weekdays at 9am"
+                                :error="$errors->first('cronExpression')" />
+                        @endif
                     @endif
 
                     <x-form-input wire:model.number="maxConsecutiveFailures" label="Max Consecutive Failures" type="number"

@@ -32,6 +32,17 @@ class CreateSkillForm extends Component
 
     public string $model = '';
 
+    // Split model (build vs run)
+    public bool $splitModelMode = false;
+
+    public string $buildProvider = '';
+
+    public string $buildModel = '';
+
+    public string $runProvider = '';
+
+    public string $runModel = '';
+
     public string $systemPrompt = '';
 
     public string $promptTemplate = '';
@@ -104,21 +115,39 @@ class CreateSkillForm extends Component
         $inputSchema = $this->buildSchema($this->inputFields);
         $outputSchema = $this->buildSchema($this->outputFields);
 
-        $configuration = $this->type === 'gpu_compute'
-            ? array_filter([
+        if ($this->type === 'gpu_compute') {
+            $configuration = array_filter([
                 'provider' => $this->computeProvider,
                 'endpoint_id' => $this->computeEndpointId ?: null,
                 'route_path' => $this->computeRoutePath ?: '/',
                 'use_sync' => $this->computeUseSync,
                 'timeout_seconds' => $this->computeTimeout,
-            ], fn ($v) => $v !== null)
-            : array_filter([
+            ], fn ($v) => $v !== null);
+        } elseif ($this->splitModelMode) {
+            $configuration = array_filter([
+                'model_selection_mode' => 'split',
+                'build_model' => array_filter([
+                    'provider' => $this->buildProvider ?: null,
+                    'model' => $this->buildModel ?: null,
+                ]),
+                'run_model' => array_filter([
+                    'provider' => $this->runProvider ?: null,
+                    'model' => $this->runModel ?: null,
+                ]),
+                'max_tokens' => $this->maxTokens,
+                'temperature' => $this->temperature,
+                'prompt_template' => $this->promptTemplate ?: null,
+            ]);
+        } else {
+            $configuration = array_filter([
+                'model_selection_mode' => 'unified',
                 'provider' => $this->provider ?: null,
                 'model' => $this->model ?: null,
                 'max_tokens' => $this->maxTokens,
                 'temperature' => $this->temperature,
                 'prompt_template' => $this->promptTemplate ?: null,
             ]);
+        }
 
         app(CreateSkillAction::class)->execute(
             teamId: $team->id,

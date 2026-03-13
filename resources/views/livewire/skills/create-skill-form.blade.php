@@ -132,29 +132,76 @@
                 </div>
             @else
                 <div class="space-y-4">
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <x-form-select wire:model.live="provider" label="LLM Provider (optional)">
-                            <option value="">Team Default</option>
-                            @foreach($providers as $key => $providerConfig)
-                                <option value="{{ $key }}">{{ $providerConfig['name'] }}</option>
-                            @endforeach
-                        </x-form-select>
+                    {{-- Model selection mode toggle --}}
+                    <x-form-checkbox wire:model.live="splitModelMode"
+                        label="Use different model for design vs production"
+                        hint="Build model: used when testing. Run model: used in production workflows." />
 
-                        @if($provider && isset($providers[$provider]))
-                            <x-form-select wire:model="model" label="Model">
-                                @foreach($providers[$provider]['models'] as $modelKey => $modelConfig)
-                                    <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                    @if($splitModelMode)
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div class="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 space-y-3">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-indigo-700">Build model <span class="font-normal normal-case">(design & testing)</span></p>
+                                <x-form-select wire:model.live="buildProvider" label="Provider">
+                                    <option value="">Team Default</option>
+                                    @foreach($providers as $key => $providerConfig)
+                                        <option value="{{ $key }}">{{ $providerConfig['name'] }}</option>
+                                    @endforeach
+                                </x-form-select>
+                                @if($buildProvider && isset($providers[$buildProvider]))
+                                    <x-form-select wire:model="buildModel" label="Model">
+                                        @foreach($providers[$buildProvider]['models'] as $modelKey => $modelConfig)
+                                            <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                                        @endforeach
+                                    </x-form-select>
+                                @else
+                                    <x-form-input wire:model="buildModel" label="Model" type="text" placeholder="e.g. claude-opus-4-6" />
+                                @endif
+                            </div>
+
+                            <div class="rounded-lg border border-green-100 bg-green-50/50 p-3 space-y-3">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-green-700">Run model <span class="font-normal normal-case">(production)</span></p>
+                                <x-form-select wire:model.live="runProvider" label="Provider">
+                                    <option value="">Team Default</option>
+                                    @foreach($providers as $key => $providerConfig)
+                                        <option value="{{ $key }}">{{ $providerConfig['name'] }}</option>
+                                    @endforeach
+                                </x-form-select>
+                                @if($runProvider && isset($providers[$runProvider]))
+                                    <x-form-select wire:model="runModel" label="Model">
+                                        @foreach($providers[$runProvider]['models'] as $modelKey => $modelConfig)
+                                            <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                                        @endforeach
+                                    </x-form-select>
+                                @else
+                                    <x-form-input wire:model="runModel" label="Model" type="text" placeholder="e.g. claude-haiku-4-5" />
+                                @endif
+                            </div>
+                        </div>
+                    @else
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <x-form-select wire:model.live="provider" label="LLM Provider (optional)">
+                                <option value="">Team Default</option>
+                                @foreach($providers as $key => $providerConfig)
+                                    <option value="{{ $key }}">{{ $providerConfig['name'] }}</option>
                                 @endforeach
                             </x-form-select>
-                        @else
-                            <x-form-input wire:model="model" label="Model (optional)" type="text" placeholder="e.g. claude-sonnet-4-5" />
-                        @endif
-                    </div>
 
-                    @if(!empty($providers[$provider]['local']))
-                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                            Local agent — executes on the host machine using its own CLI process. No per-request API costs.
+                            @if($provider && isset($providers[$provider]))
+                                <x-form-select wire:model="model" label="Model">
+                                    @foreach($providers[$provider]['models'] as $modelKey => $modelConfig)
+                                        <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                                    @endforeach
+                                </x-form-select>
+                            @else
+                                <x-form-input wire:model="model" label="Model (optional)" type="text" placeholder="e.g. claude-sonnet-4-5" />
+                            @endif
                         </div>
+
+                        @if(!empty($providers[$provider]['local']))
+                            <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                                Local agent — executes on the host machine using its own CLI process. No per-request API costs.
+                            </div>
+                        @endif
                     @endif
 
                     <x-form-textarea wire:model="systemPrompt" label="System Prompt" rows="5" :mono="true"
