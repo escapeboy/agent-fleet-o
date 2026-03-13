@@ -103,5 +103,27 @@
                 </x-sidebar-link>
             @endif
         @endforeach
+
+        <div class="my-2 border-t border-gray-700"></div>
+
+        <x-sidebar-link href="{{ route('triggers.index') }}" :active="request()->routeIs('triggers.*')" icon="bolt">
+            Triggers
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('audit') }}" :active="request()->routeIs('audit')" icon="document-text">
+            Audit Log
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">
+            Health
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('team.settings') }}" :active="request()->routeIs('team.*')" icon="users">
+            Team
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('settings') }}" :active="request()->routeIs('settings')" icon="cog">
+            Settings
+        </x-sidebar-link>
     </nav>
 </aside>
