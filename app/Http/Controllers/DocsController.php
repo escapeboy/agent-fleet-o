@@ -25,6 +25,7 @@ class DocsController extends Controller
         'budget',
         'audit-log',
         'changelog',
+        'plugins',
     ];
 
     public function show(string $page = 'introduction'): Response

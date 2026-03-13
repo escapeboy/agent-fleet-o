@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\AI\Services;
 
+use App\Domain\Bridge\Models\BridgeConnection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
@@ -156,11 +157,25 @@ class LocalAgentDiscovery
     }
 
     /**
+     * Whether the relay service is enabled (RELAY_ENABLED=true in .env).
+     * In relay mode, bridge status is tracked via BridgeConnection model, not HTTP polls.
+     */
+    public function isRelayMode(): bool
+    {
+        return (bool) config('bridge.relay_enabled', false);
+    }
+
+    /**
      * Whether we're in Docker but LOCAL_AGENT_BRIDGE_SECRET is not configured.
      * In this state the bridge cannot be used even if the daemon is running.
      */
     public function needsBridgeConfig(): bool
     {
+        // In relay mode the secret is not needed — fleetq-bridge authenticates via Sanctum
+        if ($this->isRelayMode()) {
+            return false;
+        }
+
         return $this->isRunningInDocker()
             && empty(config('local_agents.bridge.secret'));
     }
@@ -183,9 +198,23 @@ class LocalAgentDiscovery
 
     /**
      * Check if the bridge server is reachable.
+     * In relay mode, checks the BridgeConnection model instead of polling HTTP.
      */
     public function bridgeHealth(): bool
     {
+        if ($this->isRelayMode()) {
+            // Relay mode: check for an active BridgeConnection in the database
+            try {
+                return BridgeConnection::active()->exists();
+            } catch (\Throwable $e) {
+                Log::debug('LocalAgentDiscovery: relay bridge health check failed', [
+                    'error' => $e->getMessage(),
+                ]);
+
+                return false;
+            }
+        }
+
         try {
             $response = Http::timeout(config('local_agents.bridge.connect_timeout', 5))
                 ->get($this->bridgeUrl().'/health');
