@@ -167,6 +167,34 @@ services:
       redis:
         condition: service_healthy
 
+  relay:
+    build:
+      context: ../fleetq-bridge
+      dockerfile: Dockerfile.relay
+    restart: unless-stopped
+    ports:
+      - "${RELAY_PORT:-8070}:8070"    # exposed to host so fleetq-bridge can connect
+    environment:
+      FLEETQ_API_URL: "http://nginx:80"
+      REDIS_URL: "redis://redis:6379/0"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+    networks:
+      - agent-fleet-open       # needs nginx + app
+      - agent-fleet-internal   # needs redis
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8070/bridge/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - relay
+
   browserless:
     image: browserless/chrome:1-chrome-stable
     restart: unless-stopped
