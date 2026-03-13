@@ -59,6 +59,7 @@ class ExecuteSkillAction
         ?string $experimentId = null,
         ?string $provider = null,
         ?string $model = null,
+        string $purpose = 'run',
     ): array {
         // CodeExecution has its own full pipeline (worktree + Docker sandbox + approval)
         if ($skill->type === SkillType::CodeExecution->value) {
@@ -123,7 +124,7 @@ class ExecuteSkillAction
         } else {
             $agent = $agentId ? Agent::find($agentId) : null;
             $team = $teamId ? Team::find($teamId) : null;
-            $resolved = $this->providerResolver->resolve($skill, $agent, $team);
+            $resolved = $this->providerResolver->resolve($skill, $agent, $team, $purpose);
             $resolvedProvider = $provider ?? $resolved['provider'];
             $resolvedModel = $model ?? $resolved['model'];
         }

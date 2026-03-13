@@ -44,6 +44,12 @@ class RecordMarketplaceUsageAction
             'executed_at' => $execution->created_at,
         ]);
 
+        // Increment run_count atomically
+        $listing->increment('run_count');
+        if ($execution->status === 'completed') {
+            $listing->increment('success_count');
+        }
+
         // Transfer credits if paid listing and execution succeeded
         if ($listing->isPaid() && $execution->status === 'completed') {
             $this->transferCredits->execute($installation, $listing, $execution->team_id);

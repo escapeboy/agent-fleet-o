@@ -7,6 +7,7 @@ use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Enums\OverlapPolicy;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ScheduleFrequency;
+use App\Domain\Project\Services\NaturalLanguageScheduleParser;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use Livewire\Component;
@@ -59,6 +60,13 @@ class ScheduleWorkflowForm extends Component
 
     public bool $activateOnSave = true;
 
+    // NLP Schedule
+    public bool $useNlpSchedule = false;
+
+    public string $nlpScheduleInput = '';
+
+    public string $nlpScheduleParsed = '';
+
     public function mount(?string $workflow = null): void
     {
         if ($workflow) {
@@ -104,8 +112,27 @@ class ScheduleWorkflowForm extends Component
         return $rules;
     }
 
+    public function parseNlpSchedule(): void
+    {
+        if (empty($this->nlpScheduleInput)) {
+            return;
+        }
+
+        $result = app(NaturalLanguageScheduleParser::class)->parse($this->nlpScheduleInput);
+
+        $this->frequency = $result->frequency->value;
+        $this->cronExpression = $result->cronExpression ?? '';
+        $this->timezone = $result->timezone;
+        $this->overlapPolicy = $result->overlapPolicy->value;
+        $this->nlpScheduleParsed = $result->humanReadable;
+    }
+
     public function save(): void
     {
+        if ($this->useNlpSchedule && $this->nlpScheduleInput) {
+            $this->parseNlpSchedule();
+        }
+
         $this->validate();
 
         // Verify workflow is active
