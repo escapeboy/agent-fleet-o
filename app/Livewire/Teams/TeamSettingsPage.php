@@ -519,6 +519,7 @@ class TeamSettingsPage extends Component
                     ->latest()
                     ->get()
                 : collect(),
+            'bridgeConnection' => null,
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }
