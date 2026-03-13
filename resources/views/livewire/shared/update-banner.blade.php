@@ -1,3 +1,4 @@
+<div>
 @if($updateAvailable && $updateInfo)
     <div class="flex items-center justify-between gap-4 border-b border-amber-200 bg-amber-50 px-6 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
          role="alert">
@@ -29,3 +30,4 @@
         </button>
     </div>
 @endif
+</div>
