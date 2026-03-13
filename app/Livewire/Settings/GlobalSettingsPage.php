@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use App\Domain\Agent\Actions\DisableAgentAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\System\Services\VersionCheckService;
@@ -436,6 +437,10 @@ class GlobalSettingsPage extends Component
             $bridgeSecretMissing = $discovery->needsBridgeConfig();
         }
 
+        $bridgeConnection = ($relayMode && $bridgeConnected)
+            ? BridgeConnection::active()->latest('connected_at')->first()
+            : null;
+
         $resolver = app(OutboundCredentialResolver::class);
         $channels = [
             'telegram' => ['label' => 'Telegram',        'icon' => 'paper-airplane'],
@@ -479,6 +484,7 @@ class GlobalSettingsPage extends Component
             'bridgeConnected' => $bridgeConnected,
             'bridgeSecretMissing' => $bridgeSecretMissing,
             'relayMode' => $relayMode,
+            'bridgeConnection' => $bridgeConnection,
             'providers' => config('llm_providers', []),
             'connectorStatuses' => $connectorStatuses,
         ])->layout('layouts.app', ['header' => 'Settings']);

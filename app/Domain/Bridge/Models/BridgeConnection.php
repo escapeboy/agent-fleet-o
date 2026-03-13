@@ -55,6 +55,11 @@ class BridgeConnection extends Model
         return $this->endpoints['mcp_servers'] ?? [];
     }
 
+    public function ideMcpConfigs(): array
+    {
+        return $this->endpoints['ide_mcp_configs'] ?? [];
+    }
+
     public function onlineLlmCount(): int
     {
         return count(array_filter($this->llmEndpoints(), fn ($ep) => $ep['online'] ?? false));

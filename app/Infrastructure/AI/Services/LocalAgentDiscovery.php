@@ -22,6 +22,10 @@ class LocalAgentDiscovery
             return [];
         }
 
+        if ($this->isRelayMode()) {
+            return $this->relayDiscover();
+        }
+
         if ($this->shouldUseBridge()) {
             return $this->bridgeDiscover();
         }
@@ -252,6 +256,58 @@ class LocalAgentDiscovery
         return $this->isRunningInDocker()
             && config('local_agents.bridge.auto_detect', true)
             && ! empty(config('local_agents.bridge.secret'));
+    }
+
+    /**
+     * Maps bridge daemon agent keys to local_agents config keys where they differ.
+     */
+    private const BRIDGE_KEY_MAP = [
+        'gemini' => 'gemini-cli',
+    ];
+
+    /**
+     * Discover agents from the active BridgeConnection in relay mode.
+     *
+     * @return array<string, array{name: string, version: string, path: string}>
+     */
+    private function relayDiscover(): array
+    {
+        if ($this->bridgeCache !== null) {
+            return $this->bridgeCache;
+        }
+
+        try {
+            $connection = BridgeConnection::active()->latest('connected_at')->first();
+
+            if (! $connection) {
+                $this->bridgeCache = [];
+
+                return [];
+            }
+
+            $detected = [];
+            foreach ($connection->agents() as $agent) {
+                if ($agent['found'] ?? false) {
+                    $bridgeKey = $agent['key'];
+                    $configKey = self::BRIDGE_KEY_MAP[$bridgeKey] ?? $bridgeKey;
+                    $detected[$configKey] = [
+                        'name' => $agent['name'],
+                        'version' => $this->parseVersion($agent['version'] ?? ''),
+                        'path' => "bridge://{$bridgeKey}",
+                    ];
+                }
+            }
+
+            $this->bridgeCache = $detected;
+        } catch (\Throwable $e) {
+            Log::debug('LocalAgentDiscovery: relay discover failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->bridgeCache = [];
+        }
+
+        return $this->bridgeCache;
     }
 
     /**
