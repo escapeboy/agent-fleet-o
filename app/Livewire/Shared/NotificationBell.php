@@ -10,6 +10,21 @@ class NotificationBell extends Component
 {
     public bool $open = false;
 
+    public function savePushSubscription(array $payload): void
+    {
+        $user = auth()->user();
+        if (! $user || empty($payload['endpoint'])) {
+            return;
+        }
+
+        $user->updatePushSubscription(
+            endpoint: $payload['endpoint'],
+            key: $payload['keys']['p256dh'] ?? null,
+            token: $payload['keys']['auth'] ?? null,
+            contentEncoding: 'aesgcm',
+        );
+    }
+
     public function markAllRead(): void
     {
         $user = auth()->user();
