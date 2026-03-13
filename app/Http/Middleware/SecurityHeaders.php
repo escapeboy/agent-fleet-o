@@ -23,8 +23,9 @@ class SecurityHeaders
 
         $csp = implode('; ', [
             "default-src 'self'",
-            // Inline scripts are required for Blade-injected Alpine.js bootstrapping.
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://plausible.io",
+            // 'unsafe-inline' required for Blade-injected Alpine.js bootstrapping.
+            // 'unsafe-eval' required for Alpine.js v3 / Livewire 4 expression evaluation.
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://plausible.io",
             // Inline styles are required for Tailwind JIT utilities applied via Alpine.
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             // Restrict images to known origins; drop the open https: wildcard.
