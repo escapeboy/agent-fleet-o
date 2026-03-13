@@ -1,8 +1,13 @@
 <div>
-    {{-- Flash message --}}
+    {{-- Flash messages --}}
     @if(session()->has('message'))
         <div class="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
             {{ session('message') }}
+        </div>
+    @endif
+    @if(session()->has('error'))
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            {{ session('error') }}
         </div>
     @endif
 
@@ -288,10 +293,28 @@
                         @endif
                     </div>
                     <button wire:click="rescanLocalAgents"
-                        class="rounded-lg border border-(--color-theme-border-strong) px-3 py-1.5 text-xs font-medium text-(--color-on-surface) hover:bg-(--color-surface-alt)">
+                        @if($bridgeMode && !$bridgeConnected) disabled title="Bridge is not connected" @endif
+                        class="rounded-lg border border-(--color-theme-border-strong) px-3 py-1.5 text-xs font-medium text-(--color-on-surface) hover:bg-(--color-surface-alt) disabled:opacity-40 disabled:cursor-not-allowed">
                         Re-scan
                     </button>
                 </div>
+
+                {{-- Bridge not connected warning --}}
+                @if($bridgeMode && !$bridgeConnected)
+                    <div class="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                        <div>
+                            <p class="font-medium">Bridge daemon is not running</p>
+                            <p class="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+                                Local agent scanning requires the FleetQ Bridge daemon to be running on your host machine.
+                                Start it with: <code class="rounded bg-amber-100 px-1 dark:bg-amber-900">php /path/to/host-bridge.php</code>
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="mt-4 space-y-3">
                     @if($localAgentsEnabled)
                         @forelse($allLocalAgents as $key => $agentConfig)
