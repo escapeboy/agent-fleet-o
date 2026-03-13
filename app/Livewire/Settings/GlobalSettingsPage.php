@@ -422,6 +422,8 @@ class GlobalSettingsPage extends Component
         $bridgeMode = false;
         $bridgeConnected = false;
 
+        $bridgeSecretMissing = false;
+
         if ($mode->isSelfHosted()) {
             $discovery = app(LocalAgentDiscovery::class);
             $bridgeMode = $discovery->isBridgeMode();
@@ -429,6 +431,7 @@ class GlobalSettingsPage extends Component
             $detectedLocalAgents = $discovery->detect();
             $allLocalAgents = $discovery->allAgents();
             $bridgeConnected = $bridgeMode ? $discovery->bridgeHealth() : false;
+            $bridgeSecretMissing = $discovery->needsBridgeConfig();
         }
 
         $resolver = app(OutboundCredentialResolver::class);
@@ -472,6 +475,7 @@ class GlobalSettingsPage extends Component
             'allLocalAgents' => $allLocalAgents,
             'bridgeMode' => $bridgeMode,
             'bridgeConnected' => $bridgeConnected,
+            'bridgeSecretMissing' => $bridgeSecretMissing,
             'providers' => config('llm_providers', []),
             'connectorStatuses' => $connectorStatuses,
         ])->layout('layouts.app', ['header' => 'Settings']);
