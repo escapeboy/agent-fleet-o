@@ -34,9 +34,18 @@ class AssistantPanel extends Component
     {
         $team = auth()->user()?->currentTeam;
         $teamSettings = $team?->settings ?? [];
-        $this->selectedProvider = $teamSettings['assistant_llm_provider']
+        $savedProvider = $teamSettings['assistant_llm_provider']
             ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
+
+        $availableProviders = $this->resolveProvidersWithCustom();
+
+        // Fall back to the first available provider if the saved one is no longer available
+        if (! isset($availableProviders[$savedProvider])) {
+            $savedProvider = array_key_first($availableProviders) ?? $savedProvider;
+        }
+
+        $this->selectedProvider = $savedProvider;
         $this->selectedModel = $teamSettings['assistant_llm_model']
             ?? GlobalSetting::get('assistant_llm_model')
             ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');

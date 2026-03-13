@@ -14,4 +14,9 @@ return [
     AiServiceProvider::class,
     ComputeServiceProvider::class,
     IntegrationServiceProvider::class,
+    \Barsy\Providers\BarsyServiceProvider::class,
+    \Barsy\Providers\LLMServiceProvider::class,
+    \Barsy\Providers\ChatServiceProvider::class,
+    \Barsy\Providers\LearningServiceProvider::class,
+    \Barsy\Providers\AgentServiceProvider::class,
 ];

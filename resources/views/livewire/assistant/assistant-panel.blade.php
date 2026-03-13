@@ -4,6 +4,7 @@
         inputText: '',
         pendingMessage: null,
         sending: false,
+        messageQueue: [],
         userScrolled: false,
         panelWidth: parseInt(localStorage.getItem('assistant-panel-width')) || 420,
         resizing: false,
@@ -38,6 +39,14 @@
                 }
             });
 
+            // Process next queued message when the pending job clears
+            this.$watch(() => $wire.pendingMessageId, (newVal) => {
+                if (newVal === '' && this.messageQueue.length > 0) {
+                    const next = this.messageQueue.shift();
+                    this._dispatch(next);
+                }
+            });
+
             // Attach scroll listener + MutationObserver for auto-scroll
             this.$nextTick(() => {
                 const container = this.$refs.messagesContainer;
@@ -67,17 +76,25 @@
         },
         async send() {
             const text = this.inputText.trim();
-            if (!text || this.sending) return;
+            if (!text) return;
 
             this.inputText = '';
-            this.sending = true;
-            this.userScrolled = false;
-            this.scrollToBottom();
-
-            // Reset textarea height
             if (this.$refs.messageInput) {
                 this.$refs.messageInput.style.height = 'auto';
             }
+
+            // If a job is already in progress, queue the message
+            if (this.sending || $wire.pendingMessageId !== '') {
+                this.messageQueue.push(text);
+                return;
+            }
+
+            await this._dispatch(text);
+        },
+        async _dispatch(text) {
+            this.sending = true;
+            this.userScrolled = false;
+            this.scrollToBottom();
 
             // sendMessage() dispatches an async job and returns immediately —
             // no long HTTP wait. The pending bubble appears in messages[] and
@@ -365,10 +382,12 @@
                             x-model="inputText"
                             placeholder="Ask anything... (Cmd+K to toggle)"
                             rows="1"
+                            autocomplete="off"
+                            data-1p-ignore
+                            data-lpignore="true"
                             class="block w-full resize-none rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            x-on:keydown.enter.prevent="if (!$event.shiftKey) send()"
+                            x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); send(); }"
                             x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
-                            :disabled="sending || $wire.pendingMessageId !== ''"
                         ></textarea>
                     </div>
                     {{-- Mic button — only rendered when SpeechRecognition is supported --}}
@@ -384,16 +403,30 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
                         </svg>
                     </button>
-                    <button
-                        type="button"
-                        x-on:click="send()"
-                        :disabled="sending || $wire.pendingMessageId !== '' || !inputText.trim()"
-                        class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                        </svg>
-                    </button>
+                    <div class="relative flex-shrink-0">
+                        <button
+                            type="button"
+                            x-on:click="send()"
+                            :disabled="!inputText.trim()"
+                            class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {{-- Spinner when job is active --}}
+                            <svg x-show="sending || $wire.pendingMessageId !== ''" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-5 w-5 animate-spin">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            {{-- Send arrow when idle --}}
+                            <svg x-show="!sending && $wire.pendingMessageId === ''" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                            </svg>
+                        </button>
+                        {{-- Queue count badge --}}
+                        <span
+                            x-show="messageQueue.length > 0"
+                            x-text="messageQueue.length"
+                            class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-white"
+                        ></span>
+                    </div>
                 </div>
                 <p class="mt-1.5 text-center text-[10px] text-gray-400">
                     Press Enter to send, Shift+Enter for new line

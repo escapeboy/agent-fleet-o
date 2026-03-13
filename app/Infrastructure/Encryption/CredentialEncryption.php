@@ -150,11 +150,22 @@ class CredentialEncryption
         // No KMS config (or disabled) — use APP_KEY-wrapped DEK from Team model
         $team = Team::withoutGlobalScopes()->find($teamId);
 
-        if (! $team || ! $team->credential_key) {
+        if (! $team) {
             return null;
         }
 
-        $key = base64_decode($team->credential_key);
+        try {
+            $rawKey = $team->credential_key;
+        } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+            // credential_key was stored with a different APP_KEY — fall back to APP_KEY direct encryption
+            return null;
+        }
+
+        if (! $rawKey) {
+            return null;
+        }
+
+        $key = base64_decode($rawKey);
 
         if (strlen($key) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
             return null;

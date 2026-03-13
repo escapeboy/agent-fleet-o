@@ -43,6 +43,8 @@
     },
     "autoload": {
         "psr-4": {
+            "Barsy\\": "/var/www/barsy/src/",
+            "Barsy\\Database\\Seeders\\": "/var/www/barsy/database/seeders/",
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
