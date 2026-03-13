@@ -423,10 +423,12 @@ class GlobalSettingsPage extends Component
         $bridgeConnected = false;
 
         $bridgeSecretMissing = false;
+        $relayMode = false;
 
         if ($mode->isSelfHosted()) {
             $discovery = app(LocalAgentDiscovery::class);
-            $bridgeMode = $discovery->isBridgeMode();
+            $relayMode = $discovery->isRelayMode();
+            $bridgeMode = $relayMode || $discovery->isBridgeMode();
             $localAgentsEnabled = config('local_agents.enabled');
             $detectedLocalAgents = $discovery->detect();
             $allLocalAgents = $discovery->allAgents();
@@ -476,6 +478,7 @@ class GlobalSettingsPage extends Component
             'bridgeMode' => $bridgeMode,
             'bridgeConnected' => $bridgeConnected,
             'bridgeSecretMissing' => $bridgeSecretMissing,
+            'relayMode' => $relayMode,
             'providers' => config('llm_providers', []),
             'connectorStatuses' => $connectorStatuses,
         ])->layout('layouts.app', ['header' => 'Settings']);
