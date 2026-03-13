@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tool\Services;
 
+use App\Domain\Bridge\Models\BridgeConnection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -55,6 +56,10 @@ class McpConfigDiscovery
      */
     public function scanAllSources(): array
     {
+        if ($this->isRelayMode()) {
+            return $this->relayScan();
+        }
+
         if ($this->shouldUseBridge()) {
             return $this->bridgeScan();
         }
@@ -245,6 +250,59 @@ class McpConfigDiscovery
             'Windows' => 'win',
             default => 'linux',
         };
+    }
+
+    private function isRelayMode(): bool
+    {
+        return (bool) config('bridge.relay_enabled', false);
+    }
+
+    /**
+     * Discover MCP configs from the active BridgeConnection (relay mode).
+     */
+    private function relayScan(): array
+    {
+        $connection = BridgeConnection::active()->latest('connected_at')->first();
+
+        if (! $connection) {
+            return ['sources' => [], 'servers' => []];
+        }
+
+        $ideConfigs = $connection->ideMcpConfigs();
+
+        if (empty($ideConfigs)) {
+            return ['sources' => [], 'servers' => []];
+        }
+
+        $allServers = [];
+        $sourceSummary = [];
+
+        foreach ($ideConfigs as $serverData) {
+            $name = $serverData['name'] ?? '';
+            $source = $serverData['source'] ?? 'Bridge Host';
+
+            $rawConfig = [];
+            if (! empty($serverData['command'])) {
+                $rawConfig['command'] = $serverData['command'];
+                $rawConfig['args'] = $serverData['args'] ?? [];
+                if (! empty($serverData['env'])) {
+                    $rawConfig['env'] = $serverData['env'];
+                }
+            } elseif (! empty($serverData['url'])) {
+                $rawConfig['url'] = $serverData['url'];
+            }
+
+            if (empty($rawConfig)) {
+                continue;
+            }
+
+            $allServers[] = $this->normalizer->normalize($name, $rawConfig, $source);
+
+            $sourceSummary[$source] ??= ['label' => $source, 'file' => '', 'count' => 0];
+            $sourceSummary[$source]['count']++;
+        }
+
+        return ['sources' => $sourceSummary, 'servers' => $allServers];
     }
 
     private function shouldUseBridge(): bool

@@ -2,11 +2,13 @@
 
 namespace App\Livewire\Teams;
 
+use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;
 use Livewire\Component;
 
@@ -497,7 +499,7 @@ class TeamSettingsPage extends Component
             'credentials' => $team ? TeamProviderCredential::where('team_id', $team->id)->whereIn('provider', static::BYOK_PROVIDERS)->get() : collect(),
             'providers' => static::BYOK_PROVIDERS,
             'providerLabels' => static::PROVIDER_LABELS,
-            'llmProviders' => config('llm_providers', []),
+            'llmProviders' => app(ProviderResolver::class)->availableProviders($team),
             'apiTokens' => $apiTokens,
             'telegramBot' => $team ? TelegramBot::where('team_id', $team->id)->first() : null,
             'computeCredentials' => $team
@@ -519,7 +521,9 @@ class TeamSettingsPage extends Component
                     ->latest()
                     ->get()
                 : collect(),
-            'bridgeConnection' => null,
+            'bridgeConnection' => config('bridge.relay_enabled')
+                ? BridgeConnection::active()->latest('connected_at')->first()
+                : null,
             'webauthnEnabled' => config('webauthn.enabled', class_exists(\LaravelWebauthn\WebauthnServiceProvider::class)),
             'passkeys' => class_exists(\LaravelWebauthn\WebauthnServiceProvider::class)
                 ? (auth()->user()?->webauthnKeys ?? collect())

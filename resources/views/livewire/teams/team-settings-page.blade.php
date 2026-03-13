@@ -783,12 +783,12 @@
                 <p class="font-medium text-yellow-900">Bridge Disconnected</p>
                 <p class="mt-0.5 text-sm text-yellow-700">Last connected {{ $bridgeConnection->connected_at?->diffForHumans() ?? 'never' }}. Restart the bridge daemon to reconnect.</p>
             </div>
-            <p class="text-sm text-gray-600">Download FleetQ Bridge: <a href="https://github.com/fleetq/fleetq-bridge/releases" target="_blank" class="text-primary-600 hover:underline">github.com/fleetq/fleetq-bridge</a></p>
+            <p class="text-sm text-gray-600">Download FleetQ Bridge: <a href="https://github.com/escapeboy/fleetq-bridge/releases" target="_blank" class="text-primary-600 hover:underline">github.com/fleetq/fleetq-bridge</a></p>
         @else
             <div class="rounded-lg border border-dashed border-gray-300 p-4 text-center">
                 <p class="mb-1 text-sm font-medium text-gray-700">No Bridge Connected</p>
                 <p class="mb-3 text-xs text-gray-500">Install and start the FleetQ Bridge daemon on your machine to connect local LLMs and agents.</p>
-                <a href="https://github.com/fleetq/fleetq-bridge/releases" target="_blank"
+                <a href="https://github.com/escapeboy/fleetq-bridge/releases" target="_blank"
                     class="inline-flex items-center rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-900">
                     Download FleetQ Bridge
                 </a>

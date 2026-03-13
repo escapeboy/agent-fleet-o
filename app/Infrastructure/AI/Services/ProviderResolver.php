@@ -87,6 +87,16 @@ class ProviderResolver
         $localLlmEnabled = config('local_llm.enabled', false);
         $detected = null;
 
+        // Pre-load team's active BYOK provider keys for cloud provider filtering
+        $teamByokProviders = $team
+            ? TeamProviderCredential::where('team_id', $team->id)
+                ->where('is_active', true)
+                ->whereNotIn('provider', ['custom_endpoint', 'ollama', 'openai_compatible'])
+                ->pluck('provider')
+                ->flip()
+                ->all()
+            : [];
+
         foreach ($providers as $key => $provider) {
             // HTTP-based local LLM providers (Ollama, OpenAI-compatible)
             if (! empty($provider['http_local'])) {
@@ -98,24 +108,35 @@ class ProviderResolver
             }
 
             // CLI-based local agent providers (Codex, Claude Code)
-            if (empty($provider['local'])) {
+            if (! empty($provider['local'])) {
+                if (! $localAgentsEnabled) {
+                    unset($providers[$key]);
+
+                    continue;
+                }
+
+                // Lazy-detect once
+                if ($detected === null) {
+                    $detected = app(LocalAgentDiscovery::class)->detect();
+                }
+
+                $agentKey = $provider['agent_key'] ?? $key;
+
+                if (! isset($detected[$agentKey])) {
+                    unset($providers[$key]);
+                }
+
                 continue;
             }
 
-            if (! $localAgentsEnabled) {
-                unset($providers[$key]);
-
+            // Bridge-backed providers — handled separately, skip cloud key check
+            if (! empty($provider['bridge'])) {
                 continue;
             }
 
-            // Lazy-detect once
-            if ($detected === null) {
-                $detected = app(LocalAgentDiscovery::class)->detect();
-            }
-
-            $agentKey = $provider['agent_key'] ?? $key;
-
-            if (! isset($detected[$agentKey])) {
+            // Cloud providers: only show if a platform API key or team BYOK key is configured
+            $platformKey = config("services.platform_api_keys.{$key}");
+            if (! $platformKey && ! isset($teamByokProviders[$key])) {
                 unset($providers[$key]);
             }
         }

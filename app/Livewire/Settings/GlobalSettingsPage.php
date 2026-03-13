@@ -12,6 +12,7 @@ use App\Domain\System\Services\VersionCheckService;
 use App\Domain\Tool\Actions\ImportMcpServersAction;
 use App\Domain\Tool\Services\McpConfigDiscovery;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\Blacklist;
 use App\Models\GlobalSetting;
 use App\Models\User;
@@ -485,7 +486,7 @@ class GlobalSettingsPage extends Component
             'bridgeSecretMissing' => $bridgeSecretMissing,
             'relayMode' => $relayMode,
             'bridgeConnection' => $bridgeConnection,
-            'providers' => config('llm_providers', []),
+            'providers' => app(ProviderResolver::class)->availableProviders(auth()->user()?->currentTeam),
             'connectorStatuses' => $connectorStatuses,
         ])->layout('layouts.app', ['header' => 'Settings']);
     }

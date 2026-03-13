@@ -383,7 +383,7 @@ fleetq-bridge install</pre>
                             <p class="mt-1 text-xs text-blue-700">
                                 A Go-based relay daemon runs inside Docker and bridges your local agents over WebSocket. No host port forwarding required.
                             </p>
-                            <ol class="mt-2 list-decimal list-inside space-y-1 text-xs text-blue-700">
+                            <ol class="mt-2 space-y-1 text-xs text-blue-700 list-decimal list-inside">
                                 <li>Set <code class="rounded bg-blue-100 px-1">RELAY_ENABLED=true</code> in <code class="rounded bg-blue-100 px-1">.env</code></li>
                                 <li>Start the relay: <code class="rounded bg-blue-100 px-1">docker compose --profile relay up -d relay</code></li>
                                 <li>Install the bridge on your machine and authenticate:
