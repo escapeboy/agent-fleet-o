@@ -33,7 +33,7 @@ class CommandSecurityPolicy
     ];
 
     /** Dangerous shell patterns always blocked. */
-    private const DANGEROUS_PATTERNS = [
+    protected const DANGEROUS_PATTERNS = [
         '| bash',
         '| sh',
         '| zsh',

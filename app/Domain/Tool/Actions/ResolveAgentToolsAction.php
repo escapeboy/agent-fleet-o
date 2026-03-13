@@ -26,11 +26,15 @@ class ResolveAgentToolsAction
      *
      * @return array<\Prism\Prism\Tool>
      */
-    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null): array
+    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null): array
     {
         $workspace = ($executionId && $agent->team_id)
             ? new SandboxedWorkspace($executionId, $agent->id, $agent->team_id)
             : null;
+
+        if ($workspace && $sidecarSessionId !== null) {
+            $workspace->setSidecarSessionId($sidecarSessionId);
+        }
 
         $agentTools = $agent->tools()
             ->where('status', ToolStatus::Active->value)

@@ -207,6 +207,18 @@ services:
     profiles:
       - browser
 
+  bash_sidecar:
+    build:
+      context: ../../sidecar
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      BASH_SIDECAR_SECRET: "${BASH_SIDECAR_SECRET:-dev-secret}"
+    networks:
+      - agent-fleet-open
+    profiles:
+      - sandbox  # opt-in: docker compose --profile sandbox up
+
 volumes:
   postgres_data:
   redis_data:
