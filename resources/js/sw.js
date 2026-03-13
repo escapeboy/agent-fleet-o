@@ -16,8 +16,11 @@ clientsClaim();
 // Clean up precaches from older SW versions
 cleanupOutdatedCaches();
 
-// Precache all assets listed in the Workbox manifest (injected by vite-plugin-pwa)
-precacheAndRoute(self.__WB_MANIFEST);
+// Precache manifest — intentionally empty.
+// Assets are cached at runtime by the CacheFirst route below (/build/*).
+// Using a static precache manifest causes 404 errors when assets are rebuilt
+// with new hashes but sw.js is not rebuilt at the same time.
+precacheAndRoute([]);
 
 // ─── Routing Strategies ────────────────────────────────────────────────────
 
