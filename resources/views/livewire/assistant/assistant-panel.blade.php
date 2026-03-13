@@ -319,7 +319,8 @@
                     <span class="inline-flex items-center rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">Local</span>
                 @endif
             </div>
-            <div class="flex items-end gap-2" x-data="speechInput" x-on:speech-result.window="inputText = $event.detail.text">
+            <div x-data="speechInput" x-on:speech-result.window="inputText = $event.detail.text">
+            <div class="flex items-end gap-2">
                 <div class="flex-1">
                     <textarea
                         x-ref="messageInput"
@@ -360,6 +361,7 @@
                 Press Enter to send, Shift+Enter for new line
                 <span x-show="isListening" class="ml-2 text-red-500">● Recording…</span>
             </p>
+        </div>
         </div>
     </div>
 </div>
