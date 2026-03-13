@@ -92,63 +92,8 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
-    // ─── Speech Recognition ─────────────────────────────────────────────────
-    // Voice input for AssistantPanel. Chrome/Edge only; hidden on Firefox/Safari.
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    Alpine.data('speechInput', () => ({
-        isSupported: !!SpeechRecognitionAPI,
-        isListening: false,
-        transcript: '',
-        interimTranscript: '',
-        recognition: null,
-
-        init() {
-            if (!this.isSupported) return;
-
-            this.recognition = new SpeechRecognitionAPI();
-            this.recognition.continuous = false;
-            this.recognition.interimResults = true;
-            this.recognition.lang = document.documentElement.lang || 'en-US';
-
-            this.recognition.addEventListener('result', (e) => {
-                let final = '';
-                let interim = '';
-                for (let i = e.resultIndex; i < e.results.length; i++) {
-                    const t = e.results[i][0].transcript;
-                    e.results[i].isFinal ? (final += t) : (interim += t);
-                }
-                if (final) this.transcript = final;
-                this.interimTranscript = interim;
-            });
-
-            this.recognition.addEventListener('end', () => {
-                this.isListening = false;
-                this.interimTranscript = '';
-                if (this.transcript) {
-                    this.$dispatch('speech-result', { text: this.transcript });
-                    this.transcript = '';
-                }
-            });
-
-            this.recognition.addEventListener('error', (e) => {
-                this.isListening = false;
-                this.interimTranscript = '';
-                if (e.error !== 'aborted') console.warn('[FleetQ] Speech error:', e.error);
-            });
-        },
-
-        toggle() {
-            if (!this.isSupported) return;
-            if (this.isListening) {
-                this.recognition.stop();
-            } else {
-                this.transcript = '';
-                this.recognition.start();
-                this.isListening = true;
-            }
-        },
-    }));
+    // speechInput is defined inline in assistant-panel.blade.php to avoid
+    // alpine:init timing race with async Vite script loading.
 });
 
 // ─── View Transitions API ──────────────────────────────────────────────────
