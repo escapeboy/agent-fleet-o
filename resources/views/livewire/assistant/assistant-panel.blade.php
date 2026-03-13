@@ -319,47 +319,87 @@
                     <span class="inline-flex items-center rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">Local</span>
                 @endif
             </div>
-            <div class="flex items-end gap-2" x-data="speechInput" x-on:speech-result.window="inputText = $event.detail.text">
-                <div class="flex-1">
-                    <textarea
-                        x-ref="messageInput"
-                        x-model="inputText"
-                        placeholder="Ask anything... (Cmd+K to toggle)"
-                        rows="1"
-                        class="block w-full resize-none rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                        x-on:keydown.enter.prevent="if (!$event.shiftKey) send()"
-                        x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
-                        :disabled="sending || $wire.pendingMessageId !== ''"
-                    ></textarea>
+            {{-- Speech input wrapper: inline x-data avoids alpine:init timing race with pwa-features.js --}}
+            <div x-data="{
+                    isSupported: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+                    isListening: false,
+                    transcript: '',
+                    recognition: null,
+                    init() {
+                        if (!this.isSupported) return;
+                        const API = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        this.recognition = new API();
+                        this.recognition.continuous = false;
+                        this.recognition.interimResults = true;
+                        this.recognition.lang = document.documentElement.lang || 'en-US';
+                        this.recognition.addEventListener('result', (e) => {
+                            let final = '';
+                            for (let i = e.resultIndex; i < e.results.length; i++) {
+                                if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                            }
+                            if (final) this.transcript = final;
+                        });
+                        this.recognition.addEventListener('end', () => {
+                            this.isListening = false;
+                            if (this.transcript) {
+                                this.$dispatch('speech-result', { text: this.transcript });
+                                this.transcript = '';
+                            }
+                        });
+                        this.recognition.addEventListener('error', (e) => {
+                            this.isListening = false;
+                            if (e.error !== 'aborted') console.warn('[FleetQ] Speech error:', e.error);
+                        });
+                    },
+                    toggle() {
+                        if (!this.isSupported) return;
+                        if (this.isListening) { this.recognition.stop(); }
+                        else { this.transcript = ''; this.recognition.start(); this.isListening = true; }
+                    }
+                }"
+                x-on:speech-result.window="inputText = $event.detail.text">
+                <div class="flex items-end gap-2">
+                    <div class="flex-1">
+                        <textarea
+                            x-ref="messageInput"
+                            x-model="inputText"
+                            placeholder="Ask anything... (Cmd+K to toggle)"
+                            rows="1"
+                            class="block w-full resize-none rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            x-on:keydown.enter.prevent="if (!$event.shiftKey) send()"
+                            x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
+                            :disabled="sending || $wire.pendingMessageId !== ''"
+                        ></textarea>
+                    </div>
+                    {{-- Mic button — only rendered when SpeechRecognition is supported --}}
+                    <button
+                        x-show="isSupported"
+                        type="button"
+                        x-on:click="toggle()"
+                        :title="isListening ? 'Stop recording' : 'Dictate message'"
+                        :class="isListening ? 'bg-red-100 text-red-600 ring-2 ring-red-400' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+                        class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                        </svg>
+                    </button>
+                    <button
+                        type="button"
+                        x-on:click="send()"
+                        :disabled="sending || $wire.pendingMessageId !== '' || !inputText.trim()"
+                        class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                        </svg>
+                    </button>
                 </div>
-                {{-- Mic button — only rendered when SpeechRecognition is supported --}}
-                <button
-                    x-show="isSupported"
-                    type="button"
-                    x-on:click="toggle()"
-                    :title="isListening ? 'Stop recording' : 'Dictate message'"
-                    :class="isListening ? 'bg-red-100 text-red-600 ring-2 ring-red-400' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
-                    class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                    </svg>
-                </button>
-                <button
-                    type="button"
-                    x-on:click="send()"
-                    :disabled="sending || $wire.pendingMessageId !== '' || !inputText.trim()"
-                    class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                    </svg>
-                </button>
+                <p class="mt-1.5 text-center text-[10px] text-gray-400">
+                    Press Enter to send, Shift+Enter for new line
+                    <span x-show="isListening" class="ml-2 text-red-500">● Recording…</span>
+                </p>
             </div>
-            <p class="mt-1.5 text-center text-[10px] text-gray-400">
-                Press Enter to send, Shift+Enter for new line
-                <span x-show="isListening" class="ml-2 text-red-500">● Recording…</span>
-            </p>
         </div>
     </div>
 </div>
