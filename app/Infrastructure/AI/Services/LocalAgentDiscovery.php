@@ -156,6 +156,16 @@ class LocalAgentDiscovery
     }
 
     /**
+     * Whether we're in Docker but LOCAL_AGENT_BRIDGE_SECRET is not configured.
+     * In this state the bridge cannot be used even if the daemon is running.
+     */
+    public function needsBridgeConfig(): bool
+    {
+        return $this->isRunningInDocker()
+            && empty(config('local_agents.bridge.secret'));
+    }
+
+    /**
      * Get the bridge base URL.
      */
     public function bridgeUrl(): string
