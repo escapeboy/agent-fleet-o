@@ -5,10 +5,29 @@ return [
     |--------------------------------------------------------------------------
     | Bash Sandbox Mode
     |--------------------------------------------------------------------------
-    | 'php'    — Commands run in-process with CommandSecurityPolicy allowlist (default, dev-friendly)
-    | 'docker' — Commands run inside a Docker container with --network none, --read-only, workspace mount
+    | 'php'       — Commands run in-process with CommandSecurityPolicy allowlist (default, dev-friendly)
+    | 'docker'    — Commands run inside a Docker container with --network none, --read-only, workspace mount
+    | 'just_bash' — Commands run inside a persistent just-bash Node.js sidecar (recommended for cloud)
     */
     'bash_sandbox_mode' => env('AGENT_BASH_SANDBOX_MODE', 'php'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | just-bash Sidecar URL
+    |--------------------------------------------------------------------------
+    | Base URL of the bash-sidecar Docker container. Only used when
+    | bash_sandbox_mode is 'just_bash'.
+    */
+    'bash_sidecar_url' => env('BASH_SIDECAR_URL', 'http://bash_sidecar:3001'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | just-bash Sidecar Secret
+    |--------------------------------------------------------------------------
+    | Bearer token required by the sidecar HTTP API. Must match the
+    | BASH_SIDECAR_SECRET env var set in the sidecar container.
+    */
+    'bash_sidecar_secret' => env('BASH_SIDECAR_SECRET', ''),
 
     /*
     |--------------------------------------------------------------------------

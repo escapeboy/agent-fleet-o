@@ -12,6 +12,7 @@ namespace App\Domain\Agent\Services;
 final class SandboxedWorkspace
 {
     private readonly string $rootPath;
+    private ?string $sidecarSessionId = null;
 
     public function __construct(
         private readonly string $executionId,
@@ -78,6 +79,16 @@ final class SandboxedWorkspace
     public function executionId(): string
     {
         return $this->executionId;
+    }
+
+    public function setSidecarSessionId(string $id): void
+    {
+        $this->sidecarSessionId = $id;
+    }
+
+    public function sidecarSessionId(): ?string
+    {
+        return $this->sidecarSessionId;
     }
 
     public function teardown(): void

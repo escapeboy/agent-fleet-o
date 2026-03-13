@@ -26,6 +26,7 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Actions\ResolveAgentToolsAction;
+use App\Domain\Tool\Services\BashSidecarClient;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -115,13 +116,25 @@ class ExecuteAgentAction
             // Resolve tools for this agent (filtered by project restrictions).
             // Generate a sandbox ID so each execution gets an isolated filesystem workspace.
             $sandboxId = (string) Str::uuid();
-            $tools = $this->resolveTools->execute($agent, $project, $sandboxId);
+
+            // Create a just-bash sidecar session before resolving tools so the workspace
+            // can carry the session ID into ToolTranslator closures.
+            $sidecarSessionId = null;
+            if (config('agent.bash_sandbox_mode') === 'just_bash' && $agent->team_id) {
+                $sidecarSessionId = "team:{$agent->team_id}:exec:{$sandboxId}";
+                app(BashSidecarClient::class)->createSession($sidecarSessionId);
+            }
+
+            $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId);
 
             if (! empty($tools)) {
                 try {
                     $result = $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project, $ctx->systemPromptParts);
                 } finally {
-                    // Teardown sandbox regardless of success or failure
+                    // Destroy sidecar session and teardown sandbox regardless of success or failure
+                    if ($sidecarSessionId !== null) {
+                        app(BashSidecarClient::class)->destroySession($sidecarSessionId);
+                    }
                     if ($agent->team_id) {
                         (new SandboxedWorkspace($sandboxId, $agent->id, $agent->team_id))->teardown();
                     }

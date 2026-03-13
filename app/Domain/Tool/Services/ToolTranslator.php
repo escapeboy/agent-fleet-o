@@ -3,6 +3,7 @@
 namespace App\Domain\Tool\Services;
 
 use App\Domain\Agent\Services\DockerSandboxExecutor;
+use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Models\Tool;
@@ -130,7 +131,70 @@ class ToolTranslator
                 ->for("Execute a shell command. Allowed commands: {$commandDescription}. Working directory restricted to: {$pathDescription}")
                 ->withStringParameter('command', 'The shell command to execute')
                 ->withStringParameter('working_directory', 'Working directory relative to sandbox root (sandbox mode) or absolute path', required: false)
-                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy, $workspace): string {
+                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy, $workspace, $tool): string {
+                    // just-bash sidecar mode: route through the Node.js bash-sidecar container
+                    if ($workspace && config('agent.bash_sandbox_mode') === 'just_bash') {
+                        // Execution-time plan check: allows cloud to block on plan downgrade.
+                        // Cloud registers 'bash.plan_gate' as a callable (team_id → bool).
+                        if ($tool->team_id && app()->bound('bash.plan_gate')) {
+                            $gate = app('bash.plan_gate');
+                            if (! $gate($tool->team_id)) {
+                                return 'Error: Sandboxed bash requires a paid plan (Starter or above). Please upgrade to continue using this tool.';
+                            }
+                        }
+
+                        $policy = app(CommandSecurityPolicy::class);
+                        $validation = $policy->validate(
+                            $command, null, $allowedCommands, [], null, null, $orgPolicy,
+                        );
+
+                        if (! $validation->allowed) {
+                            return "Error: {$validation->reason}";
+                        }
+
+                        $sessionId = $workspace->sidecarSessionId();
+                        if ($sessionId === null) {
+                            return 'Error: Bash sandbox session not initialised';
+                        }
+
+                        // Cap timeout to the plan's sandboxed_bash_timeout limit.
+                        // Cloud registers 'bash.timeout_gate' as a callable (team_id → int seconds).
+                        $effectiveTimeout = $timeout;
+                        if ($tool->team_id && app()->bound('bash.timeout_gate')) {
+                            $planTimeout = app('bash.timeout_gate')($tool->team_id);
+                            if ($planTimeout > 0) {
+                                $effectiveTimeout = min($effectiveTimeout, $planTimeout);
+                            }
+                        }
+
+                        $output = app(BashSidecarClient::class)->run($sessionId, $command, $effectiveTimeout * 1000);
+
+                        // Audit every command executed in production (cloud) environment
+                        if (app()->environment('production') && $tool->team_id) {
+                            AuditEntry::create([
+                                'team_id'    => $tool->team_id,
+                                'event'      => 'bash.command_executed',
+                                'properties' => [
+                                    'command_preview' => substr($command, 0, 200),
+                                    'exit_code'       => $output['exitCode'],
+                                    'session_id'      => $sessionId,
+                                    'tool_id'         => $tool->id,
+                                ],
+                                'created_at' => now(),
+                            ]);
+                        }
+
+                        if ($output['stdout'] !== '') {
+                            return $output['stdout'];
+                        }
+
+                        if ($output['stderr'] !== '') {
+                            return "stderr: {$output['stderr']}";
+                        }
+
+                        return "(exit {$output['exitCode']})";
+                    }
+
                     // Docker sandbox mode: run in isolated container
                     if ($workspace && config('agent.bash_sandbox_mode') === 'docker') {
                         $executor = app(DockerSandboxExecutor::class);

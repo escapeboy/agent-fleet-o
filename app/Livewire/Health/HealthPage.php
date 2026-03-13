@@ -10,6 +10,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Tool\Services\BashSidecarClient;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
 use App\Models\Connector;
 use Illuminate\Support\Collection;
@@ -28,6 +29,7 @@ class HealthPage extends Component
             'stuckExperiments' => $this->getStuckExperiments(),
             'connectorStats' => $this->getConnectorStats(),
             'localLlmStats' => $this->getLocalLlmStats(),
+            'bashSidecarStatus' => $this->getBashSidecarStatus(),
         ])->layout('layouts.app', ['header' => 'System Health']);
     }
 
@@ -229,6 +231,24 @@ class HealthPage extends Component
             'this_hour' => abs($thisHour),
             'total_budget_cap' => $totalBudgetCap,
             'total_spent' => $totalSpent,
+        ];
+    }
+
+    private function getBashSidecarStatus(): array
+    {
+        $mode = config('agent.bash_sandbox_mode', 'php');
+
+        if ($mode !== 'just_bash') {
+            return ['mode' => $mode, 'status' => 'not_configured', 'sessions' => null];
+        }
+
+        $client = app(BashSidecarClient::class);
+        $ok = $client->ping();
+
+        return [
+            'mode'    => $mode,
+            'status'  => $ok ? 'ok' : 'degraded',
+            'sessions' => null,
         ];
     }
 }
