@@ -40,24 +40,40 @@ class BridgeConnection extends Model
         return $this->status === BridgeConnectionStatus::Connected;
     }
 
+    /** @return list<array<string, mixed>> */
     public function llmEndpoints(): array
     {
-        return array_values(array_filter($this->endpoints['llm_endpoints'] ?? [], 'is_array'));
+        /** @var list<mixed> $items */
+        $items = (array) ($this->endpoints['llm_endpoints'] ?? []);
+
+        return array_values(array_filter($items, 'is_array'));
     }
 
+    /** @return list<array<string, mixed>> */
     public function agents(): array
     {
-        return array_values(array_filter($this->endpoints['agents'] ?? [], 'is_array'));
+        /** @var list<mixed> $items */
+        $items = (array) ($this->endpoints['agents'] ?? []);
+
+        return array_values(array_filter($items, 'is_array'));
     }
 
+    /** @return list<array<string, mixed>> */
     public function mcpServers(): array
     {
-        return array_values(array_filter($this->endpoints['mcp_servers'] ?? [], 'is_array'));
+        /** @var list<mixed> $items */
+        $items = (array) ($this->endpoints['mcp_servers'] ?? []);
+
+        return array_values(array_filter($items, 'is_array'));
     }
 
+    /** @return list<array<string, mixed>> */
     public function ideMcpConfigs(): array
     {
-        return $this->endpoints['ide_mcp_configs'] ?? [];
+        /** @var list<mixed> $items */
+        $items = (array) ($this->endpoints['ide_mcp_configs'] ?? []);
+
+        return array_values(array_filter($items, 'is_array'));
     }
 
     public function onlineLlmCount(): int

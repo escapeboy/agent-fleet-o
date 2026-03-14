@@ -35,7 +35,7 @@ class BrowserUseCloudClient
      * Submit a browser task and poll until it completes.
      *
      * @param  string  $task  Natural language task description
-     * @param  array{max_steps?: int, allowed_domains?: string[], start_url?: string, llm?: string}  $options
+     * @param  array{max_steps?: int, allowed_domains?: string[], start_url?: string, llm?: string, timeout_seconds?: int}  $options
      * @return array{status: string, output: string, steps_taken: int, duration_ms: int, screenshots: string[], urls_visited: string[], error: string|null}
      *
      * @throws BrowserTaskTimeoutException
