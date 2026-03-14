@@ -75,6 +75,7 @@ class User extends Authenticatable
         return $this->hasMany(Team::class, 'owner_id');
     }
 
+    /** @return BelongsTo<Team, $this> */
     public function currentTeam(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'current_team_id');
