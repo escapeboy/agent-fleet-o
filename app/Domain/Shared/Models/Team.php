@@ -14,6 +14,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property array<string, mixed>|null $settings
+ * @property string|null $plan
+ * @property array<string, mixed>|null $custom_limits
+ */
 class Team extends Model
 {
     use HasFactory, HasUuids;
