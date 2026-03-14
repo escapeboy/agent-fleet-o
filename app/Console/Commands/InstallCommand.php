@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Budget\Enums\LedgerType;
+use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Tool\Actions\ImportMcpServersAction;
 use App\Domain\Tool\Services\McpConfigDiscovery;
@@ -222,6 +224,25 @@ class InstallCommand extends Command
             $team->users()->syncWithoutDetaching([$user->id => ['role' => 'owner']]);
 
             $user->update(['current_team_id' => $team->id]);
+
+            // Seed initial credit balance so the assistant and AI features work out of the box.
+            $hasBalance = CreditLedger::withoutGlobalScopes()
+                ->where('team_id', $team->id)
+                ->exists();
+
+            if (! $hasBalance) {
+                $initialCredits = 1_000_000; // 1,000,000 credits ≈ $1 USD at $0.001/credit
+
+                CreditLedger::withoutGlobalScopes()->create([
+                    'team_id' => $team->id,
+                    'user_id' => $user->id,
+                    'type' => LedgerType::Purchase,
+                    'amount' => $initialCredits,
+                    'balance_after' => $initialCredits,
+                    'description' => 'Initial credit grant — starter balance for new installation',
+                    'metadata' => ['source' => 'install_wizard'],
+                ]);
+            }
         });
 
         $this->components->info("Admin account created: {$email}");
