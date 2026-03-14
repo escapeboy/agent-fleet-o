@@ -3,6 +3,7 @@
 namespace App\Domain\Tool\Services;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Http;
 class BashSidecarClient
 {
     private readonly string $baseUrl;
+
     private readonly string $secret;
 
     public function __construct()
@@ -61,7 +63,7 @@ class BashSidecarClient
                 ->withToken($this->secret)
                 ->post('/exec', [
                     'sessionId' => $sessionId,
-                    'command'   => $command,
+                    'command' => $command,
                     'timeoutMs' => $timeoutMs,
                 ]);
 
@@ -80,8 +82,8 @@ class BashSidecarClient
             $body = $response->json();
 
             return [
-                'stdout'   => $body['stdout'] ?? '',
-                'stderr'   => $body['stderr'] ?? '',
+                'stdout' => $body['stdout'] ?? '',
+                'stderr' => $body['stderr'] ?? '',
                 'exitCode' => $body['exitCode'] ?? 0,
             ];
         } catch (ConnectionException) {
@@ -115,7 +117,7 @@ class BashSidecarClient
         }
     }
 
-    private function client(): \Illuminate\Http\Client\PendingRequest
+    private function client(): PendingRequest
     {
         return Http::timeout(5)
             ->baseUrl($this->baseUrl)

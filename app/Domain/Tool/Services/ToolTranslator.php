@@ -3,8 +3,8 @@
 namespace App\Domain\Tool\Services;
 
 use App\Domain\Agent\Services\DockerSandboxExecutor;
-use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Agent\Services\SandboxedWorkspace;
+use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
@@ -174,13 +174,13 @@ class ToolTranslator
                         // Audit every command executed in production (cloud) environment
                         if (app()->environment('production') && $tool->team_id) {
                             AuditEntry::create([
-                                'team_id'    => $tool->team_id,
-                                'event'      => 'bash.command_executed',
+                                'team_id' => $tool->team_id,
+                                'event' => 'bash.command_executed',
                                 'properties' => [
                                     'command_preview' => substr($command, 0, 200),
-                                    'exit_code'       => $output['exitCode'],
-                                    'session_id'      => $sessionId,
-                                    'tool_id'         => $tool->id,
+                                    'exit_code' => $output['exitCode'],
+                                    'session_id' => $sessionId,
+                                    'tool_id' => $tool->id,
                                 ],
                                 'created_at' => now(),
                             ]);
@@ -417,7 +417,7 @@ class ToolTranslator
                     }
 
                     $options = [
-                        'max_steps'       => $effectiveMaxSteps,
+                        'max_steps' => $effectiveMaxSteps,
                         'timeout_seconds' => $timeoutSeconds,
                     ];
 
@@ -449,15 +449,15 @@ class ToolTranslator
                     // Audit every browser task in production.
                     if (app()->environment('production') && $toolModel->team_id) {
                         AuditEntry::create([
-                            'team_id'    => $toolModel->team_id,
-                            'event'      => 'browser.task_executed',
+                            'team_id' => $toolModel->team_id,
+                            'event' => 'browser.task_executed',
                             'properties' => [
                                 'task_preview' => substr($task, 0, 200),
-                                'status'       => $result['status'],
-                                'duration_ms'  => $result['duration_ms'],
-                                'steps_taken'  => $result['steps_taken'],
-                                'mode'         => $mode,
-                                'tool_id'      => $toolModel->id,
+                                'status' => $result['status'],
+                                'duration_ms' => $result['duration_ms'],
+                                'steps_taken' => $result['steps_taken'],
+                                'mode' => $mode,
+                                'tool_id' => $toolModel->id,
                             ],
                             'created_at' => now(),
                         ]);

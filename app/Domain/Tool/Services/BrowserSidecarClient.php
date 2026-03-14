@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Http;
 class BrowserSidecarClient
 {
     private readonly string $baseUrl;
+
     private readonly string $secret;
 
     public function __construct()
@@ -67,7 +68,7 @@ class BrowserSidecarClient
 
             if (! $response->successful()) {
                 throw new BrowserTaskFailedException(
-                    "Browser sidecar error: {$response->status()}"
+                    "Browser sidecar error: {$response->status()}",
                 );
             }
 
@@ -83,17 +84,17 @@ class BrowserSidecarClient
             }
 
             return [
-                'status'       => $status,
-                'output'       => $body['output'] ?? '',
-                'steps_taken'  => $body['steps_taken'] ?? 0,
-                'duration_ms'  => $body['duration_ms'] ?? 0,
-                'screenshots'  => $body['screenshots'] ?? [],
+                'status' => $status,
+                'output' => $body['output'] ?? '',
+                'steps_taken' => $body['steps_taken'] ?? 0,
+                'duration_ms' => $body['duration_ms'] ?? 0,
+                'screenshots' => $body['screenshots'] ?? [],
                 'urls_visited' => $body['urls_visited'] ?? [],
-                'error'        => null,
+                'error' => null,
             ];
         } catch (ConnectionException $e) {
             throw new BrowserTaskFailedException(
-                'Browser sidecar is unavailable. Please try again later.'
+                'Browser sidecar is unavailable. Please try again later.',
             );
         }
     }

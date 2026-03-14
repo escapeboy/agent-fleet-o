@@ -26,7 +26,7 @@ class BashSidecarClientTest extends TestCase
         $this->client->createSession('sess-1');
 
         Http::assertSent(fn ($req) => str_ends_with($req->url(), '/session')
-            && $req->data()['sessionId'] === 'sess-1'
+            && $req->data()['sessionId'] === 'sess-1',
         );
     }
 
@@ -120,7 +120,7 @@ class BashSidecarClientTest extends TestCase
         $this->client->destroySession('sess-1');
 
         Http::assertSent(fn ($req) => $req->method() === 'DELETE'
-            && str_ends_with($req->url(), '/session/sess-1')
+            && str_ends_with($req->url(), '/session/sess-1'),
         );
     }
 

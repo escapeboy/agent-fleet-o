@@ -56,7 +56,7 @@ return [
     | Base URL and bearer token for the browser-use Python sidecar container.
     | Only used when browser_sandbox_mode is 'sidecar' (Phase 2).
     */
-    'browser_sidecar_url'    => env('BROWSER_SIDECAR_URL', 'http://browser_sidecar:8090'),
+    'browser_sidecar_url' => env('BROWSER_SIDECAR_URL', 'http://browser_sidecar:8090'),
     'browser_sidecar_secret' => env('BROWSER_SIDECAR_SECRET', ''),
 
     /*

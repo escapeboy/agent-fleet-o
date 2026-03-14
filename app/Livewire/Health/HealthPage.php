@@ -246,8 +246,8 @@ class HealthPage extends Component
         $ok = $client->ping();
 
         return [
-            'mode'    => $mode,
-            'status'  => $ok ? 'ok' : 'degraded',
+            'mode' => $mode,
+            'status' => $ok ? 'ok' : 'degraded',
             'sessions' => null,
         ];
     }

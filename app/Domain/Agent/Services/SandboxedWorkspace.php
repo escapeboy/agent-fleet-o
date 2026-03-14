@@ -12,6 +12,7 @@ namespace App\Domain\Agent\Services;
 final class SandboxedWorkspace
 {
     private readonly string $rootPath;
+
     private ?string $sidecarSessionId = null;
 
     public function __construct(
