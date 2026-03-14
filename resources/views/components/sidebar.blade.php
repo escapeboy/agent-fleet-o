@@ -55,6 +55,10 @@
             Credentials
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('git-repositories.index') }}" :active="request()->routeIs('git-repositories.*')" icon="code-branch">
+            Git Repositories
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('integrations.index') }}" :active="request()->routeIs('integrations.*')" icon="puzzle-piece">
             Integrations
         </x-sidebar-link>

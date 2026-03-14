@@ -26,6 +26,9 @@ use App\Livewire\Chatbots\CreateChatbotForm;
 use App\Livewire\Credentials\CreateCredentialForm;
 use App\Livewire\Credentials\CredentialDetailPage;
 use App\Livewire\Credentials\CredentialListPage;
+use App\Livewire\GitRepositories\CreateGitRepositoryForm;
+use App\Livewire\GitRepositories\GitRepositoryDetailPage;
+use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Crews\CreateCrewForm;
 use App\Livewire\Crews\CrewDetailPage;
 use App\Livewire\Crews\CrewExecutionPage;
@@ -226,6 +229,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/email/templates', EmailTemplateListPage::class)->name('email.templates.index');
     Route::get('/email/templates/{template}/edit', EmailTemplateBuilderPage::class)->name('email.templates.edit');
     Route::get('/email/templates/{template}/preview', [EmailTemplatePreviewController::class, 'show'])->name('email.templates.preview');
+
+    // Git Repositories
+    Route::get('/git-repositories', GitRepositoryListPage::class)->name('git-repositories.index');
+    Route::get('/git-repositories/create', CreateGitRepositoryForm::class)->name('git-repositories.create');
+    Route::get('/git-repositories/{gitRepository}', GitRepositoryDetailPage::class)->name('git-repositories.show');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

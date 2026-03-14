@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\BridgeController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\ChatbotInstanceController;
 use App\Http\Controllers\Api\V1\CredentialController;
+use App\Http\Controllers\Api\V1\GitRepositoryController;
 use App\Http\Controllers\Api\V1\CrewController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EmailTemplateController;
@@ -230,6 +231,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Budget
     Route::get('/budget', [BudgetController::class, 'index']);
+
+    // Git Repositories
+    Route::get('/git-repositories', [GitRepositoryController::class, 'index']);
+    Route::get('/git-repositories/{gitRepository}', [GitRepositoryController::class, 'show']);
+    Route::post('/git-repositories', [GitRepositoryController::class, 'store']);
+    Route::put('/git-repositories/{gitRepository}', [GitRepositoryController::class, 'update']);
+    Route::delete('/git-repositories/{gitRepository}', [GitRepositoryController::class, 'destroy']);
+    Route::post('/git-repositories/{gitRepository}/test', [GitRepositoryController::class, 'test']);
 
     // Bridge
     Route::get('/bridge/status', [BridgeController::class, 'status']);

@@ -204,6 +204,19 @@ use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
+use App\Mcp\Tools\GitRepository\GitBranchCreateTool;
+use App\Mcp\Tools\GitRepository\GitCommitTool;
+use App\Mcp\Tools\GitRepository\GitFileListTool;
+use App\Mcp\Tools\GitRepository\GitFileReadTool;
+use App\Mcp\Tools\GitRepository\GitFileWriteTool;
+use App\Mcp\Tools\GitRepository\GitPullRequestCreateTool;
+use App\Mcp\Tools\GitRepository\GitPullRequestListTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryCreateTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryDeleteTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryGetTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryListTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryTestTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryUpdateTool;
 use Laravel\Mcp\Server;
 
 class AgentFleetServer extends Server
@@ -487,6 +500,21 @@ class AgentFleetServer extends Server
         // Feedback (2) — super admin only
         FeedbackListTool::class,
         FeedbackUpdateTool::class,
+
+        // Git Repository (13)
+        GitRepositoryListTool::class,
+        GitRepositoryGetTool::class,
+        GitRepositoryCreateTool::class,
+        GitRepositoryUpdateTool::class,
+        GitRepositoryDeleteTool::class,
+        GitRepositoryTestTool::class,
+        GitFileReadTool::class,
+        GitFileWriteTool::class,
+        GitFileListTool::class,
+        GitBranchCreateTool::class,
+        GitCommitTool::class,
+        GitPullRequestCreateTool::class,
+        GitPullRequestListTool::class,
 
         // Admin (7) — super admin only
         AdminTeamSuspendTool::class,
