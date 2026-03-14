@@ -8,6 +8,7 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamKmsConfig;
 use App\Infrastructure\Encryption\Kms\Exceptions\KmsUnavailableException;
 use App\Infrastructure\Encryption\Kms\KmsWrapperService;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Encryption\Encrypter;
 
 class CredentialEncryption
@@ -156,7 +157,7 @@ class CredentialEncryption
 
         try {
             $rawKey = $team->credential_key;
-        } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+        } catch (DecryptException) {
             // credential_key was stored with a different APP_KEY — fall back to APP_KEY direct encryption
             return null;
         }

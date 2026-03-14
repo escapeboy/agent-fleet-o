@@ -10,6 +10,7 @@ use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;
+use LaravelWebauthn\WebauthnServiceProvider;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -524,8 +525,8 @@ class TeamSettingsPage extends Component
             'bridgeConnection' => config('bridge.relay_enabled')
                 ? BridgeConnection::active()->latest('connected_at')->first()
                 : null,
-            'webauthnEnabled' => config('webauthn.enabled', class_exists(\LaravelWebauthn\WebauthnServiceProvider::class)),
-            'passkeys' => class_exists(\LaravelWebauthn\WebauthnServiceProvider::class)
+            'webauthnEnabled' => config('webauthn.enabled', class_exists(WebauthnServiceProvider::class)),
+            'passkeys' => class_exists(WebauthnServiceProvider::class)
                 ? (auth()->user()?->webauthnKeys ?? collect())
                 : collect(),
         ])->layout('layouts.app', ['header' => 'Settings']);

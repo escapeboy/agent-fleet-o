@@ -6,6 +6,11 @@ use App\Providers\ComputeServiceProvider;
 use App\Providers\FortifyServiceProvider;
 use App\Providers\HorizonServiceProvider;
 use App\Providers\IntegrationServiceProvider;
+use Barsy\Providers\AgentServiceProvider;
+use Barsy\Providers\BarsyServiceProvider;
+use Barsy\Providers\ChatServiceProvider;
+use Barsy\Providers\LearningServiceProvider;
+use Barsy\Providers\LLMServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -14,9 +19,9 @@ return [
     AiServiceProvider::class,
     ComputeServiceProvider::class,
     IntegrationServiceProvider::class,
-    \Barsy\Providers\BarsyServiceProvider::class,
-    \Barsy\Providers\LLMServiceProvider::class,
-    \Barsy\Providers\ChatServiceProvider::class,
-    \Barsy\Providers\LearningServiceProvider::class,
-    \Barsy\Providers\AgentServiceProvider::class,
+    BarsyServiceProvider::class,
+    LLMServiceProvider::class,
+    ChatServiceProvider::class,
+    LearningServiceProvider::class,
+    AgentServiceProvider::class,
 ];

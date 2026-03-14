@@ -5,6 +5,7 @@ namespace App\Domain\Tool\Services;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -18,7 +19,9 @@ use Illuminate\Support\Facades\Http;
 class BrowserUseCloudClient
 {
     private const BASE_URL = 'https://api.browser-use.com/api/v2';
+
     private const POLL_INTERVAL_SECONDS = 2;
+
     private const TERMINAL_STATUSES = ['completed', 'failed', 'stopped', 'timed_out'];
 
     private readonly string $apiKey;
@@ -58,7 +61,7 @@ class BrowserUseCloudClient
 
                 if ($status === 'failed' || $status === 'stopped') {
                     throw new BrowserTaskFailedException(
-                        $taskData['error'] ?? "Browser task ended with status: {$status}"
+                        $taskData['error'] ?? "Browser task ended with status: {$status}",
                     );
                 }
 
@@ -67,13 +70,13 @@ class BrowserUseCloudClient
                 }
 
                 return [
-                    'status'       => $status,
-                    'output'       => $taskData['output'] ?? '',
-                    'steps_taken'  => $taskData['steps'] ?? 0,
-                    'duration_ms'  => $durationMs,
-                    'screenshots'  => $taskData['screenshots'] ?? [],
+                    'status' => $status,
+                    'output' => $taskData['output'] ?? '',
+                    'steps_taken' => $taskData['steps'] ?? 0,
+                    'duration_ms' => $durationMs,
+                    'screenshots' => $taskData['screenshots'] ?? [],
                     'urls_visited' => $taskData['urls'] ?? [],
-                    'error'        => null,
+                    'error' => null,
                 ];
             }
         }
@@ -117,7 +120,7 @@ class BrowserUseCloudClient
 
             if (! $response->successful()) {
                 throw new BrowserTaskFailedException(
-                    "browser-use API error {$response->status()}: {$response->body()}"
+                    "browser-use API error {$response->status()}: {$response->body()}",
                 );
             }
 
@@ -147,7 +150,7 @@ class BrowserUseCloudClient
         }
     }
 
-    private function client(): \Illuminate\Http\Client\PendingRequest
+    private function client(): PendingRequest
     {
         return Http::baseUrl(self::BASE_URL)
             ->withHeader('X-Browser-Use-API-Key', $this->apiKey)
