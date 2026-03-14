@@ -6,6 +6,8 @@ use App\Domain\Agent\Services\DockerSandboxExecutor;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Tool\Enums\BuiltInToolKind;
+use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
+use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -106,7 +108,7 @@ class ToolTranslator
         return match ($kind) {
             BuiltInToolKind::Bash => $this->buildBashTools($tool, $overrides, $orgPolicy, $workspace),
             BuiltInToolKind::Filesystem => $this->buildFilesystemTools($tool, $overrides, $workspace),
-            BuiltInToolKind::Browser => [],
+            BuiltInToolKind::Browser => $this->buildBrowserTools($tool),
             BuiltInToolKind::Ssh => $this->buildSshTools($tool, $overrides),
             default => [],
         };
@@ -360,6 +362,117 @@ class ToolTranslator
         }
 
         return $tools;
+    }
+
+    private function buildBrowserTools(Tool $tool): array
+    {
+        $mode = config('agent.browser_sandbox_mode', 'disabled');
+
+        if ($mode === 'disabled') {
+            // Return an inert tool that explains the plan requirement instead of nothing,
+            // so the LLM can surface a clear message rather than silently failing.
+            return [
+                PrismTool::as('browser_task')
+                    ->for('Autonomously browse the web to complete a task (navigate, click, fill forms, extract data)')
+                    ->withStringParameter('task', 'Natural language description of the browsing task to perform')
+                    ->withStringParameter('start_url', 'Optional starting URL', required: false)
+                    ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10)', required: false)
+                    ->using(fn () => 'Error: Browser automation requires a paid plan. Please upgrade to Starter or above.'),
+            ];
+        }
+
+        $toolModel = $tool;
+
+        return [
+            PrismTool::as('browser_task')
+                ->for('Autonomously browse the web to complete a task (navigate, click, fill forms, extract data). Returns the extracted result as text.')
+                ->withStringParameter('task', 'Natural language description of the browsing task to perform')
+                ->withStringParameter('start_url', 'Optional starting URL to begin from', required: false)
+                ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10, plan-capped)', required: false)
+                ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null) use ($mode, $toolModel): string {
+                    // Execution-time plan gate — cloud registers 'browser.plan_gate' as a callable.
+                    if ($toolModel->team_id && app()->bound('browser.plan_gate')) {
+                        $gate = app('browser.plan_gate');
+                        if (! $gate($toolModel->team_id)) {
+                            return 'Error: Browser automation requires a paid plan (Starter or above). Please upgrade to continue.';
+                        }
+                    }
+
+                    // Cap max_steps to the plan limit.
+                    $effectiveMaxSteps = $max_steps ?? 10;
+                    if ($toolModel->team_id && app()->bound('browser.max_steps_gate')) {
+                        $planMaxSteps = app('browser.max_steps_gate')($toolModel->team_id);
+                        if ($planMaxSteps > 0) {
+                            $effectiveMaxSteps = min($effectiveMaxSteps, $planMaxSteps);
+                        }
+                    }
+
+                    // Resolve timeout from plan.
+                    $timeoutSeconds = 120;
+                    if ($toolModel->team_id && app()->bound('browser.timeout_gate')) {
+                        $planTimeout = app('browser.timeout_gate')($toolModel->team_id);
+                        if ($planTimeout > 0) {
+                            $timeoutSeconds = $planTimeout;
+                        }
+                    }
+
+                    $options = [
+                        'max_steps'       => $effectiveMaxSteps,
+                        'timeout_seconds' => $timeoutSeconds,
+                    ];
+
+                    if ($start_url) {
+                        $options['start_url'] = $start_url;
+                    }
+
+                    // Resolve API key from tool credentials or env fallback.
+                    $apiKey = $toolModel->credentials['api_key'] ?? config('agent.browser_use_cloud_api_key', '');
+
+                    try {
+                        if ($mode === 'cloud') {
+                            $result = app(BrowserUseCloudClient::class, ['apiKey' => $apiKey])->run($task, $options);
+                        } elseif ($mode === 'sidecar') {
+                            $result = app(BrowserSidecarClient::class)->run($task, $options);
+                        } else {
+                            return "Error: Unknown browser sandbox mode: {$mode}";
+                        }
+                    } catch (BrowserTaskTimeoutException $e) {
+                        return "Error: {$e->getMessage()}";
+                    } catch (BrowserTaskFailedException $e) {
+                        return "Error: {$e->getMessage()}";
+                    } catch (\Throwable $e) {
+                        Log::error('BrowserTool error', ['error' => $e->getMessage(), 'team_id' => $toolModel->team_id]);
+
+                        return 'Error: Browser task encountered an unexpected error. Please try again.';
+                    }
+
+                    // Audit every browser task in production.
+                    if (app()->environment('production') && $toolModel->team_id) {
+                        AuditEntry::create([
+                            'team_id'    => $toolModel->team_id,
+                            'event'      => 'browser.task_executed',
+                            'properties' => [
+                                'task_preview' => substr($task, 0, 200),
+                                'status'       => $result['status'],
+                                'duration_ms'  => $result['duration_ms'],
+                                'steps_taken'  => $result['steps_taken'],
+                                'mode'         => $mode,
+                                'tool_id'      => $toolModel->id,
+                            ],
+                            'created_at' => now(),
+                        ]);
+                    }
+
+                    $output = $result['output'] ?? '';
+
+                    // Truncate to avoid context overflow (50k chars ≈ ~12k tokens).
+                    if (mb_strlen($output) > 50000) {
+                        $output = mb_substr($output, 0, 50000)."\n... [output truncated]";
+                    }
+
+                    return $output ?: '(Task completed with no text output)';
+                }),
+        ];
     }
 
     private function buildSshTools(Tool $tool, array $overrides): array

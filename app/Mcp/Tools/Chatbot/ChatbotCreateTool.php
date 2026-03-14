@@ -51,6 +51,10 @@ class ChatbotCreateTool extends Tool
 
     public function handle(Request $request): Response
     {
+        if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
+            return Response::error('Chatbot feature is not enabled for this team.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:help_bot,support_assistant,developer_assistant,custom',

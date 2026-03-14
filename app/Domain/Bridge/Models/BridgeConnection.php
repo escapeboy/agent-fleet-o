@@ -42,17 +42,17 @@ class BridgeConnection extends Model
 
     public function llmEndpoints(): array
     {
-        return $this->endpoints['llm_endpoints'] ?? [];
+        return array_values(array_filter($this->endpoints['llm_endpoints'] ?? [], 'is_array'));
     }
 
     public function agents(): array
     {
-        return $this->endpoints['agents'] ?? [];
+        return array_values(array_filter($this->endpoints['agents'] ?? [], 'is_array'));
     }
 
     public function mcpServers(): array
     {
-        return $this->endpoints['mcp_servers'] ?? [];
+        return array_values(array_filter($this->endpoints['mcp_servers'] ?? [], 'is_array'));
     }
 
     public function ideMcpConfigs(): array

@@ -23,6 +23,17 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class ChatbotInstanceController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            if (! ($request->user()?->currentTeam?->settings['chatbot_enabled'] ?? false)) {
+                abort(403, 'Chatbot feature is not enabled for this team.');
+            }
+
+            return $next($request);
+        });
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $chatbots = QueryBuilder::for(Chatbot::class)

@@ -29,6 +29,10 @@ class ChatbotGetTool extends Tool
 
     public function handle(Request $request): Response
     {
+        if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
+            return Response::error('Chatbot feature is not enabled for this team.');
+        }
+
         $idOrSlug = $request->get('id');
 
         $chatbot = Chatbot::with(['agent', 'activeTokens', 'channels'])

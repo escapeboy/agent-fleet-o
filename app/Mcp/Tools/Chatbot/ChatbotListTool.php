@@ -32,6 +32,10 @@ class ChatbotListTool extends Tool
 
     public function handle(Request $request): Response
     {
+        if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
+            return Response::error('Chatbot feature is not enabled for this team.');
+        }
+
         $query = Chatbot::withCount(['channels', 'sessions'])
             ->orderBy('name');
 
