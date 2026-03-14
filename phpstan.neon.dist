@@ -10,6 +10,7 @@ parameters:
 
     checkModelProperties: true
     noEnvCallsOutsideOfConfig: true
+    authModel: App\Models\User
     reportUnmatchedIgnoredErrors: false
 
     excludePaths:
