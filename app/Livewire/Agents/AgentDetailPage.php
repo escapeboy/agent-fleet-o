@@ -183,9 +183,9 @@ class AgentDetailPage extends Component
 
         app(RecordAgentConfigRevisionAction::class)->execute(
             agent: $this->agent,
-            newConfig: $newConfig,
+            newData: $newConfig,
             source: 'ui',
-            createdBy: auth()->id(),
+            userId: auth()->id(),
         );
 
         $this->agent->update($newConfig);
