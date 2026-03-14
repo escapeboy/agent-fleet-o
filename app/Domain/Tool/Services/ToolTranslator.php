@@ -426,7 +426,9 @@ class ToolTranslator
                     }
 
                     // Resolve API key from tool credentials or env fallback.
-                    $apiKey = $toolModel->credentials['api_key'] ?? config('agent.browser_use_cloud_api_key', '');
+                    /** @var array<string, mixed> $credentials */
+                    $credentials = (array) $toolModel->credentials;
+                    $apiKey = $credentials['api_key'] ?? config('agent.browser_use_cloud_api_key', '');
 
                     try {
                         if ($mode === 'cloud') {
@@ -463,7 +465,7 @@ class ToolTranslator
                         ]);
                     }
 
-                    $output = $result['output'] ?? '';
+                    $output = $result['output'];
 
                     // Truncate to avoid context overflow (50k chars ≈ ~12k tokens).
                     if (mb_strlen($output) > 50000) {

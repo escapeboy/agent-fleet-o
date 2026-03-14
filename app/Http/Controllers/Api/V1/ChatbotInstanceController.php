@@ -10,28 +10,36 @@ use App\Domain\Chatbot\Actions\UpdateChatbotAction;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotToken;
+use App\Domain\Shared\Models\Team;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ChatbotResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Routing\Controllers\HasMiddleware;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * @tags Chatbots
  */
-class ChatbotInstanceController extends Controller
+class ChatbotInstanceController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    public static function middleware(): array
     {
-        $this->middleware(function ($request, $next) {
-            if (! ($request->user()?->currentTeam?->settings['chatbot_enabled'] ?? false)) {
-                abort(403, 'Chatbot feature is not enabled for this team.');
-            }
+        return [
+            function (Request $request, \Closure $next): mixed {
+                /** @var Team|null $team */
+                $team = $request->user()?->currentTeam;
+                abort_unless(
+                    $team instanceof Team && ($team->settings['chatbot_enabled'] ?? false),
+                    403,
+                    'Chatbot feature is not enabled for this team.',
+                );
 
-            return $next($request);
-        });
+                return $next($request);
+            },
+        ];
     }
 
     public function index(Request $request): AnonymousResourceCollection
