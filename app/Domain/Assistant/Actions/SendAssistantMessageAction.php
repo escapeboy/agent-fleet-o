@@ -12,6 +12,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\GlobalSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +27,7 @@ class SendAssistantMessageAction
         private readonly ContextResolver $contextResolver,
         private readonly AssistantToolRegistry $toolRegistry,
         private readonly AssistantIntentClassifier $intentClassifier,
+        private readonly LocalAgentDiscovery $agentDiscovery,
     ) {}
 
     /**
@@ -73,6 +75,17 @@ class SendAssistantMessageAction
             : null;
         $supportsToolLoop = $localAgentKey === 'claude-code';
         $supportsMcpNatively = $localAgentKey === 'codex';
+
+        // In relay mode, local agents run on the user's machine via the bridge daemon.
+        // Rewrite the request to use the bridge_agent provider so FallbackAiGateway
+        // routes it through LocalBridgeGateway (Redis → relay → bridge daemon WebSocket).
+        if ($isLocal && $this->agentDiscovery->isRelayMode()) {
+            $provider = 'bridge_agent';
+            $model = $localAgentKey ?? $model;
+            $isLocal = false;
+            $supportsToolLoop = false;
+            $supportsMcpNatively = true; // Bridge agents have their own MCP/tool access
+        }
 
         // Always resolve tools regardless of provider
         $tools = $this->toolRegistry->getTools($user, $conversation);
@@ -229,6 +242,16 @@ class SendAssistantMessageAction
             : null;
         $supportsToolLoop = $localAgentKey === 'claude-code';
         $supportsMcpNatively = $localAgentKey === 'codex';
+
+        // In relay mode, route local agents through the bridge daemon
+        if ($isLocal && $this->agentDiscovery->isRelayMode()) {
+            $provider = 'bridge_agent';
+            $model = $localAgentKey ?? $model;
+            $isLocal = false;
+            $supportsToolLoop = false;
+            $supportsMcpNatively = true;
+        }
+
         $tools = $this->toolRegistry->getTools($user);
 
         $canExecuteTools = ! $isLocal || $supportsToolLoop || $supportsMcpNatively;

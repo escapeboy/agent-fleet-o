@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Skill\Models\Skill;
@@ -147,8 +148,17 @@ class ProviderResolver
                 continue;
             }
 
-            // Bridge-backed providers — handled separately, skip cloud key check
+            // Bridge-backed providers — populate models from active BridgeConnection
             if (! empty($provider['bridge'])) {
+                if ($key === 'bridge_agent') {
+                    $agents = $this->activeBridgeAgents();
+                    if (empty($agents)) {
+                        unset($providers[$key]);
+                    } else {
+                        $providers[$key]['models'] = $agents;
+                    }
+                }
+
                 continue;
             }
 
@@ -221,5 +231,86 @@ class ProviderResolver
             ->where('provider', 'custom_endpoint')
             ->where('is_active', true)
             ->get();
+    }
+
+    /**
+     * Known model lists per bridge agent key.
+     * Models are shown as "AgentName — Model Label" in the assistant panel.
+     */
+    private const BRIDGE_AGENT_MODELS = [
+        'claude-code' => [
+            'claude-sonnet-4-5' => 'Claude Code — Sonnet 4.5',
+            'claude-haiku-4-5'  => 'Claude Code — Haiku 4.5',
+            'claude-opus-4-6'   => 'Claude Code — Opus 4.6',
+        ],
+        'codex' => [
+            'o4-mini' => 'Codex — o4-mini',
+            'o3'      => 'Codex — o3',
+            'o1'      => 'Codex — o1',
+        ],
+        'gemini' => [
+            'gemini-2.5-flash' => 'Gemini CLI — 2.5 Flash',
+            'gemini-2.5-pro'   => 'Gemini CLI — 2.5 Pro',
+        ],
+        'aider' => [
+            'claude-sonnet-4-5' => 'Aider — Sonnet 4.5',
+            'claude-haiku-4-5'  => 'Aider — Haiku 4.5',
+            'gpt-4o'            => 'Aider — GPT-4o',
+            'gpt-4o-mini'       => 'Aider — GPT-4o Mini',
+            'gemini-2.5-flash'  => 'Aider — Gemini 2.5 Flash',
+        ],
+    ];
+
+    /**
+     * Get models for the bridge_agent provider from the active BridgeConnection.
+     *
+     * Returns compound keys in the form "agent_key:model" (e.g. "claude-code:claude-sonnet-4-5")
+     * for agents with known model lists. For unknown agents, falls back to a single entry
+     * keyed by agent_key alone so the agent is still selectable.
+     *
+     * @return array<string, array{label: string, input_cost: int, output_cost: int}>
+     */
+    private function activeBridgeAgents(): array
+    {
+        try {
+            $connection = BridgeConnection::active()->latest('connected_at')->first();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if (! $connection) {
+            return [];
+        }
+
+        $models = [];
+        foreach ($connection->agents() as $agent) {
+            if (! ($agent['found'] ?? false)) {
+                continue;
+            }
+            $key = $agent['key'];
+            $agentName = $agent['name'] ?? $key;
+
+            $knownModels = self::BRIDGE_AGENT_MODELS[$key] ?? null;
+
+            if ($knownModels) {
+                foreach ($knownModels as $modelKey => $modelLabel) {
+                    $models["{$key}:{$modelKey}"] = [
+                        'label'       => $modelLabel,
+                        'input_cost'  => 0,
+                        'output_cost' => 0,
+                    ];
+                }
+            } else {
+                // Agent with no known model list (kiro, cursor, cline, opencode, …)
+                // Show as a single selectable option; the agent manages its own model.
+                $models[$key] = [
+                    'label'       => $agentName,
+                    'input_cost'  => 0,
+                    'output_cost' => 0,
+                ];
+            }
+        }
+
+        return $models;
     }
 }

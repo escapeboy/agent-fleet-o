@@ -131,16 +131,23 @@ class LocalBridgeGateway implements AiGatewayInterface
     private function buildPayload(string $requestId, AiRequestDTO $request, BridgeConnection $connection): array
     {
         // bridge_agent → FrameAgentRequest (0x0010 = 16)
+        // The model field may be a compound "agent_key:model" (e.g. "claude-code:claude-sonnet-4-5")
+        // or just "agent_key" when no per-agent model was selected.
         if ($request->provider === 'bridge_agent') {
+            $parts = explode(':', $request->model, 2);
+            $agentKey = $parts[0];
+            $agentModel = $parts[1] ?? '';
+
             return [
                 'request_id' => $requestId,
                 'frame_type' => 0x0010,
                 'payload' => [
-                    'request_id' => $requestId,
-                    'agent_key' => $request->model, // model = agent key (e.g. "claude-code")
-                    'prompt' => $request->userPrompt ?? '',
+                    'request_id'   => $requestId,
+                    'agent_key'    => $agentKey,
+                    'model'        => $agentModel, // passed as --model to the agent CLI
+                    'prompt'       => $request->userPrompt ?? '',
                     'system_prompt' => $request->systemPrompt ?? '',
-                    'stream' => true,
+                    'stream'       => true,
                 ],
             ];
         }
