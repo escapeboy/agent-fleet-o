@@ -85,18 +85,23 @@ class SendAssistantMessageAction
             $agentKey = $localAgentKey ?? $provider;
             $model = ($model !== '' && $model !== $agentKey) ? "{$agentKey}:{$model}" : $agentKey;
             $isLocal = false;
-            // Keep $supportsToolLoop — claude-code uses text-based <tool_call> format which works
-            // through the bridge (server-side tool execution loop, up to 3 round-trips).
-            // Do NOT set $supportsMcpNatively = true; the bridge does not auto-configure MCP servers.
-            $supportsMcpNatively = false;
+            // claude-code in relay mode: the bridge daemon has the FleetQ MCP HTTP server
+            // configured in ~/.claude.json → use native MCP tool calling, not the custom
+            // <tool_call> text loop (which claude-code 2.1+ ignores when MCP tools are present).
+            if ($localAgentKey === 'claude-code') {
+                $supportsToolLoop = false;
+                $supportsMcpNatively = true;
+            } else {
+                $supportsMcpNatively = false;
+            }
         }
 
         // For direct bridge_agent usage (provider set explicitly, not rewritten above),
-        // detect tool loop capability from the compound "agent_key:model" string.
+        // detect MCP capability from the compound "agent_key:model" string.
         if (! $isLocal && $provider === 'bridge_agent' && ! $supportsToolLoop && ! $supportsMcpNatively) {
             $bridgeAgentKey = explode(':', $model, 2)[0] ?? '';
             if ($bridgeAgentKey === 'claude-code') {
-                $supportsToolLoop = true;
+                $supportsMcpNatively = true;
             }
         }
 
@@ -295,9 +300,14 @@ class SendAssistantMessageAction
             $agentKey = $localAgentKey ?? $provider;
             $model = ($model !== '' && $model !== $agentKey) ? "{$agentKey}:{$model}" : $agentKey;
             $isLocal = false;
-            // Keep $supportsToolLoop; streaming doesn't run a tool loop but at least don't
-            // claim MCP is connected when it isn't — buildSystemPrompt needs correct flags.
-            $supportsMcpNatively = false;
+            // claude-code in relay mode uses native MCP tools (FleetQ MCP server configured
+            // in ~/.claude.json on the bridge machine). Use MCP system prompt, not <tool_call>.
+            if ($localAgentKey === 'claude-code') {
+                $supportsToolLoop = false;
+                $supportsMcpNatively = true;
+            } else {
+                $supportsMcpNatively = false;
+            }
         }
 
         $tools = $this->toolRegistry->getTools($user);
@@ -750,31 +760,28 @@ class SendAssistantMessageAction
             <<<'MCP'
 
             You have MCP tools connected to the FleetQ platform. Use them to interact with the platform.
-            Tool names follow the pattern `{domain}_{action}` (e.g. `agent_list`, `experiment_create`, `project_get`).
+            Tool names are prefixed with `mcp__fleetq__` (e.g. `mcp__fleetq__agent_list`, `mcp__fleetq__experiment_create`).
+            IMPORTANT: Always use the full `mcp__fleetq__` prefix when calling tools. Check your tools list for exact names.
 
             ### Available MCP Tool Domains
-            - **agent_** — List, get, create, update, toggle status of AI agents
-            - **experiment_** — List, get, create, pause, resume, retry, kill experiments; check valid transitions
-            - **crew_** — List, get, create, update, execute crews; check execution status
-            - **skill_** — List, get, create, update skills
-            - **tool_** — List, get, create, update, delete tools
-            - **credential_** — List, get, create, update credentials
-            - **workflow_** — List, get, create, update, validate workflows
-            - **project_** — List, get, create, update, pause, resume, trigger runs, archive projects
-            - **approval_** — List approvals, approve or reject pending requests
-            - **signal_** — List signals, ingest new signals
-            - **budget_** — Get budget summary, check budget availability
-            - **marketplace_** — Browse, publish, install marketplace listings
-            - **memory_** — Search memories, list recent, get stats
-            - **artifact_** — List, get, and download experiment/crew artifacts
-            - **outbound_** — Manage outbound proposals, approvals, and blacklist
-            - **webhook_** — List, create, update, delete outbound webhook endpoints
-            - **trigger_** — List, create, update, delete, and test trigger rules
-            - **evolution_** — List, analyze, apply, or reject evolution proposals
-            - **telegram_** — Manage Telegram bot registrations and bindings
-            - **cache_** — Semantic cache stats and purge
-            - **notification_** / **team_** — Team management, members, notifications
-            - **dashboard_kpis** / **system_health** / **audit_log** — System observability
+            - **mcp__fleetq__agent_*** — List, get, create, update, toggle status of AI agents
+            - **mcp__fleetq__experiment_*** — List, get, create, pause, resume, retry, kill experiments
+            - **mcp__fleetq__crew_*** — List, get, create, update, execute crews; check execution status
+            - **mcp__fleetq__skill_*** — List, get, create, update skills
+            - **mcp__fleetq__tool_*** — List, get, create, update, delete tools
+            - **mcp__fleetq__credential_*** — List, get, create, update credentials
+            - **mcp__fleetq__workflow_*** — List, get, create, update, validate workflows
+            - **mcp__fleetq__project_*** — List, get, create, update, pause, resume, trigger runs, archive projects
+            - **mcp__fleetq__approval_*** — List approvals, approve or reject pending requests
+            - **mcp__fleetq__signal_*** — List signals, ingest new signals
+            - **mcp__fleetq__budget_*** — Get budget summary, check budget availability
+            - **mcp__fleetq__marketplace_*** — Browse, publish, install marketplace listings
+            - **mcp__fleetq__memory_*** — Search memories, list recent, get stats
+            - **mcp__fleetq__artifact_*** — List, get, and download experiment/crew artifacts
+            - **mcp__fleetq__webhook_*** — List, create, update, delete outbound webhook endpoints
+            - **mcp__fleetq__trigger_*** — List, create, update, delete, and test trigger rules
+            - **mcp__fleetq__evolution_*** — List, analyze, apply, or reject evolution proposals
+            - **mcp__fleetq__system_*** / **mcp__fleetq__team_*** — System health, KPIs, team management, audit log
             MCP,
         ];
 
