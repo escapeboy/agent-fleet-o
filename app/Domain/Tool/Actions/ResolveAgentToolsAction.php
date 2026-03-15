@@ -5,6 +5,8 @@ namespace App\Domain\Tool\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Credential\Models\Credential;
+use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\GitRepository\Tools\GitRepositoryToolBuilder;
 use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Enums\ToolRiskLevel;
@@ -19,6 +21,7 @@ class ResolveAgentToolsAction
 {
     public function __construct(
         private readonly ToolTranslator $translator,
+        private readonly GitRepositoryToolBuilder $gitToolBuilder,
     ) {}
 
     /**
@@ -114,6 +117,19 @@ class ResolveAgentToolsAction
             }
 
             $prismTools = array_merge($prismTools, $this->translator->toPrismTools($tool, $overrides, $orgPolicy, $workspace));
+        }
+
+        // Inject git tools for repositories configured on the agent
+        $gitRepoIds = $agent->config['git_repository_ids'] ?? [];
+        if (! empty($gitRepoIds)) {
+            $repos = GitRepository::where('team_id', $agent->team_id)
+                ->whereIn('id', $gitRepoIds)
+                ->where('status', 'active')
+                ->get();
+
+            foreach ($repos as $repo) {
+                $prismTools = array_merge($prismTools, $this->gitToolBuilder->build($repo));
+            }
         }
 
         return $prismTools;

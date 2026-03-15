@@ -8,6 +8,7 @@ use App\Domain\GitRepository\Enums\GitProvider;
 use App\Domain\GitRepository\Enums\GitRepoMode;
 use App\Domain\GitRepository\Enums\GitRepositoryStatus;
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,13 +45,13 @@ class GitRepositoryController extends Controller
     public function store(Request $request, CreateGitRepositoryAction $action): JsonResponse
     {
         $validated = $request->validate([
-            'name'            => ['required', 'string', 'min:2', 'max:255'],
-            'url'             => ['required', 'url', 'max:2048'],
-            'mode'            => ['required', new Enum(GitRepoMode::class)],
-            'provider'        => ['sometimes', new Enum(GitProvider::class)],
-            'default_branch'  => ['sometimes', 'string', 'max:255'],
-            'credential_id'   => ['nullable', 'uuid', 'exists:credentials,id'],
-            'config'          => ['sometimes', 'array'],
+            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'url' => ['required', 'url', 'max:2048'],
+            'mode' => ['required', new Enum(GitRepoMode::class)],
+            'provider' => ['sometimes', new Enum(GitProvider::class)],
+            'default_branch' => ['sometimes', 'string', 'max:255'],
+            'credential_id' => ['nullable', 'uuid', 'exists:credentials,id'],
+            'config' => ['sometimes', 'array'],
         ]);
 
         $repo = $action->execute(
@@ -70,11 +71,11 @@ class GitRepositoryController extends Controller
     public function update(Request $request, GitRepository $gitRepository): JsonResponse
     {
         $validated = $request->validate([
-            'name'           => ['sometimes', 'string', 'min:2', 'max:255'],
+            'name' => ['sometimes', 'string', 'min:2', 'max:255'],
             'default_branch' => ['sometimes', 'string', 'max:255'],
-            'status'         => ['sometimes', new Enum(GitRepositoryStatus::class)],
-            'credential_id'  => ['nullable', 'uuid', 'exists:credentials,id'],
-            'config'         => ['sometimes', 'array'],
+            'status' => ['sometimes', new Enum(GitRepositoryStatus::class)],
+            'credential_id' => ['nullable', 'uuid', 'exists:credentials,id'],
+            'config' => ['sometimes', 'array'],
         ]);
 
         $gitRepository->fill($validated)->save();
@@ -94,5 +95,26 @@ class GitRepositoryController extends Controller
         $result = $action->execute($gitRepository);
 
         return response()->json($result);
+    }
+
+    public function listFiles(Request $request, GitRepository $gitRepository): JsonResponse
+    {
+        $path = $request->input('path', '/');
+        $ref = $request->input('ref', $gitRepository->default_branch ?? 'HEAD');
+
+        $client = app(GitOperationRouter::class)->resolve($gitRepository);
+        $files = $client->listFiles($path, $ref);
+
+        return response()->json(['path' => $path, 'ref' => $ref, 'files' => $files]);
+    }
+
+    public function listPullRequests(Request $request, GitRepository $gitRepository): JsonResponse
+    {
+        $state = $request->input('state', 'open');
+
+        $client = app(GitOperationRouter::class)->resolve($gitRepository);
+        $prs = $client->listPullRequests($state);
+
+        return response()->json(['state' => $state, 'pull_requests' => $prs]);
     }
 }

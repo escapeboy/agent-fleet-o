@@ -242,6 +242,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::put('/git-repositories/{gitRepository}', [GitRepositoryController::class, 'update']);
     Route::delete('/git-repositories/{gitRepository}', [GitRepositoryController::class, 'destroy']);
     Route::post('/git-repositories/{gitRepository}/test', [GitRepositoryController::class, 'test']);
+    Route::get('/git-repositories/{gitRepository}/files', [GitRepositoryController::class, 'listFiles']);
+    Route::get('/git-repositories/{gitRepository}/prs', [GitRepositoryController::class, 'listPullRequests']);
 
     // Bridge
     Route::get('/bridge/status', [BridgeController::class, 'status']);
