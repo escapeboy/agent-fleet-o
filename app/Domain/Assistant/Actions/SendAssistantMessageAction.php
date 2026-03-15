@@ -81,18 +81,31 @@ class SendAssistantMessageAction
         // routes it through LocalBridgeGateway (Redis → relay → bridge daemon WebSocket).
         if ($isLocal && $this->agentDiscovery->isRelayMode()) {
             $provider = 'bridge_agent';
-            $model = $localAgentKey ?? $model;
+            // Build compound "agent_key:model" so bridge passes the correct model to the CLI.
+            $agentKey = $localAgentKey ?? $provider;
+            $model = ($model !== '' && $model !== $agentKey) ? "{$agentKey}:{$model}" : $agentKey;
             $isLocal = false;
-            $supportsToolLoop = false;
-            $supportsMcpNatively = true; // Bridge agents have their own MCP/tool access
+            // Keep $supportsToolLoop — claude-code uses text-based <tool_call> format which works
+            // through the bridge (server-side tool execution loop, up to 3 round-trips).
+            // Do NOT set $supportsMcpNatively = true; the bridge does not auto-configure MCP servers.
+            $supportsMcpNatively = false;
+        }
+
+        // For direct bridge_agent usage (provider set explicitly, not rewritten above),
+        // detect tool loop capability from the compound "agent_key:model" string.
+        if (! $isLocal && $provider === 'bridge_agent' && ! $supportsToolLoop && ! $supportsMcpNatively) {
+            $bridgeAgentKey = explode(':', $model, 2)[0] ?? '';
+            if ($bridgeAgentKey === 'claude-code') {
+                $supportsToolLoop = true;
+            }
         }
 
         // Always resolve tools regardless of provider
         $tools = $this->toolRegistry->getTools($user, $conversation);
 
         // Build system prompt with context and tool info.
-        // canExecuteTools: cloud providers use PrismPHP tools, claude-code uses <tool_call> format,
-        // codex uses MCP tools natively (our FleetQ MCP server is connected via config).
+        // canExecuteTools: cloud providers use PrismPHP tools, claude-code (local or bridge) uses
+        // <tool_call> text format, codex uses MCP tools natively (FleetQ MCP server connected).
         $canExecuteTools = ! $isLocal || $supportsToolLoop || $supportsMcpNatively;
         $context = $this->contextResolver->resolve($contextType, $contextId);
         $systemPrompt = $this->buildSystemPrompt($context, $user, $supportsToolLoop, $canExecuteTools, $tools, $supportsMcpNatively);
@@ -101,8 +114,10 @@ class SendAssistantMessageAction
         $history = $this->conversationManager->buildMessageHistory($conversation);
         $userPrompt = $this->buildUserPrompt($history, $userMessage);
 
-        if ($isLocal && $supportsToolLoop && ! empty($tools)) {
-            // Claude Code: text-based <tool_call> loop with --system-prompt
+        if ($supportsToolLoop && ! empty($tools)) {
+            // Claude Code (local or via bridge): text-based <tool_call> loop.
+            // For bridge mode, each tool-loop step goes through the bridge daemon
+            // (up to 3 round-trips). Server-side execution resolves FleetQ tools.
             $response = $this->executeWithLocalToolLoop(
                 provider: $provider,
                 model: $model,
@@ -277,10 +292,12 @@ class SendAssistantMessageAction
         // In relay mode, route local agents through the bridge daemon
         if ($isLocal && $this->agentDiscovery->isRelayMode()) {
             $provider = 'bridge_agent';
-            $model = $localAgentKey ?? $model;
+            $agentKey = $localAgentKey ?? $provider;
+            $model = ($model !== '' && $model !== $agentKey) ? "{$agentKey}:{$model}" : $agentKey;
             $isLocal = false;
-            $supportsToolLoop = false;
-            $supportsMcpNatively = true;
+            // Keep $supportsToolLoop; streaming doesn't run a tool loop but at least don't
+            // claim MCP is connected when it isn't — buildSystemPrompt needs correct flags.
+            $supportsMcpNatively = false;
         }
 
         $tools = $this->toolRegistry->getTools($user);
