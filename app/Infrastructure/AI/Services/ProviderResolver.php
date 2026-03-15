@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Skill\Models\Skill;
@@ -147,8 +148,17 @@ class ProviderResolver
                 continue;
             }
 
-            // Bridge-backed providers — handled separately, skip cloud key check
+            // Bridge-backed providers — populate models from active BridgeConnection
             if (! empty($provider['bridge'])) {
+                if ($key === 'bridge_agent') {
+                    $agents = $this->activeBridgeAgents();
+                    if (empty($agents)) {
+                        unset($providers[$key]);
+                    } else {
+                        $providers[$key]['models'] = $agents;
+                    }
+                }
+
                 continue;
             }
 
@@ -221,5 +231,41 @@ class ProviderResolver
             ->where('provider', 'custom_endpoint')
             ->where('is_active', true)
             ->get();
+    }
+
+    /**
+     * Get models for the bridge_agent provider from the active BridgeConnection.
+     *
+     * Returns an array keyed by agent key (e.g. 'claude-code') with label info,
+     * so the assistant panel can show e.g. "Claude Code" as a selectable model.
+     *
+     * @return array<string, array{label: string, input_cost: int, output_cost: int}>
+     */
+    private function activeBridgeAgents(): array
+    {
+        try {
+            $connection = BridgeConnection::active()->latest('connected_at')->first();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if (! $connection) {
+            return [];
+        }
+
+        $models = [];
+        foreach ($connection->agents() as $agent) {
+            if (! ($agent['found'] ?? false)) {
+                continue;
+            }
+            $key = $agent['key'];
+            $models[$key] = [
+                'label' => $agent['name'] ?? $key,
+                'input_cost' => 0,
+                'output_cost' => 0,
+            ];
+        }
+
+        return $models;
     }
 }
