@@ -177,17 +177,48 @@ class SendAssistantMessageAction
             $this->logToolExecutions($conversation, $response, $user);
         }
 
+        // Detect empty bridge response before saving — prevents a race condition where
+        // Livewire's poll sees status='completed' with empty content and stops polling
+        // before the job can overwrite it with a proper error message.
+        $finalContent = $response->content;
+        $finalStatus = 'completed';
+        if (($finalContent ?? '') === '' && str_contains($provider, 'bridge')) {
+            $finalContent = sprintf(
+                'No response from agent. The `%s` agent ran but returned no output. Check that the agent is authenticated and the model name is valid.',
+                $model ?? 'unknown',
+            );
+            $finalStatus = 'failed';
+            Log::warning('SendAssistantMessageAction: bridge agent returned empty response', [
+                'provider' => $provider,
+                'model' => $model,
+            ]);
+            \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($provider, $model, $user): void {
+                $scope->setTag('provider', $provider);
+                $scope->setTag('model', $model ?? 'unknown');
+                $scope->setContext('bridge_empty_response', [
+                    'provider' => $provider,
+                    'model' => $model,
+                    'team_id' => $user->current_team_id,
+                    'user_id' => $user->id,
+                ]);
+                \Sentry\captureMessage(
+                    "Bridge agent empty response: {$provider}/".($model ?? 'unknown'),
+                    \Sentry\Severity::warning(),
+                );
+            });
+        }
+
         // Save assistant response — update existing placeholder (async mode) or create new message
         if ($placeholderMessageId !== null) {
             AssistantMessage::where('id', $placeholderMessageId)->update([
-                'content' => $response->content,
+                'content' => $finalContent,
                 'tool_calls' => $response->toolResults ? json_encode($response->toolResults) : null,
                 'token_usage' => json_encode([
                     'prompt_tokens' => $response->usage->promptTokens,
                     'completion_tokens' => $response->usage->completionTokens,
                     'cost_credits' => $response->usage->costCredits,
                 ]),
-                'metadata' => json_encode(['status' => 'completed']),
+                'metadata' => json_encode(['status' => $finalStatus]),
             ]);
         } else {
             $this->conversationManager->addMessage(
