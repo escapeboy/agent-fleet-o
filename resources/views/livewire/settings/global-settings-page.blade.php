@@ -13,7 +13,7 @@
 
     {{-- Tab Navigation --}}
     <div class="mb-6 border-b border-(--color-theme-border)">
-        <nav class="-mb-px flex gap-6" aria-label="Settings tabs">
+        <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none" aria-label="Settings tabs">
             @php
                 $tabs = array_filter([
                     'general'    => 'General',

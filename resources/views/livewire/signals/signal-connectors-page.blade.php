@@ -130,6 +130,7 @@
             </div>
         @elseif($httpMonitors->isNotEmpty())
             <div class="overflow-hidden rounded-xl border border-(--color-theme-border)">
+            <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-(--color-theme-border)">
                     <thead class="bg-(--color-surface-alt)">
                         <tr>
@@ -197,6 +198,7 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
             </div>
         @endif
 
@@ -554,6 +556,7 @@
             </div>
         @else
             <div class="overflow-hidden rounded-xl border border-(--color-theme-border)">
+            <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-(--color-theme-border)">
                     <thead class="bg-(--color-surface-alt)">
                         <tr>
@@ -637,6 +640,7 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
             </div>
         @endif
     </div>

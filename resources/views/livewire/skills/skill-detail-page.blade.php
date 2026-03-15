@@ -92,9 +92,9 @@
         {{-- ====== VIEW MODE ====== --}}
 
         {{-- Header --}}
-        <div class="mb-6 flex items-center justify-between">
-            <div>
-                <div class="flex items-center gap-3">
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
                     <h2 class="text-xl font-semibold text-gray-900">{{ $skill->name }}</h2>
                     <x-status-badge :status="$skill->status->value" />
                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
@@ -112,7 +112,7 @@
                     <p class="mt-1 text-sm text-gray-500">{{ $skill->description }}</p>
                 @endif
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm text-gray-500">v{{ $skill->current_version }}</span>
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Skill">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
@@ -146,7 +146,7 @@
 
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
-            <nav class="-mb-px flex space-x-8">
+            <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
                 @foreach(['overview' => 'Overview', 'versions' => 'Versions', 'executions' => 'Executions'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">

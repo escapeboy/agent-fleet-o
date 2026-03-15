@@ -41,7 +41,7 @@
     <div class="space-y-4">
         @forelse($approvals as $approval)
             <div class="rounded-xl border border-gray-200 bg-white p-6">
-                <div class="flex items-start justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between">
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-3">
                             <a href="{{ route('experiments.show', $approval->experiment) }}"
@@ -224,7 +224,7 @@
                     </div>
 
                     @if($approval->status === \App\Domain\Approval\Enums\ApprovalStatus::Pending && ! $approval->isClarification() && ! $approval->isHumanTask())
-                        <div class="ml-4 flex shrink-0 flex-col gap-2">
+                        <div class="mt-3 flex shrink-0 flex-row flex-wrap gap-2 sm:ml-4 sm:mt-0 sm:flex-col">
                             <button wire:click="approve('{{ $approval->id }}')"
                                 class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
                                 Approve

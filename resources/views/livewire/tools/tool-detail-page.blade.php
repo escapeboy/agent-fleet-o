@@ -41,9 +41,9 @@
     @else
         {{-- ====== VIEW MODE ====== --}}
         {{-- Header --}}
-        <div class="mb-6 flex items-start justify-between">
-            <div>
-                <div class="flex items-center gap-3">
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
                     <h2 class="text-xl font-bold text-gray-900">{{ $tool->name }}</h2>
                     @if($tool->isPlatformTool())
                         <span class="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700">Platform</span>
@@ -70,7 +70,7 @@
                 @endif
             </div>
 
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
                 @if($tool->isPlatformTool())
                     @php $isActivated = $activation?->isActive() ?? false; @endphp
                     <button wire:click="toggleStatus"
@@ -105,10 +105,10 @@
             }
         @endphp
         <div class="mb-6 border-b border-gray-200">
-            <nav class="-mb-px flex gap-6">
+            <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
                 @foreach($tabs as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
-                        class="border-b-2 pb-3 text-sm font-medium transition
+                        class="whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition
                             {{ $activeTab === $tab
                                 ? 'border-primary-600 text-primary-600'
                                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">

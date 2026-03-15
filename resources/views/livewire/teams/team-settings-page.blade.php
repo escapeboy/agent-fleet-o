@@ -53,7 +53,7 @@
         @endif
 
         {{-- Add new credential --}}
-        <div class="flex items-end gap-3">
+        <div class="flex flex-wrap items-end gap-3">
             <div>
                 <x-form-select wire:model.live="credProvider" label="Provider">
                     @foreach($providers as $p)
@@ -61,7 +61,7 @@
                     @endforeach
                 </x-form-select>
             </div>
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
                 <x-form-input wire:model="credApiKey" label="API Key" type="password" placeholder="sk-..." />
             </div>
             <button wire:click="addProviderCredential" class="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
@@ -116,8 +116,8 @@
         @endif
 
         {{-- Create token form --}}
-        <div class="flex items-end gap-3">
-            <div class="flex-1">
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-0">
                 <x-form-input wire:model="tokenName" label="Token Name" type="text" placeholder="e.g. CI/CD Pipeline"
                     :error="$errors->first('tokenName')" />
             </div>
@@ -167,8 +167,8 @@
                             </button>
                         </div>
                     @else
-                        <div class="flex items-end gap-3">
-                            <div class="flex-1">
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div class="flex-1 min-w-0">
                                 <x-form-input wire:model="{{ $info['field'] }}" label="API Key" type="password"
                                     placeholder="{{ $info['placeholder'] }}" hint="{{ $info['hint'] }}"
                                     :error="$errors->first($info['field'])" />

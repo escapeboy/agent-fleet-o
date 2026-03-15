@@ -40,7 +40,7 @@
             <option value="paid">Paid</option>
         </x-form-select>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <button wire:click="sortBy('install_count')"
                 class="rounded-lg border px-3 py-2 text-sm {{ $sortField === 'install_count' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-300 text-gray-600' }}">
                 Most Installed

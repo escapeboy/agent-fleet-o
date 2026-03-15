@@ -171,9 +171,9 @@
         {{-- ====== VIEW MODE ====== --}}
 
         {{-- Header --}}
-        <div class="mb-6 flex items-center justify-between">
-            <div>
-                <div class="flex items-center gap-3">
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
                     <h2 class="text-xl font-semibold text-gray-900">{{ $agent->name }}</h2>
                     <x-status-badge :status="$agent->status->value" />
                     @php $tier = \App\Domain\Agent\Enums\ExecutionTier::fromConfig($agent->config ?? []); @endphp
@@ -186,7 +186,7 @@
                     <p class="mt-0.5 text-sm text-gray-500">{{ $agent->goal }}</p>
                 @endif
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <div class="flex items-center gap-1.5">
                     <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
                         {{ $agent->provider }}/{{ $agent->model }}
@@ -209,7 +209,7 @@
         </div>
 
         {{-- Stats --}}
-        <div class="mb-6 grid grid-cols-5 gap-4">
+        <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <div class="rounded-xl border border-gray-200 bg-white p-4">
                 <div class="text-2xl font-bold text-gray-900">{{ $skills->count() }}</div>
                 <div class="text-sm text-gray-500">Skills</div>
@@ -234,7 +234,7 @@
 
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
-            <nav class="-mb-px flex space-x-8">
+            <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
                 @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">

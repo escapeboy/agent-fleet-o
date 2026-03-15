@@ -1,24 +1,26 @@
 <div>
     {{-- Header Actions --}}
-    <div class="mb-6 flex items-center gap-3">
-        <a href="{{ route('workflows.index') }}" class="text-gray-500 hover:text-gray-700">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-        </a>
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="flex min-w-0 flex-1 items-center gap-3">
+            <a href="{{ route('workflows.index') }}" class="shrink-0 text-gray-500 hover:text-gray-700">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            </a>
 
-        <div class="flex-1">
-            <div class="flex items-center gap-3">
-                <h2 class="text-lg font-semibold text-gray-900">{{ $workflow->name }}</h2>
-                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-{{ $workflow->status->color() }}-100 text-{{ $workflow->status->color() }}-800">
-                    {{ $workflow->status->label() }}
-                </span>
-                <span class="text-xs text-gray-400">v{{ $workflow->version }}</span>
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-lg font-semibold text-gray-900">{{ $workflow->name }}</h2>
+                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-{{ $workflow->status->color() }}-100 text-{{ $workflow->status->color() }}-800">
+                        {{ $workflow->status->label() }}
+                    </span>
+                    <span class="text-xs text-gray-400">v{{ $workflow->version }}</span>
+                </div>
+                @if($workflow->description)
+                    <p class="mt-1 text-sm text-gray-500">{{ $workflow->description }}</p>
+                @endif
             </div>
-            @if($workflow->description)
-                <p class="mt-1 text-sm text-gray-500">{{ $workflow->description }}</p>
-            @endif
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <button wire:click="recalculateCost" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Recalculate Cost
             </button>

@@ -93,7 +93,7 @@
                 </div>
                 <div class="flex shrink-0 items-center gap-2 lg:gap-4">
                     @auth
-                        <x-page-help-button />
+                        <span class="hidden sm:inline"><x-page-help-button /></span>
                         <livewire:shared.notification-bell />
                         <livewire:components.theme-switcher />
                     @endauth
@@ -101,7 +101,7 @@
                     @auth
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="text-sm text-gray-500 hover:text-gray-700">
+                            <button type="submit" class="hidden text-sm text-gray-500 hover:text-gray-700 sm:inline">
                                 Logout
                             </button>
                         </form>

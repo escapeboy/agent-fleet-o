@@ -5,9 +5,9 @@
     @endif
 
     {{-- Header --}}
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
                     {{ $crew->status === \App\Domain\Crew\Enums\CrewStatus::Active ? 'bg-green-100 text-green-700' : ($crew->status === \App\Domain\Crew\Enums\CrewStatus::Draft ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700') }}">
                     {{ $crew->status->label() }}
@@ -18,7 +18,7 @@
                 <p class="mt-1 text-sm text-gray-500">{{ $crew->description }}</p>
             @endif
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             @if($crew->status === \App\Domain\Crew\Enums\CrewStatus::Active)
                 <a href="{{ route('crews.execute', $crew) }}"
                     class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
@@ -38,10 +38,10 @@
 
     {{-- Tabs --}}
     <div class="mb-6 border-b border-gray-200">
-        <nav class="-mb-px flex gap-6">
+        <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @foreach(['overview' => 'Overview', 'executions' => 'Executions', 'settings' => 'Settings'] as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
-                    class="border-b-2 pb-3 text-sm font-medium transition
+                    class="whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition
                         {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                     {{ $label }}
                     @if($tab === 'executions')

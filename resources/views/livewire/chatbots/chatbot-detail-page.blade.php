@@ -50,10 +50,10 @@
 
     {{-- Tabs --}}
     <div class="mb-6 border-b border-gray-200">
-        <nav class="-mb-px flex gap-6">
+        <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @foreach(['overview' => 'Overview', 'configuration' => 'Configuration', 'tokens' => 'API Tokens', 'channels' => 'Channels', 'widget' => 'Widget', 'conversations' => 'Conversations', 'knowledge' => 'Knowledge Base', 'analytics' => 'Analytics'] as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
-                        class="border-b-2 pb-3 text-sm font-medium transition
+                        class="whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition
                             {{ $activeTab === $tab
                                 ? 'border-primary-500 text-primary-600'
                                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">

@@ -7,9 +7,9 @@
     @endif
 
     {{-- Header --}}
-    <div class="mb-6 flex items-center justify-between">
-        <div>
-            <div class="flex items-center gap-3">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
                 <h2 class="text-xl font-semibold text-gray-900">{{ $project->title }}</h2>
                 <x-status-badge :status="$project->status->value" />
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
@@ -24,7 +24,7 @@
                 <p class="mt-1 max-w-2xl text-sm text-gray-500">{{ $project->description }}</p>
             @endif
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <a href="{{ route('projects.kanban', $project) }}"
                 class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Board
@@ -224,7 +224,7 @@
 
     {{-- Tabs --}}
     <div class="mb-4 border-b border-gray-200">
-        <nav class="-mb-px flex space-x-8">
+        <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
             @foreach(['activity' => 'Activity', 'milestones' => 'Milestones', 'runs' => 'Runs'] as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
                     class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">

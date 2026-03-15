@@ -109,7 +109,7 @@
 
     {{-- Tabs --}}
     <div class="mb-4 border-b border-gray-200">
-        <nav class="-mb-px flex space-x-8">
+        <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
             @php
                 $tabs = ['overview' => 'Overview', 'configuration' => 'Configuration', 'reviews' => 'Reviews'];
                 if ($isPublisher) {
