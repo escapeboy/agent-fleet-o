@@ -79,28 +79,20 @@ return [
     |--------------------------------------------------------------------------
     */
     'platform_api_keys' => [
-        'anthropic' => env('ANTHROPIC_API_KEY'),
-        'openai' => env('OPENAI_API_KEY'),
-        'google' => env('GOOGLE_AI_API_KEY'),
-        'groq' => env('GROQ_API_KEY'),
+        'anthropic'  => env('ANTHROPIC_API_KEY'),
+        'openai'     => env('OPENAI_API_KEY'),
+        'google'     => env('GOOGLE_AI_API_KEY'),
+        'groq'       => env('GROQ_API_KEY'),
         'openrouter' => env('OPENROUTER_API_KEY'),
+        'mistral'    => env('MISTRAL_API_KEY'),
+        'deepseek'   => env('DEEPSEEK_API_KEY'),
+        'xai'        => env('XAI_API_KEY'),
+        'perplexity' => env('PERPLEXITY_API_KEY'),
+        'fireworks'  => env('FIREWORKS_API_KEY'),
     ],
 
     'clearcue' => [
         'webhook_secret' => env('CLEARCUE_WEBHOOK_SECRET'),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Platform AI API Keys (immutable originals for BYOK key restoration)
-    |--------------------------------------------------------------------------
-    */
-    'platform_api_keys' => [
-        'anthropic' => env('ANTHROPIC_API_KEY'),
-        'openai' => env('OPENAI_API_KEY'),
-        'google' => env('GOOGLE_AI_API_KEY'),
-        'groq' => env('GROQ_API_KEY'),
-        'openrouter' => env('OPENROUTER_API_KEY'),
     ],
 
 ];

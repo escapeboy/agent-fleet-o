@@ -13,6 +13,9 @@ use App\Mcp\Tools\Admin\AdminUserSendPasswordResetTool;
 use App\Mcp\Tools\Agent\AgentConfigHistoryTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
+use App\Mcp\Tools\Agent\AgentFeedbackListTool;
+use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
+use App\Mcp\Tools\Agent\AgentFeedbackSubmitTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
 use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
@@ -97,6 +100,19 @@ use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
+use App\Mcp\Tools\GitRepository\GitBranchCreateTool;
+use App\Mcp\Tools\GitRepository\GitCommitTool;
+use App\Mcp\Tools\GitRepository\GitFileListTool;
+use App\Mcp\Tools\GitRepository\GitFileReadTool;
+use App\Mcp\Tools\GitRepository\GitFileWriteTool;
+use App\Mcp\Tools\GitRepository\GitPullRequestCreateTool;
+use App\Mcp\Tools\GitRepository\GitPullRequestListTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryCreateTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryDeleteTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryGetTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryListTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryTestTool;
+use App\Mcp\Tools\GitRepository\GitRepositoryUpdateTool;
 use App\Mcp\Tools\Integration\IntegrationCapabilitiesTool;
 use App\Mcp\Tools\Integration\IntegrationConnectTool;
 use App\Mcp\Tools\Integration\IntegrationDisconnectTool;
@@ -204,19 +220,6 @@ use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
-use App\Mcp\Tools\GitRepository\GitBranchCreateTool;
-use App\Mcp\Tools\GitRepository\GitCommitTool;
-use App\Mcp\Tools\GitRepository\GitFileListTool;
-use App\Mcp\Tools\GitRepository\GitFileReadTool;
-use App\Mcp\Tools\GitRepository\GitFileWriteTool;
-use App\Mcp\Tools\GitRepository\GitPullRequestCreateTool;
-use App\Mcp\Tools\GitRepository\GitPullRequestListTool;
-use App\Mcp\Tools\GitRepository\GitRepositoryCreateTool;
-use App\Mcp\Tools\GitRepository\GitRepositoryDeleteTool;
-use App\Mcp\Tools\GitRepository\GitRepositoryGetTool;
-use App\Mcp\Tools\GitRepository\GitRepositoryListTool;
-use App\Mcp\Tools\GitRepository\GitRepositoryTestTool;
-use App\Mcp\Tools\GitRepository\GitRepositoryUpdateTool;
 use Laravel\Mcp\Server;
 
 class AgentFleetServer extends Server
@@ -256,6 +259,9 @@ class AgentFleetServer extends Server
         AgentTemplatesListTool::class,
         AgentSkillSyncTool::class,
         AgentToolSyncTool::class,
+        AgentFeedbackSubmitTool::class,
+        AgentFeedbackListTool::class,
+        AgentFeedbackStatsTool::class,
         AgentDeleteTool::class,
         AgentConfigHistoryTool::class,
         AgentRollbackConfigTool::class,

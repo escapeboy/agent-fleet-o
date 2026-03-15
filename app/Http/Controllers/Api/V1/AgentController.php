@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
+use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Actions\RollbackAgentConfigAction;
 use App\Domain\Agent\Enums\AgentStatus;
+use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentConfigRevision;
+use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Http\Controllers\Controller;
@@ -199,5 +202,90 @@ class AgentController extends Controller
         $service->resetSession($agent);
 
         return response()->json(['success' => true, 'agent_id' => $agent->id]);
+    }
+
+    public function submitFeedback(Request $request, Agent $agent, CreateAgentFeedbackAction $action): JsonResponse
+    {
+        $data = $request->validate([
+            'execution_id' => 'nullable|string',
+            'score' => 'required|integer|in:-1,0,1',
+            'comment' => 'nullable|string|max:1000',
+            'correction' => 'nullable|string|max:2000',
+            'label' => 'nullable|string|max:100',
+        ]);
+
+        $execution = null;
+        if (! empty($data['execution_id'])) {
+            $execution = $agent->executions()->find($data['execution_id']);
+        }
+
+        $output = $execution?->output ? json_encode($execution->output) : null;
+        $input = $execution?->input ? json_encode($execution->input) : null;
+
+        $feedback = $action->execute(
+            agent: $agent,
+            teamId: $agent->team_id,
+            rating: FeedbackRating::from((int) $data['score']),
+            comment: $data['comment'] ?? null,
+            correction: $data['correction'] ?? null,
+            outputSnapshot: $output ? mb_substr($output, 0, 2000) : null,
+            inputSnapshot: $input ? mb_substr($input, 0, 1000) : null,
+            userId: $request->user()?->id,
+            agentExecutionId: $execution?->id,
+            label: $data['label'] ?? null,
+        );
+
+        return response()->json(['id' => $feedback->id, 'score' => $feedback->score], 201);
+    }
+
+    public function listFeedback(Request $request, Agent $agent): JsonResponse
+    {
+        $data = $request->validate([
+            'score' => 'nullable|integer|in:-1,0,1',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $query = AgentFeedback::where('agent_id', $agent->id)
+            ->orderByDesc('created_at');
+
+        if (isset($data['score'])) {
+            $query->where('score', (int) $data['score']);
+        }
+
+        $items = $query->cursorPaginate(min((int) ($data['per_page'] ?? 20), 100));
+
+        return response()->json($items);
+    }
+
+    public function feedbackStats(Request $request, Agent $agent): JsonResponse
+    {
+        $days = min((int) $request->input('days', 30), 365);
+
+        $feedback = AgentFeedback::where('agent_id', $agent->id)
+            ->where('created_at', '>=', now()->subDays($days))
+            ->get();
+
+        $positive = $feedback->where('score', FeedbackRating::Positive->value)->count();
+        $negative = $feedback->where('score', FeedbackRating::Negative->value)->count();
+        $neutral = $feedback->where('score', FeedbackRating::Neutral->value)->count();
+        $total = $feedback->count();
+
+        $topLabels = $feedback
+            ->whereNotNull('label')
+            ->groupBy('label')
+            ->map(fn ($g) => $g->count())
+            ->sortDesc()
+            ->take(5);
+
+        return response()->json([
+            'agent_id' => $agent->id,
+            'period_days' => $days,
+            'total' => $total,
+            'positive' => $positive,
+            'negative' => $negative,
+            'neutral' => $neutral,
+            'satisfaction_pct' => $total > 0 ? round(($positive / $total) * 100, 1) : null,
+            'top_failure_labels' => $topLabels,
+        ]);
     }
 }

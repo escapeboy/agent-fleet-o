@@ -103,6 +103,39 @@ class AiServiceProvider extends ServiceProvider
             );
         });
 
+        // Perplexity — OpenAI-compatible endpoint (not natively in Prism's Provider enum yet).
+        app(PrismManager::class)->extend('perplexity', function ($app, array $config) use ($appName) {
+            return new OpenRouter(
+                apiKey: $config['api_key'] ?? '',
+                url: rtrim($config['url'] ?? 'https://api.perplexity.ai', '/').'/',
+                httpReferer: null,
+                xTitle: $appName,
+            );
+        });
+
+        // Fireworks AI — OpenAI-compatible inference endpoint.
+        app(PrismManager::class)->extend('fireworks', function ($app, array $config) use ($appName) {
+            return new OpenRouter(
+                apiKey: $config['api_key'] ?? '',
+                url: rtrim($config['url'] ?? 'https://api.fireworks.ai/inference/v1', '/').'/',
+                httpReferer: null,
+                xTitle: $appName,
+            );
+        });
+
+        // LiteLLM Proxy — self-hosted proxy that exposes an OpenAI-compatible endpoint
+        // for 100+ providers (Bedrock, Vertex AI, Cohere, Together.ai, etc.).
+        // Teams register their proxy base URL as a TeamProviderCredential with provider='litellm_proxy'.
+        // See https://docs.litellm.ai/docs/proxy/quick_start
+        app(PrismManager::class)->extend('litellm_proxy', function ($app, array $config) use ($appName) {
+            return new OpenRouter(
+                apiKey: $config['api_key'] ?? 'anything',
+                url: rtrim($config['url'] ?? 'http://localhost:4000', '/').'/',
+                httpReferer: null,
+                xTitle: $appName,
+            );
+        });
+
         if (! config('local_llm.enabled', false)) {
             return;
         }

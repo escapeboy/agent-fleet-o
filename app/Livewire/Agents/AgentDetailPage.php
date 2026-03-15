@@ -2,11 +2,14 @@
 
 namespace App\Livewire\Agents;
 
+use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Enums\AgentStatus;
+use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentConfigRevision;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
@@ -206,6 +209,33 @@ class AgentDetailPage extends Component
         session()->flash('message', 'Agent updated successfully.');
     }
 
+    public function submitFeedback(string $executionId, int $score, ?string $comment = null): void
+    {
+        $this->authorize('edit-content');
+
+        $execution = AgentExecution::where('agent_id', $this->agent->id)
+            ->findOrFail($executionId);
+
+        $rating = FeedbackRating::from(max(-1, min(1, $score)));
+
+        $output = $execution->output ? json_encode($execution->output) : null;
+        $input = $execution->input ? json_encode($execution->input) : null;
+
+        app(CreateAgentFeedbackAction::class)->execute(
+            agent: $this->agent,
+            teamId: $this->agent->team_id,
+            rating: $rating,
+            comment: $comment,
+            outputSnapshot: $output ? mb_substr($output, 0, 2000) : null,
+            inputSnapshot: $input ? mb_substr($input, 0, 1000) : null,
+            userId: auth()->id(),
+            agentExecutionId: $execution->id,
+        );
+
+        $this->dispatch('feedback-submitted', executionId: $executionId, score: $score);
+        session()->flash('message', 'Feedback recorded.');
+    }
+
     public function deleteAgent(): void
     {
         $this->agent->delete();
@@ -223,6 +253,11 @@ class AgentDetailPage extends Component
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();
+
+        $feedbackByExecution = AgentFeedback::where('agent_id', $this->agent->id)
+            ->whereIn('agent_execution_id', $executions->pluck('id'))
+            ->get()
+            ->keyBy('agent_execution_id');
 
         $resolver = app(ProviderResolver::class);
         $providers = $resolver->availableProviders();
@@ -265,6 +300,7 @@ class AgentDetailPage extends Component
             'skills' => $skills,
             'tools' => $tools,
             'executions' => $executions,
+            'feedbackByExecution' => $feedbackByExecution,
             'providers' => $providers,
             'availableSkills' => $availableSkills,
             'availableTools' => $availableTools,

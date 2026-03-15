@@ -2,10 +2,12 @@
 
 namespace App\Domain\Agent\Actions;
 
+use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Events\AgentExecuting;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
 use App\Domain\Agent\Pipeline\Middleware\InjectKnowledgeGraphContext;
@@ -424,7 +426,56 @@ class ExecuteAgentAction
             }
         }
 
+        // Few-shot examples from human feedback (opt-in via config)
+        if (! empty($agent->config['use_few_shot_feedback'])) {
+            $fewShotSection = $this->buildFewShotSection($agent);
+            if ($fewShotSection !== '') {
+                $parts[] = $fewShotSection;
+            }
+        }
+
         $parts[] = 'Use the available tools to accomplish the task. Be thorough but efficient.';
+
+        return implode("\n\n", $parts);
+    }
+
+    /**
+     * Build a few-shot example section from recent positive feedback and corrections.
+     * Returns empty string when no relevant examples are available.
+     */
+    private function buildFewShotSection(Agent $agent): string
+    {
+        $examples = AgentFeedback::where('agent_id', $agent->id)
+            ->where('created_at', '>=', now()->subDays(90))
+            ->where(function ($q) {
+                $q->where('score', FeedbackRating::Positive->value)
+                    ->orWhere(function ($q2) {
+                        $q2->where('score', FeedbackRating::Negative->value)
+                            ->whereNotNull('correction');
+                    });
+            })
+            ->whereNotNull('input_snapshot')
+            ->whereNotNull('output_snapshot')
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        if ($examples->isEmpty()) {
+            return '';
+        }
+
+        $parts = ['## Examples from Past Feedback'];
+
+        foreach ($examples as $ex) {
+            $inputPreview = mb_substr((string) $ex->input_snapshot, 0, 300);
+            $outputPreview = $ex->correction
+                ? mb_substr((string) $ex->correction, 0, 400)
+                : mb_substr((string) $ex->output_snapshot, 0, 400);
+
+            $label = $ex->correction ? 'Corrected output' : 'Approved output';
+
+            $parts[] = "---\nInput: {$inputPreview}\n{$label}: {$outputPreview}";
+        }
 
         return implode("\n\n", $parts);
     }

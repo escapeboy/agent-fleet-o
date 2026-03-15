@@ -110,7 +110,7 @@ class ProviderResolver
         $teamByokProviders = $team
             ? TeamProviderCredential::where('team_id', $team->id)
                 ->where('is_active', true)
-                ->whereNotIn('provider', ['custom_endpoint', 'ollama', 'openai_compatible'])
+                ->whereNotIn('provider', ['custom_endpoint', 'ollama', 'openai_compatible', 'litellm_proxy'])
                 ->pluck('provider')
                 ->flip()
                 ->all()

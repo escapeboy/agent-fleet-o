@@ -351,10 +351,12 @@
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Duration</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Cost</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Feedback</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($executions as $exec)
+                            @php $existingFeedback = $feedbackByExecution[$exec->id] ?? null; @endphp
                             <tr>
                                 <td class="px-6 py-4"><x-status-badge :status="$exec->status" /></td>
                                 <td class="px-6 py-4 text-sm text-gray-500">
@@ -367,10 +369,55 @@
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $exec->duration_ms ? number_format($exec->duration_ms) . 'ms' : '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $exec->cost_credits }} credits</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $exec->created_at->diffForHumans() }}</td>
+                                <td class="px-6 py-4">
+                                    <div x-data="{ open: false, comment: '' }">
+                                        <div class="flex items-center gap-2">
+                                            {{-- Thumbs up --}}
+                                            <button
+                                                wire:click="submitFeedback('{{ $exec->id }}', 1)"
+                                                class="rounded p-1 transition-colors {{ $existingFeedback && $existingFeedback->score === 1 ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50' }}"
+                                                title="Good output"
+                                            >
+                                                <svg class="h-4 w-4" fill="{{ $existingFeedback && $existingFeedback->score === 1 ? 'currentColor' : 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                                </svg>
+                                            </button>
+                                            {{-- Thumbs down (opens comment box) --}}
+                                            <button
+                                                @click="open = !open"
+                                                class="rounded p-1 transition-colors {{ $existingFeedback && $existingFeedback->score === -1 ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-600 hover:bg-red-50' }}"
+                                                title="Bad output — add correction"
+                                            >
+                                                <svg class="h-4 w-4" fill="{{ $existingFeedback && $existingFeedback->score === -1 ? 'currentColor' : 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        {{-- Inline correction form --}}
+                                        <div x-show="open" x-transition class="mt-2 w-56">
+                                            <textarea
+                                                x-model="comment"
+                                                rows="2"
+                                                placeholder="What went wrong? (optional)"
+                                                class="block w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:border-primary-500 focus:ring-primary-500"
+                                            ></textarea>
+                                            <div class="mt-1 flex gap-1">
+                                                <button
+                                                    @click="$wire.submitFeedback('{{ $exec->id }}', -1, comment); open = false; comment = ''"
+                                                    class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+                                                >Submit</button>
+                                                <button
+                                                    @click="open = false; comment = ''"
+                                                    class="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200"
+                                                >Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-400">No executions yet</td>
+                                <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-400">No executions yet</td>
                             </tr>
                         @endforelse
                     </tbody>

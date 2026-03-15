@@ -91,6 +91,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/agents/{agent}/rollback', [AgentController::class, 'rollback']);
     Route::get('/agents/{agent}/runtime-state', [AgentController::class, 'runtimeState']);
     Route::post('/agents/{agent}/runtime-state/reset-session', [AgentController::class, 'resetRuntimeSession']);
+    Route::post('/agents/{agent}/feedback', [AgentController::class, 'submitFeedback']);
+    Route::get('/agents/{agent}/feedback', [AgentController::class, 'listFeedback']);
+    Route::get('/agents/{agent}/feedback/stats', [AgentController::class, 'feedbackStats']);
 
     // Skills
     Route::apiResource('skills', SkillController::class);

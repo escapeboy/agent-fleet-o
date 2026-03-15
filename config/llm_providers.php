@@ -44,6 +44,56 @@ return [
             'openrouter/free' => ['label' => 'Auto (best free model)', 'input_cost' => 0, 'output_cost' => 0],
         ],
     ],
+
+    // --- Tier 1: Named providers (native Prism support) ---
+
+    'mistral' => [
+        'name' => 'Mistral AI',
+        'models' => [
+            'mistral-large-latest'  => ['label' => 'Mistral Large',  'input_cost' => 2.0,  'output_cost' => 6.0],
+            'mistral-small-latest'  => ['label' => 'Mistral Small',  'input_cost' => 0.1,  'output_cost' => 0.3],
+            'codestral-latest'      => ['label' => 'Codestral',      'input_cost' => 0.2,  'output_cost' => 0.6],
+            'mistral-nemo-latest'   => ['label' => 'Mistral Nemo',   'input_cost' => 0.15, 'output_cost' => 0.15],
+        ],
+    ],
+
+    'deepseek' => [
+        'name' => 'DeepSeek',
+        'models' => [
+            'deepseek-chat'    => ['label' => 'DeepSeek V3',  'input_cost' => 0.27, 'output_cost' => 1.10],
+            'deepseek-reasoner' => ['label' => 'DeepSeek R1', 'input_cost' => 0.55, 'output_cost' => 2.19],
+        ],
+    ],
+
+    'xai' => [
+        'name' => 'xAI (Grok)',
+        'models' => [
+            'grok-3'       => ['label' => 'Grok 3',       'input_cost' => 3.0,  'output_cost' => 15.0],
+            'grok-3-mini'  => ['label' => 'Grok 3 Mini',  'input_cost' => 0.3,  'output_cost' => 0.5],
+            'grok-2-latest' => ['label' => 'Grok 2',      'input_cost' => 2.0,  'output_cost' => 10.0],
+        ],
+    ],
+
+    // --- Tier 2: OpenAI-compatible providers (custom Prism registration) ---
+
+    'perplexity' => [
+        'name' => 'Perplexity',
+        'models' => [
+            'sonar-pro'       => ['label' => 'Sonar Pro',       'input_cost' => 3.0,  'output_cost' => 15.0],
+            'sonar'           => ['label' => 'Sonar',           'input_cost' => 1.0,  'output_cost' => 1.0],
+            'sonar-reasoning' => ['label' => 'Sonar Reasoning', 'input_cost' => 1.0,  'output_cost' => 5.0],
+        ],
+    ],
+
+    'fireworks' => [
+        'name' => 'Fireworks AI',
+        'models' => [
+            'accounts/fireworks/models/llama-v3p3-70b-instruct'  => ['label' => 'Llama 3.3 70B',  'input_cost' => 0.9,  'output_cost' => 0.9],
+            'accounts/fireworks/models/deepseek-r1'              => ['label' => 'DeepSeek R1',    'input_cost' => 3.0,  'output_cost' => 8.0],
+            'accounts/fireworks/models/qwen3-235b-a22b'          => ['label' => 'Qwen3 235B',     'input_cost' => 0.22, 'output_cost' => 0.88],
+            'accounts/fireworks/models/mixtral-8x22b-instruct'   => ['label' => 'Mixtral 8x22B',  'input_cost' => 1.2,  'output_cost' => 1.2],
+        ],
+    ],
     'codex' => [
         'name' => 'Codex (Local)',
         'local' => true,
@@ -194,6 +244,17 @@ return [
         'default_url' => 'http://localhost:1234/v1',
         'url_hint' => 'URL with /v1 suffix — e.g. http://localhost:1234/v1',
         'models' => [], // Dynamic — set by the user when configuring the endpoint
+    ],
+
+    // LiteLLM proxy — routes calls to 100+ providers (Bedrock, Vertex, Cohere, Together, etc.)
+    // Teams self-host a LiteLLM proxy and register its base URL here.
+    // See https://docs.litellm.ai/docs/proxy/quick_start for setup instructions.
+    'litellm_proxy' => [
+        'name' => 'LiteLLM Proxy',
+        'http_local' => true,
+        'default_url' => 'http://localhost:4000',
+        'url_hint' => 'Base URL of your LiteLLM proxy — e.g. http://litellm:4000 (without /v1)',
+        'models' => [], // Dynamic — populated from proxy /models endpoint or set manually
     ],
 
     // Bridge-backed providers — routed through the FleetQ Bridge daemon

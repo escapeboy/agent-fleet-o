@@ -38,6 +38,9 @@ Schedule::command('projects:check-budgets')->hourly();
 // Agent memory pruning
 Schedule::command('memories:prune')->dailyAt('03:00');
 
+// Agent feedback analysis — weekly batch generates EvolutionProposals for underperforming agents
+Schedule::command('agents:analyze-feedback')->weeklyOn(1, '06:00');
+
 // Prune growing tables: llm_request_logs (30d), semantic_cache_entries (expired+90d), assistant_messages (90d)
 Schedule::command('model:prune')->dailyAt('04:00');
 
