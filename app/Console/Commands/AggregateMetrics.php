@@ -27,6 +27,7 @@ class AggregateMetrics extends Command
         };
 
         $aggregates = Metric::select([
+            'team_id',
             'experiment_id',
             'type as metric_type',
             DB::raw('SUM(value) as sum_value'),
@@ -34,7 +35,7 @@ class AggregateMetrics extends Command
             DB::raw('AVG(value) as avg_value'),
         ])
             ->whereBetween('occurred_at', [$periodStart, $periodEnd])
-            ->groupBy('experiment_id', 'type')
+            ->groupBy('team_id', 'experiment_id', 'type')
             ->get();
 
         $created = 0;
@@ -48,6 +49,7 @@ class AggregateMetrics extends Command
                     'period_start' => $periodStart,
                 ],
                 [
+                    'team_id' => $agg->team_id,
                     'sum_value' => $agg->sum_value,
                     'count' => $agg->count,
                     'avg_value' => $agg->avg_value,

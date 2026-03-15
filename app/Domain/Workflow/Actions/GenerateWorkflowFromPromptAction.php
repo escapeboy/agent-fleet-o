@@ -3,6 +3,7 @@
 namespace App\Domain\Workflow\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Services\GraphValidator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -41,7 +42,8 @@ class GenerateWorkflowFromPromptAction
 
         $systemPrompt = $this->buildSystemPrompt($availableAgents);
 
-        $resolved = $this->providerResolver->resolve();
+        $team = $teamId ? Team::find($teamId) : null;
+        $resolved = $this->providerResolver->resolve(team: $team);
 
         try {
             $response = $this->gateway->complete(new AiRequestDTO(
@@ -52,6 +54,8 @@ class GenerateWorkflowFromPromptAction
                 maxTokens: 4096,
                 temperature: 0.3,
                 purpose: 'workflow_generation',
+                teamId: $teamId,
+                userId: $userId,
             ));
 
             $parsed = $this->parseResponse($response->content);
