@@ -68,9 +68,62 @@ class ProcessAssistantMessageJob implements ShouldQueue
                 model: $this->model,
                 placeholderMessageId: $this->placeholderMessageId,
             );
+
+            // Detect empty bridge response: agent ran but produced no output.
+            // This happens when the agent CLI exits non-zero or produces no text,
+            // but the bridge does not propagate an explicit error frame.
+            $placeholder->refresh();
+            if (($placeholder->content ?? '') === '' && str_contains($this->provider ?? '', 'bridge')) {
+                \Sentry\withScope(function (\Sentry\State\Scope $scope): void {
+                    $scope->setTag('provider', $this->provider ?? 'unknown');
+                    $scope->setTag('model', $this->model ?? 'unknown');
+                    $scope->setContext('bridge_debug', [
+                        'provider' => $this->provider,
+                        'model' => $this->model,
+                        'team_id' => $this->teamId,
+                        'conversation_id' => $this->conversationId,
+                        'placeholder_id' => $this->placeholderMessageId,
+                    ]);
+                    \Sentry\captureMessage(
+                        'Bridge agent returned empty response: '.($this->provider ?? '?').'/'.($this->model ?? '?'),
+                        \Sentry\Severity::warning(),
+                    );
+                });
+
+                Log::warning('ProcessAssistantMessageJob: bridge agent returned empty response', [
+                    'conversation_id' => $this->conversationId,
+                    'provider' => $this->provider,
+                    'model' => $this->model,
+                    'team_id' => $this->teamId,
+                ]);
+
+                $placeholder->update([
+                    'content' => sprintf(
+                        'No response from agent. The `%s` agent ran but returned no output. Check that the agent is authenticated and the model name is valid.',
+                        $this->model ?? 'unknown',
+                    ),
+                    'metadata' => ['status' => 'failed', 'error' => 'empty_bridge_response'],
+                ]);
+            }
         } catch (\Throwable $e) {
+            \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($e): void {
+                $scope->setTag('provider', $this->provider ?? 'unknown');
+                $scope->setTag('model', $this->model ?? 'unknown');
+                $scope->setContext('bridge_debug', [
+                    'provider' => $this->provider,
+                    'model' => $this->model,
+                    'team_id' => $this->teamId,
+                    'conversation_id' => $this->conversationId,
+                    'placeholder_id' => $this->placeholderMessageId,
+                ]);
+                \Sentry\captureException($e);
+            });
+
             Log::error('ProcessAssistantMessageJob failed', [
                 'conversation_id' => $this->conversationId,
+                'provider' => $this->provider,
+                'model' => $this->model,
+                'team_id' => $this->teamId,
                 'error' => $e->getMessage(),
             ]);
 
@@ -83,6 +136,21 @@ class ProcessAssistantMessageJob implements ShouldQueue
 
     public function failed(?\Throwable $e): void
     {
+        \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($e): void {
+            $scope->setTag('provider', $this->provider ?? 'unknown');
+            $scope->setTag('model', $this->model ?? 'unknown');
+            $scope->setContext('bridge_debug', [
+                'provider' => $this->provider,
+                'model' => $this->model,
+                'team_id' => $this->teamId,
+                'conversation_id' => $this->conversationId,
+                'placeholder_id' => $this->placeholderMessageId,
+            ]);
+            if ($e) {
+                \Sentry\captureException($e);
+            }
+        });
+
         $placeholder = AssistantMessage::find($this->placeholderMessageId);
 
         $placeholder?->update([
@@ -92,6 +160,9 @@ class ProcessAssistantMessageJob implements ShouldQueue
 
         Log::error('ProcessAssistantMessageJob hard failure', [
             'conversation_id' => $this->conversationId,
+            'provider' => $this->provider,
+            'model' => $this->model,
+            'team_id' => $this->teamId,
             'error' => $e?->getMessage(),
         ]);
     }

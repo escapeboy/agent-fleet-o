@@ -86,6 +86,23 @@ class LocalBridgeGateway implements AiGatewayInterface
             $item = $this->registry->popChunk($requestId, self::RELAY_TIMEOUT);
 
             if ($item === null) {
+                \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($requestId, $request): void {
+                    $scope->setTag('provider', $request->provider);
+                    $scope->setTag('model', $request->model);
+                    $scope->setContext('bridge_timeout', [
+                        'request_id' => $requestId,
+                        'provider' => $request->provider,
+                        'model' => $request->model,
+                        'team_id' => $request->teamId,
+                        'timeout_seconds' => self::RELAY_TIMEOUT,
+                        'content_received_so_far' => strlen($content),
+                    ]);
+                    \Sentry\captureMessage(
+                        "Bridge relay timed out: {$request->provider}/{$request->model} ({$requestId})",
+                        \Sentry\Severity::error(),
+                    );
+                });
+
                 throw new BridgeTimeoutException($requestId, self::RELAY_TIMEOUT);
             }
 
@@ -102,6 +119,22 @@ class LocalBridgeGateway implements AiGatewayInterface
                 $usage = $this->registry->getUsage($requestId);
 
                 if (isset($usage['__error'])) {
+                    \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($requestId, $request, $usage): void {
+                        $scope->setTag('provider', $request->provider);
+                        $scope->setTag('model', $request->model);
+                        $scope->setContext('bridge_execution_error', [
+                            'request_id' => $requestId,
+                            'provider' => $request->provider,
+                            'model' => $request->model,
+                            'team_id' => $request->teamId,
+                            'error' => $usage['__error'],
+                        ]);
+                        \Sentry\captureMessage(
+                            "Bridge execution error: {$request->provider}/{$request->model} — {$usage['__error']}",
+                            \Sentry\Severity::error(),
+                        );
+                    });
+
                     throw new BridgeExecutionException($usage['__error'], $requestId);
                 }
 
