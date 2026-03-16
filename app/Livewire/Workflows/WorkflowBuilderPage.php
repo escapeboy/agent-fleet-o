@@ -138,7 +138,7 @@ class WorkflowBuilderPage extends Component
         $this->edges = $edges;
     }
 
-    public function save(): void
+    public function save(bool $flash = true): void
     {
         $this->validate([
             'name' => 'required|string|max:255',
@@ -158,7 +158,9 @@ class WorkflowBuilderPage extends Component
                     edges: $this->edges,
                 );
 
-                session()->flash('success', 'Workflow updated.');
+                if ($flash) {
+                    session()->flash('success', 'Workflow updated.');
+                }
             } else {
                 $team = auth()->user()->currentTeam;
 
@@ -173,7 +175,9 @@ class WorkflowBuilderPage extends Component
                 );
 
                 $this->workflowId = $workflow->id;
-                session()->flash('success', 'Workflow created.');
+                if ($flash) {
+                    session()->flash('success', 'Workflow created.');
+                }
             }
         } catch (\Throwable $e) {
             session()->flash('error', $e->getMessage());
@@ -208,7 +212,7 @@ class WorkflowBuilderPage extends Component
             return;
         }
 
-        $this->save();
+        $this->save(flash: false);
 
         $workflow = Workflow::findOrFail($this->workflowId);
         $result = app(ValidateWorkflowGraphAction::class)->execute($workflow, activateIfValid: true);
@@ -222,6 +226,9 @@ class WorkflowBuilderPage extends Component
             $this->redirectRoute('workflows.show', $workflow);
         } elseif (! $result['valid']) {
             session()->flash('error', 'Cannot activate: fix validation errors first.');
+        } elseif (! $workflow->isDraft()) {
+            session()->flash('info', 'Workflow is already active.');
+            $this->redirectRoute('workflows.show', $workflow);
         }
     }
 
