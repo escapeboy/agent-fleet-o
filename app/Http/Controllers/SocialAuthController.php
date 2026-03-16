@@ -33,7 +33,13 @@ class SocialAuthController extends Controller
         $this->validateProvider($provider);
 
         try {
-            $socialUser = Socialite::driver($provider)->user();
+            $driver = Socialite::driver($provider);
+
+            if (in_array($provider, ['google', 'linkedin-openid', 'apple'], true)) {
+                $driver->enablePKCE();
+            }
+
+            $socialUser = $driver->user();
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Social login callback failed', [
                 'provider' => $provider,
