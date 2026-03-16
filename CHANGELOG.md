@@ -2,6 +2,52 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.7.0] - 2026-03-16
+
+### Added
+
+- **Social Login** — One-click sign-in and sign-up via Google, GitHub, LinkedIn, X, and Apple using OAuth2 (Socialite + PKCE). Users can link or unlink providers from their profile. Social-only accounts can set a password later. All OAuth flows include state validation and PKCE for public clients.
+- **User Profile Settings Page** — New `/profile` route with five tabs: Profile (name/email), Password (change or set initial password for social accounts), Security (2FA enable/disable, QR code, recovery codes), Connected Accounts (link/unlink OAuth providers with lockout guard), and Notifications (per-channel preferences).
+- **Header User Dropdown** — Avatar and name in the top-right corner open a dropdown with quick links to Profile Settings, Team Settings, and Sign Out. Replaces the bare logout button.
+- **LiteLLM Provider Expansion** — Additional LLM providers are now accessible via the LiteLLM gateway, including any OpenAI-compatible endpoint registered in team settings.
+- **Agent Feedback Loop** — Thumbs-up / thumbs-down ratings with optional labels and correction text on agent executions. When three or more negative ratings accumulate within 30 days, `AnalyzeAgentFeedbackAction` automatically generates an Evolution Proposal to improve the agent. Available via UI, agent-to-agent, and MCP tools (`agent_feedback_submit`, `agent_feedback_list`, `agent_feedback_stats`).
+- **Git Repository Integration** — Multi-mode git repository linking: read-only file access, commit and PR creation, and inbound webhook signal triggers. Teams can connect any GitHub repository and subscribe to push, PR, and issue events.
+- **Bridge Relay Mode** — Run local AI agents (Claude Code, Codex, Kiro, Gemini CLI) as first-class platform workers via the FleetQ Bridge WebSocket relay. Per-agent model selection, live connection status in the Agents settings tab, and auto-discovery of running local agents.
+- **Browser-Use Sidecar Client** — Built-in browser automation via the browser-use Cloud sidecar. Agents with the Browser built-in tool can now open URLs, click, fill forms, and extract content without configuring a separate Playwright server.
+- **Bash Sandbox Sidecar** — Just-Bash sidecar client with virtual filesystem sandbox support. Agents execute bash scripts in an isolated environment with controlled file access.
+- **Chatbot Management Enhancements** — Eight improvements: knowledge base chunk management, analytics summary API, per-session token limits, learning entry archival, bulk KB import, custom system prompt per chatbot, multi-language detection, and webhook session handoff.
+- **Plugin Extension Architecture** — Five-phase plugin system for extending platform behaviour without forking. Plugins can register Livewire components, Blade views, routes, event listeners, and MCP tools. Teams enable or disable individual plugins independently via per-team plugin state.
+- **PWA Push Notification Prompt** — The notification bell now triggers a push subscription request when push is available, allowing users to opt in to browser push notifications directly from the header.
+- **REST API and MCP Expansion** — ~50 new endpoints and 20 new MCP tools covering: Integration lifecycle (connect/disconnect/ping/execute/capabilities), Assistant conversations, Trigger CRUD + dry-run, Memory CRUD + semantic search, Evolution proposal review, Email themes and templates (including AI generation), Agent config history and rollback, Agent runtime state, Delegation depth guard, and Approval SLA escalation.
+- **Agent Config Versioning** — All agent configuration changes are stored as versioned snapshots. Teams can browse history, diff versions, and rollback to any previous config via the UI, REST API, or MCP tool `agent_rollback`.
+- **Twin-inspired UX** — NLP schedule input ("every Monday at 9am"), run counter badge on project cards, and split model tier view (fast / balanced / powerful) in agent and skill creation forms.
+- **Mobile Responsiveness** — Comprehensive responsive layout improvements across all list pages, detail pages, forms, and the workflow builder. Secondary columns collapse on small screens; sidebar opens as a full-height drawer with backdrop.
+- **Initial Credit Balance on Install** — `php artisan app:install` seeds a starter credit balance so fresh installations can run experiments immediately.
+- **Relay Mode Settings UI** — The Agents settings tab shows live bridge connection status, connected agent list with version info, and copy-ready setup instructions.
+
+### Fixed
+
+- **2FA QR Code** — The `TwoFactorAuthenticatable` trait was missing from the User model, causing `twoFactorQrCodeSvg()` to be undefined and the QR code to never render.
+- **Password Error Display** — Named Livewire error bags (`$errors->updatePassword->first()`) are not supported in Livewire 4; switched to the default bag so validation errors appear correctly.
+- **500 on `/notifications/preferences`** — `NotificationPreferencesPage` had an outdated `typeLabels` array missing five keys (`experiment.budget.warning`, `approval.escalated`, `human_task.sla_breached`, `budget.exceeded`, `crew.execution.completed`) that `availableChannels()` returns.
+- **500 on `/two-factor-challenge`** — `Fortify::twoFactorChallengeView()` was never registered, leaving `TwoFactorChallengeViewResponse` unbound in the container. Added the registration and created the challenge view.
+- **Social Login Security** — Four vulnerabilities fixed: PKCE enabled for Google, LinkedIn, and Apple; unverified-email account takeover prevented in the social collect-email flow; provider allowlist validation added to `ConnectedAccountsForm::unlink()`; push subscription endpoint validated (HTTPS-only, 2048-char limit).
+- **Bridge Relay Fixes** — Tool-call loop used for Claude Code relay instead of false MCP claim; empty bridge response detected before DB update to prevent Livewire race; local agents routed through bridge relay in relay mode.
+- **Bridge Model List** — Bridge agent model list now populated dynamically from active `BridgeConnection` records instead of hardcoded values.
+- **Metric and Workflow Generation** — Fixed null `team_id` in `metric_aggregations` inserts and workflow generation requests.
+- **Named Parameter Mismatch** — Fixed incorrect named parameter in `RecordAgentConfigRevisionAction` call that caused agent saves to fail silently.
+- **MCP Password Guard** — `ProfilePasswordUpdateTool` now explicitly rejects requests that omit `current_password` when the user already has a password set.
+- **MCP Profile Update** — Removed `array_filter` from `ProfileUpdateTool` input so empty strings correctly trigger Fortify validation rather than silently retaining old values.
+
+### Security
+
+- PKCE enforced on all public OAuth clients (Google, LinkedIn, Apple).
+- Social email collection flow validates provider token before trusting the supplied email address, preventing account takeover via unverified email.
+- `ConnectedAccountsForm::unlink()` validates provider against an allowlist before any DB interaction.
+- Push subscription endpoint restricted to HTTPS URLs with a 2048-character maximum.
+
+---
+
 ## [1.6.0] - 2026-03-11
 
 ### Added
