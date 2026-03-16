@@ -108,18 +108,6 @@ Route::post('/auth/social/store-email', [SocialAuthController::class, 'storeEmai
     ->middleware('throttle:10,1')
     ->name('auth.social.store-email');
 
-// Merge confirmation when email already exists (X/Apple low-trust providers).
-// do-merge sends an OTP; verify-merge validates it and completes the link.
-Route::get('/auth/social/confirm-merge', fn () => view('auth.social-confirm-merge'))
-    ->name('auth.social.confirm-merge');
-Route::post('/auth/social/do-merge', [SocialAuthController::class, 'doMerge'])
-    ->middleware('throttle:5,1')
-    ->name('auth.social.do-merge');
-Route::get('/auth/social/verify-merge', fn () => view('auth.social-verify-merge'))
-    ->name('auth.social.verify-merge');
-Route::post('/auth/social/verify-merge', [SocialAuthController::class, 'verifyMerge'])
-    ->middleware('throttle:10,1')
-    ->name('auth.social.verify-merge.submit');
 
 // Account linking / unlinking (authenticated users)
 Route::middleware(['auth', 'verified'])->group(function () {

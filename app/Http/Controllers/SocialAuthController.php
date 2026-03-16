@@ -2,21 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Domain\Shared\Notifications\SocialMergeOtpNotification;
 use App\Domain\Shared\Services\SocialAccountService;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Notification;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
     private const SUPPORTED_PROVIDERS = ['google', 'github', 'linkedin-openid', 'x', 'apple'];
-
-    /** OTP validity window in minutes. */
-    private const OTP_TTL_MINUTES = 10;
 
     public function __construct(private readonly SocialAccountService $socialAccountService) {}
 
@@ -120,82 +115,6 @@ class SocialAuthController extends Controller
         if (! $user) {
             return redirect()->route('login')
                 ->withErrors(['social' => 'Session expired. Please try again.']);
-        }
-
-        // Regenerate session to prevent session fixation after privilege change.
-        $request->session()->regenerate();
-        Auth::login($user, remember: true);
-
-        return redirect()->intended(route('dashboard'));
-    }
-
-    /**
-     * Initiate merge: generate OTP and email it to the address in the pending session.
-     * The actual account link is completed only after OTP verification.
-     */
-    public function doMerge(Request $request): RedirectResponse
-    {
-        $pending = session('pending_social_link');
-
-        if (! $pending) {
-            return redirect()->route('login')
-                ->withErrors(['social' => 'Session expired. Please try again.']);
-        }
-
-        $existingUser = User::where('email', $pending['email'])->first();
-
-        if (! $existingUser) {
-            session()->forget('pending_social_link');
-
-            return redirect()->route('login')
-                ->withErrors(['social' => 'Account not found. Please try again.']);
-        }
-
-        // Generate a 6-digit OTP, store it with an expiry in the session.
-        $otp     = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $expires = now()->addMinutes(self::OTP_TTL_MINUTES);
-
-        $pending['otp']            = $otp;
-        $pending['otp_expires_at'] = $expires->toIso8601String();
-        session(['pending_social_link' => $pending]);
-
-        $existingUser->notify(new SocialMergeOtpNotification($otp, ucfirst($pending['provider'])));
-
-        return redirect()->route('auth.social.verify-merge');
-    }
-
-    /**
-     * Verify the OTP sent to the existing account's email and complete the link.
-     */
-    public function verifyMerge(Request $request): RedirectResponse
-    {
-        $request->validate(['otp' => ['required', 'string', 'digits:6']]);
-
-        $pending = session('pending_social_link');
-
-        if (! $pending || ! isset($pending['otp'], $pending['otp_expires_at'])) {
-            return redirect()->route('login')
-                ->withErrors(['social' => 'Session expired. Please try again.']);
-        }
-
-        // Check expiry.
-        if (now()->isAfter($pending['otp_expires_at'])) {
-            session()->forget('pending_social_link');
-
-            return redirect()->route('login')
-                ->withErrors(['social' => 'Verification code expired. Please start again.']);
-        }
-
-        // Constant-time comparison to prevent timing attacks.
-        if (! hash_equals($pending['otp'], $request->input('otp'))) {
-            return back()->withErrors(['otp' => 'Invalid verification code. Please try again.']);
-        }
-
-        $user = $this->socialAccountService->confirmMerge();
-
-        if (! $user) {
-            return redirect()->route('login')
-                ->withErrors(['social' => 'Something went wrong. Please try again.']);
         }
 
         // Regenerate session to prevent session fixation after privilege change.

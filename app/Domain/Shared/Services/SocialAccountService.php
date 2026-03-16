@@ -9,8 +9,11 @@ use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 class SocialAccountService
 {
-    // Providers that verify email addresses — safe to auto-link to existing accounts
-    private const VERIFIED_EMAIL_PROVIDERS = ['google', 'github', 'linkedin-openid'];
+    // All supported OAuth providers verify the user's email before returning it —
+    // safe to auto-link to existing accounts. The only exception is GitHub when
+    // the user has "Keep email private" enabled: getEmail() returns null and the
+    // collect-email flow handles that case separately.
+    private const VERIFIED_EMAIL_PROVIDERS = ['google', 'github', 'linkedin-openid', 'x', 'apple'];
 
     /**
      * Handle the OAuth callback and return the authenticated user,
@@ -55,32 +58,13 @@ class SocialAccountService
             return ['user' => null, 'redirect' => route('auth.social.collect-email')];
         }
 
-        // 4. Existing user with matching email
+        // 4. Existing user with matching email — all providers are verified, auto-link.
         $existingUser = User::where('email', $email)->first();
 
         if ($existingUser) {
-            if (in_array($provider, self::VERIFIED_EMAIL_PROVIDERS, true)) {
-                // Auto-link for trusted providers
-                $this->attachSocialAccount($existingUser, $provider, $socialUser);
+            $this->attachSocialAccount($existingUser, $provider, $socialUser);
 
-                return ['user' => $existingUser, 'redirect' => null];
-            }
-
-            // Ask for confirmation for lower-trust providers (X, Apple).
-            // We intentionally omit OAuth tokens here — they would be sensitive data
-            // sitting in the session during the OTP verification step. Tokens will be
-            // refreshed on the user's next social login anyway.
-            session([
-                'pending_social_link' => [
-                    'provider'         => $provider,
-                    'provider_user_id' => (string) $socialUser->getId(),
-                    'email'            => $email,
-                    'name'             => $socialUser->getName(),
-                    'avatar'           => $socialUser->getAvatar(),
-                ],
-            ]);
-
-            return ['user' => null, 'redirect' => route('auth.social.confirm-merge')];
+            return ['user' => $existingUser, 'redirect' => null];
         }
 
         // 5. Brand new user
@@ -130,37 +114,6 @@ class SocialAccountService
         ]);
 
         session()->forget('pending_social_auth');
-
-        return $user;
-    }
-
-    /**
-     * Confirm and complete a pending merge (for X/Apple providers).
-     */
-    public function confirmMerge(): ?User
-    {
-        $pending = session('pending_social_link');
-        if (! $pending) {
-            return null;
-        }
-
-        $user = User::where('email', $pending['email'])->first();
-        if (! $user) {
-            return null;
-        }
-
-        // Tokens are not stored in the session (see handleCallback). They will be
-        // populated on the user's first login via this provider after the link.
-        UserSocialAccount::create([
-            'user_id'          => $user->id,
-            'provider'         => $pending['provider'],
-            'provider_user_id' => $pending['provider_user_id'],
-            'email'            => $pending['email'],
-            'name'             => $pending['name'],
-            'avatar'           => $pending['avatar'],
-        ]);
-
-        session()->forget('pending_social_link');
 
         return $user;
     }
