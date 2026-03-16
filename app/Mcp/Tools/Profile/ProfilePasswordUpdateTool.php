@@ -41,9 +41,13 @@ class ProfilePasswordUpdateTool extends Tool
 
         if ($user->password !== null) {
             // Change existing password — use Fortify action (validates current_password)
+            if (! $request->get('current_password')) {
+                return Response::error('current_password is required to change an existing password.');
+            }
+
             try {
                 app(UpdateUserPassword::class)->update($user, [
-                    'current_password' => $request->get('current_password', ''),
+                    'current_password' => $request->get('current_password'),
                     'password' => $newPassword,
                     'password_confirmation' => $confirmation,
                 ]);

@@ -35,12 +35,18 @@ class NotificationPreferencesForm extends Component
     {
         $user = auth()->user();
 
-        if (! $user || empty($payload['endpoint'])) {
+        $endpoint = $payload['endpoint'] ?? '';
+
+        if (! $user || empty($endpoint)) {
+            return;
+        }
+
+        if (! filter_var($endpoint, FILTER_VALIDATE_URL) || ! str_starts_with($endpoint, 'https://') || strlen($endpoint) > 2048) {
             return;
         }
 
         $user->updatePushSubscription(
-            endpoint: $payload['endpoint'],
+            endpoint: $endpoint,
             key: $payload['keys']['p256dh'] ?? null,
             token: $payload['keys']['auth'] ?? null,
             contentEncoding: 'aesgcm',

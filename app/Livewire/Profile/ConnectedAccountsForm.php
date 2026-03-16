@@ -25,6 +25,12 @@ class ConnectedAccountsForm extends Component
 
     public function unlink(string $provider): void
     {
+        $allowedProviders = array_column($this->providers, 'key');
+
+        if (! in_array($provider, $allowedProviders, true)) {
+            return;
+        }
+
         $user = auth()->user();
 
         $hasPassword = $user->password !== null;

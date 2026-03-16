@@ -32,10 +32,10 @@ class ProfileUpdateTool extends Tool
             return Response::error('Not authenticated.');
         }
 
-        $input = array_filter([
+        $input = [
             'name' => $request->get('name', $user->name),
             'email' => $request->get('email', $user->email),
-        ]);
+        ];
 
         try {
             app(UpdateUserProfileInformation::class)->update($user, $input);
