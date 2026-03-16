@@ -2,13 +2,29 @@
 
 namespace Tests\Feature\Domain\Signal;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Models\Signal;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ClearCueWebhookTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $owner = User::factory()->create();
+        $team = Team::create([
+            'name' => 'Default Team',
+            'slug' => 'default',
+            'owner_id' => $owner->id,
+            'settings' => [],
+        ]);
+        $this->app->instance('current_team', $team);
+    }
 
     private function makeClearCuePayload(array $overrides = []): array
     {

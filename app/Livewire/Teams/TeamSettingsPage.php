@@ -529,6 +529,7 @@ class TeamSettingsPage extends Component
             'passkeys' => class_exists(WebauthnServiceProvider::class)
                 ? (auth()->user()?->webauthnKeys ?? collect())
                 : collect(),
+            'socialAccounts' => auth()->user()?->socialAccounts()->orderBy('provider')->get() ?? collect(),
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }

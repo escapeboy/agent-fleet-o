@@ -23,6 +23,7 @@ class DisableAgentAction
         $this->circuitBreaker->reset($agent->provider);
 
         AuditEntry::create([
+            'team_id' => $agent->team_id,
             'event' => 'agent.disabled',
             'subject_type' => Agent::class,
             'subject_id' => $agent->id,

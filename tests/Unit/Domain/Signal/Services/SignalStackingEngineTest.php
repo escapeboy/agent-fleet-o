@@ -2,11 +2,12 @@
 
 namespace Tests\Unit\Domain\Signal\Services;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Models\CompanyIntentScore;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\SignalStackingEngine;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class SignalStackingEngineTest extends TestCase
@@ -21,7 +22,15 @@ class SignalStackingEngineTest extends TestCase
     {
         parent::setUp();
         $this->engine = new SignalStackingEngine;
-        $this->teamId = Str::uuid()->toString();
+
+        $user = User::factory()->create();
+        $team = Team::create([
+            'name' => 'Test Team',
+            'slug' => 'test-team-'.uniqid(),
+            'owner_id' => $user->id,
+            'settings' => [],
+        ]);
+        $this->teamId = $team->id;
     }
 
     /** @test */

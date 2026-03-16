@@ -26,6 +26,7 @@ abstract class ApiTestCase extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Cache::flush(); // Clear rate limiter state before each test
 
         $this->user = User::factory()->create();
 

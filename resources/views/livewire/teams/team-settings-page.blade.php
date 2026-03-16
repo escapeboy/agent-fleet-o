@@ -910,6 +910,49 @@
     </div>
     @endif
 
+    {{-- Connected Social Accounts --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Connected Social Accounts</h2>
+        <p class="mb-4 text-sm text-gray-500">Connect social accounts to enable one-click login.</p>
+
+        @php
+            $providers = [
+                'google'          => ['label' => 'Google',   'color' => 'text-[#4285F4]'],
+                'github'          => ['label' => 'GitHub',   'color' => 'text-gray-900'],
+                'linkedin-openid' => ['label' => 'LinkedIn', 'color' => 'text-[#0A66C2]'],
+                'x'               => ['label' => 'X',        'color' => 'text-gray-900'],
+                'apple'           => ['label' => 'Apple',    'color' => 'text-gray-900'],
+            ];
+            $connectedMap = $socialAccounts->keyBy('provider');
+        @endphp
+
+        <div class="space-y-2">
+            @foreach($providers as $key => $meta)
+                @php $account = $connectedMap->get($key); @endphp
+                <div class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2.5">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-medium text-gray-900">{{ $meta['label'] }}</span>
+                        @if($account)
+                            <span class="text-xs text-gray-500">{{ $account->email ?? $account->name ?? 'Connected' }}</span>
+                            <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Connected</span>
+                        @else
+                            <span class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Not connected</span>
+                        @endif
+                    </div>
+                    @if($account)
+                        <form method="POST" action="{{ route('auth.social.unlink', $key) }}" onsubmit="return confirm('Disconnect {{ $meta['label'] }}?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="text-sm text-red-600 hover:text-red-800">Disconnect</button>
+                        </form>
+                    @else
+                        <a href="{{ route('auth.social.link', $key) }}" class="text-sm text-primary-600 hover:text-primary-700">Connect</a>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    </div>
+
     {{-- Chatbot Feature --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Chatbot Feature</h2>

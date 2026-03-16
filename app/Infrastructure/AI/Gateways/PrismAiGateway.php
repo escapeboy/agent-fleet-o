@@ -465,6 +465,11 @@ class PrismAiGateway implements AiGatewayInterface
      */
     private function normalizeCustomEndpoint(AiRequestDTO $request): AiRequestDTO
     {
+        // Validate early so the middleware pipeline never runs with null teamId
+        if ($request->provider === 'custom_endpoint' && (! $request->teamId || ! $request->providerName)) {
+            throw new RuntimeException('Custom endpoint requires both teamId and providerName.');
+        }
+
         if (! str_starts_with($request->provider, 'custom_endpoint:')) {
             return $request;
         }

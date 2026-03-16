@@ -67,6 +67,8 @@
                     No account yet? <a href="{{ route('register') }}" class="text-primary-600 hover:text-primary-700">Create one</a>
                 </p>
             </form>
+
+            <x-social-login-buttons />
         </div>
     </div>
 </body>

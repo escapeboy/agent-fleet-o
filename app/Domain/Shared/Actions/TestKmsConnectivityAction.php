@@ -32,7 +32,7 @@ class TestKmsConnectivityAction
             $result = $this->kmsService->testConnection($config);
 
             CredentialEncryption::logAccess(
-                $teamId, 'team_kms_config', 'test',
+                $teamId, 'team_kms_config', $teamId,
                 'kms.test_succeeded',
                 extra: ['provider' => $provider->value],
             );
@@ -45,7 +45,7 @@ class TestKmsConnectivityAction
             ];
         } catch (\Throwable $e) {
             CredentialEncryption::logAccess(
-                $teamId, 'team_kms_config', 'test',
+                $teamId, 'team_kms_config', $teamId,
                 'kms.test_failed',
                 extra: ['provider' => $provider->value, 'error' => $e->getMessage()],
             );

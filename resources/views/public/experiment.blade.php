@@ -65,16 +65,20 @@
                 <h2 class="mb-4 text-lg font-semibold text-gray-900">Pipeline Stages</h2>
                 <div class="space-y-3">
                     @foreach($stages as $stage)
+                        @php
+                            $stageValue = $stage->stage instanceof \BackedEnum ? $stage->stage->value : (string) $stage->stage;
+                            $statusValue = $stage->status instanceof \BackedEnum ? $stage->status->value : (string) $stage->status;
+                            $statusColor = $statusValue === 'completed' ? 'bg-green-100 text-green-700'
+                                : ($statusValue === 'failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600');
+                        @endphp
                         <div class="rounded-xl border border-gray-200 bg-white p-4">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
-                                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold
-                                        {{ $stage->status === 'completed' ? 'bg-green-100 text-green-700' :
-                                           ($stage->status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') }}">
+                                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold {{ $statusColor }}">
                                         {{ $loop->iteration }}
                                     </span>
-                                    <span class="font-medium text-gray-900">{{ ucfirst($stage->type) }}</span>
-                                    <span class="text-xs text-gray-400 capitalize">{{ str_replace('_', ' ', $stage->status) }}</span>
+                                    <span class="font-medium text-gray-900">{{ ucfirst(str_replace('_', ' ', $stageValue)) }}</span>
+                                    <span class="text-xs text-gray-400 capitalize">{{ str_replace('_', ' ', $statusValue) }}</span>
                                 </div>
                                 @if($stage->completed_at && $stage->started_at)
                                     <span class="text-xs text-gray-400">
@@ -83,11 +87,11 @@
                                 @endif
                             </div>
 
-                            @if($config['show_outputs'] && !empty($stage->output))
+                            @if($config['show_outputs'] && !empty($stage->output_snapshot))
                                 @php
-                                    $outputText = is_array($stage->output)
-                                        ? ($stage->output['summary'] ?? null)
-                                        : $stage->output;
+                                    $outputText = is_array($stage->output_snapshot)
+                                        ? ($stage->output_snapshot['summary'] ?? null)
+                                        : $stage->output_snapshot;
                                 @endphp
                                 @if($outputText)
                                     <div class="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">

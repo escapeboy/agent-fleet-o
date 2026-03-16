@@ -7,6 +7,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DetectContradictionAction
@@ -30,13 +31,24 @@ class DetectContradictionAction
         Carbon $validAt,
     ): array {
         // 1. Find active edges with the same source entity and relation type
-        $candidates = KgEdge::withoutGlobalScopes()
-            ->where('team_id', $teamId)
-            ->where('source_entity_id', $sourceEntityId)
-            ->where('relation_type', $relationType)
-            ->whereNull('invalid_at')
-            ->whereNotNull('fact_embedding')
-            ->get();
+        // Use DB::transaction() (savepoint when nested) so a failed query does not
+        // abort the outer transaction — pgvector column may not exist.
+        try {
+            $candidates = DB::transaction(fn () => KgEdge::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('source_entity_id', $sourceEntityId)
+                ->where('relation_type', $relationType)
+                ->whereNull('invalid_at')
+                ->whereNotNull('fact_embedding')
+                ->get());
+        } catch (\Illuminate\Database\QueryException $e) {
+            // fact_embedding column may not exist (PostgreSQL without pgvector extension)
+            Log::debug('DetectContradictionAction: fact_embedding column unavailable', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
 
         if ($candidates->isEmpty()) {
             return [];

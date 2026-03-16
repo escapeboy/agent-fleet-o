@@ -209,6 +209,11 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
+        // Apple Sign In via SocialiteProviders community package
+        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event) {
+            $event->extendSocialite('apple', \SocialiteProviders\Apple\Provider::class);
+        });
+
         // Bridge relay: forward Reverb client-relay.* whispers into Redis stream
         Event::listen(MessageReceived::class, HandleBridgeRelayResponse::class);
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
@@ -82,6 +83,47 @@ use Illuminate\Support\Facades\Route;
 
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
+
+// ── Social Login (OAuth) ──────────────────────────────────────────────────────
+// Guest-only initiation + callback routes (rate limited)
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
+    Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
+        ->where('provider', 'google|github|linkedin-openid|x|apple')
+        ->name('auth.social.redirect');
+
+    Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+        ->where('provider', 'google|github|linkedin-openid|x')
+        ->name('auth.social.callback');
+
+    // Apple sends callback as POST (response_mode=form_post); must bypass CSRF
+    Route::post('/auth/apple/callback', [SocialAuthController::class, 'appleCallback'])
+        ->name('auth.apple.callback')
+        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+});
+
+// Email collection when provider returns no email (e.g. X/Twitter)
+Route::get('/auth/social/collect-email', fn () => view('auth.social-collect-email'))
+    ->name('auth.social.collect-email');
+Route::post('/auth/social/store-email', [SocialAuthController::class, 'storeEmail'])
+    ->name('auth.social.store-email');
+
+// Merge confirmation when email already exists (X/Apple low-trust providers)
+Route::get('/auth/social/confirm-merge', fn () => view('auth.social-confirm-merge'))
+    ->name('auth.social.confirm-merge');
+Route::post('/auth/social/do-merge', [SocialAuthController::class, 'doMerge'])
+    ->name('auth.social.do-merge');
+
+// Account linking / unlinking (authenticated users)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/auth/{provider}/link', [SocialAuthController::class, 'linkRedirect'])
+        ->where('provider', 'google|github|linkedin-openid|x|apple')
+        ->name('auth.social.link');
+
+    Route::delete('/auth/{provider}/unlink', [SocialAuthController::class, 'unlink'])
+        ->where('provider', 'google|github|linkedin-openid|x|apple')
+        ->name('auth.social.unlink');
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Root and /setup are self-hosted-only — the cloud edition registers its own
 // versions in cloud/routes/cloud-web.php (landing page + 404 for setup).

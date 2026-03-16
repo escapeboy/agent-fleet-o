@@ -22,7 +22,11 @@ class NotificationService
         ?string $actionUrl = null,
         ?array $data = null,
     ): ?UserNotification {
-        $user = User::find($userId);
+        try {
+            $user = User::find($userId);
+        } catch (\Illuminate\Database\QueryException) {
+            return null;
+        }
 
         if (! $user) {
             return null;

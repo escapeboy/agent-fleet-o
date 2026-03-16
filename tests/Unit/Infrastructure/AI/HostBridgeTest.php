@@ -42,6 +42,7 @@ class HostBridgeTest extends TestCase
             'local_agents.bridge.secret' => 'test-secret-123',
             'local_agents.bridge.connect_timeout' => 5,
             'local_agents.timeout' => 300,
+            'bridge.relay_enabled' => false,
             // Configure llm_providers for agent key resolution
             'llm_providers.codex' => [
                 'name' => 'Codex (Local)',

@@ -86,6 +86,8 @@ class LocalAgentDiscoveryTest extends TestCase
         }
 
         config(['local_agents.enabled' => true]);
+        // Disable relay/bridge mode so direct binary probing is used
+        config(['bridge.relay_enabled' => false, 'local_agents.bridge.secret' => '']);
 
         // Use 'php' as a binary that's guaranteed to exist
         config(['local_agents.agents' => [
@@ -169,6 +171,8 @@ class LocalAgentDiscoveryTest extends TestCase
         }
 
         config(['local_agents.enabled' => true]);
+        // Disable relay/bridge mode so direct binary probing is used
+        config(['bridge.relay_enabled' => false, 'local_agents.bridge.secret' => '']);
 
         // Simulate cursor binary using 'php' with a detect_command that outputs "cursor 0.48.1"
         config(['local_agents.agents' => [

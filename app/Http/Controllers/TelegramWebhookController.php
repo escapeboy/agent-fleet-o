@@ -16,6 +16,11 @@ class TelegramWebhookController extends Controller
      */
     public function handle(Request $request, string $teamId): Response
     {
+        // Validate UUID format before querying to avoid PostgreSQL type errors
+        if (! preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $teamId)) {
+            return response('', 200);
+        }
+
         // Find active bot for this team
         $bot = TelegramBot::withoutGlobalScopes()
             ->where('team_id', $teamId)

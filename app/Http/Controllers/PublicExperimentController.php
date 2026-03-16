@@ -29,8 +29,8 @@ class PublicExperimentController extends Controller
         $stages = collect();
         if ($config['show_stages']) {
             $stages = $experiment->stages()
-                ->orderBy('order')
-                ->get(['id', 'type', 'status', 'started_at', 'completed_at', 'output']);
+                ->orderBy('iteration')
+                ->get(['id', 'stage', 'status', 'started_at', 'completed_at', 'output_snapshot']);
         }
 
         // Hide sensitive internal JSONB fields before passing to the unauthenticated view

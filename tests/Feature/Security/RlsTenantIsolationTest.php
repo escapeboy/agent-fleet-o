@@ -192,9 +192,10 @@ class RlsTenantIsolationTest extends TestCase
             // Insert a row — should succeed without team_id (cross-tenant cache)
             DB::table('semantic_cache_entries')->insert([
                 'id' => Str::uuid7()->toString(),
-                'prompt_hash' => hash('sha256', 'test-prompt'),
-                'prompt_text' => 'test-prompt',
-                'response_text' => 'test-response',
+                'prompt_hash' => md5('test-prompt'),
+                'request_text' => 'test-prompt',
+                'response_content' => 'test-response',
+                'response_metadata' => '{}',
                 'provider' => 'anthropic',
                 'model' => 'claude-sonnet-4-5',
                 'expires_at' => now()->addDay(),

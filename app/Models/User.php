@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Models\UserSocialAccount;
 use App\Domain\Shared\Services\NotificationPreferencesService;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +25,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'email_verified_at',
         'password',
         'current_team_id',
         'theme',
@@ -101,6 +103,11 @@ class User extends Authenticatable
         $pivot = $this->teams()->where('team_id', $team->id)->first()?->pivot;
 
         return $pivot ? TeamRole::from($pivot->role) : null;
+    }
+
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(UserSocialAccount::class);
     }
 
     public function isTeamOwner(?Team $team = null): bool

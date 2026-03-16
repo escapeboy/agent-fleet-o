@@ -12,6 +12,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Mockery;
 use Prism\Prism\Embeddings\Response as EmbeddingResponse;
@@ -34,6 +35,13 @@ class KnowledgeGraphTest extends TestCase
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
+
+    private function requirePgvector(): void
+    {
+        if (config('database.default') !== 'pgsql' || ! Schema::hasColumn('kg_edges', 'fact_embedding')) {
+            $this->markTestSkipped('Requires PostgreSQL with pgvector extension (fact_embedding column)');
+        }
+    }
 
     private function fakeEmbedding(array $vector = []): void
     {
@@ -305,9 +313,7 @@ class KnowledgeGraphTest extends TestCase
     /** @test */
     public function contradiction_detection_invalidates_conflicting_edge(): void
     {
-        if (config('database.default') !== 'pgsql') {
-            $this->markTestSkipped('Requires PostgreSQL (fact_embedding column)');
-        }
+        $this->requirePgvector();
 
         $source = Entity::factory()->create(['team_id' => $this->team->id]);
         $target = Entity::factory()->create(['team_id' => $this->team->id]);
@@ -363,9 +369,7 @@ class KnowledgeGraphTest extends TestCase
     /** @test */
     public function contradiction_detection_skips_low_similarity_candidates(): void
     {
-        if (config('database.default') !== 'pgsql') {
-            $this->markTestSkipped('Requires PostgreSQL (fact_embedding column)');
-        }
+        $this->requirePgvector();
 
         $source = Entity::factory()->create(['team_id' => $this->team->id]);
         $target = Entity::factory()->create(['team_id' => $this->team->id]);

@@ -58,6 +58,7 @@ class SignalController extends Controller
             payload: $request->payload,
             tags: $request->input('tags', []),
             experimentId: $request->experiment_id,
+            teamId: $request->user()?->current_team_id,
         );
 
         if (! $signal) {

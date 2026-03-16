@@ -70,6 +70,8 @@
                     Already have an account? <a href="{{ route('login') }}" class="text-primary-600 hover:text-primary-700">Sign in</a>
                 </p>
             </form>
+
+            <x-social-login-buttons />
         </div>
     </div>
 </body>

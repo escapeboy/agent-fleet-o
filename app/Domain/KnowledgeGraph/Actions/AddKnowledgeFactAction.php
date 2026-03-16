@@ -6,6 +6,7 @@ use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Signal\Models\Entity;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Prism\Prism\Facades\Prism;
 
@@ -51,18 +52,24 @@ class AddKnowledgeFactAction
             );
         }
 
-        $edge = KgEdge::create([
+        $data = [
             'team_id' => $teamId,
             'source_entity_id' => $sourceEntity->id,
             'target_entity_id' => $targetEntity->id,
             'relation_type' => $relationType,
             'fact' => $fact,
-            'fact_embedding' => $factEmbedding ? $this->embeddingToArray($factEmbedding) : null,
             'valid_at' => $validAt,
             'invalid_at' => null,
             'episode_id' => $episodeId,
             'attributes' => $attributes,
-        ]);
+        ];
+
+        // Only include fact_embedding when pgvector column exists
+        if ($factEmbedding && Schema::hasColumn('kg_edges', 'fact_embedding')) {
+            $data['fact_embedding'] = $this->embeddingToArray($factEmbedding);
+        }
+
+        $edge = KgEdge::create($data);
 
         Log::info('AddKnowledgeFactAction: Fact added', [
             'team_id' => $teamId,

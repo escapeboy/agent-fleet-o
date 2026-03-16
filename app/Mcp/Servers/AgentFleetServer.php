@@ -197,6 +197,8 @@ use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
+use App\Mcp\Tools\Auth\SocialAccountListTool;
+use App\Mcp\Tools\Auth\SocialAccountUnlinkTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
@@ -521,6 +523,10 @@ class AgentFleetServer extends Server
         GitCommitTool::class,
         GitPullRequestCreateTool::class,
         GitPullRequestListTool::class,
+
+        // Auth / Social Login (2)
+        SocialAccountListTool::class,
+        SocialAccountUnlinkTool::class,
 
         // Admin (7) — super admin only
         AdminTeamSuspendTool::class,

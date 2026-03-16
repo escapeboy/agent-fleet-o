@@ -14,6 +14,7 @@ use Barsy\Providers\LLMServiceProvider;
 
 return [
     AppServiceProvider::class,
+    \SocialiteProviders\Manager\ServiceProvider::class,
     FortifyServiceProvider::class,
     HorizonServiceProvider::class,
     AiServiceProvider::class,
