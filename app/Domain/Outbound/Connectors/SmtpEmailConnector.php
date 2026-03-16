@@ -50,24 +50,6 @@ class SmtpEmailConnector implements OutboundConnectorInterface
         ]);
 
         try {
-            $to = $target['email'] ?? null;
-            if (! $to || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
-                // No actionable email address — simulate the send (dry-run)
-                Log::info('SmtpEmailConnector: No valid email in target, simulating send', [
-                    'proposal_id' => $proposal->id,
-                    'target' => $target,
-                ]);
-
-                $action->update([
-                    'status' => OutboundActionStatus::Sent,
-                    'external_id' => 'smtp-simulated-'.now()->timestamp,
-                    'response' => ['simulated' => true, 'reason' => 'No valid email address in target'],
-                    'sent_at' => now(),
-                ]);
-
-                return $action;
-            }
-
             // Resolve team SMTP credentials — required for sending
             $dbConfig = $this->resolver->getDbConfig('email', $proposal->team_id);
             $creds = $dbConfig?->credentials ?? [];
@@ -76,6 +58,29 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 throw new \RuntimeException(
                     'No SMTP connector configured for this team. Configure your mail server credentials in Settings → Connectors.',
                 );
+            }
+
+            $to = $target['email'] ?? null;
+            if (! $to || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                // Fall back to the connector's default recipient
+                $to = $creds['default_recipient'] ?? null;
+            }
+
+            if (! $to || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                // No actionable email address — simulate the send (dry-run)
+                Log::info('SmtpEmailConnector: No valid email in target or default_recipient, simulating send', [
+                    'proposal_id' => $proposal->id,
+                    'target' => $target,
+                ]);
+
+                $action->update([
+                    'status' => OutboundActionStatus::Sent,
+                    'external_id' => 'smtp-simulated-'.now()->timestamp,
+                    'response' => ['simulated' => true, 'reason' => 'No valid email address in target or connector default_recipient'],
+                    'sent_at' => now(),
+                ]);
+
+                return $action;
             }
 
             $transport = $this->buildTransport($creds);
@@ -96,10 +101,18 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 $subject = $content['subject'] ?? "Experiment: {$proposal->experiment->title}";
                 $html = $content['body'] ?? 'No content generated.';
 
-                // Apply project email template if one is assigned
+                // Apply email template: project-assigned first, then connector default
                 $project = $proposal->experiment?->projectRun?->project
                     ?? $proposal->experiment?->project ?? null;
                 $template = app(EmailThemeResolver::class)->resolveForProject($project);
+
+                if (! $template && ! empty($creds['default_template_id'])) {
+                    $template = \App\Domain\Email\Models\EmailTemplate::withoutGlobalScopes()
+                        ->where('id', $creds['default_template_id'])
+                        ->where('status', 'active')
+                        ->first();
+                }
+
                 if ($template) {
                     $payload = array_merge($content, $target ?? []);
                     $html = app(EmailTemplateInterpolator::class)->interpolate($template->html_cache, $payload);

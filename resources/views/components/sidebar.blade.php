@@ -95,6 +95,10 @@
             Email Themes
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('outbound.email') }}" :active="request()->routeIs('outbound.*')" icon="paper-airplane">
+            Email Delivery
+        </x-sidebar-link>
+
         {{-- Plugin-contributed navigation items --}}
         @php $pluginNavItems = app(\App\Domain\Shared\Services\NavigationRegistry::class)->items(); @endphp
         @foreach($pluginNavItems as $navItem)

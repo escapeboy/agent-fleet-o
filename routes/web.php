@@ -78,6 +78,7 @@ use App\Livewire\Triggers\TriggerRulesPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
+use App\Livewire\OutboundConnectors\OutboundConnectorsPage;
 use App\Livewire\Workflows\WorkflowListPage;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -261,6 +262,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/triggers/create', CreateTriggerRuleForm::class)->name('triggers.create');
 
     Route::get('/changelog', ChangelogPage::class)->name('changelog');
+
+    // Outbound connectors
+    Route::get('/outbound/email', OutboundConnectorsPage::class)->name('outbound.email');
 
     // Email themes
     Route::get('/email/themes', EmailThemeListPage::class)->name('email.themes.index');
