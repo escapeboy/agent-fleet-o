@@ -98,6 +98,10 @@ class SocialAccountService
 
     /**
      * Complete a pending social sign-up after the user provides their email.
+     * Only creates a NEW account — never links to an existing account, because
+     * the email is user-supplied and unverified (the provider did not return one).
+     * Linking to an existing account without email verification would allow
+     * account takeover; use the Settings-based link flow instead.
      */
     public function completePendingRegistration(string $email): ?User
     {
@@ -106,22 +110,9 @@ class SocialAccountService
             return null;
         }
 
-        $existingUser = User::where('email', $email)->first();
-
-        if ($existingUser) {
-            // Link to existing account
-            UserSocialAccount::firstOrCreate(
-                ['provider' => $pending['provider'], 'provider_user_id' => $pending['provider_id']],
-                [
-                    'user_id' => $existingUser->id,
-                    'email'   => $email,
-                    'name'    => $pending['name'],
-                    'avatar'  => $pending['avatar'],
-                ]
-            );
-            session()->forget('pending_social_auth');
-
-            return $existingUser;
+        // Refuse to link an unverified email to an existing account.
+        if (User::where('email', $email)->exists()) {
+            return null;
         }
 
         $user = User::create([

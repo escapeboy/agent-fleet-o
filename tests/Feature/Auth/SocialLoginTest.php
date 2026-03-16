@@ -175,6 +175,44 @@ class SocialLoginTest extends TestCase
         $this->assertNotNull(session('pending_social_auth'));
     }
 
+    public function test_store_email_rejects_existing_email_to_prevent_account_takeover(): void
+    {
+        // Simulate a pending social auth session (provider gave no email)
+        session(['pending_social_auth' => [
+            'provider'    => 'x',
+            'provider_id' => '77777',
+            'name'        => 'Attacker',
+            'avatar'      => null,
+        ]]);
+
+        $victim = User::factory()->create(['email' => 'victim@example.com']);
+
+        $response = $this->post(route('auth.social.store-email'), ['email' => 'victim@example.com']);
+
+        // Must NOT log in as the victim
+        $response->assertSessionHasErrors(['email']);
+        $this->assertGuest();
+
+        // Victim's account must remain untouched (no social account added)
+        $this->assertDatabaseMissing('user_social_accounts', ['user_id' => $victim->id]);
+    }
+
+    public function test_store_email_creates_new_account_for_fresh_email(): void
+    {
+        session(['pending_social_auth' => [
+            'provider'    => 'x',
+            'provider_id' => '88888',
+            'name'        => 'New User',
+            'avatar'      => null,
+        ]]);
+
+        $response = $this->post(route('auth.social.store-email'), ['email' => 'newuser@example.com']);
+
+        $response->assertRedirect(route('dashboard'));
+        $this->assertDatabaseHas('users', ['email' => 'newuser@example.com']);
+        $this->assertDatabaseHas('user_social_accounts', ['provider' => 'x', 'provider_user_id' => '88888']);
+    }
+
     // ── callback: confirm-merge for lower-trust providers ────────────────────
 
     public function test_callback_x_with_matching_email_redirects_to_confirm_merge(): void

@@ -104,6 +104,11 @@ class SocialAuthController extends Controller
     {
         $request->validate(['email' => ['required', 'email', 'max:255']]);
 
+        // Guard: email already registered — do not auto-link without verification.
+        if (\App\Models\User::where('email', $request->input('email'))->exists()) {
+            return back()->withErrors(['email' => 'An account with this email already exists. Please log in and connect your social account from Settings.']);
+        }
+
         $user = $this->socialAccountService->completePendingRegistration($request->input('email'));
 
         if (! $user) {
