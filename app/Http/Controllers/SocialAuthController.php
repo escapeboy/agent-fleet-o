@@ -35,6 +35,12 @@ class SocialAuthController extends Controller
         try {
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Social login callback failed', [
+                'provider' => $provider,
+                'exception' => $e->getMessage(),
+                'class' => get_class($e),
+            ]);
+
             return redirect()->route('login')
                 ->withErrors(['social' => 'Authentication failed. Please try again.']);
         }
