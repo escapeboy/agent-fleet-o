@@ -157,6 +157,16 @@ class ProviderResolver
                     } else {
                         $providers[$key]['models'] = $agents;
                     }
+                } else {
+                    // bridge_llm and any future bridge providers: remove if no active connection
+                    try {
+                        $hasActiveBridge = BridgeConnection::active()->exists();
+                    } catch (\Throwable) {
+                        $hasActiveBridge = false;
+                    }
+                    if (! $hasActiveBridge) {
+                        unset($providers[$key]);
+                    }
                 }
 
                 continue;

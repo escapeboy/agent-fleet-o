@@ -98,22 +98,49 @@
                 <div>
                     <label class="mb-2 block text-sm font-medium text-gray-700">Assign Skills</label>
                     @if($availableSkills->isNotEmpty())
-                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            @foreach($availableSkills as $skill)
-                                <button wire:click="toggleSkill('{{ $skill->id }}')" type="button"
-                                    class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition
-                                        {{ in_array($skill->id, $editSkillIds) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300' }}">
-                                    <div class="flex h-5 w-5 items-center justify-center rounded border {{ in_array($skill->id, $editSkillIds) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300' }}">
-                                        @if(in_array($skill->id, $editSkillIds))
-                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <div class="font-medium">{{ $skill->name }}</div>
-                                        <div class="text-xs text-gray-500">{{ $skill->type->label() }}</div>
-                                    </div>
-                                </button>
-                            @endforeach
+                        <div
+                            x-data="{
+                                search: '',
+                                selected: $wire.entangle('editSkillIds'),
+                                items: @js($availableSkills->map(fn($s) => ['id' => $s->id, 'name' => $s->name, 'type' => $s->type->label()])->values()),
+                                get filtered() {
+                                    const q = this.search.toLowerCase();
+                                    return q ? this.items.filter(i => i.name.toLowerCase().includes(q)) : this.items;
+                                },
+                                toggle(id) {
+                                    const idx = this.selected.indexOf(id);
+                                    this.selected = idx === -1 ? [...this.selected, id] : this.selected.filter(i => i !== id);
+                                },
+                                isSelected(id) { return this.selected.includes(id); }
+                            }"
+                        >
+                            <input
+                                x-show="items.length >= 6"
+                                x-model.debounce.200ms="search"
+                                type="text"
+                                placeholder="Filter skills..."
+                                class="mb-2 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                            />
+                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                <template x-for="skill in filtered" :key="skill.id">
+                                    <button type="button"
+                                        x-on:click="toggle(skill.id)"
+                                        class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition"
+                                        :class="isSelected(skill.id) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'">
+                                        <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
+                                            :class="isSelected(skill.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
+                                            <template x-if="isSelected(skill.id)">
+                                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                            </template>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium" x-text="skill.name"></div>
+                                            <div class="text-xs text-gray-500" x-text="skill.type"></div>
+                                        </div>
+                                    </button>
+                                </template>
+                                <p x-show="filtered.length === 0" class="col-span-2 py-3 text-center text-sm text-gray-400">No skills match your search.</p>
+                            </div>
                         </div>
                     @else
                         <p class="text-sm text-gray-400">No active skills available.</p>
@@ -125,22 +152,49 @@
                     <label class="mb-2 block text-sm font-medium text-gray-700">Assign Tools</label>
                     <p class="mb-3 text-xs text-gray-500">When tools are assigned, the agent uses an agentic loop where the LLM decides which tools to call.</p>
                     @if($availableTools->isNotEmpty())
-                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            @foreach($availableTools as $tool)
-                                <button wire:click="toggleTool('{{ $tool->id }}')" type="button"
-                                    class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition
-                                        {{ in_array($tool->id, $editToolIds) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300' }}">
-                                    <div class="flex h-5 w-5 items-center justify-center rounded border {{ in_array($tool->id, $editToolIds) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300' }}">
-                                        @if(in_array($tool->id, $editToolIds))
-                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <div class="font-medium">{{ $tool->name }}</div>
-                                        <div class="text-xs text-gray-500">{{ $tool->type->label() }}</div>
-                                    </div>
-                                </button>
-                            @endforeach
+                        <div
+                            x-data="{
+                                search: '',
+                                selected: $wire.entangle('editToolIds'),
+                                items: @js($availableTools->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'type' => $t->type->label()])->values()),
+                                get filtered() {
+                                    const q = this.search.toLowerCase();
+                                    return q ? this.items.filter(i => i.name.toLowerCase().includes(q)) : this.items;
+                                },
+                                toggle(id) {
+                                    const idx = this.selected.indexOf(id);
+                                    this.selected = idx === -1 ? [...this.selected, id] : this.selected.filter(i => i !== id);
+                                },
+                                isSelected(id) { return this.selected.includes(id); }
+                            }"
+                        >
+                            <input
+                                x-show="items.length >= 6"
+                                x-model.debounce.200ms="search"
+                                type="text"
+                                placeholder="Filter tools..."
+                                class="mb-2 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                            />
+                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                <template x-for="tool in filtered" :key="tool.id">
+                                    <button type="button"
+                                        x-on:click="toggle(tool.id)"
+                                        class="flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition"
+                                        :class="isSelected(tool.id) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'">
+                                        <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
+                                            :class="isSelected(tool.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
+                                            <template x-if="isSelected(tool.id)">
+                                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                            </template>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium" x-text="tool.name"></div>
+                                            <div class="text-xs text-gray-500" x-text="tool.type"></div>
+                                        </div>
+                                    </button>
+                                </template>
+                                <p x-show="filtered.length === 0" class="col-span-2 py-3 text-center text-sm text-gray-400">No tools match your search.</p>
+                            </div>
                         </div>
                     @else
                         <p class="text-sm text-gray-400">No active tools available. <a href="{{ route('tools.create') }}" class="text-primary-600 hover:underline">Create a tool first.</a></p>

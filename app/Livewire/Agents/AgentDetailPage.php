@@ -260,10 +260,10 @@ class AgentDetailPage extends Component
             ->keyBy('agent_execution_id');
 
         $resolver = app(ProviderResolver::class);
-        $providers = $resolver->availableProviders();
+        $team = auth()->user()->currentTeam;
+        $providers = $resolver->availableProviders($team);
 
         // Append team's custom endpoints as selectable providers
-        $team = auth()->user()->currentTeam;
         foreach ($resolver->customEndpointsForTeam($team) as $ep) {
             $models = [];
             foreach ($ep->credentials['models'] ?? [] as $m) {

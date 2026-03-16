@@ -161,10 +161,10 @@ class CreateAgentForm extends Component
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
         $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
         $resolver = app(ProviderResolver::class);
-        $providers = $resolver->availableProviders();
+        $team = auth()->user()->currentTeam;
+        $providers = $resolver->availableProviders($team);
 
         // Append team's custom endpoints as selectable providers
-        $team = auth()->user()->currentTeam;
         foreach ($resolver->customEndpointsForTeam($team) as $ep) {
             $models = [];
             foreach ($ep->credentials['models'] ?? [] as $m) {

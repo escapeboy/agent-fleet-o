@@ -134,9 +134,9 @@ class SkillDetailPage extends Component
             ->get();
 
         $resolver = app(ProviderResolver::class);
-        $providers = $resolver->availableProviders();
-
         $team = auth()->user()->currentTeam;
+        $providers = $resolver->availableProviders($team);
+
         foreach ($resolver->customEndpointsForTeam($team) as $ep) {
             $models = [];
             foreach ($ep->credentials['models'] ?? [] as $m) {
