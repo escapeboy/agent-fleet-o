@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use LaravelWebauthn\WebauthnAuthenticatable;
 use NotificationChannels\WebPush\HasPushSubscriptions;
@@ -20,7 +21,7 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, Notifiable, WebauthnAuthenticatable;
+    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, Notifiable, TwoFactorAuthenticatable, WebauthnAuthenticatable;
 
     protected $fillable = [
         'name',

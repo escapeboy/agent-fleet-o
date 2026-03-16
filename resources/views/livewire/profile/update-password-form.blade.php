@@ -27,7 +27,7 @@
                     id="current_password"
                     required
                     autocomplete="current-password"
-                    :error="$errors->updatePassword->first('current_password')"
+                    :error="$errors->first('current_password')"
                 />
                 <x-form-input
                     wire:model="password"
@@ -36,7 +36,7 @@
                     id="password"
                     required
                     autocomplete="new-password"
-                    :error="$errors->updatePassword->first('password')"
+                    :error="$errors->first('password')"
                 />
                 <x-form-input
                     wire:model="passwordConfirmation"
