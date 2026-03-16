@@ -12,9 +12,9 @@ use App\Domain\Outbound\Enums\OutboundProposalStatus;
 
 class ExecuteOutbound extends BaseStageJob
 {
-    public function __construct(string $experimentId)
+    public function __construct(string $experimentId, ?string $teamId = null)
     {
-        parent::__construct($experimentId);
+        parent::__construct($experimentId, $teamId);
         $this->onQueue('outbound');
     }
 

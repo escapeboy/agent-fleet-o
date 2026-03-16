@@ -15,9 +15,9 @@ use Illuminate\Support\Facades\Log;
 
 class RunBuildingStage extends BaseStageJob
 {
-    public function __construct(string $experimentId)
+    public function __construct(string $experimentId, ?string $teamId = null)
     {
-        parent::__construct($experimentId);
+        parent::__construct($experimentId, $teamId);
         $this->onQueue('ai-calls');
     }
 
