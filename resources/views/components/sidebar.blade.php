@@ -129,5 +129,11 @@
         <x-sidebar-link href="{{ route('settings') }}" :active="request()->routeIs('settings')" icon="cog">
             Settings
         </x-sidebar-link>
+
+        @if(Route::has('profile'))
+            <x-sidebar-link href="{{ route('profile') }}" :active="request()->routeIs('profile')" icon="user-circle">
+                Profile
+            </x-sidebar-link>
+        @endif
     </nav>
 </aside>

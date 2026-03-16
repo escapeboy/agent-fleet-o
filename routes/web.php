@@ -58,6 +58,7 @@ use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Settings\PluginsPage;
 use App\Livewire\Setup\SetupPage;
 use App\Livewire\Shared\NotificationInboxPage;
+use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Shared\NotificationPreferencesPage;
 use App\Livewire\Signals\ConnectorBindingsPage;
 use App\Livewire\Signals\ConnectorSubscriptionsPage;
@@ -250,6 +251,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
     Route::get('/plugins', PluginsPage::class)->name('plugins');
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
+
+    Route::get('/profile', ProfilePage::class)->name('profile');
 
     Route::get('/notifications', NotificationInboxPage::class)->name('notifications.index');
     Route::get('/notifications/preferences', NotificationPreferencesPage::class)->name('notifications.preferences');

@@ -199,6 +199,11 @@ use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
 use App\Mcp\Tools\Auth\SocialAccountListTool;
 use App\Mcp\Tools\Auth\SocialAccountUnlinkTool;
+use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
+use App\Mcp\Tools\Profile\ProfileGetTool;
+use App\Mcp\Tools\Profile\ProfilePasswordUpdateTool;
+use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
+use App\Mcp\Tools\Profile\ProfileUpdateTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
@@ -527,6 +532,13 @@ class AgentFleetServer extends Server
         // Auth / Social Login (2)
         SocialAccountListTool::class,
         SocialAccountUnlinkTool::class,
+
+        // Profile (5)
+        ProfileGetTool::class,
+        ProfileUpdateTool::class,
+        ProfilePasswordUpdateTool::class,
+        ProfileTwoFactorStatusTool::class,
+        ProfileConnectedAccountsTool::class,
 
         // Admin (7) — super admin only
         AdminTeamSuspendTool::class,
