@@ -127,6 +127,6 @@ class DispatchNextStageJob
             'job' => class_basename($jobClass),
         ]);
 
-        $jobClass::dispatch($experiment->id);
+        $jobClass::dispatch($experiment->id, $experiment->team_id);
     }
 }

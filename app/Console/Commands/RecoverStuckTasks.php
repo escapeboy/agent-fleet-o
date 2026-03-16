@@ -396,7 +396,7 @@ class RecoverStuckTasks extends Command
 
         if ($jobClass) {
             // For states with direct job mapping, re-dispatch
-            $jobClass::dispatch($experiment->id);
+            $jobClass::dispatch($experiment->id, $experiment->team_id);
 
             Log::info('RecoverStuckTasks: Re-dispatched stage job for stuck experiment', [
                 'experiment_id' => $experiment->id,
