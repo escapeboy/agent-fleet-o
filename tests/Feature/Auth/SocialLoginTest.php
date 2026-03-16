@@ -10,6 +10,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Socialite\Contracts\Provider as SocialiteProvider;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
@@ -213,20 +214,118 @@ class SocialLoginTest extends TestCase
         $this->assertDatabaseHas('user_social_accounts', ['provider' => 'x', 'provider_user_id' => '88888']);
     }
 
-    // ── callback: confirm-merge for lower-trust providers ────────────────────
+    // ── merge OTP flow for lower-trust providers ─────────────────────────────
 
     public function test_callback_x_with_matching_email_redirects_to_confirm_merge(): void
     {
         User::factory()->create(['email' => 'x-user@example.com']);
 
         $socialUser = $this->mockSocialiteUser(id: '55555', email: 'x-user@example.com');
-        $driver = $this->mockDriver($socialUser);
+        $driver     = $this->mockDriver($socialUser);
         Socialite::shouldReceive('driver')->with('x')->andReturn($driver);
 
         $response = $this->get(route('auth.social.callback', 'x'));
 
         $response->assertRedirect(route('auth.social.confirm-merge'));
         $this->assertNotNull(session('pending_social_link'));
+
+        // Tokens must NOT be stored in the session (security: Finding 4)
+        $pending = session('pending_social_link');
+        $this->assertArrayNotHasKey('access_token', $pending);
+        $this->assertArrayNotHasKey('refresh_token', $pending);
+        $this->assertArrayNotHasKey('expires_in', $pending);
+    }
+
+    public function test_do_merge_sends_otp_email_and_redirects_to_verify_page(): void
+    {
+        Notification::fake();
+
+        $victim = User::factory()->create(['email' => 'victim@example.com']);
+        session(['pending_social_link' => [
+            'provider'         => 'x',
+            'provider_user_id' => '55555',
+            'email'            => 'victim@example.com',
+            'name'             => 'Victim',
+            'avatar'           => null,
+        ]]);
+
+        $response = $this->post(route('auth.social.do-merge'));
+
+        $response->assertRedirect(route('auth.social.verify-merge'));
+
+        // OTP must be stored in session, not sent yet to the attacker
+        $pending = session('pending_social_link');
+        $this->assertArrayHasKey('otp', $pending);
+        $this->assertArrayHasKey('otp_expires_at', $pending);
+
+        // Notification must be sent to the existing account owner
+        Notification::assertSentTo($victim, \App\Domain\Shared\Notifications\SocialMergeOtpNotification::class);
+    }
+
+    public function test_account_takeover_via_do_merge_blocked_without_valid_otp(): void
+    {
+        // Attacker has a pending_social_link in their session (from controlling an X account
+        // that reports victim's email). They must NOT be able to merge without the OTP.
+        $victim = User::factory()->create(['email' => 'victim@example.com']);
+        session(['pending_social_link' => [
+            'provider'         => 'x',
+            'provider_user_id' => '99999',
+            'email'            => 'victim@example.com',
+            'name'             => 'Attacker',
+            'avatar'           => null,
+            'otp'              => '123456',
+            'otp_expires_at'   => now()->addMinutes(10)->toIso8601String(),
+        ]]);
+
+        // Submit with wrong OTP
+        $response = $this->post(route('auth.social.verify-merge.submit'), ['otp' => '000000']);
+
+        $response->assertSessionHasErrors(['otp']);
+        $this->assertGuest();
+        $this->assertDatabaseMissing('user_social_accounts', ['user_id' => $victim->id]);
+    }
+
+    public function test_verify_merge_completes_link_with_correct_otp(): void
+    {
+        $existingUser = User::factory()->create(['email' => 'merge@example.com']);
+        session(['pending_social_link' => [
+            'provider'         => 'x',
+            'provider_user_id' => '77777',
+            'email'            => 'merge@example.com',
+            'name'             => 'Merge User',
+            'avatar'           => null,
+            'otp'              => '654321',
+            'otp_expires_at'   => now()->addMinutes(10)->toIso8601String(),
+        ]]);
+
+        $response = $this->post(route('auth.social.verify-merge.submit'), ['otp' => '654321']);
+
+        $response->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($existingUser);
+        $this->assertDatabaseHas('user_social_accounts', [
+            'user_id'          => $existingUser->id,
+            'provider'         => 'x',
+            'provider_user_id' => '77777',
+        ]);
+    }
+
+    public function test_verify_merge_rejects_expired_otp(): void
+    {
+        User::factory()->create(['email' => 'expire@example.com']);
+        session(['pending_social_link' => [
+            'provider'         => 'x',
+            'provider_user_id' => '44444',
+            'email'            => 'expire@example.com',
+            'name'             => 'User',
+            'avatar'           => null,
+            'otp'              => '111111',
+            'otp_expires_at'   => now()->subMinutes(1)->toIso8601String(), // already expired
+        ]]);
+
+        $response = $this->post(route('auth.social.verify-merge.submit'), ['otp' => '111111']);
+
+        $response->assertRedirect(route('login'));
+        $this->assertGuest();
     }
 
     // ── unlink: safety guard ─────────────────────────────────────────────────

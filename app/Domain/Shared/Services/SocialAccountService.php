@@ -66,7 +66,10 @@ class SocialAccountService
                 return ['user' => $existingUser, 'redirect' => null];
             }
 
-            // Ask for confirmation for lower-trust providers (X, Apple)
+            // Ask for confirmation for lower-trust providers (X, Apple).
+            // We intentionally omit OAuth tokens here — they would be sensitive data
+            // sitting in the session during the OTP verification step. Tokens will be
+            // refreshed on the user's next social login anyway.
             session([
                 'pending_social_link' => [
                     'provider'         => $provider,
@@ -74,9 +77,6 @@ class SocialAccountService
                     'email'            => $email,
                     'name'             => $socialUser->getName(),
                     'avatar'           => $socialUser->getAvatar(),
-                    'access_token'     => $socialUser->token,
-                    'refresh_token'    => $socialUser->refreshToken,
-                    'expires_in'       => $socialUser->expiresIn,
                 ],
             ]);
 
@@ -149,6 +149,8 @@ class SocialAccountService
             return null;
         }
 
+        // Tokens are not stored in the session (see handleCallback). They will be
+        // populated on the user's first login via this provider after the link.
         UserSocialAccount::create([
             'user_id'          => $user->id,
             'provider'         => $pending['provider'],
@@ -156,9 +158,6 @@ class SocialAccountService
             'email'            => $pending['email'],
             'name'             => $pending['name'],
             'avatar'           => $pending['avatar'],
-            'access_token'     => $pending['access_token'],
-            'refresh_token'    => $pending['refresh_token'],
-            'token_expires_at' => isset($pending['expires_in']) ? now()->addSeconds($pending['expires_in']) : null,
         ]);
 
         session()->forget('pending_social_link');
