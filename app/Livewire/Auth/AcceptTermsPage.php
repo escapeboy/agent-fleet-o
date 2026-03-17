@@ -5,6 +5,7 @@ namespace App\Livewire\Auth;
 use App\Domain\Shared\Services\TermsAcceptanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -56,7 +57,7 @@ class AcceptTermsPage extends Component
         $this->redirect(route('login'));
     }
 
-    public function render(): \Illuminate\View\View
+    public function render(): View
     {
         return view('livewire.auth.accept-terms-page');
     }

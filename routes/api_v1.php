@@ -19,8 +19,10 @@ use App\Http\Controllers\Api\V1\ExperimentController;
 use App\Http\Controllers\Api\V1\GitRepositoryController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IntegrationController;
+use App\Http\Controllers\Api\V1\KnowledgeGraphController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\MemoryController;
+use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\SignalController;
@@ -71,6 +73,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Current user
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/me', [AuthController::class, 'updateMe']);
+    Route::get('/me/social-accounts', [AuthController::class, 'socialAccounts']);
+    Route::delete('/me/social-accounts/{provider}', [AuthController::class, 'unlinkSocialAccount']);
 
     // Experiments
     Route::get('/experiments', [ExperimentController::class, 'index']);
@@ -251,6 +255,17 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/bridge/endpoints', [BridgeController::class, 'updateEndpoints']);
     Route::post('/bridge/heartbeat', [BridgeController::class, 'heartbeat']);
     Route::delete('/bridge', [BridgeController::class, 'disconnect']);
+
+    // Knowledge Graph
+    Route::get('/knowledge-graph/entities', [KnowledgeGraphController::class, 'entities']);
+    Route::get('/knowledge-graph/entity-facts', [KnowledgeGraphController::class, 'entityFacts']);
+    Route::post('/knowledge-graph/search', [KnowledgeGraphController::class, 'search']);
+    Route::post('/knowledge-graph/facts', [KnowledgeGraphController::class, 'store']);
+
+    // Metrics
+    Route::get('/metrics', [MetricsController::class, 'index']);
+    Route::get('/metrics/aggregations', [MetricsController::class, 'aggregations']);
+    Route::get('/metrics/model-comparison', [MetricsController::class, 'modelComparison']);
 
     // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)

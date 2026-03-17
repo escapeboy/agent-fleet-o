@@ -30,7 +30,7 @@ class DelegationTools
             ->withStringParameter('input_data_json', 'Optional JSON string of input_data to pass to the project run (e.g. {"topic": "AI trends"})')
             ->using(function (string $project_id, ?string $note = null, ?string $input_data_json = null) use ($conversationId) {
                 try {
-                    $project = Project::find($project_id);
+                    $project = Project::where('id', $project_id)->first();
                     if (! $project) {
                         return json_encode(['error' => "Project {$project_id} not found."]);
                     }

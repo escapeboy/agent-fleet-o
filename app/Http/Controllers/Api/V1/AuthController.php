@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Shared\Models\UserSocialAccount;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Requests\Api\V1\UpdateMeRequest;
@@ -154,5 +155,56 @@ class AuthController extends Controller
         }
 
         return new UserResource($user->fresh()->load('currentTeam'));
+    }
+
+    /**
+     * List social accounts linked to the current user.
+     *
+     * @response 200 {"data": [{"provider": "google", "email": "user@example.com", "name": "John Doe", "linked_at": "2026-01-01T00:00:00.000000Z"}]}
+     */
+    public function socialAccounts(Request $request): JsonResponse
+    {
+        $accounts = $request->user()->socialAccounts()
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (UserSocialAccount $a) => [
+                'provider' => $a->provider,
+                'email' => $a->email,
+                'name' => $a->name,
+                'avatar' => $a->avatar,
+                'linked_at' => $a->created_at->toISOString(),
+            ]);
+
+        return response()->json(['data' => $accounts]);
+    }
+
+    /**
+     * Unlink a social account from the current user.
+     *
+     * @response 200 {"message": "Social account unlinked."}
+     * @response 404 {"message": "Social account not found."}
+     * @response 422 {"message": "Cannot unlink: no password set. Please set a password first."}
+     */
+    public function unlinkSocialAccount(Request $request, string $provider): JsonResponse
+    {
+        $user = $request->user();
+
+        $account = $user->socialAccounts()->where('provider', $provider)->first();
+
+        if (! $account) {
+            abort(404, 'Social account not found.');
+        }
+
+        // Prevent lockout: user must have a password or another social account
+        $hasPassword = ! empty($user->password);
+        $otherAccounts = $user->socialAccounts()->where('provider', '!=', $provider)->exists();
+
+        if (! $hasPassword && ! $otherAccounts) {
+            abort(422, 'Cannot unlink: no password set. Please set a password first.');
+        }
+
+        $account->delete();
+
+        return response()->json(['message' => 'Social account unlinked.']);
     }
 }
