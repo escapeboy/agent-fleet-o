@@ -127,6 +127,11 @@ use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
+use App\Mcp\Tools\Knowledge\KnowledgeBaseCreateTool;
+use App\Mcp\Tools\Knowledge\KnowledgeBaseDeleteTool;
+use App\Mcp\Tools\Knowledge\KnowledgeBaseIngestTool;
+use App\Mcp\Tools\Knowledge\KnowledgeBaseListTool;
+use App\Mcp\Tools\Knowledge\KnowledgeBaseSearchTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
@@ -409,6 +414,13 @@ class AgentFleetServer extends Server
         MarketplaceAnalyticsTool::class,
         MarketplaceReviewTool::class,
         MarketplaceCategoriesListTool::class,
+
+        // Knowledge Bases (5)
+        KnowledgeBaseListTool::class,
+        KnowledgeBaseCreateTool::class,
+        KnowledgeBaseIngestTool::class,
+        KnowledgeBaseSearchTool::class,
+        KnowledgeBaseDeleteTool::class,
 
         // Memory (5)
         MemorySearchTool::class,

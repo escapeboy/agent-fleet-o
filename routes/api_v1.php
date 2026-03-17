@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\ExperimentController;
 use App\Http\Controllers\Api\V1\GitRepositoryController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IntegrationController;
+use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\KnowledgeGraphController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\MemoryController;
@@ -255,6 +256,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/bridge/endpoints', [BridgeController::class, 'updateEndpoints']);
     Route::post('/bridge/heartbeat', [BridgeController::class, 'heartbeat']);
     Route::delete('/bridge', [BridgeController::class, 'disconnect']);
+
+    // Knowledge Bases (RAG)
+    Route::get('/knowledge-bases', [KnowledgeBaseController::class, 'index']);
+    Route::post('/knowledge-bases', [KnowledgeBaseController::class, 'store']);
+    Route::get('/knowledge-bases/{knowledgeBase}', [KnowledgeBaseController::class, 'show']);
+    Route::delete('/knowledge-bases/{knowledgeBase}', [KnowledgeBaseController::class, 'destroy']);
+    Route::post('/knowledge-bases/{knowledgeBase}/ingest', [KnowledgeBaseController::class, 'ingest']);
+    Route::post('/knowledge-bases/search', [KnowledgeBaseController::class, 'search']);
 
     // Knowledge Graph
     Route::get('/knowledge-graph/entities', [KnowledgeGraphController::class, 'entities']);

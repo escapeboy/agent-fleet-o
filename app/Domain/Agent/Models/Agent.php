@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Models;
 
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
+use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Models\Skill;
@@ -14,6 +15,7 @@ use Database\Factories\Domain\Agent\AgentFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -66,6 +68,7 @@ class Agent extends Model
         'cost_per_1k_input',
         'cost_per_1k_output',
         'last_health_check',
+        'knowledge_base_id',
         'risk_score',
         'risk_profile',
         'risk_profile_updated_at',
@@ -93,6 +96,11 @@ class Agent extends Model
             'risk_profile' => 'array',
             'risk_profile_updated_at' => 'datetime',
         ];
+    }
+
+    public function knowledgeBase(): BelongsTo
+    {
+        return $this->belongsTo(KnowledgeBase::class);
     }
 
     public function aiRuns(): HasMany
