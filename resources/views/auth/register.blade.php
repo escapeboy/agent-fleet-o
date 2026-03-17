@@ -42,6 +42,7 @@
                 </div>
             @endif
 
+            <div x-data="{ terms: {{ old('terms') ? 'true' : 'false' }}, termsError: false }">
             <form method="POST" action="{{ route('register') }}">
                 @csrf
 
@@ -57,8 +58,29 @@
                     <x-form-input label="Password" type="password" id="password" name="password" required />
                 </div>
 
-                <div class="mb-6">
+                <div class="mb-4">
                     <x-form-input label="Confirm Password" type="password" id="password_confirmation" name="password_confirmation" required />
+                </div>
+
+                <div class="mb-6">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="terms" id="terms" value="1"
+                               x-model="terms"
+                               @change="termsError = false"
+                               class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 {{ $errors->has('terms') ? 'border-red-400' : '' }}">
+                        <span class="text-sm text-gray-600">
+                            I agree to the
+                            <a href="{{ route('legal.terms') }}" target="_blank" class="text-primary-600 hover:text-primary-700">Terms of Service</a>
+                            and
+                            <a href="{{ route('legal.privacy') }}" target="_blank" class="text-primary-600 hover:text-primary-700">Privacy Policy</a>
+                        </span>
+                    </label>
+                    @error('terms')
+                        <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <p x-show="termsError" x-cloak class="mt-1.5 text-sm text-red-600">
+                        You must agree to the Terms of Service and Privacy Policy.
+                    </p>
                 </div>
 
                 <button type="submit"
@@ -71,7 +93,7 @@
                 </p>
             </form>
 
-            <x-social-login-buttons />
+            <x-social-login-buttons :check-terms="true" /></div>
         </div>
     </div>
 </body>

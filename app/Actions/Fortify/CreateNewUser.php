@@ -32,6 +32,9 @@ class CreateNewUser implements CreatesNewUsers
                 Rule::unique(User::class),
             ],
             'password' => $this->passwordRules(),
+            'terms' => ['accepted'],
+        ], [
+            'terms.accepted' => 'You must agree to the Terms of Service and Privacy Policy.',
         ])->validate();
 
         return DB::transaction(function () use ($input) {
