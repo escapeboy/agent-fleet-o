@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
@@ -42,10 +43,10 @@ class SocialAuthController extends Controller
 
             $socialUser = $driver->user();
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Social login callback failed', [
-                'provider'  => $provider,
+            Log::error('Social login callback failed', [
+                'provider' => $provider,
                 'exception' => $e->getMessage(),
-                'class'     => get_class($e),
+                'class' => get_class($e),
             ]);
 
             return redirect()->route('login')

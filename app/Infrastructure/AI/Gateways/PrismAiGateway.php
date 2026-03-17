@@ -314,16 +314,16 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         $configKey = match ($request->provider) {
-            'anthropic'  => 'prism.providers.anthropic.api_key',
-            'openai'     => 'prism.providers.openai.api_key',
-            'google'     => 'prism.providers.gemini.api_key',
-            'groq'       => 'prism.providers.groq.api_key',
+            'anthropic' => 'prism.providers.anthropic.api_key',
+            'openai' => 'prism.providers.openai.api_key',
+            'google' => 'prism.providers.gemini.api_key',
+            'groq' => 'prism.providers.groq.api_key',
             'openrouter' => 'prism.providers.openrouter.api_key',
-            'mistral'    => 'prism.providers.mistral.api_key',
-            'deepseek'   => 'prism.providers.deepseek.api_key',
-            'xai'        => 'prism.providers.xai.api_key',
+            'mistral' => 'prism.providers.mistral.api_key',
+            'deepseek' => 'prism.providers.deepseek.api_key',
+            'xai' => 'prism.providers.xai.api_key',
             'perplexity' => 'prism.providers.perplexity.api_key',
-            'fireworks'  => 'prism.providers.fireworks.api_key',
+            'fireworks' => 'prism.providers.fireworks.api_key',
             default => null,
         };
 
@@ -366,20 +366,20 @@ class PrismAiGateway implements AiGatewayInterface
     private function resolveProvider(string $provider): Provider|string
     {
         return match ($provider) {
-            'anthropic'    => Provider::Anthropic,
-            'openai'       => Provider::OpenAI,
-            'google'       => Provider::Gemini,
-            'groq'         => Provider::Groq,
-            'openrouter'   => Provider::OpenRouter,
-            'ollama'       => Provider::Ollama,
-            'mistral'      => Provider::Mistral,
-            'deepseek'     => Provider::DeepSeek,
-            'xai'          => Provider::XAI,
-            'perplexity'   => 'perplexity',
-            'fireworks'    => 'fireworks',
+            'anthropic' => Provider::Anthropic,
+            'openai' => Provider::OpenAI,
+            'google' => Provider::Gemini,
+            'groq' => Provider::Groq,
+            'openrouter' => Provider::OpenRouter,
+            'ollama' => Provider::Ollama,
+            'mistral' => Provider::Mistral,
+            'deepseek' => Provider::DeepSeek,
+            'xai' => Provider::XAI,
+            'perplexity' => 'perplexity',
+            'fireworks' => 'fireworks',
             'openai_compatible' => 'openai_compatible',
-            'custom_endpoint'   => 'custom_endpoint',
-            'litellm_proxy'     => 'litellm_proxy',
+            'custom_endpoint' => 'custom_endpoint',
+            'litellm_proxy' => 'litellm_proxy',
             default => throw new PrismException("Unsupported provider: {$provider}"),
         };
     }

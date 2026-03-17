@@ -250,24 +250,24 @@ class ProviderResolver
     private const BRIDGE_AGENT_MODELS = [
         'claude-code' => [
             'claude-sonnet-4-5' => 'Claude Code — Sonnet 4.5',
-            'claude-haiku-4-5'  => 'Claude Code — Haiku 4.5',
-            'claude-opus-4-6'   => 'Claude Code — Opus 4.6',
+            'claude-haiku-4-5' => 'Claude Code — Haiku 4.5',
+            'claude-opus-4-6' => 'Claude Code — Opus 4.6',
         ],
         'codex' => [
             'o4-mini' => 'Codex — o4-mini',
-            'o3'      => 'Codex — o3',
-            'o1'      => 'Codex — o1',
+            'o3' => 'Codex — o3',
+            'o1' => 'Codex — o1',
         ],
         'gemini' => [
             'gemini-2.5-flash' => 'Gemini CLI — 2.5 Flash',
-            'gemini-2.5-pro'   => 'Gemini CLI — 2.5 Pro',
+            'gemini-2.5-pro' => 'Gemini CLI — 2.5 Pro',
         ],
         'aider' => [
             'claude-sonnet-4-5' => 'Aider — Sonnet 4.5',
-            'claude-haiku-4-5'  => 'Aider — Haiku 4.5',
-            'gpt-4o'            => 'Aider — GPT-4o',
-            'gpt-4o-mini'       => 'Aider — GPT-4o Mini',
-            'gemini-2.5-flash'  => 'Aider — Gemini 2.5 Flash',
+            'claude-haiku-4-5' => 'Aider — Haiku 4.5',
+            'gpt-4o' => 'Aider — GPT-4o',
+            'gpt-4o-mini' => 'Aider — GPT-4o Mini',
+            'gemini-2.5-flash' => 'Aider — Gemini 2.5 Flash',
         ],
     ];
 
@@ -305,8 +305,8 @@ class ProviderResolver
             if ($knownModels) {
                 foreach ($knownModels as $modelKey => $modelLabel) {
                     $models["{$key}:{$modelKey}"] = [
-                        'label'       => $modelLabel,
-                        'input_cost'  => 0,
+                        'label' => $modelLabel,
+                        'input_cost' => 0,
                         'output_cost' => 0,
                     ];
                 }
@@ -314,8 +314,8 @@ class ProviderResolver
                 // Agent with no known model list (kiro, cursor, cline, opencode, …)
                 // Show as a single selectable option; the agent manages its own model.
                 $models[$key] = [
-                    'label'       => $agentName,
-                    'input_cost'  => 0,
+                    'label' => $agentName,
+                    'input_cost' => 0,
                     'output_cost' => 0,
                 ];
             }

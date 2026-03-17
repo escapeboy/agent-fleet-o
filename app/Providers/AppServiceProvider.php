@@ -88,6 +88,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Reverb\Events\MessageReceived;
 use Livewire\Livewire;
+use SocialiteProviders\Apple\Provider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -210,8 +212,8 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Apple Sign In via SocialiteProviders community package
-        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event) {
-            $event->extendSocialite('apple', \SocialiteProviders\Apple\Provider::class);
+        Event::listen(function (SocialiteWasCalled $event) {
+            $event->extendSocialite('apple', Provider::class);
         });
 
         // Bridge relay: forward Reverb client-relay.* whispers into Redis stream

@@ -14,7 +14,9 @@ class TwoFactorAuthenticationForm extends Component
     public string $state = 'disabled';
 
     public bool $showingRecoveryCodes = false;
+
     public string $confirmationCode = '';
+
     public string $confirmationError = '';
 
     public function mount(): void

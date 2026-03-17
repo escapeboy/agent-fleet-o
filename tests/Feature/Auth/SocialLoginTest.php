@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\UserSocialAccount;
 use App\Models\User;
-use App\Domain\Shared\Models\Team;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,8 +32,8 @@ class SocialLoginTest extends TestCase
     {
         $user = User::factory()->create($attributes);
         $team = Team::create([
-            'name'     => 'Test Team',
-            'slug'     => 'test-team-'.uniqid(),
+            'name' => 'Test Team',
+            'slug' => 'test-team-'.uniqid(),
             'owner_id' => $user->id,
             'settings' => [],
         ]);
@@ -119,10 +119,10 @@ class SocialLoginTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'returning@example.com']);
         UserSocialAccount::create([
-            'user_id'          => $user->id,
-            'provider'         => 'google',
+            'user_id' => $user->id,
+            'provider' => 'google',
             'provider_user_id' => '99999',
-            'email'            => 'returning@example.com',
+            'email' => 'returning@example.com',
         ]);
 
         $socialUser = $this->mockSocialiteUser(id: '99999', email: 'returning@example.com');
@@ -179,10 +179,10 @@ class SocialLoginTest extends TestCase
     {
         // Simulate a pending social auth session (provider gave no email)
         session(['pending_social_auth' => [
-            'provider'    => 'x',
+            'provider' => 'x',
             'provider_id' => '77777',
-            'name'        => 'Attacker',
-            'avatar'      => null,
+            'name' => 'Attacker',
+            'avatar' => null,
         ]]);
 
         $victim = User::factory()->create(['email' => 'victim@example.com']);
@@ -200,10 +200,10 @@ class SocialLoginTest extends TestCase
     public function test_store_email_creates_new_account_for_fresh_email(): void
     {
         session(['pending_social_auth' => [
-            'provider'    => 'x',
+            'provider' => 'x',
             'provider_id' => '88888',
-            'name'        => 'New User',
-            'avatar'      => null,
+            'name' => 'New User',
+            'avatar' => null,
         ]]);
 
         $response = $this->post(route('auth.social.store-email'), ['email' => 'newuser@example.com']);
@@ -220,7 +220,7 @@ class SocialLoginTest extends TestCase
         $user = User::factory()->create(['email' => 'x-user@example.com']);
 
         $socialUser = $this->mockSocialiteUser(id: '55555', email: 'x-user@example.com');
-        $driver     = $this->mockDriver($socialUser);
+        $driver = $this->mockDriver($socialUser);
         Socialite::shouldReceive('driver')->with('x')->andReturn($driver);
 
         $response = $this->get(route('auth.social.callback', 'x'));
@@ -236,10 +236,10 @@ class SocialLoginTest extends TestCase
     {
         $user = $this->userWithTeam(['password' => null]);
         UserSocialAccount::create([
-            'user_id'          => $user->id,
-            'provider'         => 'google',
+            'user_id' => $user->id,
+            'provider' => 'google',
             'provider_user_id' => '111',
-            'email'            => $user->email,
+            'email' => $user->email,
         ]);
 
         $response = $this->actingAs($user)->delete(route('auth.social.unlink', 'google'));
@@ -252,10 +252,10 @@ class SocialLoginTest extends TestCase
     {
         $user = $this->userWithTeam(['password' => bcrypt('secret')]);
         UserSocialAccount::create([
-            'user_id'          => $user->id,
-            'provider'         => 'google',
+            'user_id' => $user->id,
+            'provider' => 'google',
             'provider_user_id' => '222',
-            'email'            => $user->email,
+            'email' => $user->email,
         ]);
 
         $response = $this->actingAs($user)->delete(route('auth.social.unlink', 'google'));

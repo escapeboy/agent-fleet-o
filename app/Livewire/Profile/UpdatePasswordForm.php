@@ -13,7 +13,9 @@ class UpdatePasswordForm extends Component
     public bool $hasPassword;
 
     public string $currentPassword = '';
+
     public string $password = '';
+
     public string $passwordConfirmation = '';
 
     public function mount(): void

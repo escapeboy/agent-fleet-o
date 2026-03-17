@@ -11,10 +11,11 @@ use Barsy\Providers\BarsyServiceProvider;
 use Barsy\Providers\ChatServiceProvider;
 use Barsy\Providers\LearningServiceProvider;
 use Barsy\Providers\LLMServiceProvider;
+use SocialiteProviders\Manager\ServiceProvider;
 
 return [
     AppServiceProvider::class,
-    \SocialiteProviders\Manager\ServiceProvider::class,
+    ServiceProvider::class,
     FortifyServiceProvider::class,
     HorizonServiceProvider::class,
     AiServiceProvider::class,

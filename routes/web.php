@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Controllers\ArtifactPreviewController;
-use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
+use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\SetCurrentTeam;
@@ -27,9 +27,6 @@ use App\Livewire\Chatbots\CreateChatbotForm;
 use App\Livewire\Credentials\CreateCredentialForm;
 use App\Livewire\Credentials\CredentialDetailPage;
 use App\Livewire\Credentials\CredentialListPage;
-use App\Livewire\GitRepositories\CreateGitRepositoryForm;
-use App\Livewire\GitRepositories\GitRepositoryDetailPage;
-use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Crews\CreateCrewForm;
 use App\Livewire\Crews\CrewDetailPage;
 use App\Livewire\Crews\CrewExecutionPage;
@@ -41,6 +38,9 @@ use App\Livewire\Email\EmailThemeDetailPage;
 use App\Livewire\Email\EmailThemeListPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
 use App\Livewire\Experiments\ExperimentListPage;
+use App\Livewire\GitRepositories\CreateGitRepositoryForm;
+use App\Livewire\GitRepositories\GitRepositoryDetailPage;
+use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Health\HealthPage;
 use App\Livewire\Integrations\IntegrationDetailPage;
 use App\Livewire\Integrations\IntegrationListPage;
@@ -49,6 +49,8 @@ use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
 use App\Livewire\Memory\MemoryBrowserPage;
 use App\Livewire\Metrics\ModelComparisonPage;
+use App\Livewire\OutboundConnectors\OutboundConnectorsPage;
+use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
@@ -58,7 +60,6 @@ use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Settings\PluginsPage;
 use App\Livewire\Setup\SetupPage;
 use App\Livewire\Shared\NotificationInboxPage;
-use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Shared\NotificationPreferencesPage;
 use App\Livewire\Signals\ConnectorBindingsPage;
 use App\Livewire\Signals\ConnectorSubscriptionsPage;
@@ -78,9 +79,9 @@ use App\Livewire\Triggers\TriggerRulesPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
-use App\Livewire\OutboundConnectors\OutboundConnectorsPage;
 use App\Livewire\Workflows\WorkflowListPage;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 // Public experiment share (no auth)
@@ -100,7 +101,7 @@ Route::middleware(['guest', 'throttle:10,1'])->group(function () {
     // Apple sends callback as POST (response_mode=form_post); must bypass CSRF
     Route::post('/auth/apple/callback', [SocialAuthController::class, 'appleCallback'])
         ->name('auth.apple.callback')
-        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+        ->withoutMiddleware([VerifyCsrfToken::class]);
 });
 
 // Email collection when provider returns no email (e.g. X/Twitter)
@@ -109,7 +110,6 @@ Route::get('/auth/social/collect-email', fn () => view('auth.social-collect-emai
 Route::post('/auth/social/store-email', [SocialAuthController::class, 'storeEmail'])
     ->middleware('throttle:10,1')
     ->name('auth.social.store-email');
-
 
 // Account linking / unlinking (authenticated users)
 Route::middleware(['auth', 'verified'])->group(function () {

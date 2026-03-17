@@ -48,10 +48,10 @@ class SocialAccountService
         if (empty($email)) {
             session([
                 'pending_social_auth' => [
-                    'provider'    => $provider,
+                    'provider' => $provider,
                     'provider_id' => (string) $socialUser->getId(),
-                    'name'        => $socialUser->getName(),
-                    'avatar'      => $socialUser->getAvatar(),
+                    'name' => $socialUser->getName(),
+                    'avatar' => $socialUser->getAvatar(),
                 ],
             ]);
 
@@ -69,10 +69,10 @@ class SocialAccountService
 
         // 5. Brand new user
         $user = User::create([
-            'name'              => $socialUser->getName() ?? 'User',
-            'email'             => $email,
+            'name' => $socialUser->getName() ?? 'User',
+            'email' => $email,
             'email_verified_at' => in_array($provider, self::VERIFIED_EMAIL_PROVIDERS, true) ? now() : null,
-            'password'          => null,
+            'password' => null,
         ]);
 
         $this->attachSocialAccount($user, $provider, $socialUser);
@@ -100,17 +100,17 @@ class SocialAccountService
         }
 
         $user = User::create([
-            'name'     => $pending['name'] ?? 'User',
-            'email'    => $email,
+            'name' => $pending['name'] ?? 'User',
+            'email' => $email,
             'password' => null,
         ]);
 
         UserSocialAccount::create([
-            'user_id'          => $user->id,
-            'provider'         => $pending['provider'],
+            'user_id' => $user->id,
+            'provider' => $pending['provider'],
             'provider_user_id' => $pending['provider_id'],
-            'name'             => $pending['name'],
-            'avatar'           => $pending['avatar'],
+            'name' => $pending['name'],
+            'avatar' => $pending['avatar'],
         ]);
 
         session()->forget('pending_social_auth');
@@ -138,23 +138,23 @@ class SocialAccountService
         return UserSocialAccount::updateOrCreate(
             ['provider' => $provider, 'provider_user_id' => (string) $socialUser->getId()],
             [
-                'user_id'          => $user->id,
-                'email'            => $socialUser->getEmail(),
-                'name'             => $socialUser->getName(),
-                'avatar'           => $socialUser->getAvatar(),
-                'access_token'     => $socialUser->token,
-                'refresh_token'    => $socialUser->refreshToken ?? null,
+                'user_id' => $user->id,
+                'email' => $socialUser->getEmail(),
+                'name' => $socialUser->getName(),
+                'avatar' => $socialUser->getAvatar(),
+                'access_token' => $socialUser->token,
+                'refresh_token' => $socialUser->refreshToken ?? null,
                 'token_expires_at' => $socialUser->expiresIn ? now()->addSeconds($socialUser->expiresIn) : null,
-                'raw_data'         => $socialUser->user ?? null,
-            ]
+                'raw_data' => $socialUser->user ?? null,
+            ],
         );
     }
 
     private function updateToken(UserSocialAccount $account, SocialiteUser $socialUser): void
     {
         $account->update([
-            'access_token'     => $socialUser->token,
-            'refresh_token'    => $socialUser->refreshToken ?? null,
+            'access_token' => $socialUser->token,
+            'refresh_token' => $socialUser->refreshToken ?? null,
             'token_expires_at' => $socialUser->expiresIn ? now()->addSeconds($socialUser->expiresIn) : null,
         ]);
     }

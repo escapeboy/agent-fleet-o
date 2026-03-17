@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Profile;
 
-use App\Domain\Shared\Models\UserSocialAccount;
 use Illuminate\Support\Collection;
 use Livewire\Component;
 

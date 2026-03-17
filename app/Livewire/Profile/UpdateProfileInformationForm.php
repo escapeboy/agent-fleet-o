@@ -9,7 +9,9 @@ use Livewire\Component;
 class UpdateProfileInformationForm extends Component
 {
     public string $name = '';
+
     public string $email = '';
+
     public bool $emailChanged = false;
 
     public function mount(): void

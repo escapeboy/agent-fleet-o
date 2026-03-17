@@ -74,34 +74,34 @@ return [
         'openrouter' => [],
 
         'mistral' => [
-            'mistral-large-latest'  => ['input' => 20,   'output' => 60],   // $2.00/$6.00 per 1M
-            'mistral-small-latest'  => ['input' => 1,    'output' => 3],    // $0.10/$0.30 per 1M
-            'codestral-latest'      => ['input' => 2,    'output' => 6],    // $0.20/$0.60 per 1M
-            'mistral-nemo-latest'   => ['input' => 2,    'output' => 2],    // $0.15/$0.15 per 1M
+            'mistral-large-latest' => ['input' => 20,   'output' => 60],   // $2.00/$6.00 per 1M
+            'mistral-small-latest' => ['input' => 1,    'output' => 3],    // $0.10/$0.30 per 1M
+            'codestral-latest' => ['input' => 2,    'output' => 6],    // $0.20/$0.60 per 1M
+            'mistral-nemo-latest' => ['input' => 2,    'output' => 2],    // $0.15/$0.15 per 1M
         ],
 
         'deepseek' => [
-            'deepseek-chat'     => ['input' => 3,    'output' => 11],   // $0.27/$1.10 per 1M
+            'deepseek-chat' => ['input' => 3,    'output' => 11],   // $0.27/$1.10 per 1M
             'deepseek-reasoner' => ['input' => 6,    'output' => 22],   // $0.55/$2.19 per 1M
         ],
 
         'xai' => [
-            'grok-3'        => ['input' => 30,   'output' => 150],  // $3.00/$15.00 per 1M
-            'grok-3-mini'   => ['input' => 3,    'output' => 5],    // $0.30/$0.50 per 1M
+            'grok-3' => ['input' => 30,   'output' => 150],  // $3.00/$15.00 per 1M
+            'grok-3-mini' => ['input' => 3,    'output' => 5],    // $0.30/$0.50 per 1M
             'grok-2-latest' => ['input' => 20,   'output' => 100],  // $2.00/$10.00 per 1M
         ],
 
         'perplexity' => [
-            'sonar-pro'       => ['input' => 30,   'output' => 150],  // $3.00/$15.00 per 1M
-            'sonar'           => ['input' => 10,   'output' => 10],   // $1.00/$1.00 per 1M
+            'sonar-pro' => ['input' => 30,   'output' => 150],  // $3.00/$15.00 per 1M
+            'sonar' => ['input' => 10,   'output' => 10],   // $1.00/$1.00 per 1M
             'sonar-reasoning' => ['input' => 10,   'output' => 50],   // $1.00/$5.00 per 1M
         ],
 
         'fireworks' => [
             'accounts/fireworks/models/llama-v3p3-70b-instruct' => ['input' => 9,  'output' => 9],    // $0.90/$0.90 per 1M
-            'accounts/fireworks/models/deepseek-r1'             => ['input' => 30, 'output' => 80],   // $3.00/$8.00 per 1M
-            'accounts/fireworks/models/qwen3-235b-a22b'         => ['input' => 2,  'output' => 9],    // $0.22/$0.88 per 1M
-            'accounts/fireworks/models/mixtral-8x22b-instruct'  => ['input' => 12, 'output' => 12],   // $1.20/$1.20 per 1M
+            'accounts/fireworks/models/deepseek-r1' => ['input' => 30, 'output' => 80],   // $3.00/$8.00 per 1M
+            'accounts/fireworks/models/qwen3-235b-a22b' => ['input' => 2,  'output' => 9],    // $0.22/$0.88 per 1M
+            'accounts/fireworks/models/mixtral-8x22b-instruct' => ['input' => 12, 'output' => 12],   // $1.20/$1.20 per 1M
         ],
 
         // Local HTTP LLM providers — zero cost (runs on your hardware).

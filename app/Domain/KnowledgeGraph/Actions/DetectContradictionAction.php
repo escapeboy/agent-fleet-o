@@ -5,6 +5,7 @@ namespace App\Domain\KnowledgeGraph\Actions;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +42,7 @@ class DetectContradictionAction
                 ->whereNull('invalid_at')
                 ->whereNotNull('fact_embedding')
                 ->get());
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             // fact_embedding column may not exist (PostgreSQL without pgvector extension)
             Log::debug('DetectContradictionAction: fact_embedding column unavailable', [
                 'error' => $e->getMessage(),

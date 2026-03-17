@@ -7,6 +7,7 @@ use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\GitRepository\Contracts\GitClientInterface;
 use App\Domain\GitRepository\Models\GitRepository;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -132,7 +133,7 @@ class BridgeGitClient implements GitClientInterface
 
         if (! $connection) {
             throw new RuntimeException(
-                'No active Bridge connection found. Install and connect the FleetQ Bridge to use bridge mode.'
+                'No active Bridge connection found. Install and connect the FleetQ Bridge to use bridge mode.',
             );
         }
 
@@ -141,7 +142,7 @@ class BridgeGitClient implements GitClientInterface
 
     private function sendRequest(BridgeConnection $connection, string $operation, array $payload): array
     {
-        $requestId = (string) \Illuminate\Support\Str::uuid();
+        $requestId = (string) Str::uuid();
         $repoConfig = $this->repo->config['bridge'] ?? [];
 
         $message = json_encode([
@@ -161,7 +162,7 @@ class BridgeGitClient implements GitClientInterface
         $response = Redis::connection('bridge')->blpop([$responseKey], self::REQUEST_TIMEOUT);
 
         if (! $response) {
-            throw new RuntimeException("Bridge git operation '{$operation}' timed out after " . self::REQUEST_TIMEOUT . 's.');
+            throw new RuntimeException("Bridge git operation '{$operation}' timed out after ".self::REQUEST_TIMEOUT.'s.');
         }
 
         $data = json_decode($response[1], true);

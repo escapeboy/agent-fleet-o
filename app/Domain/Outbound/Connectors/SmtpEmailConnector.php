@@ -2,6 +2,7 @@
 
 namespace App\Domain\Outbound\Connectors;
 
+use App\Domain\Email\Models\EmailTemplate;
 use App\Domain\Email\Services\EmailTemplateInterpolator;
 use App\Domain\Email\Services\EmailThemeResolver;
 use App\Domain\Experiment\Models\Experiment;
@@ -107,7 +108,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 $template = app(EmailThemeResolver::class)->resolveForProject($project);
 
                 if (! $template && ! empty($creds['default_template_id'])) {
-                    $template = \App\Domain\Email\Models\EmailTemplate::withoutGlobalScopes()
+                    $template = EmailTemplate::withoutGlobalScopes()
                         ->where('id', $creds['default_template_id'])
                         ->where('status', 'active')
                         ->first();

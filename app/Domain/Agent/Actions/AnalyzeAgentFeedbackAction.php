@@ -7,6 +7,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Evolution\Actions\AnalyzeExecutionForEvolutionAction;
 use App\Domain\Evolution\Models\EvolutionProposal;
+use Illuminate\Support\Collection;
 
 class AnalyzeAgentFeedbackAction
 {
@@ -47,9 +48,9 @@ class AnalyzeAgentFeedbackAction
     /**
      * Build a human-readable summary of failure patterns from feedback records.
      *
-     * @param  \Illuminate\Support\Collection<int, AgentFeedback>  $feedbacks
+     * @param  Collection<int, AgentFeedback>  $feedbacks
      */
-    private function buildFeedbackSummary(\Illuminate\Support\Collection $feedbacks): string
+    private function buildFeedbackSummary(Collection $feedbacks): string
     {
         $parts = ["Recent negative feedback ({$feedbacks->count()} items):"];
 

@@ -35,18 +35,18 @@ class SocialAccountListTool extends Tool
             ->orderBy('provider')
             ->get()
             ->map(fn ($account) => [
-                'provider'         => $account->provider,
+                'provider' => $account->provider,
                 'provider_user_id' => $account->provider_user_id,
-                'email'            => $account->email,
-                'name'             => $account->name,
-                'avatar'           => $account->avatar,
-                'connected_at'     => $account->created_at->toIso8601String(),
+                'email' => $account->email,
+                'name' => $account->name,
+                'avatar' => $account->avatar,
+                'connected_at' => $account->created_at->toIso8601String(),
             ])
             ->values();
 
         return Response::text(json_encode([
             'connected_providers' => $accounts,
-            'has_password'        => ! empty($user->password),
+            'has_password' => ! empty($user->password),
         ]));
     }
 }

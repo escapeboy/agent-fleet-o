@@ -35,7 +35,7 @@ class GitOperationRouter
         }
 
         throw new InvalidArgumentException(
-            "Provider '{$provider}' does not support api_only mode. Use sandbox or bridge mode."
+            "Provider '{$provider}' does not support api_only mode. Use sandbox or bridge mode.",
         );
     }
 }

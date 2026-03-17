@@ -79,16 +79,16 @@ return [
     |--------------------------------------------------------------------------
     */
     'platform_api_keys' => [
-        'anthropic'  => env('ANTHROPIC_API_KEY'),
-        'openai'     => env('OPENAI_API_KEY'),
-        'google'     => env('GOOGLE_AI_API_KEY'),
-        'groq'       => env('GROQ_API_KEY'),
+        'anthropic' => env('ANTHROPIC_API_KEY'),
+        'openai' => env('OPENAI_API_KEY'),
+        'google' => env('GOOGLE_AI_API_KEY'),
+        'groq' => env('GROQ_API_KEY'),
         'openrouter' => env('OPENROUTER_API_KEY'),
-        'mistral'    => env('MISTRAL_API_KEY'),
-        'deepseek'   => env('DEEPSEEK_API_KEY'),
-        'xai'        => env('XAI_API_KEY'),
+        'mistral' => env('MISTRAL_API_KEY'),
+        'deepseek' => env('DEEPSEEK_API_KEY'),
+        'xai' => env('XAI_API_KEY'),
         'perplexity' => env('PERPLEXITY_API_KEY'),
-        'fireworks'  => env('FIREWORKS_API_KEY'),
+        'fireworks' => env('FIREWORKS_API_KEY'),
     ],
 
     'clearcue' => [
@@ -101,36 +101,36 @@ return [
     |--------------------------------------------------------------------------
     */
     'google' => [
-        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect'      => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
     'github' => [
-        'client_id'     => env('GITHUB_CLIENT_ID'),
+        'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        'redirect'      => env('GITHUB_REDIRECT_URI'),
+        'redirect' => env('GITHUB_REDIRECT_URI'),
     ],
 
     'linkedin-openid' => [
-        'client_id'     => env('LINKEDIN_CLIENT_ID'),
+        'client_id' => env('LINKEDIN_CLIENT_ID'),
         'client_secret' => env('LINKEDIN_CLIENT_SECRET'),
-        'redirect'      => env('LINKEDIN_REDIRECT_URI'),
+        'redirect' => env('LINKEDIN_REDIRECT_URI'),
     ],
 
     'x' => [
-        'client_id'     => env('X_CLIENT_ID'),
+        'client_id' => env('X_CLIENT_ID'),
         'client_secret' => env('X_CLIENT_SECRET'),
-        'redirect'      => env('X_REDIRECT_URI'),
+        'redirect' => env('X_REDIRECT_URI'),
     ],
 
     'apple' => [
-        'client_id'   => env('APPLE_CLIENT_ID'),
+        'client_id' => env('APPLE_CLIENT_ID'),
         'client_secret' => env('APPLE_CLIENT_SECRET', ''),
-        'key_id'      => env('APPLE_KEY_ID'),
-        'team_id'     => env('APPLE_TEAM_ID'),
+        'key_id' => env('APPLE_KEY_ID'),
+        'team_id' => env('APPLE_TEAM_ID'),
         'private_key' => env('APPLE_PRIVATE_KEY'),
-        'redirect'    => env('APPLE_REDIRECT_URI'),
+        'redirect' => env('APPLE_REDIRECT_URI'),
     ],
 
 ];

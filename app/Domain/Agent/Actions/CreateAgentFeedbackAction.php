@@ -3,6 +3,7 @@
 namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Enums\FeedbackRating;
+use App\Domain\Agent\Jobs\AnalyzeAgentFeedbackJob;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Audit\Models\AuditEntry;
@@ -69,7 +70,7 @@ class CreateAgentFeedbackAction
 
         // Trigger improvement analysis when enough negative feedback has accumulated.
         if ($rating->isNegative() && $this->shouldTriggerAnalysis($agent, $teamId)) {
-            dispatch(new \App\Domain\Agent\Jobs\AnalyzeAgentFeedbackJob($agent));
+            dispatch(new AnalyzeAgentFeedbackJob($agent));
         }
 
         return $feedback;

@@ -104,7 +104,7 @@ class GitHubApiClient implements GitClientInterface
     public function listFiles(string $path = '/', string $ref = 'HEAD'): array
     {
         $path = ltrim($path, '/');
-        $url = "/repos/{$this->owner}/{$this->repo}/contents/" . ($path ?: '');
+        $url = "/repos/{$this->owner}/{$this->repo}/contents/".($path ?: '');
 
         $response = $this->http()->get($url, ['ref' => $ref]);
 
@@ -128,7 +128,7 @@ class GitHubApiClient implements GitClientInterface
     {
         $response = $this->http()->get(
             "/repos/{$this->owner}/{$this->repo}/git/trees/{$ref}",
-            ['recursive' => '1']
+            ['recursive' => '1'],
         );
 
         $this->checkAuth($response);

@@ -7,6 +7,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -51,8 +52,8 @@ class ProfilePasswordUpdateTool extends Tool
                     'password' => $newPassword,
                     'password_confirmation' => $confirmation,
                 ]);
-            } catch (\Illuminate\Validation\ValidationException $e) {
-                return Response::error('Validation failed: ' . implode(', ', array_merge(...array_values($e->errors()))));
+            } catch (ValidationException $e) {
+                return Response::error('Validation failed: '.implode(', ', array_merge(...array_values($e->errors()))));
             }
         } else {
             // Set initial password (social-only account)
@@ -63,8 +64,8 @@ class ProfilePasswordUpdateTool extends Tool
                 ], [
                     'password' => ['required', 'string', Password::default(), 'confirmed'],
                 ])->validate();
-            } catch (\Illuminate\Validation\ValidationException $e) {
-                return Response::error('Validation failed: ' . implode(', ', array_merge(...array_values($e->errors()))));
+            } catch (ValidationException $e) {
+                return Response::error('Validation failed: '.implode(', ', array_merge(...array_values($e->errors()))));
             }
 
             $user->forceFill(['password' => Hash::make($newPassword)])->save();

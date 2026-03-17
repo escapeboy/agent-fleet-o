@@ -18,6 +18,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Tool as PrismToolObject;
 use Prism\Prism\ValueObjects\ToolOutput;
+use Sentry\Severity;
+use Sentry\State\Scope;
 
 class SendAssistantMessageAction
 {
@@ -212,7 +214,7 @@ class SendAssistantMessageAction
                 'provider' => $provider,
                 'model' => $model,
             ]);
-            \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($provider, $model, $user): void {
+            \Sentry\withScope(function (Scope $scope) use ($provider, $model, $user): void {
                 $scope->setTag('provider', $provider);
                 $scope->setTag('model', $model ?? 'unknown');
                 $scope->setContext('bridge_empty_response', [
@@ -223,7 +225,7 @@ class SendAssistantMessageAction
                 ]);
                 \Sentry\captureMessage(
                     "Bridge agent empty response: {$provider}/".($model ?? 'unknown'),
-                    \Sentry\Severity::warning(),
+                    Severity::warning(),
                 );
             });
         }

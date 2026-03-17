@@ -67,11 +67,10 @@ class SandboxGitClient implements GitClientInterface
         $this->notImplemented();
     }
 
-    /** @return never */
     private function notImplemented(): never
     {
         throw new RuntimeException(
-            'Sandbox git mode is not yet available. Please use api_only mode for GitHub/GitLab repositories or bridge mode for local repositories.'
+            'Sandbox git mode is not yet available. Please use api_only mode for GitHub/GitLab repositories or bridge mode for local repositories.',
         );
     }
 }

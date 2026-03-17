@@ -12,6 +12,8 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Sentry\Severity;
+use Sentry\State\Scope;
 
 class ProcessAssistantMessageJob implements ShouldQueue
 {
@@ -74,7 +76,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
             // but the bridge does not propagate an explicit error frame.
             $placeholder->refresh();
             if (($placeholder->content ?? '') === '' && str_contains($this->provider ?? '', 'bridge')) {
-                \Sentry\withScope(function (\Sentry\State\Scope $scope): void {
+                \Sentry\withScope(function (Scope $scope): void {
                     $scope->setTag('provider', $this->provider ?? 'unknown');
                     $scope->setTag('model', $this->model ?? 'unknown');
                     $scope->setContext('bridge_debug', [
@@ -86,7 +88,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
                     ]);
                     \Sentry\captureMessage(
                         'Bridge agent returned empty response: '.($this->provider ?? '?').'/'.($this->model ?? '?'),
-                        \Sentry\Severity::warning(),
+                        Severity::warning(),
                     );
                 });
 
@@ -106,7 +108,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
                 ]);
             }
         } catch (\Throwable $e) {
-            \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($e): void {
+            \Sentry\withScope(function (Scope $scope) use ($e): void {
                 $scope->setTag('provider', $this->provider ?? 'unknown');
                 $scope->setTag('model', $this->model ?? 'unknown');
                 $scope->setContext('bridge_debug', [
@@ -136,7 +138,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
 
     public function failed(?\Throwable $e): void
     {
-        \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($e): void {
+        \Sentry\withScope(function (Scope $scope) use ($e): void {
             $scope->setTag('provider', $this->provider ?? 'unknown');
             $scope->setTag('model', $this->model ?? 'unknown');
             $scope->setContext('bridge_debug', [

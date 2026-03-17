@@ -5,6 +5,7 @@ namespace App\Domain\Shared\Services;
 use App\Domain\Shared\Jobs\SendPushNotificationJob;
 use App\Domain\Shared\Models\UserNotification;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 
 class NotificationService
@@ -24,7 +25,7 @@ class NotificationService
     ): ?UserNotification {
         try {
             $user = User::find($userId);
-        } catch (\Illuminate\Database\QueryException) {
+        } catch (QueryException) {
             return null;
         }
 

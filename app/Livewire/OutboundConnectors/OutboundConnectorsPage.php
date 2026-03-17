@@ -10,26 +10,35 @@ class OutboundConnectorsPage extends Component
 {
     // SMTP server
     public string $host = '';
+
     public string $port = '587';
+
     public string $encryption = 'tls';
+
     public string $username = '';
+
     public string $password = '';
 
     // Sender identity
     public string $fromAddress = '';
+
     public string $fromName = '';
 
     // Delivery defaults
     public string $defaultRecipient = '';
+
     public string $defaultTemplateId = '';
 
     // Connector state
     public bool $isActive = true;
+
     public ?string $lastTestedAt = null;
+
     public ?string $lastTestStatus = null;
 
     // UI feedback
     public ?string $testMessage = null;
+
     public ?string $testError = null;
 
     public function mount(): void

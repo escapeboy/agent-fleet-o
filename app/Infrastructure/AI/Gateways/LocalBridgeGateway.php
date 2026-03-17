@@ -13,6 +13,8 @@ use App\Infrastructure\Bridge\BridgeRequestRegistry;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Sentry\Severity;
+use Sentry\State\Scope;
 
 class LocalBridgeGateway implements AiGatewayInterface
 {
@@ -86,7 +88,7 @@ class LocalBridgeGateway implements AiGatewayInterface
             $item = $this->registry->popChunk($requestId, self::RELAY_TIMEOUT);
 
             if ($item === null) {
-                \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($requestId, $request): void {
+                \Sentry\withScope(function (Scope $scope) use ($requestId, $request): void {
                     $scope->setTag('provider', $request->provider);
                     $scope->setTag('model', $request->model);
                     $scope->setContext('bridge_timeout', [
@@ -99,7 +101,7 @@ class LocalBridgeGateway implements AiGatewayInterface
                     ]);
                     \Sentry\captureMessage(
                         "Bridge relay timed out: {$request->provider}/{$request->model} ({$requestId})",
-                        \Sentry\Severity::error(),
+                        Severity::error(),
                     );
                 });
 
@@ -119,7 +121,7 @@ class LocalBridgeGateway implements AiGatewayInterface
                 $usage = $this->registry->getUsage($requestId);
 
                 if (isset($usage['__error'])) {
-                    \Sentry\withScope(function (\Sentry\State\Scope $scope) use ($requestId, $request, $usage): void {
+                    \Sentry\withScope(function (Scope $scope) use ($requestId, $request, $usage): void {
                         $scope->setTag('provider', $request->provider);
                         $scope->setTag('model', $request->model);
                         $scope->setContext('bridge_execution_error', [
@@ -131,7 +133,7 @@ class LocalBridgeGateway implements AiGatewayInterface
                         ]);
                         \Sentry\captureMessage(
                             "Bridge execution error: {$request->provider}/{$request->model} — {$usage['__error']}",
-                            \Sentry\Severity::error(),
+                            Severity::error(),
                         );
                     });
 
@@ -175,12 +177,12 @@ class LocalBridgeGateway implements AiGatewayInterface
                 'request_id' => $requestId,
                 'frame_type' => 0x0010,
                 'payload' => [
-                    'request_id'   => $requestId,
-                    'agent_key'    => $agentKey,
-                    'model'        => $agentModel, // passed as --model to the agent CLI
-                    'prompt'       => $request->userPrompt ?? '',
+                    'request_id' => $requestId,
+                    'agent_key' => $agentKey,
+                    'model' => $agentModel, // passed as --model to the agent CLI
+                    'prompt' => $request->userPrompt ?? '',
                     'system_prompt' => $request->systemPrompt ?? '',
-                    'stream'       => true,
+                    'stream' => true,
                 ],
             ];
         }
