@@ -52,6 +52,9 @@ class TeamSettingsPage extends Component
     // Media analysis
     public bool $mediaAnalysisEnabled = false;
 
+    // Chatbot feature toggle
+    public bool $chatbotEnabled = false;
+
     // Approval settings
     public int $approvalTimeoutHours = 48;
 
@@ -80,6 +83,7 @@ class TeamSettingsPage extends Component
         $this->assistantModel = $settings['assistant_llm_model'] ?? GlobalSetting::get('assistant_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
+        $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
     }
 
     public function saveTeamSettings(): void
@@ -135,6 +139,16 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Media analysis settings saved.');
+    }
+
+    public function saveChatbotSettings(): void
+    {
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['chatbot_enabled'] = $this->chatbotEnabled;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Chatbot settings saved.');
     }
 
     public function saveApprovalSettings(): void
