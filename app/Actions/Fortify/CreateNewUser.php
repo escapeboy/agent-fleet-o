@@ -4,7 +4,9 @@ namespace App\Actions\Fortify;
 
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Notifications\WelcomeNotification;
+use App\Domain\Shared\Services\TermsAcceptanceService;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -20,6 +22,11 @@ class CreateNewUser implements CreatesNewUsers
      *
      * @param  array<string, string>  $input
      */
+    public function __construct(
+        private readonly TermsAcceptanceService $terms,
+        private readonly Request $request,
+    ) {}
+
     public function create(array $input): User
     {
         Validator::make($input, [
@@ -59,6 +66,8 @@ class CreateNewUser implements CreatesNewUsers
             $user->update(['current_team_id' => $team->id]);
 
             $user->notify(new WelcomeNotification($team));
+
+            $this->terms->record($user, $this->request, 'registration_form');
 
             return $user;
         });

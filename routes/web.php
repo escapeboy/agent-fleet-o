@@ -77,6 +77,7 @@ use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
+use App\Livewire\Auth\AcceptTermsPage;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
@@ -179,6 +180,9 @@ Route::middleware(['auth', 'verified'])->prefix('app/marketplace')->name('app.ma
     Route::get('/publish', PublishForm::class)->name('publish');
     Route::get('/{listing:slug}', MarketplaceDetailPage::class)->name('show');
 });
+
+// Terms acceptance gate (auth required, but NOT verified — social users may not have verified email)
+Route::middleware(['auth'])->get('/terms/accept', AcceptTermsPage::class)->name('terms.accept');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardPage::class)->name('dashboard');

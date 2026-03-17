@@ -154,6 +154,8 @@ use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
+use App\Mcp\Tools\Shared\TermsAcceptanceHistoryTool;
+use App\Mcp\Tools\Shared\TermsAcceptanceStatusTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
 use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
@@ -434,7 +436,7 @@ class AgentFleetServer extends Server
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
 
-        // Shared (7)
+        // Shared (9)
         NotificationTool::class,
         TeamGetTool::class,
         TeamUpdateTool::class,
@@ -443,6 +445,8 @@ class AgentFleetServer extends Server
         TeamByokCredentialManageTool::class,
         CustomEndpointManageTool::class,
         ApiTokenManageTool::class,
+        TermsAcceptanceStatusTool::class,
+        TermsAcceptanceHistoryTool::class,
 
         // Telegram (1)
         TelegramBotTool::class,

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Models\TermsAcceptance;
 use App\Domain\Shared\Models\UserSocialAccount;
 use App\Domain\Shared\Services\NotificationPreferencesService;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -32,6 +33,8 @@ class User extends Authenticatable
         'theme',
         'notification_preferences',
         'changelog_seen_at',
+        'terms_version',
+        'terms_accepted_at',
     ];
 
     protected $hidden = [
@@ -50,6 +53,8 @@ class User extends Authenticatable
             'two_factor_recovery_codes' => 'encrypted',
             'notification_preferences' => 'array',
             'changelog_seen_at' => 'datetime',
+            'terms_version' => 'integer',
+            'terms_accepted_at' => 'datetime',
         ];
     }
 
@@ -109,6 +114,19 @@ class User extends Authenticatable
     public function socialAccounts(): HasMany
     {
         return $this->hasMany(UserSocialAccount::class);
+    }
+
+    /** @return HasMany<TermsAcceptance, $this> */
+    public function termsAcceptances(): HasMany
+    {
+        return $this->hasMany(TermsAcceptance::class);
+    }
+
+    public function hasAcceptedCurrentTerms(): bool
+    {
+        $current = config('terms.current_version');
+
+        return $current === 0 || ($this->terms_version !== null && $this->terms_version >= $current);
     }
 
     public function isTeamOwner(?Team $team = null): bool

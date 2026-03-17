@@ -2,6 +2,7 @@
 
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
 use App\Http\Middleware\BypassAuth;
+use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
         $middleware->appendToGroup('web', BypassAuth::class);
         $middleware->appendToGroup('web', SetCurrentTeam::class);
+        $middleware->appendToGroup('web', EnsureTermsAccepted::class);
         $middleware->appendToGroup('web', SetPostgresRlsContext::class);
         $middleware->statefulApi();
     })
