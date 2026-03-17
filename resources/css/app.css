@@ -122,6 +122,9 @@
 .prose-output tr:nth-child(even) td { background-color: var(--surface-alt, #f9fafb); }
 .prose-output td:first-child { white-space: normal; }
 
+/* Alpine.js cloak — hide until Alpine initializes to prevent flash of unstyled content */
+[x-cloak] { display: none !important; }
+
 /* ─── Landing page ─── */
 html {
     scroll-behavior: smooth;
