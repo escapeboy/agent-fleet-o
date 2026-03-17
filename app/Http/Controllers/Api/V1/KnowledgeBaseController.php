@@ -84,11 +84,17 @@ class KnowledgeBaseController extends Controller
             'top_k' => ['sometimes', 'integer', 'min:1', 'max:20'],
         ]);
 
-        $results = $action->execute(
-            knowledgeBaseId: $validated['knowledge_base_id'],
-            query: $validated['query'],
-            topK: $validated['top_k'] ?? 5,
-        );
+        try {
+            $results = $action->execute(
+                knowledgeBaseId: $validated['knowledge_base_id'],
+                query: $validated['query'],
+                topK: $validated['top_k'] ?? 5,
+            );
+        } catch (\Throwable $e) {
+            error_log('[KnowledgeBaseController::search] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+
+            return response()->json(['data' => [], 'total' => 0]);
+        }
 
         return response()->json([
             'data' => $results,
