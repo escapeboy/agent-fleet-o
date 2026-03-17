@@ -4,6 +4,7 @@ namespace App\Domain\Knowledge\Services;
 
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\NeuronPrismProvider;
+use Illuminate\Support\Facades\Log;
 use NeuronAI\Chat\Messages\UserMessage;
 use NeuronAI\RAG\RAG;
 
@@ -80,13 +81,23 @@ class KnowledgeBaseRAGFactory
         $embedder = new PrismEmbeddingsProvider;
         $store = new PgVectorKnowledgeStore($knowledgeBaseId, $topK);
 
-        $embedding = $embedder->embedText($query);
+        try {
+            $embedding = $embedder->embedText($query);
+        } catch (\Throwable $e) {
+            Log::warning('KnowledgeBaseRAGFactory: embedding failed during search', [
+                'knowledge_base_id' => $knowledgeBaseId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+
         $docs = $store->similaritySearch($embedding);
 
         return array_map(fn ($doc) => [
             'content' => $doc->content,
             'source' => $doc->sourceName,
-            'score' => $doc->score,
+            'score' => $doc->score ?? 0.0,
         ], is_array($docs) ? $docs : iterator_to_array($docs));
     }
 }
