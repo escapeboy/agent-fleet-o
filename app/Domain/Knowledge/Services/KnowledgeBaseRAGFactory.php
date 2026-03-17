@@ -4,7 +4,6 @@ namespace App\Domain\Knowledge\Services;
 
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\NeuronPrismProvider;
-use Illuminate\Support\Facades\Log;
 use NeuronAI\Chat\Messages\UserMessage;
 use NeuronAI\RAG\RAG;
 
@@ -84,11 +83,7 @@ class KnowledgeBaseRAGFactory
         try {
             $embedding = $embedder->embedText($query);
         } catch (\Throwable $e) {
-            Log::warning('KnowledgeBaseRAGFactory: embedding failed during search', [
-                'knowledge_base_id' => $knowledgeBaseId,
-                'error' => $e->getMessage(),
-            ]);
-
+            // Embedding provider not configured or failed — return empty results gracefully
             return [];
         }
 
