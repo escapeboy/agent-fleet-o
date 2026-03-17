@@ -21,15 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_sqlite, dom, filter, json, tokenizer, bcmath, openssl, sodium
-          coverage: none
-
-      - name: Verify PHP
-        run: php -v && composer --version
+      - name: Verify PHP 8.4
+        run: |
+          php -v
+          php -r 'if (PHP_MAJOR_VERSION !== 8 || PHP_MINOR_VERSION !== 4) { echo "Expected PHP 8.4, got " . PHP_VERSION . "\n"; exit(1); }'
+          composer --version
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -66,15 +62,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_sqlite, dom, filter, json, tokenizer, bcmath, openssl, sodium
-          coverage: none
-
-      - name: Verify PHP
-        run: php -v && php -m | grep -E '(sqlite3|pcov|pgsql|redis)'
+      - name: Verify PHP 8.4
+        run: |
+          php -v
+          php -r 'if (PHP_MAJOR_VERSION !== 8 || PHP_MINOR_VERSION !== 4) { echo "Expected PHP 8.4, got " . PHP_VERSION . "\n"; exit(1); }'
+          php -m | grep -E '(sqlite3|pcov|pgsql|redis)'
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
