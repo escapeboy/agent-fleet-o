@@ -92,11 +92,11 @@ Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->
 // Guest-only initiation + callback routes (rate limited)
 Route::middleware(['guest', 'throttle:10,1'])->group(function () {
     Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
-        ->where('provider', 'google|github|linkedin-openid|x|apple')
+        ->where('provider', '[a-z0-9\-]+')
         ->name('auth.social.redirect');
 
     Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
-        ->where('provider', 'google|github|linkedin-openid|x')
+        ->where('provider', '[a-z0-9\-]+')
         ->name('auth.social.callback');
 
     // Apple sends callback as POST (response_mode=form_post); must bypass CSRF
@@ -115,11 +115,11 @@ Route::post('/auth/social/store-email', [SocialAuthController::class, 'storeEmai
 // Account linking / unlinking (authenticated users)
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/auth/{provider}/link', [SocialAuthController::class, 'linkRedirect'])
-        ->where('provider', 'google|github|linkedin-openid|x|apple')
+        ->where('provider', '[a-z0-9\-]+')
         ->name('auth.social.link');
 
     Route::delete('/auth/{provider}/unlink', [SocialAuthController::class, 'unlink'])
-        ->where('provider', 'google|github|linkedin-openid|x|apple')
+        ->where('provider', '[a-z0-9\-]+')
         ->name('auth.social.unlink');
 });
 // ─────────────────────────────────────────────────────────────────────────────

@@ -74,6 +74,17 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
     /** @var list<class-string<PanelExtension>> PanelExtension implementations */
     protected array $panels = [];
 
+    /**
+     * Socialite provider driver names to add to the social login allowlist.
+     * Each driver must also be registered (e.g. in bootAddon() via Socialite::extend()).
+     *
+     * Example:
+     *   protected array $socialiteProviders = ['lukanet'];
+     *
+     * @var list<string>
+     */
+    protected array $socialiteProviders = [];
+
     // -------------------------------------------------------------------------
     // Abstract — plugin authors must implement this
     // -------------------------------------------------------------------------
@@ -98,6 +109,12 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
 
         // Tag connectors and tools for the registries
         $this->registerTaggedBindings();
+
+        // Merge plugin's Socialite providers into the social allowlist
+        if (! empty($this->socialiteProviders)) {
+            $existing = config('social.providers', []);
+            config(['social.providers' => array_values(array_unique(array_merge($existing, $this->socialiteProviders)))]);
+        }
 
         // Let the plugin do its own container bindings
         $plugin->register();

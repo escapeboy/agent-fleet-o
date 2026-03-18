@@ -12,8 +12,6 @@ use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
-    private const SUPPORTED_PROVIDERS = ['google', 'github', 'linkedin-openid', 'x', 'apple'];
-
     public function __construct(private readonly SocialAccountService $socialAccountService) {}
 
     public function redirect(string $provider): RedirectResponse
@@ -23,7 +21,7 @@ class SocialAuthController extends Controller
         $driver = Socialite::driver($provider);
 
         // Enable PKCE for providers that support it (X has it on by default)
-        if (in_array($provider, ['google', 'linkedin-openid', 'apple'], true)) {
+        if (in_array($provider, config('social.pkce_providers', []), true)) {
             $driver->enablePKCE();
         }
 
@@ -37,7 +35,7 @@ class SocialAuthController extends Controller
         try {
             $driver = Socialite::driver($provider);
 
-            if (in_array($provider, ['google', 'linkedin-openid', 'apple'], true)) {
+            if (in_array($provider, config('social.pkce_providers', []), true)) {
                 $driver->enablePKCE();
             }
 
@@ -78,7 +76,7 @@ class SocialAuthController extends Controller
 
         $driver = Socialite::driver($provider);
 
-        if (in_array($provider, ['google', 'linkedin-openid', 'apple'], true)) {
+        if (in_array($provider, config('social.pkce_providers', []), true)) {
             $driver->enablePKCE();
         }
 
@@ -147,7 +145,7 @@ class SocialAuthController extends Controller
 
     private function validateProvider(string $provider): void
     {
-        if (! in_array($provider, self::SUPPORTED_PROVIDERS, true)) {
+        if (! in_array($provider, config('social.providers', []), true)) {
             abort(404);
         }
     }
