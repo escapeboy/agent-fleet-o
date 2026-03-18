@@ -39,6 +39,9 @@
         <div class="space-y-8">
             <livewire:profile.update-password-form />
             <livewire:profile.two-factor-authentication-form />
+            <div class="rounded-lg border border-gray-200 bg-white p-6">
+                <livewire:profile.passkeys-form />
+            </div>
         </div>
     </div>
 
