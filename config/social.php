@@ -24,4 +24,25 @@ return [
     |
     */
     'pkce_providers' => ['google', 'linkedin-openid', 'apple'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | UI Metadata per Provider
+    |--------------------------------------------------------------------------
+    |
+    | Display label and layout hints for each provider button.
+    | full_width: true makes the button span both columns (like Apple).
+    | Unknown providers fall back to ['label' => ucfirst($driver)].
+    |
+    | Plugins can extend this by merging into the config:
+    |   config(['social.ui.lukanet' => ['label' => 'LukaNet']]);
+    |
+    */
+    'ui' => [
+        'google'          => ['label' => 'Google'],
+        'github'          => ['label' => 'GitHub'],
+        'linkedin-openid' => ['label' => 'LinkedIn'],
+        'x'               => ['label' => 'X'],
+        'apple'           => ['label' => 'Apple', 'full_width' => true],
+    ],
 ];
