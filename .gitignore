@@ -44,3 +44,5 @@ Thumbs.db
 /services
 /phpstan-filter.php
 /public/presentations
+/public/vendor
+/storage/docs-repo
