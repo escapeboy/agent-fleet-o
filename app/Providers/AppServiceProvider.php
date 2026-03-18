@@ -175,6 +175,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Passport OAuth2 — used for MCP server authentication (Authorization Code + PKCE)
+        Passport::useUserKeyType('uuid');  // User PKs are UUIDs, not bigints
         Passport::tokensExpireIn(CarbonInterval::hours(1));
         Passport::refreshTokensExpireIn(CarbonInterval::days(30));
         Passport::tokensCan(['mcp:use' => 'Use the FleetQ MCP server']);
