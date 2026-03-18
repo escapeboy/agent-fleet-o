@@ -26,7 +26,11 @@ class NeuronPrismProvider implements AIProviderInterface
 {
     private ?string $storedSystemPrompt = null;
 
-    /** @var ToolInterface[] */
+    /**
+     * @var ToolInterface[]
+     *
+     * @phpstan-ignore property.onlyWritten
+     */
     private array $storedTools = [];
 
     public function __construct(

@@ -19,7 +19,7 @@ class PasskeysForm extends Component
         return view('livewire.profile.passkeys-form', [
             'webauthnEnabled' => config('webauthn.enabled', class_exists(WebauthnServiceProvider::class)),
             'passkeys' => class_exists(WebauthnServiceProvider::class)
-                ? (auth()->user()?->webauthnKeys ?? collect())
+                ? (auth()->user()->webauthnKeys ?? collect())
                 : collect(),
         ]);
     }

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Knowledge;
 
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Collection;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -42,6 +43,7 @@ class KnowledgeBaseListTool extends Tool
             ->orderByDesc('created_at')
             ->limit(min((int) ($request->get('limit', 20)), 100));
 
+        /** @var Collection<int, KnowledgeBase> $kbs */
         $kbs = $query->get();
 
         return Response::text(json_encode([

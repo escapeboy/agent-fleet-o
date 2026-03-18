@@ -50,7 +50,7 @@ class KnowledgeBaseRAGFactory
             public function __construct(
                 private readonly AIProviderInterface $neuronProvider,
                 private readonly PrismEmbeddingsProvider $embeds,
-                private readonly PgVectorKnowledgeStore $store,
+                protected VectorStoreInterface $knowledgeStore,
             ) {}
 
             protected function provider(): AIProviderInterface
@@ -65,7 +65,7 @@ class KnowledgeBaseRAGFactory
 
             protected function vectorStore(): VectorStoreInterface
             {
-                return $this->store;
+                return $this->knowledgeStore;
             }
         };
     }

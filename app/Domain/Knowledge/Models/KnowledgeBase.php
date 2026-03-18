@@ -5,12 +5,17 @@ namespace App\Domain\Knowledge\Models;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Knowledge\Enums\KnowledgeBaseStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property KnowledgeBaseStatus $status
+ * @property Carbon|null $last_ingested_at
+ */
 class KnowledgeBase extends Model
 {
     use BelongsToTeam, HasUuids, SoftDeletes;
