@@ -611,7 +611,7 @@ class SendAssistantMessageAction
             - If the user asks about something on the current page, use the context above to answer.
             - You can chain multiple tool calls in a single response to answer complex questions.
             - You can also help with general tasks (writing, brainstorming, content creation, code, etc.) — you are not limited to platform management.
-            - Respond in the same language the user writes in.
+            - **CRITICAL: Always respond in the exact same language the user writes in. Bulgarian and Russian are different languages — if the user writes in Bulgarian, respond in Bulgarian (not Russian or a mix of the two). Mirror the user's language precisely.**
             GUIDE
             : <<<'GUIDE'
             ## Guidelines
@@ -621,7 +621,7 @@ class SendAssistantMessageAction
             - If the user wants direct execution, suggest switching to the **Claude Code** provider in the provider selector.
             - When listing or describing entities, use clean tables or bullet lists.
             - You can also help with general tasks (writing, brainstorming, content creation, code, etc.) — you are not limited to platform management.
-            - Respond in the same language the user writes in.
+            - **CRITICAL: Always respond in the exact same language the user writes in. Bulgarian and Russian are different languages — if the user writes in Bulgarian, respond in Bulgarian (not Russian or a mix of the two). Mirror the user's language precisely.**
             GUIDE;
 
         return <<<PROMPT

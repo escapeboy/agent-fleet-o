@@ -284,7 +284,16 @@ class AgentDetailPage extends Component
         unset($providerData);
 
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
-        $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
+        $teamId = auth()->user()->current_team_id;
+        $availableTools = Tool::where('status', 'active')
+            ->where(function ($q) use ($teamId) {
+                $q->where('is_platform', false)
+                    ->orWhereHas('activations', function ($q2) use ($teamId) {
+                        $q2->where('team_id', $teamId)->where('status', 'active');
+                    });
+            })
+            ->orderBy('name')
+            ->get();
 
         $revisions = AgentConfigRevision::withoutGlobalScopes()
             ->where('agent_id', $this->agent->id)

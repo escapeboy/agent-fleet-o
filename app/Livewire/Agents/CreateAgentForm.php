@@ -159,7 +159,16 @@ class CreateAgentForm extends Component
     public function render()
     {
         $availableSkills = Skill::where('status', 'active')->orderBy('name')->get();
-        $availableTools = Tool::where('status', 'active')->orderBy('name')->get();
+        $teamId = auth()->user()->current_team_id;
+        $availableTools = Tool::where('status', 'active')
+            ->where(function ($q) use ($teamId) {
+                $q->where('is_platform', false)
+                    ->orWhereHas('activations', function ($q2) use ($teamId) {
+                        $q2->where('team_id', $teamId)->where('status', 'active');
+                    });
+            })
+            ->orderBy('name')
+            ->get();
         $resolver = app(ProviderResolver::class);
         $team = auth()->user()->currentTeam;
         $providers = $resolver->availableProviders($team);
