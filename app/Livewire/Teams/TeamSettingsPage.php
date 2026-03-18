@@ -9,6 +9,7 @@ use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\GlobalSetting;
 use Livewire\Component;
 
@@ -201,7 +202,7 @@ class TeamSettingsPage extends Component
         $user = auth()->user();
         $team = $user->currentTeam;
 
-        $token = $user->createToken($this->tokenName, ['team:'.$team->id]);
+        $token = SanctumTokenIssuer::create($user, $this->tokenName, ['team:'.$team->id]);
         $this->newToken = $token->plainTextToken;
         $this->tokenName = '';
 

@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Shared;
 
+use App\Infrastructure\Auth\SanctumTokenIssuer;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -74,7 +75,7 @@ class ApiTokenManageTool extends Tool
 
         $abilities = $user->is_super_admin ? ['*'] : ['team:'.$user->current_team_id];
         $expiresAt = now()->addDays(90);
-        $token = $user->createToken($name, $abilities, $expiresAt);
+        $token = SanctumTokenIssuer::create($user, $name, $abilities, $expiresAt);
 
         // The plaintext token is returned only once and must not be logged
         return Response::text(json_encode([

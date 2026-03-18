@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Requests\Api\V1\UpdateMeRequest;
 use App\Http\Resources\Api\V1\UserResource;
+use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,7 +40,7 @@ class AuthController extends Controller
         // Scope token to the user's current team (prevents cross-team access in cloud).
         // Never issue wildcard tokens — if the user has no team yet, use a scoped placeholder.
         $teamAbility = $user->current_team_id ? ['team:'.$user->current_team_id] : ['team:none'];
-        $token = $user->createToken($deviceName, $teamAbility, now()->addDays(30));
+        $token = SanctumTokenIssuer::create($user, $deviceName, $teamAbility, now()->addDays(30));
 
         return response()->json([
             'token' => $token->plainTextToken,
@@ -60,7 +61,7 @@ class AuthController extends Controller
 
         $user = $request->user();
         $teamAbility = $user->current_team_id ? ['team:'.$user->current_team_id] : ['team:none'];
-        $newToken = $user->createToken($deviceName, $teamAbility, now()->addDays(30));
+        $newToken = SanctumTokenIssuer::create($user, $deviceName, $teamAbility, now()->addDays(30));
 
         $currentToken->delete();
 

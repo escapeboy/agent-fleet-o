@@ -47,6 +47,7 @@ use App\Domain\Workflow\Actions\GenerateWorkflowFromPromptAction;
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Models\Workflow;
+use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -1174,14 +1175,16 @@ class MutationTools
                         return json_encode(['error' => 'name is required for create action.']);
                     }
 
-                    $token = $user->createToken($name, ['*'], now()->addYear());
+                    $abilities = $user->is_super_admin ? ['*'] : ['team:'.$user->current_team_id];
+                    $expiresAt = now()->addDays(90);
+                    $token = SanctumTokenIssuer::create($user, $name, $abilities, $expiresAt);
 
                     return json_encode([
                         'success' => true,
                         'token_id' => $token->accessToken->id,
                         'name' => $name,
                         'token' => $token->plainTextToken,
-                        'expires_at' => now()->addYear()->toIso8601String(),
+                        'expires_at' => $expiresAt->toIso8601String(),
                         'warning' => 'This token will not be shown again. Store it securely.',
                     ]);
                 }

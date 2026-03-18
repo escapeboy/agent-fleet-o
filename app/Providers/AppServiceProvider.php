@@ -62,6 +62,8 @@ use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
+use Carbon\CarbonInterval;
+use Laravel\Passport\Passport;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
@@ -172,6 +174,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Passport OAuth2 — used for MCP server authentication (Authorization Code + PKCE)
+        Passport::tokensExpireIn(CarbonInterval::hours(1));
+        Passport::refreshTokensExpireIn(CarbonInterval::days(30));
+        Passport::tokensCan(['mcp:use' => 'Use the FleetQ MCP server']);
+        Passport::authorizationView('mcp.authorize');
+
         // Force HTTPS when APP_URL uses https (e.g. behind OrbStack / reverse proxy)
         if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceScheme('https');

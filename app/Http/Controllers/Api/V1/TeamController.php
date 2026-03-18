@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\TeamResource;
+use App\Infrastructure\Auth\SanctumTokenIssuer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -170,10 +171,7 @@ class TeamController extends Controller
             abort(422, 'Token abilities must be limited to the current team.');
         }
 
-        $token = $request->user()->createToken(
-            $request->name,
-            [$teamAbility],
-        );
+        $token = SanctumTokenIssuer::create($request->user(), $request->name, [$teamAbility]);
 
         return response()->json([
             'data' => [
