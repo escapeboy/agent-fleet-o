@@ -39,10 +39,10 @@ return [
     |
     */
     'ui' => [
-        'google'          => ['label' => 'Google'],
-        'github'          => ['label' => 'GitHub'],
+        'google' => ['label' => 'Google'],
+        'github' => ['label' => 'GitHub'],
         'linkedin-openid' => ['label' => 'LinkedIn'],
-        'x'               => ['label' => 'X'],
-        'apple'           => ['label' => 'Apple', 'full_width' => true],
+        'x' => ['label' => 'X'],
+        'apple' => ['label' => 'Apple', 'full_width' => true],
     ],
 ];

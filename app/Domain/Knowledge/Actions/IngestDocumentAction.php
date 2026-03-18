@@ -10,7 +10,7 @@ class IngestDocumentAction
     /**
      * Dispatch an async ingestion job for the given content.
      *
-     * @param  string  $content   Raw text content to ingest (pre-loaded)
+     * @param  string  $content  Raw text content to ingest (pre-loaded)
      * @param  string  $sourceName  Display name of the source (e.g. filename, URL)
      * @param  string  $sourceType  'file', 'url', or 'text'
      */

@@ -4,8 +4,10 @@ namespace App\Domain\Knowledge\Services;
 
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\NeuronPrismProvider;
-use NeuronAI\Chat\Messages\UserMessage;
+use NeuronAI\Providers\AIProviderInterface;
+use NeuronAI\RAG\Embeddings\EmbeddingsProviderInterface;
 use NeuronAI\RAG\RAG;
+use NeuronAI\RAG\VectorStore\VectorStoreInterface;
 
 /**
  * Builds a NeuronAI RAG instance wired to FleetQ's PrismAiGateway.
@@ -20,7 +22,7 @@ class KnowledgeBaseRAGFactory
      * Create a RAG agent for a specific knowledge base.
      *
      * @param  string  $provider  e.g. 'anthropic'
-     * @param  string  $model     e.g. 'claude-haiku-4-5'
+     * @param  string  $model  e.g. 'claude-haiku-4-5'
      */
     public function make(
         string $knowledgeBaseId,
@@ -43,24 +45,25 @@ class KnowledgeBaseRAGFactory
         $embeddingsProvider = new PrismEmbeddingsProvider;
         $vectorStore = new PgVectorKnowledgeStore($knowledgeBaseId, $topK);
 
-        return new class($neuronProvider, $embeddingsProvider, $vectorStore) extends RAG {
+        return new class($neuronProvider, $embeddingsProvider, $vectorStore) extends RAG
+        {
             public function __construct(
-                private readonly \NeuronAI\Providers\AIProviderInterface $neuronProvider,
+                private readonly AIProviderInterface $neuronProvider,
                 private readonly PrismEmbeddingsProvider $embeds,
                 private readonly PgVectorKnowledgeStore $store,
             ) {}
 
-            protected function provider(): \NeuronAI\Providers\AIProviderInterface
+            protected function provider(): AIProviderInterface
             {
                 return $this->neuronProvider;
             }
 
-            protected function embeddings(): \NeuronAI\RAG\Embeddings\EmbeddingsProviderInterface
+            protected function embeddings(): EmbeddingsProviderInterface
             {
                 return $this->embeds;
             }
 
-            protected function vectorStore(): \NeuronAI\RAG\VectorStore\VectorStoreInterface
+            protected function vectorStore(): VectorStoreInterface
             {
                 return $this->store;
             }

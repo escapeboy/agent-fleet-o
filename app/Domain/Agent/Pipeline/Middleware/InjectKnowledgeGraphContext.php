@@ -67,7 +67,7 @@ class InjectKnowledgeGraphContext
                     if (! empty($chunks)) {
                         $parts = array_map(
                             fn ($c) => "Source: {$c['source']}\n{$c['content']}",
-                            $chunks
+                            $chunks,
                         );
                         $ctx->systemPromptParts[] = "## Knowledge Base Context\n\n".implode("\n\n---\n\n", $parts);
                     }

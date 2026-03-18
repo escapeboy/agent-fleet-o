@@ -57,7 +57,8 @@ class NeuronPrismProvider implements AIProviderInterface
 
     public function messageMapper(): MessageMapperInterface
     {
-        return new class implements MessageMapperInterface {
+        return new class implements MessageMapperInterface
+        {
             public function map(array $messages): array
             {
                 return $messages;
@@ -67,7 +68,8 @@ class NeuronPrismProvider implements AIProviderInterface
 
     public function toolPayloadMapper(): ToolMapperInterface
     {
-        return new class implements ToolMapperInterface {
+        return new class implements ToolMapperInterface
+        {
             public function map(array $tools): array
             {
                 return $tools;
@@ -127,7 +129,7 @@ class NeuronPrismProvider implements AIProviderInterface
             maxTokens: $this->maxTokens,
             teamId: $this->teamId,
             agentId: $this->agentId,
-            purpose: $this->purpose . '.stream',
+            purpose: $this->purpose.'.stream',
             temperature: $this->temperature,
         ));
 
@@ -173,7 +175,7 @@ class NeuronPrismProvider implements AIProviderInterface
             maxTokens: $this->maxTokens,
             teamId: $this->teamId,
             agentId: $this->agentId,
-            purpose: $this->purpose . '.structured',
+            purpose: $this->purpose.'.structured',
             temperature: 0.1, // Low temperature for deterministic JSON
         ));
 

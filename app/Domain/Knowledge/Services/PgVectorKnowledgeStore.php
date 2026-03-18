@@ -53,14 +53,14 @@ class PgVectorKnowledgeStore implements VectorStoreInterface
         $vector = '['.implode(',', $embedding).']';
 
         $rows = DB::select(
-            "SELECT id, content, source_name, source_type, metadata,
+            'SELECT id, content, source_name, source_type, metadata,
                     1 - (embedding <=> ?) AS score
              FROM knowledge_chunks
              WHERE knowledge_base_id = ?
                AND embedding IS NOT NULL
              ORDER BY embedding <=> ?
-             LIMIT ?",
-            [$vector, $this->knowledgeBaseId, $vector, $this->topK]
+             LIMIT ?',
+            [$vector, $this->knowledgeBaseId, $vector, $this->topK],
         );
 
         return array_map(function (object $row): Document {

@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Profile;
 
-use Livewire\Component;
 use LaravelWebauthn\WebauthnServiceProvider;
+use Livewire\Component;
 
 class PasskeysForm extends Component
 {
