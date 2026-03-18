@@ -23,7 +23,7 @@ return [
     | driver name here if their server requires PKCE.
     |
     */
-    'pkce_providers' => ['google', 'linkedin-openid', 'apple', 'lukanet'],
+    'pkce_providers' => ['google', 'linkedin-openid', 'apple'],
 
     /*
     |--------------------------------------------------------------------------
