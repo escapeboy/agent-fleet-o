@@ -95,6 +95,12 @@ return [
         'webhook_secret' => env('CLEARCUE_WEBHOOK_SECRET'),
     ],
 
+    'lukanet' => [
+        'client_id'     => env('LUKANET_CLIENT_ID'),
+        'client_secret' => env('LUKANET_CLIENT_SECRET'),
+        'redirect'      => env('LUKANET_REDIRECT_URI'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Social Login (OAuth) Providers
