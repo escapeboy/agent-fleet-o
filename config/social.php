@@ -11,7 +11,7 @@ return [
     | by declaring a $socialiteProviders array, which is merged here during boot.
     |
     */
-    'providers' => ['google', 'github', 'linkedin-openid', 'x', 'apple', 'lukanet'],
+    'providers' => ['google', 'github', 'linkedin-openid', 'x', 'apple'],
 
     /*
     |--------------------------------------------------------------------------
@@ -23,7 +23,7 @@ return [
     | driver name here if their server requires PKCE.
     |
     */
-    'pkce_providers' => ['google', 'linkedin-openid', 'apple', 'lukanet'],
+    'pkce_providers' => ['google', 'linkedin-openid', 'apple'],
 
     /*
     |--------------------------------------------------------------------------
@@ -44,6 +44,5 @@ return [
         'linkedin-openid' => ['label' => 'LinkedIn'],
         'x' => ['label' => 'X'],
         'apple' => ['label' => 'Apple', 'full_width' => true],
-        'lukanet' => ['label' => 'Lukanet', 'full_width' => true],
     ],
 ];
