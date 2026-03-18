@@ -42,9 +42,9 @@ class AcceptTermsPage extends Component
             'post_login',
         );
 
-        $intended = redirect()->intended(route('dashboard'));
+        $url = session()->pull('url.intended', route('dashboard'));
 
-        $this->redirect($intended->getTargetUrl());
+        $this->redirect($url);
     }
 
     public function decline(): void

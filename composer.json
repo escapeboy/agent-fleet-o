@@ -56,7 +56,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "Tests\\": "tests/",
+            "Barsy\\Tests\\": "/var/www/barsy/tests/"
         }
     },
     "scripts": {

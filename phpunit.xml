@@ -14,6 +14,9 @@
         <testsuite name="Property">
             <directory>tests/Property</directory>
         </testsuite>
+        <testsuite name="BarsyProperties">
+            <directory>/var/www/barsy/tests/Properties</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
