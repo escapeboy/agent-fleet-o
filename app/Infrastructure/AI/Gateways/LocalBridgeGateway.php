@@ -182,6 +182,7 @@ class LocalBridgeGateway implements AiGatewayInterface
                     'model' => $agentModel, // passed as --model to the agent CLI
                     'prompt' => $request->userPrompt ?? '',
                     'system_prompt' => $request->systemPrompt ?? '',
+                    'purpose' => $request->purpose ?? '',
                     'stream' => true,
                 ],
             ];
