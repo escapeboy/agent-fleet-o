@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProviderConfigController;
 use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\SshFingerprintController;
@@ -249,6 +250,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/git-repositories/{gitRepository}/test', [GitRepositoryController::class, 'test']);
     Route::get('/git-repositories/{gitRepository}/files', [GitRepositoryController::class, 'listFiles']);
     Route::get('/git-repositories/{gitRepository}/prs', [GitRepositoryController::class, 'listPullRequests']);
+
+    // Provider config (LLM provider settings per team)
+    Route::get('/config/providers/{provider}', [ProviderConfigController::class, 'show']);
+    Route::put('/config/providers/{provider}', [ProviderConfigController::class, 'update']);
 
     // Bridge
     Route::get('/bridge/status', [BridgeController::class, 'status']);
