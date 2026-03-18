@@ -72,7 +72,9 @@ class ApiTokenManageTool extends Tool
             return Response::error('name is required for create action.');
         }
 
-        $token = $user->createToken($name, ['*'], now()->addYear());
+        $abilities = $user->is_super_admin ? ['*'] : ['team:'.$user->current_team_id];
+        $expiresAt = now()->addDays(90);
+        $token = $user->createToken($name, $abilities, $expiresAt);
 
         // The plaintext token is returned only once and must not be logged
         return Response::text(json_encode([
@@ -80,7 +82,7 @@ class ApiTokenManageTool extends Tool
             'token_id' => $token->accessToken->id,
             'name' => $name,
             'token' => $token->plainTextToken,
-            'expires_at' => now()->addYear()->toIso8601String(),
+            'expires_at' => $expiresAt->toIso8601String(),
             'warning' => 'This token will not be shown again. Store it securely.',
         ]));
     }

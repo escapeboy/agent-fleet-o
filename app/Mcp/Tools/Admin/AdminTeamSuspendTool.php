@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Admin;
 
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\DeploymentMode;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -33,6 +34,10 @@ class AdminTeamSuspendTool extends Tool
 
     public function handle(Request $request): Response
     {
+        if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
+            return Response::error('Access denied: super admin privileges required.');
+        }
+
         $team = Team::withoutGlobalScopes()->findOrFail($request->get('team_id'));
         $action = $request->get('action');
 

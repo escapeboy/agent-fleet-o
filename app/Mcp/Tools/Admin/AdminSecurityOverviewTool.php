@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Admin;
 
+use App\Domain\Shared\Services\DeploymentMode;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Mcp\Request;
@@ -25,6 +26,10 @@ class AdminSecurityOverviewTool extends Tool
 
     public function handle(Request $request): Response
     {
+        if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
+            return Response::error('Access denied: super admin privileges required.');
+        }
+
         $now = now();
         $hourlyTotals = [];
         $totalFailed24h = 0;

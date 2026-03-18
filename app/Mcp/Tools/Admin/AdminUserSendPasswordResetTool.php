@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Admin;
 
+use App\Domain\Shared\Services\DeploymentMode;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Password;
@@ -28,6 +29,10 @@ class AdminUserSendPasswordResetTool extends Tool
 
     public function handle(Request $request): Response
     {
+        if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
+            return Response::error('Access denied: super admin privileges required.');
+        }
+
         $user = User::findOrFail($request->get('user_id'));
         $status = Password::sendResetLink(['email' => $user->email]);
 

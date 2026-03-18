@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Admin;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Shared\Services\DeploymentMode;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -28,6 +29,10 @@ class AdminUserRevokeSessionsTool extends Tool
 
     public function handle(Request $request): Response
     {
+        if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
+            return Response::error('Access denied: super admin privileges required.');
+        }
+
         $user = User::findOrFail($request->get('user_id'));
         $count = $user->tokens()->count();
         $user->tokens()->delete();

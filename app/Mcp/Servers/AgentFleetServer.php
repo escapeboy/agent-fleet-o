@@ -144,7 +144,6 @@ use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
 use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
 use App\Mcp\Tools\Profile\ProfileGetTool;
-use App\Mcp\Tools\Profile\ProfilePasswordUpdateTool;
 use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
 use App\Mcp\Tools\Profile\ProfileUpdateTool;
 use App\Mcp\Tools\Project\ProjectActivateTool;
@@ -549,10 +548,9 @@ class AgentFleetServer extends Server
         SocialAccountListTool::class,
         SocialAccountUnlinkTool::class,
 
-        // Profile (5)
+        // Profile (4)
         ProfileGetTool::class,
         ProfileUpdateTool::class,
-        ProfilePasswordUpdateTool::class,
         ProfileTwoFactorStatusTool::class,
         ProfileConnectedAccountsTool::class,
 
