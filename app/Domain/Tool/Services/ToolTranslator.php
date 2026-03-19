@@ -83,13 +83,40 @@ class ToolTranslator
                 };
             }
 
-            // MCP tool handler: calls the MCP server when invoked
+            // MCP tool handler: proxy the call to the remote MCP server
+            $serverUrl = $tool->transport_config['url'] ?? null;
+            $credentials = (array) $tool->credentials;
+            $authHeader = $credentials['api_key'] ?? $credentials['bearer_token'] ?? null;
+            $mcpHeaders = $authHeader ? ['Authorization' => "Bearer {$authHeader}"] : [];
             $toolModel = $tool;
-            $prismTool->using(function () use ($toolModel, $name) {
-                // Placeholder: MCP call will be handled by Relay when installed.
-                // For now, return a message indicating the tool was called.
-                return "Tool '{$name}' on server '{$toolModel->name}' was called. "
-                    .'MCP server execution requires prism-php/relay package.';
+            $defName = $name;
+            $paramNames = array_keys($properties);
+
+            $prismTool->using(function () use ($serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames): string {
+                if (! $serverUrl) {
+                    return "Error: Tool '{$defName}' on server '{$toolModel->name}' has no URL configured.";
+                }
+
+                // PrismPHP passes arguments positionally; map them back to named keys
+                $positional = func_get_args();
+                $arguments = [];
+                foreach ($paramNames as $i => $paramName) {
+                    if (isset($positional[$i]) && $positional[$i] !== null) {
+                        $arguments[$paramName] = $positional[$i];
+                    }
+                }
+
+                try {
+                    return app(McpHttpClient::class)->callTool($serverUrl, $defName, $arguments, $mcpHeaders);
+                } catch (\Throwable $e) {
+                    Log::error('McpHttpClient error', [
+                        'tool' => $toolModel->name,
+                        'function' => $defName,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    return "Error calling {$defName}: {$e->getMessage()}";
+                }
             });
 
             $tools[] = $prismTool;

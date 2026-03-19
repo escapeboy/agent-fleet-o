@@ -226,6 +226,7 @@ use App\Mcp\Tools\Tool\ToolDiscoverMcpTool;
 use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
+use App\Mcp\Tools\Tool\ToolProbeRemoteMcpTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
@@ -345,7 +346,7 @@ class AgentFleetServer extends Server
         CodeExecutionTool::class,
         BrowserSkillTool::class,
 
-        // Tool (7)
+        // Tool (12)
         ToolListTool::class,
         ToolGetTool::class,
         ToolCreateTool::class,
@@ -355,6 +356,7 @@ class AgentFleetServer extends Server
         ToolDeactivateTool::class,
         ToolDiscoverMcpTool::class,
         ToolImportMcpTool::class,
+        ToolProbeRemoteMcpTool::class,
         ToolSshFingerprintsTool::class,
         ToolBashPolicyTool::class,
 
