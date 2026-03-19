@@ -182,11 +182,11 @@ class McpStdioClient
         // Send initialize request
         $this->writeJsonRpc($pipes[0], [
             'jsonrpc' => '2.0',
-            'method'  => 'initialize',
-            'params'  => [
+            'method' => 'initialize',
+            'params' => [
                 'protocolVersion' => self::PROTOCOL_VERSION,
-                'capabilities'    => new \stdClass,
-                'clientInfo'      => ['name' => 'FleetQ', 'version' => '1.0'],
+                'capabilities' => new \stdClass,
+                'clientInfo' => ['name' => 'FleetQ', 'version' => '1.0'],
             ],
             'id' => 1,
         ]);
@@ -201,7 +201,7 @@ class McpStdioClient
         // Send initialized notification (no response expected)
         $this->writeJsonRpc($pipes[0], [
             'jsonrpc' => '2.0',
-            'method'  => 'notifications/initialized',
+            'method' => 'notifications/initialized',
         ]);
     }
 
@@ -215,9 +215,9 @@ class McpStdioClient
     {
         $this->writeJsonRpc($pipes[0], [
             'jsonrpc' => '2.0',
-            'method'  => 'tools/list',
-            'params'  => new \stdClass,
-            'id'      => 2,
+            'method' => 'tools/list',
+            'params' => new \stdClass,
+            'id' => 2,
         ]);
 
         $response = $this->readJsonRpcResponse($pipes[1], expectedId: 2, timeoutSeconds: 15);
@@ -238,9 +238,9 @@ class McpStdioClient
     {
         $this->writeJsonRpc($pipes[0], [
             'jsonrpc' => '2.0',
-            'method'  => 'tools/call',
-            'params'  => [
-                'name'      => $toolName,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => $toolName,
                 'arguments' => $arguments ?: new \stdClass,
             ],
             'id' => 3,
@@ -307,6 +307,7 @@ class McpStdioClient
                 if (! is_array($decoded)) {
                     // Non-JSON line — skip (might be debug output that leaked to stdout)
                     Log::debug('McpStdioClient: skipping non-JSON stdout line', ['line' => substr($line, 0, 200)]);
+
                     continue;
                 }
 
@@ -386,7 +387,7 @@ class McpStdioClient
             }
 
             throw new \RuntimeException(
-                "McpStdioClient: mcp_stdio_binary_allowlist is empty and MCP_STDIO_ALLOW_ANY_BINARY is not set. ".
+                'McpStdioClient: mcp_stdio_binary_allowlist is empty and MCP_STDIO_ALLOW_ANY_BINARY is not set. '.
                 'Set MCP_STDIO_BINARY_ALLOWLIST in .env (comma-separated absolute paths) '.
                 'or set MCP_STDIO_ALLOW_ANY_BINARY=true for local dev.'
             );
@@ -440,11 +441,11 @@ class McpStdioClient
     {
         // Start with a minimal safe environment
         $env = array_filter([
-            'PATH'     => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin',
-            'HOME'     => '/tmp',
-            'TMPDIR'   => sys_get_temp_dir(),
-            'LANG'     => 'en_US.UTF-8',
-            'LC_ALL'   => 'C',
+            'PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin',
+            'HOME' => '/tmp',
+            'TMPDIR' => sys_get_temp_dir(),
+            'LANG' => 'en_US.UTF-8',
+            'LC_ALL' => 'C',
         ]);
 
         // Explicitly null-out known secrets from the inherited env

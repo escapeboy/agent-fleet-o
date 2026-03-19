@@ -11,9 +11,9 @@ use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Chatbot\Models\ChatbotSession;
+use Barsy\Services\EmbeddingServiceInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Barsy\Services\EmbeddingServiceInterface;
 use Illuminate\Support\Facades\Log;
 
 class ChatbotResponseService

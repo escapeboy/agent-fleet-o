@@ -62,8 +62,6 @@ use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
-use Carbon\CarbonInterval;
-use Laravel\Passport\Passport;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\Auth\CompatibleSanctumGuard;
@@ -72,6 +70,7 @@ use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
 use App\Livewire\Hooks\PluginDispatchHook;
 use App\Models\User;
+use Carbon\CarbonInterval;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -80,12 +79,12 @@ use Dedoc\Scramble\Support\Generator\SecuritySchemes\OAuthFlow;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Channels\MailChannel;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -93,6 +92,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Passport\Passport;
 use Laravel\Reverb\Events\MessageReceived;
 use Livewire\Livewire;
 use SocialiteProviders\Apple\Provider;
@@ -219,11 +219,9 @@ class AppServiceProvider extends ServiceProvider
         // /oauth/register: 20 per hour per IP (RFC 7591 recommendation).
         // /oauth/token: uses Passport's built-in 'throttle' (60/min); 'oauth-token' named limiter
         //   is available if routes are overridden in cloud to apply a stricter hourly cap.
-        RateLimiter::for('oauth-register', fn (Request $request) =>
-            Limit::perHour(20)->by($request->ip())
+        RateLimiter::for('oauth-register', fn (Request $request) => Limit::perHour(20)->by($request->ip())
         );
-        RateLimiter::for('oauth-token', fn (Request $request) =>
-            Limit::perHour(60)->by($request->ip())
+        RateLimiter::for('oauth-token', fn (Request $request) => Limit::perHour(60)->by($request->ip())
         );
 
         // Force HTTPS when APP_URL uses https (e.g. behind OrbStack / reverse proxy)

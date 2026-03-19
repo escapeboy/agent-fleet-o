@@ -79,12 +79,12 @@ class BorunaEvidenceTool extends McpTool
 
         return Response::text(json_encode([
             'execution_id' => $execution->id,
-            'skill_id'     => $execution->skill_id,
-            'skill_name'   => $execution->skill?->name,
-            'status'       => $execution->status,
-            'duration_ms'  => $execution->duration_ms,
-            'created_at'   => $execution->created_at,
-            'evidence'     => $evidence ?? '(evidence not available — run a boruna_script skill to generate one)',
+            'skill_id' => $execution->skill_id,
+            'skill_name' => $execution->skill?->name,
+            'status' => $execution->status,
+            'duration_ms' => $execution->duration_ms,
+            'created_at' => $execution->created_at,
+            'evidence' => $evidence ?? '(evidence not available — run a boruna_script skill to generate one)',
         ]));
     }
 
