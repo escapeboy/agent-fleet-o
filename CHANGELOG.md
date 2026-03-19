@@ -2,6 +2,32 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.8.0] - 2026-03-19
+
+### Added
+
+- **MCP OAuth2 Server** — The MCP HTTP endpoint (`/mcp`) is now protected by a full OAuth 2.0 Authorization Code + PKCE flow via Laravel Passport. Supports Dynamic Client Registration (RFC 7591), Authorization Server Metadata (RFC 8414), and Protected Resource Metadata (RFC 9728). Enables Claude.ai, Cursor, and any standards-compliant MCP client to connect with secure user authentication.
+- **MCP HTTP Client + Remote MCP Probe** — New `ToolType::McpHttp` transport: connect to any remote MCP server via HTTP/SSE. The `tool_probe_remote_mcp` MCP tool auto-discovers all available tools on a remote server and optionally imports them as platform tools. SSH fingerprint trust management included.
+- **244 MCP Tools — Agent-Native Parity** — +17 new tools and 4 updated since v1.7.0, bringing the total to 244. New tools cover granular workflow/project/agent control: individual node execution, graph re-wiring, project run details, per-agent tool sync, remote MCP discovery, and more. Every action a user can perform from the UI is now also available as an MCP tool.
+- **CORS Support for Claude.ai / ChatGPT** — New `config/cors.php` enables cross-origin requests for `/mcp`, `/oauth/*`, `/.well-known/*`, and `/api/*` paths. Required for browser-based MCP clients (Claude.ai web UI, ChatGPT).
+- **OpenAPI 1.0.0 + OAuth2 Security Scheme** — API documentation at `/docs/api` updated to version 1.0.0. An `oauth2` (authorizationCode) security scheme is now included alongside the existing Bearer token scheme, enabling ChatGPT Actions and other OAuth-capable clients to discover auth endpoints from the spec.
+
+### Fixed
+
+- **OAuth Discovery Chain** — `/.well-known/oauth-protected-resource/mcp` was returning `authorization_servers: ["https://…/mcp"]` (the protected resource URL) instead of `["https://…"]` (the issuer). This broke Claude.ai's OAuth discovery flow. Now replaced with inline route registrations per RFC 9728/8414 that always return the correct issuer URL.
+- **`issuer` in oauth-authorization-server** — The issuer field is now always `url('/')` regardless of the path parameter, preventing incorrect issuer values when the endpoint is accessed with a path suffix.
+- **Sanctum/Passport Coexistence** — Multiple fixes to allow Sanctum API token auth (`/api/v1/`) and Passport OAuth2 auth (`/mcp`) to work side-by-side on the same User model: `ScopedPersonalAccessToken` model with correct table name, custom `withAccessToken()` override, dropped conflicting string type hints on `can()`/`cant()`, and a `CompatibleSanctumGuard` that accepts both Sanctum and Passport tokens.
+- **MCP HTTP Client Stability** — `Connection: close` header to prevent SSH tunnel stalls; explicit connect timeout; SSE response parsing for Streamable HTTP transport; correct MCP `initialize` handshake before `tools/list`/`tools/call`.
+- **DecryptException on APP_KEY Rotation** — `updateToken()` now catches `DecryptException` and treats stale tokens as expired instead of crashing.
+- **Session Redis DB** — Added a dedicated Redis connection for sessions (DB 3) so session data is isolated from queues (DB 0), cache (DB 1), and locks (DB 2).
+
+### Security
+
+- **MCP Stdio Hardening** — 7 CVEs resolved: command injection in bash tool (`escapeshellarg`), path traversal in filesystem tool, SSRF in HTTP-based MCP transport, token scope bypass, missing rate limits on stdio, unrestricted file read via symlinks, and unauthenticated reflection of server capabilities.
+- **OAuth Key Permissions** — Passport OAuth keys are now generated with correct file permissions (0600) on container start via `entrypoint.sh`.
+
+---
+
 ## [1.7.0] - 2026-03-16
 
 ### Added
