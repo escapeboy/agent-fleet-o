@@ -67,6 +67,7 @@ use Laravel\Passport\Passport;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\Auth\CompatibleSanctumGuard;
+use App\Infrastructure\Auth\ScopedPersonalAccessToken;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
 use App\Livewire\Hooks\PluginDispatchHook;
@@ -198,6 +199,11 @@ class AppServiceProvider extends ServiceProvider
                 });
             });
         });
+
+        // Configure Sanctum to use our ScopedPersonalAccessToken model so that tokens
+        // retrieved via findToken() implement ScopeAuthorizable and can be stored in
+        // Passport's typed ?ScopeAuthorizable $accessToken property without a TypeError.
+        \Laravel\Sanctum\Sanctum::usePersonalAccessTokenModel(ScopedPersonalAccessToken::class);
 
         // Passport OAuth2 — used for MCP server authentication (Authorization Code + PKCE)
         Passport::tokensExpireIn(CarbonInterval::hours(1));

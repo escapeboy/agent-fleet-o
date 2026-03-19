@@ -128,47 +128,6 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->morphMany(PersonalAccessToken::class, 'tokenable');
     }
 
-    /**
-     * Holds the current Sanctum token (PersonalAccessToken or TransientToken).
-     *
-     * Passport's trait declares `protected ?ScopeAuthorizable $accessToken`,
-     * which PHP enforces at property assignment. Sanctum tokens don't implement
-     * ScopeAuthorizable, so we store them separately to avoid the TypeError.
-     */
-    private mixed $currentSanctumToken = null;
-
-    /**
-     * Set the current access token for the user.
-     *
-     * Routes Passport tokens (ScopeAuthorizable) to the trait's typed property
-     * and Sanctum tokens to our untyped property, so both guards coexist safely.
-     *
-     * @param  mixed  $accessToken
-     */
-    public function withAccessToken($accessToken): static
-    {
-        if ($accessToken instanceof \Laravel\Passport\Contracts\ScopeAuthorizable) {
-            $this->accessToken = $accessToken;
-        } else {
-            $this->currentSanctumToken = $accessToken; // PersonalAccessToken or TransientToken
-        }
-
-        return $this;
-    }
-
-    /**
-     * Get the access token currently associated with the user.
-     *
-     * Returns the Sanctum token first (set by the sanctum guard or web session),
-     * falling back to the Passport token (set by the passport guard for MCP OAuth).
-     *
-     * @return mixed
-     */
-    public function currentAccessToken()
-    {
-        return $this->currentSanctumToken ?? $this->accessToken;
-    }
-
     public function socialAccounts(): HasMany
     {
         return $this->hasMany(UserSocialAccount::class);
