@@ -40,9 +40,7 @@ class ProjectUpdateTool extends Tool
             'allowed_credential_ids' => $schema->array()
                 ->description('Restrict which credentials are available to agents. Pass an array of credential UUIDs.')
                 ->items($schema->string()),
-            'schedule' => $schema->object()
-                ->description('Update schedule for continuous projects. Only provided sub-fields are changed.')
-                ->properties([
+            'schedule' => $schema->object([
                     'frequency' => $schema->string()
                         ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once']),
                     'cron_expression' => $schema->string()
@@ -52,7 +50,8 @@ class ProjectUpdateTool extends Tool
                     'overlap_policy' => $schema->string()
                         ->enum(['skip', 'queue', 'allow']),
                     'max_consecutive_failures' => $schema->integer(),
-                ]),
+                ])
+                ->description('Update schedule for continuous projects. Only provided sub-fields are changed.'),
         ];
     }
 
