@@ -155,7 +155,6 @@ use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
 use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
 use App\Mcp\Tools\Profile\ProfileGetTool;
-use App\Mcp\Tools\Profile\ProfilePasswordUpdateTool;
 use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
 use App\Mcp\Tools\Profile\ProfileUpdateTool;
 use App\Mcp\Tools\Project\ProjectActivateTool;
@@ -601,7 +600,8 @@ class AgentFleetServer extends Server
         // Profile (5)
         ProfileGetTool::class,
         ProfileUpdateTool::class,
-        ProfilePasswordUpdateTool::class,
+        // ProfilePasswordUpdateTool removed — password changes must not be callable by an LLM.
+        // Prompt injection can trigger account takeover, especially for social-login users.
         ProfileTwoFactorStatusTool::class,
         ProfileConnectedAccountsTool::class,
 

@@ -211,6 +211,20 @@ class AppServiceProvider extends ServiceProvider
         Passport::refreshTokensExpireIn(CarbonInterval::days(30));
         Passport::tokensCan(['mcp:use' => 'Use the FleetQ MCP server']);
         Passport::authorizationView('mcp.authorize');
+        // OAuth 2.1 mandates PKCE — Passport enforces it for public clients when
+        // code_challenge is submitted. The registration endpoint registers clients
+        // as non-confidential (confidential: false), which requires PKCE automatically.
+
+        // Named rate limiters for OAuth endpoints.
+        // /oauth/register: 20 per hour per IP (RFC 7591 recommendation).
+        // /oauth/token: uses Passport's built-in 'throttle' (60/min); 'oauth-token' named limiter
+        //   is available if routes are overridden in cloud to apply a stricter hourly cap.
+        RateLimiter::for('oauth-register', fn (Request $request) =>
+            Limit::perHour(20)->by($request->ip())
+        );
+        RateLimiter::for('oauth-token', fn (Request $request) =>
+            Limit::perHour(60)->by($request->ip())
+        );
 
         // Force HTTPS when APP_URL uses https (e.g. behind OrbStack / reverse proxy)
         if (str_starts_with(config('app.url'), 'https://')) {
