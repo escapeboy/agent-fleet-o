@@ -80,6 +80,7 @@ class McpHttpClient
         $response = Http::withHeaders(array_merge([
             'Accept' => 'application/json, text/event-stream',
             'Content-Type' => 'application/json',
+            'Connection' => 'close',
         ], $headers))
             ->timeout(self::TIMEOUT)
             ->post("{$url}/mcp", [
@@ -108,6 +109,7 @@ class McpHttpClient
         $requestHeaders = array_merge([
             'Accept' => 'application/json, text/event-stream',
             'Content-Type' => 'application/json',
+            'Connection' => 'close',
         ], $headers);
 
         if ($sessionId) {
@@ -137,6 +139,7 @@ class McpHttpClient
         $requestHeaders = array_merge([
             'Accept' => 'application/json, text/event-stream',
             'Content-Type' => 'application/json',
+            'Connection' => 'close',
         ], $headers);
 
         if ($sessionId) {
