@@ -16,6 +16,9 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 class ScopedPersonalAccessToken extends PersonalAccessToken implements ScopeAuthorizable
 {
+    protected $table = 'personal_access_tokens';
+
+
     public function can($scope): bool
     {
         return parent::can($scope);
