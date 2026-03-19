@@ -90,7 +90,7 @@ class AuthController extends Controller
      */
     public function devices(Request $request): JsonResponse
     {
-        $tokens = $request->user()->tokens()
+        $tokens = $request->user()->sanctumTokens()
             ->orderByDesc('last_used_at')
             ->get()
             ->map(fn ($token) => [
@@ -114,7 +114,7 @@ class AuthController extends Controller
      */
     public function revokeDevice(Request $request, int $tokenId): JsonResponse
     {
-        $token = $request->user()->tokens()->where('id', $tokenId)->first();
+        $token = $request->user()->sanctumTokens()->where('id', $tokenId)->first();
 
         if (! $token) {
             abort(404, 'Token not found.');
@@ -152,7 +152,7 @@ class AuthController extends Controller
         // Revoke all other tokens when password changes (forces re-login on all devices)
         if ($passwordChanged) {
             $currentTokenId = $request->user()->currentAccessToken()->id;
-            $user->tokens()->when($currentTokenId, fn ($q) => $q->where('id', '!=', $currentTokenId))->delete();
+            $user->sanctumTokens()->when($currentTokenId, fn ($q) => $q->where('id', '!=', $currentTokenId))->delete();
         }
 
         return new UserResource($user->fresh()->load('currentTeam'));

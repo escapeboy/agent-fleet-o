@@ -66,6 +66,7 @@ use Carbon\CarbonInterval;
 use Laravel\Passport\Passport;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
+use App\Infrastructure\Auth\CompatibleSanctumGuard;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
 use App\Livewire\Hooks\PluginDispatchHook;
@@ -75,7 +76,9 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\RequestGuard;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Channels\MailChannel;
@@ -174,6 +177,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Override Sanctum's guard driver to also accept users whose model uses
+        // Passport's HasApiTokens trait (for MCP OAuth2 co-existence). The default
+        // Sanctum guard rejects such users, breaking all /api/v1/ token authentication.
+        // Using Auth::resolved() ensures our callback runs AFTER Sanctum registers its
+        // own version, so ours takes precedence (last Auth::extend call wins).
+        Auth::resolved(function ($auth) {
+            $auth->extend('sanctum', function ($app, $name, array $config) use ($auth) {
+                return tap(new RequestGuard(
+                    new CompatibleSanctumGuard(
+                        $auth,
+                        config('sanctum.expiration'),
+                        $config['provider'] ?? null,
+                        config('sanctum.last_used_at', true),
+                    ),
+                    $app['request'],
+                    $auth->createUserProvider($config['provider'] ?? null),
+                ), function ($guard) {
+                    app()->refresh('request', $guard, 'setRequest');
+                });
+            });
+        });
+
         // Passport OAuth2 — used for MCP server authentication (Authorization Code + PKCE)
         Passport::tokensExpireIn(CarbonInterval::hours(1));
         Passport::refreshTokensExpireIn(CarbonInterval::days(30));

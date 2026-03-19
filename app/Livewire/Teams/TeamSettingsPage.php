@@ -212,7 +212,7 @@ class TeamSettingsPage extends Component
     public function revokeApiToken(int $tokenId): void
     {
         $user = auth()->user();
-        $user->tokens()->where('id', $tokenId)->delete();
+        $user->sanctumTokens()->where('id', $tokenId)->delete();
 
         session()->flash('message', 'API token revoked.');
     }
@@ -504,7 +504,7 @@ class TeamSettingsPage extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        $apiTokens = auth()->user()->tokens()
+        $apiTokens = auth()->user()->sanctumTokens()
             ->where('name', 'not like', '%sanctum%')
             ->latest()
             ->get();

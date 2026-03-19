@@ -49,7 +49,7 @@ class ApiTokenManageTool extends Tool
 
     private function listTokens($user): Response
     {
-        $tokens = $user->tokens()
+        $tokens = $user->sanctumTokens()
             ->get(['id', 'name', 'last_used_at', 'expires_at', 'created_at'])
             ->map(fn ($t) => [
                 'id' => $t->id,
@@ -96,7 +96,7 @@ class ApiTokenManageTool extends Tool
             return Response::error('token_id is required for revoke action. Use the list action to find token IDs.');
         }
 
-        $deleted = $user->tokens()->where('id', $tokenId)->delete();
+        $deleted = $user->sanctumTokens()->where('id', $tokenId)->delete();
 
         if (! $deleted) {
             return Response::error("Token {$tokenId} not found or does not belong to the current user.");

@@ -34,8 +34,8 @@ class AdminUserRevokeSessionsTool extends Tool
         }
 
         $user = User::findOrFail($request->get('user_id'));
-        $count = $user->tokens()->count();
-        $user->tokens()->delete();
+        $count = $user->sanctumTokens()->count();
+        $user->sanctumTokens()->delete();
 
         AuditEntry::withoutGlobalScopes()->create([
             'user_id' => auth()->id(),

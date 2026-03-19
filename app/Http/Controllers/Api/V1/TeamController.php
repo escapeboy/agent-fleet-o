@@ -141,7 +141,7 @@ class TeamController extends Controller
      */
     public function tokens(Request $request): JsonResponse
     {
-        $tokens = $request->user()->tokens()->get()->map(fn ($token) => [
+        $tokens = $request->user()->sanctumTokens()->get()->map(fn ($token) => [
             'id' => $token->id,
             'name' => $token->name,
             'abilities' => $token->abilities,
@@ -186,7 +186,7 @@ class TeamController extends Controller
      */
     public function revokeToken(Request $request, string $tokenId): JsonResponse
     {
-        $request->user()->tokens()->where('id', $tokenId)->delete();
+        $request->user()->sanctumTokens()->where('id', $tokenId)->delete();
 
         return response()->json(['message' => 'Token revoked.']);
     }

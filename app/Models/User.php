@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -110,6 +112,20 @@ class User extends Authenticatable implements OAuthenticatable
         $pivot = $this->teams()->where('team_id', $team->id)->first()?->pivot;
 
         return $pivot ? TeamRole::from($pivot->role) : null;
+    }
+
+    /**
+     * Sanctum personal access tokens (REST API tokens).
+     *
+     * The User model uses Passport's HasApiTokens (for MCP OAuth2), which means
+     * the inherited tokens() relation returns Passport OAuth tokens — NOT Sanctum
+     * personal access tokens. Use this method anywhere Sanctum PATs are needed.
+     *
+     * @return MorphMany<PersonalAccessToken, $this>
+     */
+    public function sanctumTokens(): MorphMany
+    {
+        return $this->morphMany(PersonalAccessToken::class, 'tokenable');
     }
 
     public function socialAccounts(): HasMany

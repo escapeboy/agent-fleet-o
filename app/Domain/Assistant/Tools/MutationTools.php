@@ -1157,7 +1157,7 @@ class MutationTools
                 }
 
                 if ($action === 'list') {
-                    $tokens = $user->tokens()
+                    $tokens = $user->sanctumTokens()
                         ->get(['id', 'name', 'last_used_at', 'expires_at', 'created_at'])
                         ->map(fn ($t) => [
                             'id' => $t->id,
@@ -1194,7 +1194,7 @@ class MutationTools
                         return json_encode(['error' => 'token_id is required for revoke action.']);
                     }
 
-                    $deleted = $user->tokens()->where('id', $token_id)->delete();
+                    $deleted = $user->sanctumTokens()->where('id', $token_id)->delete();
 
                     if (! $deleted) {
                         return json_encode(['error' => "Token {$token_id} not found."]);
