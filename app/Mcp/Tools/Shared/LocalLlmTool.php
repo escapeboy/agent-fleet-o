@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\Client\ConnectionException;
@@ -16,13 +17,13 @@ class LocalLlmTool extends Tool
     protected string $name = 'local_llm_manage';
 
     protected string $description = 'Manage local LLM HTTP endpoints (Ollama, OpenAI-compatible). '
-        .'Actions: status, configure_ollama, configure_openai_compatible, discover_models, remove.';
+        .'Actions: status, configure_ollama, configure_openai_compatible, discover_models, remove, rescan_agents.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
             'action' => $schema->string()
-                ->description('Action: status | configure_ollama | configure_openai_compatible | discover_models | remove')
+                ->description('Action: status | configure_ollama | configure_openai_compatible | discover_models | remove | rescan_agents')
                 ->required(),
             'provider' => $schema->string()
                 ->description('Provider: ollama | openai_compatible (required for configure/remove/discover)'),
@@ -45,7 +46,8 @@ class LocalLlmTool extends Tool
             'configure_openai_compatible' => $this->handleConfigureOpenaiCompatible($request),
             'discover_models' => $this->handleDiscoverModels($request),
             'remove' => $this->handleRemove($request),
-            default => Response::error("Unknown action '{$action}'. Valid: status, configure_ollama, configure_openai_compatible, discover_models, remove"),
+            'rescan_agents' => $this->handleRescanAgents(),
+            default => Response::error("Unknown action '{$action}'. Valid: status, configure_ollama, configure_openai_compatible, discover_models, remove, rescan_agents"),
         };
     }
 
@@ -192,6 +194,28 @@ class LocalLlmTool extends Tool
         } catch (ConnectionException $e) {
             return Response::error("Connection failed to {$baseUrl}: {$e->getMessage()}");
         }
+    }
+
+    private function handleRescanAgents(): Response
+    {
+        if (! config('local_agents.enabled')) {
+            return Response::text(json_encode([
+                'enabled' => false,
+                'message' => 'Local agent support is disabled. Set LOCAL_AGENTS_ENABLED=true to enable.',
+            ]));
+        }
+
+        $agents = app(LocalAgentDiscovery::class)->detect();
+
+        return Response::text(json_encode([
+            'agents' => array_map(fn ($key, $info) => [
+                'key' => $key,
+                'name' => $info['name'] ?? $key,
+                'version' => $info['version'] ?? null,
+                'path' => $info['path'] ?? null,
+            ], array_keys($agents), array_values($agents)),
+            'count' => count($agents),
+        ]));
     }
 
     private function handleRemove(Request $request): Response

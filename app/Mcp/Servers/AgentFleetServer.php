@@ -51,14 +51,18 @@ use App\Mcp\Tools\Cache\SemanticCachePurgeTool;
 use App\Mcp\Tools\Cache\SemanticCacheStatsTool;
 use App\Mcp\Tools\Chatbot\ChatbotAnalyticsSummaryTool;
 use App\Mcp\Tools\Chatbot\ChatbotCreateTool;
+use App\Mcp\Tools\Chatbot\ChatbotDeleteTool;
 use App\Mcp\Tools\Chatbot\ChatbotGetTool;
 use App\Mcp\Tools\Chatbot\ChatbotLearningEntriesListTool;
 use App\Mcp\Tools\Chatbot\ChatbotListTool;
 use App\Mcp\Tools\Chatbot\ChatbotSessionListTool;
 use App\Mcp\Tools\Chatbot\ChatbotToggleStatusTool;
+use App\Mcp\Tools\Chatbot\ChatbotTokenCreateTool;
+use App\Mcp\Tools\Chatbot\ChatbotTokenRevokeTool;
 use App\Mcp\Tools\Chatbot\ChatbotUpdateTool;
 use App\Mcp\Tools\Compute\ComputeManageTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
+use App\Mcp\Tools\Credential\CredentialDeleteTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
 use App\Mcp\Tools\Credential\CredentialListTool;
 use App\Mcp\Tools\Credential\CredentialOAuthFinalizeTool;
@@ -84,6 +88,7 @@ use App\Mcp\Tools\Email\EmailThemeGetTool;
 use App\Mcp\Tools\Email\EmailThemeListTool;
 use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
+use App\Mcp\Tools\Evolution\EvolutionApproveTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
 use App\Mcp\Tools\Evolution\EvolutionRejectTool;
@@ -144,6 +149,7 @@ use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
 use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
 use App\Mcp\Tools\Profile\ProfileGetTool;
+use App\Mcp\Tools\Profile\ProfilePasswordUpdateTool;
 use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
 use App\Mcp\Tools\Profile\ProfileUpdateTool;
 use App\Mcp\Tools\Project\ProjectActivateTool;
@@ -152,7 +158,10 @@ use App\Mcp\Tools\Project\ProjectCreateTool;
 use App\Mcp\Tools\Project\ProjectGetTool;
 use App\Mcp\Tools\Project\ProjectListTool;
 use App\Mcp\Tools\Project\ProjectPauseTool;
+use App\Mcp\Tools\Project\ProjectRestartTool;
 use App\Mcp\Tools\Project\ProjectResumeTool;
+use App\Mcp\Tools\Project\ProjectScheduleManageTool;
+use App\Mcp\Tools\Project\ProjectScheduleNlpTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
@@ -160,6 +169,8 @@ use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
+use App\Mcp\Tools\Shared\PluginManageTool;
+use App\Mcp\Tools\Shared\PushSubscriptionManageTool;
 use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
@@ -190,13 +201,16 @@ use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
+use App\Mcp\Tools\Skill\SkillDeleteTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
 use App\Mcp\Tools\Skill\SkillListTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\System\AuditLogTool;
+use App\Mcp\Tools\System\BlacklistManageTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
+use App\Mcp\Tools\System\SecurityPolicyManageTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
@@ -280,9 +294,10 @@ class AgentFleetServer extends Server
         AgentRollbackConfigTool::class,
         AgentRuntimeStateTool::class,
 
-        // Evolution (4)
+        // Evolution (5)
         EvolutionProposalListTool::class,
         EvolutionAnalyzeTool::class,
+        EvolutionApproveTool::class,
         EvolutionApplyTool::class,
         EvolutionRejectTool::class,
 
@@ -310,11 +325,12 @@ class AgentFleetServer extends Server
         ExperimentStepsTool::class,
         ExperimentShareTool::class,
 
-        // Skill (9)
+        // Skill (10)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
         SkillUpdateTool::class,
+        SkillDeleteTool::class,
         SkillVersionsTool::class,
         GuardrailTool::class,
         MultiModelConsensusTool::class,
@@ -334,11 +350,12 @@ class AgentFleetServer extends Server
         ToolSshFingerprintsTool::class,
         ToolBashPolicyTool::class,
 
-        // Credential (7)
+        // Credential (8)
         CredentialListTool::class,
         CredentialGetTool::class,
         CredentialCreateTool::class,
         CredentialUpdateTool::class,
+        CredentialDeleteTool::class,
         CredentialRotateTool::class,
         CredentialOAuthInitiateTool::class,
         CredentialOAuthFinalizeTool::class,
@@ -358,7 +375,7 @@ class AgentFleetServer extends Server
         WorkflowTimeGateTool::class,
         WorkflowExecutionChainTool::class,
 
-        // Project (9)
+        // Project (12)
         ProjectListTool::class,
         ProjectGetTool::class,
         ProjectCreateTool::class,
@@ -366,8 +383,11 @@ class AgentFleetServer extends Server
         ProjectActivateTool::class,
         ProjectPauseTool::class,
         ProjectResumeTool::class,
+        ProjectRestartTool::class,
         ProjectTriggerRunTool::class,
         ProjectArchiveTool::class,
+        ProjectScheduleManageTool::class,
+        ProjectScheduleNlpTool::class,
 
         // Approval (5)
         ApprovalListTool::class,
@@ -447,7 +467,7 @@ class AgentFleetServer extends Server
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
 
-        // Shared (9)
+        // Shared (12)
         NotificationTool::class,
         TeamGetTool::class,
         TeamUpdateTool::class,
@@ -458,6 +478,8 @@ class AgentFleetServer extends Server
         ApiTokenManageTool::class,
         TermsAcceptanceStatusTool::class,
         TermsAcceptanceHistoryTool::class,
+        PushSubscriptionManageTool::class,
+        PluginManageTool::class,
 
         // Telegram (1)
         TelegramBotTool::class,
@@ -496,19 +518,24 @@ class AgentFleetServer extends Server
         EmailTemplateDeleteTool::class,
         EmailTemplateGenerateTool::class,
 
-        // System (5)
+        // System (7)
         DashboardKpisTool::class,
         SystemHealthTool::class,
         SystemVersionCheckTool::class,
         AuditLogTool::class,
         GlobalSettingsUpdateTool::class,
+        BlacklistManageTool::class,
+        SecurityPolicyManageTool::class,
 
-        // Chatbot (7)
+        // Chatbot (10)
         ChatbotListTool::class,
         ChatbotGetTool::class,
         ChatbotCreateTool::class,
         ChatbotUpdateTool::class,
+        ChatbotDeleteTool::class,
         ChatbotToggleStatusTool::class,
+        ChatbotTokenCreateTool::class,
+        ChatbotTokenRevokeTool::class,
         ChatbotSessionListTool::class,
         ChatbotAnalyticsSummaryTool::class,
         ChatbotLearningEntriesListTool::class,
@@ -548,9 +575,10 @@ class AgentFleetServer extends Server
         SocialAccountListTool::class,
         SocialAccountUnlinkTool::class,
 
-        // Profile (4)
+        // Profile (5)
         ProfileGetTool::class,
         ProfileUpdateTool::class,
+        ProfilePasswordUpdateTool::class,
         ProfileTwoFactorStatusTool::class,
         ProfileConnectedAccountsTool::class,
 

@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Mcp\Tools\Chatbot;
+
+use App\Domain\Chatbot\Actions\DeleteChatbotAction;
+use App\Domain\Chatbot\Models\Chatbot;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+
+#[IsDestructive]
+class ChatbotDeleteTool extends Tool
+{
+    protected string $name = 'chatbot_delete';
+
+    protected string $description = 'Delete a chatbot. Revokes all active API tokens, deactivates all channels, and soft-deletes the backing agent if it was auto-created.';
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'chatbot_id' => $schema->string()
+                ->description('The chatbot UUID')
+                ->required(),
+        ];
+    }
+
+    public function handle(Request $request): Response
+    {
+        $validated = $request->validate([
+            'chatbot_id' => 'required|string',
+        ]);
+
+        $chatbot = Chatbot::find($validated['chatbot_id']);
+
+        if (! $chatbot) {
+            return Response::error('Chatbot not found.');
+        }
+
+        try {
+            app(DeleteChatbotAction::class)->execute($chatbot);
+
+            return Response::text(json_encode([
+                'success' => true,
+                'chatbot_id' => $validated['chatbot_id'],
+                'deleted' => true,
+            ]));
+        } catch (\Throwable $e) {
+            return Response::error($e->getMessage());
+        }
+    }
+}
