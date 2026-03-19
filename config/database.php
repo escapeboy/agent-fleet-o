@@ -190,6 +190,19 @@ return [
             'options' => ['prefix' => ''],
         ],
 
+        // Sessions (DB 3) -- dedicated connection, no prefix override
+        // (global options.prefix is overridden to '' here; the cache store layer
+        //  adds its own barsy-chatbot-cache- prefix, giving clean single-prefix keys)
+        'session' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_SESSION_DB', '3'),
+            'options' => ['prefix' => ''],
+        ],
+
         // Distributed locks (DB 2) -- survives Cache::flush()
         'locks' => [
             'url' => env('REDIS_URL'),
