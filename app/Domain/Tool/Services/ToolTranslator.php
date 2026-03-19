@@ -6,6 +6,7 @@ use App\Domain\Agent\Services\DockerSandboxExecutor;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Tool\Enums\BuiltInToolKind;
+use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Models\Tool;
@@ -84,6 +85,7 @@ class ToolTranslator
             }
 
             // MCP tool handler: proxy the call to the remote MCP server
+            $isStdio = $tool->type === ToolType::McpStdio;
             $serverUrl = $tool->transport_config['url'] ?? null;
             $credentials = (array) $tool->credentials;
             $authHeader = $credentials['api_key'] ?? $credentials['bearer_token'] ?? null;
@@ -92,11 +94,7 @@ class ToolTranslator
             $defName = $name;
             $paramNames = array_keys($properties);
 
-            $prismTool->using(function () use ($serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames): string {
-                if (! $serverUrl) {
-                    return "Error: Tool '{$defName}' on server '{$toolModel->name}' has no URL configured.";
-                }
-
+            $prismTool->using(function () use ($isStdio, $serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames): string {
                 // PrismPHP passes arguments positionally; map them back to named keys
                 $positional = func_get_args();
                 $arguments = [];
@@ -107,9 +105,18 @@ class ToolTranslator
                 }
 
                 try {
+                    if ($isStdio) {
+                        return app(McpStdioClient::class)->callTool($toolModel, $defName, $arguments);
+                    }
+
+                    if (! $serverUrl) {
+                        return "Error: Tool '{$defName}' on server '{$toolModel->name}' has no URL configured.";
+                    }
+
                     return app(McpHttpClient::class)->callTool($serverUrl, $defName, $arguments, $mcpHeaders);
                 } catch (\Throwable $e) {
-                    Log::error('McpHttpClient error', [
+                    $client = $isStdio ? 'McpStdioClient' : 'McpHttpClient';
+                    Log::error("{$client} error", [
                         'tool' => $toolModel->name,
                         'function' => $defName,
                         'error' => $e->getMessage(),

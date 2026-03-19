@@ -13,8 +13,8 @@ use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Barsy\Services\EmbeddingServiceInterface;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 class ChatbotResponseService
 {
@@ -26,6 +26,7 @@ class ChatbotResponseService
 
     public function __construct(
         private readonly ExecuteAgentAction $executeAgent,
+        private readonly EmbeddingServiceInterface $embedding,
     ) {}
 
     /**
@@ -351,12 +352,7 @@ class ChatbotResponseService
     private function retrieveRelevantChunks(Chatbot $chatbot, string $query, float $threshold = 0.72, int $topK = 5): array
     {
         try {
-            $response = Prism::embeddings()
-                ->using('openai', 'text-embedding-3-small')
-                ->fromInput($query)
-                ->asEmbeddings();
-
-            $vector = $response->embeddings[0]->embedding;
+            $vector = $this->embedding->generate($query);
             $embeddingStr = '['.implode(',', $vector).']';
 
             $allowedLevels = $this->allowedAccessLevels($chatbot);

@@ -22,8 +22,8 @@ class SkillCreateTool extends Tool
                 ->description('Skill name')
                 ->required(),
             'type' => $schema->string()
-                ->description('Skill type: llm, connector, rule, hybrid')
-                ->enum(['llm', 'connector', 'rule', 'hybrid'])
+                ->description('Skill type: llm, connector, rule, hybrid, boruna_script')
+                ->enum(['llm', 'connector', 'rule', 'hybrid', 'boruna_script'])
                 ->required(),
             'description' => $schema->string()
                 ->description('Skill description'),
@@ -36,7 +36,7 @@ class SkillCreateTool extends Tool
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|string|in:llm,connector,rule,hybrid',
+            'type' => 'required|string|in:llm,connector,rule,hybrid,boruna_script',
             'description' => 'nullable|string',
             'prompt_template' => 'nullable|string',
         ]);

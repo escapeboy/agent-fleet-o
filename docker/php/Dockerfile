@@ -44,6 +44,21 @@ RUN echo "memory_limit=512M" >> /usr/local/etc/php/conf.d/app.ini \
     && echo "post_max_size=64M" >> /usr/local/etc/php/conf.d/app.ini \
     && echo "max_execution_time=120" >> /usr/local/etc/php/conf.d/app.ini
 
+# Install Boruna MCP server binary (optional — skip if BORUNA_VERSION is empty)
+# Boruna provides a deterministic capability-safe .ax script executor via MCP stdio.
+# Set BORUNA_VERSION build arg to pin a specific release (e.g. --build-arg BORUNA_VERSION=0.3.0).
+ARG BORUNA_VERSION=""
+RUN if [ -n "$BORUNA_VERSION" ]; then \
+        apk add --no-cache curl tar && \
+        ARCH=$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/aarch64/') && \
+        curl -fsSL "https://github.com/escapeboy/boruna/releases/download/v${BORUNA_VERSION}/boruna-${ARCH}-unknown-linux-musl.tar.gz" \
+            -o /tmp/boruna.tar.gz && \
+        tar -xzf /tmp/boruna.tar.gz -C /tmp && \
+        mv /tmp/boruna /usr/local/bin/boruna && \
+        chmod +x /usr/local/bin/boruna && \
+        rm -f /tmp/boruna.tar.gz; \
+    fi
+
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

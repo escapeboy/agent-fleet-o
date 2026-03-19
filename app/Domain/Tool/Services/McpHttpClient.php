@@ -16,6 +16,8 @@ class McpHttpClient
 {
     private const TIMEOUT = 30;
 
+    private const CONNECT_TIMEOUT = 15;
+
     private const SSE_CONNECT_TIMEOUT = 10;
 
     /**
@@ -83,6 +85,7 @@ class McpHttpClient
             'Connection' => 'close',
         ], $headers))
             ->timeout(self::TIMEOUT)
+            ->connectTimeout(self::CONNECT_TIMEOUT)
             ->post("{$url}/mcp", [
                 'jsonrpc' => '2.0',
                 'method' => 'initialize',
@@ -118,6 +121,7 @@ class McpHttpClient
 
         $response = Http::withHeaders($requestHeaders)
             ->timeout(self::TIMEOUT)
+            ->connectTimeout(self::CONNECT_TIMEOUT)
             ->post("{$url}/mcp", [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/call',
@@ -148,6 +152,7 @@ class McpHttpClient
 
         $response = Http::withHeaders($requestHeaders)
             ->timeout(self::TIMEOUT)
+            ->connectTimeout(self::CONNECT_TIMEOUT)
             ->post("{$url}/mcp", [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/list',

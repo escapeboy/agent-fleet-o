@@ -243,7 +243,7 @@ class WorkflowGraphExecutor
             return;
         }
 
-        if ($type === 'agent' || $type === 'crew' || $type === 'human_task' || $type === 'time_gate' || $type === 'sub_workflow') {
+        if ($type === 'agent' || $type === 'crew' || $type === 'human_task' || $type === 'time_gate' || $type === 'sub_workflow' || $type === 'boruna_step') {
             $step = $steps[$nodeId] ?? null;
 
             if (! $step) {
@@ -622,6 +622,7 @@ class WorkflowGraphExecutor
             if ($nodeType === 'crew') {
                 $jobs[] = new ExecuteCrewWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
             } else {
+                // agent, boruna_step, and any future execution node types all use ExecutePlaybookStepJob
                 $jobs[] = new ExecutePlaybookStepJob($step->id, $experiment->id, $experiment->team_id);
             }
 
@@ -747,6 +748,7 @@ class WorkflowGraphExecutor
                 'crew' => 2,
                 'time_gate' => 2,
                 'agent' => 1,
+                'boruna_step' => 1,
                 default => 0,
             };
 

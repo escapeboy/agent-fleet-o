@@ -5,6 +5,7 @@ namespace App\Domain\Experiment\Pipeline;
 use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
+use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Experiment\Services\CheckpointManager;
 use App\Domain\Skill\Actions\ExecuteGuardrailAction;
 use App\Domain\Workflow\Models\WorkflowNode;
@@ -52,7 +53,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
         ];
     }
 
-    public function handle(ExecuteAgentAction $executeAgent): void
+    public function handle(ExecuteAgentAction $executeAgent, ExecuteSkillAction $executeSkill): void
     {
         $checkpointManager = app(CheckpointManager::class);
 
@@ -206,21 +207,46 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 }
             }
 
-            Log::info('ExecutePlaybookStepJob: calling executeAgent', [
-                'step_id' => $this->stepId,
-                'agent' => $step->agent?->name,
-                'input_keys' => array_keys($input),
-                'attempt' => $this->attempts(),
-            ]);
+            // Skill-only steps (e.g. boruna_step nodes) — no agent required
+            if ($step->skill_id && ! $step->agent_id) {
+                $skill = $step->skill;
 
-            $result = $executeAgent->execute(
-                agent: $step->agent,
-                input: $input,
-                teamId: $experiment->team_id,
-                userId: $experiment->user_id,
-                experimentId: $experiment->id,
-                stepId: $this->stepId,
-            );
+                if (! $skill) {
+                    throw new \RuntimeException("Skill {$step->skill_id} not found for step {$this->stepId}.");
+                }
+
+                Log::info('ExecutePlaybookStepJob: calling executeSkill (skill-only step)', [
+                    'step_id' => $this->stepId,
+                    'skill' => $skill->name,
+                    'input_keys' => array_keys($input),
+                    'attempt' => $this->attempts(),
+                ]);
+
+                $result = $executeSkill->execute(
+                    skill: $skill,
+                    input: $input,
+                    teamId: $experiment->team_id,
+                    userId: $experiment->user_id,
+                    agentId: null,
+                    experimentId: $experiment->id,
+                );
+            } else {
+                Log::info('ExecutePlaybookStepJob: calling executeAgent', [
+                    'step_id' => $this->stepId,
+                    'agent' => $step->agent?->name,
+                    'input_keys' => array_keys($input),
+                    'attempt' => $this->attempts(),
+                ]);
+
+                $result = $executeAgent->execute(
+                    agent: $step->agent,
+                    input: $input,
+                    teamId: $experiment->team_id,
+                    userId: $experiment->user_id,
+                    experimentId: $experiment->id,
+                    stepId: $this->stepId,
+                );
+            }
 
             // Stop heartbeat
             if ($stopHeartbeat) {

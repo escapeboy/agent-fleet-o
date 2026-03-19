@@ -3,6 +3,11 @@
 namespace App\Mcp\Servers;
 
 use App\Mcp\Concerns\BootstrapsMcpAuth;
+use App\Mcp\Tools\Boruna\BorunaCapabilityListTool;
+use App\Mcp\Tools\Boruna\BorunaEvidenceTool;
+use App\Mcp\Tools\Boruna\BorunaRunTool;
+use App\Mcp\Tools\Boruna\BorunaSkillManageTool;
+use App\Mcp\Tools\Boruna\BorunaValidateTool;
 use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
 use App\Mcp\Tools\Admin\AdminBillingRefundTool;
 use App\Mcp\Tools\Admin\AdminSecurityOverviewTool;
@@ -599,6 +604,13 @@ class AgentFleetServer extends Server
         ProfilePasswordUpdateTool::class,
         ProfileTwoFactorStatusTool::class,
         ProfileConnectedAccountsTool::class,
+
+        // Boruna (5)
+        BorunaRunTool::class,
+        BorunaValidateTool::class,
+        BorunaEvidenceTool::class,
+        BorunaCapabilityListTool::class,
+        BorunaSkillManageTool::class,
 
         // Admin (7) — super admin only
         AdminTeamSuspendTool::class,

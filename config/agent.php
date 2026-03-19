@@ -83,4 +83,30 @@ return [
     | Soft limit for per-execution sandbox disk usage (for future quota enforcement).
     */
     'sandbox_max_size_mb' => (int) env('AGENT_SANDBOX_MAX_SIZE_MB', 100),
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCP Stdio Binary Allowlist
+    |--------------------------------------------------------------------------
+    | When non-empty, only binaries whose resolved path appears in this list
+    | can be spawned by McpStdioClient. Empty = allow all (suitable for local dev).
+    | In production, set this to the absolute paths of permitted MCP server binaries.
+    |
+    | Example:
+    |   MCP_STDIO_BINARY_ALLOWLIST=/usr/local/bin/boruna,/usr/local/bin/my-mcp-server
+    */
+    'mcp_stdio_binary_allowlist' => array_filter(
+        explode(',', env('MCP_STDIO_BINARY_ALLOWLIST', '')),
+        fn ($v) => $v !== '',
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Boruna Binary Path
+    |--------------------------------------------------------------------------
+    | Absolute path to the Boruna binary on the host / inside the container.
+    | Used by the PopularToolsSeeder and install wizard to auto-configure the
+    | default Boruna mcp_stdio Tool.
+    */
+    'boruna_binary_path' => env('BORUNA_BINARY_PATH', '/usr/local/bin/boruna'),
 ];

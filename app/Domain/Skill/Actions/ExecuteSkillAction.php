@@ -39,6 +39,7 @@ class ExecuteSkillAction
         private readonly ExecuteRunPodSkillAction $executeRunPod,
         private readonly ExecuteRunPodPodSkillAction $executeRunPodPod,
         private readonly ExecuteGpuComputeSkillAction $executeGpuCompute,
+        private readonly ExecuteBorunaScriptSkillAction $executeBorunaScript,
     ) {}
 
     /**
@@ -84,6 +85,11 @@ class ExecuteSkillAction
         // GpuCompute routes to the pluggable compute provider system
         if ($skill->type === SkillType::GpuCompute->value) {
             return $this->executeGpuCompute->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
+        }
+
+        // BorunaScript runs a deterministic .ax script via the Boruna MCP stdio server — no LLM, no credits
+        if ($skill->type === SkillType::BorunaScript->value) {
+            return $this->executeBorunaScript->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // Plugin hook: allow plugins to inspect input or cancel skill execution
@@ -244,7 +250,7 @@ class ExecuteSkillAction
             SkillType::Rule => $this->executeRuleSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Guardrail => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::MultiModelConsensus => $this->executeMultiModelConsensusSkill($skill, $input, $teamId, $userId, $agentId, $experimentId),
-            SkillType::CodeExecution, SkillType::Browser, SkillType::RunpodEndpoint, SkillType::RunpodPod, SkillType::GpuCompute => throw new \LogicException('CodeExecution, Browser, RunpodEndpoint, RunpodPod, and GpuCompute skill types must be short-circuited before reaching executeByType.'),
+            SkillType::CodeExecution, SkillType::Browser, SkillType::RunpodEndpoint, SkillType::RunpodPod, SkillType::GpuCompute, SkillType::BorunaScript => throw new \LogicException('CodeExecution, Browser, RunpodEndpoint, RunpodPod, GpuCompute, and BorunaScript skill types must be short-circuited before reaching executeByType.'),
         };
     }
 

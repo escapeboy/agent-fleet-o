@@ -16,6 +16,7 @@ enum WorkflowNodeType: string
     case TimeGate = 'time_gate';
     case Merge = 'merge';
     case SubWorkflow = 'sub_workflow';
+    case BorunaStep = 'boruna_step';
 
     public function label(): string
     {
@@ -32,6 +33,7 @@ enum WorkflowNodeType: string
             self::TimeGate => 'Time Gate',
             self::Merge => 'Merge',
             self::SubWorkflow => 'Sub-Workflow',
+            self::BorunaStep => 'Boruna Script',
         };
     }
 
@@ -50,6 +52,7 @@ enum WorkflowNodeType: string
             self::TimeGate => 'clock',
             self::Merge => 'funnel',
             self::SubWorkflow => 'rectangle-stack',
+            self::BorunaStep => 'shield-check',
         };
     }
 
@@ -98,6 +101,7 @@ enum WorkflowNodeType: string
             self::HumanTask,
             self::TimeGate,
             self::SubWorkflow,
+            self::BorunaStep,
         ]);
     }
 }
