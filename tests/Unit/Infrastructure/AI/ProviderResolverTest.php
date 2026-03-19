@@ -23,7 +23,9 @@ class ProviderResolverTest extends TestCase
         parent::setUp();
         // Bust discovery cache so each test starts clean
         Cache::flush();
-        $this->resolver = app(ProviderResolver::class);
+        // Instantiate directly to bypass any container singleton override
+        // (e.g. CloudProviderResolver, which unconditionally strips http_local providers)
+        $this->resolver = new ProviderResolver();
     }
 
     // ── availableProviders ───────────────────────────────────────────────────
