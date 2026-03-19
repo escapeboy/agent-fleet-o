@@ -15,6 +15,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use League\OAuth2\Server\Exception\OAuthServerException;
 use Sentry\Laravel\Integration;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
@@ -65,6 +66,7 @@ return Application::configure(basePath: dirname(__DIR__))
             $status = match (true) {
                 $e instanceof ValidationException => 422,
                 $e instanceof AuthenticationException => 401,
+                $e instanceof OAuthServerException => $e->getHttpStatusCode(),
                 $e instanceof AuthorizationException => 403,
                 $e instanceof ModelNotFoundException => 404,
                 $e instanceof NotFoundHttpException => 404,
