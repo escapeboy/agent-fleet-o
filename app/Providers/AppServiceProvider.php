@@ -369,9 +369,26 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewApiDocs', fn () => true);
 
         Scramble::afterOpenApiGenerated(function (OpenApi $openApi) {
+            // Bearer token auth (Sanctum) — used by all /api/v1/ endpoints
             $openApi->secure(
                 SecurityScheme::http('bearer', 'token'),
             );
+
+            // OAuth2 Authorization Code + PKCE — required for ChatGPT Actions and
+            // any OAuth2-capable client. Describes the same endpoints as the MCP
+            // OAuth discovery documents (/.well-known/oauth-authorization-server).
+            $openApi->components->securitySchemes['oauth2'] = [
+                'type' => 'oauth2',
+                'flows' => [
+                    'authorizationCode' => [
+                        'authorizationUrl' => url('/oauth/authorize'),
+                        'tokenUrl' => url('/oauth/token'),
+                        'scopes' => [
+                            'mcp:use' => 'Full access to the FleetQ MCP server and REST API',
+                        ],
+                    ],
+                ],
+            ];
         });
 
         // Serve the OpenAPI JSON spec from a pre-generated file when available.
