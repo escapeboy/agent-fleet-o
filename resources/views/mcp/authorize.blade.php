@@ -6,7 +6,30 @@
     <title>{{ config('app.name') }} — Authorize Access</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4">
+<body class="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4" x-data="{ authorizing: false }">
+
+    {{-- Full-page loading overlay (shown after Authorize is clicked) --}}
+    <div
+        x-show="authorizing"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm"
+        style="display: none;"
+    >
+        <div class="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl mb-5 shadow-lg">
+            {{ substr(config('app.name'), 0, 1) }}
+        </div>
+        <div class="flex items-center gap-3 text-gray-700">
+            <svg class="w-5 h-5 text-primary-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span class="text-base font-medium">Connecting to <strong>{{ $client->name }}</strong>…</span>
+        </div>
+        <p class="mt-3 text-sm text-gray-400">You'll be redirected back to the application shortly.</p>
+    </div>
+
     <div class="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         {{-- Header --}}
         <div class="px-8 py-6 border-b border-gray-100">
@@ -19,7 +42,7 @@
             <h1 class="text-xl font-semibold text-gray-900 mt-3">Authorize Access</h1>
             <p class="text-sm text-gray-500 mt-1">
                 <strong class="text-gray-800">{{ $client->name }}</strong>
-                wants to access your FleetQ account via the MCP server.
+                wants to access your FleetQ workspace via the MCP server.
             </p>
         </div>
 
@@ -58,13 +81,21 @@
             </form>
 
             {{-- Approve --}}
-            <form method="POST" action="{{ route('passport.authorizations.approve') }}" class="flex-1">
+            <form method="POST" action="{{ route('passport.authorizations.approve') }}" class="flex-1" @submit="authorizing = true">
                 @csrf
                 <input type="hidden" name="state" value="{{ $request->state }}">
                 <input type="hidden" name="client_id" value="{{ $client->getKey() }}">
                 <input type="hidden" name="auth_token" value="{{ $authToken }}">
-                <button type="submit" class="w-full py-2.5 px-4 rounded-lg bg-primary-600 text-sm font-medium text-white hover:bg-primary-700 transition-colors">
-                    Authorize
+                <button
+                    type="submit"
+                    :disabled="authorizing"
+                    class="w-full py-2.5 px-4 rounded-lg bg-primary-600 text-sm font-medium text-white hover:bg-primary-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    <svg x-show="authorizing" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" style="display:none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="authorizing ? 'Authorizing…' : 'Authorize'">Authorize</span>
                 </button>
             </form>
         </div>
