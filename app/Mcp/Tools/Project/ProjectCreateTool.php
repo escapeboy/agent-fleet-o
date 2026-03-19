@@ -43,9 +43,7 @@ class ProjectCreateTool extends Tool
             'allowed_credential_ids' => $schema->array()
                 ->description('Restrict which credentials are available to agents in this project. Pass an array of credential UUIDs.')
                 ->items($schema->string()),
-            'schedule' => $schema->object()
-                ->description('Schedule configuration. Required for continuous projects — omitting it creates a project that never runs. Use project_schedule_nlp to parse natural language schedules.')
-                ->properties([
+            'schedule' => $schema->object([
                     'frequency' => $schema->string()
                         ->description('Preset frequency. Use "cron" to specify a custom cron_expression.')
                         ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once'])
@@ -68,7 +66,8 @@ class ProjectCreateTool extends Tool
                     'run_immediately' => $schema->boolean()
                         ->description('Trigger a run immediately on creation, before the first scheduled time. Default: true')
                         ->default(true),
-                ]),
+                ])
+                ->description('Schedule configuration. Required for continuous projects — omitting it creates a project that never runs. Use project_schedule_nlp to parse natural language schedules.'),
         ];
     }
 

@@ -25,16 +25,15 @@ class SecurityPolicyManageTool extends Tool
                 ->description('get: read current policy | update: save new policy | reset: clear policy to defaults')
                 ->enum(['get', 'update', 'reset'])
                 ->required(),
-            'policy' => $schema->object()
-                ->description('Required for update. Policy fields to set.')
-                ->properties([
+            'policy' => $schema->object([
                     'blocked_commands' => $schema->array()->items($schema->string()),
                     'blocked_patterns' => $schema->array()->items($schema->string()),
                     'allowed_commands' => $schema->array()->items($schema->string()),
                     'allowed_paths' => $schema->array()->items($schema->string()),
                     'require_approval_for' => $schema->array()->items($schema->string()),
                     'max_command_timeout' => $schema->integer()->description('Max command timeout in seconds. Null to remove limit.'),
-                ]),
+                ])
+                ->description('Required for update. Policy fields to set.'),
         ];
     }
 

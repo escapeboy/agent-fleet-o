@@ -26,9 +26,7 @@ class ProjectScheduleManageTool extends Tool
                 ->description('get: read schedule details | update: change schedule settings | enable: turn on the schedule | disable: turn off the schedule')
                 ->enum(['get', 'update', 'enable', 'disable'])
                 ->required(),
-            'schedule' => $schema->object()
-                ->description('New schedule settings. Required when operation=update.')
-                ->properties([
+            'schedule' => $schema->object([
                     'frequency' => $schema->string()
                         ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once']),
                     'cron_expression' => $schema->string()
@@ -39,7 +37,8 @@ class ProjectScheduleManageTool extends Tool
                         ->enum(['skip', 'queue', 'allow']),
                     'max_consecutive_failures' => $schema->integer(),
                     'catchup_missed' => $schema->boolean(),
-                ]),
+                ])
+                ->description('New schedule settings. Required when operation=update.'),
         ];
     }
 
