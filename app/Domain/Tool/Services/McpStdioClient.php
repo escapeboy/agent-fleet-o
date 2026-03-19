@@ -109,6 +109,7 @@ class McpStdioClient
         $fullCmd = array_merge($cmd, $args);
 
         $this->validateBinaryAllowlist($fullCmd[0]);
+        $this->validateArgs($args);
 
         $env = $this->buildEnv($config['env'] ?? []);
 
@@ -377,9 +378,18 @@ class McpStdioClient
     {
         $allowlist = config('agent.mcp_stdio_binary_allowlist', []);
 
-        // Empty allowlist = allow all (useful for local dev). Non-empty = strict.
+        // Empty allowlist + explicit opt-in → allow all (local dev only).
+        // Empty allowlist without opt-in → deny all (fail-close default).
         if (empty($allowlist)) {
-            return;
+            if (config('agent.mcp_stdio_allow_any_binary', false)) {
+                return;
+            }
+
+            throw new \RuntimeException(
+                "McpStdioClient: mcp_stdio_binary_allowlist is empty and MCP_STDIO_ALLOW_ANY_BINARY is not set. ".
+                'Set MCP_STDIO_BINARY_ALLOWLIST in .env (comma-separated absolute paths) '.
+                'or set MCP_STDIO_ALLOW_ANY_BINARY=true for local dev.'
+            );
         }
 
         // Resolve symlinks before comparing
@@ -392,6 +402,32 @@ class McpStdioClient
         }
 
         throw new \RuntimeException("McpStdioClient: binary '{$binaryPath}' is not in the mcp_stdio_binary_allowlist.");
+    }
+
+    /**
+     * Validate that args do not contain shell metacharacters.
+     *
+     * Since proc_open with an array bypasses the shell, these characters are not
+     * directly injectable. However, some binaries interpret their own flags as
+     * sub-commands (e.g. git --upload-pack, curl --config). Blocking metacharacters
+     * in args prevents the most obvious argument-injection vectors.
+     *
+     * @param  array<int, mixed>  $args
+     *
+     * @throws \RuntimeException if any arg contains shell metacharacters
+     */
+    private function validateArgs(array $args): void
+    {
+        foreach ($args as $arg) {
+            if (! is_string($arg)) {
+                continue;
+            }
+            if (preg_match('/[;&|`$\n\r]/', $arg)) {
+                throw new \RuntimeException(
+                    'McpStdioClient: transport_config args must not contain shell metacharacters (;, &, |, `, $, newline).'
+                );
+            }
+        }
     }
 
     /**

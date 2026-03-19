@@ -432,7 +432,18 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 }
             } elseif (is_string($source) && str_starts_with($source, 'experiment.')) {
                 $field = substr($source, 11);
-                $resolved[$key] = data_get($experiment, $field);
+                // Restrict to safe scalar fields — prevent relationship traversal
+                // to sensitive attributes (team.credential_key, user.password, etc.)
+                static $allowedExperimentFields = [
+                    'id', 'title', 'thesis', 'status', 'track', 'input_data',
+                    'constraints', 'metadata', 'created_at', 'updated_at',
+                ];
+                $topLevel = explode('.', $field)[0];
+                if (! in_array($topLevel, $allowedExperimentFields, true)) {
+                    $resolved[$key] = null;
+                } else {
+                    $resolved[$key] = data_get($experiment, $field);
+                }
             } else {
                 $resolved[$key] = $source;
             }

@@ -34,13 +34,26 @@ class CommandSecurityPolicy
 
     /** Dangerous shell patterns always blocked. */
     protected const DANGEROUS_PATTERNS = [
+        // Shell pipes to interpreters
         '| bash',
         '| sh',
         '| zsh',
+        '| python3 -c',
+        '| python -c',
+        '| node -e',
+        '| node -',
+        '| perl -e',
+        '| php -r',
+        '| ruby -e',
+        // Shell substitution / expansion
         '$(',
+        '$\'',      // ANSI-C quoting: $'\x28' bypasses $( check
+        '${IFS}',
         '`',
+        // Dangerous combinators
         '&& rm',
         '; rm',
+        // Newline / carriage return injection (checked separately via strpos)
     ];
 
     /** Commands that require approval / audit logging. */
@@ -94,6 +107,16 @@ class CommandSecurityPolicy
                     level: 'platform',
                 );
             }
+        }
+
+        // 2b. Platform-level: newline / carriage-return injection
+        // Use strpos (not stripos) — these are control characters, not letters.
+        if (strpos($command, "\n") !== false || strpos($command, "\r") !== false) {
+            return new CommandValidationResult(
+                allowed: false,
+                reason: 'Command contains newline or carriage-return character',
+                level: 'platform',
+            );
         }
 
         // 3. Platform-level: sensitive path access
@@ -257,7 +280,8 @@ class CommandSecurityPolicy
 
             foreach ($cwdVariants as $cwd) {
                 foreach ($pathVariants as $allowed) {
-                    if (str_starts_with($cwd, $allowed)) {
+                    $allowedWithSlash = rtrim($allowed, '/').'/';
+                    if ($cwd === $allowed || str_starts_with($cwd.'/', $allowedWithSlash)) {
                         return true;
                     }
                 }

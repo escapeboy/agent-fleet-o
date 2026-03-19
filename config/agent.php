@@ -88,17 +88,29 @@ return [
     |--------------------------------------------------------------------------
     | MCP Stdio Binary Allowlist
     |--------------------------------------------------------------------------
-    | When non-empty, only binaries whose resolved path appears in this list
-    | can be spawned by McpStdioClient. Empty = allow all (suitable for local dev).
-    | In production, set this to the absolute paths of permitted MCP server binaries.
+    | Comma-separated list of absolute paths to binaries that may be spawned
+    | by McpStdioClient. When non-empty, only listed binaries are permitted.
     |
-    | Example:
+    | When EMPTY (default):
+    |   - If MCP_STDIO_ALLOW_ANY_BINARY=true  → allow all (local dev opt-in)
+    |   - If MCP_STDIO_ALLOW_ANY_BINARY=false → deny all (fail-close, safe default)
+    |
+    | Production: always set an explicit list.
     |   MCP_STDIO_BINARY_ALLOWLIST=/usr/local/bin/boruna,/usr/local/bin/my-mcp-server
     */
     'mcp_stdio_binary_allowlist' => array_filter(
         explode(',', env('MCP_STDIO_BINARY_ALLOWLIST', '')),
         fn ($v) => $v !== '',
     ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCP Stdio Allow Any Binary (Dev Opt-In)
+    |--------------------------------------------------------------------------
+    | When true AND mcp_stdio_binary_allowlist is empty, McpStdioClient will
+    | allow any binary path. Only for local development. NEVER enable in production.
+    */
+    'mcp_stdio_allow_any_binary' => (bool) env('MCP_STDIO_ALLOW_ANY_BINARY', false),
 
     /*
     |--------------------------------------------------------------------------

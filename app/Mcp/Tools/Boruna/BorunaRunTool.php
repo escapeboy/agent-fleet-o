@@ -147,6 +147,7 @@ class BorunaRunTool extends McpTool
             return Tool::where('id', $toolId)
                 ->where('team_id', $teamId)
                 ->where('type', 'mcp_stdio')
+                ->where('status', 'active')
                 ->first();
         }
 

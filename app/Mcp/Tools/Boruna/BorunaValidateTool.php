@@ -62,7 +62,11 @@ class BorunaValidateTool extends McpTool
     private function resolveTool(string $teamId, ?string $toolId): ?Tool
     {
         if ($toolId) {
-            return Tool::where('id', $toolId)->where('team_id', $teamId)->where('type', 'mcp_stdio')->first();
+            return Tool::where('id', $toolId)
+                ->where('team_id', $teamId)
+                ->where('type', 'mcp_stdio')
+                ->where('status', 'active')
+                ->first();
         }
 
         return Tool::where('team_id', $teamId)

@@ -543,6 +543,19 @@ class ToolTranslator
                         if (! in_array($binary, $allowedCommands, true)) {
                             return "Error: Command '{$binary}' is not in the SSH tool allowlist.";
                         }
+
+                        // Also validate the full command string for dangerous shell patterns —
+                        // the binary check alone does not prevent shell injection in arguments.
+                        $policy = app(CommandSecurityPolicy::class);
+                        $validation = $policy->validate(
+                            $command,
+                            workingDirectory: null,
+                            toolAllowedCommands: $allowedCommands,
+                            toolAllowedPaths: [],
+                        );
+                        if (! $validation->allowed) {
+                            return "Error: {$validation->reason}";
+                        }
                     }
 
                     try {
@@ -574,7 +587,8 @@ class ToolTranslator
 
         foreach ($allowedPaths as $allowed) {
             $resolvedAllowed = realpath($allowed) ?: $allowed;
-            if (str_starts_with($resolvedPath, $resolvedAllowed)) {
+            $allowedWithSlash = rtrim($resolvedAllowed, '/').'/';
+            if ($resolvedPath === $resolvedAllowed || str_starts_with($resolvedPath.'/', $allowedWithSlash)) {
                 return true;
             }
         }
