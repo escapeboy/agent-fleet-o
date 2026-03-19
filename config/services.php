@@ -95,7 +95,6 @@ return [
         'webhook_secret' => env('CLEARCUE_WEBHOOK_SECRET'),
     ],
 
-
     /*
     |--------------------------------------------------------------------------
     | Social Login (OAuth) Providers

@@ -10,7 +10,6 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
-use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 /**
  * Manage boruna_script skills: create, list, get, and list recent executions.
@@ -49,22 +48,22 @@ class BorunaSkillManageTool extends McpTool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'action'         => 'required|in:create,list,get,executions',
-            'name'           => 'nullable|string|max:255',
-            'description'    => 'nullable|string',
-            'script'         => 'nullable|string',
-            'policy'         => 'nullable|in:allow-all,deny-all',
+            'action' => 'required|in:create,list,get,executions',
+            'name' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'script' => 'nullable|string',
+            'policy' => 'nullable|in:allow-all,deny-all',
             'boruna_tool_id' => 'nullable|uuid',
-            'skill_id'       => 'nullable|uuid',
-            'limit'          => 'nullable|integer|min:1|max:100',
+            'skill_id' => 'nullable|uuid',
+            'limit' => 'nullable|integer|min:1|max:100',
         ]);
 
         $teamId = auth()->user()->current_team_id;
 
         return match ($validated['action']) {
-            'create'     => $this->create($validated, $teamId),
-            'list'       => $this->list($teamId, $validated['limit'] ?? 20),
-            'get'        => $this->get($validated['skill_id'] ?? null, $teamId),
+            'create' => $this->create($validated, $teamId),
+            'list' => $this->list($teamId, $validated['limit'] ?? 20),
+            'get' => $this->get($validated['skill_id'] ?? null, $teamId),
             'executions' => $this->executions($validated['skill_id'] ?? null, $teamId, $validated['limit'] ?? 20),
         };
     }
@@ -85,20 +84,20 @@ class BorunaSkillManageTool extends McpTool
                 description: $validated['description'] ?? '',
                 systemPrompt: null,
                 configuration: array_filter([
-                    'script'         => $validated['script'],
-                    'policy'         => $policy,
+                    'script' => $validated['script'],
+                    'policy' => $policy,
                     'boruna_tool_id' => $validated['boruna_tool_id'] ?? null,
                 ]),
                 createdBy: auth()->id(),
             );
 
             return Response::text(json_encode([
-                'success'  => true,
+                'success' => true,
                 'skill_id' => $skill->id,
-                'name'     => $skill->name,
-                'type'     => $skill->type,
-                'status'   => $skill->status->value,
-                'policy'   => $policy,
+                'name' => $skill->name,
+                'type' => $skill->type,
+                'status' => $skill->status->value,
+                'policy' => $policy,
             ]));
         } catch (\Throwable $e) {
             return Response::error("Failed to create Boruna skill: {$e->getMessage()}");
@@ -114,20 +113,20 @@ class BorunaSkillManageTool extends McpTool
             ->get(['id', 'name', 'slug', 'description', 'status', 'configuration', 'execution_count', 'last_executed_at']);
 
         return Response::text(json_encode([
-            'count'  => $skills->count(),
+            'count' => $skills->count(),
             'skills' => $skills->map(function ($s) {
                 $cfg = is_array($s->configuration) ? $s->configuration : [];
 
                 return [
-                    'id'              => $s->id,
-                    'name'            => $s->name,
-                    'slug'            => $s->slug,
-                    'description'     => $s->description,
-                    'status'          => $s->status,
-                    'policy'          => $cfg['policy'] ?? 'deny-all',
-                    'has_script'      => ! empty($cfg['script']),
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'slug' => $s->slug,
+                    'description' => $s->description,
+                    'status' => $s->status,
+                    'policy' => $cfg['policy'] ?? 'deny-all',
+                    'has_script' => ! empty($cfg['script']),
                     'execution_count' => $s->execution_count ?? 0,
-                    'last_executed'   => $s->last_executed_at,
+                    'last_executed' => $s->last_executed_at,
                 ];
             }),
         ]));
@@ -151,17 +150,17 @@ class BorunaSkillManageTool extends McpTool
         $cfg = is_array($skill->configuration) ? $skill->configuration : [];
 
         return Response::text(json_encode([
-            'id'              => $skill->id,
-            'name'            => $skill->name,
-            'slug'            => $skill->slug,
-            'description'     => $skill->description,
-            'status'          => $skill->status,
-            'policy'          => $cfg['policy'] ?? 'deny-all',
-            'script'          => $cfg['script'] ?? null,
-            'boruna_tool_id'  => $cfg['boruna_tool_id'] ?? null,
+            'id' => $skill->id,
+            'name' => $skill->name,
+            'slug' => $skill->slug,
+            'description' => $skill->description,
+            'status' => $skill->status,
+            'policy' => $cfg['policy'] ?? 'deny-all',
+            'script' => $cfg['script'] ?? null,
+            'boruna_tool_id' => $cfg['boruna_tool_id'] ?? null,
             'execution_count' => $skill->execution_count ?? 0,
-            'last_executed'   => $skill->last_executed_at,
-            'created_at'      => $skill->created_at,
+            'last_executed' => $skill->last_executed_at,
+            'created_at' => $skill->created_at,
         ]));
     }
 
@@ -180,14 +179,14 @@ class BorunaSkillManageTool extends McpTool
         $executions = $query->get();
 
         return Response::text(json_encode([
-            'count'      => $executions->count(),
+            'count' => $executions->count(),
             'executions' => $executions->map(fn ($e) => [
-                'id'          => $e->id,
-                'skill_id'    => $e->skill_id,
-                'skill_name'  => $e->skill?->name,
-                'status'      => $e->status,
+                'id' => $e->id,
+                'skill_id' => $e->skill_id,
+                'skill_name' => $e->skill?->name,
+                'status' => $e->status,
                 'duration_ms' => $e->duration_ms,
-                'created_at'  => $e->created_at,
+                'created_at' => $e->created_at,
             ]),
         ]));
     }

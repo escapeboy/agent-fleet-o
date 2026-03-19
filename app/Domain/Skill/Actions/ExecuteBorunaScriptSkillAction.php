@@ -92,15 +92,15 @@ class ExecuteBorunaScriptSkillAction
             }
 
             $execution = SkillExecution::create([
-                'skill_id'      => $skill->id,
-                'agent_id'      => $agentId,
+                'skill_id' => $skill->id,
+                'agent_id' => $agentId,
                 'experiment_id' => $experimentId,
-                'team_id'       => $teamId,
-                'status'        => 'completed',
-                'input'         => $input,
-                'output'        => $output,
-                'duration_ms'   => $durationMs,
-                'cost_credits'  => 0, // Local execution — zero platform cost
+                'team_id' => $teamId,
+                'status' => 'completed',
+                'input' => $input,
+                'output' => $output,
+                'duration_ms' => $durationMs,
+                'cost_credits' => 0, // Local execution — zero platform cost
             ]);
 
             $skill->recordExecution(true, $durationMs);
@@ -112,7 +112,7 @@ class ExecuteBorunaScriptSkillAction
 
             Log::warning('ExecuteBorunaScriptSkillAction failed', [
                 'skill_id' => $skill->id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return $this->failExecution(
@@ -156,15 +156,15 @@ class ExecuteBorunaScriptSkillAction
         int $durationMs = 0,
     ): array {
         $execution = SkillExecution::create([
-            'skill_id'      => $skill->id,
-            'agent_id'      => $agentId,
+            'skill_id' => $skill->id,
+            'agent_id' => $agentId,
             'experiment_id' => $experimentId,
-            'team_id'       => $teamId,
-            'status'        => 'failed',
-            'input'         => $input,
-            'output'        => null,
-            'duration_ms'   => $durationMs,
-            'cost_credits'  => 0,
+            'team_id' => $teamId,
+            'status' => 'failed',
+            'input' => $input,
+            'output' => null,
+            'duration_ms' => $durationMs,
+            'cost_credits' => 0,
             'error_message' => $errorMessage,
         ]);
 

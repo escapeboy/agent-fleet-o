@@ -18,7 +18,6 @@ class ScopedPersonalAccessToken extends PersonalAccessToken implements ScopeAuth
 {
     protected $table = 'personal_access_tokens';
 
-
     public function can($scope): bool
     {
         return parent::can($scope);

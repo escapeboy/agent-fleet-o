@@ -16,7 +16,12 @@ return [
     */
 
     'redirect_domains' => [
+        // Anthropic / Claude.ai
         'https://claude.ai',
+        // OpenAI / ChatGPT Actions
+        'https://chatgpt.com',
+        'https://chat.openai.com',
+        // Local development
         'http://localhost',
         'http://127.0.0.1',
     ],

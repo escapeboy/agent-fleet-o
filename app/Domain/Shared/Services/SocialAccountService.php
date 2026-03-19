@@ -158,10 +158,10 @@ class SocialAccountService
         $encrypter = app('encrypter');
 
         DB::table('user_social_accounts')->where('id', $account->id)->update([
-            'access_token'     => $encrypter->encrypt($socialUser->token),
-            'refresh_token'    => $socialUser->refreshToken ? $encrypter->encrypt($socialUser->refreshToken) : null,
+            'access_token' => $encrypter->encrypt($socialUser->token),
+            'refresh_token' => $socialUser->refreshToken ? $encrypter->encrypt($socialUser->refreshToken) : null,
             'token_expires_at' => $socialUser->expiresIn ? now()->addSeconds($socialUser->expiresIn) : null,
-            'updated_at'       => now(),
+            'updated_at' => now(),
         ]);
     }
 }

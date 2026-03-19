@@ -34,7 +34,7 @@ class BorunaValidateTool extends McpTool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'script'         => 'required|string',
+            'script' => 'required|string',
             'boruna_tool_id' => 'nullable|uuid',
         ]);
 
@@ -51,8 +51,8 @@ class BorunaValidateTool extends McpTool
             ]);
 
             return Response::text(json_encode([
-                'valid'   => ! str_contains(strtolower($output), 'error'),
-                'output'  => $output,
+                'valid' => ! str_contains(strtolower($output), 'error'),
+                'output' => $output,
             ]));
         } catch (\Throwable $e) {
             return Response::error("Boruna validate failed: {$e->getMessage()}");

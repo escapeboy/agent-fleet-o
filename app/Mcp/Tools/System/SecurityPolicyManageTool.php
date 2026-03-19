@@ -43,7 +43,7 @@ class SecurityPolicyManageTool extends Tool
         $operation = $request->get('operation');
 
         if (! $operation || ! in_array($operation, ['get', 'update', 'reset'], true)) {
-            return Response::error("operation must be one of: get, update, reset");
+            return Response::error('operation must be one of: get, update, reset');
         }
 
         return match ($operation) {

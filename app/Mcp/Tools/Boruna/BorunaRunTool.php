@@ -49,12 +49,12 @@ class BorunaRunTool extends McpTool
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
-            'mode'           => 'required|in:inline,skill',
-            'script'         => 'nullable|string',
-            'policy'         => 'nullable|in:allow-all,deny-all',
+            'mode' => 'required|in:inline,skill',
+            'script' => 'nullable|string',
+            'policy' => 'nullable|in:allow-all,deny-all',
             'boruna_tool_id' => 'nullable|uuid',
-            'input'          => 'nullable|array',
-            'skill_id'       => 'nullable|uuid',
+            'input' => 'nullable|array',
+            'skill_id' => 'nullable|uuid',
         ]);
 
         $teamId = auth()->user()->current_team_id;
@@ -85,7 +85,7 @@ class BorunaRunTool extends McpTool
         $arguments = array_filter([
             'script' => $script,
             'policy' => $policy,
-            'input'  => isset($validated['input']) ? json_encode($validated['input']) : null,
+            'input' => isset($validated['input']) ? json_encode($validated['input']) : null,
         ], fn ($v) => $v !== null);
 
         try {
@@ -93,9 +93,9 @@ class BorunaRunTool extends McpTool
 
             return Response::text(json_encode([
                 'success' => true,
-                'mode'    => 'inline',
-                'policy'  => $policy,
-                'output'  => $output,
+                'mode' => 'inline',
+                'policy' => $policy,
+                'output' => $output,
             ]));
         } catch (\Throwable $e) {
             return Response::error("Boruna execution failed: {$e->getMessage()}");
@@ -128,13 +128,13 @@ class BorunaRunTool extends McpTool
             );
 
             return Response::text(json_encode([
-                'success'      => $result['output'] !== null,
-                'mode'         => 'skill',
-                'skill_id'     => $skill->id,
-                'skill_name'   => $skill->name,
+                'success' => $result['output'] !== null,
+                'mode' => 'skill',
+                'skill_id' => $skill->id,
+                'skill_name' => $skill->name,
                 'execution_id' => $result['execution']->id,
-                'output'       => $result['output'],
-                'duration_ms'  => $result['execution']->duration_ms,
+                'output' => $result['output'],
+                'duration_ms' => $result['execution']->duration_ms,
             ]));
         } catch (\Throwable $e) {
             return Response::error("Boruna skill execution failed: {$e->getMessage()}");

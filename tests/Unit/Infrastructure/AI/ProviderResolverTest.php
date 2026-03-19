@@ -25,7 +25,7 @@ class ProviderResolverTest extends TestCase
         Cache::flush();
         // Instantiate directly to bypass any container singleton override
         // (e.g. CloudProviderResolver, which unconditionally strips http_local providers)
-        $this->resolver = new ProviderResolver();
+        $this->resolver = new ProviderResolver;
     }
 
     // ── availableProviders ───────────────────────────────────────────────────
@@ -116,7 +116,7 @@ class ProviderResolverTest extends TestCase
         $providers = $this->resolver->availableProviders(null);
 
         $this->assertArrayHasKey('ollama', $providers,
-            'Ollama should be in providers when local_llm.enabled=true. Got: ' . implode(', ', array_keys($providers)));
+            'Ollama should be in providers when local_llm.enabled=true. Got: '.implode(', ', array_keys($providers)));
     }
 
     public function test_ollama_hidden_when_local_llm_disabled(): void
