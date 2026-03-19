@@ -127,7 +127,7 @@ class McpHttpClient
             throw new \RuntimeException("MCP HTTP {$response->status()}: {$response->body()}");
         }
 
-        return $this->extractToolResult($response->json());
+        return $this->extractToolResult($this->parseMcpBody($response->body()));
     }
 
     private function listToolsStreamableHttp(string $url, array $headers): array
@@ -135,7 +135,7 @@ class McpHttpClient
         $sessionId = $this->initializeStreamableHttp($url, $headers);
 
         $requestHeaders = array_merge([
-            'Accept' => 'application/json',
+            'Accept' => 'application/json, text/event-stream',
             'Content-Type' => 'application/json',
         ], $headers);
 
@@ -156,7 +156,37 @@ class McpHttpClient
             throw new \RuntimeException("MCP tools/list HTTP {$response->status()}");
         }
 
-        return $response->json('result.tools', []);
+        $data = $this->parseMcpBody($response->body());
+
+        return $data['result']['tools'] ?? [];
+    }
+
+    /**
+     * Parse MCP response body — handles both plain JSON and SSE event streams.
+     * Playwright MCP returns responses as SSE even for single-value results.
+     *
+     * @return array<string, mixed>
+     */
+    private function parseMcpBody(string $body): array
+    {
+        $body = trim($body);
+
+        // SSE stream: look for "data: {...}" lines
+        if (str_contains($body, 'data:')) {
+            foreach (explode("\n", $body) as $line) {
+                $line = trim($line);
+                if (str_starts_with($line, 'data:')) {
+                    $decoded = json_decode(trim(substr($line, 5)), true);
+                    if (is_array($decoded)) {
+                        return $decoded;
+                    }
+                }
+            }
+
+            return [];
+        }
+
+        return json_decode($body, true) ?? [];
     }
 
     // -------------------------------------------------------------------------
