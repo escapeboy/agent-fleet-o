@@ -207,7 +207,9 @@ class AppServiceProvider extends ServiceProvider
         \Laravel\Sanctum\Sanctum::usePersonalAccessTokenModel(ScopedPersonalAccessToken::class);
 
         // Passport OAuth2 — used for MCP server authentication (Authorization Code + PKCE)
-        Passport::tokensExpireIn(CarbonInterval::hours(1));
+        // 24-hour TTL: MCP Desktop clients (Claude.ai, Cursor) keep sessions open all day.
+        // Refresh tokens (30-day TTL) allow silent renewal when the access token expires.
+        Passport::tokensExpireIn(CarbonInterval::hours(24));
         Passport::refreshTokensExpireIn(CarbonInterval::days(30));
         Passport::tokensCan(['mcp:use' => 'Use the FleetQ MCP server']);
         Passport::authorizationView('mcp.authorize');
