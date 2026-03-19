@@ -128,6 +128,23 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->morphMany(PersonalAccessToken::class, 'tokenable');
     }
 
+    /**
+     * Set the current access token for the user.
+     *
+     * Overrides Passport's strictly-typed withAccessToken(?ScopeAuthorizable) to
+     * also accept Sanctum's PersonalAccessToken (which does not implement the
+     * Passport ScopeAuthorizable interface). Both guards set $this->accessToken;
+     * currentAccessToken() and tokenCan() work correctly for either token type.
+     *
+     * @param  mixed  $accessToken
+     */
+    public function withAccessToken($accessToken): static
+    {
+        $this->accessToken = $accessToken;
+
+        return $this;
+    }
+
     public function socialAccounts(): HasMany
     {
         return $this->hasMany(UserSocialAccount::class);
