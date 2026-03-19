@@ -51,11 +51,16 @@
                         @endforeach
                     </x-form-select>
 
-                    <x-form-select wire:model="defaultLlmModel" label="Model">
-                        @foreach($providers[$defaultLlmProvider]['models'] ?? [] as $modelKey => $modelInfo)
-                            <option value="{{ $modelKey }}">{{ $modelInfo['label'] }}</option>
-                        @endforeach
-                    </x-form-select>
+                    @php $defaultLlmModels = $providers[$defaultLlmProvider]['models'] ?? []; @endphp
+                    @if(empty($defaultLlmModels) && !empty($providers[$defaultLlmProvider]['http_local']))
+                        <p class="text-xs text-amber-600">No models found — ensure the endpoint is reachable and has models pulled.</p>
+                    @else
+                        <x-form-select wire:model="defaultLlmModel" label="Model">
+                            @foreach($defaultLlmModels as $modelKey => $modelInfo)
+                                <option value="{{ $modelKey }}">{{ $modelInfo['label'] }}</option>
+                            @endforeach
+                        </x-form-select>
+                    @endif
 
                     <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                         Save Default LLM
@@ -74,11 +79,16 @@
                         @endforeach
                     </x-form-select>
 
-                    <x-form-select wire:model="assistantModel" label="Model">
-                        @foreach($providers[$assistantProvider]['models'] ?? [] as $modelKey => $modelInfo)
-                            <option value="{{ $modelKey }}">{{ $modelInfo['label'] }}</option>
-                        @endforeach
-                    </x-form-select>
+                    @php $assistantModels = $providers[$assistantProvider]['models'] ?? []; @endphp
+                    @if(empty($assistantModels) && !empty($providers[$assistantProvider]['http_local']))
+                        <p class="text-xs text-amber-600">No models found — ensure the endpoint is reachable and has models pulled.</p>
+                    @else
+                        <x-form-select wire:model="assistantModel" label="Model">
+                            @foreach($assistantModels as $modelKey => $modelInfo)
+                                <option value="{{ $modelKey }}">{{ $modelInfo['label'] }}</option>
+                            @endforeach
+                        </x-form-select>
+                    @endif
 
                     <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                         Save Assistant LLM

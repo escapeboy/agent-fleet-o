@@ -121,6 +121,12 @@ class ProviderResolver
             if (! empty($provider['http_local'])) {
                 if (! $localLlmEnabled) {
                     unset($providers[$key]);
+                } else {
+                    // Replace static model list with live models fetched from the endpoint.
+                    // For Ollama: queries /api/tags. For OpenAI-compat: queries /models.
+                    // Returns empty array if the endpoint is unreachable — never shows
+                    // hardcoded model names that may not actually be pulled/available.
+                    $providers[$key]['models'] = $this->fetchHttpLocalModels($key, $team);
                 }
 
                 continue;
@@ -184,43 +190,19 @@ class ProviderResolver
 
     /**
      * Get models for a specific provider.
-     * For HTTP-local providers (ollama, openai_compatible), merges static config models
-     * with dynamically discovered models from the team's configured endpoint.
+     * For HTTP-local providers (ollama, openai_compatible, litellm_proxy) returns only
+     * dynamically discovered models from the endpoint — never the hardcoded static list,
+     * because showing models that are not actually available is misleading.
      *
      * @return array<string, array{label: string, input_cost: float, output_cost: float}>
      */
     public function modelsForProvider(string $provider, ?Team $team = null): array
     {
-        $static = config("llm_providers.{$provider}.models", []);
-
-        if (! config("llm_providers.{$provider}.http_local") || ! $team) {
-            return $static;
+        if (! config("llm_providers.{$provider}.http_local")) {
+            return config("llm_providers.{$provider}.models", []);
         }
 
-        $credential = TeamProviderCredential::where('team_id', $team->id)
-            ->where('provider', $provider)
-            ->where('is_active', true)
-            ->first();
-
-        if (! $credential) {
-            return $static;
-        }
-
-        $baseUrl = $credential->credentials['base_url'] ?? null;
-        if (! $baseUrl) {
-            return $static;
-        }
-
-        $apiKey = $credential->credentials['api_key'] ?? null;
-        $discovered = app(LocalLlmDiscovery::class)->discoverModels($provider, $baseUrl, $apiKey ?: null);
-
-        foreach ($discovered as $modelId) {
-            if (! isset($static[$modelId])) {
-                $static[$modelId] = ['label' => $modelId, 'input_cost' => 0, 'output_cost' => 0];
-            }
-        }
-
-        return $static;
+        return $this->fetchHttpLocalModels($provider, $team);
     }
 
     /**
@@ -241,6 +223,52 @@ class ProviderResolver
             ->where('provider', 'custom_endpoint')
             ->where('is_active', true)
             ->get();
+    }
+
+    /**
+     * Fetch the live model list for an HTTP-based local LLM provider (Ollama, OpenAI-compatible).
+     *
+     * Uses the team's configured TeamProviderCredential base_url when available,
+     * falling back to the provider's config default_url. Results are cached for 60 s
+     * via LocalLlmDiscovery so page renders stay fast.
+     *
+     * Returns an empty array when the endpoint is unreachable or returns no models —
+     * never falls back to the hardcoded static list, because showing models that are
+     * not actually pulled/available is misleading.
+     *
+     * @return array<string, array{label: string, input_cost: int, output_cost: int}>
+     */
+    private function fetchHttpLocalModels(string $provider, ?Team $team): array
+    {
+        $baseUrl = null;
+        $apiKey = null;
+
+        if ($team) {
+            $credential = TeamProviderCredential::where('team_id', $team->id)
+                ->where('provider', $provider)
+                ->where('is_active', true)
+                ->first();
+
+            if ($credential) {
+                $baseUrl = $credential->credentials['base_url'] ?? null;
+                $apiKey = $credential->credentials['api_key'] ?? null;
+            }
+        }
+
+        // Fall back to the provider's default URL from config (e.g. localhost:11434 for Ollama)
+        $baseUrl ??= config("llm_providers.{$provider}.default_url");
+
+        if (! $baseUrl) {
+            return [];
+        }
+
+        $discovered = app(LocalLlmDiscovery::class)->discoverModels($provider, $baseUrl, $apiKey ?: null);
+
+        return collect($discovered)
+            ->mapWithKeys(fn (string $modelId) => [
+                $modelId => ['label' => $modelId, 'input_cost' => 0, 'output_cost' => 0],
+            ])
+            ->all();
     }
 
     /**
