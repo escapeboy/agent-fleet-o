@@ -22,16 +22,27 @@ class UpdateProjectAction
                 }
             }
 
-            // Update core project fields
-            $project->update(array_filter([
+            // Build the update payload
+            $updatePayload = array_filter([
                 'title' => $data['title'] ?? null,
                 'description' => $data['description'] ?? null,
                 'workflow_id' => array_key_exists('workflow_id', $data) ? ($data['workflow_id'] ?: null) : $project->workflow_id,
+                'crew_id' => array_key_exists('crew_id', $data) ? ($data['crew_id'] ?: null) : $project->crew_id,
                 'agent_config' => $data['agent_config'] ?? $project->agent_config,
                 'budget_config' => $data['budget_config'] ?? $project->budget_config,
                 'notification_config' => $data['notification_config'] ?? $project->notification_config,
                 'delivery_config' => array_key_exists('delivery_config', $data) ? $data['delivery_config'] : $project->delivery_config,
-            ], fn ($v) => $v !== null));
+            ], fn ($v) => $v !== null);
+
+            // allowed_tool_ids and allowed_credential_ids can be empty arrays (not filtered)
+            if (array_key_exists('allowed_tool_ids', $data)) {
+                $updatePayload['allowed_tool_ids'] = $data['allowed_tool_ids'];
+            }
+            if (array_key_exists('allowed_credential_ids', $data)) {
+                $updatePayload['allowed_credential_ids'] = $data['allowed_credential_ids'];
+            }
+
+            $project->update($updatePayload);
 
             // Update schedule if provided
             if (isset($data['schedule']) && $project->isContinuous()) {

@@ -30,6 +30,16 @@ class ProjectUpdateTool extends Tool
             'execution_mode' => $schema->string()
                 ->description('Execution mode: autonomous (full tool access) or watcher (read-only tools only)')
                 ->enum(['autonomous', 'watcher']),
+            'workflow_id' => $schema->string()
+                ->description('UUID of an active workflow to assign to this project. Must be in active status. Pass empty string to detach.'),
+            'crew_id' => $schema->string()
+                ->description('UUID of a crew to assign to this project. Pass empty string to detach.'),
+            'allowed_tool_ids' => $schema->array()
+                ->description('Restrict which tools agents can use. Pass an array of tool UUIDs. Empty array = all team tools allowed.')
+                ->items($schema->string()),
+            'allowed_credential_ids' => $schema->array()
+                ->description('Restrict which credentials are available to agents. Pass an array of credential UUIDs.')
+                ->items($schema->string()),
             'schedule' => $schema->object()
                 ->description('Update schedule for continuous projects. Only provided sub-fields are changed.')
                 ->properties([
@@ -54,6 +64,12 @@ class ProjectUpdateTool extends Tool
             'description' => 'nullable|string',
             'goal' => 'nullable|string',
             'execution_mode' => 'nullable|string|in:autonomous,watcher',
+            'workflow_id' => 'nullable|string',
+            'crew_id' => 'nullable|string',
+            'allowed_tool_ids' => 'nullable|array',
+            'allowed_tool_ids.*' => 'uuid',
+            'allowed_credential_ids' => 'nullable|array',
+            'allowed_credential_ids.*' => 'uuid',
             'schedule' => 'nullable|array',
             'schedule.frequency' => 'nullable|string|in:every_5_minutes,every_10_minutes,every_15_minutes,every_30_minutes,hourly,daily,weekly,monthly,cron,once',
             'schedule.cron_expression' => 'nullable|string',
@@ -76,8 +92,22 @@ class ProjectUpdateTool extends Tool
             'schedule' => $validated['schedule'] ?? null,
         ], fn ($v) => $v !== null);
 
+        // workflow_id and crew_id can be empty string to detach
+        if (array_key_exists('workflow_id', $validated)) {
+            $data['workflow_id'] = $validated['workflow_id'] ?: null;
+        }
+        if (array_key_exists('crew_id', $validated)) {
+            $data['crew_id'] = $validated['crew_id'] ?: null;
+        }
+        if (array_key_exists('allowed_tool_ids', $validated)) {
+            $data['allowed_tool_ids'] = $validated['allowed_tool_ids'];
+        }
+        if (array_key_exists('allowed_credential_ids', $validated)) {
+            $data['allowed_credential_ids'] = $validated['allowed_credential_ids'];
+        }
+
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: title, description, goal, execution_mode, schedule.');
+            return Response::error('No fields to update. Provide at least one of: title, description, goal, execution_mode, workflow_id, crew_id, allowed_tool_ids, allowed_credential_ids, schedule.');
         }
 
         try {
@@ -91,6 +121,10 @@ class ProjectUpdateTool extends Tool
                 'project_id' => $result->id,
                 'title' => $result->title,
                 'execution_mode' => $result->execution_mode->value,
+                'workflow_id' => $result->workflow_id,
+                'crew_id' => $result->crew_id,
+                'allowed_tool_ids' => $result->allowed_tool_ids ?? [],
+                'allowed_credential_ids' => $result->allowed_credential_ids ?? [],
                 'updated_fields' => array_keys($data),
             ];
 

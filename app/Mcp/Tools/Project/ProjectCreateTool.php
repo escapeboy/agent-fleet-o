@@ -34,6 +34,16 @@ class ProjectCreateTool extends Tool
                 ->description('Execution mode: autonomous (full tool access) or watcher (read-only tools only). Default: autonomous')
                 ->enum(['autonomous', 'watcher'])
                 ->default('autonomous'),
+            'workflow_id' => $schema->string()
+                ->description('UUID of an active workflow to run for each project execution. The workflow must be in active status.'),
+            'crew_id' => $schema->string()
+                ->description('UUID of a crew to run for each project execution. Alternative to workflow_id.'),
+            'allowed_tool_ids' => $schema->array()
+                ->description('Restrict which tools agents can use in this project. Pass an array of tool UUIDs. Empty = all team tools allowed.')
+                ->items($schema->string()),
+            'allowed_credential_ids' => $schema->array()
+                ->description('Restrict which credentials are available to agents in this project. Pass an array of credential UUIDs.')
+                ->items($schema->string()),
             'schedule' => $schema->object()
                 ->description('Schedule configuration. Required for continuous projects — omitting it creates a project that never runs. Use project_schedule_nlp to parse natural language schedules.')
                 ->properties([
@@ -71,6 +81,12 @@ class ProjectCreateTool extends Tool
             'type' => 'nullable|string|in:one_shot,continuous',
             'goal' => 'nullable|string',
             'execution_mode' => 'nullable|string|in:autonomous,watcher',
+            'workflow_id' => 'nullable|uuid|exists:workflows,id',
+            'crew_id' => 'nullable|uuid|exists:crews,id',
+            'allowed_tool_ids' => 'nullable|array',
+            'allowed_tool_ids.*' => 'uuid|exists:tools,id',
+            'allowed_credential_ids' => 'nullable|array',
+            'allowed_credential_ids.*' => 'uuid|exists:credentials,id',
             'schedule' => 'nullable|array',
             'schedule.frequency' => 'nullable|string|in:every_5_minutes,every_10_minutes,every_15_minutes,every_30_minutes,hourly,daily,weekly,monthly,cron,once',
             'schedule.cron_expression' => 'nullable|string',
@@ -89,11 +105,23 @@ class ProjectCreateTool extends Tool
                 description: $validated['description'] ?? null,
                 goal: $validated['goal'] ?? null,
                 teamId: auth()->user()->current_team_id,
+                workflowId: $validated['workflow_id'] ?? null,
+                crewId: $validated['crew_id'] ?? null,
                 executionMode: isset($validated['execution_mode'])
                     ? ProjectExecutionMode::from($validated['execution_mode'])
                     : null,
                 schedule: $validated['schedule'] ?? null,
             );
+
+            // Update allowed_tool_ids and allowed_credential_ids if provided
+            $allowedFields = array_filter([
+                'allowed_tool_ids' => isset($validated['allowed_tool_ids']) ? $validated['allowed_tool_ids'] : null,
+                'allowed_credential_ids' => isset($validated['allowed_credential_ids']) ? $validated['allowed_credential_ids'] : null,
+            ], fn ($v) => $v !== null);
+
+            if (! empty($allowedFields)) {
+                $project->update($allowedFields);
+            }
 
             $response = [
                 'success' => true,
@@ -101,6 +129,10 @@ class ProjectCreateTool extends Tool
                 'title' => $project->title,
                 'status' => $project->status->value,
                 'execution_mode' => $project->execution_mode->value,
+                'workflow_id' => $project->workflow_id,
+                'crew_id' => $project->crew_id,
+                'allowed_tool_ids' => $project->allowed_tool_ids ?? [],
+                'allowed_credential_ids' => $project->allowed_credential_ids ?? [],
             ];
 
             if ($project->schedule) {

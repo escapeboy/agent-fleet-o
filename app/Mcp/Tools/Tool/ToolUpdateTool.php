@@ -73,18 +73,26 @@ class ToolUpdateTool extends Tool
                 clearCredentialId: (bool) ($validated['clear_credential_id'] ?? false),
             );
 
+            $updatedFields = array_keys(array_filter([
+                'name' => $validated['name'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'status' => $validated['status'] ?? null,
+                'risk_level' => $validated['risk_level'] ?? null,
+                'credential_id' => $validated['credential_id'] ?? null,
+            ], fn ($v) => $v !== null));
+
+            if (! empty($validated['clear_credential_id'])) {
+                $updatedFields[] = 'credential_id';
+            }
+
             return Response::text(json_encode([
                 'success' => true,
                 'tool_id' => $result->id,
                 'name' => $result->name,
                 'status' => $result->status->value,
                 'risk_level' => $result->risk_level?->value,
-                'updated_fields' => array_keys(array_filter([
-                    'name' => $validated['name'] ?? null,
-                    'description' => $validated['description'] ?? null,
-                    'status' => $validated['status'] ?? null,
-                    'risk_level' => $validated['risk_level'] ?? null,
-                ], fn ($v) => $v !== null)),
+                'credential_id' => $result->credential_id,
+                'updated_fields' => array_values(array_unique($updatedFields)),
             ]));
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());

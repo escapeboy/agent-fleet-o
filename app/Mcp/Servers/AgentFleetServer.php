@@ -137,6 +137,7 @@ use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
+use App\Mcp\Tools\Memory\MemoryAddTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
@@ -160,6 +161,8 @@ use App\Mcp\Tools\Project\ProjectListTool;
 use App\Mcp\Tools\Project\ProjectPauseTool;
 use App\Mcp\Tools\Project\ProjectRestartTool;
 use App\Mcp\Tools\Project\ProjectResumeTool;
+use App\Mcp\Tools\Project\ProjectRunGetTool;
+use App\Mcp\Tools\Project\ProjectRunListTool;
 use App\Mcp\Tools\Project\ProjectScheduleManageTool;
 use App\Mcp\Tools\Project\ProjectScheduleNlpTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
@@ -237,11 +240,16 @@ use App\Mcp\Tools\Webhook\WebhookUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
 use App\Mcp\Tools\Workflow\WorkflowDuplicateTool;
+use App\Mcp\Tools\Workflow\WorkflowEdgeAddTool;
+use App\Mcp\Tools\Workflow\WorkflowEdgeDeleteTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
 use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
+use App\Mcp\Tools\Workflow\WorkflowNodeAddTool;
+use App\Mcp\Tools\Workflow\WorkflowNodeDeleteTool;
+use App\Mcp\Tools\Workflow\WorkflowNodeUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowSaveGraphTool;
 use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
@@ -360,7 +368,7 @@ class AgentFleetServer extends Server
         CredentialOAuthInitiateTool::class,
         CredentialOAuthFinalizeTool::class,
 
-        // Workflow (11)
+        // Workflow (16)
         WorkflowListTool::class,
         WorkflowGetTool::class,
         WorkflowCreateTool::class,
@@ -374,8 +382,13 @@ class AgentFleetServer extends Server
         WorkflowSuggestionTool::class,
         WorkflowTimeGateTool::class,
         WorkflowExecutionChainTool::class,
+        WorkflowNodeUpdateTool::class,
+        WorkflowNodeAddTool::class,
+        WorkflowNodeDeleteTool::class,
+        WorkflowEdgeAddTool::class,
+        WorkflowEdgeDeleteTool::class,
 
-        // Project (12)
+        // Project (14)
         ProjectListTool::class,
         ProjectGetTool::class,
         ProjectCreateTool::class,
@@ -388,6 +401,8 @@ class AgentFleetServer extends Server
         ProjectArchiveTool::class,
         ProjectScheduleManageTool::class,
         ProjectScheduleNlpTool::class,
+        ProjectRunListTool::class,
+        ProjectRunGetTool::class,
 
         // Approval (5)
         ApprovalListTool::class,
@@ -441,12 +456,13 @@ class AgentFleetServer extends Server
         KnowledgeBaseSearchTool::class,
         KnowledgeBaseDeleteTool::class,
 
-        // Memory (5)
+        // Memory (6)
         MemorySearchTool::class,
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
         MemoryDeleteTool::class,
         MemoryUploadKnowledgeTool::class,
+        MemoryAddTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,
