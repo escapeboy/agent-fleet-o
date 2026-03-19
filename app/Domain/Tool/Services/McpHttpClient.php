@@ -68,7 +68,14 @@ class McpHttpClient
     // Streamable HTTP transport
     // -------------------------------------------------------------------------
 
-    private function callStreamableHttp(string $url, string $toolName, array $arguments, array $headers): string
+    /**
+     * Send MCP initialize handshake and return the session ID (if any).
+     * Required by MCP spec before any other method. Some servers (e.g. Playwright MCP)
+     * silently drop requests that arrive before initialization.
+     *
+     * @param  array<string, string>  $headers
+     */
+    private function initializeStreamableHttp(string $url, array $headers): ?string
     {
         $response = Http::withHeaders(array_merge([
             'Accept' => 'application/json, text/event-stream',
@@ -77,9 +84,43 @@ class McpHttpClient
             ->timeout(self::TIMEOUT)
             ->post("{$url}/mcp", [
                 'jsonrpc' => '2.0',
+                'method' => 'initialize',
+                'params' => [
+                    'protocolVersion' => '2024-11-05',
+                    'capabilities' => new \stdClass,
+                    'clientInfo' => ['name' => 'FleetQ', 'version' => '1.0'],
+                ],
+                'id' => 1,
+            ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException("MCP initialize HTTP {$response->status()}: {$response->body()}");
+        }
+
+        // Some servers issue a session token for subsequent requests
+        return $response->header('Mcp-Session-Id') ?: null;
+    }
+
+    private function callStreamableHttp(string $url, string $toolName, array $arguments, array $headers): string
+    {
+        $sessionId = $this->initializeStreamableHttp($url, $headers);
+
+        $requestHeaders = array_merge([
+            'Accept' => 'application/json, text/event-stream',
+            'Content-Type' => 'application/json',
+        ], $headers);
+
+        if ($sessionId) {
+            $requestHeaders['Mcp-Session-Id'] = $sessionId;
+        }
+
+        $response = Http::withHeaders($requestHeaders)
+            ->timeout(self::TIMEOUT)
+            ->post("{$url}/mcp", [
+                'jsonrpc' => '2.0',
                 'method' => 'tools/call',
                 'params' => ['name' => $toolName, 'arguments' => $arguments ?: new \stdClass],
-                'id' => 1,
+                'id' => 2,
             ]);
 
         if (! $response->successful()) {
@@ -91,16 +132,24 @@ class McpHttpClient
 
     private function listToolsStreamableHttp(string $url, array $headers): array
     {
-        $response = Http::withHeaders(array_merge([
+        $sessionId = $this->initializeStreamableHttp($url, $headers);
+
+        $requestHeaders = array_merge([
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-        ], $headers))
+        ], $headers);
+
+        if ($sessionId) {
+            $requestHeaders['Mcp-Session-Id'] = $sessionId;
+        }
+
+        $response = Http::withHeaders($requestHeaders)
             ->timeout(self::TIMEOUT)
             ->post("{$url}/mcp", [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/list',
                 'params' => new \stdClass,
-                'id' => 1,
+                'id' => 2,
             ]);
 
         if (! $response->successful()) {
