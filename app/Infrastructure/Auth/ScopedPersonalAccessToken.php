@@ -16,12 +16,12 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 class ScopedPersonalAccessToken extends PersonalAccessToken implements ScopeAuthorizable
 {
-    public function can(string $scope): bool
+    public function can($scope): bool
     {
         return parent::can($scope);
     }
 
-    public function cant(string $scope): bool
+    public function cant($scope): bool
     {
         return parent::cant($scope);
     }

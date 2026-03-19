@@ -15,12 +15,12 @@ use Laravel\Sanctum\TransientToken;
  */
 class ScopedTransientToken extends TransientToken implements ScopeAuthorizable
 {
-    public function can(string $scope): bool
+    public function can($scope): bool
     {
         return true;
     }
 
-    public function cant(string $scope): bool
+    public function cant($scope): bool
     {
         return false;
     }
