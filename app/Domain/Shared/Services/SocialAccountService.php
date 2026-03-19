@@ -5,6 +5,7 @@ namespace App\Domain\Shared\Services;
 use App\Domain\Shared\Models\UserSocialAccount;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 class SocialAccountService
@@ -152,10 +153,15 @@ class SocialAccountService
 
     private function updateToken(UserSocialAccount $account, SocialiteUser $socialUser): void
     {
-        $account->update([
-            'access_token' => $socialUser->token,
-            'refresh_token' => $socialUser->refreshToken ?? null,
+        // Use query builder to avoid Eloquent dirty-check decrypting the old
+        // encrypted token (which would fail if APP_KEY changed since last login).
+        $encrypter = app('encrypter');
+
+        DB::table('user_social_accounts')->where('id', $account->id)->update([
+            'access_token'     => $encrypter->encrypt($socialUser->token),
+            'refresh_token'    => $socialUser->refreshToken ? $encrypter->encrypt($socialUser->refreshToken) : null,
             'token_expires_at' => $socialUser->expiresIn ? now()->addSeconds($socialUser->expiresIn) : null,
+            'updated_at'       => now(),
         ]);
     }
 }
