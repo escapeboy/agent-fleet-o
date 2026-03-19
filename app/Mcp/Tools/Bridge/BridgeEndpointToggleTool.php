@@ -18,19 +18,15 @@ class BridgeEndpointToggleTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'endpoint_id' => [
-                'type' => 'string',
-                'description' => 'The ID of the endpoint to toggle (from bridge_endpoint_list).',
-            ],
-            'type' => [
-                'type' => 'string',
-                'enum' => ['llm', 'agent', 'mcp_server'],
-                'description' => 'The endpoint type.',
-            ],
-            'enabled' => [
-                'type' => 'boolean',
-                'description' => 'Whether to enable (true) or disable (false) the endpoint.',
-            ],
+            'endpoint_id' => $schema->string()
+                ->description('The ID of the endpoint to toggle (from bridge_endpoint_list).')
+                ->required(),
+            'type' => $schema->string()
+                ->description('The endpoint type.')
+                ->enum(['llm', 'agent', 'mcp_server'])
+                ->required(),
+            'enabled' => $schema->boolean()
+                ->description('Whether to enable (true) or disable (false) the endpoint.'),
         ];
     }
 

@@ -21,11 +21,9 @@ class BridgeEndpointListTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'type' => [
-                'type' => 'string',
-                'enum' => ['llm', 'agent', 'mcp_server', 'all'],
-                'description' => 'Filter by endpoint type. Defaults to all.',
-            ],
+            'type' => $schema->string()
+                ->description('Filter by endpoint type. Defaults to all.')
+                ->enum(['llm', 'agent', 'mcp_server', 'all']),
         ];
     }
 
