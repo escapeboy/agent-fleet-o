@@ -20,7 +20,7 @@ class SanctumTokenIssuer
         Model $user,
         string $name,
         array $abilities = ['*'],
-        ?DateTimeInterface $expiresAt = null
+        ?DateTimeInterface $expiresAt = null,
     ): NewAccessToken {
         $prefix = config('sanctum.token_prefix', '');
         $entropy = Str::random(40);

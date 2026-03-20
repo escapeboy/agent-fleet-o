@@ -3,6 +3,7 @@
 namespace App\Mcp\Servers;
 
 use App\Mcp\Concerns\BootstrapsMcpAuth;
+use App\Mcp\Resources\ApprovalsResource;
 use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
 use App\Mcp\Tools\Admin\AdminBillingRefundTool;
 use App\Mcp\Tools\Admin\AdminSecurityOverviewTool;
@@ -110,6 +111,7 @@ use App\Mcp\Tools\Experiment\ExperimentShareTool;
 use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
+use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
 use App\Mcp\Tools\GitRepository\GitBranchCreateTool;
@@ -206,7 +208,6 @@ use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SupabaseConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
 use App\Mcp\Tools\Skill\BrowserSkillTool;
-use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
@@ -216,6 +217,7 @@ use App\Mcp\Tools\Skill\SkillGetTool;
 use App\Mcp\Tools\Skill\SkillListTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
+use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
 use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\BlacklistManageTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
@@ -340,6 +342,7 @@ class AgentFleetServer extends Server
         ExperimentCostTool::class,
         ExperimentStepsTool::class,
         ExperimentShareTool::class,
+        WorkflowSnapshotListTool::class,
 
         // Skill (10)
         SkillListTool::class,
@@ -628,9 +631,9 @@ class AgentFleetServer extends Server
         AdminUserSendPasswordResetTool::class,
     ];
 
-    /** @var array<int, class-string<\Laravel\Mcp\Server\Resource>> */
+    /** @var array<int, class-string<Server\Resource>> */
     protected array $resources = [
         // MCP Apps UI resources — only exposed to clients that declare MCP Apps capability
-        \App\Mcp\Resources\ApprovalsResource::class,
+        ApprovalsResource::class,
     ];
 }

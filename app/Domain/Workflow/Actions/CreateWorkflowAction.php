@@ -23,8 +23,9 @@ class CreateWorkflowAction
         array $edges = [],
         int $maxLoopIterations = 5,
         ?string $teamId = null,
+        array $settings = [],
     ): Workflow {
-        return DB::transaction(function () use ($userId, $name, $description, $nodes, $edges, $maxLoopIterations, $teamId) {
+        return DB::transaction(function () use ($userId, $name, $description, $nodes, $edges, $maxLoopIterations, $teamId, $settings) {
             $workflow = Workflow::create([
                 'team_id' => $teamId,
                 'user_id' => $userId,
@@ -33,6 +34,7 @@ class CreateWorkflowAction
                 'description' => $description,
                 'status' => WorkflowStatus::Draft,
                 'max_loop_iterations' => $maxLoopIterations,
+                'settings' => $settings,
             ]);
 
             // If no nodes provided, create default start + end

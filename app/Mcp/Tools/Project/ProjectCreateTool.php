@@ -44,29 +44,29 @@ class ProjectCreateTool extends Tool
                 ->description('Restrict which credentials are available to agents in this project. Pass an array of credential UUIDs.')
                 ->items($schema->string()),
             'schedule' => $schema->object([
-                    'frequency' => $schema->string()
-                        ->description('Preset frequency. Use "cron" to specify a custom cron_expression.')
-                        ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once'])
-                        ->default('daily'),
-                    'cron_expression' => $schema->string()
-                        ->description('Raw cron expression (5-part). Required when frequency=cron, e.g. "0 9 * * 1" for every Monday at 9am.'),
-                    'timezone' => $schema->string()
-                        ->description('IANA timezone, e.g. "Europe/London". Default: UTC')
-                        ->default('UTC'),
-                    'overlap_policy' => $schema->string()
-                        ->description('What to do when a run is already active at the scheduled time. skip=do nothing, queue=run after current finishes, allow=always run. Default: skip')
-                        ->enum(['skip', 'queue', 'allow'])
-                        ->default('skip'),
-                    'max_consecutive_failures' => $schema->integer()
-                        ->description('Pause the project after this many consecutive failed runs. Default: 3')
-                        ->default(3),
-                    'catchup_missed' => $schema->boolean()
-                        ->description('Dispatch missed runs when the project resumes from pause. Default: false')
-                        ->default(false),
-                    'run_immediately' => $schema->boolean()
-                        ->description('Trigger a run immediately on creation, before the first scheduled time. Default: true')
-                        ->default(true),
-                ])
+                'frequency' => $schema->string()
+                    ->description('Preset frequency. Use "cron" to specify a custom cron_expression.')
+                    ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once'])
+                    ->default('daily'),
+                'cron_expression' => $schema->string()
+                    ->description('Raw cron expression (5-part). Required when frequency=cron, e.g. "0 9 * * 1" for every Monday at 9am.'),
+                'timezone' => $schema->string()
+                    ->description('IANA timezone, e.g. "Europe/London". Default: UTC')
+                    ->default('UTC'),
+                'overlap_policy' => $schema->string()
+                    ->description('What to do when a run is already active at the scheduled time. skip=do nothing, queue=run after current finishes, allow=always run. Default: skip')
+                    ->enum(['skip', 'queue', 'allow'])
+                    ->default('skip'),
+                'max_consecutive_failures' => $schema->integer()
+                    ->description('Pause the project after this many consecutive failed runs. Default: 3')
+                    ->default(3),
+                'catchup_missed' => $schema->boolean()
+                    ->description('Dispatch missed runs when the project resumes from pause. Default: false')
+                    ->default(false),
+                'run_immediately' => $schema->boolean()
+                    ->description('Trigger a run immediately on creation, before the first scheduled time. Default: true')
+                    ->default(true),
+            ])
                 ->description('Schedule configuration. Required for continuous projects — omitting it creates a project that never runs. Use project_schedule_nlp to parse natural language schedules.'),
         ];
     }

@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
-use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
@@ -23,9 +22,9 @@ use App\Domain\Outbound\Connectors\DiscordConnector;
 use App\Domain\Outbound\Connectors\GoogleChatConnector;
 use App\Domain\Outbound\Connectors\SlackConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
+use App\Domain\Outbound\Connectors\SupabaseRealtimeConnector;
 use App\Domain\Outbound\Connectors\TeamsConnector;
 use App\Domain\Outbound\Connectors\TelegramConnector;
-use App\Domain\Outbound\Connectors\SupabaseRealtimeConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
 use App\Domain\Outbound\Connectors\WhatsAppConnector;
 use App\Domain\Project\Listeners\LogProjectActivity;
@@ -53,9 +52,9 @@ use App\Domain\Signal\Connectors\RssConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
 use App\Domain\Signal\Connectors\SignalProtocolConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
+use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
-use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Models\SkillExecution;
@@ -72,6 +71,7 @@ use App\Infrastructure\Auth\ScopedPersonalAccessToken;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
 use App\Livewire\Hooks\PluginDispatchHook;
+use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Models\User;
 use Carbon\CarbonInterval;
 use Dedoc\Scramble\Generator;
@@ -95,8 +95,10 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Mcp\Events\SessionInitialized;
 use Laravel\Passport\Passport;
 use Laravel\Reverb\Events\MessageReceived;
+use Laravel\Sanctum\Sanctum;
 use Livewire\Livewire;
 use SocialiteProviders\Apple\Provider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -209,7 +211,7 @@ class AppServiceProvider extends ServiceProvider
         // Configure Sanctum to use our ScopedPersonalAccessToken model so that tokens
         // retrieved via findToken() implement ScopeAuthorizable and can be stored in
         // Passport's typed ?ScopeAuthorizable $accessToken property without a TypeError.
-        \Laravel\Sanctum\Sanctum::usePersonalAccessTokenModel(ScopedPersonalAccessToken::class);
+        Sanctum::usePersonalAccessTokenModel(ScopedPersonalAccessToken::class);
 
         // Passport OAuth2 — used for MCP server authentication (Authorization Code + PKCE)
         // 24-hour TTL: MCP Desktop clients (Claude.ai, Cursor) keep sessions open all day.
@@ -226,9 +228,9 @@ class AppServiceProvider extends ServiceProvider
         // /oauth/register: 20 per hour per IP (RFC 7591 recommendation).
         // /oauth/token: uses Passport's built-in 'throttle' (60/min); 'oauth-token' named limiter
         //   is available if routes are overridden in cloud to apply a stricter hourly cap.
-        RateLimiter::for('oauth-register', fn (Request $request) => Limit::perHour(20)->by($request->ip())
+        RateLimiter::for('oauth-register', fn (Request $request) => Limit::perHour(20)->by($request->ip()),
         );
-        RateLimiter::for('oauth-token', fn (Request $request) => Limit::perHour(60)->by($request->ip())
+        RateLimiter::for('oauth-token', fn (Request $request) => Limit::perHour(60)->by($request->ip()),
         );
 
         // Force HTTPS when APP_URL uses https (e.g. behind OrbStack / reverse proxy)
@@ -279,7 +281,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(MessageReceived::class, HandleBridgeRelayResponse::class);
 
         // MCP Apps: record per-session capability flag on initialize handshake
-        Event::listen(\Laravel\Mcp\Events\SessionInitialized::class, McpAppsCapabilityListener::class);
+        Event::listen(SessionInitialized::class, McpAppsCapabilityListener::class);
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);

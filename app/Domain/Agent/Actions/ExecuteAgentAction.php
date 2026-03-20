@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Actions;
 
+use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Events\AgentExecuting;
@@ -431,6 +432,18 @@ class ExecuteAgentAction
             $fewShotSection = $this->buildFewShotSection($agent);
             if ($fewShotSection !== '') {
                 $parts[] = $fewShotSection;
+            }
+        }
+
+        // Handoff capability — allow agent to transfer control to other agents
+        if (! empty($agent->config['allow_handoff']) && ! empty($agent->config['handoff_agents'])) {
+            $handoffAgents = Agent::whereIn('id', $agent->config['handoff_agents'])
+                ->where('status', AgentStatus::Active)
+                ->get(['id', 'name', 'role', 'goal']);
+
+            if ($handoffAgents->isNotEmpty()) {
+                $agentList = $handoffAgents->map(fn ($ha) => "- {$ha->name} (ID: {$ha->id}): {$ha->role} — {$ha->goal}")->implode("\n");
+                $parts[] = "## Handoff Capability\nIf this task is better suited for another specialist, you may hand off by including a `_handoff` key in your JSON output:\n```json\n{\"_handoff\": {\"target_agent_id\": \"<agent-id>\", \"reason\": \"why\", \"context\": {\"key\": \"value\"}}}\n```\nAvailable agents for handoff:\n{$agentList}";
             }
         }
 

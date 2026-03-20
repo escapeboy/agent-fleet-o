@@ -3,13 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Experiment\Models\WorkflowSnapshot;
 use Illuminate\Console\Command;
 
 class CleanupAuditEntries extends Command
 {
     protected $signature = 'audit:cleanup {--days=90 : Number of days to retain audit entries}';
 
-    protected $description = 'Delete audit entries older than the retention period';
+    protected $description = 'Delete audit entries and workflow snapshots older than the retention period';
 
     public function handle(): int
     {
@@ -22,6 +23,12 @@ class CleanupAuditEntries extends Command
             ->delete();
 
         $this->info("Deleted {$deleted} audit entries older than {$days} days.");
+
+        $snapshotsDeleted = WorkflowSnapshot::withoutGlobalScopes()
+            ->where('created_at', '<', now()->subDays($days))
+            ->delete();
+
+        $this->info("Deleted {$snapshotsDeleted} workflow snapshots older than {$days} days.");
 
         return self::SUCCESS;
     }

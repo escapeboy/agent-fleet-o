@@ -25,6 +25,9 @@ class WorkflowUpdateTool extends Tool
                 ->description('New workflow name'),
             'description' => $schema->string()
                 ->description('New workflow description'),
+            'checkpoint_mode' => $schema->string()
+                ->description('Checkpoint durability mode: sync (safest), async (Redis buffer), exit (in-memory). Default: sync')
+                ->enum(['sync', 'async', 'exit']),
         ];
     }
 
@@ -34,6 +37,7 @@ class WorkflowUpdateTool extends Tool
             'workflow_id' => 'required|string',
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
+            'checkpoint_mode' => 'nullable|string|in:sync,async,exit',
         ]);
 
         $workflow = Workflow::find($validated['workflow_id']);
@@ -42,17 +46,25 @@ class WorkflowUpdateTool extends Tool
             return Response::error('Workflow not found.');
         }
 
-        $hasUpdates = ($validated['name'] ?? null) !== null || ($validated['description'] ?? null) !== null;
+        $hasUpdates = ($validated['name'] ?? null) !== null
+            || ($validated['description'] ?? null) !== null
+            || ($validated['checkpoint_mode'] ?? null) !== null;
 
         if (! $hasUpdates) {
-            return Response::error('No fields to update. Provide at least one of: name, description.');
+            return Response::error('No fields to update. Provide at least one of: name, description, checkpoint_mode.');
         }
 
         try {
+            $settings = null;
+            if (! empty($validated['checkpoint_mode'])) {
+                $settings = ['checkpoint_mode' => $validated['checkpoint_mode']];
+            }
+
             $result = app(UpdateWorkflowAction::class)->execute(
                 workflow: $workflow,
                 name: $validated['name'] ?? null,
                 description: $validated['description'] ?? null,
+                settings: $settings,
             );
 
             return Response::text(json_encode([
@@ -62,6 +74,7 @@ class WorkflowUpdateTool extends Tool
                 'updated_fields' => array_keys(array_filter([
                     'name' => $validated['name'] ?? null,
                     'description' => $validated['description'] ?? null,
+                    'checkpoint_mode' => $validated['checkpoint_mode'] ?? null,
                 ], fn ($v) => $v !== null)),
             ]));
         } catch (\Throwable $e) {

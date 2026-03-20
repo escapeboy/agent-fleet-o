@@ -33,8 +33,7 @@ class SignalStackingEngineTest extends TestCase
         $this->teamId = $team->id;
     }
 
-    /** @test */
-    public function it_returns_zero_score_for_entity_with_no_signals(): void
+    public function test_returns_zero_score_for_entity_with_no_signals(): void
     {
         $score = $this->engine->recalculate($this->teamId, 'https://acme.com', 'company');
 
@@ -43,8 +42,7 @@ class SignalStackingEngineTest extends TestCase
         $this->assertEquals(0, $score->signal_count);
     }
 
-    /** @test */
-    public function it_computes_higher_intent_score_for_purchase_intent_signals(): void
+    public function test_computes_higher_intent_score_for_purchase_intent_signals(): void
     {
         // Create a strong intent signal (purchase_intent category)
         $this->createSignal('https://acme.com', 'clearcue', [
@@ -64,8 +62,7 @@ class SignalStackingEngineTest extends TestCase
         $this->assertGreaterThan($weakScore->intent_score, $strongScore->intent_score);
     }
 
-    /** @test */
-    public function it_applies_stacking_bonus_for_multiple_signals(): void
+    public function test_applies_stacking_bonus_for_multiple_signals(): void
     {
         // One signal
         $this->createSignal('https://single.com', 'clearcue', ['signal_category' => 'evaluation']);
@@ -81,8 +78,7 @@ class SignalStackingEngineTest extends TestCase
         $this->assertGreaterThan($singleScore->composite_score, $stackedScore->composite_score);
     }
 
-    /** @test */
-    public function it_applies_decay_so_old_signals_score_lower(): void
+    public function test_applies_decay_so_old_signals_score_lower(): void
     {
         // Recent signal
         $recentSignal = $this->createSignal('https://acme.com', 'clearcue', ['signal_category' => 'evaluation']);
@@ -97,8 +93,7 @@ class SignalStackingEngineTest extends TestCase
         $this->assertGreaterThan($oldScore->intent_score, $recentScore->intent_score);
     }
 
-    /** @test */
-    public function it_correctly_classifies_intent_tags(): void
+    public function test_correctly_classifies_intent_tags(): void
     {
         $score = new CompanyIntentScore;
 
@@ -115,8 +110,7 @@ class SignalStackingEngineTest extends TestCase
         $this->assertEquals('intent.cold', $score->intentTag());
     }
 
-    /** @test */
-    public function it_persists_score_to_database(): void
+    public function test_persists_score_to_database(): void
     {
         $this->createSignal('https://acme.com', 'clearcue', ['signal_category' => 'evaluation']);
 
@@ -134,8 +128,7 @@ class SignalStackingEngineTest extends TestCase
         $this->assertGreaterThan(now(), $record->recalculate_after);
     }
 
-    /** @test */
-    public function it_upserts_rather_than_creating_duplicate_records(): void
+    public function test_upserts_rather_than_creating_duplicate_records(): void
     {
         $this->createSignal('https://acme.com', 'clearcue', ['signal_category' => 'research']);
 
@@ -145,8 +138,7 @@ class SignalStackingEngineTest extends TestCase
         $this->assertEquals(1, CompanyIntentScore::where('entity_key', 'https://acme.com')->count());
     }
 
-    /** @test */
-    public function it_counts_signal_diversity_correctly(): void
+    public function test_counts_signal_diversity_correctly(): void
     {
         $this->createSignal('https://multi.com', 'clearcue', ['signal_category' => 'social']);
         $this->createSignal('https://multi.com', 'github', ['signal_category' => 'evaluation']);

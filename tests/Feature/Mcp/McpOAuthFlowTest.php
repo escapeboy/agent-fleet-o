@@ -318,7 +318,7 @@ class McpOAuthFlowTest extends TestCase
         $this->assertContains(
             $authServer['issuer'],
             $protectedResource['authorization_servers'],
-            'Protected resource authorization_servers must include the auth server issuer'
+            'Protected resource authorization_servers must include the auth server issuer',
         );
     }
 

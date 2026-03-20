@@ -80,6 +80,7 @@ class MaterializeWorkflowAction
             'workflow_id' => $workflow->id,
             'version' => $workflow->version,
             'max_loop_iterations' => $workflow->max_loop_iterations,
+            'checkpoint_mode' => $workflow->settings['checkpoint_mode'] ?? 'sync',
             'nodes' => $workflow->nodes->map(fn ($node) => [
                 'id' => $node->id,
                 'type' => $node->type->value,

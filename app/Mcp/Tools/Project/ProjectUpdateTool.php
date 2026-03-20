@@ -41,16 +41,16 @@ class ProjectUpdateTool extends Tool
                 ->description('Restrict which credentials are available to agents. Pass an array of credential UUIDs.')
                 ->items($schema->string()),
             'schedule' => $schema->object([
-                    'frequency' => $schema->string()
-                        ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once']),
-                    'cron_expression' => $schema->string()
-                        ->description('Raw 5-part cron expression. Required when frequency=cron.'),
-                    'timezone' => $schema->string()
-                        ->description('IANA timezone, e.g. "Europe/London".'),
-                    'overlap_policy' => $schema->string()
-                        ->enum(['skip', 'queue', 'allow']),
-                    'max_consecutive_failures' => $schema->integer(),
-                ])
+                'frequency' => $schema->string()
+                    ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once']),
+                'cron_expression' => $schema->string()
+                    ->description('Raw 5-part cron expression. Required when frequency=cron.'),
+                'timezone' => $schema->string()
+                    ->description('IANA timezone, e.g. "Europe/London".'),
+                'overlap_policy' => $schema->string()
+                    ->enum(['skip', 'queue', 'allow']),
+                'max_consecutive_failures' => $schema->integer(),
+            ])
                 ->description('Update schedule for continuous projects. Only provided sub-fields are changed.'),
         ];
     }

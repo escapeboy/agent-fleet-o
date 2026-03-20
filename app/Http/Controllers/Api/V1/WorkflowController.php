@@ -52,7 +52,13 @@ class WorkflowController extends Controller
             'nodes.*.type' => ['required_with:nodes', 'in:start,end,agent,conditional'],
             'nodes.*.label' => ['required_with:nodes', 'string', 'max:100'],
             'edges' => ['sometimes', 'array'],
+            'checkpoint_mode' => ['sometimes', 'string', 'in:sync,async,exit'],
         ]);
+
+        $settings = [];
+        if ($request->has('checkpoint_mode')) {
+            $settings['checkpoint_mode'] = $request->input('checkpoint_mode');
+        }
 
         $workflow = $action->execute(
             userId: $request->user()->id,
@@ -62,6 +68,7 @@ class WorkflowController extends Controller
             edges: $request->input('edges', []),
             maxLoopIterations: $request->input('max_loop_iterations', 5),
             teamId: $request->user()->current_team_id,
+            settings: $settings,
         );
 
         return (new WorkflowResource($workflow->load(['nodes', 'edges'])))
@@ -75,13 +82,20 @@ class WorkflowController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'max_loop_iterations' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'checkpoint_mode' => ['sometimes', 'string', 'in:sync,async,exit'],
         ]);
+
+        $settings = null;
+        if ($request->has('checkpoint_mode')) {
+            $settings = ['checkpoint_mode' => $request->input('checkpoint_mode')];
+        }
 
         $workflow = $action->execute(
             workflow: $workflow,
             name: $request->input('name'),
             description: $request->input('description'),
             maxLoopIterations: $request->input('max_loop_iterations'),
+            settings: $settings,
         );
 
         return new WorkflowResource($workflow);
@@ -171,6 +185,7 @@ class WorkflowController extends Controller
             ])->toArray(),
             maxLoopIterations: $workflow->max_loop_iterations,
             teamId: request()->user()->current_team_id,
+            settings: $workflow->settings ?? [],
         );
 
         return (new WorkflowResource($newWorkflow->load(['nodes', 'edges'])))

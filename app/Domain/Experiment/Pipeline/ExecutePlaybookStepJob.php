@@ -3,9 +3,12 @@
 namespace App\Domain\Experiment\Pipeline;
 
 use App\Domain\Agent\Actions\ExecuteAgentAction;
+use App\Domain\Agent\Actions\ProcessAgentHandoffAction;
+use App\Domain\Experiment\Enums\CheckpointMode;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Services\CheckpointManager;
+use App\Domain\Experiment\Services\WorkflowSnapshotRecorder;
 use App\Domain\Skill\Actions\ExecuteGuardrailAction;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Workflow\Models\WorkflowNode;
@@ -117,6 +120,11 @@ class ExecutePlaybookStepJob implements ShouldQueue
             return;
         }
 
+        // Resolve checkpoint durability mode from workflow config
+        $checkpointMode = CheckpointMode::tryFrom(
+            $experiment->constraints['workflow_graph']['checkpoint_mode'] ?? 'sync',
+        ) ?? CheckpointMode::Sync;
+
         // Check idempotency — if we already have a result for this key, use it
         $idempotencyKey = $checkpointManager->generateIdempotencyKey(
             $this->experimentId,
@@ -146,13 +154,20 @@ class ExecutePlaybookStepJob implements ShouldQueue
             'phase' => 'started',
             'attempt' => $this->attempts(),
             'started_at' => now()->toIso8601String(),
-        ]);
+        ], mode: $checkpointMode);
 
         $step->update([
             'status' => 'running',
             'started_at' => now(),
             'idempotency_key' => $idempotencyKey,
         ]);
+
+        // Record time-travel snapshot: step started
+        app(WorkflowSnapshotRecorder::class)->record(
+            experiment: $experiment,
+            eventType: 'step_started',
+            step: $step,
+        );
 
         $stopHeartbeat = $checkpointManager->startHeartbeat($this->stepId);
 
@@ -271,6 +286,23 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 return;
             }
 
+            // Detect handoff directive — agent wants to transfer control to another agent
+            if (is_array($result['output']) && isset($result['output']['_handoff'])) {
+                Log::info('ExecutePlaybookStepJob: handoff detected', [
+                    'step_id' => $this->stepId,
+                    'target' => $result['output']['_handoff']['target_agent_id'] ?? 'unknown',
+                ]);
+
+                $checkpointManager->clearCheckpoint($this->stepId);
+                app(ProcessAgentHandoffAction::class)->execute(
+                    experiment: $experiment,
+                    step: $step,
+                    handoffDirective: $result['output']['_handoff'],
+                );
+
+                return;
+            }
+
             Log::info('ExecutePlaybookStepJob: completed', [
                 'step_id' => $this->stepId,
                 'success' => $result['output'] !== null,
@@ -285,6 +317,19 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 'error_message' => $result['execution']->error_message,
                 'completed_at' => now(),
             ]);
+
+            // Record time-travel snapshot: step completed or failed
+            app(WorkflowSnapshotRecorder::class)->record(
+                experiment: $experiment,
+                eventType: $result['output'] !== null ? 'step_completed' : 'step_failed',
+                step: $step,
+                input: $input ?? null,
+                output: $result['output'],
+                metadata: [
+                    'duration_ms' => $result['execution']->duration_ms ?? 0,
+                    'cost_credits' => $result['execution']->cost_credits ?? 0,
+                ],
+            );
 
             // Cache result for idempotency
             if ($result['output'] !== null) {
@@ -326,7 +371,16 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 'class' => get_class($e),
             ]);
 
-            // Write failure checkpoint for recovery
+            // Record time-travel snapshot: step failed (best-effort)
+            app(WorkflowSnapshotRecorder::class)->record(
+                experiment: $experiment,
+                eventType: 'step_failed',
+                step: $step,
+                metadata: ['error' => $e->getMessage()],
+            );
+
+            // Write failure checkpoint for recovery (always sync — must persist on failure)
+            $checkpointManager->flushPendingCheckpoints();
             $checkpointManager->writeCheckpoint($this->stepId, [
                 'phase' => 'failed',
                 'error' => $e->getMessage(),

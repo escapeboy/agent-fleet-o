@@ -389,7 +389,7 @@ class McpStdioClient
             throw new \RuntimeException(
                 'McpStdioClient: mcp_stdio_binary_allowlist is empty and MCP_STDIO_ALLOW_ANY_BINARY is not set. '.
                 'Set MCP_STDIO_BINARY_ALLOWLIST in .env (comma-separated absolute paths) '.
-                'or set MCP_STDIO_ALLOW_ANY_BINARY=true for local dev.'
+                'or set MCP_STDIO_ALLOW_ANY_BINARY=true for local dev.',
             );
         }
 
@@ -425,7 +425,7 @@ class McpStdioClient
             }
             if (preg_match('/[;&|`$\n\r]/', $arg)) {
                 throw new \RuntimeException(
-                    'McpStdioClient: transport_config args must not contain shell metacharacters (;, &, |, `, $, newline).'
+                    'McpStdioClient: transport_config args must not contain shell metacharacters (;, &, |, `, $, newline).',
                 );
             }
         }

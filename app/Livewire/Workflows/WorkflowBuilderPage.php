@@ -25,6 +25,8 @@ class WorkflowBuilderPage extends Component
 
     public int $maxLoopIterations = 10;
 
+    public string $checkpointMode = 'sync';
+
     // Graph state (synced with Alpine.js canvas)
     public array $nodes = [];
 
@@ -51,6 +53,7 @@ class WorkflowBuilderPage extends Component
             $this->name = $workflow->name;
             $this->description = $workflow->description ?? '';
             $this->maxLoopIterations = $workflow->max_loop_iterations;
+            $this->checkpointMode = $workflow->settings['checkpoint_mode'] ?? 'sync';
 
             $workflow->load(['nodes.agent', 'nodes.skill', 'edges']);
 
@@ -143,6 +146,7 @@ class WorkflowBuilderPage extends Component
         $this->validate([
             'name' => 'required|string|max:255',
             'maxLoopIterations' => 'required|integer|min:1|max:100',
+            'checkpointMode' => 'required|in:sync,async,exit',
         ]);
 
         try {
@@ -156,6 +160,7 @@ class WorkflowBuilderPage extends Component
                     maxLoopIterations: $this->maxLoopIterations,
                     nodes: $this->nodes,
                     edges: $this->edges,
+                    settings: ['checkpoint_mode' => $this->checkpointMode],
                 );
 
                 if ($flash) {
@@ -172,6 +177,7 @@ class WorkflowBuilderPage extends Component
                     maxLoopIterations: $this->maxLoopIterations,
                     nodes: $this->nodes,
                     edges: $this->edges,
+                    settings: ['checkpoint_mode' => $this->checkpointMode],
                 );
 
                 $this->workflowId = $workflow->id;

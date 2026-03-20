@@ -4,6 +4,11 @@
         <div class="flex-1 flex items-center gap-3">
             <x-form-input wire:model="name" type="text" placeholder="Workflow name..." compact />
             <x-form-input wire:model="maxLoopIterations" type="number" placeholder="Max loops" compact class="w-24" />
+            <x-form-select wire:model="checkpointMode" compact class="w-32">
+                <option value="sync">Sync</option>
+                <option value="async">Async</option>
+                <option value="exit">Exit</option>
+            </x-form-select>
         </div>
 
         <div class="flex items-center gap-2">

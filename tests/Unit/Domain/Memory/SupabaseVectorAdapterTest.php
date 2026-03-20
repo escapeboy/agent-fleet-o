@@ -24,7 +24,7 @@ class SupabaseVectorAdapterTest extends TestCase
         Http::fake([
             'test.supabase.co/rest/v1/fleetq_memories*' => Http::response(
                 [['id' => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee']],
-                201
+                201,
             ),
         ]);
 

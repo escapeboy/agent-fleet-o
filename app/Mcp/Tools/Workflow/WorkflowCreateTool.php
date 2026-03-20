@@ -22,6 +22,9 @@ class WorkflowCreateTool extends Tool
                 ->required(),
             'description' => $schema->string()
                 ->description('Workflow description'),
+            'checkpoint_mode' => $schema->string()
+                ->description('Checkpoint durability mode: sync (safest, DB write per step), async (Redis buffer + background flush), exit (in-memory, flushed on completion). Default: sync')
+                ->enum(['sync', 'async', 'exit']),
         ];
     }
 
@@ -30,9 +33,15 @@ class WorkflowCreateTool extends Tool
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'checkpoint_mode' => 'nullable|string|in:sync,async,exit',
         ]);
 
         try {
+            $settings = [];
+            if (! empty($validated['checkpoint_mode'])) {
+                $settings['checkpoint_mode'] = $validated['checkpoint_mode'];
+            }
+
             $workflow = app(CreateWorkflowAction::class)->execute(
                 userId: auth()->id(),
                 name: $validated['name'],
@@ -40,6 +49,7 @@ class WorkflowCreateTool extends Tool
                 nodes: [],
                 edges: [],
                 teamId: auth()->user()->current_team_id,
+                settings: $settings,
             );
 
             return Response::text(json_encode([

@@ -3,10 +3,10 @@
 namespace Tests\Feature\Domain\Skill;
 
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSupabaseEdgeFunctionSkillAction;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
-use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -59,7 +59,7 @@ class SupabaseEdgeFunctionSkillTest extends TestCase
         Http::fake([
             'xyzabcdef.supabase.co/functions/v1/my-function' => Http::response(
                 ['result' => 'processed', 'count' => 42],
-                200
+                200,
             ),
         ]);
 
@@ -124,7 +124,7 @@ class SupabaseEdgeFunctionSkillTest extends TestCase
         Http::fake([
             'xyzabcdef.supabase.co/functions/v1/bad-fn' => Http::response(
                 ['error' => 'Function not found'],
-                404
+                404,
             ),
         ]);
 

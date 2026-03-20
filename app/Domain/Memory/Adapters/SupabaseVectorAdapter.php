@@ -38,7 +38,7 @@ class SupabaseVectorAdapter
      *
      * @param  float[]  $embedding  Vector from your embedding model
      * @param  array<string, mixed>  $metadata  Arbitrary key-value pairs stored alongside the memory
-     * @return string  The UUID of the inserted record
+     * @return string The UUID of the inserted record
      */
     public function store(string $content, array $embedding, array $metadata = []): string
     {
@@ -54,7 +54,7 @@ class SupabaseVectorAdapter
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "SupabaseVectorAdapter store failed: HTTP {$response->status()} — {$response->body()}"
+                "SupabaseVectorAdapter store failed: HTTP {$response->status()} — {$response->body()}",
             );
         }
 
@@ -85,7 +85,7 @@ class SupabaseVectorAdapter
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "SupabaseVectorAdapter search failed: HTTP {$response->status()} — {$response->body()}"
+                "SupabaseVectorAdapter search failed: HTTP {$response->status()} — {$response->body()}",
             );
         }
 
@@ -103,7 +103,7 @@ class SupabaseVectorAdapter
 
         if (! $response->successful()) {
             throw new \RuntimeException(
-                "SupabaseVectorAdapter delete failed: HTTP {$response->status()} — {$response->body()}"
+                "SupabaseVectorAdapter delete failed: HTTP {$response->status()} — {$response->body()}",
             );
         }
     }

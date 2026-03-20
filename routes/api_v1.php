@@ -89,6 +89,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/experiments/{experiment}/kill', [ExperimentController::class, 'kill']);
     Route::post('/experiments/{experiment}/retry-from-step', [ExperimentController::class, 'retryFromStep']);
     Route::get('/experiments/{experiment}/steps', [ExperimentController::class, 'steps']);
+    Route::get('/experiments/{experiment}/snapshots', [ExperimentController::class, 'snapshots']);
 
     // Agents
     Route::apiResource('agents', AgentController::class);

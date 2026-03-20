@@ -74,8 +74,7 @@ class KnowledgeGraphTest extends TestCase
 
     // ─── AddKnowledgeFactAction ─────────────────────────────────────────────────
 
-    /** @test */
-    public function it_creates_entities_and_an_edge_when_adding_a_fact(): void
+    public function test_creates_entities_and_an_edge_when_adding_a_fact(): void
     {
         $this->fakeEmbedding();
         // DetectContradictionAction needs AiGatewayInterface but will find no candidates, so it won't call LLM
@@ -114,8 +113,7 @@ class KnowledgeGraphTest extends TestCase
         $this->assertEquals('works_at', $edge->relation_type);
     }
 
-    /** @test */
-    public function it_reuses_existing_entities_instead_of_creating_duplicates(): void
+    public function test_reuses_existing_entities_instead_of_creating_duplicates(): void
     {
         $this->fakeEmbedding();
         $action = app(AddKnowledgeFactAction::class);
@@ -149,8 +147,7 @@ class KnowledgeGraphTest extends TestCase
             ->count());
     }
 
-    /** @test */
-    public function it_normalises_relation_type_to_snake_case(): void
+    public function test_normalises_relation_type_to_snake_case(): void
     {
         $this->fakeEmbedding();
         $action = app(AddKnowledgeFactAction::class);
@@ -168,8 +165,7 @@ class KnowledgeGraphTest extends TestCase
         $this->assertEquals('has_price', $edge->relation_type);
     }
 
-    /** @test */
-    public function it_proceeds_without_embedding_when_prism_fails(): void
+    public function test_proceeds_without_embedding_when_prism_fails(): void
     {
         // Prism will throw — embedding generation silently fails
         Prism::shouldReceive('embeddings')->andThrow(new \RuntimeException('No API key'));
@@ -197,8 +193,7 @@ class KnowledgeGraphTest extends TestCase
 
     // ─── TemporalKnowledgeGraphService ─────────────────────────────────────────
 
-    /** @test */
-    public function it_returns_only_current_facts_for_an_entity(): void
+    public function test_returns_only_current_facts_for_an_entity(): void
     {
         $source = Entity::factory()->create(['team_id' => $this->team->id]);
         $target = Entity::factory()->create(['team_id' => $this->team->id]);
@@ -232,8 +227,7 @@ class KnowledgeGraphTest extends TestCase
         $this->assertEquals('Current fact', $facts->first()->fact);
     }
 
-    /** @test */
-    public function it_returns_full_timeline_including_invalidated_facts(): void
+    public function test_returns_full_timeline_including_invalidated_facts(): void
     {
         $source = Entity::factory()->create(['team_id' => $this->team->id]);
         $target = Entity::factory()->create(['team_id' => $this->team->id]);
@@ -256,8 +250,7 @@ class KnowledgeGraphTest extends TestCase
         $this->assertCount(2, $timeline);
     }
 
-    /** @test */
-    public function it_returns_point_in_time_facts(): void
+    public function test_returns_point_in_time_facts(): void
     {
         $source = Entity::factory()->create(['team_id' => $this->team->id]);
         $target = Entity::factory()->create(['team_id' => $this->team->id]);
@@ -288,8 +281,7 @@ class KnowledgeGraphTest extends TestCase
 
     // ─── DetectContradictionAction ──────────────────────────────────────────────
 
-    /** @test */
-    public function contradiction_detection_skips_when_no_candidates_exist(): void
+    public function test_contradiction_detection_skips_when_no_candidates_exist(): void
     {
         $gateway = Mockery::mock(AiGatewayInterface::class);
         $gateway->shouldNotReceive('complete');
@@ -310,8 +302,7 @@ class KnowledgeGraphTest extends TestCase
         $this->assertEmpty($invalidated);
     }
 
-    /** @test */
-    public function contradiction_detection_invalidates_conflicting_edge(): void
+    public function test_contradiction_detection_invalidates_conflicting_edge(): void
     {
         $this->requirePgvector();
 
@@ -366,8 +357,7 @@ class KnowledgeGraphTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function contradiction_detection_skips_low_similarity_candidates(): void
+    public function test_contradiction_detection_skips_low_similarity_candidates(): void
     {
         $this->requirePgvector();
 

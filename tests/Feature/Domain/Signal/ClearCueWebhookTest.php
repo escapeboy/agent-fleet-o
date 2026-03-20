@@ -59,8 +59,7 @@ class ClearCueWebhookTest extends TestCase
         ], $overrides);
     }
 
-    /** @test */
-    public function it_accepts_a_valid_clearcue_webhook_without_signature_check(): void
+    public function test_accepts_a_valid_clearcue_webhook_without_signature_check(): void
     {
         // No secret configured → signature validation skipped
         config(['services.clearcue.webhook_secret' => null]);
@@ -79,8 +78,7 @@ class ClearCueWebhookTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_validates_hmac_signature_when_secret_is_configured(): void
+    public function test_validates_hmac_signature_when_secret_is_configured(): void
     {
         $secret = 'test-webhook-secret';
         config(['services.clearcue.webhook_secret' => $secret]);
@@ -102,8 +100,7 @@ class ClearCueWebhookTest extends TestCase
         $this->assertEquals(1, Signal::where('source_type', 'clearcue')->count());
     }
 
-    /** @test */
-    public function it_rejects_invalid_signature_with_401(): void
+    public function test_rejects_invalid_signature_with_401(): void
     {
         config(['services.clearcue.webhook_secret' => 'real-secret']);
 
@@ -121,8 +118,7 @@ class ClearCueWebhookTest extends TestCase
         $this->assertEquals(0, Signal::where('source_type', 'clearcue')->count());
     }
 
-    /** @test */
-    public function it_deduplicates_repeated_deliveries_of_same_signal(): void
+    public function test_deduplicates_repeated_deliveries_of_same_signal(): void
     {
         config(['services.clearcue.webhook_secret' => null]);
 
@@ -143,8 +139,7 @@ class ClearCueWebhookTest extends TestCase
         $this->assertEquals(1, $signal->duplicate_count);
     }
 
-    /** @test */
-    public function it_includes_intent_and_category_tags(): void
+    public function test_includes_intent_and_category_tags(): void
     {
         config(['services.clearcue.webhook_secret' => null]);
 
@@ -158,8 +153,7 @@ class ClearCueWebhookTest extends TestCase
         $this->assertContains('competitor_engagement', $signal->tags);
     }
 
-    /** @test */
-    public function it_handles_batch_array_payload(): void
+    public function test_handles_batch_array_payload(): void
     {
         config(['services.clearcue.webhook_secret' => null]);
 
@@ -175,8 +169,7 @@ class ClearCueWebhookTest extends TestCase
         $this->assertEquals(2, Signal::where('source_type', 'clearcue')->count());
     }
 
-    /** @test */
-    public function it_returns_200_with_no_signals_when_payload_is_empty(): void
+    public function test_returns_200_with_no_signals_when_payload_is_empty(): void
     {
         config(['services.clearcue.webhook_secret' => null]);
 

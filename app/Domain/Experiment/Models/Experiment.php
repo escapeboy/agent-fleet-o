@@ -180,6 +180,11 @@ class Experiment extends Model
         return $this->hasMany(PlaybookStep::class)->orderBy('order');
     }
 
+    public function workflowSnapshots(): HasMany
+    {
+        return $this->hasMany(WorkflowSnapshot::class)->orderBy('sequence');
+    }
+
     public function tasks(): HasMany
     {
         return $this->hasMany(ExperimentTask::class)->orderBy('sort_order');

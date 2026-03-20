@@ -22,8 +22,9 @@ class UpdateWorkflowAction
         ?int $maxLoopIterations = null,
         ?array $nodes = null,
         ?array $edges = null,
+        ?array $settings = null,
     ): Workflow {
-        return DB::transaction(function () use ($workflow, $name, $description, $maxLoopIterations, $nodes, $edges) {
+        return DB::transaction(function () use ($workflow, $name, $description, $maxLoopIterations, $nodes, $edges, $settings) {
             $changes = [];
 
             if ($name !== null && $name !== $workflow->name) {
@@ -39,6 +40,11 @@ class UpdateWorkflowAction
             if ($maxLoopIterations !== null) {
                 $changes['max_loop_iterations'] = $maxLoopIterations;
                 $workflow->max_loop_iterations = $maxLoopIterations;
+            }
+
+            if ($settings !== null) {
+                $workflow->settings = array_merge($workflow->settings ?? [], $settings);
+                $changes['settings'] = 'updated';
             }
 
             // If graph is being updated and workflow is active, bump version

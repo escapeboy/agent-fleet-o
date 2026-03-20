@@ -22,10 +22,10 @@ use App\Domain\Integration\Drivers\Salesforce\SalesforceIntegrationDriver;
 use App\Domain\Integration\Drivers\Sentry\SentryIntegrationDriver;
 use App\Domain\Integration\Drivers\Slack\SlackIntegrationDriver;
 use App\Domain\Integration\Drivers\Stripe\StripeIntegrationDriver;
+use App\Domain\Integration\Drivers\Supabase\SupabaseIntegrationDriver;
 use App\Domain\Integration\Drivers\Teams\TeamsIntegrationDriver;
 use App\Domain\Integration\Drivers\Telegram\TelegramIntegrationDriver;
 use App\Domain\Integration\Drivers\WhatsApp\WhatsAppIntegrationDriver;
-use App\Domain\Integration\Drivers\Supabase\SupabaseIntegrationDriver;
 use App\Domain\Integration\Drivers\Zapier\ZapierIntegrationDriver;
 use Illuminate\Support\Manager;
 

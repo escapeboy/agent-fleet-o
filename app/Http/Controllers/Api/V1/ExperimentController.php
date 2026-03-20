@@ -12,6 +12,7 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
+use App\Domain\Experiment\Models\WorkflowSnapshot;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreExperimentRequest;
 use App\Http\Requests\Api\V1\TransitionExperimentRequest;
@@ -152,5 +153,42 @@ class ExperimentController extends Controller
             ->get();
 
         return PlaybookStepResource::collection($steps);
+    }
+
+    /**
+     * List time-travel snapshots for an experiment.
+     *
+     * @response 200 {"data": [{"id": "uuid", "sequence": 0, "event_type": "step_started", ...}]}
+     */
+    public function snapshots(Request $request, Experiment $experiment): JsonResponse
+    {
+        $request->validate([
+            'event_type' => 'nullable|string',
+            'limit' => 'nullable|integer|min:1|max:200',
+        ]);
+
+        $query = WorkflowSnapshot::where('experiment_id', $experiment->id)
+            ->orderBy('sequence');
+
+        if ($request->has('event_type')) {
+            $query->where('event_type', $request->input('event_type'));
+        }
+
+        $snapshots = $query->limit($request->input('limit', 50))->get();
+
+        return response()->json([
+            'data' => $snapshots->map(fn ($s) => [
+                'id' => $s->id,
+                'sequence' => $s->sequence,
+                'event_type' => $s->event_type,
+                'workflow_node_id' => $s->workflow_node_id,
+                'duration_from_start_ms' => $s->duration_from_start_ms,
+                'graph_state' => $s->graph_state,
+                'step_input' => $s->step_input,
+                'step_output' => $s->step_output,
+                'metadata' => $s->metadata,
+                'created_at' => $s->created_at?->toIso8601String(),
+            ]),
+        ]);
     }
 }

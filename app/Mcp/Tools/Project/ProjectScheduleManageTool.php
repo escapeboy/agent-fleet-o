@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectSchedule;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -27,17 +28,17 @@ class ProjectScheduleManageTool extends Tool
                 ->enum(['get', 'update', 'enable', 'disable'])
                 ->required(),
             'schedule' => $schema->object([
-                    'frequency' => $schema->string()
-                        ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once']),
-                    'cron_expression' => $schema->string()
-                        ->description('Raw 5-part cron expression. Required when frequency=cron.'),
-                    'timezone' => $schema->string()
-                        ->description('IANA timezone, e.g. "Europe/Sofia".'),
-                    'overlap_policy' => $schema->string()
-                        ->enum(['skip', 'queue', 'allow']),
-                    'max_consecutive_failures' => $schema->integer(),
-                    'catchup_missed' => $schema->boolean(),
-                ])
+                'frequency' => $schema->string()
+                    ->enum(['every_5_minutes', 'every_10_minutes', 'every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'monthly', 'cron', 'once']),
+                'cron_expression' => $schema->string()
+                    ->description('Raw 5-part cron expression. Required when frequency=cron.'),
+                'timezone' => $schema->string()
+                    ->description('IANA timezone, e.g. "Europe/Sofia".'),
+                'overlap_policy' => $schema->string()
+                    ->enum(['skip', 'queue', 'allow']),
+                'max_consecutive_failures' => $schema->integer(),
+                'catchup_missed' => $schema->boolean(),
+            ])
                 ->description('New schedule settings. Required when operation=update.'),
         ];
     }
@@ -84,7 +85,7 @@ class ProjectScheduleManageTool extends Tool
         }
     }
 
-    private function getSchedule(\App\Domain\Project\Models\ProjectSchedule $schedule): Response
+    private function getSchedule(ProjectSchedule $schedule): Response
     {
         $upcomingRuns = $schedule->getNextRunTimes(5);
 
@@ -105,7 +106,7 @@ class ProjectScheduleManageTool extends Tool
     }
 
     private function updateSchedule(
-        \App\Domain\Project\Models\ProjectSchedule $schedule,
+        ProjectSchedule $schedule,
         Project $project,
         array $data,
     ): Response {
@@ -134,7 +135,7 @@ class ProjectScheduleManageTool extends Tool
         return $this->getSchedule($schedule->fresh());
     }
 
-    private function setEnabled(\App\Domain\Project\Models\ProjectSchedule $schedule, bool $enabled): Response
+    private function setEnabled(ProjectSchedule $schedule, bool $enabled): Response
     {
         $schedule->update(['enabled' => $enabled]);
 

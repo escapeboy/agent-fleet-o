@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Infrastructure\Auth\SanctumTokenIssuer;
 
 class TeamControllerTest extends ApiTestCase
 {
@@ -108,8 +109,8 @@ class TeamControllerTest extends ApiTestCase
     {
         $this->actingAsApiUser();
 
-        // Create a token first
-        $this->user->createToken('Test Token', ['*']);
+        // Create a Sanctum token (not Passport — User uses Passport's HasApiTokens for MCP OAuth2)
+        SanctumTokenIssuer::create($this->user, 'Test Token', ['*']);
 
         $response = $this->getJson('/api/v1/team/tokens');
 

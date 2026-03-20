@@ -233,7 +233,7 @@
         <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @php
                 $tabs = $experiment->hasWorkflow()
-                    ? ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions']
+                    ? ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions']
                     : ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions'];
             @endphp
             @foreach($tabs as $tab => $label)
@@ -267,6 +267,8 @@
     {{-- Tab Content --}}
     @if($activeTab === 'timeline')
         <livewire:experiments.experiment-timeline :experiment="$experiment" :key="'timeline-'.$experiment->id" />
+    @elseif($activeTab === 'time-travel')
+        <livewire:experiments.workflow-timeline :experimentId="$experiment->id" :key="'time-travel-'.$experiment->id" />
     @elseif($activeTab === 'tasks')
         <livewire:experiments.experiment-tasks-panel :experiment="$experiment" :key="'tasks-'.$experiment->id" />
     @elseif($activeTab === 'artifacts')
