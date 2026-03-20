@@ -45,4 +45,20 @@ return [
 
     'connection' => env('PASSPORT_CONNECTION'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Personal Access Client
+    |--------------------------------------------------------------------------
+    |
+    | Used by User::createToken() to issue personal access tokens.
+    | Set PASSPORT_PERSONAL_ACCESS_CLIENT_ID and _SECRET in .env after
+    | running: php artisan passport:client --personal
+    |
+    */
+
+    'personal_access_client' => [
+        'id' => env('PASSPORT_PERSONAL_ACCESS_CLIENT_ID'),
+        'secret' => env('PASSPORT_PERSONAL_ACCESS_CLIENT_SECRET'),
+    ],
+
 ];
