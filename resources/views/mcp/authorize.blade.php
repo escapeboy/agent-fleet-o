@@ -6,9 +6,9 @@
     <title>{{ config('app.name') }} — Authorize Access</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4" x-data="{ authorizing: false }">
+<body class="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4" x-data="{ authorizing: false, connected: false }">
 
-    {{-- Full-page loading overlay (shown after Authorize is clicked) --}}
+    {{-- Full-page overlay (loading → success) shown after Authorize is clicked --}}
     <div
         x-show="authorizing"
         x-transition:enter="transition ease-out duration-200"
@@ -20,14 +20,27 @@
         <div class="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl mb-5 shadow-lg">
             {{ substr(config('app.name'), 0, 1) }}
         </div>
-        <div class="flex items-center gap-3 text-gray-700">
+
+        {{-- Loading state --}}
+        <div x-show="!connected" class="flex items-center gap-3 text-gray-700">
             <svg class="w-5 h-5 text-primary-600 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
             <span class="text-base font-medium">Connecting to <strong>{{ $client->name }}</strong>…</span>
         </div>
-        <p class="mt-3 text-sm text-gray-400">You'll be redirected back to the application shortly.</p>
+        <p x-show="!connected" class="mt-3 text-sm text-gray-400">You'll be redirected back to the application shortly.</p>
+
+        {{-- Success state --}}
+        <div x-show="connected" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="flex flex-col items-center" style="display:none">
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <span class="text-base font-semibold text-gray-900">Connected successfully!</span>
+            <p class="mt-2 text-sm text-gray-500">You can now return to <strong>{{ $client->name }}</strong>.</p>
+        </div>
     </div>
 
     <div class="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -81,7 +94,7 @@
             </form>
 
             {{-- Approve --}}
-            <form method="POST" action="{{ route('passport.authorizations.approve') }}" class="flex-1" @submit="authorizing = true">
+            <form method="POST" action="{{ route('passport.authorizations.approve') }}" class="flex-1" @submit="authorizing = true; setTimeout(() => connected = true, 2000)">
                 @csrf
                 <input type="hidden" name="state" value="{{ $request->state }}">
                 <input type="hidden" name="client_id" value="{{ $client->getKey() }}">
