@@ -33,6 +33,7 @@ use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Services\BashSidecarClient;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -237,8 +238,24 @@ class ExecuteAgentAction
                 'output' => ['result' => $response->content],
             ];
         } catch (ResultAsAnswerException $e) {
-            // Tool flagged as result_as_answer — use its output directly, skip LLM summarization
+            // Tool flagged as result_as_answer — use its output directly, skip LLM summarization.
+            // LLM tokens were already consumed before the tool threw, so we estimate cost
+            // from the request log. The gateway logs each call to llm_request_logs.
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+            // Retrieve the cost from the most recent LLM request log for this agent
+            $costCredits = LlmRequestLog::where('agent_id', $agent->id)
+                ->where('created_at', '>=', now()->subMinutes(2))
+                ->orderByDesc('created_at')
+                ->value('cost_credits') ?? 0;
+
+            // Attribute budget spend to the agent
+            if ($costCredits > 0) {
+                DB::transaction(function () use ($agent, $costCredits) {
+                    $locked = Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
+                    $locked->increment('budget_spent_credits', $costCredits);
+                });
+            }
 
             $execution = AgentExecution::create([
                 'agent_id' => $agent->id,
@@ -251,7 +268,7 @@ class ExecuteAgentAction
                 'tool_calls_count' => 1,
                 'llm_steps_count' => 1,
                 'duration_ms' => $durationMs,
-                'cost_credits' => 0,
+                'cost_credits' => $costCredits,
                 'quality_details' => ['result_as_answer' => true],
             ]);
 

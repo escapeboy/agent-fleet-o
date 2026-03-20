@@ -97,6 +97,20 @@ class ToolTranslator
 
             $resultAsAnswer = $toolModel->result_as_answer;
 
+            // If result_as_answer is enabled, register a custom error handler that
+            // re-throws ResultAsAnswerException while handling other errors normally.
+            // PrismPHP's Tool::handle() catches all Throwable — without this, our
+            // exception would be swallowed and turned into an error message string.
+            if ($resultAsAnswer) {
+                $prismTool->failed(function (\Throwable $e) {
+                    if ($e instanceof ResultAsAnswerException) {
+                        throw $e;
+                    }
+
+                    return "Error: {$e->getMessage()}";
+                });
+            }
+
             $prismTool->using(function () use ($isStdio, $serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames, $resultAsAnswer): string {
                 // PrismPHP passes arguments positionally; map them back to named keys
                 $positional = func_get_args();

@@ -139,7 +139,65 @@ class DecomposeGoalAction
             $parsed = $parsed['tasks'];
         }
 
+        // Validate and sanitize each task's skip_condition
+        foreach ($parsed as &$task) {
+            if (isset($task['skip_condition'])) {
+                if (! $this->isValidSkipCondition($task['skip_condition'])) {
+                    $task['skip_condition'] = null; // Strip invalid conditions
+                }
+            }
+        }
+        unset($task);
+
         // Ensure sequential array
         return array_values($parsed);
+    }
+
+    /**
+     * Validate skip_condition structure to prevent malformed/malicious conditions.
+     * Only allows known keys: field, operator, value, all, any.
+     */
+    private function isValidSkipCondition(mixed $condition, int $depth = 0): bool
+    {
+        if (! is_array($condition) || $depth > 10) {
+            return false;
+        }
+
+        // Compound: all/any
+        if (isset($condition['all'])) {
+            if (! is_array($condition['all'])) {
+                return false;
+            }
+            foreach ($condition['all'] as $sub) {
+                if (! $this->isValidSkipCondition($sub, $depth + 1)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (isset($condition['any'])) {
+            if (! is_array($condition['any'])) {
+                return false;
+            }
+            foreach ($condition['any'] as $sub) {
+                if (! $this->isValidSkipCondition($sub, $depth + 1)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Simple condition: must have 'field' and 'operator'
+        if (! isset($condition['field']) || ! is_string($condition['field'])) {
+            return false;
+        }
+
+        $allowedOperators = ['==', '!=', '>', '<', '>=', '<=', 'contains', 'not_contains', 'in', 'not_in', 'is_null', 'is_not_null'];
+        $operator = $condition['operator'] ?? '==';
+
+        return in_array($operator, $allowedOperators, true);
     }
 }

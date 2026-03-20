@@ -57,7 +57,7 @@ class RetrieveRelevantMemoriesAction
                     $recencyWeight, $halfLifeDays,
                     $importanceWeight,
                 ])
-                ->havingRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
+                ->whereRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
                 ->where('confidence', '>=', $minConfidence)
                 ->orderByDesc('composite_score');
 
@@ -82,11 +82,18 @@ class RetrieveRelevantMemoriesAction
 
             $results = $builder->limit($topK)->get();
 
-            // Batch update last_accessed_at for retrieved memories
+            // Batch update last_accessed_at for retrieved memories (scoped to prevent cross-tenant writes)
             if ($results->isNotEmpty()) {
-                Memory::withoutGlobalScopes()
-                    ->whereIn('id', $results->pluck('id'))
-                    ->update(['last_accessed_at' => now()]);
+                $updateQuery = Memory::withoutGlobalScopes()
+                    ->whereIn('id', $results->pluck('id'));
+
+                // Apply tenant guard: only update memories belonging to the correct scope
+                match ($scope) {
+                    'team' => $updateQuery->when($teamId, fn ($q) => $q->where('team_id', $teamId)),
+                    default => $updateQuery->where('agent_id', $agentId),
+                };
+
+                $updateQuery->update(['last_accessed_at' => now()]);
             }
 
             return $results;

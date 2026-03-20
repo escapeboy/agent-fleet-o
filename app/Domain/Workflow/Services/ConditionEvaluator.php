@@ -6,6 +6,8 @@ use Illuminate\Support\Arr;
 
 class ConditionEvaluator
 {
+    private const MAX_RECURSION_DEPTH = 10;
+
     /**
      * Evaluate a condition against a context of node outputs.
      *
@@ -21,17 +23,22 @@ class ConditionEvaluator
      * @param  array|null  $condition  The condition definition
      * @param  array  $context  Map of node_id => output data
      * @param  string|null  $predecessorNodeId  The node whose output to evaluate against (for simple field references)
+     * @param  int  $depth  Current recursion depth (internal, do not pass externally)
      */
-    public function evaluate(?array $condition, array $context, ?string $predecessorNodeId = null): bool
+    public function evaluate(?array $condition, array $context, ?string $predecessorNodeId = null, int $depth = 0): bool
     {
         if (empty($condition)) {
             return true;
         }
 
+        if ($depth >= self::MAX_RECURSION_DEPTH) {
+            return false; // Fail-safe: treat deeply nested conditions as not met
+        }
+
         // Compound AND
         if (isset($condition['all'])) {
             foreach ($condition['all'] as $subCondition) {
-                if (! $this->evaluate($subCondition, $context, $predecessorNodeId)) {
+                if (! $this->evaluate($subCondition, $context, $predecessorNodeId, $depth + 1)) {
                     return false;
                 }
             }
@@ -42,7 +49,7 @@ class ConditionEvaluator
         // Compound OR
         if (isset($condition['any'])) {
             foreach ($condition['any'] as $subCondition) {
-                if ($this->evaluate($subCondition, $context, $predecessorNodeId)) {
+                if ($this->evaluate($subCondition, $context, $predecessorNodeId, $depth + 1)) {
                     return true;
                 }
             }

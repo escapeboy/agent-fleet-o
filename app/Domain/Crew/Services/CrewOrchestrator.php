@@ -204,42 +204,68 @@ class CrewOrchestrator
 
     private function dispatchTask(CrewTaskExecution $task, CrewExecution $execution): void
     {
-        // Gather dependency outputs as context
-        $allTasks = $execution->taskExecutions()->get();
-        $depOutputs = $this->dependencyResolver->gatherDependencyOutputs($task, $allTasks);
+        // Iterative skip loop — avoids infinite recursion when consecutive tasks are skipped.
+        // Maximum skip iterations prevents runaway loops from malformed skip_conditions.
+        $maxSkipIterations = 50;
+        $currentTask = $task;
 
-        if (! empty($depOutputs)) {
-            $context = $task->input_context ?? [];
-            $context['dependency_outputs'] = $depOutputs;
-            $task->update(['input_context' => $context]);
-        }
+        for ($i = 0; $i < $maxSkipIterations; $i++) {
+            // Gather dependency outputs as context
+            $allTasks = $execution->taskExecutions()->get();
+            $depOutputs = $this->dependencyResolver->gatherDependencyOutputs($currentTask, $allTasks);
 
-        // Evaluate skip_condition before dispatching
-        if ($this->shouldSkipTask($task, $allTasks)) {
-            $task->update([
-                'status' => CrewTaskStatus::Skipped,
-                'completed_at' => now(),
-            ]);
+            if (! empty($depOutputs)) {
+                $context = $currentTask->input_context ?? [];
+                $context['dependency_outputs'] = $depOutputs;
+                $currentTask->update(['input_context' => $context]);
+            }
 
-            Log::info('Crew task skipped by condition', [
-                'task_id' => $task->id,
-                'title' => $task->title,
-                'skip_condition' => $task->skip_condition,
-            ]);
+            // Evaluate skip_condition before dispatching
+            if ($this->shouldSkipTask($currentTask, $allTasks)) {
+                $currentTask->update([
+                    'status' => CrewTaskStatus::Skipped,
+                    'completed_at' => now(),
+                ]);
 
-            // Continue orchestration after skip
-            $this->onTaskValidated($execution, $task);
+                Log::info('Crew task skipped by condition', [
+                    'task_id' => $currentTask->id,
+                    'title' => $currentTask->title,
+                    'skip_condition' => $currentTask->skip_condition,
+                ]);
+
+                // Find next ready task instead of recursing
+                $tasks = $execution->taskExecutions()->get();
+                $ready = $this->dependencyResolver->resolveReady($tasks);
+
+                if ($ready->isEmpty()) {
+                    if ($this->dependencyResolver->allTerminal($tasks)) {
+                        $this->synthesizeAndComplete($execution);
+                    } elseif ($this->dependencyResolver->hasDeadlock($tasks)) {
+                        $this->failExecution($execution, 'Deadlock: remaining tasks depend on failed tasks.');
+                    }
+
+                    return;
+                }
+
+                $currentTask = $ready->first();
+
+                continue;
+            }
+
+            // Task is not skipped — dispatch it
+            $currentTask->update(['status' => CrewTaskStatus::Assigned]);
+
+            ExecuteCrewTaskJob::dispatch(
+                crewExecutionId: $execution->id,
+                taskExecutionId: $currentTask->id,
+                teamId: $execution->team_id,
+            );
 
             return;
         }
 
-        $task->update(['status' => CrewTaskStatus::Assigned]);
-
-        ExecuteCrewTaskJob::dispatch(
-            crewExecutionId: $execution->id,
-            taskExecutionId: $task->id,
-            teamId: $execution->team_id,
-        );
+        // Safety: too many consecutive skips
+        $this->failExecution($execution, 'Too many consecutive task skips — possible skip_condition loop.');
     }
 
     /**
@@ -254,11 +280,12 @@ class CrewOrchestrator
             return false;
         }
 
-        // Build context from all completed/validated task outputs, keyed by sort_order
+        // Build context from all completed/validated task outputs, keyed by sort_order.
+        // Skipped tasks without output get an empty array so conditions like is_null can reason about them.
         $context = [];
         foreach ($allTasks as $t) {
-            if ($t->output && ($t->isValidated() || $t->status === CrewTaskStatus::Skipped)) {
-                $context[(string) $t->sort_order] = $t->output;
+            if ($t->isValidated() || $t->status === CrewTaskStatus::Skipped) {
+                $context[(string) $t->sort_order] = $t->output ?? [];
             }
         }
 
