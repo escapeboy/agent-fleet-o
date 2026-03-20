@@ -2,6 +2,25 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.9.0] - 2026-03-20
+
+### Added
+
+- **Supabase Integration** — Five-layer native Supabase integration for agent workflows:
+  - *Integration driver* (`SupabaseIntegrationDriver`): connect any Supabase project; ping and validate credentials; query tables via PostgREST, execute SQL via RPC, invoke Edge Functions, upload Storage objects. Receives Database Webhook CDC events (INSERT/UPDATE/DELETE) as FleetQ Signals using plain `X-Webhook-Secret` header authentication.
+  - *Signal connector* (`SupabaseWebhookConnector`): ingests Supabase Database Webhooks as tagged Signals with CDC metadata (table, schema, event type, record, old_record).
+  - *Outbound connector* (`SupabaseRealtimeConnector`): broadcasts agent output to Supabase Realtime channels via the REST broadcast endpoint — no WebSocket required from PHP; idempotent delivery via `xxh128` key.
+  - *pgvector memory* (`SupabaseVectorAdapter`): stores and retrieves agent memories using cosine similarity search against the `fleetq_memories` table. `supabase_provision_vector_memory` MCP tool generates the setup SQL for any embedding dimension.
+  - *Edge Function skills* (`SkillType::SupabaseEdgeFunction`): invoke any Supabase Edge Function as a reusable platform skill; zero platform credits consumed.
+  - Three new MCP tools: `supabase_connector_manage`, `supabase_provision_vector_memory`, `supabase_edge_function_skill`.
+- **`SupabaseEdgeFunction` Skill Type** — `ExecuteSupabaseEdgeFunctionSkillAction` handles auth via a linked `Credential` (service role key), configurable HTTP method, timeout, and full error recording via `SkillExecution`.
+
+### Fixed
+
+- **Supabase seeder bug** — `PopularToolsSeeder` was setting `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` env vars on the MCP server tool definition; the correct env var for `@supabase/mcp-server-supabase` is `SUPABASE_ACCESS_TOKEN`. Also expanded seeded tool definitions from 3 to 12 (database, edge functions, debugging, development, and docs groups) and increased timeout from 30 s to 60 s.
+
+---
+
 ## [1.8.0] - 2026-03-19
 
 ### Added
