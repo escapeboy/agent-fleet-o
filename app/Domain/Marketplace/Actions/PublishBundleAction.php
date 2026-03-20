@@ -12,17 +12,19 @@ use Illuminate\Support\Str;
 
 class PublishBundleAction
 {
-    private PublishToMarketplaceAction $publisher;
-
-    public function __construct(PublishToMarketplaceAction $publisher)
-    {
-        $this->publisher = $publisher;
-    }
+    public function __construct(
+        private readonly PublishToMarketplaceAction $publisher,
+    ) {}
 
     /**
      * Publish a bundle of skills, agents, and/or workflows as a single marketplace listing.
      *
-     * @param  array<array{type: string, id: string}>  $items
+     * Enhanced with cross-entity refs: workflow nodes are automatically linked to
+     * agents/skills in the bundle, and ref_keys enable wiring during install.
+     *
+     * @param  array<array{type: string, id: string, ref_key?: string}>  $items
+     * @param  array<string>  $setupHints  Post-install guidance for the user
+     * @param  array<array{type: string, service: string, purpose: string}>  $requiredCredentials
      */
     public function execute(
         string $teamId,
@@ -34,16 +36,21 @@ class PublishBundleAction
         ?string $category = null,
         array $tags = [],
         ListingVisibility $visibility = ListingVisibility::Public,
+        array $setupHints = [],
+        array $requiredCredentials = [],
     ): MarketplaceListing {
         $configSnapshot = ['items' => []];
+        $entityMap = []; // type:id → ref_key
 
-        foreach ($items as $item) {
+        foreach ($items as $index => $item) {
             $entity = match ($item['type']) {
                 'skill' => Skill::findOrFail($item['id']),
                 'agent' => Agent::findOrFail($item['id']),
                 'workflow' => Workflow::findOrFail($item['id']),
                 default => throw new \InvalidArgumentException("Unsupported bundle item type: {$item['type']}"),
             };
+
+            $refKey = $item['ref_key'] ?? Str::slug($entity->name).'_'.($index + 1);
 
             $snapshot = match ($item['type']) {
                 'skill' => [
@@ -67,10 +74,24 @@ class PublishBundleAction
 
             $configSnapshot['items'][] = [
                 'type' => $item['type'],
+                'ref_key' => $refKey,
                 'name' => $entity->name,
                 'description' => $entity->description ?? '',
                 'snapshot' => $snapshot,
             ];
+
+            $entityMap[$item['type'].':'.$entity->id] = $refKey;
+        }
+
+        // Auto-detect cross-entity refs from workflow nodes
+        $configSnapshot['entity_refs'] = $this->detectEntityRefs($items, $entityMap);
+
+        if ($setupHints !== []) {
+            $configSnapshot['setup_hints'] = $setupHints;
+        }
+
+        if ($requiredCredentials !== []) {
+            $configSnapshot['required_credentials'] = $requiredCredentials;
         }
 
         return MarketplaceListing::create([
@@ -89,5 +110,83 @@ class PublishBundleAction
             'version' => '1.0.0',
             'configuration_snapshot' => $configSnapshot,
         ]);
+    }
+
+    /**
+     * Detect cross-entity references from workflow nodes and agent-skill attachments.
+     *
+     * @return array<array{workflow_ref?: string, node_label?: string, agent_ref?: string, skill_ref?: string}>
+     */
+    private function detectEntityRefs(array $items, array $entityMap): array
+    {
+        $refs = [];
+
+        // Build lookup maps: entity ID → ref_key
+        $agentIdToRef = [];
+        $skillIdToRef = [];
+        $workflowItems = [];
+
+        foreach ($items as $index => $item) {
+            $entity = match ($item['type']) {
+                'agent' => Agent::find($item['id']),
+                'skill' => Skill::find($item['id']),
+                'workflow' => Workflow::find($item['id']),
+                default => null,
+            };
+
+            if (! $entity) {
+                continue;
+            }
+
+            $refKey = $entityMap[$item['type'].':'.$entity->id] ?? null;
+            if (! $refKey) {
+                continue;
+            }
+
+            match ($item['type']) {
+                'agent' => $agentIdToRef[$entity->id] = $refKey,
+                'skill' => $skillIdToRef[$entity->id] = $refKey,
+                'workflow' => $workflowItems[] = ['entity' => $entity, 'ref_key' => $refKey],
+                default => null,
+            };
+        }
+
+        // Detect workflow node → agent/skill refs
+        foreach ($workflowItems as $wf) {
+            $nodes = $wf['entity']->nodes()->get();
+            foreach ($nodes as $node) {
+                if ($node->agent_id && isset($agentIdToRef[$node->agent_id])) {
+                    $refs[] = [
+                        'workflow_ref' => $wf['ref_key'],
+                        'node_label' => $node->label,
+                        'agent_ref' => $agentIdToRef[$node->agent_id],
+                    ];
+                }
+                if ($node->skill_id && isset($skillIdToRef[$node->skill_id])) {
+                    $refs[] = [
+                        'workflow_ref' => $wf['ref_key'],
+                        'node_label' => $node->label,
+                        'skill_ref' => $skillIdToRef[$node->skill_id],
+                    ];
+                }
+            }
+        }
+
+        // Detect agent → skill attachments (via pivot table)
+        foreach ($agentIdToRef as $agentId => $agentRef) {
+            $agent = Agent::find($agentId);
+            if ($agent && method_exists($agent, 'skills')) {
+                foreach ($agent->skills()->pluck('skills.id') as $skillId) {
+                    if (isset($skillIdToRef[$skillId])) {
+                        $refs[] = [
+                            'agent_ref' => $agentRef,
+                            'skill_ref' => $skillIdToRef[$skillId],
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $refs;
     }
 }

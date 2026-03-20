@@ -23,6 +23,7 @@ class MarketplaceInstallation extends Model
         'installed_workflow_id',
         'installed_email_theme_id',
         'installed_email_template_id',
+        'bundle_metadata',
         'total_credits_spent',
         'total_revenue_earned',
     ];
@@ -30,6 +31,7 @@ class MarketplaceInstallation extends Model
     protected function casts(): array
     {
         return [
+            'bundle_metadata' => 'array',
             'total_credits_spent' => 'decimal:6',
             'total_revenue_earned' => 'decimal:6',
         ];

@@ -66,6 +66,10 @@ class PlatformMarketplaceSeeder extends Seeder
         }
 
         $this->command?->info("Platform marketplace listings seeded: {$count}");
+
+        // Seed solution bundles
+        $bundleCount = $this->seedBundles($team, $user);
+        $this->command?->info("Platform solution bundles seeded: {$bundleCount}");
     }
 
     private function resolveListable(string $type, string $name, string $teamId): ?object
@@ -594,6 +598,190 @@ class PlatformMarketplaceSeeder extends Seeder
                 'description' => 'Monthly usage summary with experiments, success rate, active agents, and credit consumption. Uses {{month}}, {{total_experiments}}, {{credits_consumed}} variables.',
                 'category' => 'email',
                 'tags' => ['email', 'template', 'report', 'monthly', 'usage'],
+            ],
+        ];
+    }
+
+    private function seedBundles(Team $team, $user): int
+    {
+        $count = 0;
+
+        foreach ($this->bundleDefinitions() as $def) {
+            $items = [];
+            $entityRefs = [];
+            $skip = false;
+
+            foreach ($def['components'] as $component) {
+                $entity = $this->resolveListable($component['type'], $component['listable_name'], $team->id);
+                if (! $entity) {
+                    $this->command?->warn("Bundle component not found: {$component['listable_name']} (type={$component['type']})");
+                    $skip = true;
+                    break;
+                }
+
+                $items[] = [
+                    'type' => $component['type'],
+                    'ref_key' => $component['ref_key'],
+                    'name' => $entity->name,
+                    'description' => $entity->description ?? '',
+                    'snapshot' => $this->buildSnapshot($component['type'], $entity),
+                ];
+            }
+
+            if ($skip) {
+                continue;
+            }
+
+            $snapshot = [
+                'items' => $items,
+                'entity_refs' => $def['entity_refs'] ?? [],
+                'setup_hints' => $def['setup_hints'] ?? [],
+                'required_credentials' => $def['required_credentials'] ?? [],
+            ];
+
+            MarketplaceListing::withoutGlobalScopes()->updateOrCreate(
+                ['slug' => $def['slug']],
+                [
+                    'team_id' => $team->id,
+                    'published_by' => $user->id,
+                    'type' => 'bundle',
+                    'listable_id' => null,
+                    'name' => $def['name'],
+                    'description' => $def['description'],
+                    'readme' => $def['readme'] ?? null,
+                    'category' => $def['category'],
+                    'tags' => $def['tags'],
+                    'status' => MarketplaceStatus::Published,
+                    'visibility' => ListingVisibility::Public,
+                    'is_official' => true,
+                    'version' => '1.0.0',
+                    'configuration_snapshot' => $snapshot,
+                ],
+            );
+
+            $count++;
+        }
+
+        return $count;
+    }
+
+    private function bundleDefinitions(): array
+    {
+        return [
+            // ── Customer Support Crew ────────────────────────────────────
+            [
+                'slug' => 'fleetq-bundle-customer-support-crew',
+                'name' => 'Customer Support Crew',
+                'description' => 'Complete customer support solution: triage agent classifies and routes tickets, escalation analyst monitors SLA breaches, and a workflow automates the escalation pipeline.',
+                'readme' => "# Customer Support Crew\n\nA ready-to-use support automation bundle.\n\n## Included\n- **Support Triage Agent** — classifies, prioritizes, and drafts first responses\n- **Escalation Analyst** — monitors SLA breaches and prepares management briefings\n- **Support Escalation Workflow** — automates the triage → escalate pipeline\n\n## Setup\n1. Install the bundle\n2. Configure your ticket source (webhook or email connector)\n3. Customize agent system prompts for your product domain\n4. Activate the workflow",
+                'category' => 'customer-support',
+                'tags' => ['support', 'triage', 'escalation', 'sla', 'bundle', 'crew'],
+                'components' => [
+                    ['type' => 'agent', 'ref_key' => 'triage_agent', 'listable_name' => 'Support Triage Agent'],
+                    ['type' => 'agent', 'ref_key' => 'escalation_agent', 'listable_name' => 'Escalation Analyst'],
+                    ['type' => 'skill', 'ref_key' => 'ticket_classifier', 'listable_name' => 'Support Ticket Classifier'],
+                    ['type' => 'skill', 'ref_key' => 'sentiment_analyzer', 'listable_name' => 'Sentiment Analyzer'],
+                    ['type' => 'workflow', 'ref_key' => 'escalation_workflow', 'listable_name' => 'Support Escalation Workflow'],
+                ],
+                'entity_refs' => [
+                    ['agent_ref' => 'triage_agent', 'skill_ref' => 'ticket_classifier'],
+                    ['agent_ref' => 'triage_agent', 'skill_ref' => 'sentiment_analyzer'],
+                    ['agent_ref' => 'escalation_agent', 'skill_ref' => 'sentiment_analyzer'],
+                ],
+                'setup_hints' => [
+                    'Configure a webhook or email inbound connector to receive support tickets',
+                    'Customize the Support Triage Agent system prompt with your product knowledge',
+                    'Set SLA thresholds in the Escalation Analyst agent constraints',
+                    'Activate the workflow after assigning agents to workflow nodes',
+                ],
+                'required_credentials' => [
+                    ['type' => 'api_key', 'service' => 'helpdesk', 'purpose' => 'Ticket management (Zendesk, Freshdesk, or similar)'],
+                ],
+            ],
+
+            // ── Lead Generation Pipeline ─────────────────────────────────
+            [
+                'slug' => 'fleetq-bundle-lead-generation-pipeline',
+                'name' => 'Lead Generation Pipeline',
+                'description' => 'End-to-end lead processing: SDR agent qualifies and writes personalized outreach, with a workflow that automates the qualify → enrich → outreach pipeline.',
+                'readme' => "# Lead Generation Pipeline\n\nAutomate your inbound lead processing.\n\n## Included\n- **Sales Development Rep** — qualifies leads and crafts outreach\n- **Lead Qualifier** — scores leads against your ICP\n- **Cold Email Writer** — writes personalized cold emails\n- **Lead Enrichment Workflow** — automates the full pipeline\n\n## Setup\n1. Install the bundle\n2. Define your ICP criteria in the Lead Qualifier skill config\n3. Connect your CRM via webhook connector\n4. Customize email tone in the Cold Email Writer",
+                'category' => 'sales',
+                'tags' => ['sales', 'lead-generation', 'sdr', 'outreach', 'bundle', 'pipeline'],
+                'components' => [
+                    ['type' => 'agent', 'ref_key' => 'sdr_agent', 'listable_name' => 'Sales Development Rep'],
+                    ['type' => 'skill', 'ref_key' => 'lead_qualifier', 'listable_name' => 'Lead Qualifier'],
+                    ['type' => 'skill', 'ref_key' => 'cold_email_writer', 'listable_name' => 'Cold Email Writer'],
+                    ['type' => 'workflow', 'ref_key' => 'enrichment_workflow', 'listable_name' => 'Lead Enrichment Pipeline'],
+                ],
+                'entity_refs' => [
+                    ['agent_ref' => 'sdr_agent', 'skill_ref' => 'lead_qualifier'],
+                    ['agent_ref' => 'sdr_agent', 'skill_ref' => 'cold_email_writer'],
+                ],
+                'setup_hints' => [
+                    'Define your Ideal Customer Profile (ICP) in the Lead Qualifier skill configuration',
+                    'Customize the Cold Email Writer tone and templates for your industry',
+                    'Connect a CRM webhook to receive lead data',
+                    'Assign the SDR Agent to workflow nodes after installation',
+                ],
+                'required_credentials' => [
+                    ['type' => 'api_key', 'service' => 'crm', 'purpose' => 'CRM integration for lead sync (HubSpot, Salesforce, or similar)'],
+                ],
+            ],
+
+            // ── Content Publishing Suite ─────────────────────────────────
+            [
+                'slug' => 'fleetq-bundle-content-publishing-suite',
+                'name' => 'Content Publishing Suite',
+                'description' => 'Full content creation and distribution: strategy agent, social media adaptation, email subject optimization, and a publishing workflow with human approval.',
+                'readme' => "# Content Publishing Suite\n\nAutomate content creation and multi-channel distribution.\n\n## Included\n- **Content Strategy Agent** — plans and repurposes content\n- **Social Media Adapter** — adapts content for Twitter, LinkedIn, Instagram\n- **Email Subject Line Generator** — A/B testable subject lines\n- **Content Publishing Workflow** — research → draft → adapt → approve → publish\n\n## Setup\n1. Install the bundle\n2. Connect your social media accounts via outbound connectors\n3. Configure the human approval gate for your editorial team\n4. Customize tone and brand voice in the Content Strategy Agent",
+                'category' => 'content',
+                'tags' => ['content', 'publishing', 'social-media', 'email', 'bundle', 'suite'],
+                'components' => [
+                    ['type' => 'agent', 'ref_key' => 'content_agent', 'listable_name' => 'Content Strategy Agent'],
+                    ['type' => 'skill', 'ref_key' => 'social_adapter', 'listable_name' => 'Social Media Adapter'],
+                    ['type' => 'skill', 'ref_key' => 'subject_generator', 'listable_name' => 'Email Subject Line Generator'],
+                    ['type' => 'workflow', 'ref_key' => 'publishing_workflow', 'listable_name' => 'Content Publishing Pipeline'],
+                ],
+                'entity_refs' => [
+                    ['agent_ref' => 'content_agent', 'skill_ref' => 'social_adapter'],
+                    ['agent_ref' => 'content_agent', 'skill_ref' => 'subject_generator'],
+                ],
+                'setup_hints' => [
+                    'Configure outbound connectors for your social media channels',
+                    'Set up the human approval gate with your editorial team',
+                    'Customize brand voice and tone in the Content Strategy Agent',
+                    'Connect email marketing platform for subject line testing',
+                ],
+                'required_credentials' => [],
+            ],
+
+            // ── Incident Response Kit ────────────────────────────────────
+            [
+                'slug' => 'fleetq-bundle-incident-response-kit',
+                'name' => 'Incident Response Kit',
+                'description' => 'Automated incident detection and response: ops coordinator diagnoses issues, anomaly explainer provides root cause analysis, and a workflow manages the response pipeline.',
+                'readme' => "# Incident Response Kit\n\nAutomate your incident response from detection to documentation.\n\n## Included\n- **Operations Coordinator** — tracks SLA, summarizes meetings, assesses risk\n- **Anomaly Explainer** — explains metric anomalies with root cause analysis\n- **Risk Assessor** — evaluates risk with likelihood/impact scoring\n- **Incident Response Workflow** — detect → diagnose → approve → respond → document\n\n## Setup\n1. Install the bundle\n2. Connect monitoring alerts via webhook connector\n3. Configure risk thresholds in the Risk Assessor skill\n4. Set up Slack/email notifications for critical incidents",
+                'category' => 'devops',
+                'tags' => ['incident-response', 'devops', 'monitoring', 'anomaly', 'bundle', 'kit'],
+                'components' => [
+                    ['type' => 'agent', 'ref_key' => 'ops_agent', 'listable_name' => 'Operations Coordinator'],
+                    ['type' => 'skill', 'ref_key' => 'anomaly_skill', 'listable_name' => 'Anomaly Explainer'],
+                    ['type' => 'skill', 'ref_key' => 'risk_skill', 'listable_name' => 'Risk Assessor'],
+                    ['type' => 'workflow', 'ref_key' => 'incident_workflow', 'listable_name' => 'Incident Response Workflow'],
+                ],
+                'entity_refs' => [
+                    ['agent_ref' => 'ops_agent', 'skill_ref' => 'anomaly_skill'],
+                    ['agent_ref' => 'ops_agent', 'skill_ref' => 'risk_skill'],
+                ],
+                'setup_hints' => [
+                    'Connect monitoring alerts (PagerDuty, Datadog, etc.) via webhook connector',
+                    'Configure risk thresholds in the Risk Assessor skill',
+                    'Set up Slack or email outbound connectors for incident notifications',
+                    'Assign the Operations Coordinator to workflow nodes after installation',
+                ],
+                'required_credentials' => [
+                    ['type' => 'api_key', 'service' => 'monitoring', 'purpose' => 'Monitoring platform integration (PagerDuty, Datadog, or similar)'],
+                ],
             ],
         ];
     }

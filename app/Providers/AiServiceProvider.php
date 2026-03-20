@@ -10,6 +10,7 @@ use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Infrastructure\AI\Gateways\LocalBridgeGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
+use App\Infrastructure\AI\Middleware\ContextCompaction;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
@@ -50,6 +51,7 @@ class AiServiceProvider extends ServiceProvider
                 $app->make(BudgetEnforcement::class),
                 $app->make(IdempotencyCheck::class),
                 $app->make(SemanticCache::class),
+                $app->make(ContextCompaction::class),
                 $app->make(SchemaValidation::class),
                 $app->make(UsageTracking::class),
             ]);

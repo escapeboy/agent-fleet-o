@@ -140,8 +140,9 @@
              @mouseup="onMouseUp($event)"
              @wheel.prevent="onWheel($event)">
 
-            <svg class="absolute inset-0 h-full w-full" :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + '); transform-origin: 0 0;'">
-                {{-- Grid pattern --}}
+            <svg class="absolute inset-0 h-full w-full" x-ref="canvasSvg"
+                 :viewBox="svgViewBox()">
+                {{-- Grid pattern (scales with viewBox automatically) --}}
                 <defs>
                     <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
                         <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>
@@ -733,6 +734,19 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
         this.panX = cx - (cx - this.panX) * scale;
         this.panY = cy - (cy - this.panY) * scale;
         this.zoom = newZoom;
+    },
+
+    // SVG viewBox — maps CSS transform coordinates to SVG viewport
+    // so the SVG always fills its container (no clipping on zoom out)
+    svgViewBox() {
+        const svg = this.$refs.canvasSvg;
+        const w = svg ? svg.clientWidth : 1200;
+        const h = svg ? svg.clientHeight : 800;
+        const vx = -this.panX / this.zoom;
+        const vy = -this.panY / this.zoom;
+        const vw = w / this.zoom;
+        const vh = h / this.zoom;
+        return `${vx} ${vy} ${vw} ${vh}`;
     },
 
     onMouseMove(event) {

@@ -38,6 +38,11 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::prefix('api')
                 ->middleware('api')
                 ->group(base_path('routes/chatbot.php'));
+
+            Route::prefix('v1')
+                ->middleware('api')
+                ->name('v1.')
+                ->group(base_path('routes/openai.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -54,12 +59,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Force JSON responses for all API routes
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
-            return $request->is('api/*') || $request->expectsJson();
+            return $request->is('api/*') || $request->is('v1/*') || $request->expectsJson();
         });
 
         // Consistent error envelope for API responses
         $exceptions->render(function (Throwable $e, Request $request) {
-            if (! $request->is('api/*') && ! $request->expectsJson()) {
+            if (! $request->is('api/*') && ! $request->is('v1/*') && ! $request->expectsJson()) {
                 return null;
             }
 

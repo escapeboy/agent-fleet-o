@@ -42,8 +42,10 @@ class InstallFromMarketplaceAction
             $installedEmailThemeId = null;
             $installedEmailTemplateId = null;
 
+            $bundleResult = null;
+
             if ($listing->type === 'bundle') {
-                $this->installBundle($listing, is_array($snapshot) ? $snapshot : [], $teamId, $userId);
+                $bundleResult = $this->installBundle($listing, is_array($snapshot) ? $snapshot : [], $teamId, $userId);
             } elseif ($listing->type === 'skill') {
                 $skill = Skill::create([
                     'team_id' => $teamId,
@@ -134,6 +136,7 @@ class InstallFromMarketplaceAction
                 'installed_workflow_id' => $installedWorkflowId,
                 'installed_email_theme_id' => $installedEmailThemeId,
                 'installed_email_template_id' => $installedEmailTemplateId,
+                'bundle_metadata' => $bundleResult,
             ]);
         });
     }
@@ -260,14 +263,25 @@ class InstallFromMarketplaceAction
         return $workflow;
     }
 
+    /**
+     * Install a bundle with cross-entity linking.
+     *
+     * Phase 1: Install all items, tracking ref_key → installed entity.
+     * Phase 2: Wire up entity_refs (workflow nodes → agents/skills, agent → skill attachments).
+     *
+     * @return array{installed_ids: array<string, string>, setup_hints: array, required_credentials: array}
+     */
     private function installBundle(
         MarketplaceListing $listing,
         array $snapshot,
         string $teamId,
         string $userId,
-    ): void {
+    ): array {
+        $refMap = []; // ref_key → ['type' => ..., 'id' => ..., 'model' => ...]
+
+        // Phase 1: Install all items
         foreach ($snapshot['items'] ?? [] as $item) {
-            $this->executeFromManifest(
+            $model = $this->executeFromManifest(
                 type: $item['type'],
                 configuration: $item['snapshot'],
                 name: $item['name'],
@@ -275,6 +289,68 @@ class InstallFromMarketplaceAction
                 teamId: $teamId,
                 userId: $userId,
             );
+
+            $refKey = $item['ref_key'] ?? null;
+            if ($refKey) {
+                $refMap[$refKey] = [
+                    'type' => $item['type'],
+                    'id' => $model->id,
+                    'model' => $model,
+                ];
+            }
+        }
+
+        // Phase 2: Wire up cross-entity refs
+        foreach ($snapshot['entity_refs'] ?? [] as $ref) {
+            $this->applyEntityRef($ref, $refMap);
+        }
+
+        return [
+            'installed_ids' => collect($refMap)->mapWithKeys(fn ($v, $k) => [$k => $v['id']])->toArray(),
+            'setup_hints' => $snapshot['setup_hints'] ?? [],
+            'required_credentials' => $snapshot['required_credentials'] ?? [],
+        ];
+    }
+
+    /**
+     * Apply a single cross-entity reference.
+     */
+    private function applyEntityRef(array $ref, array $refMap): void
+    {
+        // Workflow node → agent ref
+        if (isset($ref['workflow_ref'], $ref['node_label'], $ref['agent_ref'])) {
+            $workflowEntry = $refMap[$ref['workflow_ref']] ?? null;
+            $agentEntry = $refMap[$ref['agent_ref']] ?? null;
+
+            if ($workflowEntry && $agentEntry && $workflowEntry['type'] === 'workflow') {
+                WorkflowNode::where('workflow_id', $workflowEntry['id'])
+                    ->where('label', $ref['node_label'])
+                    ->update(['agent_id' => $agentEntry['id']]);
+            }
+        }
+
+        // Workflow node → skill ref
+        if (isset($ref['workflow_ref'], $ref['node_label'], $ref['skill_ref']) && ! isset($ref['agent_ref'])) {
+            $workflowEntry = $refMap[$ref['workflow_ref']] ?? null;
+            $skillEntry = $refMap[$ref['skill_ref']] ?? null;
+
+            if ($workflowEntry && $skillEntry && $workflowEntry['type'] === 'workflow') {
+                WorkflowNode::where('workflow_id', $workflowEntry['id'])
+                    ->where('label', $ref['node_label'])
+                    ->update(['skill_id' => $skillEntry['id']]);
+            }
+        }
+
+        // Agent → skill attachment (via pivot)
+        if (isset($ref['agent_ref'], $ref['skill_ref']) && ! isset($ref['workflow_ref'])) {
+            $agentEntry = $refMap[$ref['agent_ref']] ?? null;
+            $skillEntry = $refMap[$ref['skill_ref']] ?? null;
+
+            if ($agentEntry && $skillEntry && $agentEntry['type'] === 'agent') {
+                /** @var Agent $agent */
+                $agent = $agentEntry['model'];
+                $agent->skills()->syncWithoutDetaching([$skillEntry['id']]);
+            }
         }
     }
 
