@@ -11,6 +11,7 @@ use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Prism\Prism\Facades\Tool as PrismTool;
@@ -46,7 +47,13 @@ class ToolTranslator
      */
     private function translateMcpTool(Tool $tool, array $overrides): array
     {
-        $definitions = $tool->tool_definitions ?? [];
+        // Cache MCP tool definitions using content hash (not updated_at) to avoid
+        // false invalidation when only health_status or other non-definition fields change.
+        $rawDefs = $tool->tool_definitions ?? [];
+        $contentHash = md5(json_encode($rawDefs));
+        $cacheKey = "mcp_tools:{$tool->id}:{$contentHash}";
+
+        $definitions = Cache::remember($cacheKey, 3600, fn () => $rawDefs);
         $enabledFunctions = $overrides['enabled_functions'] ?? null;
         $disabledFunctions = $overrides['disabled_functions'] ?? [];
         $tools = [];

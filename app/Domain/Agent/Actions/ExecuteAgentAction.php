@@ -147,7 +147,14 @@ class ExecuteAgentAction
                 app(BashSidecarClient::class)->createSession($sidecarSessionId);
             }
 
-            $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId, $currentDepth, $userId);
+            // Build a semantic query from the user input for tool pre-filtering.
+            // This allows ResolveAgentToolsAction to filter tools by relevance when the
+            // agent has many tools attached (above the semantic filter threshold).
+            $semanticQuery = is_string($input) ? $input : json_encode(
+                array_filter($input, fn ($k) => ! str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY),
+            );
+
+            $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId, $currentDepth, $userId, $semanticQuery);
 
             if (! empty($tools)) {
                 try {

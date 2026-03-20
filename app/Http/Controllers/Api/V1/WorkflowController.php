@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\DeleteWorkflowAction;
 use App\Domain\Workflow\Actions\EstimateWorkflowCostAction;
+use App\Domain\Workflow\Actions\ExportWorkflowAction;
+use App\Domain\Workflow\Actions\ImportWorkflowAction;
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Models\Workflow;
@@ -13,6 +15,7 @@ use App\Http\Resources\Api\V1\WorkflowResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -203,5 +206,61 @@ class WorkflowController extends Controller
         return response()->json([
             'estimated_cost_credits' => $credits,
         ]);
+    }
+
+    /**
+     * Export a workflow to JSON or YAML format.
+     *
+     * @response 200 {"format_version": "2.0", "workflow": {}, "nodes": [], "edges": [], "references": {}}
+     */
+    public function export(Request $request, Workflow $workflow, ExportWorkflowAction $action): JsonResponse|Response
+    {
+        $format = $request->query('format', 'json');
+        if (! in_array($format, ['json', 'yaml'])) {
+            return response()->json(['message' => 'Format must be json or yaml.'], 422);
+        }
+
+        $result = $action->execute($workflow, $format);
+
+        if ($format === 'yaml') {
+            return response($result, 200, ['Content-Type' => 'text/yaml']);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Import a workflow from a JSON or YAML file.
+     *
+     * @response 201 {"workflow_id": "...", "unresolved_references": [], "checksum_valid": true}
+     */
+    public function import(Request $request, ImportWorkflowAction $action): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:1024'],
+        ]);
+
+        $content = file_get_contents($request->file('file')->getRealPath());
+
+        try {
+            $result = $action->execute(
+                data: $content,
+                teamId: $request->user()->current_team_id,
+                userId: $request->user()->id,
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        $workflow = $result['workflow'];
+
+        return response()->json([
+            'workflow_id' => $workflow->id,
+            'workflow_name' => $workflow->name,
+            'status' => 'draft',
+            'checksum_valid' => $result['checksum_valid'],
+            'unresolved_references' => $result['unresolved_references'],
+            'data' => new WorkflowResource($workflow->load(['nodes', 'edges'])),
+        ], 201);
     }
 }

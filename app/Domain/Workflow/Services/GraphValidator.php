@@ -15,9 +15,17 @@ class GraphValidator
 
     private array $errors = [];
 
+    private array $warnings = [];
+
+    /**
+     * Validate the workflow graph.
+     *
+     * @return array<array{type: string, message: string, node_id?: string}>
+     */
     public function validate(Workflow $workflow): array
     {
         $this->errors = [];
+        $this->warnings = [];
         $this->nodes = $workflow->nodes()->get();
         $this->edges = $workflow->edges()->get();
 
@@ -37,8 +45,19 @@ class GraphValidator
         $this->validateMergeNodes();
         $this->validateActivationModes();
         $this->validateSubWorkflowNodes();
+        $this->validateDataTypeCompatibility();
 
         return $this->errors;
+    }
+
+    /**
+     * Return any warnings collected during the last validate() call.
+     *
+     * @return array<array{type: string, message: string, edge_id?: string, source_node_id?: string, target_node_id?: string}>
+     */
+    public function getWarnings(): array
+    {
+        return $this->warnings;
     }
 
     public function isValid(Workflow $workflow): bool
@@ -553,5 +572,177 @@ class GraphValidator
                 }
             }
         }
+    }
+
+    /**
+     * Validate data type compatibility across all edges.
+     *
+     * Mismatches are collected as warnings (advisory only, do not block activation).
+     * DoWhile back-edges (edges that target a DoWhile node and create a cycle) are skipped.
+     * Custom output_schema / input_schema in node config override default port schemas.
+     */
+    private function validateDataTypeCompatibility(): void
+    {
+        // Build lookup maps
+        $nodeMap = [];
+        foreach ($this->nodes as $node) {
+            $nodeMap[$node->id] = [
+                'type' => $node->type,
+                'label' => $node->label,
+                'config' => is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []),
+            ];
+        }
+
+        $edgesByTarget = [];
+        foreach ($this->edges as $edge) {
+            $edgesByTarget[$edge->target_node_id][] = $edge;
+        }
+
+        // Detect DoWhile back-edge targets: a DoWhile node that is reached by one of its own descendants
+        $doWhileBackEdgeKeys = $this->detectDoWhileBackEdges($nodeMap);
+
+        foreach ($this->edges as $edge) {
+            $edgeKey = $edge->source_node_id.'->'.$edge->target_node_id;
+
+            // Skip DoWhile back-edges
+            if (isset($doWhileBackEdgeKeys[$edgeKey])) {
+                continue;
+            }
+
+            $sourceNode = $nodeMap[$edge->source_node_id] ?? null;
+            $targetNode = $nodeMap[$edge->target_node_id] ?? null;
+
+            if (! $sourceNode || ! $targetNode) {
+                continue;
+            }
+
+            $outputType = $this->resolveOutputType($edge->source_node_id, $sourceNode, $nodeMap, $edgesByTarget);
+            $inputType = $this->resolveInputType($targetNode);
+
+            if (! NodeTypeCompatibility::isCompatible($outputType, $inputType)) {
+                $this->warnings[] = [
+                    'type' => 'data_type_incompatible',
+                    'message' => "Type mismatch: node '{$sourceNode['label']}' outputs '{$outputType}' but node '{$targetNode['label']}' expects '{$inputType}'.",
+                    'edge_id' => $edge->id,
+                    'source_node_id' => $edge->source_node_id,
+                    'target_node_id' => $edge->target_node_id,
+                ];
+            }
+        }
+    }
+
+    /**
+     * Resolve the output type for a source node, considering custom output_schema overrides.
+     */
+    private function resolveOutputType(string $nodeId, array $nodeData, array $nodeMap, array $edgesByTarget): string
+    {
+        $config = $nodeData['config'];
+
+        // Custom output_schema override
+        if (! empty($config['output_schema']) && is_array($config['output_schema'])) {
+            $customType = $config['output_schema']['type'] ?? null;
+            if (is_string($customType) && $customType !== '') {
+                return $customType;
+            }
+            // Invalid custom schema — emit warning, fall back to default
+            $this->warnings[] = [
+                'type' => 'invalid_custom_output_schema',
+                'message' => "Node '{$nodeData['label']}' has an invalid output_schema in config; using default port type.",
+                'source_node_id' => $nodeId,
+            ];
+        }
+
+        $schema = $nodeData['type']->portSchema();
+        $outputType = $schema['outputs'][0]['type'] ?? 'any';
+
+        if ($outputType === 'passthrough') {
+            return NodeTypeCompatibility::resolvePassthroughType($nodeId, $nodeMap, $edgesByTarget);
+        }
+
+        return $outputType;
+    }
+
+    /**
+     * Resolve the input type for a target node, considering custom input_schema overrides.
+     */
+    private function resolveInputType(array $nodeData): string
+    {
+        $config = $nodeData['config'];
+
+        // Custom input_schema override
+        if (! empty($config['input_schema']) && is_array($config['input_schema'])) {
+            $customType = $config['input_schema']['type'] ?? null;
+            if (is_string($customType) && $customType !== '') {
+                return $customType;
+            }
+            // Invalid custom schema — emit warning, fall back to default
+            $this->warnings[] = [
+                'type' => 'invalid_custom_input_schema',
+                'message' => "Node '{$nodeData['label']}' has an invalid input_schema in config; using default port type.",
+            ];
+        }
+
+        $schema = $nodeData['type']->portSchema();
+
+        return $schema['inputs'][0]['type'] ?? 'any';
+    }
+
+    /**
+     * Detect DoWhile back-edges: edges whose target is a DoWhile node AND that create a cycle
+     * (i.e., the source is reachable from the DoWhile node via forward traversal).
+     *
+     * @return array<string, true> Keys are "source_id->target_id" strings.
+     */
+    private function detectDoWhileBackEdges(array $nodeMap): array
+    {
+        $backEdges = [];
+
+        $doWhileNodes = array_filter($nodeMap, fn (array $n) => $n['type'] === WorkflowNodeType::DoWhile);
+
+        if (empty($doWhileNodes)) {
+            return [];
+        }
+
+        // Build adjacency list for forward traversal
+        $adjacency = [];
+        foreach ($this->edges as $edge) {
+            $adjacency[$edge->source_node_id][] = $edge->target_node_id;
+        }
+
+        foreach ($doWhileNodes as $doWhileId => $_) {
+            // Find all nodes reachable from this DoWhile node
+            $reachable = $this->collectReachable($doWhileId, $adjacency);
+
+            // Any edge that goes FROM a reachable node BACK TO this DoWhile node is a back-edge
+            foreach ($this->edges as $edge) {
+                if ($edge->target_node_id === $doWhileId && $reachable->contains($edge->source_node_id)) {
+                    $backEdges[$edge->source_node_id.'->'.$edge->target_node_id] = true;
+                }
+            }
+        }
+
+        return $backEdges;
+    }
+
+    /**
+     * Collect all node IDs reachable from a given node via BFS.
+     */
+    private function collectReachable(string $fromNodeId, array $adjacency): Collection
+    {
+        $visited = collect();
+        $queue = [$fromNodeId];
+
+        while (! empty($queue)) {
+            $currentId = array_shift($queue);
+
+            foreach ($adjacency[$currentId] ?? [] as $neighbor) {
+                if (! $visited->contains($neighbor)) {
+                    $visited->push($neighbor);
+                    $queue[] = $neighbor;
+                }
+            }
+        }
+
+        return $visited;
     }
 }

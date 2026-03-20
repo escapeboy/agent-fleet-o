@@ -15,15 +15,17 @@ class ValidateWorkflowGraphAction
     /**
      * Validate the workflow graph and optionally activate it if valid.
      *
-     * @return array{valid: bool, errors: array, activated: bool}
+     * @return array{valid: bool, errors: array, warnings: array, activated: bool}
      */
     public function execute(Workflow $workflow, bool $activateIfValid = false): array
     {
         $errors = $this->validator->validate($workflow);
+        $warnings = $this->validator->getWarnings();
 
         $result = [
             'valid' => empty($errors),
             'errors' => $errors,
+            'warnings' => $warnings,
             'activated' => false,
         ];
 

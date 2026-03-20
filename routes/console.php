@@ -13,6 +13,7 @@ Artisan::command('inspire', function () {
 Schedule::command('approvals:expire-stale')->hourly();
 // Temporarily disabled to avoid rate-limiting Google Gemini during experiment runs
 // Schedule::command('agents:health-check')->everyFiveMinutes();
+Schedule::command('tools:health-check')->everyFiveMinutes()->withoutOverlapping(4);
 Schedule::command('metrics:aggregate --period=hourly')->hourly();
 Schedule::command('metrics:aggregate --period=daily')->dailyAt('01:00');
 Schedule::command('connectors:poll')->everyFifteenMinutes();

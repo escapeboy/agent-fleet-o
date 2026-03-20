@@ -7,6 +7,7 @@ enum ToolType: string
     case McpStdio = 'mcp_stdio';
     case McpHttp = 'mcp_http';
     case BuiltIn = 'built_in';
+    case Workflow = 'workflow';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum ToolType: string
             self::McpStdio => 'MCP Server (stdio)',
             self::McpHttp => 'MCP Server (HTTP)',
             self::BuiltIn => 'Built-in Host Tool',
+            self::Workflow => 'Workflow',
         };
     }
 
@@ -23,6 +25,7 @@ enum ToolType: string
             self::McpStdio => 'bg-indigo-100 text-indigo-800',
             self::McpHttp => 'bg-blue-100 text-blue-800',
             self::BuiltIn => 'bg-amber-100 text-amber-800',
+            self::Workflow => 'bg-emerald-100 text-emerald-800',
         };
     }
 

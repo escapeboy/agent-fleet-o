@@ -96,6 +96,8 @@ use App\Mcp\Tools\Email\EmailThemeDeleteTool;
 use App\Mcp\Tools\Email\EmailThemeGetTool;
 use App\Mcp\Tools\Email\EmailThemeListTool;
 use App\Mcp\Tools\Email\EmailThemeUpdateTool;
+use App\Mcp\Tools\Evaluation\EvaluationDatasetManageTool;
+use App\Mcp\Tools\Evaluation\EvaluationRunTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionApproveTool;
@@ -235,6 +237,8 @@ use App\Mcp\Tools\Tool\ToolCreateTool;
 use App\Mcp\Tools\Tool\ToolDeactivateTool;
 use App\Mcp\Tools\Tool\ToolDeleteTool;
 use App\Mcp\Tools\Tool\ToolDiscoverMcpTool;
+use App\Mcp\Tools\Tool\ToolEmbeddingManageTool;
+use App\Mcp\Tools\Tool\ToolEmbeddingSearchTool;
 use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
@@ -257,8 +261,10 @@ use App\Mcp\Tools\Workflow\WorkflowEdgeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowEdgeDeleteTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
 use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
+use App\Mcp\Tools\Workflow\WorkflowExportTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
+use App\Mcp\Tools\Workflow\WorkflowImportTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeDeleteTool;
@@ -373,6 +379,8 @@ class AgentFleetServer extends Server
         ToolProbeRemoteMcpTool::class,
         ToolSshFingerprintsTool::class,
         ToolBashPolicyTool::class,
+        ToolEmbeddingManageTool::class,
+        ToolEmbeddingSearchTool::class,
 
         // Credential (8)
         CredentialListTool::class,
@@ -403,6 +411,8 @@ class AgentFleetServer extends Server
         WorkflowNodeDeleteTool::class,
         WorkflowEdgeAddTool::class,
         WorkflowEdgeDeleteTool::class,
+        WorkflowExportTool::class,
+        WorkflowImportTool::class,
 
         // Project (14)
         ProjectListTool::class,
@@ -453,6 +463,10 @@ class AgentFleetServer extends Server
         BudgetSummaryTool::class,
         BudgetCheckTool::class,
         BudgetForecastTool::class,
+
+        // Evaluation (2)
+        EvaluationDatasetManageTool::class,
+        EvaluationRunTool::class,
 
         // Cache (2)
         SemanticCacheStatsTool::class,

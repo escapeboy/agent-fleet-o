@@ -77,6 +77,67 @@ enum WorkflowNodeType: string
     /**
      * Whether this node type is a control-flow node (no agent execution).
      */
+    /**
+     * Return the typed port schema (inputs and outputs) for this node type.
+     *
+     * @return array{inputs: array<array{name: string, type: string}>, outputs: array<array{name: string, type: string}>}
+     */
+    public function portSchema(): array
+    {
+        return match ($this) {
+            self::Start => ['inputs' => [], 'outputs' => [['name' => 'trigger_data', 'type' => 'any']]],
+            self::End => ['inputs' => [['name' => 'result', 'type' => 'any']], 'outputs' => []],
+            self::Agent => [
+                'inputs' => [['name' => 'context', 'type' => 'text|structured']],
+                'outputs' => [['name' => 'result', 'type' => 'text'], ['name' => 'artifacts', 'type' => 'artifact[]']],
+            ],
+            self::Conditional => [
+                'inputs' => [['name' => 'value', 'type' => 'any']],
+                'outputs' => [['name' => 'pass', 'type' => 'passthrough']],
+            ],
+            self::Crew => [
+                'inputs' => [['name' => 'context', 'type' => 'text|structured']],
+                'outputs' => [['name' => 'result', 'type' => 'text'], ['name' => 'artifacts', 'type' => 'artifact[]']],
+            ],
+            self::HumanTask => [
+                'inputs' => [['name' => 'context', 'type' => 'text|structured']],
+                'outputs' => [['name' => 'response', 'type' => 'structured']],
+            ],
+            self::Switch => [
+                'inputs' => [['name' => 'expression', 'type' => 'any']],
+                'outputs' => [['name' => 'case', 'type' => 'passthrough']],
+            ],
+            self::DynamicFork => [
+                'inputs' => [['name' => 'items', 'type' => 'array']],
+                'outputs' => [['name' => 'item_result', 'type' => 'text']],
+            ],
+            self::DoWhile => [
+                'inputs' => [['name' => 'iteration_data', 'type' => 'any']],
+                'outputs' => [['name' => 'result', 'type' => 'passthrough']],
+            ],
+            self::TimeGate => [
+                'inputs' => [['name' => 'data', 'type' => 'any']],
+                'outputs' => [['name' => 'data', 'type' => 'passthrough']],
+            ],
+            self::Merge => [
+                'inputs' => [['name' => 'data', 'type' => 'any']],
+                'outputs' => [['name' => 'merged', 'type' => 'structured']],
+            ],
+            self::SubWorkflow => [
+                'inputs' => [['name' => 'context', 'type' => 'text|structured']],
+                'outputs' => [['name' => 'result', 'type' => 'text|structured']],
+            ],
+            self::BorunaStep => [
+                'inputs' => [['name' => 'context', 'type' => 'text|structured']],
+                'outputs' => [['name' => 'result', 'type' => 'structured']],
+            ],
+            default => [
+                'inputs' => [['name' => 'data', 'type' => 'any']],
+                'outputs' => [['name' => 'data', 'type' => 'any']],
+            ],
+        };
+    }
+
     public function isControlFlow(): bool
     {
         return in_array($this, [

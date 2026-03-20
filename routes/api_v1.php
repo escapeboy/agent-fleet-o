@@ -144,6 +144,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/workflows/{workflow}/activate', [WorkflowController::class, 'activate']);
     Route::post('/workflows/{workflow}/duplicate', [WorkflowController::class, 'duplicate']);
     Route::get('/workflows/{workflow}/cost', [WorkflowController::class, 'estimateCost']);
+    Route::get('/workflows/{workflow}/export', [WorkflowController::class, 'export']);
+    Route::post('/workflows/import', [WorkflowController::class, 'import']);
 
     // Crews
     Route::apiResource('crews', CrewController::class);

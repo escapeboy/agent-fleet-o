@@ -15,7 +15,12 @@ use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Services\SemanticToolSelector;
 use App\Domain\Tool\Services\ToolTranslator;
+use App\Domain\Workflow\Enums\WorkflowNodeType;
+use App\Domain\Workflow\Enums\WorkflowStatus;
+use App\Domain\Workflow\Models\Workflow;
+use App\Domain\Workflow\Services\SynchronousWorkflowExecutor;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Livewire\Settings\SecurityPolicyPanel;
 use Illuminate\Support\Facades\Log;
@@ -27,6 +32,7 @@ class ResolveAgentToolsAction
     public function __construct(
         private readonly ToolTranslator $translator,
         private readonly GitRepositoryToolBuilder $gitToolBuilder,
+        private readonly SemanticToolSelector $semanticSelector,
     ) {}
 
     /**
@@ -35,7 +41,7 @@ class ResolveAgentToolsAction
      * @param  int  $agentToolDepth  Current nesting depth for agent-as-tool calls
      * @return array<\Prism\Prism\Tool>
      */
-    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null, int $agentToolDepth = 0, ?string $userId = null): array
+    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null, int $agentToolDepth = 0, ?string $userId = null, ?string $semanticQuery = null): array
     {
         $workspace = ($executionId && $agent->team_id)
             ? new SandboxedWorkspace($executionId, $agent->id, $agent->team_id)
@@ -141,7 +147,82 @@ class ResolveAgentToolsAction
         // Inject agent-as-tool wrappers for callable agents (if within depth limit)
         $prismTools = array_merge($prismTools, $this->buildAgentAsTools($agent, $agentToolDepth, $userId));
 
+        // Inject workflow-as-tool wrappers for callable workflows (if within depth limit)
+        $prismTools = array_merge($prismTools, $this->buildWorkflowAsTools($agent, $agentToolDepth, $userId));
+
+        // Semantic pre-filtering: if tool count exceeds threshold, filter by relevance to query
+        $prismTools = $this->applySemanticFilter($prismTools, $agent, $semanticQuery);
+
         return $prismTools;
+    }
+
+    /**
+     * Apply semantic pre-filtering when tool count exceeds threshold.
+     *
+     * Uses pgvector cosine similarity to select the most relevant tools
+     * for the given query. Falls back to returning all tools when:
+     * - No query provided
+     * - Tool count below threshold
+     * - pgvector unavailable (SQLite tests)
+     * - Embedding search fails
+     * - Coverage below 80% of threshold (too few matches)
+     *
+     * @param  array<\Prism\Prism\Tool>  $prismTools
+     * @return array<\Prism\Prism\Tool>
+     */
+    private function applySemanticFilter(array $prismTools, Agent $agent, ?string $semanticQuery): array
+    {
+        $threshold = SemanticToolSelector::threshold();
+
+        if ($semanticQuery === null || count($prismTools) <= $threshold) {
+            return $prismTools;
+        }
+
+        // Collect tool model IDs that contributed to this agent's tools
+        $toolIds = $agent->tools()
+            ->pluck('tools.id')
+            ->toArray();
+
+        if (empty($toolIds)) {
+            return $prismTools;
+        }
+
+        $limit = (int) config('tools.semantic_filter_limit', 12);
+        $similarityThreshold = (float) config('tools.semantic_filter_similarity', 0.75);
+
+        $matchingNames = $this->semanticSelector->searchToolNames(
+            $semanticQuery,
+            $agent->team_id,
+            $toolIds,
+            $limit,
+            $similarityThreshold,
+        );
+
+        // If too few matches, return all tools (fallback)
+        $minCoverage = (int) ceil($threshold * 0.8);
+        if ($matchingNames->isEmpty() || $matchingNames->count() < $minCoverage) {
+            Log::debug('SemanticToolSelector: insufficient matches, returning all tools', [
+                'agent_id' => $agent->id,
+                'total_tools' => count($prismTools),
+                'matches' => $matchingNames->count(),
+                'min_coverage' => $minCoverage,
+            ]);
+
+            return $prismTools;
+        }
+
+        $nameSet = $matchingNames->flip();
+
+        $filtered = array_filter($prismTools, fn ($tool) => isset($nameSet[$tool->name()]));
+
+        Log::debug('SemanticToolSelector: filtered tools', [
+            'agent_id' => $agent->id,
+            'total_tools' => count($prismTools),
+            'filtered_to' => count($filtered),
+            'query_preview' => substr($semanticQuery, 0, 100),
+        ]);
+
+        return array_values($filtered);
     }
 
     /**
@@ -265,6 +346,100 @@ class ResolveAgentToolsAction
                         ]);
 
                         return json_encode(['error' => 'Agent execution failed']);
+                    }
+                });
+        }
+
+        return $tools;
+    }
+
+    /**
+     * Build PrismPHP Tool wrappers for workflows configured as callable tools.
+     * Each callable workflow becomes an LLM tool that delegates to SynchronousWorkflowExecutor.
+     *
+     * @return array<\Prism\Prism\Tool>
+     */
+    private function buildWorkflowAsTools(Agent $parentAgent, int $currentDepth, ?string $userId = null): array
+    {
+        $callableIds = $parentAgent->config['callable_workflow_ids'] ?? [];
+        if (empty($callableIds)) {
+            return [];
+        }
+
+        // Don't inject workflow tools if we'd exceed the depth limit on the next call
+        $maxDepth = min(
+            (int) config('workflows.max_recursion_depth', 5),
+            (int) config('agent.max_agent_tool_depth', 3),
+        );
+        if ($currentDepth >= $maxDepth) {
+            return [];
+        }
+
+        $callableWorkflows = Workflow::where('team_id', $parentAgent->team_id)
+            ->whereIn('id', $callableIds)
+            ->where('status', WorkflowStatus::Active)
+            ->get();
+
+        $tools = [];
+        foreach ($callableWorkflows as $workflow) {
+            // Reject workflows with human_task nodes (async-only)
+            $hasHumanTask = $workflow->nodes()
+                ->where('type', WorkflowNodeType::HumanTask->value)
+                ->exists();
+
+            if ($hasHumanTask) {
+                Log::debug('Skipping workflow-as-tool: contains human_task nodes', [
+                    'workflow_id' => $workflow->id,
+                    'workflow_name' => $workflow->name,
+                ]);
+
+                continue;
+            }
+
+            $workflowId = $workflow->id;
+            $workflowName = $workflow->name;
+            $teamId = $parentAgent->team_id;
+            $nextDepth = $currentDepth + 1;
+            $callerUserId = $userId ?? 'system';
+
+            $description = "Execute workflow \"{$workflowName}\"";
+            if ($workflow->description) {
+                $description .= '. '.$workflow->description;
+            }
+
+            $toolName = 'run_workflow_'.preg_replace('/[^a-z0-9_]/', '_', strtolower($workflowName));
+            $toolName = substr($toolName, 0, 50).'_'.substr($workflowId, 0, 8);
+
+            $tools[] = PrismTool::as($toolName)
+                ->for($description)
+                ->withParameter(new StringSchema('goal', 'The goal or task for this workflow to accomplish'))
+                ->withParameter(new StringSchema('context', 'Additional context for the workflow (optional)'))
+                ->using(function (string $goal, string $context = '') use ($workflowId, $teamId, $nextDepth, $callerUserId): string {
+                    try {
+                        $workflow = Workflow::withoutGlobalScopes()->find($workflowId);
+                        if (! $workflow || $workflow->team_id !== $teamId || $workflow->status !== WorkflowStatus::Active) {
+                            return json_encode(['error' => 'Workflow is not available']);
+                        }
+
+                        $executor = app(SynchronousWorkflowExecutor::class);
+
+                        return $executor->execute(
+                            workflow: $workflow,
+                            teamId: $teamId,
+                            userId: $callerUserId,
+                            input: [
+                                'goal' => $goal,
+                                'context' => $context !== '' ? $context : null,
+                            ],
+                            currentDepth: $nextDepth,
+                        );
+                    } catch (\Throwable $e) {
+                        Log::warning('Workflow-as-tool execution failed', [
+                            'workflow_id' => $workflowId,
+                            'error' => $e->getMessage(),
+                        ]);
+
+                        return json_encode(['error' => 'Workflow execution failed']);
                     }
                 });
         }
