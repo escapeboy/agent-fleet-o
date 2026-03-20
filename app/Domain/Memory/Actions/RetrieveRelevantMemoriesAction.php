@@ -35,12 +35,31 @@ class RetrieveRelevantMemoriesAction
         try {
             $queryEmbedding = $this->generateEmbedding($query);
 
+            // Composite scoring weights from config
+            $semanticWeight = config('memory.scoring.semantic_weight', 0.5);
+            $recencyWeight = config('memory.scoring.recency_weight', 0.3);
+            $importanceWeight = config('memory.scoring.importance_weight', 0.2);
+            $halfLifeDays = config('memory.scoring.half_life_days', 7);
+
+            // Composite score = semantic * similarity + recency * decay + importance * score
+            // Recency decay: 0.5 ^ (age_days / half_life_days) using PostgreSQL POWER()
+            $compositeScoreSql = <<<'SQL'
+                (? * (1 - (embedding <=> ?))) +
+                (? * POWER(0.5, EXTRACT(EPOCH FROM (NOW() - COALESCE(last_accessed_at, created_at))) / 86400.0 / ?)) +
+                (? * COALESCE(importance, 0.5))
+                AS composite_score
+            SQL;
+
             $builder = Memory::withoutGlobalScopes()
                 ->select('memories.*')
-                ->selectRaw('(1 - (embedding <=> ?)) * confidence AS weighted_score', [$queryEmbedding])
+                ->selectRaw($compositeScoreSql, [
+                    $semanticWeight, $queryEmbedding,
+                    $recencyWeight, $halfLifeDays,
+                    $importanceWeight,
+                ])
                 ->havingRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
                 ->where('confidence', '>=', $minConfidence)
-                ->orderByDesc('weighted_score');
+                ->orderByDesc('composite_score');
 
             // Apply scope filtering
             match ($scope) {
@@ -61,7 +80,16 @@ class RetrieveRelevantMemoriesAction
                     })),
             };
 
-            return $builder->limit($topK)->get();
+            $results = $builder->limit($topK)->get();
+
+            // Batch update last_accessed_at for retrieved memories
+            if ($results->isNotEmpty()) {
+                Memory::withoutGlobalScopes()
+                    ->whereIn('id', $results->pluck('id'))
+                    ->update(['last_accessed_at' => now()]);
+            }
+
+            return $results;
         } catch (\Throwable $e) {
             Log::warning('RetrieveRelevantMemoriesAction: Failed to retrieve memories', [
                 'agent_id' => $agentId,

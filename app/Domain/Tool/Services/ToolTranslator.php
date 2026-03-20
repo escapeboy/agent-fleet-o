@@ -9,6 +9,7 @@ use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
+use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -94,7 +95,9 @@ class ToolTranslator
             $defName = $name;
             $paramNames = array_keys($properties);
 
-            $prismTool->using(function () use ($isStdio, $serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames): string {
+            $resultAsAnswer = $toolModel->result_as_answer;
+
+            $prismTool->using(function () use ($isStdio, $serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames, $resultAsAnswer): string {
                 // PrismPHP passes arguments positionally; map them back to named keys
                 $positional = func_get_args();
                 $arguments = [];
@@ -106,14 +109,21 @@ class ToolTranslator
 
                 try {
                     if ($isStdio) {
-                        return app(McpStdioClient::class)->callTool($toolModel, $defName, $arguments);
-                    }
-
-                    if (! $serverUrl) {
+                        $result = app(McpStdioClient::class)->callTool($toolModel, $defName, $arguments);
+                    } elseif (! $serverUrl) {
                         return "Error: Tool '{$defName}' on server '{$toolModel->name}' has no URL configured.";
+                    } else {
+                        $result = app(McpHttpClient::class)->callTool($serverUrl, $defName, $arguments, $mcpHeaders);
                     }
 
-                    return app(McpHttpClient::class)->callTool($serverUrl, $defName, $arguments, $mcpHeaders);
+                    // If tool has result_as_answer, short-circuit the LLM loop
+                    if ($resultAsAnswer) {
+                        throw new ResultAsAnswerException($result, $defName);
+                    }
+
+                    return $result;
+                } catch (ResultAsAnswerException $e) {
+                    throw $e; // Re-throw — must not be caught by generic handler
                 } catch (\Throwable $e) {
                     $client = $isStdio ? 'McpStdioClient' : 'McpHttpClient';
                     Log::error("{$client} error", [

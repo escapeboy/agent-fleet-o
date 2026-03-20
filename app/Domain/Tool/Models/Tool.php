@@ -44,6 +44,7 @@ class Tool extends Model
         'settings',
         'last_health_check',
         'health_status',
+        'result_as_answer',
     ];
 
     protected $hidden = ['credentials'];
@@ -59,6 +60,7 @@ class Tool extends Model
             'credentials' => TeamEncryptedArray::class,
             'tool_definitions' => 'array',
             'settings' => 'array',
+            'result_as_answer' => 'boolean',
             'last_health_check' => 'datetime',
         ];
     }

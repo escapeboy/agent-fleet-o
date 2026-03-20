@@ -16,13 +16,14 @@ class TaskDependencyResolver
      */
     public function resolveReady(Collection $tasks): Collection
     {
-        $validatedIndices = $tasks
-            ->filter(fn (CrewTaskExecution $t) => $t->isValidated())
+        // Validated and Skipped dependencies are both considered satisfied
+        $satisfiedIndices = $tasks
+            ->filter(fn (CrewTaskExecution $t) => $t->isValidated() || $t->status === CrewTaskStatus::Skipped)
             ->pluck('sort_order')
             ->toArray();
 
         return $tasks
-            ->filter(function (CrewTaskExecution $task) use ($validatedIndices) {
+            ->filter(function (CrewTaskExecution $task) use ($satisfiedIndices) {
                 if (! $task->isPending()) {
                     return false;
                 }
@@ -32,9 +33,9 @@ class TaskDependencyResolver
                     return true;
                 }
 
-                // All dependency indices must be in the validated set
+                // All dependency indices must be in the satisfied set
                 foreach ($deps as $depIndex) {
-                    if (! in_array((int) $depIndex, $validatedIndices, true)) {
+                    if (! in_array((int) $depIndex, $satisfiedIndices, true)) {
                         return false;
                     }
                 }
@@ -59,7 +60,7 @@ class TaskDependencyResolver
     public function hasDeadlock(Collection $tasks): bool
     {
         $failedIndices = $tasks
-            ->filter(fn (CrewTaskExecution $t) => $t->status === CrewTaskStatus::QaFailed || $t->status === CrewTaskStatus::Skipped)
+            ->filter(fn (CrewTaskExecution $t) => $t->status === CrewTaskStatus::QaFailed || $t->status === CrewTaskStatus::Failed)
             ->pluck('sort_order')
             ->toArray();
 

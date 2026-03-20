@@ -78,4 +78,21 @@ return [
     */
     'enabled' => (bool) env('MEMORY_ENABLED', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Composite Scoring Weights
+    |--------------------------------------------------------------------------
+    |
+    | Weights for the composite memory scoring formula:
+    | score = semantic_weight * similarity + recency_weight * decay + importance_weight * importance
+    | Weights should sum to 1.0 for normalized scoring.
+    |
+    */
+    'scoring' => [
+        'semantic_weight' => (float) env('MEMORY_SEMANTIC_WEIGHT', 0.5),
+        'recency_weight' => (float) env('MEMORY_RECENCY_WEIGHT', 0.3),
+        'importance_weight' => (float) env('MEMORY_IMPORTANCE_WEIGHT', 0.2),
+        'half_life_days' => (int) env('MEMORY_HALF_LIFE_DAYS', 7),
+    ],
+
 ];

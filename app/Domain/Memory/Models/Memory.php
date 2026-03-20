@@ -23,6 +23,8 @@ class Memory extends Model
         'source_type',
         'source_id',
         'confidence',
+        'importance',
+        'last_accessed_at',
         'tags',
     ];
 
@@ -32,6 +34,8 @@ class Memory extends Model
             'metadata' => 'array',
             'tags' => 'array',
             'confidence' => 'float',
+            'importance' => 'float',
+            'last_accessed_at' => 'datetime',
         ];
     }
 

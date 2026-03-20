@@ -15,6 +15,8 @@ use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Shared\Services\NotificationService;
+use App\Domain\Workflow\Services\ConditionEvaluator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
@@ -27,6 +29,7 @@ class CrewOrchestrator
         private readonly TaskDependencyResolver $dependencyResolver,
         private readonly CollectCrewArtifactsAction $collectArtifacts,
         private readonly NotificationService $notifications,
+        private readonly ConditionEvaluator $conditionEvaluator,
     ) {}
 
     /**
@@ -211,6 +214,25 @@ class CrewOrchestrator
             $task->update(['input_context' => $context]);
         }
 
+        // Evaluate skip_condition before dispatching
+        if ($this->shouldSkipTask($task, $allTasks)) {
+            $task->update([
+                'status' => CrewTaskStatus::Skipped,
+                'completed_at' => now(),
+            ]);
+
+            Log::info('Crew task skipped by condition', [
+                'task_id' => $task->id,
+                'title' => $task->title,
+                'skip_condition' => $task->skip_condition,
+            ]);
+
+            // Continue orchestration after skip
+            $this->onTaskValidated($execution, $task);
+
+            return;
+        }
+
         $task->update(['status' => CrewTaskStatus::Assigned]);
 
         ExecuteCrewTaskJob::dispatch(
@@ -218,6 +240,33 @@ class CrewOrchestrator
             taskExecutionId: $task->id,
             teamId: $execution->team_id,
         );
+    }
+
+    /**
+     * Evaluate whether a task should be skipped based on its skip_condition.
+     * Context is built from dependency task outputs keyed by sort_order.
+     */
+    private function shouldSkipTask(CrewTaskExecution $task, Collection $allTasks): bool
+    {
+        $condition = $task->skip_condition;
+
+        if (empty($condition)) {
+            return false;
+        }
+
+        // Build context from all completed/validated task outputs, keyed by sort_order
+        $context = [];
+        foreach ($allTasks as $t) {
+            if ($t->output && ($t->isValidated() || $t->status === CrewTaskStatus::Skipped)) {
+                $context[(string) $t->sort_order] = $t->output;
+            }
+        }
+
+        // Find the last dependency as the predecessor
+        $deps = $task->depends_on ?? [];
+        $predecessorId = ! empty($deps) ? (string) end($deps) : null;
+
+        return $this->conditionEvaluator->evaluate($condition, $context, $predecessorId);
     }
 
     private function checkParallelProgress(CrewExecution $execution): void

@@ -22,6 +22,7 @@ class StoreMemoryAction
         ?string $sourceId = null,
         array $metadata = [],
         float $confidence = 1.0,
+        float $importance = 0.5,
         array $tags = [],
     ): array {
         if (! config('memory.enabled', true)) {
@@ -49,6 +50,7 @@ class StoreMemoryAction
                     'source_type' => $sourceType,
                     'source_id' => $sourceId,
                     'confidence' => $confidence,
+                    'importance' => $importance,
                     'tags' => $tags,
                 ]);
 

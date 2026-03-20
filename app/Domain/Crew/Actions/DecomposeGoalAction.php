@@ -49,7 +49,8 @@ class DecomposeGoalAction
             .($isCoordinatorOnly
                 ? "You are working alone. Decompose the goal into concrete tasks that you will execute yourself.\n"
                 : "Your team:\n{$workerDescriptions}\n\nDecompose the goal into tasks. Assign each to the most suitable team member by their name, or 'self' if you will do it.\n")
-            ."\nOutput valid JSON: an array of task objects with keys: title, description, assigned_to, dependencies (array of 0-based indices), expected_output.";
+            ."\nOutput valid JSON: an array of task objects with keys: title, description, assigned_to, dependencies (array of 0-based indices), expected_output."
+            ."\nOptionally include skip_condition to conditionally skip a task based on dependency outputs. Format: {\"field\": \"output.key\", \"operator\": \"==\", \"value\": \"...\"} or compound: {\"all\": [...]} / {\"any\": [...]}. Operators: ==, !=, >, <, >=, <=, contains, in, is_null, is_not_null.";
 
         $userPrompt = "Goal: {$execution->goal}\n\nProduce a task plan as a JSON array.";
 
@@ -106,6 +107,7 @@ class DecomposeGoalAction
                     'assigned_to' => $assignedTo,
                 ],
                 'depends_on' => $dependencies,
+                'skip_condition' => $task['skip_condition'] ?? null,
                 'attempt_number' => 1,
                 'max_attempts' => $execution->config_snapshot['max_task_iterations'] ?? 3,
                 'sort_order' => $index,

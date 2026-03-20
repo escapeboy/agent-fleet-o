@@ -29,6 +29,7 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Actions\ResolveAgentToolsAction;
+use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Services\BashSidecarClient;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -234,6 +235,29 @@ class ExecuteAgentAction
             return [
                 'execution' => $execution,
                 'output' => ['result' => $response->content],
+            ];
+        } catch (ResultAsAnswerException $e) {
+            // Tool flagged as result_as_answer — use its output directly, skip LLM summarization
+            $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+            $execution = AgentExecution::create([
+                'agent_id' => $agent->id,
+                'team_id' => $teamId,
+                'experiment_id' => $experimentId,
+                'status' => 'completed',
+                'input' => $input,
+                'output' => ['result' => $e->toolResult],
+                'tools_used' => [['tool' => $e->toolName, 'result_as_answer' => true]],
+                'tool_calls_count' => 1,
+                'llm_steps_count' => 1,
+                'duration_ms' => $durationMs,
+                'cost_credits' => 0,
+                'quality_details' => ['result_as_answer' => true],
+            ]);
+
+            return [
+                'execution' => $execution,
+                'output' => ['result' => $e->toolResult],
             ];
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
