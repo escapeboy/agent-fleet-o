@@ -9,6 +9,7 @@ use App\Domain\Chatbot\Actions\ToggleChatbotStatusAction;
 use App\Domain\Chatbot\Actions\UpdateChatbotAction;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotToken;
+use App\Domain\Workflow\Models\Workflow;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Livewire\Component;
 
@@ -38,6 +39,8 @@ class ChatbotDetailPage extends Component
     public string $editModel = 'claude-sonnet-4-5';
 
     public string $editSystemPrompt = '';
+
+    public string $editWorkflowId = '';
 
     // Token generation
     public bool $showNewTokenModal = false;
@@ -69,6 +72,7 @@ class ChatbotDetailPage extends Component
         $this->editProvider = $this->chatbot->agent?->provider ?? 'anthropic';
         $this->editModel = $this->chatbot->agent?->model ?? 'claude-sonnet-4-5';
         $this->editSystemPrompt = $this->chatbot->agent?->backstory ?? '';
+        $this->editWorkflowId = $this->chatbot->workflow_id ?? '';
         $this->editing = true;
     }
 
@@ -96,6 +100,7 @@ class ChatbotDetailPage extends Component
             fallbackMessage: $this->editFallbackMessage ?: null,
             confidenceThreshold: $this->editConfidenceThreshold,
             humanEscalationEnabled: $this->editHumanEscalationEnabled,
+            workflowId: $this->editWorkflowId ?: null,
             provider: $this->chatbot->agent_is_dedicated ? $this->editProvider : null,
             model: $this->chatbot->agent_is_dedicated ? $this->editModel : null,
             systemPrompt: $this->chatbot->agent_is_dedicated && $this->editSystemPrompt !== '' ? $this->editSystemPrompt : null,
@@ -160,6 +165,7 @@ class ChatbotDetailPage extends Component
             'sessionsCount' => $this->chatbot->sessions()->count(),
             'messagesCount' => $this->chatbot->messages()->count(),
             'providers' => app(ProviderResolver::class)->availableProviders(),
+            'workflows' => Workflow::where('status', 'active')->orderBy('name')->get(['id', 'name']),
         ])->layout('layouts.app', ['header' => $this->chatbot->name]);
     }
 }

@@ -100,7 +100,10 @@
                             <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</dt>
                             <dd class="mt-1 text-sm">
                                 @if($chatbot->agent_is_dedicated)
-                                    <span class="text-gray-500 italic">Dedicated (auto-created)</span>
+                                    <a href="{{ route('agents.show', $chatbot->agent) }}" class="text-primary-600 hover:text-primary-800">
+                                        Dedicated agent ↗
+                                    </a>
+                                    <span class="text-xs text-gray-400">(auto-created)</span>
                                 @else
                                     <a href="{{ route('agents.show', $chatbot->agent) }}" class="text-primary-600 hover:text-primary-800">
                                         {{ $chatbot->agent->name }}
@@ -144,6 +147,15 @@
                 </div>
 
                 <x-form-checkbox wire:model="editHumanEscalationEnabled" label="Enable human escalation for low-confidence responses" />
+
+                <div class="border-t border-gray-100 pt-4">
+                    <x-form-select wire:model="editWorkflowId" label="Workflow" hint="Route chatbot messages through a workflow instead of directly to the agent.">
+                        <option value="">— No workflow (use direct agent)</option>
+                        @foreach($workflows as $workflow)
+                            <option value="{{ $workflow->id }}">{{ $workflow->name }}</option>
+                        @endforeach
+                    </x-form-select>
+                </div>
 
                 @if($chatbot->agent_is_dedicated)
                     <div class="border-t border-gray-100 pt-4 space-y-4">
@@ -198,6 +210,16 @@
                             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $chatbot->human_escalation_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">
                                 {{ $chatbot->human_escalation_enabled ? 'Enabled' : 'Disabled' }}
                             </span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Workflow</dt>
+                        <dd class="mt-1 text-sm">
+                            @if($chatbot->workflow_id && ($wf = $workflows->firstWhere('id', $chatbot->workflow_id)))
+                                <a href="{{ route('workflows.show', $wf->id) }}" class="text-primary-600 hover:text-primary-800">{{ $wf->name }} ↗</a>
+                            @else
+                                <span class="text-gray-500">Direct agent (no workflow)</span>
+                            @endif
                         </dd>
                     </div>
                 </dl>

@@ -40,6 +40,7 @@
                                 <option value="url">Web URL</option>
                                 <option value="sitemap">Sitemap</option>
                                 <option value="document">Document</option>
+                                <option value="git_repository">Git Repository</option>
                             </x-form-select>
                         </div>
                     </div>
@@ -51,7 +52,15 @@
                                 accept=".txt,.md,.pdf"
                                 class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100" />
                             @error('sourceFile') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                            <p class="mt-1.5 text-xs text-gray-500">
+                                For source code, you can also generate a repomix pack locally
+                                (<code class="rounded bg-gray-100 px-1">npx repomix --style plain ./</code>)
+                                and upload the output file as a document.
+                            </p>
                         </div>
+                    @elseif($sourceType === 'git_repository')
+                        <x-form-input wire:model="sourceUrl" label="Repository URL" placeholder="https://github.com/org/repo" />
+                        <x-form-input wire:model="sourceBranch" label="Branch" placeholder="main" hint="Leave blank to use main." />
                     @else
                         <x-form-input wire:model="sourceUrl" label="URL" placeholder="https://example.com/docs" />
                     @endif
@@ -74,51 +83,118 @@
         {{-- Sources list --}}
         <div class="divide-y divide-gray-100">
             @forelse($sources as $source)
-                <div class="flex items-center justify-between px-6 py-4">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-3">
-                            <span class="text-sm font-medium text-gray-900">{{ $source->name }}</span>
-                            <span class="rounded-full px-2 py-0.5 text-xs font-medium
-                                {{ $source->status->value === 'ready' ? 'bg-green-100 text-green-700' : '' }}
-                                {{ $source->status->value === 'indexing' ? 'bg-blue-100 text-blue-700' : '' }}
-                                {{ $source->status->value === 'pending' ? 'bg-gray-100 text-gray-600' : '' }}
-                                {{ $source->status->value === 'failed' ? 'bg-red-100 text-red-700' : '' }}">
-                                {{ ucfirst($source->status->value) }}
-                            </span>
-                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                                {{ ucfirst($source->type->value) }}
-                            </span>
-                        </div>
-                        <div class="mt-0.5 flex items-center gap-3 text-xs text-gray-500">
-                            @if($source->source_url)
-                                <span class="truncate max-w-xs">{{ $source->source_url }}</span>
-                            @elseif(isset($source->source_data['original_name']))
-                                <span>{{ $source->source_data['original_name'] }}</span>
+                <div>
+                    <div class="flex items-center justify-between px-6 py-4">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-medium text-gray-900">{{ $source->name }}</span>
+                                <span class="rounded-full px-2 py-0.5 text-xs font-medium
+                                    {{ $source->status->value === 'ready' ? 'bg-green-100 text-green-700' : '' }}
+                                    {{ $source->status->value === 'indexing' ? 'bg-blue-100 text-blue-700' : '' }}
+                                    {{ $source->status->value === 'pending' ? 'bg-gray-100 text-gray-600' : '' }}
+                                    {{ $source->status->value === 'failed' ? 'bg-red-100 text-red-700' : '' }}">
+                                    {{ ucfirst($source->status->value) }}
+                                </span>
+                                <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                    {{ ucfirst($source->type->value) }}
+                                </span>
+                            </div>
+                            <div class="mt-0.5 flex items-center gap-3 text-xs text-gray-500">
+                                @if($source->source_url)
+                                    <span class="truncate max-w-xs">{{ $source->source_url }}</span>
+                                @elseif(isset($source->source_data['original_name']))
+                                    <span>{{ $source->source_data['original_name'] }}</span>
+                                @endif
+                                @if($source->chunk_count > 0)
+                                    <span>&middot; {{ $source->chunk_count }} chunks</span>
+                                @endif
+                                @if($source->indexed_at)
+                                    <span>&middot; Indexed {{ $source->indexed_at->diffForHumans() }}</span>
+                                @endif
+                            </div>
+                            @if($source->error_message)
+                                <p class="mt-1 text-xs text-red-600">{{ $source->error_message }}</p>
                             @endif
+                        </div>
+                        <div class="ml-4 flex shrink-0 items-center gap-2">
                             @if($source->chunk_count > 0)
-                                <span>&middot; {{ $source->chunk_count }} chunks</span>
+                                <button wire:click="viewChunks('{{ $source->id }}')"
+                                    class="rounded border border-gray-300 px-2 py-1 text-xs {{ $viewingSourceId === $source->id ? 'bg-primary-50 border-primary-300 text-primary-700' : 'text-gray-600 hover:bg-gray-50' }}">
+                                    {{ $viewingSourceId === $source->id ? 'Hide Chunks' : 'View Chunks' }}
+                                </button>
                             @endif
-                            @if($source->indexed_at)
-                                <span>&middot; Indexed {{ $source->indexed_at->diffForHumans() }}</span>
+                            @if(in_array($source->status->value, ['ready', 'failed']))
+                                <button wire:click="reindex('{{ $source->id }}')"
+                                    class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
+                                    Re-index
+                                </button>
+                            @endif
+                            <button wire:click="deleteSource('{{ $source->id }}')"
+                                wire:confirm="Delete this knowledge source?"
+                                class="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Inline chunk browser --}}
+                    @if($viewingSourceId === $source->id && $viewingChunks !== null)
+                        <div class="border-t border-gray-100 bg-gray-50 px-6 py-4">
+                            <div class="mb-3 flex items-center gap-3">
+                                <p class="text-xs font-semibold text-gray-700">Chunks ({{ $viewingChunks->total() }} total)</p>
+                                <div class="flex-1 max-w-xs">
+                                    <input wire:model.live.debounce.400ms="chunkSearch" type="text"
+                                        placeholder="Search chunks…"
+                                        class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:border-primary-400 focus:ring-primary-400" />
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                @forelse($viewingChunks as $chunk)
+                                    <div class="rounded-lg border border-gray-200 bg-white p-3" x-data="{ expanded: false }">
+                                        <div class="mb-1 flex items-center justify-between gap-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-xs font-mono text-gray-500">#{{ $chunk->chunk_index }}</span>
+                                                @if($chunk->access_level !== 'public')
+                                                    <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">{{ $chunk->access_level }}</span>
+                                                @endif
+                                                @if(isset($chunk->metadata['file']))
+                                                    <span class="font-mono text-xs text-gray-400 truncate max-w-xs">{{ $chunk->metadata['file'] }}</span>
+                                                @endif
+                                            </div>
+                                            <button @click="expanded = !expanded" class="shrink-0 text-xs text-primary-600 hover:text-primary-800"
+                                                x-text="expanded ? 'Collapse' : 'Expand'"></button>
+                                        </div>
+                                        <p class="text-xs text-gray-700 leading-relaxed"
+                                            x-show="!expanded">{{ mb_substr($chunk->content, 0, 300) }}{{ strlen($chunk->content) > 300 ? '…' : '' }}</p>
+                                        <p class="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap font-mono"
+                                            x-show="expanded" x-cloak>{{ $chunk->content }}</p>
+                                    </div>
+                                @empty
+                                    <p class="text-sm text-gray-400">No chunks match your search.</p>
+                                @endforelse
+                            </div>
+
+                            {{-- Pagination --}}
+                            @if($viewingChunks->hasPages())
+                                <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                                    <span>Page {{ $viewingChunks->currentPage() }} of {{ $viewingChunks->lastPage() }}</span>
+                                    <div class="flex gap-2">
+                                        @if($viewingChunks->onFirstPage())
+                                            <span class="cursor-not-allowed opacity-40">← Prev</span>
+                                        @else
+                                            <button wire:click="$set('chunkPage', {{ $chunkPage - 1 }})" class="text-primary-600 hover:text-primary-800">← Prev</button>
+                                        @endif
+                                        @if($viewingChunks->hasMorePages())
+                                            <button wire:click="$set('chunkPage', {{ $chunkPage + 1 }})" class="text-primary-600 hover:text-primary-800">Next →</button>
+                                        @else
+                                            <span class="cursor-not-allowed opacity-40">Next →</span>
+                                        @endif
+                                    </div>
+                                </div>
                             @endif
                         </div>
-                        @if($source->error_message)
-                            <p class="mt-1 text-xs text-red-600">{{ $source->error_message }}</p>
-                        @endif
-                    </div>
-                    <div class="ml-4 flex shrink-0 items-center gap-2">
-                        @if(in_array($source->status->value, ['ready', 'failed']))
-                            <button wire:click="reindex('{{ $source->id }}')"
-                                class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
-                                Re-index
-                            </button>
-                        @endif
-                        <button wire:click="deleteSource('{{ $source->id }}')"
-                            wire:confirm="Delete this knowledge source?"
-                            class="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50">
-                            Delete
-                        </button>
-                    </div>
+                    @endif
                 </div>
             @empty
                 <div class="px-6 py-10 text-center text-sm text-gray-400">
