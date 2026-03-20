@@ -277,23 +277,37 @@ class LocalAgentDiscovery
         }
 
         try {
-            $connection = BridgeConnection::active()->latest('connected_at')->first();
+            // Aggregate agents from ALL active bridge connections (TeamScope auto-filters).
+            $connections = BridgeConnection::active()
+                ->orderByDesc('priority')
+                ->orderByDesc('connected_at')
+                ->get();
 
-            if (! $connection) {
+            if ($connections->isEmpty()) {
                 $this->bridgeCache = [];
 
                 return [];
             }
 
             $detected = [];
-            foreach ($connection->agents() as $agent) {
-                if ($agent['found'] ?? false) {
+            foreach ($connections as $connection) {
+                foreach ($connection->agents() as $agent) {
+                    if (! ($agent['found'] ?? false)) {
+                        continue;
+                    }
                     $bridgeKey = $agent['key'];
                     $configKey = self::BRIDGE_KEY_MAP[$bridgeKey] ?? $bridgeKey;
+
+                    // First bridge with this agent wins (highest priority / most recent)
+                    if (isset($detected[$configKey])) {
+                        continue;
+                    }
+
                     $detected[$configKey] = [
                         'name' => $agent['name'],
                         'version' => $this->parseVersion($agent['version'] ?? ''),
-                        'path' => "bridge://{$bridgeKey}",
+                        'path' => "bridge://{$connection->id}:{$bridgeKey}",
+                        'bridge_id' => $connection->id,
                     ];
                 }
             }

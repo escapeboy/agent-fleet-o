@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Teams;
 
+use App\Domain\Bridge\Actions\TerminateBridgeConnection;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
@@ -560,6 +561,41 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'Telegram bot disconnected.');
     }
 
+    // ── Bridge management ──────────────────────────────────────────────
+
+    public function disconnectBridge(string $id): void
+    {
+        $team = auth()->user()->currentTeam;
+        $connection = BridgeConnection::where('team_id', $team->id)
+            ->where('id', $id)
+            ->active()
+            ->first();
+
+        if ($connection) {
+            app(TerminateBridgeConnection::class)->execute($connection);
+            session()->flash('message', 'Bridge disconnected.');
+        }
+    }
+
+    public function disconnectAllBridges(): void
+    {
+        $team = auth()->user()->currentTeam;
+        BridgeConnection::where('team_id', $team->id)
+            ->active()
+            ->get()
+            ->each(fn ($c) => app(TerminateBridgeConnection::class)->execute($c));
+
+        session()->flash('message', 'All bridges disconnected.');
+    }
+
+    public function renameBridge(string $id, string $name): void
+    {
+        $team = auth()->user()->currentTeam;
+        BridgeConnection::where('team_id', $team->id)
+            ->where('id', $id)
+            ->update(['label' => mb_substr(trim($name), 0, 100)]);
+    }
+
     public function render()
     {
         $team = auth()->user()->currentTeam;
@@ -596,9 +632,12 @@ class TeamSettingsPage extends Component
                     ->latest()
                     ->get()
                 : collect(),
-            'bridgeConnection' => config('bridge.relay_enabled')
-                ? BridgeConnection::active()->latest('connected_at')->first()
-                : null,
+            'bridgeConnections' => config('bridge.relay_enabled')
+                ? BridgeConnection::active()
+                    ->orderByDesc('priority')
+                    ->orderByDesc('connected_at')
+                    ->get()
+                : collect(),
             'mcpToolCatalog' => config('mcp_tool_catalog.groups', []),
             'mcpProfiles' => config('mcp_profiles', []),
         ])->layout('layouts.app', ['header' => 'Settings']);

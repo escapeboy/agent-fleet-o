@@ -311,41 +311,55 @@ class ProviderResolver
     private function activeBridgeAgents(): array
     {
         try {
-            $connection = BridgeConnection::active()->latest('connected_at')->first();
+            // Aggregate agents from ALL active bridge connections (TeamScope auto-filters).
+            $connections = BridgeConnection::active()
+                ->orderByDesc('priority')
+                ->orderByDesc('connected_at')
+                ->get();
         } catch (\Throwable) {
             return [];
         }
 
-        if (! $connection) {
+        if ($connections->isEmpty()) {
             return [];
         }
 
         $models = [];
-        foreach ($connection->agents() as $agent) {
-            if (! ($agent['found'] ?? false)) {
-                continue;
-            }
-            $key = $agent['key'];
-            $agentName = $agent['name'] ?? $key;
+        $seenAgentKeys = [];
 
-            $knownModels = self::BRIDGE_AGENT_MODELS[$key] ?? null;
+        foreach ($connections as $connection) {
+            foreach ($connection->agents() as $agent) {
+                if (! ($agent['found'] ?? false)) {
+                    continue;
+                }
+                $key = $agent['key'];
 
-            if ($knownModels) {
-                foreach ($knownModels as $modelKey => $modelLabel) {
-                    $models["{$key}:{$modelKey}"] = [
-                        'label' => $modelLabel,
+                // Dedup: first bridge with this agent wins (highest priority / most recent)
+                if (isset($seenAgentKeys[$key])) {
+                    continue;
+                }
+                $seenAgentKeys[$key] = true;
+
+                $agentName = $agent['name'] ?? $key;
+                $knownModels = self::BRIDGE_AGENT_MODELS[$key] ?? null;
+
+                if ($knownModels) {
+                    foreach ($knownModels as $modelKey => $modelLabel) {
+                        $models["{$key}:{$modelKey}"] = [
+                            'label' => $modelLabel,
+                            'input_cost' => 0,
+                            'output_cost' => 0,
+                        ];
+                    }
+                } else {
+                    // Agent with no known model list (kiro, cursor, cline, opencode, …)
+                    // Show as a single selectable option; the agent manages its own model.
+                    $models[$key] = [
+                        'label' => $agentName,
                         'input_cost' => 0,
                         'output_cost' => 0,
                     ];
                 }
-            } else {
-                // Agent with no known model list (kiro, cursor, cline, opencode, …)
-                // Show as a single selectable option; the agent manages its own model.
-                $models[$key] = [
-                    'label' => $agentName,
-                    'input_cost' => 0,
-                    'output_cost' => 0,
-                ];
             }
         }
 

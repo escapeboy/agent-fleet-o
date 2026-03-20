@@ -6,6 +6,7 @@ use App\Domain\Bridge\Actions\RegisterBridgeConnection;
 use App\Domain\Bridge\Actions\TerminateBridgeConnection;
 use App\Domain\Bridge\Actions\UpdateBridgeEndpoints;
 use App\Domain\Bridge\Models\BridgeConnection;
+use App\Domain\Bridge\Services\BridgeRouter;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,36 +20,55 @@ class BridgeController extends Controller
     /**
      * Get the current team's bridge connection status.
      *
-     * @response 200 {"data": {"connected": true, "status": "connected", "bridge_version": "1.0.0", "llm_count": 2, "agent_count": 3}}
+     * Returns all connections (active + recent) with backward-compatible single-bridge fields.
+     *
+     * @response 200 {"data": {"connected": true, "connections": [...]}}
      */
     public function status(Request $request): JsonResponse
     {
         $teamId = $request->user()->current_team_id;
 
-        $connection = BridgeConnection::where('team_id', $teamId)
-            ->orderByDesc('connected_at')
-            ->first();
+        $connections = app(BridgeRouter::class)->allConnections($teamId);
 
-        if (! $connection) {
+        if ($connections->isEmpty()) {
             return response()->json(['data' => [
                 'connected' => false,
+                'connections' => [],
                 'message' => 'No FleetQ Bridge connection found.',
             ]]);
         }
 
+        $primary = $connections->firstWhere('status', 'connected');
+
         return response()->json(['data' => [
-            'connected' => $connection->isActive(),
-            'status' => $connection->status->value,
-            'bridge_version' => $connection->bridge_version,
-            'session_id' => $connection->session_id,
-            'connected_at' => $connection->connected_at?->toISOString(),
-            'last_seen_at' => $connection->last_seen_at?->toISOString(),
-            'uptime' => $connection->connected_at ? now()->diffForHumans($connection->connected_at, true) : null,
-            'llm_count' => $connection->onlineLlmCount(),
-            'agent_count' => $connection->foundAgentCount(),
-            'llm_endpoints' => $connection->llmEndpoints(),
-            'agents' => $connection->agents(),
-            'mcp_servers' => $connection->mcpServers(),
+            // Backward compat: single-bridge fields from the best active connection
+            'connected' => $primary !== null,
+            'status' => $primary?->status->value ?? $connections->first()->status->value,
+            'bridge_version' => $primary?->bridge_version,
+            'session_id' => $primary?->session_id,
+            'connected_at' => $primary?->connected_at?->toISOString(),
+            'last_seen_at' => $primary?->last_seen_at?->toISOString(),
+            'uptime' => $primary?->connected_at ? now()->diffForHumans($primary->connected_at, true) : null,
+            'llm_count' => $primary?->onlineLlmCount() ?? 0,
+            'agent_count' => $primary?->foundAgentCount() ?? 0,
+            'llm_endpoints' => $primary?->llmEndpoints() ?? [],
+            'agents' => $primary?->agents() ?? [],
+            'mcp_servers' => $primary?->mcpServers() ?? [],
+            // Multi-bridge: all connections
+            'connections' => $connections->map(fn (BridgeConnection $c) => [
+                'id' => $c->id,
+                'label' => $c->label,
+                'status' => $c->status->value,
+                'bridge_version' => $c->bridge_version,
+                'ip_address' => $c->ip_address,
+                'priority' => $c->priority,
+                'connected_at' => $c->connected_at?->toISOString(),
+                'last_seen_at' => $c->last_seen_at?->toISOString(),
+                'agents' => $c->agents(),
+                'llm_endpoints' => $c->llmEndpoints(),
+                'mcp_servers' => $c->mcpServers(),
+            ])->values(),
+            'connected_count' => $connections->filter(fn ($c) => $c->isActive())->count(),
         ]]);
     }
 
@@ -61,6 +81,7 @@ class BridgeController extends Controller
             'session_id' => 'required|string|max:255',
             'bridge_version' => 'nullable|string|max:50',
             'endpoints' => 'nullable|array',
+            'label' => 'nullable|string|max:100',
         ]);
 
         $teamId = $request->user()->current_team_id;
@@ -71,6 +92,7 @@ class BridgeController extends Controller
             bridgeVersion: $validated['bridge_version'] ?? null,
             endpoints: $validated['endpoints'] ?? [],
             ipAddress: $request->ip(),
+            label: $validated['label'] ?? null,
         );
 
         return response()->json(['data' => [
@@ -166,23 +188,34 @@ class BridgeController extends Controller
     }
 
     /**
-     * Disconnect the bridge session.
+     * Disconnect a bridge session.
+     *
+     * Accepts optional connection_id to disconnect a specific bridge.
+     * Without connection_id, disconnects all active bridges for the team.
      */
     public function disconnect(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'connection_id' => 'nullable|uuid',
+        ]);
+
         $teamId = $request->user()->current_team_id;
+        $connectionId = $validated['connection_id'] ?? null;
 
-        $connection = BridgeConnection::where('team_id', $teamId)
-            ->active()
-            ->orderByDesc('connected_at')
-            ->first();
+        $query = BridgeConnection::where('team_id', $teamId)->active();
 
-        if (! $connection) {
+        if ($connectionId) {
+            $query->where('id', $connectionId);
+        }
+
+        $connections = $query->get();
+
+        if ($connections->isEmpty()) {
             return response()->json(['error' => 'No active bridge connection.'], 404);
         }
 
-        app(TerminateBridgeConnection::class)->execute($connection);
+        $connections->each(fn ($c) => app(TerminateBridgeConnection::class)->execute($c));
 
-        return response()->json(['data' => ['disconnected' => true]]);
+        return response()->json(['data' => ['disconnected' => $connections->count()]]);
     }
 }

@@ -604,89 +604,79 @@
     {{-- FleetQ Bridge --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">FleetQ Bridge</h2>
-        <p class="mb-4 text-sm text-gray-500">Connect your local machine to FleetQ Cloud. The Bridge daemon discovers local LLMs, CLI agents, and MCP servers and routes AI workloads to them.</p>
+        <p class="mb-4 text-sm text-gray-500">Connect your machines to FleetQ. Each Bridge daemon discovers local LLMs, CLI agents, and MCP servers.</p>
 
-        @if($bridgeConnection && $bridgeConnection->isActive())
-            <div class="mb-4 rounded-lg bg-green-50 p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-medium text-green-900">Bridge Connected</p>
-                        <p class="mt-0.5 text-sm text-green-700">
-                            Version {{ $bridgeConnection->bridge_version ?? 'unknown' }}
-                            @if($bridgeConnection->connected_at)
-                                · Connected {{ $bridgeConnection->connected_at->diffForHumans() }}
-                            @endif
-                        </p>
+        @if($bridgeConnections->isNotEmpty())
+            <div class="mb-4 space-y-3">
+                @foreach($bridgeConnections as $conn)
+                <div class="rounded-lg {{ $conn->isActive() ? 'bg-green-50' : 'bg-yellow-50' }} p-4" wire:key="bridge-{{ $conn->id }}">
+                    <div class="flex items-center justify-between">
+                        <div class="min-w-0 flex-1"
+                             x-data="{ editing: false, name: '{{ e($conn->label ?? '') }}' }">
+                            <div x-show="!editing" class="flex items-center gap-2">
+                                <span class="inline-block h-2 w-2 rounded-full {{ $conn->isActive() ? 'bg-green-500' : 'bg-yellow-500' }}"></span>
+                                <span class="font-medium {{ $conn->isActive() ? 'text-green-900' : 'text-yellow-900' }}">
+                                    {{ $conn->label ?? $conn->ip_address ?? 'Bridge' }}
+                                </span>
+                                <button x-on:click="editing = true; $nextTick(() => $refs.nameInput.focus())"
+                                    class="text-gray-400 hover:text-gray-600" title="Rename">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                </button>
+                            </div>
+                            <div x-show="editing" x-cloak class="flex items-center gap-2">
+                                <input x-ref="nameInput" x-model="name"
+                                    x-on:keydown.enter="$wire.renameBridge('{{ $conn->id }}', name); editing = false"
+                                    x-on:keydown.escape="editing = false"
+                                    class="rounded border border-gray-300 px-2 py-1 text-sm" placeholder="Bridge name">
+                                <button x-on:click="$wire.renameBridge('{{ $conn->id }}', name); editing = false"
+                                    class="text-xs text-primary-600 hover:text-primary-800">Save</button>
+                                <button x-on:click="editing = false" class="text-xs text-gray-500">Cancel</button>
+                            </div>
+                            <p class="mt-0.5 text-sm {{ $conn->isActive() ? 'text-green-700' : 'text-yellow-700' }}">
+                                v{{ $conn->bridge_version ?? '?' }}
+                                @if($conn->ip_address && $conn->label) · {{ $conn->ip_address }} @endif
+                                @if($conn->connected_at) · {{ $conn->isActive() ? 'Connected' : 'Disconnected' }} {{ $conn->connected_at->diffForHumans() }} @endif
+                            </p>
+                        </div>
+                        @if($conn->isActive())
+                        <button wire:click="disconnectBridge('{{ $conn->id }}')" wire:confirm="Disconnect this bridge?"
+                            class="ml-3 shrink-0 rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50">
+                            Disconnect
+                        </button>
+                        @endif
                     </div>
-                    <button wire:click="disconnectBridge" wire:confirm="Disconnect the FleetQ Bridge?"
-                        class="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50">
-                        Disconnect
-                    </button>
+
+                    {{-- Discovered endpoints for this bridge --}}
+                    @if($conn->isActive())
+                        @php
+                            $connAgents = collect($conn->agents())->filter(fn ($a) => $a['found'] ?? false);
+                            $connLlms = collect($conn->llmEndpoints());
+                            $connMcp = collect($conn->mcpServers());
+                        @endphp
+                        @if($connAgents->isNotEmpty() || $connLlms->isNotEmpty() || $connMcp->isNotEmpty())
+                        <div class="mt-3 flex flex-wrap gap-1.5">
+                            @foreach($connAgents as $agent)
+                                <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{{ $agent['name'] ?? $agent['key'] }}</span>
+                            @endforeach
+                            @foreach($connLlms as $llm)
+                                <span class="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">{{ $llm['name'] ?? $llm['id'] }}</span>
+                            @endforeach
+                            @foreach($connMcp as $mcp)
+                                <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $mcp['name'] ?? $mcp['key'] }}</span>
+                            @endforeach
+                        </div>
+                        @endif
+                    @endif
                 </div>
+                @endforeach
             </div>
 
-            {{-- Discovered endpoints --}}
-            @php
-                $llms = $bridgeConnection->llmEndpoints();
-                $agents = $bridgeConnection->agents();
-                $mcpServers = $bridgeConnection->mcpServers();
-            @endphp
-
-            @if(count($llms) > 0 || count($agents) > 0 || count($mcpServers) > 0)
-                <div class="space-y-3">
-                    @if(count($llms) > 0)
-                        <div>
-                            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">Local LLMs ({{ count($llms) }})</p>
-                            <div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
-                                @foreach($llms as $llm)
-                                    <div class="flex items-center justify-between px-3 py-2 text-sm">
-                                        <span class="font-mono text-gray-800">{{ $llm['name'] ?? $llm['id'] }}</span>
-                                        <span class="text-xs {{ ($llm['status'] ?? '') === 'online' ? 'text-green-600' : 'text-gray-400' }}">
-                                            {{ $llm['status'] ?? 'unknown' }}
-                                        </span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    @if(count($agents) > 0)
-                        <div>
-                            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">AI Agents ({{ count($agents) }})</p>
-                            <div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
-                                @foreach($agents as $agent)
-                                    <div class="flex items-center justify-between px-3 py-2 text-sm">
-                                        <span class="text-gray-800">{{ $agent['name'] ?? $agent['id'] }}</span>
-                                        <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{{ $agent['type'] ?? 'agent' }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    @if(count($mcpServers) > 0)
-                        <div>
-                            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">MCP Servers ({{ count($mcpServers) }})</p>
-                            <div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
-                                @foreach($mcpServers as $mcp)
-                                    <div class="flex items-center justify-between px-3 py-2 text-sm">
-                                        <span class="font-mono text-gray-800">{{ $mcp['name'] ?? $mcp['id'] }}</span>
-                                        <span class="text-xs text-gray-500">{{ $mcp['tool_count'] ?? 0 }} tools</span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            @else
-                <p class="text-sm text-gray-500">No local endpoints discovered yet. The bridge will auto-detect LLMs, agents, and MCP servers on your machine.</p>
+            @if($bridgeConnections->where('status', 'connected')->count() > 1)
+                <button wire:click="disconnectAllBridges" wire:confirm="Disconnect all bridges?"
+                    class="mb-3 text-xs text-red-600 hover:text-red-800">
+                    Disconnect all
+                </button>
             @endif
-        @elseif($bridgeConnection)
-            <div class="mb-4 rounded-lg bg-yellow-50 p-4">
-                <p class="font-medium text-yellow-900">Bridge Disconnected</p>
-                <p class="mt-0.5 text-sm text-yellow-700">Last connected {{ $bridgeConnection->connected_at?->diffForHumans() ?? 'never' }}. Restart the bridge daemon to reconnect.</p>
-            </div>
-            <p class="text-sm text-gray-600">Download FleetQ Bridge: <a href="https://github.com/escapeboy/fleetq-bridge/releases" target="_blank" class="text-primary-600 hover:underline">github.com/fleetq/fleetq-bridge</a></p>
         @else
             <div class="rounded-lg border border-dashed border-gray-300 p-4 text-center">
                 <p class="mb-1 text-sm font-medium text-gray-700">No Bridge Connected</p>

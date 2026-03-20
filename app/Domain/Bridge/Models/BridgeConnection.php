@@ -14,6 +14,8 @@ class BridgeConnection extends Model
     protected $fillable = [
         'team_id',
         'session_id',
+        'label',
+        'priority',
         'status',
         'bridge_version',
         'endpoints',

@@ -14,15 +14,8 @@ class RegisterBridgeConnection
         ?string $bridgeVersion,
         array $endpoints,
         ?string $ipAddress = null,
+        ?string $label = null,
     ): BridgeConnection {
-        // Disconnect any previous active connections for this team
-        BridgeConnection::where('team_id', $teamId)
-            ->where('status', BridgeConnectionStatus::Connected->value)
-            ->update([
-                'status' => BridgeConnectionStatus::Disconnected->value,
-                'disconnected_at' => now(),
-            ]);
-
         // Check for endpoints pre-cached by the relay (which calls /bridge/endpoints
         // before the daemon calls /bridge/register — a timing quirk in the relay binary).
         $pendingKey = "bridge:pending_endpoints:{$teamId}";
@@ -32,10 +25,8 @@ class RegisterBridgeConnection
             Redis::connection('bridge')->del($pendingKey);
         }
 
-        // If the relay sent empty endpoints (current relay binary behaviour — it always
-        // reports [] on connection before local-agent discovery runs), fall back to the
-        // most-recent connection's endpoints so that previously-discovered agents are
-        // preserved across relay restarts.
+        // If endpoints are empty, try to carry over from the most recent disconnected
+        // connection so that previously-discovered agents are preserved across restarts.
         if (empty($endpoints)) {
             $previous = BridgeConnection::where('team_id', $teamId)
                 ->where('status', BridgeConnectionStatus::Disconnected->value)
@@ -47,9 +38,31 @@ class RegisterBridgeConnection
             }
         }
 
+        // Upsert: if a connection with the same session_id already exists, reconnect it.
+        // This handles relay restarts and daemon re-registrations without creating duplicates.
+        $existing = BridgeConnection::where('team_id', $teamId)
+            ->where('session_id', $sessionId)
+            ->first();
+
+        if ($existing) {
+            $existing->update([
+                'status' => BridgeConnectionStatus::Connected,
+                'bridge_version' => $bridgeVersion,
+                'endpoints' => ! empty($endpoints) ? $endpoints : $existing->endpoints,
+                'ip_address' => $ipAddress,
+                'label' => $label ?? $existing->label,
+                'connected_at' => now(),
+                'last_seen_at' => now(),
+                'disconnected_at' => null,
+            ]);
+
+            return $existing->fresh();
+        }
+
         return BridgeConnection::create([
             'team_id' => $teamId,
             'session_id' => $sessionId,
+            'label' => $label,
             'status' => BridgeConnectionStatus::Connected,
             'bridge_version' => $bridgeVersion,
             'endpoints' => $endpoints,
