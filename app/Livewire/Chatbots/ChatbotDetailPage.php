@@ -9,6 +9,7 @@ use App\Domain\Chatbot\Actions\ToggleChatbotStatusAction;
 use App\Domain\Chatbot\Actions\UpdateChatbotAction;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotToken;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Livewire\Component;
 
 class ChatbotDetailPage extends Component
@@ -31,6 +32,12 @@ class ChatbotDetailPage extends Component
     public float $editConfidenceThreshold = 0.70;
 
     public bool $editHumanEscalationEnabled = false;
+
+    public string $editProvider = 'anthropic';
+
+    public string $editModel = 'claude-sonnet-4-5';
+
+    public string $editSystemPrompt = '';
 
     // Token generation
     public bool $showNewTokenModal = false;
@@ -59,6 +66,9 @@ class ChatbotDetailPage extends Component
         $this->editFallbackMessage = $this->chatbot->fallback_message ?? '';
         $this->editConfidenceThreshold = (float) $this->chatbot->confidence_threshold;
         $this->editHumanEscalationEnabled = $this->chatbot->human_escalation_enabled;
+        $this->editProvider = $this->chatbot->agent?->provider ?? 'anthropic';
+        $this->editModel = $this->chatbot->agent?->model ?? 'claude-sonnet-4-5';
+        $this->editSystemPrompt = $this->chatbot->agent?->backstory ?? '';
         $this->editing = true;
     }
 
@@ -74,6 +84,8 @@ class ChatbotDetailPage extends Component
             'editConfidenceThreshold' => 'required|numeric|min:0.1|max:1.0',
             'editWelcomeMessage' => 'nullable|max:500',
             'editFallbackMessage' => 'nullable|max:500',
+            'editProvider' => 'required|string',
+            'editModel' => 'required|string',
         ]);
 
         app(UpdateChatbotAction::class)->execute(
@@ -84,6 +96,9 @@ class ChatbotDetailPage extends Component
             fallbackMessage: $this->editFallbackMessage ?: null,
             confidenceThreshold: $this->editConfidenceThreshold,
             humanEscalationEnabled: $this->editHumanEscalationEnabled,
+            provider: $this->chatbot->agent_is_dedicated ? $this->editProvider : null,
+            model: $this->chatbot->agent_is_dedicated ? $this->editModel : null,
+            systemPrompt: $this->chatbot->agent_is_dedicated && $this->editSystemPrompt !== '' ? $this->editSystemPrompt : null,
         );
 
         $this->chatbot->refresh();
@@ -144,6 +159,7 @@ class ChatbotDetailPage extends Component
             'channels' => $this->chatbot->channels()->get(),
             'sessionsCount' => $this->chatbot->sessions()->count(),
             'messagesCount' => $this->chatbot->messages()->count(),
+            'providers' => app(ProviderResolver::class)->availableProviders(),
         ])->layout('layouts.app', ['header' => $this->chatbot->name]);
     }
 }

@@ -145,6 +145,27 @@
 
                 <x-form-checkbox wire:model="editHumanEscalationEnabled" label="Enable human escalation for low-confidence responses" />
 
+                @if($chatbot->agent_is_dedicated)
+                    <div class="border-t border-gray-100 pt-4 space-y-4">
+                        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">LLM Configuration</h4>
+
+                        <x-form-select wire:model.live="editProvider" label="Provider">
+                            @foreach($providers as $key => $providerData)
+                                <option value="{{ $key }}">{{ $providerData['name'] }}</option>
+                            @endforeach
+                        </x-form-select>
+
+                        <x-form-select wire:model="editModel" label="Model">
+                            @foreach($providers[$editProvider]['models'] ?? [] as $modelKey => $modelData)
+                                <option value="{{ $modelKey }}">{{ $modelData['label'] ?? $modelKey }}</option>
+                            @endforeach
+                        </x-form-select>
+
+                        <x-form-textarea wire:model="editSystemPrompt" label="System Prompt" rows="4"
+                            hint="Instructions for the AI agent. Leave blank to keep current prompt." />
+                    </div>
+                @endif
+
                 <div class="flex justify-end gap-3 pt-2">
                     <button wire:click="cancelEdit"
                             class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">

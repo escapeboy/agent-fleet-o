@@ -34,7 +34,11 @@ class ChatbotUpdateTool extends Tool
             'human_escalation_enabled' => $schema->boolean()
                 ->description('Enable/disable human escalation'),
             'system_prompt' => $schema->string()
-                ->description('New system prompt (updates backing agent)'),
+                ->description('New system prompt (updates backing agent backstory)'),
+            'provider' => $schema->string()
+                ->description('LLM provider key (e.g. anthropic, openai, google). Only applies to dedicated-agent chatbots.'),
+            'model' => $schema->string()
+                ->description('Model identifier matching the provider (e.g. claude-sonnet-4-5). Only applies to dedicated-agent chatbots.'),
             'widget_config' => $schema->object()
                 ->description('Widget config: {position, theme_color, title}'),
             'workflow_id' => $schema->string()
@@ -65,6 +69,8 @@ class ChatbotUpdateTool extends Tool
             'confidence_threshold' => 'nullable|numeric|between:0,1',
             'human_escalation_enabled' => 'nullable|boolean',
             'system_prompt' => 'nullable|string',
+            'provider' => 'nullable|string|max:50',
+            'model' => 'nullable|string|max:100',
             'widget_config' => 'nullable|array',
             'workflow_id' => 'nullable|uuid',
             'approval_timeout_hours' => 'nullable|integer|min:1|max:720',
@@ -82,6 +88,9 @@ class ChatbotUpdateTool extends Tool
                 widgetConfig: $validated['widget_config'] ?? null,
                 workflowId: $validated['workflow_id'] ?? null,
                 approvalTimeoutHours: $validated['approval_timeout_hours'] ?? null,
+                provider: $validated['provider'] ?? null,
+                model: $validated['model'] ?? null,
+                systemPrompt: $validated['system_prompt'] ?? null,
             );
 
             return Response::text(json_encode([

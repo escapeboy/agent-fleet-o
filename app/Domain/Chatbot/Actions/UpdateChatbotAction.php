@@ -18,6 +18,9 @@ class UpdateChatbotAction
         ?array $widgetConfig = null,
         ?string $workflowId = null,
         ?int $approvalTimeoutHours = null,
+        ?string $provider = null,
+        ?string $model = null,
+        ?string $systemPrompt = null,
     ): Chatbot {
         $data = array_filter([
             'name' => $name,
@@ -40,6 +43,26 @@ class UpdateChatbotAction
 
         $chatbot->update($data);
 
-        return $chatbot->fresh();
+        if ($chatbot->agent_is_dedicated && $chatbot->agent && ($provider !== null || $model !== null || $systemPrompt !== null)) {
+            $agentUpdates = [];
+
+            if ($provider !== null || $model !== null) {
+                $p = $provider ?? $chatbot->agent->provider;
+                $m = $model ?? $chatbot->agent->model;
+                $pricing = config("llm_pricing.providers.{$p}.{$m}", ['input' => 0, 'output' => 0]);
+                $agentUpdates['provider'] = $p;
+                $agentUpdates['model'] = $m;
+                $agentUpdates['cost_per_1k_input'] = $pricing['input'] ?? 0;
+                $agentUpdates['cost_per_1k_output'] = $pricing['output'] ?? 0;
+            }
+
+            if ($systemPrompt !== null) {
+                $agentUpdates['backstory'] = $systemPrompt;
+            }
+
+            $chatbot->agent->update($agentUpdates);
+        }
+
+        return $chatbot->fresh(['agent']);
     }
 }

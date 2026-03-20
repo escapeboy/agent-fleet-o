@@ -104,6 +104,9 @@ class ChatbotInstanceController extends Controller implements HasMiddleware
             'human_escalation_enabled' => 'nullable|boolean',
             'config' => 'nullable|array',
             'widget_config' => 'nullable|array',
+            'provider' => 'sometimes|nullable|string|max:50',
+            'model' => 'sometimes|nullable|string|max:100',
+            'system_prompt' => 'sometimes|nullable|string|max:5000',
         ]);
 
         $action->execute(
@@ -116,6 +119,9 @@ class ChatbotInstanceController extends Controller implements HasMiddleware
             humanEscalationEnabled: $data['human_escalation_enabled'] ?? null,
             config: $data['config'] ?? null,
             widgetConfig: $data['widget_config'] ?? null,
+            provider: $data['provider'] ?? null,
+            model: $data['model'] ?? null,
+            systemPrompt: $data['system_prompt'] ?? null,
         );
 
         return new ChatbotResource($chatbot->fresh());
