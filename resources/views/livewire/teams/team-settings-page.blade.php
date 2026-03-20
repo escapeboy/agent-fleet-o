@@ -746,6 +746,72 @@
     </div>
     </div>
 
+    {{-- MCP Tool Preferences --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">MCP Tool Preferences</h2>
+        <p class="mb-4 text-sm text-gray-500">Control which MCP tools are available to AI clients (Claude, Cursor, etc.) connecting to this team. Fewer tools = faster discovery and lower token usage.</p>
+
+        {{-- Profile selector --}}
+        <div class="mb-4">
+            <label class="mb-1.5 block text-sm font-medium text-gray-700">Profile</label>
+            <div class="flex flex-wrap gap-2">
+                @foreach($mcpProfiles as $profileKey => $profileTools)
+                    <button
+                        wire:click="applyMcpProfile('{{ $profileKey }}')"
+                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition {{ $mcpToolProfile === $profileKey ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}"
+                    >
+                        {{ ucfirst($profileKey) }}
+                        <span class="ml-1 text-xs text-gray-500">
+                            ({{ $profileTools === null ? 'all' : count($profileTools) }} tools)
+                        </span>
+                    </button>
+                @endforeach
+                <button
+                    wire:click="$set('mcpToolProfile', 'custom')"
+                    class="rounded-lg border px-3 py-1.5 text-sm font-medium transition {{ $mcpToolProfile === 'custom' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}"
+                >
+                    Custom
+                </button>
+            </div>
+        </div>
+
+        {{-- Tool groups with checkboxes --}}
+        <div class="space-y-4" x-data>
+            @foreach($mcpToolCatalog as $groupKey => $group)
+                <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                    <h3 class="mb-1 text-sm font-semibold text-gray-800">{{ $group['label'] }}</h3>
+                    <p class="mb-3 text-xs text-gray-500">{{ $group['description'] }}</p>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        @foreach($group['tools'] as $toolName => $toolDescription)
+                            <label class="flex items-start gap-2 rounded p-1.5 transition hover:bg-white">
+                                <input
+                                    type="checkbox"
+                                    wire:model="mcpToolsEnabled"
+                                    value="{{ $toolName }}"
+                                    class="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    {{ $mcpToolProfile !== 'custom' ? 'disabled' : '' }}
+                                />
+                                <div>
+                                    <span class="text-sm font-medium text-gray-800">{{ $toolName }}</span>
+                                    <p class="text-xs text-gray-500">{{ $toolDescription }}</p>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="mt-4 flex items-center gap-3">
+            <button wire:click="saveMcpToolPreferences" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                Save MCP Preferences
+            </button>
+            <span class="text-xs text-gray-500">
+                {{ count($mcpToolsEnabled) }} / {{ collect($mcpToolCatalog)->sum(fn($g) => count($g['tools'])) }} tools enabled
+            </span>
+        </div>
+    </div>
+
     {{-- Chatbot Feature --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Chatbot Feature</h2>

@@ -58,6 +58,11 @@ class TeamSettingsPage extends Component
     // Approval settings
     public int $approvalTimeoutHours = 48;
 
+    // MCP tool preferences
+    public string $mcpToolProfile = 'full';
+
+    public array $mcpToolsEnabled = [];
+
     // API token form
     public string $tokenName = '';
 
@@ -84,6 +89,21 @@ class TeamSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+
+        // MCP tool preferences
+        $mcpTools = $settings['mcp_tools'] ?? null;
+
+        if ($mcpTools === null) {
+            $this->mcpToolProfile = 'full';
+            $this->mcpToolsEnabled = array_keys($this->getAllCatalogToolNames());
+        } elseif (isset($mcpTools['enabled'])) {
+            $this->mcpToolProfile = 'custom';
+            $this->mcpToolsEnabled = $mcpTools['enabled'];
+        } else {
+            $this->mcpToolProfile = $mcpTools['profile'] ?? 'full';
+            $profileTools = config("mcp_profiles.{$this->mcpToolProfile}");
+            $this->mcpToolsEnabled = $profileTools ?? array_keys($this->getAllCatalogToolNames());
+        }
     }
 
     public function saveTeamSettings(): void
@@ -163,6 +183,46 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Approval settings saved.');
+    }
+
+    public function saveMcpToolPreferences(): void
+    {
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+
+        if ($this->mcpToolProfile === 'full') {
+            // Full = no restrictions, remove mcp_tools key entirely
+            unset($settings['mcp_tools']);
+        } elseif ($this->mcpToolProfile === 'custom') {
+            $settings['mcp_tools'] = ['enabled' => array_values($this->mcpToolsEnabled)];
+        } else {
+            $settings['mcp_tools'] = ['profile' => $this->mcpToolProfile];
+        }
+
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'MCP tool preferences saved. Changes take effect on next MCP request.');
+    }
+
+    public function applyMcpProfile(string $profile): void
+    {
+        $this->mcpToolProfile = $profile;
+        $profileTools = config("mcp_profiles.{$profile}");
+        $this->mcpToolsEnabled = $profileTools ?? array_keys($this->getAllCatalogToolNames());
+    }
+
+    private function getAllCatalogToolNames(): array
+    {
+        $catalog = config('mcp_tool_catalog.groups', []);
+        $names = [];
+
+        foreach ($catalog as $group) {
+            foreach ($group['tools'] as $toolName => $description) {
+                $names[$toolName] = $description;
+            }
+        }
+
+        return $names;
     }
 
     public function addProviderCredential(): void
@@ -539,6 +599,8 @@ class TeamSettingsPage extends Component
             'bridgeConnection' => config('bridge.relay_enabled')
                 ? BridgeConnection::active()->latest('connected_at')->first()
                 : null,
+            'mcpToolCatalog' => config('mcp_tool_catalog.groups', []),
+            'mcpProfiles' => config('mcp_profiles', []),
         ])->layout('layouts.app', ['header' => 'Settings']);
     }
 }
