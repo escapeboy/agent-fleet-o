@@ -23,6 +23,8 @@ return [
     | text-embedding-3-small provides a good cost/quality tradeoff.
     |
     */
+    'embedding_provider' => env('SEMANTIC_CACHE_EMBEDDING_PROVIDER', 'openai'),
+
     'embedding_model' => env('SEMANTIC_CACHE_EMBEDDING_MODEL', 'text-embedding-3-small'),
 
     /*

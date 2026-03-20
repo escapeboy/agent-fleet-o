@@ -125,7 +125,7 @@ class StoreMemoryAction
         $model = config('memory.embedding_model', 'text-embedding-3-small');
 
         $response = Prism::embeddings()
-            ->using('openai', $model)
+            ->using(config('memory.embedding_provider', 'openai'), $model)
             ->fromInput($text)
             ->asEmbeddings();
 

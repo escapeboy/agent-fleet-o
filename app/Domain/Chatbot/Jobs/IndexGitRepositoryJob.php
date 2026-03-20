@@ -198,7 +198,7 @@ class IndexGitRepositoryJob implements ShouldQueue
             $text = $chunk['content'];
 
             $response = Prism::embeddings()
-                ->using('openai', 'text-embedding-3-small')
+                ->using(config('memory.embedding_provider', 'openai'), config('memory.embedding_model', 'text-embedding-3-small'))
                 ->fromInput($text)
                 ->asEmbeddings();
 

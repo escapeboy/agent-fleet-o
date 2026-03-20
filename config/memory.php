@@ -11,6 +11,8 @@ return [
     | and retrieval. text-embedding-3-small is the most cost-effective.
     |
     */
+    'embedding_provider' => env('MEMORY_EMBEDDING_PROVIDER', 'openai'),
+
     'embedding_model' => env('MEMORY_EMBEDDING_MODEL', 'text-embedding-3-small'),
 
     /*

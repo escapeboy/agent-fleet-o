@@ -166,7 +166,7 @@ class ChatbotKnowledgeBasePage extends Component
     private function generateTestEmbedding(string $text): string
     {
         $response = Prism::embeddings()
-            ->using('openai', 'text-embedding-3-small')
+            ->using(config('memory.embedding_provider', 'openai'), config('memory.embedding_model', 'text-embedding-3-small'))
             ->fromInput($text)
             ->asEmbeddings();
 
@@ -185,6 +185,7 @@ class ChatbotKnowledgeBasePage extends Component
 
         $sources = ChatbotKnowledgeSource::where('chatbot_id', $this->chatbot->id)
             ->withTrashed(false)
+            ->withCount('chunks')
             ->orderByDesc('created_at')
             ->get();
 

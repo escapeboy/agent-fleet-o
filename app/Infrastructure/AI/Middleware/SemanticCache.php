@@ -145,7 +145,7 @@ class SemanticCache implements AiMiddlewareInterface
         $model = config('semantic_cache.embedding_model', 'text-embedding-3-small');
 
         $response = Prism::embeddings()
-            ->using('openai', $model)
+            ->using(config('semantic_cache.embedding_provider', 'openai'), $model)
             ->fromInput($text)
             ->asEmbeddings();
 

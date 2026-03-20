@@ -105,8 +105,8 @@
                                 @elseif(isset($source->source_data['original_name']))
                                     <span>{{ $source->source_data['original_name'] }}</span>
                                 @endif
-                                @if($source->chunk_count > 0)
-                                    <span>&middot; {{ $source->chunk_count }} chunks</span>
+                                @if($source->chunks_count > 0)
+                                    <span>&middot; {{ $source->chunks_count }} chunks</span>
                                 @endif
                                 @if($source->indexed_at)
                                     <span>&middot; Indexed {{ $source->indexed_at->diffForHumans() }}</span>
@@ -117,7 +117,7 @@
                             @endif
                         </div>
                         <div class="ml-4 flex shrink-0 items-center gap-2">
-                            @if($source->chunk_count > 0)
+                            @if($source->chunks_count > 0)
                                 <button wire:click="viewChunks('{{ $source->id }}')"
                                     class="rounded border border-gray-300 px-2 py-1 text-xs {{ $viewingSourceId === $source->id ? 'bg-primary-50 border-primary-300 text-primary-700' : 'text-gray-600 hover:bg-gray-50' }}">
                                     {{ $viewingSourceId === $source->id ? 'Hide Chunks' : 'View Chunks' }}
