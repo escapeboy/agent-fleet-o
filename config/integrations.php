@@ -71,6 +71,9 @@ return [
 
         // Phase 4 — Advanced drivers
         'twilio' => ['label' => 'Twilio',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '📱'],
+
+        // Database & backend platforms
+        'supabase' => ['label' => 'Supabase',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '⚡'],
     ],
 
     /*

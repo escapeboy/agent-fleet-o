@@ -14,4 +14,5 @@ enum OutboundChannel: string
     case GoogleChat = 'google_chat';
     case SignalProtocol = 'signal_protocol';
     case Matrix = 'matrix';
+    case SupabaseRealtime = 'supabase_realtime';
 }

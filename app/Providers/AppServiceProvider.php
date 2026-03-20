@@ -25,6 +25,7 @@ use App\Domain\Outbound\Connectors\SlackConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
 use App\Domain\Outbound\Connectors\TeamsConnector;
 use App\Domain\Outbound\Connectors\TelegramConnector;
+use App\Domain\Outbound\Connectors\SupabaseRealtimeConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
 use App\Domain\Outbound\Connectors\WhatsAppConnector;
 use App\Domain\Project\Listeners\LogProjectActivity;
@@ -54,6 +55,7 @@ use App\Domain\Signal\Connectors\SignalProtocolConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
+use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Models\SkillExecution;
@@ -138,6 +140,7 @@ class AppServiceProvider extends ServiceProvider
             SignalProtocolConnector::class,
             HttpMonitorConnector::class,
             CalendarConnector::class,
+            SupabaseWebhookConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors
@@ -158,6 +161,7 @@ class AppServiceProvider extends ServiceProvider
             WebhookOutboundConnector::class,
             \App\Domain\Outbound\Connectors\SignalProtocolConnector::class,
             \App\Domain\Outbound\Connectors\MatrixConnector::class,
+            SupabaseRealtimeConnector::class,
         ], 'fleet.outbound.connectors');
 
         // Tag all built-in AI gateway middleware (plugins can prepend their own)

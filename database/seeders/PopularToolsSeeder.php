@@ -1509,48 +1509,166 @@ class PopularToolsSeeder extends Seeder
             [
                 'name' => 'Supabase',
                 'slug' => 'supabase',
-                'description' => 'Interact with your Supabase project — query tables, manage auth users, invoke Edge Functions, and access Storage. Requires a Supabase project URL and service role key.',
+                'description' => 'Manage your Supabase project from AI agents — execute SQL, apply migrations, deploy Edge Functions, inspect logs, and list tables. Requires a Supabase Personal Access Token (PAT) from supabase.com/dashboard/account/tokens.',
                 'type' => ToolType::McpStdio,
                 'risk_level' => ToolRiskLevel::Write,
                 'transport_config' => [
                     'command' => 'npx',
-                    'args' => ['-y', '@supabase/mcp-server-supabase@latest'],
-                    'env' => ['SUPABASE_URL' => '', 'SUPABASE_SERVICE_ROLE_KEY' => ''],
+                    'args' => ['-y', '@supabase/mcp-server-supabase@latest', '--read-only'],
+                    'env' => ['SUPABASE_ACCESS_TOKEN' => ''],
+                ],
+                'credentials' => [
+                    'access_token' => '',
                 ],
                 'tool_definitions' => [
+                    // Database tools
                     [
-                        'name' => 'supabase_query',
-                        'description' => 'Execute a SQL query on the Supabase PostgreSQL database',
+                        'name' => 'execute_sql',
+                        'description' => 'Execute raw SQL against the Supabase PostgreSQL database',
                         'input_schema' => [
                             'type' => 'object',
                             'properties' => [
-                                'query' => ['type' => 'string', 'description' => 'SQL query'],
+                                'query' => ['type' => 'string', 'description' => 'SQL query to execute'],
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                            ],
+                            'required' => ['query', 'project_ref'],
+                        ],
+                    ],
+                    [
+                        'name' => 'list_tables',
+                        'description' => 'List all tables in the Supabase database with schema and column metadata',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                                'schemas' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Optional schema filter (e.g. ["public"])'],
+                            ],
+                            'required' => ['project_ref'],
+                        ],
+                    ],
+                    [
+                        'name' => 'apply_migration',
+                        'description' => 'Apply a SQL migration to the Supabase database and track it in migration history',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                                'name' => ['type' => 'string', 'description' => 'Migration name (snake_case)'],
+                                'query' => ['type' => 'string', 'description' => 'DDL SQL for the migration'],
+                            ],
+                            'required' => ['project_ref', 'name', 'query'],
+                        ],
+                    ],
+                    [
+                        'name' => 'list_migrations',
+                        'description' => 'List all applied migrations for a Supabase project',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                            ],
+                            'required' => ['project_ref'],
+                        ],
+                    ],
+                    [
+                        'name' => 'list_extensions',
+                        'description' => 'List installed PostgreSQL extensions (e.g. pgvector, pg_cron, pg_net)',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                            ],
+                            'required' => ['project_ref'],
+                        ],
+                    ],
+                    // Edge Function tools
+                    [
+                        'name' => 'list_edge_functions',
+                        'description' => 'List all Edge Functions deployed to a Supabase project',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                            ],
+                            'required' => ['project_ref'],
+                        ],
+                    ],
+                    [
+                        'name' => 'deploy_edge_function',
+                        'description' => 'Deploy a new Edge Function or update an existing one',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                                'name' => ['type' => 'string', 'description' => 'Function name (slug, no spaces)'],
+                                'entrypoint_path' => ['type' => 'string', 'description' => 'Path to the function entrypoint file'],
+                                'verify_jwt' => ['type' => 'boolean', 'description' => 'Whether to enforce JWT verification (default: true)'],
+                            ],
+                            'required' => ['project_ref', 'name', 'entrypoint_path'],
+                        ],
+                    ],
+                    // Debugging tools
+                    [
+                        'name' => 'get_logs',
+                        'description' => 'Retrieve logs from a Supabase service (api, postgres, edge-runtime, auth, storage, realtime)',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                                'service' => ['type' => 'string', 'description' => 'Service name: api | postgres | edge-runtime | auth | storage | realtime'],
+                            ],
+                            'required' => ['project_ref', 'service'],
+                        ],
+                    ],
+                    [
+                        'name' => 'get_advisors',
+                        'description' => 'Get security and performance recommendations for a Supabase project',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                                'type' => ['type' => 'string', 'description' => 'Advisor type: security | performance'],
+                            ],
+                            'required' => ['project_ref'],
+                        ],
+                    ],
+                    // Development tools
+                    [
+                        'name' => 'get_project_url',
+                        'description' => 'Get the REST API URL for a Supabase project',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                            ],
+                            'required' => ['project_ref'],
+                        ],
+                    ],
+                    [
+                        'name' => 'get_publishable_keys',
+                        'description' => 'Get the anon (publishable) API key for a Supabase project',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_ref' => ['type' => 'string', 'description' => 'Supabase project reference ID'],
+                            ],
+                            'required' => ['project_ref'],
+                        ],
+                    ],
+                    // Docs tool
+                    [
+                        'name' => 'search_docs',
+                        'description' => 'Search the Supabase documentation for answers about APIs, configuration, and best practices',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Search query'],
                             ],
                             'required' => ['query'],
                         ],
                     ],
-                    [
-                        'name' => 'supabase_list_tables',
-                        'description' => 'List all tables in the Supabase database',
-                        'input_schema' => [
-                            'type' => 'object',
-                            'properties' => [],
-                        ],
-                    ],
-                    [
-                        'name' => 'supabase_invoke_function',
-                        'description' => 'Invoke a Supabase Edge Function',
-                        'input_schema' => [
-                            'type' => 'object',
-                            'properties' => [
-                                'function_name' => ['type' => 'string', 'description' => 'Edge Function name'],
-                                'body' => ['type' => 'object', 'description' => 'Request body'],
-                            ],
-                            'required' => ['function_name'],
-                        ],
-                    ],
                 ],
-                'settings' => ['timeout' => 30],
+                'settings' => ['timeout' => 60],
             ],
 
             // ─── Cloud & Infrastructure ───────────────────────────────

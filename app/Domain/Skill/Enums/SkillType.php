@@ -16,6 +16,7 @@ enum SkillType: string
     case RunpodPod = 'runpod_pod';
     case GpuCompute = 'gpu_compute';
     case BorunaScript = 'boruna_script';
+    case SupabaseEdgeFunction = 'supabase_edge_function';
 
     public function label(): string
     {
@@ -32,6 +33,7 @@ enum SkillType: string
             self::RunpodPod => 'RunPod Pod',
             self::GpuCompute => 'GPU Compute',
             self::BorunaScript => 'Boruna Script',
+            self::SupabaseEdgeFunction => 'Supabase Edge Function',
         };
     }
 }

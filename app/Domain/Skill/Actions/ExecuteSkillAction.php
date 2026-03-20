@@ -40,6 +40,7 @@ class ExecuteSkillAction
         private readonly ExecuteRunPodPodSkillAction $executeRunPodPod,
         private readonly ExecuteGpuComputeSkillAction $executeGpuCompute,
         private readonly ExecuteBorunaScriptSkillAction $executeBorunaScript,
+        private readonly ExecuteSupabaseEdgeFunctionSkillAction $executeSupabaseEdgeFunction,
     ) {}
 
     /**
@@ -90,6 +91,11 @@ class ExecuteSkillAction
         // BorunaScript runs a deterministic .ax script via the Boruna MCP stdio server — no LLM, no credits
         if ($skill->type === SkillType::BorunaScript->value) {
             return $this->executeBorunaScript->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
+        }
+
+        // Supabase Edge Function calls a Supabase Edge Function via REST — no LLM, costs billed to user's Supabase account
+        if ($skill->type === SkillType::SupabaseEdgeFunction->value) {
+            return $this->executeSupabaseEdgeFunction->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // Plugin hook: allow plugins to inspect input or cancel skill execution

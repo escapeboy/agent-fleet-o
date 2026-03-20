@@ -148,6 +148,7 @@ use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
 use App\Mcp\Tools\Memory\MemoryUploadKnowledgeTool;
+use App\Mcp\Tools\Memory\SupabaseProvisionMemoryTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
@@ -202,8 +203,10 @@ use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
+use App\Mcp\Tools\Signal\SupabaseConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
 use App\Mcp\Tools\Skill\BrowserSkillTool;
+use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
@@ -349,6 +352,7 @@ class AgentFleetServer extends Server
         MultiModelConsensusTool::class,
         CodeExecutionTool::class,
         BrowserSkillTool::class,
+        SupabaseEdgeFunctionSkillTool::class,
 
         // Tool (12)
         ToolListTool::class,
@@ -432,6 +436,7 @@ class AgentFleetServer extends Server
         ImapMailboxTool::class,
         EmailReplyTool::class,
         ClearCueConnectorTool::class,
+        SupabaseConnectorTool::class,
         ConnectorSubscriptionTool::class,
         IntentScoreTool::class,
         KgSearchTool::class,
@@ -462,13 +467,14 @@ class AgentFleetServer extends Server
         KnowledgeBaseSearchTool::class,
         KnowledgeBaseDeleteTool::class,
 
-        // Memory (6)
+        // Memory (7)
         MemorySearchTool::class,
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
         MemoryDeleteTool::class,
         MemoryUploadKnowledgeTool::class,
         MemoryAddTool::class,
+        SupabaseProvisionMemoryTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,

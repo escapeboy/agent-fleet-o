@@ -25,6 +25,7 @@ use App\Domain\Integration\Drivers\Stripe\StripeIntegrationDriver;
 use App\Domain\Integration\Drivers\Teams\TeamsIntegrationDriver;
 use App\Domain\Integration\Drivers\Telegram\TelegramIntegrationDriver;
 use App\Domain\Integration\Drivers\WhatsApp\WhatsAppIntegrationDriver;
+use App\Domain\Integration\Drivers\Supabase\SupabaseIntegrationDriver;
 use App\Domain\Integration\Drivers\Zapier\ZapierIntegrationDriver;
 use Illuminate\Support\Manager;
 
@@ -160,5 +161,10 @@ class IntegrationManager extends Manager
     public function createMakeDriver(): IntegrationDriverInterface
     {
         return $this->container->make(MakeIntegrationDriver::class);
+    }
+
+    public function createSupabaseDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(SupabaseIntegrationDriver::class);
     }
 }
