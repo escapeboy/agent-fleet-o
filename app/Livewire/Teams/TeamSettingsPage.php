@@ -680,7 +680,7 @@ class TeamSettingsPage extends Component
                     ->get()
                 : collect(),
             'allBridgeAgents' => $bridgeConnections->flatMap(
-                fn ($c) => collect($c->agents())->filter(fn ($a) => $a['found'] ?? false)
+                fn ($c) => collect($c->agents())->filter(fn ($a) => $a['found'] ?? false),
             )->unique('key')->values(),
             'mcpToolCatalog' => config('mcp_tool_catalog.groups', []),
             'mcpProfiles' => config('mcp_profiles', []),

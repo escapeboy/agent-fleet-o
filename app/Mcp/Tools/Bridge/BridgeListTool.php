@@ -3,7 +3,7 @@
 namespace App\Mcp\Tools\Bridge;
 
 use App\Domain\Bridge\Models\BridgeConnection;
-use App\Domain\Bridge\Services\BridgeRouter;
+use App\Domain\Shared\Models\Team;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -46,7 +46,7 @@ class BridgeListTool extends Tool
         $connections = $query->limit(20)->get();
 
         // Get current routing preferences
-        $team = \App\Domain\Shared\Models\Team::find($teamId);
+        $team = Team::find($teamId);
         $bridgeSettings = $team?->settings['bridge'] ?? [];
 
         return Response::text(json_encode([

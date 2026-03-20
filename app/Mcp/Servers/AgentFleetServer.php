@@ -154,6 +154,7 @@ use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
+use App\Mcp\Tools\Memory\MemoryUnifiedSearchTool;
 use App\Mcp\Tools\Memory\MemoryUploadKnowledgeTool;
 use App\Mcp\Tools\Memory\SupabaseProvisionMemoryTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
@@ -487,8 +488,9 @@ class AgentFleetServer extends Server
         KnowledgeBaseSearchTool::class,
         KnowledgeBaseDeleteTool::class,
 
-        // Memory (7)
+        // Memory (8)
         MemorySearchTool::class,
+        MemoryUnifiedSearchTool::class,
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
         MemoryDeleteTool::class,

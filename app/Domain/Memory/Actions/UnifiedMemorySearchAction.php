@@ -1,0 +1,236 @@
+<?php
+
+namespace App\Domain\Memory\Actions;
+
+use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
+use App\Domain\Memory\Models\Memory;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Prism\Prism\Facades\Prism;
+
+/**
+ * Unified search across vector memory, knowledge graph, and keyword search
+ * using Reciprocal Rank Fusion (RRF) to produce a single ranked list.
+ *
+ * RRF_score(item) = Σ [ weight_i / (rank_in_system_i + k) ]
+ */
+class UnifiedMemorySearchAction
+{
+    public function __construct(
+        private readonly RetrieveRelevantMemoriesAction $vectorSearch,
+        private readonly TemporalKnowledgeGraphService $kgService,
+    ) {}
+
+    /**
+     * @return Collection<int, array{type: string, content: string, score: float, metadata: array}>
+     */
+    public function execute(
+        string $teamId,
+        string $query,
+        ?string $agentId = null,
+        ?string $projectId = null,
+        int $topK = 10,
+    ): Collection {
+        if (! config('memory.unified_search.enabled', true)) {
+            // Fall back to vector-only search
+            return $this->vectorOnlyFallback($agentId, $query, $projectId, $topK, $teamId);
+        }
+
+        $vectorWeight = config('memory.unified_search.vector_weight', 1.0);
+        $kgWeight = config('memory.unified_search.kg_weight', 2.0);
+        $keywordWeight = config('memory.unified_search.keyword_weight', 0.5);
+        $rrfK = config('memory.unified_search.rrf_k', 60);
+
+        $queryEmbedding = $this->generateEmbedding($query);
+
+        // System 1: Vector search
+        $vectorResults = $this->getVectorResults($agentId, $query, $projectId, $teamId);
+
+        // System 2: Knowledge Graph search
+        $kgResults = $this->getKgResults($teamId, $queryEmbedding);
+
+        // System 3: Keyword search
+        $keywordResults = $this->getKeywordResults($teamId, $agentId, $query);
+
+        // RRF fusion
+        $fused = collect();
+
+        // Assign ranks and scores for vector results
+        $vectorResults->values()->each(function ($item, $rank) use ($fused, $vectorWeight, $rrfK) {
+            $key = 'memory:'.$item->id;
+            $rrfScore = $vectorWeight / ($rank + 1 + $rrfK);
+            $existing = $fused->get($key);
+
+            $fused->put($key, [
+                'type' => 'memory',
+                'content' => $item->content,
+                'score' => ($existing['score'] ?? 0) + $rrfScore,
+                'metadata' => [
+                    'id' => $item->id,
+                    'source_type' => $item->source_type,
+                    'agent_id' => $item->agent_id,
+                    'importance' => $item->effective_importance,
+                    'retrieval_count' => $item->retrieval_count ?? 0,
+                    'created_at' => $item->created_at?->toIso8601String(),
+                    'confidence' => $item->confidence,
+                    'metadata' => $item->metadata,
+                ],
+            ]);
+        });
+
+        // Assign ranks and scores for KG results
+        $kgResults->values()->each(function ($edge, $rank) use ($fused, $kgWeight, $rrfK) {
+            $key = 'kg:'.$edge->id;
+            $rrfScore = $kgWeight / ($rank + 1 + $rrfK);
+
+            $source = $edge->sourceEntity?->name ?? 'Unknown';
+            $target = $edge->targetEntity?->name ?? 'Unknown';
+
+            $fused->put($key, [
+                'type' => 'kg_fact',
+                'content' => $edge->fact,
+                'score' => $rrfScore,
+                'metadata' => [
+                    'id' => $edge->id,
+                    'source_entity' => $source,
+                    'target_entity' => $target,
+                    'relation_type' => $edge->relation_type,
+                    'valid_at' => $edge->valid_at?->toIso8601String(),
+                ],
+            ]);
+        });
+
+        // Assign ranks and scores for keyword results
+        $keywordResults->values()->each(function ($item, $rank) use ($fused, $keywordWeight, $rrfK) {
+            $key = 'memory:'.$item->id;
+            $rrfScore = $keywordWeight / ($rank + 1 + $rrfK);
+            $existing = $fused->get($key);
+
+            if ($existing) {
+                // Memory already found via vector — boost its score
+                $existing['score'] += $rrfScore;
+                $fused->put($key, $existing);
+            } else {
+                $fused->put($key, [
+                    'type' => 'memory',
+                    'content' => $item->content,
+                    'score' => $rrfScore,
+                    'metadata' => [
+                        'id' => $item->id,
+                        'source_type' => $item->source_type,
+                        'agent_id' => $item->agent_id,
+                        'importance' => $item->effective_importance,
+                        'retrieval_count' => $item->retrieval_count ?? 0,
+                        'created_at' => $item->created_at?->toIso8601String(),
+                        'confidence' => $item->confidence,
+                        'metadata' => $item->metadata,
+                    ],
+                ]);
+            }
+        });
+
+        return $fused->values()
+            ->sortByDesc('score')
+            ->take($topK)
+            ->values();
+    }
+
+    private function getVectorResults(?string $agentId, string $query, ?string $projectId, ?string $teamId): Collection
+    {
+        if (! $agentId) {
+            return collect();
+        }
+
+        try {
+            return $this->vectorSearch->execute(
+                agentId: $agentId,
+                query: $query,
+                projectId: $projectId,
+                topK: 20,
+                scope: $projectId ? 'project' : 'agent',
+                teamId: $teamId,
+            );
+        } catch (\Throwable $e) {
+            Log::debug('UnifiedSearch: vector search failed', ['error' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    private function getKgResults(string $teamId, string $queryEmbedding): Collection
+    {
+        try {
+            return $this->kgService->search(
+                teamId: $teamId,
+                queryEmbedding: $queryEmbedding,
+                limit: 20,
+            );
+        } catch (\Throwable $e) {
+            Log::debug('UnifiedSearch: KG search failed', ['error' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    private function getKeywordResults(string $teamId, ?string $agentId, string $query): Collection
+    {
+        try {
+            $builder = Memory::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('content', 'ILIKE', '%'.str_replace(['%', '_'], ['\%', '\_'], $query).'%')
+                ->orderByDesc('importance')
+                ->limit(20);
+
+            if ($agentId) {
+                $builder->where('agent_id', $agentId);
+            }
+
+            return $builder->get();
+        } catch (\Throwable $e) {
+            Log::debug('UnifiedSearch: keyword search failed', ['error' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    private function vectorOnlyFallback(?string $agentId, string $query, ?string $projectId, int $topK, ?string $teamId): Collection
+    {
+        if (! $agentId) {
+            return collect();
+        }
+
+        $memories = $this->vectorSearch->execute(
+            agentId: $agentId,
+            query: $query,
+            projectId: $projectId,
+            topK: $topK,
+            scope: $projectId ? 'project' : 'agent',
+            teamId: $teamId,
+        );
+
+        return $memories->map(fn ($m) => [
+            'type' => 'memory',
+            'content' => $m->content,
+            'score' => $m->composite_score ?? 0,
+            'metadata' => [
+                'id' => $m->id,
+                'source_type' => $m->source_type,
+                'agent_id' => $m->agent_id,
+                'importance' => $m->effective_importance,
+                'retrieval_count' => $m->retrieval_count ?? 0,
+                'created_at' => $m->created_at?->toIso8601String(),
+                'confidence' => $m->confidence,
+            ],
+        ]);
+    }
+
+    private function generateEmbedding(string $text): string
+    {
+        $response = Prism::embeddings()
+            ->using(config('memory.embedding_provider', 'openai'), config('memory.embedding_model', 'text-embedding-3-small'))
+            ->fromInput($text)
+            ->asEmbeddings();
+
+        return '['.implode(',', $response->embeddings[0]->embedding).']';
+    }
+}

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Bridge\Services\BridgeRouter;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Gateways\FallbackAiGateway;
@@ -59,6 +60,7 @@ class AiServiceProvider extends ServiceProvider
         $this->app->singleton(LocalBridgeGateway::class, function ($app) {
             return new LocalBridgeGateway(
                 registry: $app->make(BridgeRequestRegistry::class),
+                router: $app->make(BridgeRouter::class),
             );
         });
 

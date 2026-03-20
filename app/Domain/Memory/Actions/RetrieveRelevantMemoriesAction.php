@@ -2,7 +2,9 @@
 
 namespace App\Domain\Memory\Actions;
 
+use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Memory\Models\Memory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Prism;
@@ -10,7 +12,9 @@ use Prism\Prism\Facades\Prism;
 class RetrieveRelevantMemoriesAction
 {
     /**
-     * Retrieve top-K relevant memories using cosine similarity.
+     * Retrieve top-K relevant memories using composite scoring with effective importance.
+     *
+     * Effective importance = LEAST(importance + LN(1 + retrieval_count) * 0.15, 1.0)
      *
      * @param  string  $scope  'agent' (default), 'team', or 'project'
      * @return Collection<int, Memory>
@@ -35,18 +39,16 @@ class RetrieveRelevantMemoriesAction
         try {
             $queryEmbedding = $this->generateEmbedding($query);
 
-            // Composite scoring weights from config
             $semanticWeight = config('memory.scoring.semantic_weight', 0.5);
             $recencyWeight = config('memory.scoring.recency_weight', 0.3);
             $importanceWeight = config('memory.scoring.importance_weight', 0.2);
             $halfLifeDays = config('memory.scoring.half_life_days', 7);
 
-            // Composite score = semantic * similarity + recency * decay + importance * score
-            // Recency decay: 0.5 ^ (age_days / half_life_days) using PostgreSQL POWER()
+            // Composite score using effective_importance (base + retrieval reinforcement)
             $compositeScoreSql = <<<'SQL'
                 (? * (1 - (embedding <=> ?))) +
                 (? * POWER(0.5, EXTRACT(EPOCH FROM (NOW() - COALESCE(last_accessed_at, created_at))) / 86400.0 / ?)) +
-                (? * COALESCE(importance, 0.5))
+                (? * LEAST(COALESCE(importance, 0.5) + LN(1 + COALESCE(retrieval_count, 0)) * 0.15, 1.0))
                 AS composite_score
             SQL;
 
@@ -61,39 +63,35 @@ class RetrieveRelevantMemoriesAction
                 ->where('confidence', '>=', $minConfidence)
                 ->orderByDesc('composite_score');
 
-            // Apply scope filtering
-            match ($scope) {
-                'team' => $builder->when($teamId, fn ($q) => $q->where('team_id', $teamId)),
-                'project' => $builder->where(function ($q) use ($agentId, $projectId) {
-                    $q->where('agent_id', $agentId);
-                    if ($projectId) {
-                        $q->orWhere(function ($sub) use ($projectId) {
-                            $sub->where('source_type', 'experiment')
-                                ->where('project_id', $projectId);
-                        });
-                    }
-                }),
-                default => $builder->where('agent_id', $agentId)
-                    ->when($projectId, fn ($q) => $q->where(function ($sub) use ($projectId) {
-                        $sub->where('project_id', $projectId)
-                            ->orWhereNull('project_id');
-                    })),
-            };
+            // Apply scope filtering with visibility awareness
+            $this->applyScope($builder, $scope, $agentId, $projectId, $teamId);
 
             $results = $builder->limit($topK)->get();
 
-            // Batch update last_accessed_at for retrieved memories (scoped to prevent cross-tenant writes)
+            // Batch update last_accessed_at and increment retrieval_count
             if ($results->isNotEmpty()) {
                 $updateQuery = Memory::withoutGlobalScopes()
                     ->whereIn('id', $results->pluck('id'));
 
-                // Apply tenant guard: only update memories belonging to the correct scope
+                // Apply tenant guard
                 match ($scope) {
                     'team' => $updateQuery->when($teamId, fn ($q) => $q->where('team_id', $teamId)),
                     default => $updateQuery->where('agent_id', $agentId),
                 };
 
                 $updateQuery->update(['last_accessed_at' => now()]);
+
+                // Increment retrieval_count atomically (with tenant guard)
+                $incrementQuery = Memory::withoutGlobalScopes()
+                    ->whereIn('id', $results->pluck('id'));
+                match ($scope) {
+                    'team' => $incrementQuery->when($teamId, fn ($q) => $q->where('team_id', $teamId)),
+                    default => $incrementQuery->where('agent_id', $agentId),
+                };
+                $incrementQuery->increment('retrieval_count');
+
+                // Auto-promote private memories that cross the sharing threshold
+                $this->checkAutoPromotion($results, $agentId);
             }
 
             return $results;
@@ -105,6 +103,71 @@ class RetrieveRelevantMemoriesAction
             ]);
 
             return collect();
+        }
+    }
+
+    /**
+     * Apply scope and visibility filters to the query builder.
+     */
+    private function applyScope(
+        Builder $builder,
+        string $scope,
+        string $agentId,
+        ?string $projectId,
+        ?string $teamId,
+    ): void {
+        match ($scope) {
+            'team' => $builder->when($teamId, fn ($q) => $q->where('team_id', $teamId)),
+            'project' => $builder->where(function ($q) use ($agentId, $projectId, $teamId) {
+                // Own private memories
+                $q->where(fn ($sub) => $sub->where('agent_id', $agentId)->where('visibility', MemoryVisibility::Private));
+
+                // Project-scoped memories from any agent in the project (team-guarded)
+                if ($projectId) {
+                    $q->orWhere(fn ($sub) => $sub->where('project_id', $projectId)
+                        ->where('visibility', MemoryVisibility::Project)
+                        ->when($teamId, fn ($s) => $s->where('team_id', $teamId)));
+                }
+
+                // Team-scoped memories
+                if ($teamId) {
+                    $q->orWhere(fn ($sub) => $sub->where('team_id', $teamId)->where('visibility', MemoryVisibility::Team));
+                }
+            }),
+            default => $builder->where(function ($q) use ($agentId, $teamId) {
+                // Own memories (any visibility)
+                $q->where('agent_id', $agentId);
+
+                // Also include team-scoped memories from other agents
+                if ($teamId) {
+                    $q->orWhere(fn ($sub) => $sub->where('team_id', $teamId)->where('visibility', MemoryVisibility::Team));
+                }
+            })->when($projectId, fn ($q) => $q->where(function ($sub) use ($projectId) {
+                $sub->where('project_id', $projectId)
+                    ->orWhereNull('project_id');
+            })),
+        };
+    }
+
+    /**
+     * Auto-promote private memories that cross the sharing threshold.
+     */
+    private function checkAutoPromotion(Collection $memories, string $agentId): void
+    {
+        $minRetrievals = config('memory.visibility.auto_promote_retrievals', 3);
+        $minImportance = config('memory.visibility.auto_promote_min_importance', 0.7);
+
+        $candidates = $memories->filter(fn ($m) => $m->visibility === MemoryVisibility::Private
+            && ($m->retrieval_count ?? 0) + 1 >= $minRetrievals // +1 because we just incremented
+            && ($m->importance ?? 0.5) >= $minImportance,
+        );
+
+        if ($candidates->isNotEmpty()) {
+            Memory::withoutGlobalScopes()
+                ->whereIn('id', $candidates->pluck('id'))
+                ->where('agent_id', $agentId)
+                ->where('visibility', MemoryVisibility::Private)
+                ->update(['visibility' => MemoryVisibility::Project]);
         }
     }
 

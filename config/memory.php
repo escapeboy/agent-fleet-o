@@ -95,4 +95,86 @@ return [
         'half_life_days' => (int) env('MEMORY_HALF_LIFE_DAYS', 7),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Write Gate (Semantic Deduplication)
+    |--------------------------------------------------------------------------
+    |
+    | Before storing a new memory, check for near-duplicates using hash and
+    | vector similarity. skip_threshold: exact semantic match (discard).
+    | update_threshold: similar enough to merge (LLM-assisted).
+    |
+    */
+    'write_gate' => [
+        'enabled' => (bool) env('MEMORY_WRITE_GATE_ENABLED', true),
+        'skip_threshold' => (float) env('MEMORY_SKIP_THRESHOLD', 0.95),
+        'update_threshold' => (float) env('MEMORY_UPDATE_THRESHOLD', 0.85),
+        'hash_dedup' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Memory Consolidation
+    |--------------------------------------------------------------------------
+    |
+    | Periodic merging of similar memories into consolidated summaries.
+    | Reduces noise while preserving signal. Runs as a daily batch job.
+    |
+    */
+    'consolidation' => [
+        'enabled' => (bool) env('MEMORY_CONSOLIDATION_ENABLED', true),
+        'min_memories_per_agent' => 50,
+        'min_cluster_size' => 3,
+        'similarity_threshold' => 0.85,
+        'exclude_newer_than_days' => 7,
+        'model' => 'claude-haiku-4-5',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Importance-Weighted Pruning
+    |--------------------------------------------------------------------------
+    |
+    | Pruning considers both age and importance instead of pure TTL.
+    | High-importance or frequently-retrieved memories are protected.
+    |
+    */
+    'pruning' => [
+        'score_threshold' => (float) env('MEMORY_PRUNE_SCORE_THRESHOLD', 0.05),
+        'max_ttl_days' => (int) env('MEMORY_MAX_TTL_DAYS', 365),
+        'protect_importance_above' => 0.8,
+        'protect_retrieval_above' => 10,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Unified Search (RRF Fusion)
+    |--------------------------------------------------------------------------
+    |
+    | Reciprocal Rank Fusion across vector memory, knowledge graph, and keyword
+    | search. Higher weights = more influence on final ranking.
+    |
+    */
+    'unified_search' => [
+        'enabled' => (bool) env('MEMORY_UNIFIED_SEARCH', true),
+        'kg_weight' => 2.0,
+        'vector_weight' => 1.0,
+        'keyword_weight' => 0.5,
+        'rrf_k' => 60,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Visibility & Cross-Agent Sharing
+    |--------------------------------------------------------------------------
+    |
+    | Controls when private memories are auto-promoted to project scope.
+    | A memory needs both minimum retrievals AND importance to be shared.
+    |
+    */
+    'visibility' => [
+        'auto_promote_retrievals' => 3,
+        'auto_promote_min_importance' => 0.7,
+    ],
+
 ];
