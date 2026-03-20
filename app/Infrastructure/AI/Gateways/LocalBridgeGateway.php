@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Gateways;
 
 use App\Domain\Bridge\Models\BridgeConnection;
+use App\Domain\Bridge\Services\BridgeRouter;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -20,18 +21,21 @@ class LocalBridgeGateway implements AiGatewayInterface
 {
     private const RELAY_TIMEOUT = 90;
 
-    public function __construct(private readonly BridgeRequestRegistry $registry) {}
+    public function __construct(
+        private readonly BridgeRequestRegistry $registry,
+        private readonly BridgeRouter $router,
+    ) {}
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
-        $connection = $this->requireActiveConnection($request->teamId);
+        $connection = $this->requireActiveConnection($request->teamId, $request);
 
         return $this->routeRequest($connection, $request);
     }
 
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
-        $connection = $this->requireActiveConnection($request->teamId);
+        $connection = $this->requireActiveConnection($request->teamId, $request);
 
         return $this->routeRequest($connection, $request, $onChunk);
     }
@@ -41,7 +45,14 @@ class LocalBridgeGateway implements AiGatewayInterface
         return 0; // Bridge requests are always zero cost
     }
 
-    private function requireActiveConnection(?string $teamId): BridgeConnection
+    /**
+     * Resolve the best active bridge connection for the given request.
+     *
+     * For bridge_agent requests, uses BridgeRouter to resolve based on
+     * the team's routing preferences (auto/prefer/per_agent).
+     * For bridge_llm requests, picks the best connection with matching LLM endpoints.
+     */
+    private function requireActiveConnection(?string $teamId, ?AiRequestDTO $request = null): BridgeConnection
     {
         if (! $teamId) {
             throw new RuntimeException(
@@ -49,15 +60,28 @@ class LocalBridgeGateway implements AiGatewayInterface
             );
         }
 
-        $connection = BridgeConnection::where('team_id', $teamId)
+        // For bridge_agent, use routing preferences to pick the right connection
+        if ($request && $request->provider === 'bridge_agent') {
+            $agentKey = explode(':', $request->model, 2)[0];
+            $connection = $this->router->resolveForAgent($teamId, $agentKey);
+
+            if ($connection) {
+                return $connection;
+            }
+        }
+
+        // Fallback: pick the best active connection (highest priority, most recent)
+        $connection = BridgeConnection::withoutGlobalScopes()
+            ->where('team_id', $teamId)
             ->active()
+            ->orderByDesc('priority')
             ->orderByDesc('connected_at')
             ->first();
 
         if (! $connection) {
             throw new RuntimeException(
                 'FleetQ Bridge is not connected. '
-                .'Download and start the bridge daemon: https://github.com/fleetq/fleetq-bridge',
+                .'Download and start the bridge daemon: https://github.com/escapeboy/fleetq-bridge',
             );
         }
 

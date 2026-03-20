@@ -59,6 +59,13 @@ class TeamSettingsPage extends Component
     // Approval settings
     public int $approvalTimeoutHours = 48;
 
+    // Bridge routing
+    public string $bridgeRoutingMode = 'auto';
+
+    public ?string $preferredBridgeId = null;
+
+    public array $agentRouting = [];
+
     // MCP tool preferences
     public string $mcpToolProfile = 'full';
 
@@ -90,6 +97,12 @@ class TeamSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+
+        // Bridge routing preferences
+        $bridgeSettings = $settings['bridge'] ?? [];
+        $this->bridgeRoutingMode = $bridgeSettings['routing_mode'] ?? 'auto';
+        $this->preferredBridgeId = $bridgeSettings['preferred_bridge_id'] ?? null;
+        $this->agentRouting = $bridgeSettings['agent_routing'] ?? [];
 
         // MCP tool preferences
         $mcpTools = $settings['mcp_tools'] ?? null;
@@ -596,6 +609,34 @@ class TeamSettingsPage extends Component
             ->update(['label' => mb_substr(trim($name), 0, 100)]);
     }
 
+    public function saveBridgeRouting(): void
+    {
+        $this->validate([
+            'bridgeRoutingMode' => 'required|in:auto,prefer,per_agent',
+            'preferredBridgeId' => 'nullable|string|uuid',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+
+        $bridgeSettings = [
+            'routing_mode' => $this->bridgeRoutingMode,
+        ];
+
+        if ($this->bridgeRoutingMode === 'prefer' && $this->preferredBridgeId) {
+            $bridgeSettings['preferred_bridge_id'] = $this->preferredBridgeId;
+        }
+
+        if ($this->bridgeRoutingMode === 'per_agent' && ! empty($this->agentRouting)) {
+            $bridgeSettings['agent_routing'] = array_filter($this->agentRouting, fn ($v) => $v && $v !== 'auto');
+        }
+
+        $settings['bridge'] = $bridgeSettings;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Bridge routing saved.');
+    }
+
     public function render()
     {
         $team = auth()->user()->currentTeam;
@@ -632,12 +673,15 @@ class TeamSettingsPage extends Component
                     ->latest()
                     ->get()
                 : collect(),
-            'bridgeConnections' => config('bridge.relay_enabled')
+            'bridgeConnections' => $bridgeConnections = config('bridge.relay_enabled')
                 ? BridgeConnection::active()
                     ->orderByDesc('priority')
                     ->orderByDesc('connected_at')
                     ->get()
                 : collect(),
+            'allBridgeAgents' => $bridgeConnections->flatMap(
+                fn ($c) => collect($c->agents())->filter(fn ($a) => $a['found'] ?? false)
+            )->unique('key')->values(),
             'mcpToolCatalog' => config('mcp_tool_catalog.groups', []),
             'mcpProfiles' => config('mcp_profiles', []),
         ])->layout('layouts.app', ['header' => 'Settings']);

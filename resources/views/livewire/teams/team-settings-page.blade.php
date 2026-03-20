@@ -677,6 +677,53 @@
                     Disconnect all
                 </button>
             @endif
+
+            {{-- Routing preferences (only show when 2+ bridges connected) --}}
+            @if($bridgeConnections->count() > 1)
+            <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <h3 class="mb-3 text-sm font-medium text-gray-900">Agent Routing</h3>
+
+                <x-form-select wire:model.live="bridgeRoutingMode" label="Routing Mode">
+                    <option value="auto">Automatic — route to any online bridge</option>
+                    <option value="prefer">Prefer a specific machine (fallback to others)</option>
+                    <option value="per_agent">Per-agent routing (advanced)</option>
+                </x-form-select>
+
+                @if($bridgeRoutingMode === 'prefer')
+                <div class="mt-3">
+                    <x-form-select wire:model="preferredBridgeId" label="Preferred Bridge">
+                        <option value="">Select...</option>
+                        @foreach($bridgeConnections as $conn)
+                            <option value="{{ $conn->id }}">
+                                {{ $conn->label ?? $conn->ip_address ?? 'Bridge' }}
+                                ({{ $conn->isActive() ? 'Online' : 'Offline' }})
+                            </option>
+                        @endforeach
+                    </x-form-select>
+                </div>
+                @endif
+
+                @if($bridgeRoutingMode === 'per_agent')
+                <div class="mt-3 space-y-2 border-l-2 border-gray-200 pl-4">
+                    @foreach($allBridgeAgents as $agent)
+                    <x-form-select wire:model="agentRouting.{{ $agent['key'] }}" label="{{ $agent['name'] ?? $agent['key'] }}" compact>
+                        <option value="auto">Auto (any bridge)</option>
+                        @foreach($bridgeConnections->filter(fn($c) => collect($c->agents())->contains('key', $agent['key'])) as $conn)
+                            <option value="{{ $conn->id }}">{{ $conn->label ?? $conn->ip_address ?? 'Bridge' }}</option>
+                        @endforeach
+                    </x-form-select>
+                    @endforeach
+                </div>
+                @endif
+
+                <div class="mt-3">
+                    <button wire:click="saveBridgeRouting"
+                        class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                        Save Routing
+                    </button>
+                </div>
+            </div>
+            @endif
         @else
             <div class="rounded-lg border border-dashed border-gray-300 p-4 text-center">
                 <p class="mb-1 text-sm font-medium text-gray-700">No Bridge Connected</p>
