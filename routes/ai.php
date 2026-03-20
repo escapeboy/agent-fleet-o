@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\OAuthRevokeController;
 use App\Mcp\Servers\AgentFleetServer;
+use App\Mcp\Servers\CompactMcpServer;
 use Illuminate\Support\Facades\Route;
 use Laravel\Mcp\Facades\Mcp;
 use Laravel\Mcp\Server\Http\Controllers\OAuthRegisterController;
@@ -51,9 +52,14 @@ Route::post('oauth/register', OAuthRegisterController::class)
 Route::post('oauth/revoke', OAuthRevokeController::class)
     ->middleware('throttle:120,1');
 
-// Web MCP endpoint (HTTP/SSE) — protected by Passport OAuth2 (Authorization Code + PKCE)
-Mcp::web('/mcp', AgentFleetServer::class)
+// Compact MCP endpoint (HTTP/SSE) — 33 consolidated tools for remote clients (Claude.ai)
+// Each tool supports multiple actions via "action" parameter, delegating to original tools.
+Mcp::web('/mcp', CompactMcpServer::class)
     ->middleware(['auth:passport', 'scope:mcp:use']);
 
-// Local MCP server (stdio) — for CLI agents like Codex, Claude Code (unaffected)
+// Full MCP endpoint (HTTP/SSE) — all 259 tools for power users and clients without tool limits
+Mcp::web('/mcp/full', AgentFleetServer::class)
+    ->middleware(['auth:passport', 'scope:mcp:use']);
+
+// Local MCP server (stdio) — for CLI agents like Codex, Claude Code (no tool limit)
 Mcp::local('agent-fleet', AgentFleetServer::class);
