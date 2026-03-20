@@ -21,10 +21,13 @@ return new class extends Migration
             $table->unique(['tool_id', 'prism_tool_name']);
         });
 
-        // Add vector column only on PostgreSQL with pgvector
+        // Add vector column only when pgvector extension is available
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement('ALTER TABLE tool_embeddings ADD COLUMN embedding vector(1536)');
-            DB::statement('CREATE INDEX idx_tool_embeddings_embedding ON tool_embeddings USING hnsw (embedding vector_cosine_ops)');
+            $hasVector = DB::selectOne("SELECT COUNT(*) AS cnt FROM pg_extension WHERE extname = 'vector'");
+            if ($hasVector && $hasVector->cnt > 0) {
+                DB::statement('ALTER TABLE tool_embeddings ADD COLUMN embedding vector(1536)');
+                DB::statement('CREATE INDEX idx_tool_embeddings_embedding ON tool_embeddings USING hnsw (embedding vector_cosine_ops)');
+            }
         }
     }
 
