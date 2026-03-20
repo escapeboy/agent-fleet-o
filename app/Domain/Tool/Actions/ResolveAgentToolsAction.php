@@ -2,6 +2,8 @@
 
 namespace App\Domain\Tool\Actions;
 
+use App\Domain\Agent\Actions\ExecuteAgentAction;
+use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Credential\Models\Credential;
@@ -16,6 +18,9 @@ use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolTranslator;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Livewire\Settings\SecurityPolicyPanel;
+use Illuminate\Support\Facades\Log;
+use Prism\Prism\Facades\Tool as PrismTool;
+use Prism\Prism\Schema\StringSchema;
 
 class ResolveAgentToolsAction
 {
@@ -27,9 +32,10 @@ class ResolveAgentToolsAction
     /**
      * Resolve all PrismPHP Tool objects available for an agent execution.
      *
+     * @param  int  $agentToolDepth  Current nesting depth for agent-as-tool calls
      * @return array<\Prism\Prism\Tool>
      */
-    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null): array
+    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null, int $agentToolDepth = 0, ?string $userId = null): array
     {
         $workspace = ($executionId && $agent->team_id)
             ? new SandboxedWorkspace($executionId, $agent->id, $agent->team_id)
@@ -132,6 +138,9 @@ class ResolveAgentToolsAction
             }
         }
 
+        // Inject agent-as-tool wrappers for callable agents (if within depth limit)
+        $prismTools = array_merge($prismTools, $this->buildAgentAsTools($agent, $agentToolDepth, $userId));
+
         return $prismTools;
     }
 
@@ -168,5 +177,98 @@ class ResolveAgentToolsAction
         }
 
         return null;
+    }
+
+    /**
+     * Build PrismPHP Tool wrappers for agents configured as callable tools.
+     * Each callable agent becomes an LLM tool that delegates to ExecuteAgentAction.
+     *
+     * @return array<\Prism\Prism\Tool>
+     */
+    private function buildAgentAsTools(Agent $parentAgent, int $currentDepth, ?string $userId = null): array
+    {
+        $callableIds = $parentAgent->config['callable_agent_ids'] ?? [];
+        if (empty($callableIds)) {
+            return [];
+        }
+
+        // Don't inject agent tools if we'd exceed the depth limit on the next call
+        $maxDepth = config('agent.max_agent_tool_depth', 3);
+        if ($currentDepth >= $maxDepth) {
+            return [];
+        }
+
+        $callableAgents = Agent::where('team_id', $parentAgent->team_id)
+            ->whereIn('id', $callableIds)
+            ->where('status', AgentStatus::Active)
+            ->get();
+
+        $tools = [];
+        foreach ($callableAgents as $callableAgent) {
+            $agentId = $callableAgent->id;
+            $agentName = $callableAgent->name;
+            $teamId = $parentAgent->team_id;
+            $nextDepth = $currentDepth + 1;
+            $callerUserId = $userId ?? 'system';
+
+            $description = "Delegate a task to agent \"{$agentName}\"";
+            if ($callableAgent->role) {
+                $description .= " ({$callableAgent->role})";
+            }
+            if ($callableAgent->goal) {
+                $description .= ". Goal: {$callableAgent->goal}";
+            }
+
+            $toolName = 'call_agent_'.preg_replace('/[^a-z0-9_]/', '_', strtolower($agentName));
+            // Ensure unique tool name by appending short ID suffix
+            $toolName = substr($toolName, 0, 50).'_'.substr($agentId, 0, 8);
+
+            $tools[] = PrismTool::as($toolName)
+                ->for($description)
+                ->withParameter(new StringSchema('task', 'The task or question to delegate to this agent'))
+                ->withParameter(new StringSchema('context', 'Additional context from the current conversation (optional)'))
+                ->using(function (string $task, string $context = '') use ($agentId, $teamId, $nextDepth, $callerUserId): string {
+                    try {
+                        $agent = Agent::withoutGlobalScopes()->find($agentId);
+                        // Defense-in-depth: verify team_id even though buildAgentAsTools filters by team
+                        if (! $agent || $agent->team_id !== $teamId || $agent->status !== AgentStatus::Active) {
+                            return json_encode(['error' => 'Agent is not available']);
+                        }
+
+                        $executeAction = app(ExecuteAgentAction::class);
+                        $result = $executeAction->execute(
+                            agent: $agent,
+                            input: [
+                                'task' => $task,
+                                'context' => $context !== '' ? $context : null,
+                                '_is_nested_call' => true,
+                                '_agent_tool_depth' => $nextDepth,
+                            ],
+                            teamId: $teamId,
+                            userId: $callerUserId,
+                        );
+
+                        if ($result['output'] === null) {
+                            return json_encode([
+                                'error' => $result['execution']->error_message ?? 'Agent execution failed',
+                            ]);
+                        }
+
+                        $output = $result['output']['result'] ?? $result['output'];
+
+                        return is_string($output) ? $output : json_encode($output);
+                    } catch (\Throwable $e) {
+                        Log::warning('Agent-as-tool execution failed', [
+                            'parent_agent' => $teamId,
+                            'callable_agent_id' => $agentId,
+                            'error' => $e->getMessage(),
+                        ]);
+
+                        return json_encode(['error' => 'Agent execution failed']);
+                    }
+                });
+        }
+
+        return $tools;
     }
 }

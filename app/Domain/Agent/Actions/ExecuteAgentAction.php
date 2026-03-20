@@ -73,6 +73,23 @@ class ExecuteAgentAction
         ?Project $project = null,
         ?string $stepId = null,
     ): array {
+        // Strip internal underscore-prefixed keys from external input (defense-in-depth).
+        // Only trust these keys when injected by buildAgentAsTools (nested calls).
+        $isNested = ! empty($input['_is_nested_call']);
+        if (! $isNested) {
+            $input = array_filter($input, fn ($key) => ! str_starts_with($key, '_'), ARRAY_FILTER_USE_KEY);
+        }
+
+        // Agent-as-tool depth guard: prevent infinite recursion
+        $currentDepth = (int) ($input['_agent_tool_depth'] ?? 0);
+        $maxDepth = config('agent.max_agent_tool_depth', 3);
+        if ($currentDepth > $maxDepth) {
+            return $this->failExecution(
+                $agent, $teamId, $experimentId, $input,
+                "Agent-as-tool max nesting depth ({$maxDepth}) exceeded",
+            );
+        }
+
         if (! $agent->hasBudgetRemaining()) {
             return $this->failExecution($agent, $teamId, $experimentId, $input, 'Agent budget cap reached');
         }
@@ -130,7 +147,7 @@ class ExecuteAgentAction
                 app(BashSidecarClient::class)->createSession($sidecarSessionId);
             }
 
-            $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId);
+            $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId, $currentDepth, $userId);
 
             if (! empty($tools)) {
                 try {

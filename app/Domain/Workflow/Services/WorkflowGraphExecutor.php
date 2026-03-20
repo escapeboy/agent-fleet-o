@@ -488,8 +488,12 @@ class WorkflowGraphExecutor
     /**
      * Filter candidate node IDs to only those that are ready to execute.
      *
-     * - Default (AND semantics): ALL incoming predecessors must be complete.
-     * - Merge nodes (OR semantics): ANY predecessor complete is sufficient.
+     * Activation modes (per-node via activation_mode field):
+     * - 'all' (default, AND): ALL incoming predecessors must be complete.
+     * - 'any' (OR): ANY predecessor complete is sufficient.
+     * - 'n_of_m' (threshold): At least N predecessors must be complete (N = activation_threshold).
+     *
+     * Merge nodes default to 'any' for backward compatibility.
      */
     private function filterReadyNodes(array $candidateNodeIds, array $edges, $steps, array $nodeMap = []): array
     {
@@ -497,42 +501,34 @@ class WorkflowGraphExecutor
 
         foreach ($candidateNodeIds as $nodeId) {
             $incomingEdges = collect($edges)->where('target_node_id', $nodeId);
-            $nodeType = $nodeMap[$nodeId]['type'] ?? null;
-            $isMerge = $nodeType === 'merge';
+            $node = $nodeMap[$nodeId] ?? [];
+            $nodeType = $node['type'] ?? null;
 
-            if ($isMerge) {
-                // OR semantics: ready if ANY predecessor has a completed/skipped step
-                // (or is a control-flow node with no step — always counts as complete)
-                $anyComplete = false;
-                foreach ($incomingEdges as $edge) {
-                    $sourceStep = $steps[$edge['source_node_id']] ?? null;
-                    if (! $sourceStep || $sourceStep->isCompleted() || $sourceStep->isSkipped()) {
-                        $anyComplete = true;
-                        break;
-                    }
-                }
-                if ($anyComplete) {
-                    $ready[] = $nodeId;
-                }
-            } else {
-                // AND semantics: ALL predecessors must be complete
-                $allPredecessorsComplete = true;
-                foreach ($incomingEdges as $edge) {
-                    $sourceStep = $steps[$edge['source_node_id']] ?? null;
+            // Determine activation mode: explicit config > merge backward compat > default 'all'
+            $activationMode = $node['activation_mode'] ?? null;
+            if (! $activationMode) {
+                $activationMode = ($nodeType === 'merge') ? 'any' : 'all';
+            }
 
-                    // Control-flow nodes have no step — always "complete"
-                    if (! $sourceStep) {
-                        continue;
-                    }
+            $completedCount = 0;
+            $totalCount = $incomingEdges->count();
 
-                    if (! $sourceStep->isCompleted() && ! $sourceStep->isSkipped()) {
-                        $allPredecessorsComplete = false;
-                        break;
-                    }
+            foreach ($incomingEdges as $edge) {
+                $sourceStep = $steps[$edge['source_node_id']] ?? null;
+                // Control-flow nodes have no step — always "complete"
+                if (! $sourceStep || $sourceStep->isCompleted() || $sourceStep->isSkipped()) {
+                    $completedCount++;
                 }
-                if ($allPredecessorsComplete) {
-                    $ready[] = $nodeId;
-                }
+            }
+
+            $isReady = match ($activationMode) {
+                'any' => $completedCount > 0,
+                'n_of_m' => $completedCount >= max(1, (int) ($node['activation_threshold'] ?? $totalCount)),
+                default => $completedCount >= $totalCount, // 'all' — AND semantics
+            };
+
+            if ($isReady) {
+                $ready[] = $nodeId;
             }
         }
 

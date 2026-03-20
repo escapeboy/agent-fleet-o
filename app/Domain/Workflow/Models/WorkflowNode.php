@@ -5,6 +5,7 @@ namespace App\Domain\Workflow\Models;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Workflow\Enums\ActivationMode;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use Database\Factories\Domain\Workflow\WorkflowNodeFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -37,6 +38,8 @@ class WorkflowNode extends Model
         'position_x',
         'position_y',
         'config',
+        'activation_mode',
+        'activation_threshold',
         'expression',
         'order',
     ];
@@ -45,6 +48,8 @@ class WorkflowNode extends Model
     {
         return [
             'type' => WorkflowNodeType::class,
+            'activation_mode' => ActivationMode::class,
+            'activation_threshold' => 'integer',
             'position_x' => 'integer',
             'position_y' => 'integer',
             'config' => 'array',

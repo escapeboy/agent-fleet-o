@@ -35,6 +35,7 @@ class GraphValidator
         $this->validateCrewNodes();
         $this->validateTimeGateNodes();
         $this->validateMergeNodes();
+        $this->validateActivationModes();
         $this->validateSubWorkflowNodes();
 
         return $this->errors;
@@ -465,6 +466,60 @@ class GraphValidator
                     'node_id' => $node->id,
                 ];
             }
+
+            // Validate activation_mode settings
+            $this->validateActivationMode($node, $incoming->count());
+        }
+    }
+
+    private function validateActivationMode(WorkflowNode $node, int $incomingCount): void
+    {
+        $mode = $node->activation_mode?->value ?? 'all';
+        $validModes = ['all', 'any', 'n_of_m'];
+
+        if (! in_array($mode, $validModes, true)) {
+            $this->errors[] = [
+                'type' => 'invalid_activation_mode',
+                'message' => "Node '{$node->label}' has invalid activation_mode '{$mode}'. Must be one of: all, any, n_of_m.",
+                'node_id' => $node->id,
+            ];
+
+            return;
+        }
+
+        if ($mode === 'n_of_m') {
+            $threshold = $node->activation_threshold;
+            if ($threshold === null || $threshold < 1) {
+                $this->errors[] = [
+                    'type' => 'missing_activation_threshold',
+                    'message' => "Node '{$node->label}' uses n_of_m activation mode but has no valid activation_threshold (must be >= 1).",
+                    'node_id' => $node->id,
+                ];
+            } elseif ($threshold > $incomingCount) {
+                $this->errors[] = [
+                    'type' => 'activation_threshold_exceeds_incoming',
+                    'message' => "Node '{$node->label}' activation_threshold ({$threshold}) exceeds incoming edge count ({$incomingCount}).",
+                    'node_id' => $node->id,
+                ];
+            }
+        }
+    }
+
+    /**
+     * Validate activation_mode on all non-merge nodes that have incoming edges.
+     * (Merge nodes are already validated in validateMergeNodes.)
+     */
+    private function validateActivationModes(): void
+    {
+        $nonMergeNodes = $this->nodes->where('type', '!=', WorkflowNodeType::Merge);
+
+        foreach ($nonMergeNodes as $node) {
+            $incoming = $this->edges->where('target_node_id', $node->id);
+            if ($incoming->count() < 2) {
+                continue; // Activation mode is irrelevant with 0-1 incoming edges
+            }
+
+            $this->validateActivationMode($node, $incoming->count());
         }
     }
 

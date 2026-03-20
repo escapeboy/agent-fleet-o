@@ -38,8 +38,9 @@ class DetectClarificationNeeded
     {
         $config = $ctx->agent->config ?? [];
 
-        // Skip if: Flash tier (too expensive relative to task cost), opt-out, or answer already provided
-        if (ExecutionTier::fromConfig($config) === ExecutionTier::Flash
+        // Skip if: nested agent-as-tool call, Flash tier, opt-out, or answer already provided
+        if (! empty($ctx->input['_is_nested_call'])
+            || ExecutionTier::fromConfig($config) === ExecutionTier::Flash
             || ! ($config[self::CONFIG_ENABLED_KEY] ?? false)
             || isset($ctx->input['clarification_answer'])
         ) {

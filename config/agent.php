@@ -121,4 +121,13 @@ return [
     | default Boruna mcp_stdio Tool.
     */
     'boruna_binary_path' => env('BORUNA_BINARY_PATH', '/usr/local/bin/boruna'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Agent-as-Tool Max Nesting Depth
+    |--------------------------------------------------------------------------
+    | Maximum recursion depth when agents call other agents as tools.
+    | Prevents infinite loops in agent-to-agent delegation chains.
+    */
+    'max_agent_tool_depth' => (int) env('AGENT_MAX_TOOL_DEPTH', 3),
 ];
