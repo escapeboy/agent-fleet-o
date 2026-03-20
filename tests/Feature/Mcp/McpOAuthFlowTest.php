@@ -346,7 +346,8 @@ class McpOAuthFlowTest extends TestCase
             'params' => [],
         ]);
 
-        // Must require auth — 401 or 302 redirect to login
-        $this->assertContains($response->status(), [401, 302, 403]);
+        // MCP spec 2025-11-25: servers MUST respond with 401, never 302 redirect.
+        // Base edition uses auth:sanctum which returns 401 for JSON requests.
+        $this->assertContains($response->status(), [401, 403]);
     }
 }

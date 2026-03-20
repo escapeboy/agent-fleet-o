@@ -40,6 +40,7 @@ Route::get('/.well-known/oauth-authorization-server/{path?}', fn (?string $path 
     'code_challenge_methods_supported' => ['S256'],
     'token_endpoint_auth_methods_supported' => ['none', 'client_secret_post'],
     'scopes_supported' => ['mcp:use'],
+    'client_id_metadata_document_supported' => true,
 ]))->where('path', '.*')->name('mcp.oauth.authorization-server');
 
 // RFC 7591 — Dynamic Client Registration
