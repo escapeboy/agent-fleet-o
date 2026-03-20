@@ -22,7 +22,7 @@ class TermsAcceptanceStatusTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'user_id' => $schema->string()->description('User UUID to check. Defaults to the authenticated user.')->optional(),
+            'user_id' => $schema->string()->description('User UUID to check. Defaults to the authenticated user.'),
         ];
     }
 
