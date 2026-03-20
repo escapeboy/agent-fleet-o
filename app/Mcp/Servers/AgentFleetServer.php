@@ -273,10 +273,10 @@ class AgentFleetServer extends Server
 
     protected string $version = '1.1.0';
 
-    // Return all tools in a single page — MCP clients like Codex don't follow cursors
-    public int $defaultPaginationLength = 200;
+    // Return all tools in a single page — MCP clients like Claude.ai/Codex don't follow cursors
+    public int $defaultPaginationLength = 300;
 
-    public int $maxPaginationLength = 200;
+    public int $maxPaginationLength = 300;
 
     protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, chatbots, email themes, email templates, and team settings.';
 
