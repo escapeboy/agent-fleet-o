@@ -22,7 +22,7 @@ class ExperimentCostTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            $schema->string('experiment_id')->description('The UUID of the experiment')->required(),
+            'experiment_id' => $schema->string()->description('The UUID of the experiment')->required(),
         ];
     }
 

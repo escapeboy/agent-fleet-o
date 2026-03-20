@@ -21,7 +21,7 @@ class SocialAccountUnlinkTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            $schema->string('provider')->enum(['google', 'github', 'linkedin-openid', 'x', 'apple'])
+            'provider' => $schema->string()->enum(['google', 'github', 'linkedin-openid', 'x', 'apple'])
                 ->description('The social provider to disconnect.'),
         ];
     }

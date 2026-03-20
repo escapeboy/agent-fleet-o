@@ -19,9 +19,9 @@ class SemanticCachePurgeTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            $schema->string('provider')->description('Filter by provider (e.g. "anthropic"). Omit to purge all.')->nullable(),
-            $schema->string('model')->description('Filter by model (e.g. "claude-sonnet-4-5-20250929"). Omit to purge all.')->nullable(),
-            $schema->boolean('expired_only')->description('When true, only purge entries past their expiry date.')->nullable(),
+            'provider' => $schema->string()->description('Filter by provider (e.g. "anthropic"). Omit to purge all.')->nullable(),
+            'model' => $schema->string()->description('Filter by model (e.g. "claude-sonnet-4-5-20250929"). Omit to purge all.')->nullable(),
+            'expired_only' => $schema->boolean()->description('When true, only purge entries past their expiry date.')->nullable(),
         ];
     }
 
