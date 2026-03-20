@@ -1,22 +1,22 @@
 <div>
     {{-- Toolbar --}}
-    <div class="mb-6 flex flex-wrap items-center gap-4">
+    <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_experiments" tooldescription="Filter experiments by status, track, and search query">
         <div class="relative flex-1">
-            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search experiments..." class="pl-10">
+            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search experiments..." class="pl-10" toolparamdescription="Free-text search across experiment titles and theses">
                 <x-slot:leadingIcon>
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
 
-        <x-form-select wire:model.live="statusFilter">
+        <x-form-select wire:model.live="statusFilter" toolparamdescription="Filter by experiment status: draft, scoring, planning, building, executing, completed, killed, paused">
             <option value="">All Statuses</option>
             @foreach($statuses as $status)
                 <option value="{{ $status->value }}">{{ str_replace('_', ' ', ucfirst($status->value)) }}</option>
             @endforeach
         </x-form-select>
 
-        <x-form-select wire:model.live="trackFilter">
+        <x-form-select wire:model.live="trackFilter" toolparamdescription="Filter by experiment track: exploration, optimization, validation">
             <option value="">All Tracks</option>
             @foreach($tracks as $track)
                 <option value="{{ $track->value }}">{{ ucfirst($track->value) }}</option>
@@ -27,7 +27,7 @@
             class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
             New Experiment
         </button>
-    </div>
+    </form>
 
     {{-- Create Form --}}
     @if($showCreateForm)

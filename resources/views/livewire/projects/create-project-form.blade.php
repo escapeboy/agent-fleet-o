@@ -6,15 +6,17 @@
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Basics</h3>
                 <div class="space-y-4">
                     <x-form-input wire:model="title" label="Title" type="text" placeholder="e.g. Social Media Campaign"
-                        :error="$errors->first('title')" />
+                        :error="$errors->first('title')"
+                        toolparamdescription="Project title — descriptive name" />
 
                     <x-form-textarea wire:model="description" label="Description" rows="3"
                         placeholder="What should this project accomplish?"
-                        :error="$errors->first('description')" />
+                        :error="$errors->first('description')"
+                        toolparamdescription="Project description and objectives" />
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700">Project Type</label>
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700" toolparamdescription="Project type: one_shot (runs once) or continuous (runs on schedule)">Project Type</label>
                             <div class="flex gap-3">
                                 @foreach(\App\Domain\Project\Enums\ProjectType::cases() as $t)
                                     <button type="button" wire:click="$set('type', '{{ $t->value }}')"
@@ -277,3 +279,42 @@
         </div>
     </div>
 </div>
+
+@script
+<script>
+if (window.FleetQWebMcp?.isAvailable()) {
+    window.FleetQWebMcp.registerTool({
+        name: 'create_project',
+        description: 'Create a new project (one-shot or continuous) with workflow, agent, and schedule',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Project title — descriptive name' },
+                description: { type: 'string', description: 'Project description and objectives' },
+                type: { type: 'string', description: 'Project type: one_shot or continuous' },
+                agent_id: { type: 'string', description: 'Lead agent UUID' },
+                workflow_id: { type: 'string', description: 'Workflow UUID (optional)' },
+                execution_mode: { type: 'string', description: 'Execution mode: autonomous, watcher, or yolo' },
+                frequency: { type: 'string', description: 'Schedule frequency for continuous projects' },
+                per_run_cap: { type: 'number', description: 'Per-run budget cap in credits (optional)' },
+                daily_cap: { type: 'number', description: 'Daily budget cap in credits (optional)' },
+            },
+            required: ['title', 'type', 'agent_id'],
+        },
+        async execute(params) {
+            $wire.set('title', params.title);
+            if (params.description) $wire.set('description', params.description);
+            $wire.set('type', params.type);
+            $wire.set('agentId', params.agent_id);
+            if (params.workflow_id) $wire.set('workflowId', params.workflow_id);
+            if (params.execution_mode) $wire.set('executionMode', params.execution_mode);
+            if (params.frequency) $wire.set('frequency', params.frequency);
+            if (params.per_run_cap) $wire.set('perRunCap', params.per_run_cap);
+            if (params.daily_cap) $wire.set('dailyCap', params.daily_cap);
+            await $wire.save();
+            return { success: true, message: 'Project created' };
+        },
+    });
+}
+</script>
+@endscript

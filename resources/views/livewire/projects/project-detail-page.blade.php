@@ -36,24 +36,32 @@
                 </a>
             @endif
             @if($project->status === \App\Domain\Project\Enums\ProjectStatus::Draft)
-                <button wire:click="activate"
+                <form class="inline" onsubmit="return false" toolname="activate_project" tooldescription="Activate this draft project">
+                <button type="button" wire:click="activate"
                     class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
                     Activate
                 </button>
+                </form>
             @elseif($project->status === \App\Domain\Project\Enums\ProjectStatus::Active)
-                <button wire:click="triggerRun"
+                <form class="inline" onsubmit="return false" toolname="trigger_project_run" tooldescription="Manually trigger a new run for this project">
+                <button type="button" wire:click="triggerRun"
                     class="rounded-lg border border-primary-300 px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-primary-50">
                     Trigger Run
                 </button>
-                <button wire:click="pause"
+                </form>
+                <form class="inline" onsubmit="return false" toolname="pause_project" tooldescription="Pause this active project">
+                <button type="button" wire:click="pause"
                     class="rounded-lg border border-yellow-300 px-3 py-1.5 text-sm font-medium text-yellow-700 hover:bg-yellow-50">
                     Pause
                 </button>
+                </form>
             @elseif($project->status === \App\Domain\Project\Enums\ProjectStatus::Paused)
-                <button wire:click="resume"
+                <form class="inline" onsubmit="return false" toolname="resume_project" tooldescription="Resume this paused project">
+                <button type="button" wire:click="resume"
                     class="rounded-lg border border-green-300 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50">
                     Resume
                 </button>
+                </form>
             @endif
             @if(in_array($project->status, [
                 \App\Domain\Project\Enums\ProjectStatus::Completed,

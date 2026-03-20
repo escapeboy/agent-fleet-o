@@ -1,12 +1,12 @@
 <div>
     {{-- Toolbar --}}
-    <div class="mb-6 flex flex-wrap items-center gap-4">
+    <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_crews" tooldescription="Filter crews by status and search query">
         <div class="relative flex-1">
-            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search crews...">
+            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search crews..." toolparamdescription="Free-text search across crew names and descriptions">
             </x-form-input>
         </div>
 
-        <x-form-select wire:model.live="statusFilter">
+        <x-form-select wire:model.live="statusFilter" toolparamdescription="Filter by crew status: draft, active, disabled">
             <option value="">All Statuses</option>
             @foreach($statuses as $status)
                 <option value="{{ $status->value }}">{{ $status->label() }}</option>
@@ -23,7 +23,7 @@
                 New Crew
             </span>
         @endif
-    </div>
+    </form>
 
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">

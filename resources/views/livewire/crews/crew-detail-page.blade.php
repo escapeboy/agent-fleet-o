@@ -20,15 +20,19 @@
         </div>
         <div class="flex flex-wrap items-center gap-2">
             @if($crew->status === \App\Domain\Crew\Enums\CrewStatus::Active)
+                <form class="inline" action="{{ route('crews.execute', $crew) }}" method="get" toolname="execute_crew" tooldescription="Start executing this crew">
                 <a href="{{ route('crews.execute', $crew) }}"
                     class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                     Execute
                 </a>
+                </form>
             @endif
             @if($crew->status === \App\Domain\Crew\Enums\CrewStatus::Draft)
-                <button wire:click="activate" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                <form class="inline" onsubmit="return false" toolname="activate_crew" tooldescription="Activate this draft crew for execution">
+                <button type="button" wire:click="activate" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
                     Activate
                 </button>
+                </form>
             @endif
             <button wire:click="toggleStatus" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 {{ $crew->status === \App\Domain\Crew\Enums\CrewStatus::Active ? 'Archive' : 'Activate' }}

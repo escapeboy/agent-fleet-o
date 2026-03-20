@@ -21,13 +21,15 @@
             <h3 class="mb-4 text-lg font-semibold text-gray-900">Tool Basics</h3>
             <div class="space-y-4">
                 <x-form-input wire:model="name" label="Name" type="text" placeholder="e.g. GitHub MCP Server"
-                    :error="$errors->first('name')" hint="A descriptive name for this tool" />
+                    :error="$errors->first('name')" hint="A descriptive name for this tool"
+                    toolparamdescription="Tool name — descriptive identifier" />
 
                 <x-form-textarea wire:model="description" label="Description" rows="2"
                     placeholder="What does this tool do?"
-                    :error="$errors->first('description')" />
+                    :error="$errors->first('description')"
+                    toolparamdescription="What this tool does and its capabilities" />
 
-                <x-form-select wire:model.live="type" label="Type">
+                <x-form-select wire:model.live="type" label="Type" toolparamdescription="Tool type: mcp_stdio (local MCP), mcp_http (remote MCP), or built_in (bash/filesystem/browser)">
                     @foreach($types as $t)
                         <option value="{{ $t->value }}">{{ $t->label() }}</option>
                     @endforeach
@@ -265,3 +267,41 @@
         </div>
     </div>
 </div>
+
+@script
+<script>
+if (window.FleetQWebMcp?.isAvailable()) {
+    window.FleetQWebMcp.registerTool({
+        name: 'create_tool',
+        description: 'Register a new LLM tool (MCP server or built-in tool)',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', description: 'Tool name — descriptive identifier' },
+                description: { type: 'string', description: 'What this tool does and its capabilities' },
+                type: { type: 'string', description: 'Tool type: mcp_stdio, mcp_http, or built_in' },
+                mcp_command: { type: 'string', description: 'Command for mcp_stdio (e.g., npx)' },
+                mcp_args: { type: 'string', description: 'Arguments for mcp_stdio (comma-separated)' },
+                mcp_url: { type: 'string', description: 'Server URL for mcp_http' },
+                built_in_kind: { type: 'string', description: 'Kind for built_in: bash, filesystem, or ssh' },
+                timeout: { type: 'number', description: 'Timeout in seconds (1-300)' },
+            },
+            required: ['name', 'type'],
+        },
+        async execute(params) {
+            $wire.set('name', params.name);
+            if (params.description) $wire.set('description', params.description);
+            $wire.set('type', params.type);
+            if (params.mcp_command) $wire.set('mcpCommand', params.mcp_command);
+            if (params.mcp_args) $wire.set('mcpArgs', params.mcp_args);
+            if (params.mcp_url) $wire.set('mcpUrl', params.mcp_url);
+            if (params.built_in_kind) $wire.set('builtInKind', params.built_in_kind);
+            if (params.timeout) $wire.set('timeout', params.timeout);
+            $wire.set('step', 3);
+            await $wire.save();
+            return { success: true, message: 'Tool created' };
+        },
+    });
+}
+</script>
+@endscript

@@ -210,3 +210,34 @@
         </div>
     @endif
 </div>
+
+@script
+<script>
+    // WebMCP: expose dashboard KPIs to browser AI agents
+    if (window.FleetQWebMcp?.isAvailable()) {
+        window.FleetQWebMcp.registerTool({
+            name: 'dashboard_get_kpis',
+            description: 'Get current FleetQ dashboard KPIs: active runs, success rate, total spend, pending approvals, active skills, active agents, and more.',
+            inputSchema: { type: 'object', properties: {} },
+            annotations: { readOnlyHint: true },
+            execute: async () => {
+                const kpis = {
+                    active_runs: $wire.active,
+                    success_rate_pct: $wire.successRate,
+                    completed: $wire.completed,
+                    total: $wire.total,
+                    total_spend_credits: $wire.totalSpend,
+                    pending_approvals: $wire.pendingApprovals,
+                    active_skills: $wire.activeSkills,
+                    active_agents: $wire.activeAgents,
+                    skill_executions_24h: $wire.skillExecutions24h,
+                    agent_runs_24h: $wire.agentRuns24h,
+                    active_projects: $wire.activeProjects,
+                    project_runs_24h: $wire.projectRuns24h,
+                };
+                return { content: [{ type: 'text', text: JSON.stringify(kpis) }] };
+            }
+        });
+    }
+</script>
+@endscript

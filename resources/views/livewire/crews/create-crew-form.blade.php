@@ -1,16 +1,18 @@
 <div class="mx-auto max-w-3xl">
-    <form wire:submit="save" class="space-y-6">
+    <form wire:submit="save" class="space-y-6" toolname="create_crew" tooldescription="Create a multi-agent crew with coordinator, QA agent, and workers">
         {{-- Basic Info --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Basic Information</h3>
 
             <div class="space-y-4">
-                <x-form-input wire:model="name" label="Crew Name" placeholder="e.g. Research & Content Team" :error="$errors->first('name')" />
+                <x-form-input wire:model="name" label="Crew Name" placeholder="e.g. Research & Content Team" :error="$errors->first('name')"
+                    toolparamdescription="Crew name — descriptive identifier" />
 
-                <x-form-textarea wire:model="description" label="Description" placeholder="What does this crew do?" hint="Optional" />
+                <x-form-textarea wire:model="description" label="Description" placeholder="What does this crew do?" hint="Optional"
+                    toolparamdescription="What this crew does and its purpose" />
 
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-gray-700">Process Type</label>
+                    <label class="mb-1 block text-sm font-medium text-gray-700" toolparamdescription="Process type: sequential (agents work one after another) or hierarchical (coordinator delegates)">Process Type</label>
                     <div class="grid grid-cols-3 gap-3">
                         @foreach($processTypes as $pt)
                             <label class="relative flex cursor-pointer items-start rounded-lg border p-3 transition

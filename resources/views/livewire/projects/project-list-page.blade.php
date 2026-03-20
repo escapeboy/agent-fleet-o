@@ -7,23 +7,23 @@
     @endif
 
     {{-- Toolbar --}}
-    <div class="mb-6 flex flex-wrap items-center gap-4">
+    <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_projects" tooldescription="Filter projects by status, type, and search query">
         <div class="relative flex-1">
-            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search projects...">
+            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search projects..." toolparamdescription="Free-text search across project titles and descriptions">
                 <x-slot:leadingIcon>
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
 
-        <x-form-select wire:model.live="statusFilter">
+        <x-form-select wire:model.live="statusFilter" toolparamdescription="Filter by project status: draft, active, paused, completed, archived, failed">
             <option value="">All Statuses</option>
             @foreach($statuses as $status)
                 <option value="{{ $status->value }}">{{ $status->label() }}</option>
             @endforeach
         </x-form-select>
 
-        <x-form-select wire:model.live="typeFilter">
+        <x-form-select wire:model.live="typeFilter" toolparamdescription="Filter by project type: one_shot, continuous">
             <option value="">All Types</option>
             @foreach($types as $type)
                 <option value="{{ $type->value }}">{{ $type->label() }}</option>
@@ -40,7 +40,7 @@
                 New Project
             </span>
         @endif
-    </div>
+    </form>
 
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">

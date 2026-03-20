@@ -1,11 +1,12 @@
 <div class="mx-auto max-w-2xl">
-    <form wire:submit="save" class="space-y-6">
+    <form wire:submit="save" class="space-y-6" toolname="create_trigger_rule" tooldescription="Create an event-driven trigger rule that automatically starts projects or experiments">
 
         {{-- Name --}}
-        <x-form-input wire:model="name" label="Rule Name" placeholder="e.g. Sentry critical errors → Incident response" />
+        <x-form-input wire:model="name" label="Rule Name" placeholder="e.g. Sentry critical errors → Incident response"
+            toolparamdescription="Trigger rule name — descriptive identifier" />
 
         {{-- Source Type --}}
-        <x-form-select wire:model="source_type" label="Signal Source">
+        <x-form-select wire:model="source_type" label="Signal Source" toolparamdescription="Signal source type that activates this trigger">
             @foreach($availableSourceTypes as $type)
                 <option value="{{ $type }}">{{ $type === '*' ? 'Any source' : $type }}</option>
             @endforeach

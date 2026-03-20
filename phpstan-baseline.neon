@@ -715,6 +715,24 @@ parameters:
 			path: app/Domain/Bridge/Models/BridgeConnection.php
 
 		-
+			message: '#^Anonymous function should return Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Domain/Bridge/Services/BridgeRouter.php
+
+		-
+			message: '#^Method App\\Domain\\Bridge\\Services\\BridgeRouter\:\:allAvailableAgents\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Domain/Bridge/Services/BridgeRouter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Domain\\Bridge\\Models\\BridgeConnection\>\:\:flatMap\(\) expects callable\(App\\Domain\\Bridge\\Models\\BridgeConnection, int\)\: \(array\<int, non\-empty\-array\<string, mixed\>\>\|Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\>\), Closure\(App\\Domain\\Bridge\\Models\\BridgeConnection\)\: Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Bridge/Services/BridgeRouter.php
+
+		-
 			message: '#^Using nullsafe property access "\?\-\>balance_after" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -5643,13 +5661,19 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 1
+			count: 3
 			path: app/Http/Controllers/Api/V1/BridgeController.php
 
 		-
 			message: '#^Cannot call method toISOString\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 3
+			count: 5
+			path: app/Http/Controllers/Api/V1/BridgeController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Domain\\Bridge\\Models\\BridgeConnection\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
 			path: app/Http/Controllers/Api/V1/BridgeController.php
 
 		-

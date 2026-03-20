@@ -3,24 +3,28 @@
         <div class="space-y-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-form-input wire:model="name" label="Name" type="text" placeholder="e.g. Research Assistant"
-                    :error="$errors->first('name')" />
+                    :error="$errors->first('name')"
+                    toolparamdescription="Agent name — unique, descriptive identifier" />
                 <x-form-input wire:model="role" label="Role" type="text" placeholder="e.g. Lead Research Analyst"
-                    :error="$errors->first('role')" />
+                    :error="$errors->first('role')"
+                    toolparamdescription="Agent role — defines the agent's job function (e.g., Content Writer, Data Analyst)" />
             </div>
 
             <x-form-textarea wire:model="goal" label="Goal" rows="2" placeholder="What should this agent accomplish?"
-                :error="$errors->first('goal')" />
+                :error="$errors->first('goal')"
+                toolparamdescription="What the agent should achieve when executed" />
 
-            <x-form-textarea wire:model="backstory" label="Backstory (optional)" rows="3" placeholder="Background context for the agent..." />
+            <x-form-textarea wire:model="backstory" label="Backstory (optional)" rows="3" placeholder="Background context for the agent..."
+                toolparamdescription="Background context that shapes the agent's behavior and expertise" />
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <x-form-select wire:model.live="provider" label="Provider">
+                <x-form-select wire:model.live="provider" label="Provider" toolparamdescription="LLM provider: anthropic, openai, or google">
                     @foreach($providers as $key => $provider)
                         <option value="{{ $key }}">{{ $provider['name'] }}</option>
                     @endforeach
                 </x-form-select>
 
-                <x-form-select wire:model="model" label="Model">
+                <x-form-select wire:model="model" label="Model" toolparamdescription="LLM model to use (depends on selected provider)">
                     @if(isset($providers[$this->provider]['models']))
                         @foreach($providers[$this->provider]['models'] as $modelKey => $modelConfig)
                             <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
@@ -189,3 +193,38 @@
         </div>
     </div>
 </div>
+
+@script
+<script>
+if (window.FleetQWebMcp?.isAvailable()) {
+    window.FleetQWebMcp.registerTool({
+        name: 'create_agent',
+        description: 'Create a new AI agent with role, goal, and LLM configuration',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', description: 'Agent name — unique, descriptive identifier' },
+                role: { type: 'string', description: 'Agent role — defines the job function (e.g., Content Writer)' },
+                goal: { type: 'string', description: 'What the agent should achieve when executed' },
+                backstory: { type: 'string', description: 'Background context that shapes behavior (optional)' },
+                provider: { type: 'string', description: 'LLM provider: anthropic, openai, or google' },
+                model: { type: 'string', description: 'LLM model ID (depends on provider)' },
+                budget_cap_credits: { type: 'number', description: 'Budget cap in credits (optional)' },
+            },
+            required: ['name', 'role', 'goal'],
+        },
+        async execute(params) {
+            $wire.set('name', params.name);
+            $wire.set('role', params.role);
+            $wire.set('goal', params.goal);
+            if (params.backstory) $wire.set('backstory', params.backstory);
+            if (params.provider) $wire.set('provider', params.provider);
+            if (params.model) $wire.set('model', params.model);
+            if (params.budget_cap_credits) $wire.set('budgetCapCredits', params.budget_cap_credits);
+            await $wire.save();
+            return { success: true, message: 'Agent created' };
+        },
+    });
+}
+</script>
+@endscript

@@ -1000,6 +1000,122 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
                 this.isConnecting = false;
             }
         });
+
+        // WebMCP imperative tools for browser AI agents
+        if (window.FleetQWebMcp?.isAvailable()) {
+            this._registerWebMcpTools();
+        }
+    },
+
+    _registerWebMcpTools() {
+        const self = this;
+        const reg = window.FleetQWebMcp.registerTool;
+
+        reg({
+            name: 'workflow_add_node',
+            description: 'Add a node to the workflow graph being edited.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    type: { type: 'string', enum: ['agent','crew','conditional','human_task','switch','do_while','dynamic_fork','time_gate','merge','sub_workflow','end'], description: 'Node type' },
+                    label: { type: 'string', description: 'Display label for the node' },
+                },
+                required: ['type']
+            },
+            annotations: { readOnlyHint: false },
+            execute: async ({ type, label }) => {
+                self.addNode(type);
+                if (label) {
+                    const node = self.localNodes[self.localNodes.length - 1];
+                    if (node) node.label = label;
+                }
+                return { content: [{ type: 'text', text: JSON.stringify({ success: true, node_count: self.localNodes.length }) }] };
+            }
+        });
+
+        reg({
+            name: 'workflow_remove_node',
+            description: 'Remove a node from the workflow graph.',
+            inputSchema: {
+                type: 'object',
+                properties: { node_id: { type: 'string', description: 'ID of the node to remove' } },
+                required: ['node_id']
+            },
+            annotations: { readOnlyHint: false },
+            execute: async ({ node_id }) => {
+                self.removeNode(node_id);
+                return { content: [{ type: 'text', text: 'Node removed.' }] };
+            }
+        });
+
+        reg({
+            name: 'workflow_connect_nodes',
+            description: 'Connect two nodes with a directed edge.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    source_node_id: { type: 'string', description: 'Source node ID' },
+                    target_node_id: { type: 'string', description: 'Target node ID' },
+                    condition: { type: 'string', description: 'Optional condition expression for the edge' },
+                },
+                required: ['source_node_id', 'target_node_id']
+            },
+            annotations: { readOnlyHint: false },
+            execute: async ({ source_node_id, target_node_id, condition }) => {
+                const edgeId = 'edge-' + Date.now();
+                self.localEdges.push({
+                    id: edgeId,
+                    source_node_id,
+                    target_node_id,
+                    condition: condition || null,
+                    case_value: null,
+                });
+                self.syncToLivewireNow();
+                return { content: [{ type: 'text', text: JSON.stringify({ success: true, edge_id: edgeId }) }] };
+            }
+        });
+
+        reg({
+            name: 'workflow_get_graph',
+            description: 'Get the current workflow graph state (nodes and edges).',
+            inputSchema: { type: 'object', properties: {} },
+            annotations: { readOnlyHint: true },
+            execute: async () => {
+                return { content: [{ type: 'text', text: JSON.stringify({ nodes: self.localNodes, edges: self.localEdges }) }] };
+            }
+        });
+
+        reg({
+            name: 'workflow_save_graph',
+            description: 'Save the current workflow graph to the server.',
+            inputSchema: { type: 'object', properties: {} },
+            annotations: { readOnlyHint: false },
+            execute: async (_, client) => {
+                if (client?.requestUserInteraction) {
+                    await client.requestUserInteraction(async () => true);
+                }
+                await $wire.save();
+                return { content: [{ type: 'text', text: 'Graph saved.' }] };
+            }
+        });
+
+        reg({
+            name: 'workflow_validate_graph',
+            description: 'Validate the current workflow graph for errors.',
+            inputSchema: { type: 'object', properties: {} },
+            annotations: { readOnlyHint: true },
+            execute: async () => {
+                await $wire.validateGraph();
+                return { content: [{ type: 'text', text: 'Validation triggered — check the page for results.' }] };
+            }
+        });
+
+        // Cleanup on component destroy
+        this.$cleanup = () => {
+            ['workflow_add_node','workflow_remove_node','workflow_connect_nodes',
+             'workflow_get_graph','workflow_save_graph','workflow_validate_graph']
+                .forEach(n => window.FleetQWebMcp?.unregisterTool(n));
+        };
     },
 }));
 </script>

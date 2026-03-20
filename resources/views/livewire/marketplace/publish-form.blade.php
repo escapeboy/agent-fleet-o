@@ -3,7 +3,7 @@
         <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
     @endif
 
-    <form wire:submit="publish" class="mx-auto max-w-2xl space-y-6">
+    <form wire:submit="publish" class="mx-auto max-w-2xl space-y-6" toolname="publish_to_marketplace" tooldescription="Publish a skill, agent, workflow, or bundle to the marketplace">
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h3 class="mb-4 text-lg font-semibold text-gray-900">Publish to Marketplace</h3>
 
@@ -98,13 +98,15 @@
             {{-- Name --}}
             <div class="mb-4">
                 <x-form-input wire:model="name" label="Marketplace Name" type="text" placeholder="A catchy name for the listing"
-                    :error="$errors->first('name')" />
+                    :error="$errors->first('name')"
+                    toolparamdescription="Listing name as shown in the marketplace" />
             </div>
 
             {{-- Description --}}
             <div class="mb-4">
                 <x-form-textarea wire:model="description" label="Short Description" rows="3" placeholder="What does this skill/agent do?"
-                    :error="$errors->first('description')" />
+                    :error="$errors->first('description')"
+                    toolparamdescription="Short description of what this listing provides" />
             </div>
 
             {{-- README --}}
@@ -115,7 +117,7 @@
 
             {{-- Category & Tags --}}
             <div class="mb-4 grid grid-cols-2 gap-4">
-                <x-form-select wire:model="category" label="Category">
+                <x-form-select wire:model="category" label="Category" toolparamdescription="Marketplace category for discovery">
                     <option value="">No category</option>
                     @foreach(config('marketplace-categories', []) as $key => $label)
                         <option value="{{ $key }}">{{ $label }}</option>

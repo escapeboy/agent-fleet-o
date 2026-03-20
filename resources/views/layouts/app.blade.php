@@ -197,5 +197,10 @@
     {{-- PWA: install prompt + update notification --}}
     <x-pwa-install-prompt />
     <x-pwa-update-toast />
+
+    {{-- WebMCP: polyfill for browser AI agent tool discovery --}}
+    @if(config('webmcp.enabled', true))
+        <script src="https://unpkg.com/@mcp-b/global@2.2.0/dist/index.iife.js" defer></script>
+    @endif
 </body>
 </html>

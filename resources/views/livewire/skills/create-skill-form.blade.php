@@ -20,12 +20,14 @@
         @if($step === 1)
             <div class="space-y-4">
                 <x-form-input wire:model="name" label="Name" type="text" placeholder="e.g. Lead Scorer"
-                    :error="$errors->first('name')" />
+                    :error="$errors->first('name')"
+                    toolparamdescription="Skill name — descriptive identifier" />
 
-                <x-form-textarea wire:model="description" label="Description" rows="3" placeholder="What does this skill do?" />
+                <x-form-textarea wire:model="description" label="Description" rows="3" placeholder="What does this skill do?"
+                    toolparamdescription="What this skill does and when to use it" />
 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <x-form-select wire:model="type" label="Type">
+                    <x-form-select wire:model="type" label="Type" toolparamdescription="Skill type: llm, connector, rule, hybrid, or guardrail">
                         @foreach($types as $t)
                             @if($t->value !== 'browser' || $browserSkillEnabled)
                                 <option value="{{ $t->value }}">{{ $t->label() }}</option>
@@ -33,7 +35,7 @@
                         @endforeach
                     </x-form-select>
 
-                    <x-form-select wire:model="riskLevel" label="Risk Level">
+                    <x-form-select wire:model="riskLevel" label="Risk Level" toolparamdescription="Risk level: low, medium, high, or critical">
                         @foreach($riskLevels as $rl)
                             <option value="{{ $rl->value }}">{{ ucfirst($rl->value) }}</option>
                         @endforeach
@@ -285,3 +287,45 @@
         </div>
     </div>
 </div>
+
+@script
+<script>
+if (window.FleetQWebMcp?.isAvailable()) {
+    window.FleetQWebMcp.registerTool({
+        name: 'create_skill',
+        description: 'Create a new reusable AI skill with type, prompt, and LLM configuration',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', description: 'Skill name — descriptive identifier' },
+                description: { type: 'string', description: 'What this skill does and when to use it' },
+                type: { type: 'string', description: 'Skill type: llm, connector, rule, hybrid, or guardrail' },
+                risk_level: { type: 'string', description: 'Risk level: low, medium, high, or critical' },
+                system_prompt: { type: 'string', description: 'System prompt instructing the AI how to process input' },
+                prompt_template: { type: 'string', description: 'Prompt template with @{{field}} substitution (optional)' },
+                provider: { type: 'string', description: 'LLM provider (optional, uses team default)' },
+                model: { type: 'string', description: 'LLM model ID (optional)' },
+                max_tokens: { type: 'number', description: 'Max output tokens (100-8192)' },
+                temperature: { type: 'number', description: 'Temperature (0-2)' },
+            },
+            required: ['name', 'type'],
+        },
+        async execute(params) {
+            $wire.set('name', params.name);
+            if (params.description) $wire.set('description', params.description);
+            $wire.set('type', params.type);
+            if (params.risk_level) $wire.set('riskLevel', params.risk_level);
+            if (params.system_prompt) $wire.set('systemPrompt', params.system_prompt);
+            if (params.prompt_template) $wire.set('promptTemplate', params.prompt_template);
+            if (params.provider) $wire.set('provider', params.provider);
+            if (params.model) $wire.set('model', params.model);
+            if (params.max_tokens) $wire.set('maxTokens', params.max_tokens);
+            if (params.temperature !== undefined) $wire.set('temperature', params.temperature);
+            $wire.set('step', 4);
+            await $wire.save();
+            return { success: true, message: 'Skill created' };
+        },
+    });
+}
+</script>
+@endscript

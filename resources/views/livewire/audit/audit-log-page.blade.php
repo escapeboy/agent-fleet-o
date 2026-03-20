@@ -1,21 +1,21 @@
 <div>
     {{-- Filters --}}
-    <div class="mb-6 flex flex-wrap items-center gap-4">
+    <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_audit_log" tooldescription="Filter audit log entries by event type and search query">
         <div class="relative flex-1">
-            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search events or users..." class="pl-10">
+            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search events or users..." class="pl-10" toolparamdescription="Free-text search across audit log descriptions and subjects">
                 <x-slot:leadingIcon>
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
 
-        <x-form-select wire:model.live="eventFilter">
+        <x-form-select wire:model.live="eventFilter" toolparamdescription="Filter by audit event category">
             <option value="">All Categories</option>
             @foreach($eventTypes as $type)
                 <option value="{{ $type }}">{{ ucfirst($type) }}</option>
             @endforeach
         </x-form-select>
-    </div>
+    </form>
 
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">

@@ -62,6 +62,48 @@
                 new MutationObserver(() => this.scrollIfNeeded())
                     .observe(container, { childList: true, subtree: true });
             });
+
+            // WebMCP: expose assistant chat to browser AI agents
+            if (window.FleetQWebMcp?.isAvailable()) {
+                window.FleetQWebMcp.registerTool({
+                    name: 'assistant_send_message',
+                    description: 'Send a message to the FleetQ AI assistant and get a response. The assistant has full access to platform tools and can perform actions on your behalf.',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string', description: 'The message to send to the FleetQ assistant' }
+                        },
+                        required: ['message']
+                    },
+                    annotations: { readOnlyHint: false },
+                    execute: async ({ message }) => {
+                        // Open the panel if closed
+                        this.open = true;
+                        await this.$nextTick();
+
+                        // Send message through the normal flow
+                        this.inputText = message;
+                        await this.send();
+
+                        // Wait for the async job to complete (poll pendingMessageId)
+                        return new Promise((resolve) => {
+                            const maxWait = 60000;
+                            const start = Date.now();
+                            const check = setInterval(async () => {
+                                const pending = $wire.pendingMessageId;
+                                if (pending === '' || Date.now() - start > maxWait) {
+                                    clearInterval(check);
+                                    const msgs = $wire.messages;
+                                    const last = msgs?.[msgs.length - 1];
+                                    resolve({
+                                        content: [{ type: 'text', text: last?.content ?? 'No response within timeout.' }]
+                                    });
+                                }
+                            }, 1500);
+                        });
+                    }
+                });
+            }
         },
         scrollToBottom() {
             this.$nextTick(() => {

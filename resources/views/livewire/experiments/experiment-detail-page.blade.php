@@ -29,24 +29,30 @@
         {{-- Actions --}}
         <div class="flex flex-wrap items-center gap-2">
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Draft)
-                <button wire:click="startExperiment" wire:confirm="Start this run? It will begin the scoring stage."
+                <form class="inline" onsubmit="return false" toolname="start_experiment" tooldescription="Start this experiment — transition from draft to scoring">
+                <button type="button" wire:click="startExperiment" wire:confirm="Start this run? It will begin the scoring stage."
                     class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
                     Start Run
                 </button>
+                </form>
             @endif
 
             @if($experiment->status->isPausable())
-                <button wire:click="pauseExperiment"
+                <form class="inline" onsubmit="return false" toolname="pause_experiment" tooldescription="Pause this running experiment">
+                <button type="button" wire:click="pauseExperiment"
                     class="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm font-medium text-yellow-700 hover:bg-yellow-100">
                     Pause
                 </button>
+                </form>
             @endif
 
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Paused)
-                <button wire:click="resumeExperiment"
+                <form class="inline" onsubmit="return false" toolname="resume_experiment" tooldescription="Resume this paused experiment">
+                <button type="button" wire:click="resumeExperiment"
                     class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100">
                     Resume
                 </button>
+                </form>
             @endif
 
             @if($experiment->status->isFailed())
@@ -68,7 +74,9 @@
                 @if($showKillConfirm)
                     <div class="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
                         <span class="text-sm text-red-700">Kill this run?</span>
-                        <button wire:click="killExperiment" class="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700">Yes, kill</button>
+                        <form class="inline" onsubmit="return false" toolname="kill_experiment" tooldescription="Permanently terminate this experiment">
+                        <button type="button" wire:click="killExperiment" class="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700">Yes, kill</button>
+                        </form>
                         <button wire:click="$set('showKillConfirm', false)" class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">Cancel</button>
                     </div>
                 @else

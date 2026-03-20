@@ -8,16 +8,16 @@
     @endif
 
     {{-- Toolbar --}}
-    <div class="mb-6 flex flex-wrap items-center gap-4">
+    <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_marketplace" tooldescription="Filter marketplace listings by type, category, pricing, and search query">
         <div class="relative flex-1">
-            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search marketplace..." class="pl-10">
+            <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search marketplace..." class="pl-10" toolparamdescription="Free-text search across marketplace listing names and descriptions">
                 <x-slot:leadingIcon>
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
 
-        <x-form-select wire:model.live="typeFilter">
+        <x-form-select wire:model.live="typeFilter" toolparamdescription="Filter by listing type: skill, agent, workflow, bundle">
             <option value="">All Types</option>
             <option value="skill">Skills</option>
             <option value="agent">Agents</option>
@@ -26,7 +26,7 @@
             <option value="email_template">Email Templates</option>
         </x-form-select>
 
-        <x-form-select wire:model.live="categoryFilter">
+        <x-form-select wire:model.live="categoryFilter" toolparamdescription="Filter by marketplace category">
             <option value="">All Categories</option>
             @foreach($categories as $cat)
                 @php $label = config('marketplace-categories.'.$cat, ucfirst($cat)); @endphp
@@ -34,7 +34,7 @@
             @endforeach
         </x-form-select>
 
-        <x-form-select wire:model.live="pricingFilter">
+        <x-form-select wire:model.live="pricingFilter" toolparamdescription="Filter by pricing model: free, paid">
             <option value="">All Pricing</option>
             <option value="free">Free</option>
             <option value="paid">Paid</option>
@@ -71,7 +71,7 @@
                 </span>
             @endif
         @endauth
-    </div>
+    </form>
 
     {{-- Card Grid --}}
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
