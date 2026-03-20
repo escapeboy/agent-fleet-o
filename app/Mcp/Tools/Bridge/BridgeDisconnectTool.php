@@ -15,37 +15,44 @@ class BridgeDisconnectTool extends Tool
 {
     protected string $name = 'bridge_disconnect';
 
-    protected string $description = 'Terminate the active FleetQ Bridge session for the current team.';
+    protected string $description = 'Disconnect a FleetQ Bridge. Pass connection_id to disconnect a specific bridge, or omit to disconnect all active bridges.';
 
     public function schema(JsonSchema $schema): array
     {
-        return [];
+        return [
+            'connection_id' => $schema->string()
+                ->description('UUID of a specific bridge connection to disconnect. Omit to disconnect all.'),
+        ];
     }
 
     public function handle(Request $request): Response
     {
         $teamId = app('mcp.team_id') ?? null;
+        $connectionId = $request->input('connection_id');
 
-        $connection = $teamId
-            ? BridgeConnection::where('team_id', $teamId)
-                ->active()
-                ->orderByDesc('connected_at')
-                ->first()
-            : null;
+        $query = BridgeConnection::where('team_id', $teamId)->active();
 
-        if (! $connection) {
+        if ($connectionId) {
+            $query->where('id', $connectionId);
+        }
+
+        $connections = $query->get();
+
+        if ($connections->isEmpty()) {
             return Response::text(json_encode([
                 'success' => false,
                 'message' => 'No active FleetQ Bridge connection to disconnect.',
             ]));
         }
 
-        app(TerminateBridgeConnection::class)->execute($connection);
+        $connections->each(fn ($c) => app(TerminateBridgeConnection::class)->execute($c));
 
         return Response::text(json_encode([
             'success' => true,
-            'message' => 'FleetQ Bridge connection terminated.',
-            'session_id' => $connection->session_id,
+            'disconnected' => $connections->count(),
+            'message' => $connections->count() === 1
+                ? 'Bridge connection terminated.'
+                : "{$connections->count()} bridge connections terminated.",
         ]));
     }
 }
