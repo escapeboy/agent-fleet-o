@@ -44,3 +44,12 @@ Thumbs.db
 /services
 /phpstan-filter.php
 /public/presentations
+
+# Laravel Boost (auto-generated)
+/.agents
+/.codex
+/.gemini
+/.mcp.json
+/AGENTS.md
+/GEMINI.md
+/boost.json

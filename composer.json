@@ -36,9 +36,10 @@
         "webklex/php-imap": "^6.2"
     },
     "require-dev": {
-        "giorgiosironi/eris": "^1.0",
         "fakerphp/faker": "^1.23",
+        "giorgiosironi/eris": "^1.0",
         "larastan/larastan": "^3.0",
+        "laravel/boost": "^2.3",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
         "laravel/sail": "^1.41",
@@ -90,7 +91,8 @@
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
+            "@php artisan boost:update --ansi"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
