@@ -69,6 +69,19 @@ Example: agent_manage(action: "list") to list agents, agent_manage(action: "get"
 All parameters from the original tools are supported — pass them alongside "action".
 TXT;
 
+    /** @var array<string, array<string, bool>|string> */
+    protected array $capabilities = [
+        self::CAPABILITY_TOOLS => [
+            'listChanged' => true,
+        ],
+        self::CAPABILITY_RESOURCES => [
+            'listChanged' => false,
+        ],
+        self::CAPABILITY_PROMPTS => [
+            'listChanged' => false,
+        ],
+    ];
+
     protected function boot(): void
     {
         $this->bootstrapMcpAuth();
