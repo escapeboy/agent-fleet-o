@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Approvals</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: var(--color-background-primary, #0f0f0f);
+    --bg2: var(--color-background-secondary, #1a1a1a);
+    --bg3: var(--color-background-tertiary, #242424);
+    --text: var(--color-text-primary, #f5f5f5);
+    --text2: var(--color-text-secondary, #a0a0a0);
+    --border: var(--color-border-primary, #2e2e2e);
+    --accent: var(--color-accent-primary, #6366f1);
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --font: var(--font-sans, system-ui, -apple-system, sans-serif);
+    --radius: 8px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px;
+    min-height: 100vh;
+  }
+
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .header h1 { font-size: 15px; font-weight: 600; }
+
+  .badge {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 99px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge.empty { background: var(--bg3); color: var(--text2); }
+
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading { text-align: center; color: var(--text2); padding: 32px 0; }
+  .empty-state { text-align: center; color: var(--text2); padding: 40px 0; }
+
+  .filter-bar { display: none; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-bar.visible { display: flex; }
+
+  .filter-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: var(--font);
+    transition: all 0.15s;
+  }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 8px;
+    transition: border-color 0.15s;
+  }
+  .card:hover { border-color: var(--accent); }
+
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .card-type { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text2); }
+  .card-id { font-size: 11px; color: var(--text2); font-family: monospace; }
+
+  .card-payload { font-size: 11px; color: var(--text2); margin-bottom: 8px; word-break: break-word; }
+  .card-meta { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
+
+  .card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .btn {
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    font-family: var(--font);
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-approve { background: var(--success); color: #fff; }
+  .btn-reject { background: var(--danger); color: #fff; }
+  .btn-escalate { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+
+  .result-banner {
+    display: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 6px;
+  }
+  .result-banner.success { background: rgba(16,185,129,0.15); color: var(--success); display: block; }
+  .result-banner.error { background: rgba(239,68,68,0.15); color: var(--danger); display: block; }
+
+  .error-msg {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: var(--radius);
+    padding: 12px;
+    color: var(--danger);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Approval Inbox</h1>
+  <span class="badge empty" id="count-badge">—</span>
+</div>
+
+<div class="filter-bar" id="filter-bar">
+  <button class="filter-btn active" data-status="pending">Pending</button>
+  <button class="filter-btn" data-status="approved">Approved</button>
+  <button class="filter-btn" data-status="rejected">Rejected</button>
+  <button class="filter-btn" data-status="expired">Expired</button>
+</div>
+
+<div id="content">
+  <div class="loading"><span class="spinner"></span> Loading approvals…</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Minimal MCP Apps postMessage client ───────────────────────────────────
+  var _id = 1;
+  var _pending = {};
+  var _handlers = {};
+
+  function mcpSend(method, params) {
+    window.parent.postMessage({ jsonrpc: '2.0', method: method, params: params || {} }, '*');
+  }
+
+  function mcpRequest(method, params) {
+    return new Promise(function (resolve, reject) {
+      var id = _id++;
+      _pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ jsonrpc: '2.0', id: id, method: method, params: params || {} }, '*');
+      setTimeout(function () {
+        if (_pending[id]) {
+          delete _pending[id];
+          reject(new Error('Timed out: ' + method));
+        }
+      }, 30000);
+    });
+  }
+
+  window.addEventListener('message', function (e) {
+    var msg = e.data;
+    if (!msg || msg.jsonrpc !== '2.0') return;
+
+    if (msg.id && _pending[msg.id]) {
+      var cb = _pending[msg.id];
+      delete _pending[msg.id];
+      if (msg.error) cb.reject(new Error(msg.error.message || 'MCP error'));
+      else cb.resolve(msg.result);
+      return;
+    }
+
+    if (msg.method && _handlers[msg.method]) {
+      _handlers[msg.method](msg.params);
+    }
+  });
+
+  function callTool(name, args) {
+    return mcpRequest('tools/call', { name: name, arguments: args || {} });
+  }
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  var currentStatus = 'pending';
+  var initialDataReceived = false;
+
+  // ── DOM helpers ──────────────────────────────────────────────────────────
+  var content = document.getElementById('content');
+  var badge = document.getElementById('count-badge');
+  var filterBar = document.getElementById('filter-bar');
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function showLoading(msg) {
+    while (content.firstChild) content.removeChild(content.firstChild);
+    var d = el('div', 'loading');
+    var sp = el('span', 'spinner');
+    d.appendChild(sp);
+    d.appendChild(document.createTextNode(' ' + (msg || 'Loading…')));
+    content.appendChild(d);
+  }
+
+  function showEmpty() {
+    while (content.firstChild) content.removeChild(content.firstChild);
+    content.appendChild(el('div', 'empty-state', 'No ' + currentStatus + ' approvals'));
+  }
+
+  function showError(msg) {
+    while (content.firstChild) content.removeChild(content.firstChild);
+    content.appendChild(el('div', 'error-msg', msg));
+  }
+
+  // ── Card builder (all DOM, no innerHTML with user data) ───────────────────
+  function typeLabel(a) {
+    if (a.type === 'experiment') return 'Experiment';
+    if (a.type === 'outbound') return 'Outbound';
+    return 'Request';
+  }
+
+  function buildCard(a, isPending) {
+    var card = el('div', 'card');
+    card.id = 'card-' + a.id;
+
+    // Header
+    var header = el('div', 'card-header');
+    header.appendChild(el('span', 'card-type', typeLabel(a)));
+    header.appendChild(el('span', 'card-id', String(a.id).slice(0, 8) + '…'));
+    card.appendChild(header);
+
+    // Payload
+    if (a.payload) {
+      card.appendChild(el('div', 'card-payload', a.payload));
+    }
+
+    // Meta
+    if (a.created_at) {
+      card.appendChild(el('div', 'card-meta', a.created_at));
+    }
+
+    // Actions (only for pending)
+    if (isPending) {
+      var actions = el('div', 'card-actions');
+      var btnApprove = el('button', 'btn btn-approve', 'Approve');
+      var btnReject = el('button', 'btn btn-reject', 'Reject');
+      var btnEscalate = el('button', 'btn btn-escalate', 'Escalate');
+
+      btnApprove.addEventListener('click', function () { doAction(a.id, 'approve'); });
+      btnReject.addEventListener('click', function () { doAction(a.id, 'reject'); });
+      btnEscalate.addEventListener('click', function () { doAction(a.id, 'escalate'); });
+
+      actions.appendChild(btnApprove);
+      actions.appendChild(btnReject);
+      actions.appendChild(btnEscalate);
+      card.appendChild(actions);
+
+      var resultBanner = el('div', 'result-banner');
+      resultBanner.id = 'result-' + a.id;
+      card.appendChild(resultBanner);
+    }
+
+    return card;
+  }
+
+  function renderApprovals(data) {
+    var approvals = data.approvals || [];
+    var count = data.count !== undefined ? data.count : approvals.length;
+
+    badge.textContent = String(count);
+    badge.className = count > 0 ? 'badge' : 'badge empty';
+    filterBar.classList.add('visible');
+
+    while (content.firstChild) content.removeChild(content.firstChild);
+
+    if (approvals.length === 0) {
+      showEmpty();
+      return;
+    }
+
+    var isPending = currentStatus === 'pending';
+    approvals.forEach(function (a) {
+      content.appendChild(buildCard(a, isPending));
+    });
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  var toolMap = {
+    approve: 'approval_approve',
+    reject: 'approval_reject',
+    escalate: 'approval_escalate',
+  };
+
+  var resultMessages = {
+    approve: '✓ Approved',
+    reject: '✗ Rejected',
+    escalate: '↑ Escalated',
+  };
+
+  var contextMessages = {
+    approve: 'approved',
+    reject: 'rejected',
+    escalate: 'escalated',
+  };
+
+  function setCardBtns(id, disabled) {
+    var card = document.getElementById('card-' + id);
+    if (!card) return;
+    var btns = card.querySelectorAll('.btn');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = disabled;
+  }
+
+  function showResult(id, message, isSuccess) {
+    var banner = document.getElementById('result-' + id);
+    if (!banner) return;
+    banner.textContent = message;
+    banner.className = 'result-banner ' + (isSuccess ? 'success' : 'error');
+  }
+
+  function doAction(id, action) {
+    setCardBtns(id, true);
+    callTool(toolMap[action], { id: id })
+      .then(function () {
+        showResult(id, resultMessages[action], true);
+        mcpSend('ui/update-model-context', {
+          content: [{ type: 'text', text: 'Approval ' + id + ' was ' + contextMessages[action] + ' by the user.' }]
+        });
+      })
+      .catch(function (err) {
+        showResult(id, 'Error: ' + err.message, false);
+        setCardBtns(id, false);
+      });
+  }
+
+  // ── Filter tabs ───────────────────────────────────────────────────────────
+  filterBar.addEventListener('click', function (e) {
+    var btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    var btns = filterBar.querySelectorAll('.filter-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+    btn.classList.add('active');
+    currentStatus = btn.dataset.status;
+    loadApprovals(currentStatus);
+  });
+
+  function loadApprovals(status) {
+    showLoading('Loading ' + status + ' approvals…');
+    callTool('approval_list', { status: status, limit: 25 })
+      .then(function (result) {
+        var text = result && result.content && result.content[0] && result.content[0].text;
+        var data = text ? JSON.parse(text) : {};
+        renderApprovals(data);
+      })
+      .catch(function (err) {
+        showError('Failed to load: ' + err.message);
+      });
+  }
+
+  // ── Handle initial tool-result pushed by host ─────────────────────────────
+  _handlers['ui/notifications/tool-result'] = function (params) {
+    var text = params && params.content && params.content[0] && params.content[0].text;
+    if (!text) return;
+    try {
+      var data = JSON.parse(text);
+      if (data.approvals !== undefined) {
+        initialDataReceived = true;
+        renderApprovals(data);
+      }
+    } catch (_) { /* ignore */ }
+  };
+
+  // ── Initialize ────────────────────────────────────────────────────────────
+  mcpRequest('ui/initialize', {
+    protocolVersion: '2026-01-26',
+    clientInfo: { name: 'fleetq-approvals', version: '1.0.0' },
+    appCapabilities: {}
+  }).then(function () {
+    mcpSend('ui/notifications/initialized', {});
+  }).catch(function () {
+    // Standalone preview — host doesn't respond to ui/initialize
+  }).finally(function () {
+    // If host didn't push initial data, load it via tool call
+    setTimeout(function () {
+      if (!initialDataReceived) loadApprovals(currentStatus);
+    }, 400);
+  });
+
+})();
+</script>
+</body>
+</html>

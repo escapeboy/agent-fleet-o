@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
+use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
@@ -272,6 +273,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Bridge relay: forward Reverb client-relay.* whispers into Redis stream
         Event::listen(MessageReceived::class, HandleBridgeRelayResponse::class);
+
+        // MCP Apps: record per-session capability flag on initialize handshake
+        Event::listen(\Laravel\Mcp\Events\SessionInitialized::class, McpAppsCapabilityListener::class);
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);

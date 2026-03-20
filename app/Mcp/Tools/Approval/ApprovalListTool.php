@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Approval;
 
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Mcp\Concerns\HasMcpAppUi;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,13 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ApprovalListTool extends Tool
 {
+    use HasMcpAppUi;
+
+    protected function uiResourceUri(): string
+    {
+        return 'ui://fleetq/approvals';
+    }
+
     protected string $name = 'approval_list';
 
     protected string $description = 'List approval requests with optional status filter. Defaults to pending. Returns id, type, payload summary, created_at.';

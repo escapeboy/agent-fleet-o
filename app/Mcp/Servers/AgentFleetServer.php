@@ -621,4 +621,10 @@ class AgentFleetServer extends Server
         AdminUserRevokeSessionsTool::class,
         AdminUserSendPasswordResetTool::class,
     ];
+
+    /** @var array<int, class-string<\Laravel\Mcp\Server\Resource>> */
+    protected array $resources = [
+        // MCP Apps UI resources — only exposed to clients that declare MCP Apps capability
+        \App\Mcp\Resources\ApprovalsResource::class,
+    ];
 }
