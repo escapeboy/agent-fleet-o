@@ -9,4 +9,5 @@ enum ExperimentTrack: string
     case Revenue = 'revenue';
     case Engagement = 'engagement';
     case Debug = 'debug';
+    case Workflow = 'workflow';
 }
