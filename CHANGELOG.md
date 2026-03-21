@@ -2,6 +2,57 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.10.0] - 2026-03-21
+
+### Added
+
+- **OpenAI-Compatible Chat Completions API** — Drop-in replacement endpoints at `/v1/chat/completions` and `/v1/models`. Any OpenAI SDK client can now use FleetQ agents as backends with streaming support, usage reporting, and automatic agent-to-model mapping.
+- **Marketplace Bundles** — Publish and install multi-entity bundles (agent + skills + workflow + credentials) as a single marketplace listing. Dependency resolution wires up cross-entity references (workflow nodes → agents/skills, agent → skill attachments) automatically on install. Platform-curated bundle seeder included.
+- **Context Compaction Middleware** — New AI gateway middleware that automatically compacts long conversation histories to stay within token budgets, preserving key context while reducing token usage.
+- **Token Estimator Service** — Predict token counts and costs before executing AI calls, enabling better budget management and cost visibility.
+- **Agentic Memory Lifecycle** — Intelligent memory management with:
+  - *Write gate*: duplicate detection, contradiction resolution, and confidence scoring before storing new memories.
+  - *Memory consolidation*: scheduled command + job that merges related memories to reduce redundancy.
+  - *Unified search*: combines semantic similarity, keyword matching, and recency signals in a single query.
+  - *Visibility levels*: Private, Project, and Team scopes with auto-promotion based on access patterns.
+  - *Tenant hardening*: defense-in-depth guards on retrieval count increment and auto-promotion.
+- **Haystack-Inspired Enhancements** — Six features adapted from Haystack pipeline patterns:
+  - *Semantic Tool Pre-Filtering*: pgvector embeddings on tools with `tools:embed` command; threshold-based pre-filter reduces tool count before LLM selection.
+  - *Workflow YAML/JSON Export/Import*: v2 envelope format with checksum verification, fuzzy reference resolution, 500-node cap. Available via CLI, REST API, and MCP tools.
+  - *Workflow Node Type Validation*: port schemas with union type compatibility checks, passthrough resolution, and advisory warnings.
+  - *Structured Evaluation Framework*: LLM-as-Judge with XML-based prompt templates, score validation (0–10), datasets, configurable criteria, and MCP tools.
+  - *Workflow-as-Tool*: `SynchronousWorkflowExecutor` enables in-process graph execution; agents can invoke workflows as tools via `callable_workflow_ids`.
+  - *Enhanced MCP Tool Discovery*: `server_capabilities` column, content-hash caching, and `ToolHealthCheckCommand` for monitoring external MCP server availability.
+- **CrewAI-Inspired Phase 1** — Three features adapted from CrewAI patterns:
+  - *Conditional Crew Tasks*: `skip_condition` JSONB evaluated via `ConditionEvaluator` before task dispatch; tasks can be dynamically skipped based on prior results.
+  - *result_as_answer Tool Flag*: `ResultAsAnswerException` short-circuits the PrismPHP tool loop so tool output becomes the agent's final answer without LLM summarization.
+  - *Composite Memory Scoring*: weighted formula combining semantic similarity (0.5), recency decay (0.3), and importance (0.2) with configurable half-life.
+- **Agent-as-Tool Delegation** — Agents can call other agents as PrismPHP tools with depth guard, cycle detection, cross-tenant validation, and internal key stripping. Enables hierarchical multi-agent orchestration.
+- **Workflow Activation Groups** — Per-node `activation_mode` (all/any/n_of_m) for DAG fan-in control. Backward-compatible merge-to-any semantics.
+- **WebMCP Integration (W3C Draft)** — Three-phase browser AI agent tool discovery:
+  - *Declarative annotations*: `toolname`/`tooldescription`/`toolparamdescription` attributes on 28 admin pages.
+  - *Imperative tools*: `webmcp.js` module with `FleetQWebMcp` global API and 7 imperative tools.
+  - *Agent consumption*: `WebMcpBrowserBridge` service for discovering and executing WebMCP tools via CDP.
+- **Multi-Bridge Routing** — Priority-based routing with failover chains across multiple bridge connections. Routing preferences UI in Team Settings, `BridgeRouter` integration in `LocalBridgeGateway`. 7 MCP tools for bridge management.
+- **Checkpoint Durability Modes** — Three persistence strategies (sync/async/exit) with `CheckpointMode` enum, Redis buffer, and `FlushCheckpointJob`. Configurable per workflow via UI, API, and MCP.
+- **Time-Travel Debugging** — `WorkflowSnapshot` model captures execution state at each workflow event. `WorkflowTimeline` Livewire component with split-view snapshot inspector. API endpoint `GET /experiments/{id}/snapshots` and MCP tool `workflow_snapshot_list`.
+- **Agent Handoff Pattern** — `ProcessAgentHandoffAction` validates target agent, enforces depth limits, and tracks handoff chains in checkpoint data. System prompt injection for handoff-enabled agents.
+- **Dynamic MCP Tool Preferences** — Per-team tool filtering via `shouldRegister()`, `McpToolCatalogTool` for browsing available tools by domain, `McpToolPreferencesTool` for toggling tools on/off, and `listChanged` notifications.
+- **CompactMcpServer** — 33 meta-tools optimized for Claude.ai's tool limit, aggregating frequently-used operations into domain-level compound tools.
+- **MCP Spec 2025-11-25 Compliance** — `allowed_origins` for DNS rebinding protection, `client_id_metadata_document_supported` in OAuth metadata, strict 401 responses.
+- **268 MCP Tools** — Total tool count expanded from 244 to 268 across 37 domains.
+
+### Fixed
+
+- **Workflow Builder Zoom** — Replaced CSS `transform: scale()` with SVG `viewBox` so background grid and edge links render correctly at all zoom levels.
+- **`ExperimentTrack` Enum** — Added missing `workflow` case used by `ExecuteChatbotWorkflowJob`.
+- **pgvector Migration Guard** — `tool_embeddings` vector column now guarded with `pg_extension` check, preventing migration failure when pgvector is not installed.
+- **MCP Pagination Limit** — Increased from 200 to 300 tools to accommodate growing tool catalog.
+- **Chatbot Chunks UI** — View Chunks button now visible; embedding provider made configurable per chatbot.
+- **CrewAI Security Hardening** — Recursive skip chain converted to iterative loop (50-iteration safety); `havingRaw` → `whereRaw` for pgvector; budget bypass fix; max recursion depth on `ConditionEvaluator`; tenant guards on `last_accessed_at` updates.
+
+---
+
 ## [1.9.0] - 2026-03-20
 
 ### Added
