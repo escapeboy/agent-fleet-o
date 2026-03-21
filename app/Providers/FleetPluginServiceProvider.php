@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Contracts\FleetPlugin;
 use App\Contracts\PanelExtension;
+use App\Domain\Integration\Services\IntegrationManager;
+use App\Domain\Outbound\Managers\OutboundConnectorManager;
 use App\Domain\Shared\Models\PluginState;
 use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
@@ -70,6 +72,9 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
 
     /** @var list<class-string> AiMiddlewareInterface implementations (tagged as 'fleet.ai.middleware') */
     protected array $aiMiddleware = [];
+
+    /** @var list<class-string> IntegrationDriverInterface implementations (tagged as 'fleet.integrations') */
+    protected array $integrations = [];
 
     /** @var list<class-string<PanelExtension>> PanelExtension implementations */
     protected array $panels = [];
@@ -147,6 +152,8 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
         $this->bootListeners();
         $this->bootLivewireComponents();
         $this->bootPanelExtensions();
+        $this->bootOutboundConnectors();
+        $this->bootIntegrationDrivers();
 
         if ($this->app->runningInConsole()) {
             $this->bootCommands();
@@ -193,6 +200,10 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
 
         if (! empty($this->aiMiddleware)) {
             $this->app->tag($this->aiMiddleware, 'fleet.ai.middleware');
+        }
+
+        if (! empty($this->integrations)) {
+            $this->app->tag($this->integrations, 'fleet.integrations');
         }
     }
 
@@ -243,6 +254,54 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
     {
         if (! empty($this->commands)) {
             $this->commands($this->commands);
+        }
+    }
+
+    /**
+     * Register plugin outbound connectors with the OutboundConnectorManager.
+     * Connectors that implement a getDriverName() method are registered by that name.
+     * Others fall back to what supports() matches (first channel that returns true).
+     */
+    protected function bootOutboundConnectors(): void
+    {
+        if (empty($this->outbound) || ! $this->app->bound(OutboundConnectorManager::class)) {
+            return;
+        }
+
+        $manager = $this->app->make(OutboundConnectorManager::class);
+
+        foreach ($this->outbound as $connectorClass) {
+            $connector = $this->app->make($connectorClass);
+            $driverName = method_exists($connector, 'getDriverName')
+                ? $connector->getDriverName()
+                : null;
+
+            if ($driverName) {
+                $manager->extend($driverName, fn () => $connector);
+            }
+        }
+    }
+
+    /**
+     * Register plugin integration drivers with the IntegrationManager.
+     */
+    protected function bootIntegrationDrivers(): void
+    {
+        if (empty($this->integrations)) {
+            return;
+        }
+
+        if (! $this->app->bound(IntegrationManager::class)) {
+            return;
+        }
+
+        $manager = $this->app->make(IntegrationManager::class);
+
+        foreach ($this->integrations as $driverClass) {
+            $driver = $this->app->make($driverClass);
+            if (method_exists($driver, 'key')) {
+                $manager->extend($driver->key(), fn () => $driver);
+            }
         }
     }
 

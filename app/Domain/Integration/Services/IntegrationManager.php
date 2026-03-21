@@ -36,10 +36,9 @@ use Illuminate\Support\Manager;
  *   $driver = app(IntegrationManager::class)->driver('github');
  *   $driver = app(IntegrationManager::class)->driver('slack');
  *
- * New integrations are added by:
- *   1. Implementing IntegrationDriverInterface
- *   2. Adding a createXxxDriver() method here
- *   3. Registering the driver slug in config/integrations.php
+ * Adding integrations:
+ *   Core: add a createXxxDriver() method here + register slug in config/integrations.php
+ *   Plugin: use FleetPluginServiceProvider::$integrations array — auto-extends this Manager
  */
 class IntegrationManager extends Manager
 {

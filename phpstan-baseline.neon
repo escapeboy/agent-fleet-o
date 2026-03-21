@@ -1573,6 +1573,12 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/ExecuteOutbound.php
 
 		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Outbound\\Enums\\OutboundActionStatus\:\:Skipped will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Experiment/Pipeline/ExecuteOutbound.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 2
@@ -2821,6 +2827,12 @@ parameters:
 			path: app/Domain/Outbound/Actions/SendOutboundAction.php
 
 		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Outbound\\Enums\\OutboundActionStatus\:\:Sent will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Outbound/Actions/SendOutboundAction.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Outbound\\Models\\OutboundProposal\:\:\$team_id\.$#'
 			identifier: property.notFound
 			count: 2
@@ -3041,6 +3053,36 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Outbound/Connectors/MatrixConnector.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Outbound\\Models\\OutboundProposal\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Domain/Outbound/Connectors/NotificationConnector.php
+
+		-
+			message: '#^Offset ''action_url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/NotificationConnector.php
+
+		-
+			message: '#^Offset ''body'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/NotificationConnector.php
+
+		-
+			message: '#^Offset ''subject'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/NotificationConnector.php
+
+		-
+			message: '#^Offset ''summary'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Outbound/Connectors/NotificationConnector.php
 
 		-
 			message: '#^Access to an undefined property App\\Domain\\Outbound\\Models\\OutboundProposal\:\:\$team_id\.$#'
@@ -5017,6 +5059,48 @@ parameters:
 			path: app/Domain/Tool/Models/Tool.php
 
 		-
+			message: '#^Constant App\\Domain\\Tool\\Services\\McpBridgeClient\:\:FRAME_ERROR is unused\.$#'
+			identifier: classConstant.unused
+			count: 1
+			path: app/Domain/Tool/Services/McpBridgeClient.php
+
+		-
+			message: '#^Constant App\\Domain\\Tool\\Services\\McpBridgeClient\:\:FRAME_MCP_TOOL_RESULT is unused\.$#'
+			identifier: classConstant.unused
+			count: 1
+			path: app/Domain/Tool/Services/McpBridgeClient.php
+
+		-
+			message: '#^Offset ''__error'' on array\{prompt_tokens\: int, completion_tokens\: int\}\|null in isset\(\) does not exist\.$#'
+			identifier: isset.offset
+			count: 2
+			path: app/Domain/Tool/Services/McpBridgeClient.php
+
+		-
+			message: '#^Offset ''bridge_server_name'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Domain/Tool/Services/McpBridgeClient.php
+
+		-
+			message: '#^Offset ''chunk'' on array\{chunk\: string, done\: bool, usage\: array\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Domain/Tool/Services/McpBridgeClient.php
+
+		-
+			message: '#^Offset ''done'' on array\{chunk\: string, done\: bool, usage\: array\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Services/McpBridgeClient.php
+
+		-
+			message: '#^Offset ''timeout'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Services/McpBridgeClient.php
+
+		-
 			message: '#^Method App\\Domain\\Tool\\Services\\McpStdioClient\:\:buildEnv\(\) is unused\.$#'
 			identifier: method.unused
 			count: 1
@@ -5103,6 +5187,12 @@ parameters:
 		-
 			message: '#^Dead catch \- Throwable is never thrown in the try block\.$#'
 			identifier: catch.neverThrown
+			count: 1
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Elseif condition is always false\.$#'
+			identifier: elseif.alwaysFalse
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
@@ -5217,6 +5307,12 @@ parameters:
 		-
 			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Tool/Services/ToolTranslator.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolType\:\:McpBridge will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
@@ -5992,6 +6088,18 @@ parameters:
 			message: '#^Cannot call method toISOString\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 5
+			path: app/Http/Controllers/Api/V1/BridgeController.php
+
+		-
+			message: '#^Offset ''__error'' on array\{prompt_tokens\: int, completion_tokens\: int\}\|null in isset\(\) does not exist\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Http/Controllers/Api/V1/BridgeController.php
+
+		-
+			message: '#^Offset ''chunk'' on array\{chunk\: string, done\: bool, usage\: array\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
 			path: app/Http/Controllers/Api/V1/BridgeController.php
 
 		-
