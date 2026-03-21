@@ -23,6 +23,7 @@ use App\Domain\Outbound\Middleware\TargetRateLimit;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
+use Illuminate\Support\Facades\Log;
 
 class SendOutboundAction
 {
@@ -99,9 +100,15 @@ class SendOutboundAction
     {
         foreach ($this->connectors as $connector) {
             if ($connector->supports($channel)) {
+                if ($connector instanceof DummyConnector) {
+                    Log::warning("No outbound connector configured for channel '{$channel}' — delivery will be skipped");
+                }
+
                 return $connector;
             }
         }
+
+        Log::warning("No outbound connector configured for channel '{$channel}' — delivery will be skipped");
 
         return new DummyConnector;
     }

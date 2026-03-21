@@ -57,7 +57,8 @@ class ProjectScheduler
 
         if ($this->canDispatch($project)) {
             ExecuteProjectRunJob::dispatch($project->id, 'schedule');
-            $this->advanceSchedule($project);
+            // Schedule advancement moved to ExecuteProjectRunJob::handle()
+            // to prevent phantom last_run_at when the job fails before creating a ProjectRun.
 
             return 1;
         }
@@ -214,7 +215,7 @@ class ProjectScheduler
         }
     }
 
-    private function advanceSchedule(Project $project): void
+    public function advanceSchedule(Project $project): void
     {
         $schedule = $project->schedule;
         $nextRun = $schedule->calculateNextRunAt();

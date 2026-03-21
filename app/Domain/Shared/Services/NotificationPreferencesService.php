@@ -28,6 +28,7 @@ class NotificationPreferencesService
             'crew.execution.completed' => ['in_app'],
             'usage.alert' => ['in_app', 'mail'],
             'weekly.digest' => ['mail'],
+            'system.deploy' => ['in_app', 'mail'],
         ];
     }
 
@@ -52,6 +53,7 @@ class NotificationPreferencesService
             'crew.execution.completed' => ['in_app', 'mail', 'push'],
             'usage.alert' => ['in_app', 'mail'],
             'weekly.digest' => ['mail'],
+            'system.deploy' => ['in_app', 'mail'],
         ];
     }
 

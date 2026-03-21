@@ -8,6 +8,7 @@ use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Outbound\Actions\SendOutboundAction;
+use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
 
 class ExecuteOutbound extends BaseStageJob
@@ -39,6 +40,7 @@ class ExecuteOutbound extends BaseStageJob
 
         $sent = 0;
         $failed = 0;
+        $skipped = 0;
 
         foreach ($proposals as $proposal) {
             if ($experiment->outbound_count >= $experiment->max_outbound_count) {
@@ -46,10 +48,14 @@ class ExecuteOutbound extends BaseStageJob
             }
 
             try {
-                $sendAction->execute($proposal);
-                $sent++;
+                $action = $sendAction->execute($proposal);
 
-                $experiment->increment('outbound_count');
+                if ($action->status === OutboundActionStatus::Skipped) {
+                    $skipped++;
+                } else {
+                    $sent++;
+                    $experiment->increment('outbound_count');
+                }
             } catch (\Throwable $e) {
                 $failed++;
             }
@@ -58,6 +64,7 @@ class ExecuteOutbound extends BaseStageJob
         $stage->update([
             'output_snapshot' => [
                 'sent' => $sent,
+                'skipped' => $skipped,
                 'failed' => $failed,
                 'total_proposals' => $proposals->count(),
             ],
@@ -66,7 +73,7 @@ class ExecuteOutbound extends BaseStageJob
         $transition->execute(
             experiment: $experiment,
             toState: ExperimentStatus::CollectingMetrics,
-            reason: "Outbound complete: {$sent} sent, {$failed} failed",
+            reason: "Outbound complete: {$sent} sent, {$skipped} skipped, {$failed} failed",
         );
     }
 }

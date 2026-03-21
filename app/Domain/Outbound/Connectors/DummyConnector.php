@@ -21,7 +21,7 @@ class DummyConnector implements OutboundConnectorInterface
             return $existing;
         }
 
-        Log::info('DummyConnector: Simulating send', [
+        Log::warning('DummyConnector: No real connector configured — delivery skipped', [
             'proposal_id' => $proposal->id,
             'channel' => $proposal->channel->value,
             'target' => $proposal->target,
@@ -30,12 +30,11 @@ class DummyConnector implements OutboundConnectorInterface
         return OutboundAction::withoutGlobalScopes()->create([
             'team_id' => $proposal->team_id,
             'outbound_proposal_id' => $proposal->id,
-            'status' => OutboundActionStatus::Sent,
+            'status' => OutboundActionStatus::Skipped,
             'external_id' => 'dummy-'.Str::uuid()->toString(),
-            'response' => ['simulated' => true],
+            'response' => ['skipped' => true, 'reason' => 'No connector configured for channel'],
             'idempotency_key' => $idempotencyKey,
             'retry_count' => 0,
-            'sent_at' => now(),
         ]);
     }
 

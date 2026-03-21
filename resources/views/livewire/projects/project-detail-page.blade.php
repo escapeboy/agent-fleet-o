@@ -204,6 +204,7 @@
                                     <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ match($tool->type->value) {
                                         'mcp_stdio' => 'bg-blue-100 text-blue-800',
                                         'mcp_http' => 'bg-cyan-100 text-cyan-800',
+                                        'mcp_bridge' => 'bg-purple-100 text-purple-800',
                                         'built_in' => 'bg-amber-100 text-amber-800',
                                         default => 'bg-gray-100 text-gray-800',
                                     } }}">{{ $tool->type->label() }}</span>
