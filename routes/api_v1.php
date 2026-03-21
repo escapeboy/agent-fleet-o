@@ -35,7 +35,6 @@ use App\Http\Controllers\Api\V1\ToolController;
 use App\Http\Controllers\Api\V1\TriggerController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
 use App\Http\Controllers\Api\V1\WorkflowController;
-use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 /*
