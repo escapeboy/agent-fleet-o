@@ -9991,6 +9991,18 @@ parameters:
 			path: app/Livewire/Marketplace/PublishForm.php
 
 		-
+			message: '#^Offset ''default_priority'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/OutboundConnectors/NotificationOutboundPage.php
+
+		-
+			message: '#^Offset ''notify_all_members'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/OutboundConnectors/NotificationOutboundPage.php
+
+		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -10061,6 +10073,54 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Livewire/OutboundConnectors/OutboundConnectorsPage.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Livewire/OutboundConnectors/WebhookOutboundPage.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Livewire/OutboundConnectors/WebhookOutboundPage.php
+
+		-
+			message: '#^Offset ''content_type'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/OutboundConnectors/WebhookOutboundPage.php
+
+		-
+			message: '#^Offset ''method'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/OutboundConnectors/WebhookOutboundPage.php
+
+		-
+			message: '#^Offset ''secret'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/OutboundConnectors/WebhookOutboundPage.php
+
+		-
+			message: '#^Offset ''url'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/OutboundConnectors/WebhookOutboundPage.php
+
+		-
+			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/OutboundConnectors/WebhookOutboundPage.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Livewire/OutboundConnectors/WebhookOutboundPage.php
 
 		-
 			message: '#^Access to an undefined property App\\Livewire\\Profile\\TwoFactorAuthenticationForm\:\:\$qrCodeSvg\.$#'
