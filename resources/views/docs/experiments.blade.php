@@ -1,11 +1,11 @@
 <x-layouts.docs
     title="Experiments"
-    description="FleetQ experiments are AI pipeline runs with a 22-state engine. Learn how to create, monitor, pause, retry, and kill experiments."
+    description="FleetQ experiments are AI pipeline runs with a 20-state engine. Learn how to create, monitor, pause, retry, and kill experiments."
     page="experiments"
 >
     <h1 class="text-3xl font-bold tracking-tight text-gray-900">Experiments — The AI Pipeline Engine</h1>
     <p class="mt-4 text-gray-600">
-        An <strong>Experiment</strong> is a single run of an AI workflow. It moves through up to 22 states —
+        An <strong>Experiment</strong> is a single run of an AI workflow. It moves through up to 20 states —
         from <em>Draft</em> all the way to <em>Completed</em> — with automatic checkpointing, budget enforcement,
         human approval gates, and a full audit trail at every step.
     </p>

@@ -97,7 +97,7 @@ curl -X POST {{ url('/api/v1/experiments') }} \
         </a>
         <a href="{{ route('docs.show', 'mcp-server') }}" class="group rounded-lg border border-gray-200 p-4 transition hover:border-primary-300 hover:bg-primary-50">
             <p class="font-medium text-gray-900 group-hover:text-primary-700">MCP Server →</p>
-            <p class="mt-1 text-sm text-gray-500">Connect Claude Code or Cursor directly to FleetQ via 143 MCP tools.</p>
+            <p class="mt-1 text-sm text-gray-500">Connect Claude Code or Cursor directly to FleetQ via 268+ MCP tools.</p>
         </a>
     </div>
 </x-layouts.docs>

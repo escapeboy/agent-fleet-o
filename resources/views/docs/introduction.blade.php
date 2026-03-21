@@ -90,6 +90,14 @@
                     <td class="py-3 pl-4 pr-6 font-medium text-gray-900">Project</td>
                     <td class="py-3 pr-4 text-gray-600">A container for scheduled, recurring AI work. Each trigger creates a ProjectRun with full history.</td>
                 </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-6 font-medium text-gray-900">Approval</td>
+                    <td class="py-3 pr-4 text-gray-600">A human-in-the-loop gate. Agents pause for human review before taking irreversible actions.</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-6 font-medium text-gray-900">Tool</td>
+                    <td class="py-3 pr-4 text-gray-600">An external capability (MCP server, shell, browser) that extends what agents can do beyond language generation.</td>
+                </tr>
             </tbody>
         </table>
     </div>

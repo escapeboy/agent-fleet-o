@@ -95,4 +95,105 @@
 curl -X PATCH {{ url('/api/v1/agents/AGENT_ID/status') }} \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"status": "disabled"}'</x-docs.code>
+
+    {{-- Config history & rollback --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Configuration history &amp; rollback</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Every change to an agent's configuration (role, goal, backstory, skills, tools, provider) is versioned.
+        View the full history from the agent detail page or via <code class="rounded bg-gray-100 px-1 text-xs">GET /api/v1/agents/{id}/config-history</code>.
+    </p>
+    <p class="mt-2 text-sm text-gray-600">
+        To revert to a previous version, use <strong>Rollback</strong> on the detail page or call
+        <code class="rounded bg-gray-100 px-1 text-xs">POST /api/v1/agents/{id}/rollback</code> with the version number.
+        This is useful when a prompt tweak causes regressions — roll back instantly without manual re-editing.
+    </p>
+
+    {{-- Runtime state --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Runtime state</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Check an agent's current runtime state — active experiments, queue depth, recent execution history —
+        via <code class="rounded bg-gray-100 px-1 text-xs">GET /api/v1/agents/{id}/runtime-state</code>
+        or the <code class="rounded bg-gray-100 px-1 text-xs">agent_runtime_state</code> MCP tool.
+    </p>
+
+    {{-- Agent templates --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Agent templates</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Browse pre-built agent templates from the <a href="{{ route('docs.show', 'marketplace') }}" class="text-primary-600 hover:underline">Marketplace</a>
+        via <code class="rounded bg-gray-100 px-1 text-xs">agent_templates_list</code> MCP tool.
+        Install a template to get a fully configured agent with role, goal, backstory, skills, and tools.
+    </p>
+
+    {{-- MCP tools --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">MCP tools</h2>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Tool</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Purpose</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach([
+                    ['agent_list', 'List agents with filtering and pagination'],
+                    ['agent_get', 'Get agent details including skills and tools'],
+                    ['agent_create', 'Create a new agent'],
+                    ['agent_update', 'Update agent configuration'],
+                    ['agent_toggle_status', 'Enable or disable an agent'],
+                    ['agent_delete', 'Soft-delete an agent'],
+                    ['agent_config_history', 'View configuration version history'],
+                    ['agent_rollback', 'Revert to a previous configuration version'],
+                    ['agent_runtime_state', 'Check active experiments, queue depth, recent runs'],
+                    ['agent_skill_sync', 'Sync skills attached to an agent'],
+                    ['agent_tool_sync', 'Sync tools attached to an agent'],
+                    ['agent_templates_list', 'Browse pre-built agent templates'],
+                ] as [$tool, $desc])
+                <tr>
+                    <td class="py-2 pl-4 pr-6 font-mono text-xs text-gray-900">{{ $tool }}</td>
+                    <td class="py-2 pr-4 text-xs text-gray-600">{{ $desc }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    {{-- API --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">API endpoints</h2>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Method</th>
+                    <th class="py-3 pr-6 text-left font-semibold text-gray-700">Path</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Purpose</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach([
+                    ['GET', '/api/v1/agents', 'List agents'],
+                    ['GET', '/api/v1/agents/{id}', 'Get agent details'],
+                    ['POST', '/api/v1/agents', 'Create agent'],
+                    ['PUT', '/api/v1/agents/{id}', 'Update agent'],
+                    ['DELETE', '/api/v1/agents/{id}', 'Delete agent'],
+                    ['PATCH', '/api/v1/agents/{id}/status', 'Toggle status'],
+                    ['GET', '/api/v1/agents/{id}/config-history', 'Configuration history'],
+                    ['POST', '/api/v1/agents/{id}/rollback', 'Rollback to version'],
+                    ['GET', '/api/v1/agents/{id}/runtime-state', 'Runtime state'],
+                ] as [$method, $path, $desc])
+                <tr>
+                    <td class="py-2 pl-4 pr-6"><span class="rounded bg-{{ $method === 'GET' ? 'green' : ($method === 'POST' ? 'blue' : ($method === 'DELETE' ? 'red' : 'yellow')) }}-100 px-1.5 py-0.5 font-mono text-xs font-medium text-{{ $method === 'GET' ? 'green' : ($method === 'POST' ? 'blue' : ($method === 'DELETE' ? 'red' : 'yellow')) }}-700">{{ $method }}</span></td>
+                    <td class="py-2 pr-6 font-mono text-xs text-gray-600">{{ $path }}</td>
+                    <td class="py-2 pr-4 text-xs text-gray-600">{{ $desc }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <x-docs.callout type="tip">
+        See also: <a href="{{ route('docs.show', 'skills') }}" class="font-medium underline">Skills</a> (reusable capabilities),
+        <a href="{{ route('docs.show', 'tools') }}" class="font-medium underline">Tools</a> (MCP servers &amp; built-in tools),
+        <a href="{{ route('docs.show', 'crews') }}" class="font-medium underline">Crews</a> (multi-agent teams).
+    </x-docs.callout>
 </x-layouts.docs>

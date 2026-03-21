@@ -95,4 +95,77 @@ curl -X POST {{ url('/api/v1/crews/CREW_ID/execute') }} \
         <x-docs.step number="3" title="ValidateTaskOutput">The QA agent validates each output. Failed validations trigger a retry of that specific task.</x-docs.step>
         <x-docs.step number="4" title="SynthesizeResult">The coordinator merges all validated outputs into the final result and saves it as an Artifact.</x-docs.step>
     </div>
+
+    {{-- Artifacts --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Crew artifacts</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Each crew execution automatically collects artifacts from task outputs via <code class="rounded bg-gray-100 px-1 text-xs">CollectCrewArtifactsAction</code>.
+        View and download artifacts from the execution detail page.
+    </p>
+
+    {{-- MCP tools --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">MCP tools</h2>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Tool</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Purpose</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach([
+                    ['crew_list', 'List crews with filtering'],
+                    ['crew_get', 'Get crew details including members'],
+                    ['crew_create', 'Create a new crew with members'],
+                    ['crew_update', 'Update crew configuration'],
+                    ['crew_execute', 'Start a crew execution'],
+                    ['crew_execution_status', 'Check execution progress'],
+                    ['crew_executions_list', 'List past executions'],
+                ] as [$tool, $desc])
+                <tr>
+                    <td class="py-2 pl-4 pr-6 font-mono text-xs text-gray-900">{{ $tool }}</td>
+                    <td class="py-2 pr-4 text-xs text-gray-600">{{ $desc }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    {{-- API --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">API endpoints</h2>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Method</th>
+                    <th class="py-3 pr-6 text-left font-semibold text-gray-700">Path</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Purpose</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach([
+                    ['GET', '/api/v1/crews', 'List crews'],
+                    ['GET', '/api/v1/crews/{id}', 'Get crew details'],
+                    ['POST', '/api/v1/crews', 'Create crew'],
+                    ['PUT', '/api/v1/crews/{id}', 'Update crew'],
+                    ['DELETE', '/api/v1/crews/{id}', 'Delete crew'],
+                    ['POST', '/api/v1/crews/{id}/execute', 'Start execution'],
+                    ['GET', '/api/v1/crews/{id}/executions', 'List executions'],
+                    ['GET', '/api/v1/crews/{id}/executions/{eid}', 'Execution detail'],
+                ] as [$method, $path, $desc])
+                <tr>
+                    <td class="py-2 pl-4 pr-6"><span class="rounded bg-{{ $method === 'GET' ? 'green' : ($method === 'POST' ? 'blue' : ($method === 'DELETE' ? 'red' : 'yellow')) }}-100 px-1.5 py-0.5 font-mono text-xs font-medium text-{{ $method === 'GET' ? 'green' : ($method === 'POST' ? 'blue' : ($method === 'DELETE' ? 'red' : 'yellow')) }}-700">{{ $method }}</span></td>
+                    <td class="py-2 pr-6 font-mono text-xs text-gray-600">{{ $path }}</td>
+                    <td class="py-2 pr-4 text-xs text-gray-600">{{ $desc }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <x-docs.callout type="tip">
+        See also: <a href="{{ route('docs.show', 'agents') }}" class="font-medium underline">Agents</a> (individual AI workers),
+        <a href="{{ route('docs.show', 'workflows') }}" class="font-medium underline">Workflows</a> (visual DAG pipelines).
+    </x-docs.callout>
 </x-layouts.docs>
