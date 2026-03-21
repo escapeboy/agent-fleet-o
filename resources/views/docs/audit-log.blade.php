@@ -63,8 +63,7 @@ GET {{ url('/api/v1/audit') }}?actor_id=01jf4a2b-...</x-docs.code>
                 <tr><td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Free</td><td class="py-2.5 pr-4 text-sm text-gray-600">7 days</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Starter</td><td class="py-2.5 pr-4 text-sm text-gray-600">30 days</td></tr>
                 <tr><td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Pro</td><td class="py-2.5 pr-4 text-sm text-gray-600">90 days</td></tr>
-                <tr><td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Business</td><td class="py-2.5 pr-4 text-sm text-gray-600">365 days</td></tr>
-                <tr><td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Enterprise</td><td class="py-2.5 pr-4 text-sm text-gray-600">3,650 days (10 years)</td></tr>
+                <tr><td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Enterprise</td><td class="py-2.5 pr-4 text-sm text-gray-600">365 days (custom unlimited available)</td></tr>
             </tbody>
         </table>
     </div>

@@ -1,6 +1,6 @@
 <x-layouts.docs
     title="MCP Server"
-    description="Connect AI agents directly to FleetQ via MCP (Model Context Protocol). 200+ tools across 31 domains, available via stdio or HTTP/SSE."
+    description="Connect AI agents directly to FleetQ via MCP (Model Context Protocol). 268+ tools across 37 domains, available via stdio or HTTP/SSE."
     page="mcp-server"
 >
     <h1 class="text-3xl font-bold tracking-tight text-gray-900">MCP Server — Connect AI Agents Directly</h1>
@@ -87,8 +87,81 @@ php artisan mcp:start agent-fleet</x-docs.code>
   }
 }</x-docs.code>
 
+    {{-- Compact vs Full --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Compact vs Full server</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        FleetQ offers two HTTP endpoints for different client capabilities:
+    </p>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Endpoint</th>
+                    <th class="py-3 pr-6 text-left font-semibold text-gray-700">Tools</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Best for</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-3 pl-4 pr-6 font-mono text-xs text-gray-900">POST /mcp</td>
+                    <td class="py-3 pr-6 text-xs text-gray-600">~33 meta-tools (consolidated via <code>action</code> parameter)</td>
+                    <td class="py-3 pr-4 text-xs text-gray-600">Claude.ai, ChatGPT — clients with tool count limits</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-6 font-mono text-xs text-gray-900">POST /mcp/full</td>
+                    <td class="py-3 pr-6 text-xs text-gray-600">All 268+ tools individually</td>
+                    <td class="py-3 pr-4 text-xs text-gray-600">Cursor, Claude Code remote, power users</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="mt-3 text-sm text-gray-600">
+        The compact server consolidates related tools into meta-tools. For example, <code class="rounded bg-gray-100 px-1 text-xs">agent_manage</code>
+        supports actions: <code class="text-xs">list</code>, <code class="text-xs">get</code>, <code class="text-xs">create</code>,
+        <code class="text-xs">update</code>, <code class="text-xs">toggle_status</code>, <code class="text-xs">delete</code>, etc.
+    </p>
+
+    {{-- Tool Profiles --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Tool profiles</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Teams can customize which tools are available via profiles in <strong>Team Settings → MCP Tools</strong>:
+    </p>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Profile</th>
+                    <th class="py-3 pr-6 text-left font-semibold text-gray-700">Tools</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Best for</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-3 pl-4 pr-6 font-medium text-gray-900">Essential</td>
+                    <td class="py-3 pr-6 text-xs text-gray-600">11 core tools</td>
+                    <td class="py-3 pr-4 text-xs text-gray-600">Simple agents with focused tasks</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-6 font-medium text-gray-900">Standard</td>
+                    <td class="py-3 pr-6 text-xs text-gray-600">33 tools (core + operations)</td>
+                    <td class="py-3 pr-4 text-xs text-gray-600">Most use cases</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-6 font-medium text-gray-900">Full</td>
+                    <td class="py-3 pr-6 text-xs text-gray-600">All 268+ tools</td>
+                    <td class="py-3 pr-4 text-xs text-gray-600">Power users and automation</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-6 font-medium text-gray-900">Custom</td>
+                    <td class="py-3 pr-6 text-xs text-gray-600">Hand-picked</td>
+                    <td class="py-3 pr-4 text-xs text-gray-600">Teams with specific needs</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
     {{-- Tool list --}}
-    <h2 class="mt-10 text-xl font-bold text-gray-900">200+ tools across 31 domains</h2>
+    <h2 class="mt-10 text-xl font-bold text-gray-900">268+ tools across 37 domains</h2>
     <p class="mt-2 text-sm text-gray-600">Every platform capability is available as an MCP tool:</p>
 
     <div class="mt-4 grid gap-2 sm:grid-cols-2">
@@ -122,6 +195,7 @@ php artisan mcp:start agent-fleet</x-docs.code>
             ['System',      'system_dashboard_kpis, system_health, system_version_check, system_audit_log'],
             ['Compute',     'compute_manage'],
             ['RunPod',      'runpod_manage'],
+            ['Git',         'git_status, git_log, git_diff, git_branches, git_commit, git_push, git_pull, git_stash'],
         ] as [$domain, $examples])
         <div class="rounded-lg border border-gray-200 p-3">
             <span class="font-medium text-gray-900 text-sm">{{ $domain }}</span>
