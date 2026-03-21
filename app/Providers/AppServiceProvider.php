@@ -18,15 +18,10 @@ use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
-use App\Domain\Outbound\Connectors\DiscordConnector;
-use App\Domain\Outbound\Connectors\GoogleChatConnector;
-use App\Domain\Outbound\Connectors\SlackConnector;
+use App\Domain\Outbound\Connectors\NotificationConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
-use App\Domain\Outbound\Connectors\SupabaseRealtimeConnector;
-use App\Domain\Outbound\Connectors\TeamsConnector;
-use App\Domain\Outbound\Connectors\TelegramConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
-use App\Domain\Outbound\Connectors\WhatsAppConnector;
+use App\Domain\Outbound\Managers\OutboundConnectorManager;
 use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
@@ -151,20 +146,15 @@ class AppServiceProvider extends ServiceProvider
             fn ($app) => new SignalConnectorRegistry($app->tagged('fleet.signal.connectors')),
         );
 
-        // Tag all built-in outbound connectors (plugins can add their own)
+        // Tag core outbound connectors (plugins extend via OutboundConnectorManager::extend())
         $this->app->tag([
             SmtpEmailConnector::class,
-            TelegramConnector::class,
-            SlackConnector::class,
-            WhatsAppConnector::class,
-            DiscordConnector::class,
-            TeamsConnector::class,
-            GoogleChatConnector::class,
             WebhookOutboundConnector::class,
-            \App\Domain\Outbound\Connectors\SignalProtocolConnector::class,
-            \App\Domain\Outbound\Connectors\MatrixConnector::class,
-            SupabaseRealtimeConnector::class,
+            NotificationConnector::class,
         ], 'fleet.outbound.connectors');
+
+        // Outbound connector manager — resolves connectors by channel name
+        $this->app->singleton(OutboundConnectorManager::class);
 
         // Tag all built-in AI gateway middleware (plugins can prepend their own)
         $this->app->tag([

@@ -36,6 +36,7 @@ class OutboundCredentialResolver
             'from_name' => 'mail.from.name',
         ],
         'webhook' => ['default_url' => null, 'secret' => null],
+        'notification' => [], // No external credentials needed
     ];
 
     /**

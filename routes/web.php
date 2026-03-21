@@ -50,7 +50,9 @@ use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
 use App\Livewire\Memory\MemoryBrowserPage;
 use App\Livewire\Metrics\ModelComparisonPage;
+use App\Livewire\OutboundConnectors\NotificationOutboundPage;
 use App\Livewire\OutboundConnectors\OutboundConnectorsPage;
+use App\Livewire\OutboundConnectors\WebhookOutboundPage;
 use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
@@ -269,6 +271,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Outbound connectors
     Route::get('/outbound/email', OutboundConnectorsPage::class)->name('outbound.email');
+    Route::get('/outbound/webhooks', WebhookOutboundPage::class)->name('outbound.webhooks');
+    Route::get('/outbound/notifications', NotificationOutboundPage::class)->name('outbound.notifications');
 
     // Email themes
     Route::get('/email/themes', EmailThemeListPage::class)->name('email.themes.index');

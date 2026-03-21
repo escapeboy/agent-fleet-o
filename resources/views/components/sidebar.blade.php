@@ -91,12 +91,36 @@
             Subscriptions
         </x-sidebar-link>
 
-        <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.*')" icon="envelope">
+        <x-sidebar-link href="{{ route('signals.entities') }}" :active="request()->routeIs('signals.entities')" icon="squares-2x2">
+            Signal Entities
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('signals.bindings') }}" :active="request()->routeIs('signals.bindings')" icon="link">
+            Signal Bindings
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('contacts.index') }}" :active="request()->routeIs('contacts.*')" icon="identification">
+            Contacts
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.themes.*')" icon="envelope">
             Email Themes
         </x-sidebar-link>
 
-        <x-sidebar-link href="{{ route('outbound.email') }}" :active="request()->routeIs('outbound.*')" icon="paper-airplane">
+        <x-sidebar-link href="{{ route('email.templates.index') }}" :active="request()->routeIs('email.templates.*')" icon="document-text">
+            Email Templates
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('outbound.email') }}" :active="request()->routeIs('outbound.email')" icon="envelope">
             Email Delivery
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('outbound.webhooks') }}" :active="request()->routeIs('outbound.webhooks')" icon="link">
+            Webhook Delivery
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('outbound.notifications') }}" :active="request()->routeIs('outbound.notifications')" icon="bell">
+            Notifications
         </x-sidebar-link>
 
         {{-- Plugin-contributed navigation items --}}
@@ -124,6 +148,10 @@
 
         <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">
             Health
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('metrics.models') }}" :active="request()->routeIs('metrics.*')" icon="scale">
+            Model Comparison
         </x-sidebar-link>
 
         <x-sidebar-link href="{{ route('team.settings') }}" :active="request()->routeIs('team.*')" icon="users">

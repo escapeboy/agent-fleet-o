@@ -12,16 +12,16 @@ class ConnectorConfigSaveTool extends Tool
 {
     protected string $name = 'connector_config_save';
 
-    protected string $description = 'Create or update an outbound connector config. Upserts by channel. Provide channel-specific credentials.';
+    protected string $description = 'Create or update an outbound connector config. Upserts by channel. Core channels: email, webhook, notification. Legacy channels (telegram, slack, etc.) are supported for backward compatibility but should be handled by agents via tools instead.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
             'channel' => $schema->string()
-                ->description('Channel: telegram, slack, discord, teams, google_chat, whatsapp, email, webhook')
+                ->description('Channel: email, webhook, notification (core). Also accepts legacy channels: telegram, slack, discord, teams, google_chat, whatsapp.')
                 ->required(),
             'credentials' => $schema->object()
-                ->description('Channel-specific credentials object. E.g. {bot_token: "..."} for telegram, {webhook_url: "..."} for slack/discord/teams/google_chat, {phone_number_id: "...", access_token: "..."} for whatsapp, {host: "...", port: 587, username: "...", password: "...", encryption: "tls", from_address: "...", from_name: "..."} for email, {default_url: "...", secret: "..."} for webhook.')
+                ->description('Channel-specific credentials object. E.g. {host: "...", port: 587, username: "...", password: "...", encryption: "tls", from_address: "...", from_name: "..."} for email, {default_url: "...", secret: "..."} for webhook.')
                 ->required(),
             'is_active' => $schema->boolean()
                 ->description('Whether the config is active')
@@ -32,7 +32,7 @@ class ConnectorConfigSaveTool extends Tool
     public function handle(Request $request): Response
     {
         $channel = $request->get('channel');
-        $validChannels = ['telegram', 'slack', 'discord', 'teams', 'google_chat', 'whatsapp', 'email', 'webhook'];
+        $validChannels = ['email', 'webhook', 'notification', 'telegram', 'slack', 'discord', 'teams', 'google_chat', 'whatsapp'];
 
         if (! in_array($channel, $validChannels)) {
             return Response::error('Invalid channel. Must be one of: '.implode(', ', $validChannels));
