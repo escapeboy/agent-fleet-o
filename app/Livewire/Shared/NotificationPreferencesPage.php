@@ -94,6 +94,7 @@ class NotificationPreferencesPage extends Component
                 'crew.execution.completed' => 'Crew execution completed',
                 'usage.alert' => 'Usage limit alert',
                 'weekly.digest' => 'Weekly digest email',
+                'system.deploy' => 'System deployment notifications',
             ],
             'channelLabels' => [
                 'in_app' => 'In-App',
