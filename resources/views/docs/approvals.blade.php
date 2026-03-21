@@ -234,7 +234,7 @@
   <ul class="mt-4 list-disc list-inside space-y-2 text-gray-600">
     <li>A <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded">human_task</code> node <strong>pauses workflow execution</strong>. No nodes downstream of it will run until the task is completed or expires.</li>
     <li>The <code>form_schema</code> is defined on the workflow node configuration and may reference upstream node outputs using template variables.</li>
-    <li>Once the task is completed, the submitted <code>form_data</code> object becomes the output of the node and is available to all downstream nodes via the standard <code>{{ '{{node_id.field_name}}' }}</code> template syntax.</li>
+    <li>Once the task is completed, the submitted <code>form_data</code> object becomes the output of the node and is available to all downstream nodes via the standard <code>@{{ node_id.field_name }}</code> template syntax.</li>
     <li>Add an error edge from every <code>human_task</code> node to handle the case where the task expires without a response.</li>
   </ul>
   <x-docs.code language="json">

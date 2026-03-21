@@ -13,8 +13,8 @@
 
     <p class="mt-3 text-gray-600">
         <strong>Scenario:</strong> <em>A growth team creates a "Company Brand" theme with their primary colour and
-        logo. They then author a "Weekly Digest" template that references <code class="rounded bg-gray-100 px-1">{{ '{{ $agent.name }}' }}</code>
-        and <code class="rounded bg-gray-100 px-1">{{ '{{ $signal.title }}' }}</code>. Each Friday, the "Weekly Report"
+        logo. They then author a "Weekly Digest" template that references <code class="rounded bg-gray-100 px-1">@{{ $agent.name }}</code>
+        and <code class="rounded bg-gray-100 px-1">@{{ $signal.title }}</code>. Each Friday, the "Weekly Report"
         experiment renders the template with live data and delivers it via the SMTP outbound connector.</em>
     </p>
 
@@ -89,7 +89,7 @@
                 </tr>
                 <tr>
                     <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">subject</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Email subject line. Supports variable interpolation — e.g. <code class="rounded bg-gray-100 px-1">{{ '{{ $signal.title }}' }}</code>.</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Email subject line. Supports variable interpolation — e.g. <code class="rounded bg-gray-100 px-1">@{{ $signal.title }}</code>.</td>
                 </tr>
                 <tr>
                     <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">body</td>
@@ -124,23 +124,23 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">{{ '{{ $signal.title }}' }}</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">@{{ $signal.title }}</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Title of the inbound signal that triggered the run.</td>
                 </tr>
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">{{ '{{ $agent.name }}' }}</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">@{{ $agent.name }}</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Display name of the agent that produced the output.</td>
                 </tr>
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">{{ '{{ $experiment.title }}' }}</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">@{{ $experiment.title }}</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Title of the parent experiment.</td>
                 </tr>
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">{{ '{{ $output }}' }}</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">@{{ $output }}</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Raw text output from the last completed pipeline stage.</td>
                 </tr>
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">{{ '{{ $team.name }}' }}</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs text-gray-900">@{{ $team.name }}</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Name of the team sending the email.</td>
                 </tr>
             </tbody>
