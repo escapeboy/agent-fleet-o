@@ -180,6 +180,41 @@ class BridgeController extends Controller
         return response()->json(['data' => ['alive' => true]]);
     }
 
+    /**
+     * Authenticate a Pusher/Reverb private channel subscription.
+     *
+     * Generates the HMAC-SHA256 auth signature manually instead of using
+     * Broadcast::auth() which has guard resolution issues in API context.
+     */
+    public function broadcastingAuth(Request $request): JsonResponse
+    {
+        $socketId = $request->input('socket_id');
+        $channelName = $request->input('channel_name');
+        $user = $request->user();
+
+        if (! $socketId || ! $channelName || ! $user) {
+            return response()->json(['error' => 'Missing parameters'], 400);
+        }
+
+        // Authorize: only allow daemon.{teamId} channels matching user's team
+        if (preg_match('/^private-daemon\.(.+)$/', $channelName, $m)) {
+            if ($user->current_team_id !== $m[1]) {
+                return response()->json(['error' => 'Forbidden'], 403);
+            }
+        } else {
+            return response()->json(['error' => 'Unsupported channel'], 403);
+        }
+
+        // Generate Pusher auth signature: HMAC-SHA256(secret, socket_id:channel_name)
+        $secret = config('reverb.apps.apps.0.secret');
+        $key = config('reverb.apps.apps.0.key');
+        $signature = hash_hmac('sha256', "{$socketId}:{$channelName}", $secret);
+
+        return response()->json([
+            'auth' => "{$key}:{$signature}",
+        ]);
+    }
+
     private function buildReverbUrl(): string
     {
         $scheme = config('reverb.apps.apps.0.options.scheme', 'https');

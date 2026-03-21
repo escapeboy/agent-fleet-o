@@ -287,5 +287,5 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)
-    Route::post('/broadcasting/auth', fn () => Broadcast::auth(request()));
+    Route::post('/broadcasting/auth', [BridgeController::class, 'broadcastingAuth']);
 });
