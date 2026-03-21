@@ -38,14 +38,23 @@ class RegisterBridgeConnection
             }
         }
 
-        // Upsert: if a connection with the same session_id already exists, reconnect it.
-        // This handles relay restarts and daemon re-registrations without creating duplicates.
+        // Upsert: find existing connection by session_id first, then fall back to
+        // the most recent connection for this team. The relay binary generates a new
+        // session_id on each reconnect (relay-{team_id}-{timestamp}), so matching
+        // only by session_id would create duplicate records on every reconnect.
         $existing = BridgeConnection::where('team_id', $teamId)
             ->where('session_id', $sessionId)
             ->first();
 
+        if (! $existing) {
+            $existing = BridgeConnection::where('team_id', $teamId)
+                ->orderByDesc('connected_at')
+                ->first();
+        }
+
         if ($existing) {
             $existing->update([
+                'session_id' => $sessionId,
                 'status' => BridgeConnectionStatus::Connected,
                 'bridge_version' => $bridgeVersion,
                 'endpoints' => ! empty($endpoints) ? $endpoints : $existing->endpoints,

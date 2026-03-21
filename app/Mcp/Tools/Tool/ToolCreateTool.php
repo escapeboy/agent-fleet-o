@@ -17,13 +17,15 @@ class ToolCreateTool extends Tool
     protected string $description = <<<'DESC'
 Create a new tool. Supported types:
 
-mcp_stdio — local MCP server via stdio. transport_config: {command, args, env}
-mcp_http  — remote MCP server via HTTP/SSE. transport_config: {url, headers}
-built_in  — host capability. transport_config depends on kind:
+mcp_stdio  — local MCP server via stdio. transport_config: {command, args, env}
+mcp_http   — remote MCP server via HTTP/SSE. transport_config: {url, headers}
+mcp_bridge — MCP server on a bridge daemon. transport_config: {bridge_server_name}
+built_in   — host capability. transport_config depends on kind:
   bash: {kind:"bash", allowed_commands:[], allowed_paths:[]}
   filesystem: {kind:"filesystem", allowed_paths:[], read_only:false}
   ssh: {kind:"ssh", host, port, username, credential_id, allowed_commands:[]}
 
+For mcp_bridge: the bridge_server_name must match a server name reported by the team's bridge daemon.
 For SSH tools: create an ssh_key Credential first, then reference its ID in credential_id.
 Host fingerprints are stored automatically on first connect (TOFU). Manage via tool_ssh_fingerprints.
 DESC;
@@ -37,8 +39,8 @@ DESC;
             'description' => $schema->string()
                 ->description('Tool description'),
             'type' => $schema->string()
-                ->description('Tool type: mcp_stdio, mcp_http, built_in (default: mcp_stdio)')
-                ->enum(['mcp_stdio', 'mcp_http', 'built_in'])
+                ->description('Tool type: mcp_stdio, mcp_http, mcp_bridge, built_in (default: mcp_stdio)')
+                ->enum(['mcp_stdio', 'mcp_http', 'mcp_bridge', 'built_in'])
                 ->default('mcp_stdio'),
             'transport_config' => $schema->object()
                 ->description('Transport configuration (command, args, env for stdio; url, headers for http)'),
@@ -55,7 +57,7 @@ DESC;
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|string|in:mcp_stdio,mcp_http,built_in',
+            'type' => 'nullable|string|in:mcp_stdio,mcp_http,mcp_bridge,built_in',
             'transport_config' => 'nullable|array',
             'risk_level' => 'nullable|string|in:safe,read,write,destructive',
             'credential_id' => 'nullable|uuid|exists:credentials,id',

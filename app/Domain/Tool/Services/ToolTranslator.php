@@ -92,7 +92,8 @@ class ToolTranslator
                 };
             }
 
-            // MCP tool handler: proxy the call to the remote MCP server
+            // MCP tool handler: proxy the call to the appropriate MCP client
+            $isBridge = $tool->type === ToolType::McpBridge;
             $isStdio = $tool->type === ToolType::McpStdio;
             $serverUrl = $tool->transport_config['url'] ?? null;
             $credentials = (array) $tool->credentials;
@@ -118,7 +119,7 @@ class ToolTranslator
                 });
             }
 
-            $prismTool->using(function () use ($isStdio, $serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames, $resultAsAnswer): string {
+            $prismTool->using(function () use ($isBridge, $isStdio, $serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames, $resultAsAnswer): string {
                 // PrismPHP passes arguments positionally; map them back to named keys
                 $positional = func_get_args();
                 $arguments = [];
@@ -129,7 +130,9 @@ class ToolTranslator
                 }
 
                 try {
-                    if ($isStdio) {
+                    if ($isBridge) {
+                        $result = app(McpBridgeClient::class)->callTool($toolModel, $defName, $arguments);
+                    } elseif ($isStdio) {
                         $result = app(McpStdioClient::class)->callTool($toolModel, $defName, $arguments);
                     } elseif (! $serverUrl) {
                         return "Error: Tool '{$defName}' on server '{$toolModel->name}' has no URL configured.";
@@ -146,7 +149,7 @@ class ToolTranslator
                 } catch (ResultAsAnswerException $e) {
                     throw $e; // Re-throw — must not be caught by generic handler
                 } catch (\Throwable $e) {
-                    $client = $isStdio ? 'McpStdioClient' : 'McpHttpClient';
+                    $client = $isBridge ? 'McpBridgeClient' : ($isStdio ? 'McpStdioClient' : 'McpHttpClient');
                     Log::error("{$client} error", [
                         'tool' => $toolModel->name,
                         'function' => $defName,

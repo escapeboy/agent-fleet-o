@@ -64,6 +64,8 @@ class BridgeRequestRegistry
      *   0x0003 FrameLLMResponseEnd    — final frame, payload = (empty or usage JSON)
      *   0x0011 FrameAgentEvent        — agent output, payload = AgentEvent{kind, text, error}
      *   0x0012 FrameAgentDone         — agent done
+     *   0x0020 FrameMcpToolCall       — MCP tool call (outbound, not seen in responses)
+     *   0x0021 FrameMcpToolResult     — MCP tool result, payload = raw MCP JSON-RPC result
      *   0x00FF FrameError             — bridge error, payload = ErrorPayload{code, message}
      *
      * @return array{chunk: string, done: bool, usage: array|null}|null
@@ -109,6 +111,15 @@ class BridgeRequestRegistry
             }
 
             return ['chunk' => $this->stripAnsi($payload['text'] ?? ''), 'done' => $done, 'usage' => null];
+        }
+
+        // FrameMcpToolResult = 0x0021 — MCP result relayed from bridge daemon.
+        // The relay base64-encodes the daemon's {request_id, chunk, done} event.
+        // The "chunk" field contains the raw MCP JSON-RPC result string.
+        if ($frameType === 0x0021) {
+            $chunk = $payload['chunk'] ?? (is_array($payload) ? json_encode($payload) : '');
+
+            return ['chunk' => $chunk, 'done' => true, 'usage' => null];
         }
 
         // FrameLLMResponseChunk = 0x0002 — LLMResponseChunk{request_id, delta, done}

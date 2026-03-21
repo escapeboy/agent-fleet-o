@@ -8,9 +8,12 @@ use App\Domain\Bridge\Actions\UpdateBridgeEndpoints;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Services\BridgeRouter;
 use App\Http\Controllers\Controller;
+use App\Infrastructure\Bridge\BridgeRequestRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 
 /**
  * @tags Bridge
@@ -185,6 +188,95 @@ class BridgeController extends Controller
         $wsScheme = $scheme === 'https' ? 'wss' : 'ws';
 
         return "{$wsScheme}://{$host}:{$port}";
+    }
+
+    /**
+     * Proxy an MCP tool call through the relay to a bridge-hosted MCP server.
+     *
+     * Uses the same Redis frame-based protocol as all bridge communication:
+     * RPUSH to bridge:req:{teamId} → relay binary → WebSocket → bridge daemon → MCP server.
+     *
+     * @response 200 {"result": {"content": [{"type": "text", "text": "..."}]}}
+     */
+    public function mcpCall(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'server' => 'required|string|max:100',
+            'method' => 'required|string|in:tools/call,tools/list',
+            'params' => 'required|array',
+            'timeout' => 'nullable|integer|min:1|max:300',
+        ]);
+
+        $teamId = $request->user()->current_team_id;
+        $serverName = $validated['server'];
+        $timeout = $validated['timeout'] ?? 60;
+        $requestId = Str::uuid()->toString();
+
+        $bridge = app(BridgeRouter::class)->resolveForMcpServer($teamId, $serverName);
+
+        if (! $bridge) {
+            return response()->json([
+                'error' => "No active bridge with MCP server '{$serverName}'.",
+            ], 404);
+        }
+
+        Log::info('BridgeController: proxying MCP call', [
+            'request_id' => $requestId,
+            'team_id' => $teamId,
+            'bridge_id' => $bridge->id,
+            'server' => $serverName,
+            'method' => $validated['method'],
+            'tool' => $validated['params']['name'] ?? null,
+        ]);
+
+        try {
+            $registry = app(BridgeRequestRegistry::class);
+            $registry->register($requestId, $teamId);
+
+            Redis::connection('bridge')->rpush(
+                "bridge:req:{$teamId}",
+                json_encode([
+                    'request_id' => $requestId,
+                    'frame_type' => 0x0020, // FrameMcpToolCall
+                    'payload' => [
+                        'request_id' => $requestId,
+                        'server' => $serverName,
+                        'method' => $validated['method'],
+                        'params' => $validated['params'],
+                        'timeout' => $timeout,
+                    ],
+                ]),
+            );
+
+            $item = $registry->popChunk($requestId, $timeout + 10);
+
+            if ($item === null) {
+                return response()->json([
+                    'error' => "MCP call timed out after {$timeout}s",
+                ], 504);
+            }
+
+            $usage = $registry->getUsage($requestId);
+            if (isset($usage['__error'])) {
+                return response()->json([
+                    'error' => $usage['__error'],
+                ], 502);
+            }
+
+            // Return the raw MCP result
+            $result = json_decode($item['chunk'] ?? '', true);
+
+            return response()->json($result ?: ['result' => ['content' => [['type' => 'text', 'text' => $item['chunk'] ?? '']]]]);
+        } catch (\Throwable $e) {
+            Log::error('BridgeController: MCP call exception', [
+                'request_id' => $requestId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => "Bridge MCP call failed: {$e->getMessage()}",
+            ], 502);
+        }
     }
 
     /**

@@ -39,6 +39,8 @@
                     <p class="text-sm text-gray-500">Connects to an MCP server via stdio (e.g. <code class="text-xs">npx @modelcontextprotocol/server-github</code>)</p>
                 @elseif($type === 'mcp_http')
                     <p class="text-sm text-gray-500">Connects to an MCP server over HTTP/SSE</p>
+                @elseif($type === 'mcp_bridge')
+                    <p class="text-sm text-gray-500">Connects to an MCP server running on your bridge daemon (e.g. Playwright, filesystem)</p>
                 @elseif($type === 'built_in')
                     @selfhosted
                     <p class="text-sm text-gray-500">Use host machine capabilities (bash, filesystem) with sandboxing</p>
@@ -82,6 +84,13 @@
                     <x-form-textarea wire:model="mcpHeaders" label="Custom Headers" rows="2"
                         placeholder="Authorization=Bearer xxx"
                         hint="One per line, KEY=VALUE format" />
+                @endif
+
+                @if($type === 'mcp_bridge')
+                    <x-form-input wire:model="bridgeServerName" label="Bridge Server Name" type="text"
+                        placeholder="playwright"
+                        :error="$errors->first('bridgeServerName')"
+                        hint="Must match a server name reported by your bridge daemon" />
                 @endif
 
                 @if($type === 'built_in')
@@ -185,7 +194,7 @@
 
                 <x-form-input wire:model.number="timeout" label="Timeout (seconds)" type="number" min="1" max="300" />
 
-                @if($type === 'mcp_stdio' || $type === 'mcp_http')
+                @if($type === 'mcp_stdio' || $type === 'mcp_http' || $type === 'mcp_bridge')
                     <x-form-textarea wire:model="toolDefinitionsJson" label="Tool Definitions (JSON, optional)" rows="4" mono="true"
                         placeholder='[{"name": "search", "description": "Search repos", "input_schema": {"type": "object", "properties": {}}}]'
                         hint="Paste the tools/list output from the MCP server. Can be auto-discovered later." />
@@ -207,6 +216,7 @@
                             {{ match($type) {
                                 'mcp_stdio' => 'bg-blue-100 text-blue-800',
                                 'mcp_http' => 'bg-cyan-100 text-cyan-800',
+                                'mcp_bridge' => 'bg-purple-100 text-purple-800',
                                 'built_in' => 'bg-amber-100 text-amber-800',
                                 default => 'bg-gray-100 text-gray-800',
                             } }}">
@@ -237,6 +247,9 @@
                     @elseif($type === 'mcp_http')
                         <div class="text-gray-500">URL</div>
                         <div class="font-mono text-xs">{{ $mcpUrl }}</div>
+                    @elseif($type === 'mcp_bridge')
+                        <div class="text-gray-500">Bridge Server</div>
+                        <div class="font-mono text-xs">{{ $bridgeServerName }}</div>
                     @elseif($type === 'built_in')
                         <div class="text-gray-500">Kind</div>
                         <div>{{ \App\Domain\Tool\Enums\BuiltInToolKind::from($builtInKind)->label() }}</div>
@@ -279,10 +292,11 @@ if (window.FleetQWebMcp?.isAvailable()) {
             properties: {
                 name: { type: 'string', description: 'Tool name — descriptive identifier' },
                 description: { type: 'string', description: 'What this tool does and its capabilities' },
-                type: { type: 'string', description: 'Tool type: mcp_stdio, mcp_http, or built_in' },
+                type: { type: 'string', description: 'Tool type: mcp_stdio, mcp_http, mcp_bridge, or built_in' },
                 mcp_command: { type: 'string', description: 'Command for mcp_stdio (e.g., npx)' },
                 mcp_args: { type: 'string', description: 'Arguments for mcp_stdio (comma-separated)' },
                 mcp_url: { type: 'string', description: 'Server URL for mcp_http' },
+                bridge_server_name: { type: 'string', description: 'Server name for mcp_bridge (must match bridge daemon)' },
                 built_in_kind: { type: 'string', description: 'Kind for built_in: bash, filesystem, or ssh' },
                 timeout: { type: 'number', description: 'Timeout in seconds (1-300)' },
             },
@@ -295,6 +309,7 @@ if (window.FleetQWebMcp?.isAvailable()) {
             if (params.mcp_command) $wire.set('mcpCommand', params.mcp_command);
             if (params.mcp_args) $wire.set('mcpArgs', params.mcp_args);
             if (params.mcp_url) $wire.set('mcpUrl', params.mcp_url);
+            if (params.bridge_server_name) $wire.set('bridgeServerName', params.bridge_server_name);
             if (params.built_in_kind) $wire.set('builtInKind', params.built_in_kind);
             if (params.timeout) $wire.set('timeout', params.timeout);
             $wire.set('step', 3);

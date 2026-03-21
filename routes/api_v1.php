@@ -263,6 +263,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/bridge/register', [BridgeController::class, 'register']);
     Route::post('/bridge/endpoints', [BridgeController::class, 'updateEndpoints']);
     Route::post('/bridge/heartbeat', [BridgeController::class, 'heartbeat']);
+    Route::post('/bridge/mcp/call', [BridgeController::class, 'mcpCall']);
     Route::delete('/bridge', [BridgeController::class, 'disconnect']);
 
     // Knowledge Bases (RAG)

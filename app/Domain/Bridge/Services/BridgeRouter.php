@@ -30,6 +30,16 @@ class BridgeRouter
     }
 
     /**
+     * Find the best bridge connection that has a specific MCP server available.
+     */
+    public function resolveForMcpServer(string $teamId, string $serverName): ?BridgeConnection
+    {
+        return $this->activeConnections($teamId)
+            ->first(fn (BridgeConnection $c) => collect($c->mcpServers())
+                ->contains(fn (array $s) => ($s['name'] ?? '') === $serverName));
+    }
+
+    /**
      * Get ALL available agents across all active bridges for a team.
      *
      * Each agent entry is enriched with bridge_id and bridge_label.

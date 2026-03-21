@@ -33,6 +33,9 @@ class CreateToolForm extends Component
     // MCP HTTP
     public string $mcpUrl = '';
 
+    // MCP Bridge
+    public string $bridgeServerName = '';
+
     public string $mcpHeaders = '';
 
     // Built-in
@@ -79,7 +82,7 @@ class CreateToolForm extends Component
             $this->validate([
                 'name' => 'required|min:2|max:255',
                 'description' => 'max:1000',
-                'type' => 'required|in:mcp_stdio,mcp_http,built_in',
+                'type' => 'required|in:mcp_stdio,mcp_http,mcp_bridge,built_in',
             ]);
         }
 
@@ -108,6 +111,12 @@ class CreateToolForm extends Component
         if ($type === ToolType::McpHttp) {
             $this->validate([
                 'mcpUrl' => 'required|url',
+            ]);
+        }
+
+        if ($type === ToolType::McpBridge) {
+            $this->validate([
+                'bridgeServerName' => 'required|string|min:1|max:100',
             ]);
         }
 
@@ -166,6 +175,9 @@ class CreateToolForm extends Component
                 'headers' => $this->parseKeyValuePairs($this->mcpHeaders),
                 'credential_env_var' => $this->credentialEnvVar ?: null,
             ], fn ($v) => $v !== null && $v !== [] && $v !== ''),
+            ToolType::McpBridge => [
+                'bridge_server_name' => $this->bridgeServerName,
+            ],
             ToolType::BuiltIn => $this->buildBuiltInConfig(),
         };
     }

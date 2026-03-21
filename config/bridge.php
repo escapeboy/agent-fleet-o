@@ -24,4 +24,19 @@ return [
     // Port on the host machine where fleetq-relay listens (mapped from container :8070)
     'relay_port' => (int) env('RELAY_PORT', 8070),
 
+    /*
+    |--------------------------------------------------------------------------
+    | MCP Tool Proxy
+    |--------------------------------------------------------------------------
+    |
+    | URL for proxying MCP tool calls through the relay to bridge-hosted MCP servers.
+    | The relay binary exposes an HTTP endpoint that accepts tool call requests
+    | and forwards them via WebSocket to the bridge daemon running the MCP server.
+    |
+    | Default: http://localhost:{relay_port} (relay runs on same host as the app)
+    |
+    */
+
+    'relay_mcp_url' => env('BRIDGE_RELAY_MCP_URL', 'http://localhost:'.(env('RELAY_PORT', 8070))),
+
 ];
