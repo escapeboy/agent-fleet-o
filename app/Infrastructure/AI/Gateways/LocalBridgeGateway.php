@@ -127,7 +127,7 @@ class LocalBridgeGateway implements AiGatewayInterface
             $item = $this->registry->popChunk($requestId, self::RELAY_TIMEOUT);
 
             if ($item === null) {
-                \Sentry\withScope(function (Scope $scope) use ($requestId, $request): void {
+                \Sentry\withScope(function (Scope $scope) use ($requestId, $request, $content): void {
                     $scope->setTag('provider', $request->provider);
                     $scope->setTag('model', $request->model);
                     $scope->setContext('bridge_timeout', [
