@@ -84,6 +84,17 @@ class BridgeRequestRegistry
             return null;
         }
 
+        // Reverb path: HandleBridgeRelayResponse pushes {chunk, done, usage} directly.
+        // Detect by presence of 'chunk' key and absence of 'frame_type'.
+        if (array_key_exists('chunk', $envelope) && ! isset($envelope['frame_type'])) {
+            return [
+                'chunk' => $envelope['chunk'] ?? '',
+                'done' => (bool) ($envelope['done'] ?? false),
+                'usage' => $envelope['usage'] ?? null,
+            ];
+        }
+
+        // Relay binary path: frame-based protocol with base64-encoded payload.
         $frameType = (int) ($envelope['frame_type'] ?? 0);
         $done = (bool) ($envelope['done'] ?? false);
 

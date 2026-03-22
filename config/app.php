@@ -155,4 +155,19 @@ return [
 
     'auth_bypass' => env('APP_AUTH_BYPASS', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public Reverb URL (for external bridge clients)
+    |--------------------------------------------------------------------------
+    |
+    | When REVERB_HOST points to an internal Docker host for server-side
+    | broadcasting, these values provide the public-facing Reverb URL
+    | returned to bridge clients via the register endpoint.
+    |
+    */
+
+    'reverb_public_host' => env('REVERB_PUBLIC_HOST'),
+    'reverb_public_port' => env('REVERB_PUBLIC_PORT'),
+    'reverb_public_scheme' => env('REVERB_PUBLIC_SCHEME'),
+
 ];

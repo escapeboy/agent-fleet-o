@@ -21,6 +21,28 @@ use Illuminate\Support\Str;
 class BridgeController extends Controller
 {
     /**
+     * Resolve the team ID from the Sanctum token's abilities (preferred)
+     * or fall back to the user's current_team_id.
+     *
+     * Prevents wrong-team registration when the user switches teams in the
+     * web UI but the API token is scoped to a specific team.
+     */
+    protected function resolveTeamId(Request $request): string
+    {
+        $user = $request->user();
+        $token = $user->currentAccessToken();
+
+        if ($token && method_exists($token, 'getAbilities')) {
+            foreach ($token->getAbilities() as $ability) {
+                if (str_starts_with($ability, 'team:') && strlen($ability) > 5) {
+                    return substr($ability, 5);
+                }
+            }
+        }
+
+        return $user->current_team_id;
+    }
+    /**
      * Get the current team's bridge connection status.
      *
      * Returns all connections (active + recent) with backward-compatible single-bridge fields.
@@ -29,7 +51,7 @@ class BridgeController extends Controller
      */
     public function status(Request $request): JsonResponse
     {
-        $teamId = $request->user()->current_team_id;
+        $teamId = $this->resolveTeamId($request);
 
         $connections = app(BridgeRouter::class)->allConnections($teamId);
 
@@ -87,7 +109,7 @@ class BridgeController extends Controller
             'label' => 'nullable|string|max:100',
         ]);
 
-        $teamId = $request->user()->current_team_id;
+        $teamId = $this->resolveTeamId($request);
 
         $connection = app(RegisterBridgeConnection::class)->execute(
             teamId: $teamId,
@@ -119,7 +141,7 @@ class BridgeController extends Controller
             'endpoints' => 'nullable|array',
         ]);
 
-        $teamId = $request->user()->current_team_id;
+        $teamId = $this->resolveTeamId($request);
         $endpoints = $validated['endpoints'] ?? [];
 
         // Primary: find the active connection (prefer matching session_id)
@@ -164,7 +186,7 @@ class BridgeController extends Controller
             'session_id' => 'required|string|max:255',
         ]);
 
-        $teamId = $request->user()->current_team_id;
+        $teamId = $this->resolveTeamId($request);
 
         $connection = BridgeConnection::where('team_id', $teamId)
             ->where('session_id', $validated['session_id'])
@@ -198,7 +220,7 @@ class BridgeController extends Controller
 
         // Authorize: only allow daemon.{teamId} channels matching user's team
         if (preg_match('/^private-daemon\.(.+)$/', $channelName, $m)) {
-            if ($user->current_team_id !== $m[1]) {
+            if ($this->resolveTeamId($request) !== $m[1]) {
                 return response()->json(['error' => 'Forbidden'], 403);
             }
         } else {
@@ -217,9 +239,14 @@ class BridgeController extends Controller
 
     private function buildReverbUrl(): string
     {
-        $scheme = config('reverb.apps.apps.0.options.scheme', 'https');
-        $host = config('reverb.apps.apps.0.options.host');
-        $port = config('reverb.apps.apps.0.options.port', 443);
+        // Use VITE_REVERB_* (public-facing) when available, otherwise fall back to the
+        // app config. Server-side REVERB_HOST may point to an internal Docker host.
+        $scheme = config('app.reverb_public_scheme')
+            ?: config('reverb.apps.apps.0.options.scheme', 'https');
+        $host = config('app.reverb_public_host')
+            ?: config('reverb.apps.apps.0.options.host');
+        $port = config('app.reverb_public_port')
+            ?: config('reverb.apps.apps.0.options.port', 443);
         $wsScheme = $scheme === 'https' ? 'wss' : 'ws';
 
         return "{$wsScheme}://{$host}:{$port}";
@@ -242,7 +269,7 @@ class BridgeController extends Controller
             'timeout' => 'nullable|integer|min:1|max:300',
         ]);
 
-        $teamId = $request->user()->current_team_id;
+        $teamId = $this->resolveTeamId($request);
         $serverName = $validated['server'];
         $timeout = $validated['timeout'] ?? 60;
         $requestId = Str::uuid()->toString();
@@ -326,7 +353,7 @@ class BridgeController extends Controller
             'connection_id' => 'nullable|uuid',
         ]);
 
-        $teamId = $request->user()->current_team_id;
+        $teamId = $this->resolveTeamId($request);
         $connectionId = $validated['connection_id'] ?? null;
 
         $query = BridgeConnection::where('team_id', $teamId)->active();

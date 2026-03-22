@@ -2,21 +2,20 @@
 
 namespace App\Infrastructure\Bridge;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Laravel\Reverb\Events\MessageReceived;
 
 /**
  * Listens to Reverb MessageReceived events and pushes bridge relay chunks
  * into the Redis stream consumed by LocalBridgeGateway::routeRequest().
  *
- * This listener MUST run on the queue (ShouldQueue) to avoid blocking
- * Reverb's ReactPHP event loop with synchronous Redis writes.
- * See: https://github.com/laravel/reverb/issues/285
+ * This listener runs synchronously within Reverb's process. The operations
+ * are pure Redis writes (sub-millisecond) so they won't block the event loop.
+ *
+ * NOTE: Cannot use ShouldQueue because MessageReceived contains a Connection
+ * object that is not serializable for queue transport.
  */
-class HandleBridgeRelayResponse implements ShouldQueue
+class HandleBridgeRelayResponse
 {
-    public string $queue = 'ai-calls';
-
     public function __construct(private readonly BridgeRequestRegistry $registry) {}
 
     public function handle(MessageReceived $event): void
@@ -86,7 +85,7 @@ class HandleBridgeRelayResponse implements ShouldQueue
 
         // Store the error message so LocalBridgeGateway can re-throw it
         $this->registry->storeUsage($requestId, [
-            '__error' => $data['message'] ?? 'Unknown bridge execution error',
+            '__error' => $data['error'] ?? $data['message'] ?? 'Unknown bridge execution error',
         ]);
     }
 }
