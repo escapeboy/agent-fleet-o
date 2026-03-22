@@ -83,7 +83,7 @@ return [
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
                 'allowed_origins' => ['*'],
-                'ping_interval' => env('REVERB_APP_PING_INTERVAL', 30),
+                'ping_interval' => env('REVERB_APP_PING_INTERVAL', 120),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 300),
                 'max_connections' => env('REVERB_APP_MAX_CONNECTIONS'),
                 'max_message_size' => env('REVERB_APP_MAX_MESSAGE_SIZE', 100_000),
