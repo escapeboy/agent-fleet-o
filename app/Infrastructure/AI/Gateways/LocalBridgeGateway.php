@@ -21,7 +21,7 @@ use Sentry\State\Scope;
 
 class LocalBridgeGateway implements AiGatewayInterface
 {
-    private const RELAY_TIMEOUT = 90;
+    private const RELAY_TIMEOUT = 600;
 
     public function __construct(
         private readonly BridgeRequestRegistry $registry,
