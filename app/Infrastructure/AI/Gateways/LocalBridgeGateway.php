@@ -11,6 +11,8 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Exceptions\BridgeExecutionException;
 use App\Infrastructure\AI\Exceptions\BridgeTimeoutException;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
+use App\Infrastructure\Bridge\Events\BridgeAgentRequest;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -96,12 +98,25 @@ class LocalBridgeGateway implements AiGatewayInterface
         // Register in-flight request so the relay binary can push chunks into it
         $this->registry->register($requestId, $request->teamId);
 
+        $payload = $this->buildPayload($requestId, $request, $connection);
+
         // Push the request to the Redis queue — the relay binary reads via BLPOP
         // and forwards to the bridge daemon over the WebSocket connection.
         Redis::connection('bridge')->rpush(
             "bridge:req:{$request->teamId}",
-            json_encode($this->buildPayload($requestId, $request, $connection)),
+            json_encode($payload),
         );
+
+        // Also broadcast via Reverb so bridge daemons using the `start` command
+        // (connected to Reverb directly, not the relay) receive the request.
+        try {
+            broadcast(new BridgeAgentRequest($request->teamId, $payload['payload'] ?? $payload));
+        } catch (\Throwable $e) {
+            Log::warning('LocalBridgeGateway: Reverb broadcast failed, relying on relay path', [
+                'request_id' => $requestId,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Consume the Redis chunk stream via BLPOP
         $content = '';
