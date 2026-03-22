@@ -135,6 +135,7 @@ class SkillDetailPage extends Component
 
         $resolver = app(ProviderResolver::class);
         $team = auth()->user()->currentTeam;
+        $resolvedProvider = $resolver->resolveWithSource(skill: $this->skill, team: $team);
         $providers = $resolver->availableProviders($team);
 
         foreach ($resolver->customEndpointsForTeam($team) as $ep) {
@@ -160,6 +161,7 @@ class SkillDetailPage extends Component
             'versions' => $versions,
             'executions' => $executions,
             'providers' => $providers,
+            'resolvedProvider' => $resolvedProvider,
         ])->layout('layouts.app', ['header' => $this->skill->name]);
     }
 }

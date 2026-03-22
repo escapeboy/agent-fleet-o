@@ -261,6 +261,7 @@ class AgentDetailPage extends Component
 
         $resolver = app(ProviderResolver::class);
         $team = auth()->user()->currentTeam;
+        $resolvedProvider = $resolver->resolveWithSource(agent: $this->agent, team: $team);
         $providers = $resolver->availableProviders($team);
 
         // Append team's custom endpoints as selectable providers
@@ -315,6 +316,7 @@ class AgentDetailPage extends Component
             'availableTools' => $availableTools,
             'revisions' => $revisions,
             'runtimeState' => $runtimeState,
+            'resolvedProvider' => $resolvedProvider,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }

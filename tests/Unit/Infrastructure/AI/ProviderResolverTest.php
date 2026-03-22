@@ -2,8 +2,10 @@
 
 namespace Tests\Unit\Infrastructure\AI;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Domain\Skill\Models\Skill;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -208,6 +210,75 @@ class ProviderResolverTest extends TestCase
 
         $this->assertArrayHasKey('claude-sonnet-4-5', $models);
         $this->assertArrayHasKey('claude-haiku-4-5', $models);
+    }
+
+    // ── resolveWithSource ──────────────────────────────────────────────────
+
+    public function test_resolve_with_source_returns_agent_source(): void
+    {
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'openai',
+            'model' => 'gpt-4o',
+        ]);
+
+        $result = $this->resolver->resolveWithSource(agent: $agent, team: $team);
+
+        $this->assertSame('openai', $result['provider']);
+        $this->assertSame('gpt-4o', $result['model']);
+        $this->assertSame('agent', $result['source']);
+    }
+
+    public function test_resolve_with_source_falls_back_to_team_default(): void
+    {
+        $team = Team::factory()->create([
+            'settings' => [
+                'default_llm_provider' => 'google',
+                'default_llm_model' => 'gemini-2.5-flash',
+            ],
+        ]);
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => '',
+            'model' => '',
+        ]);
+
+        $result = $this->resolver->resolveWithSource(agent: $agent, team: $team);
+
+        $this->assertSame('google', $result['provider']);
+        $this->assertSame('gemini-2.5-flash', $result['model']);
+        $this->assertSame('team', $result['source']);
+    }
+
+    public function test_resolve_with_source_returns_skill_source(): void
+    {
+        $team = Team::factory()->create();
+        $skill = Skill::factory()->create([
+            'team_id' => $team->id,
+            'configuration' => [
+                'provider' => 'anthropic',
+                'model' => 'claude-haiku-4-5',
+            ],
+        ]);
+
+        $result = $this->resolver->resolveWithSource(skill: $skill, team: $team);
+
+        $this->assertSame('anthropic', $result['provider']);
+        $this->assertSame('claude-haiku-4-5', $result['model']);
+        $this->assertSame('skill', $result['source']);
+    }
+
+    public function test_resolve_with_source_returns_config_fallback(): void
+    {
+        Config::set('llm_pricing.default_provider', 'anthropic');
+        Config::set('llm_pricing.default_model', 'claude-sonnet-4-5');
+
+        $result = $this->resolver->resolveWithSource();
+
+        $this->assertSame('anthropic', $result['provider']);
+        $this->assertSame('claude-sonnet-4-5', $result['model']);
+        $this->assertContains($result['source'], ['platform', 'config']);
     }
 
     public function test_model_label_matches_model_id_for_dynamically_discovered_ollama_models(): void
