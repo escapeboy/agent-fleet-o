@@ -18,6 +18,8 @@ use App\Domain\Experiment\Pipeline\RunEvaluationStage;
 use App\Domain\Experiment\Pipeline\RunPlanningStage;
 use App\Domain\Experiment\Pipeline\RunScoringStage;
 use App\Domain\Experiment\Services\CheckpointManager;
+use App\Domain\Project\Enums\ProjectRunStatus;
+use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
@@ -51,8 +53,9 @@ class RecoverStuckTasks extends Command
         $resolved = $this->resolveStuckStages();
         $steps = $this->recoverStuckPlaybookSteps();
         $experiments = $this->recoverStuckExperiments();
+        $runs = $this->syncStaleProjectRuns();
 
-        $this->info("Recovered {$recovered} stuck task(s), resolved {$resolved} stuck stage(s), {$steps} stuck step(s), {$experiments} stuck experiment(s).");
+        $this->info("Recovered {$recovered} stuck task(s), resolved {$resolved} stuck stage(s), {$steps} stuck step(s), {$experiments} stuck experiment(s), {$runs} stale project run(s).");
 
         return self::SUCCESS;
     }
@@ -465,6 +468,59 @@ class RecoverStuckTasks extends Command
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Find project runs stuck in "running" whose linked experiment has reached a terminal state.
+     * This handles cases where the experiment was killed/completed directly (bypassing the
+     * SyncProjectStatusOnRunComplete listener) or where the listener failed silently.
+     */
+    private function syncStaleProjectRuns(): int
+    {
+        $terminalStates = array_map(fn ($s) => $s->value, ExperimentStatus::terminalStates());
+
+        $staleRuns = ProjectRun::withoutGlobalScopes()
+            ->whereIn('status', [ProjectRunStatus::Running->value, ProjectRunStatus::Pending->value])
+            ->whereNotNull('experiment_id')
+            ->whereHas('experiment', function ($q) use ($terminalStates) {
+                $q->withoutGlobalScopes()->whereIn('status', $terminalStates);
+            })
+            ->with(['experiment' => fn ($q) => $q->withoutGlobalScopes()])
+            ->get();
+
+        $synced = 0;
+
+        foreach ($staleRuns as $run) {
+            $expStatus = $run->experiment?->status;
+
+            if (! $expStatus) {
+                continue;
+            }
+
+            $newRunStatus = match ($expStatus) {
+                ExperimentStatus::Completed => ProjectRunStatus::Completed,
+                ExperimentStatus::Killed, ExperimentStatus::Discarded => ProjectRunStatus::Failed,
+                ExperimentStatus::Expired => ProjectRunStatus::Cancelled,
+                default => ProjectRunStatus::Failed,
+            };
+
+            $run->update([
+                'status' => $newRunStatus,
+                'completed_at' => $run->experiment->updated_at ?? now(),
+                'error_message' => "Synced by tasks:recover-stuck — experiment reached {$expStatus->value} without updating run",
+            ]);
+
+            Log::warning('RecoverStuckTasks: Synced stale project run with terminal experiment', [
+                'run_id' => $run->id,
+                'run_status_was' => $run->getOriginal('status'),
+                'experiment_status' => $expStatus->value,
+                'new_run_status' => $newRunStatus->value,
+            ]);
+
+            $synced++;
+        }
+
+        return $synced;
     }
 
     private function transitionExperiment(string $experimentId, ExperimentStatus $expectedState, ExperimentStatus $toState, string $reason): void
