@@ -242,8 +242,24 @@
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <div class="flex items-center gap-1.5">
-                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                        {{ $agent->provider }}/{{ $agent->model }}
+                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700"
+                        title="Resolved from: {{ match($resolvedProvider['source']) { 'agent' => 'Agent configuration', 'team' => 'Team default', 'platform' => 'Platform settings', 'config' => 'System default', default => $resolvedProvider['source'] } }}">
+                        {{ $resolvedProvider['provider'] }}/{{ $resolvedProvider['model'] }}
+                    </span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ match($resolvedProvider['source']) {
+                        'agent' => 'bg-blue-50 text-blue-700',
+                        'team' => 'bg-purple-50 text-purple-700',
+                        'platform' => 'bg-amber-50 text-amber-700',
+                        'config' => 'bg-gray-50 text-gray-500',
+                        default => 'bg-gray-50 text-gray-500',
+                    } }}">
+                        {{ match($resolvedProvider['source']) {
+                            'agent' => 'agent',
+                            'team' => 'team default',
+                            'platform' => 'platform',
+                            'config' => 'system default',
+                            default => $resolvedProvider['source'],
+                        } }}
                     </span>
                     @foreach($agent->config['fallback_chain'] ?? [] as $fb)
                         <span class="text-xs text-gray-400">&rarr;</span>

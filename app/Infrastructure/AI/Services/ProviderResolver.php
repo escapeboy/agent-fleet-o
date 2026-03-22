@@ -92,6 +92,87 @@ class ProviderResolver
     }
 
     /**
+     * Resolve provider and model with source attribution.
+     *
+     * Returns the same result as resolve() plus a 'source' key indicating
+     * which level of the hierarchy provided the value:
+     * 'skill_split', 'skill', 'agent', 'team', 'platform', or 'config'.
+     *
+     * @return array{provider: string, model: string, source: string}
+     */
+    public function resolveWithSource(
+        ?Skill $skill = null,
+        ?Agent $agent = null,
+        ?Team $team = null,
+        string $purpose = 'run',
+    ): array {
+        // 1. Skill-level override
+        if ($skill) {
+            $config = $skill->configuration ?? [];
+
+            if (($config['model_selection_mode'] ?? 'unified') === 'split') {
+                $key = $purpose === 'build' ? 'build_model' : 'run_model';
+                $modelConfig = $config[$key] ?? null;
+
+                if ($modelConfig && ! empty($modelConfig['provider']) && ! empty($modelConfig['model'])) {
+                    return [
+                        'provider' => $modelConfig['provider'],
+                        'model' => $modelConfig['model'],
+                        'source' => 'skill_split',
+                    ];
+                }
+            }
+
+            if (! empty($config['provider']) && ! empty($config['model'])) {
+                return [
+                    'provider' => $config['provider'],
+                    'model' => $config['model'],
+                    'source' => 'skill',
+                ];
+            }
+        }
+
+        // 2. Agent-level override
+        if ($agent && $agent->provider && $agent->model) {
+            return [
+                'provider' => $agent->provider,
+                'model' => $agent->model,
+                'source' => 'agent',
+            ];
+        }
+
+        // 3. Team workspace default
+        if ($team) {
+            $settings = $team->settings ?? [];
+            if (! empty($settings['default_llm_provider']) && ! empty($settings['default_llm_model'])) {
+                return [
+                    'provider' => $settings['default_llm_provider'],
+                    'model' => $settings['default_llm_model'],
+                    'source' => 'team',
+                ];
+            }
+        }
+
+        // 4. GlobalSetting
+        $globalProvider = GlobalSetting::get('default_llm_provider');
+        $globalModel = GlobalSetting::get('default_llm_model');
+        if ($globalProvider && $globalModel) {
+            return [
+                'provider' => $globalProvider,
+                'model' => $globalModel,
+                'source' => 'platform',
+            ];
+        }
+
+        // 5. Config fallback
+        return [
+            'provider' => config('llm_pricing.default_provider', 'anthropic'),
+            'model' => config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+            'source' => 'config',
+        ];
+    }
+
+    /**
      * Get all available providers and their models from config.
      * Local agents are only included when enabled and detected on the system.
      *

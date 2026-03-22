@@ -196,6 +196,34 @@
                 {{-- Configuration --}}
                 <div class="col-span-2 rounded-xl border border-gray-200 bg-white p-4">
                     <h3 class="mb-3 text-sm font-semibold text-gray-700">Configuration</h3>
+
+                    {{-- Resolved Provider indicator --}}
+                    <div class="mb-3 flex items-center gap-2">
+                        <span class="text-xs font-medium text-gray-500">LLM:</span>
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                            {{ $resolvedProvider['provider'] }}/{{ $resolvedProvider['model'] }}
+                        </span>
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ match($resolvedProvider['source']) {
+                            'skill' => 'bg-green-50 text-green-700',
+                            'skill_split' => 'bg-green-50 text-green-700',
+                            'agent' => 'bg-blue-50 text-blue-700',
+                            'team' => 'bg-purple-50 text-purple-700',
+                            'platform' => 'bg-amber-50 text-amber-700',
+                            'config' => 'bg-gray-50 text-gray-500',
+                            default => 'bg-gray-50 text-gray-500',
+                        } }}">
+                            {{ match($resolvedProvider['source']) {
+                                'skill' => 'skill override',
+                                'skill_split' => 'skill (split mode)',
+                                'agent' => 'from agent',
+                                'team' => 'team default',
+                                'platform' => 'platform',
+                                'config' => 'system default',
+                                default => $resolvedProvider['source'],
+                            } }}
+                        </span>
+                    </div>
+
                     <pre class="max-h-48 overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($skill->configuration, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                 </div>
 
