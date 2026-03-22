@@ -239,9 +239,14 @@ class BridgeController extends Controller
 
     private function buildReverbUrl(): string
     {
-        $scheme = config('reverb.apps.apps.0.options.scheme', 'https');
-        $host = config('reverb.apps.apps.0.options.host');
-        $port = config('reverb.apps.apps.0.options.port', 443);
+        // Use VITE_REVERB_* (public-facing) when available, otherwise fall back to the
+        // app config. Server-side REVERB_HOST may point to an internal Docker host.
+        $scheme = config('app.reverb_public_scheme')
+            ?: config('reverb.apps.apps.0.options.scheme', 'https');
+        $host = config('app.reverb_public_host')
+            ?: config('reverb.apps.apps.0.options.host');
+        $port = config('app.reverb_public_port')
+            ?: config('reverb.apps.apps.0.options.port', 443);
         $wsScheme = $scheme === 'https' ? 'wss' : 'ws';
 
         return "{$wsScheme}://{$host}:{$port}";
