@@ -6,6 +6,7 @@ use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Events\AgentExecuting;
+use App\Domain\Agent\Exceptions\ToolLoopCriticalException;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AgentFeedback;
@@ -226,6 +227,26 @@ class ExecuteAgentAction
             );
 
             $response = $this->gateway->complete($request);
+
+            // Tool loop circuit breakers (BroodMind-inspired).
+            // Warning threshold: log but continue. Critical threshold: fail fast.
+            $warningThreshold = config('agent.tool_loop.warning_threshold', 8);
+            $criticalThreshold = config('agent.tool_loop.critical_threshold', 12);
+
+            if ($response->stepsCount >= $criticalThreshold) {
+                throw new ToolLoopCriticalException($response->stepsCount, $criticalThreshold, $agent->id);
+            }
+
+            if ($response->stepsCount >= $warningThreshold) {
+                Log::warning('Agent tool loop approaching critical threshold', [
+                    'agent_id' => $agent->id,
+                    'steps_count' => $response->stepsCount,
+                    'tool_calls_count' => $response->toolCallsCount,
+                    'warning_threshold' => $warningThreshold,
+                    'critical_threshold' => $criticalThreshold,
+                    'experiment_id' => $experimentId,
+                ]);
+            }
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
             $costCredits = $response->usage->costCredits;

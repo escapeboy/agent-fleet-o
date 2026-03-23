@@ -6,10 +6,12 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
+use App\Domain\Experiment\Events\ExperimentContextApproachingLimit;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\Services\ContextHealthService;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\CheckKmsAvailable;
@@ -131,6 +133,8 @@ abstract class BaseStageJob implements ShouldQueue
                 'stage' => $this->stageType()->value,
                 'duration_ms' => $durationMs,
             ]);
+
+            $this->checkContextHealth($experiment);
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
@@ -306,6 +310,37 @@ abstract class BaseStageJob implements ShouldQueue
     protected function shouldSkipForYolo(Experiment $experiment): bool
     {
         return $experiment->isYoloMode();
+    }
+
+    /**
+     * Check the experiment's accumulated LLM context usage after a stage completes.
+     * Fires ExperimentContextApproachingLimit when usage >= 80% (warning) or >= 90% (critical).
+     * Non-blocking — failures are swallowed to avoid impacting the pipeline.
+     */
+    protected function checkContextHealth(Experiment $experiment): void
+    {
+        try {
+            $health = app(ContextHealthService::class)->getExperimentContextHealth($experiment);
+
+            if ($health->isApproachingLimit) {
+                Log::warning('BaseStageJob: Experiment context approaching limit', [
+                    'experiment_id' => $experiment->id,
+                    'stage' => $this->stageType()->value,
+                    'context_used_pct' => $health->contextUsedPercent(),
+                    'total_input_tokens' => $health->totalInputTokens,
+                    'context_window' => $health->contextWindowTokens,
+                    'model' => $health->primaryModel,
+                    'level' => $health->level(),
+                ]);
+
+                event(new ExperimentContextApproachingLimit($experiment, $health));
+            }
+        } catch (\Throwable $e) {
+            Log::debug('BaseStageJob: Context health check failed (non-blocking)', [
+                'experiment_id' => $experiment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     protected function generateIdempotencyKey(string $suffix = ''): string
