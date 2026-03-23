@@ -33,6 +33,9 @@ Schedule::command('integrations:ping')->everyFifteenMinutes()->withoutOverlappin
 Schedule::command('integrations:poll')->everyFifteenMinutes()->withoutOverlapping(10);
 Schedule::command('integrations:refresh-tokens')->everyFiveMinutes()->withoutOverlapping(3);
 
+// Refresh Reddit browser session tokens (token_v2 expires every ~24h)
+Schedule::command('credentials:refresh-reddit')->hourly()->withoutOverlapping(5);
+
 // Project scheduling & budget enforcement
 Schedule::command('projects:check-budgets')->hourly();
 
