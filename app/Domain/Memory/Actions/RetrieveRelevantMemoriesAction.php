@@ -44,11 +44,14 @@ class RetrieveRelevantMemoriesAction
             $importanceWeight = config('memory.scoring.importance_weight', 0.2);
             $halfLifeDays = config('memory.scoring.half_life_days', 7);
 
-            // Composite score using effective_importance (base + retrieval reinforcement)
+            // Composite score using effective_importance (base + retrieval reinforcement).
+            // Curated tiers (canonical, facts, decisions, failures) receive a +0.10 boost
+            // so human-approved knowledge surfaces preferentially over agent-proposed memories.
             $compositeScoreSql = <<<'SQL'
                 (? * (1 - (embedding <=> ?))) +
                 (? * POWER(0.5, EXTRACT(EPOCH FROM (NOW() - COALESCE(last_accessed_at, created_at))) / 86400.0 / ?)) +
-                (? * LEAST(COALESCE(importance, 0.5) + LN(1 + COALESCE(retrieval_count, 0)) * 0.15, 1.0))
+                (? * LEAST(COALESCE(importance, 0.5) + LN(1 + COALESCE(retrieval_count, 0)) * 0.15, 1.0)) +
+                CASE WHEN COALESCE(tier, 'working') IN ('canonical','facts','decisions','failures') THEN 0.10 ELSE 0.0 END
                 AS composite_score
             SQL;
 
