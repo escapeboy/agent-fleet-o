@@ -6,6 +6,7 @@ use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Jobs\FireApprovalWebhookJob;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Credential\Enums\CredentialStatus;
@@ -68,10 +69,13 @@ class ApproveAction
                 $credential->update(['status' => CredentialStatus::Active]);
             }
 
+            $ocsf = OcsfMapper::classify('approval.approved');
             AuditEntry::withoutGlobalScopes()->create([
                 'user_id' => $reviewerId,
                 'team_id' => $approvalRequest->team_id,
                 'event' => 'approval.approved',
+                'ocsf_class_uid' => $ocsf['class_uid'],
+                'ocsf_severity_id' => $ocsf['severity_id'],
                 'subject_type' => ApprovalRequest::class,
                 'subject_id' => $approvalRequest->id,
                 'properties' => [
@@ -95,10 +99,13 @@ class ApproveAction
             ->where('status', OutboundProposalStatus::PendingApproval)
             ->update(['status' => OutboundProposalStatus::Approved]);
 
+        $ocsf = OcsfMapper::classify('approval.approved');
         AuditEntry::withoutGlobalScopes()->create([
             'user_id' => $reviewerId,
             'team_id' => $experiment->team_id,
             'event' => 'approval.approved',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approvalRequest->id,
             'properties' => [

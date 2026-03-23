@@ -3,6 +3,7 @@
 namespace App\Infrastructure\Encryption;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Shared\Enums\KmsConfigStatus;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamKmsConfig;
@@ -198,10 +199,13 @@ class CredentialEncryption
         array $extra = [],
     ): void {
         try {
+            $ocsf = OcsfMapper::classify('credential.accessed');
             AuditEntry::create([
                 'team_id' => $teamId,
                 'user_id' => $userId ?? auth()->id(),
                 'event' => 'credential.accessed',
+                'ocsf_class_uid' => $ocsf['class_uid'],
+                'ocsf_severity_id' => $ocsf['severity_id'],
                 'subject_type' => $subjectType,
                 'subject_id' => $subjectId,
                 'properties' => array_filter([

@@ -6,6 +6,7 @@ use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Jobs\FireApprovalWebhookJob;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
@@ -41,10 +42,13 @@ class RejectAction
                 $credential->update(['status' => CredentialStatus::Disabled]);
             }
 
+            $ocsf = OcsfMapper::classify('approval.rejected');
             AuditEntry::withoutGlobalScopes()->create([
                 'user_id' => $reviewerId,
                 'team_id' => $approvalRequest->team_id,
                 'event' => 'approval.rejected',
+                'ocsf_class_uid' => $ocsf['class_uid'],
+                'ocsf_severity_id' => $ocsf['severity_id'],
                 'subject_type' => ApprovalRequest::class,
                 'subject_id' => $approvalRequest->id,
                 'properties' => [
@@ -63,9 +67,12 @@ class RejectAction
             return;
         }
 
+        $ocsf = OcsfMapper::classify('approval.rejected');
         AuditEntry::create([
             'user_id' => $reviewerId,
             'event' => 'approval.rejected',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approvalRequest->id,
             'properties' => [

@@ -5,6 +5,7 @@ namespace App\Domain\Approval\Actions;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Shared\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 
@@ -34,9 +35,12 @@ class EscalateHumanTaskAction
             ),
         ]);
 
+        $ocsf = OcsfMapper::classify('human_task.escalated');
         AuditEntry::withoutGlobalScopes()->create([
             'team_id' => $approvalRequest->team_id,
             'event' => 'human_task.escalated',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approvalRequest->id,
             'properties' => [

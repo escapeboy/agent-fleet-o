@@ -7,6 +7,7 @@ use App\Domain\Agent\Jobs\AnalyzeAgentFeedbackJob;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 
 class CreateAgentFeedbackAction
 {
@@ -52,10 +53,13 @@ class CreateAgentFeedbackAction
             'feedback_at' => now(),
         ]);
 
+        $ocsf = OcsfMapper::classify('feedback.submitted');
         AuditEntry::withoutGlobalScopes()->create([
             'user_id' => $userId,
             'team_id' => $teamId,
             'event' => 'feedback.submitted',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => AgentFeedback::class,
             'subject_id' => $feedback->id,
             'properties' => [

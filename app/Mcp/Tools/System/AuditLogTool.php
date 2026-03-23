@@ -16,13 +16,15 @@ class AuditLogTool extends Tool
 {
     protected string $name = 'system_audit_log';
 
-    protected string $description = 'Get recent audit log entries with optional subject type filter. Returns id, subject_type, subject_id, event, description, created_at.';
+    protected string $description = 'Get recent audit log entries with optional filters. Returns id, subject_type, subject_id, event, ocsf_class_uid, ocsf_severity_id, description, created_at.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
             'subject_type' => $schema->string()
                 ->description('Filter by subject type (e.g. experiment, agent, approval)'),
+            'ocsf_class_uid' => $schema->integer()
+                ->description('Filter by OCSF class UID (e.g. 3002 = API Activity, 3001 = Account Change, 3006 = Financial Activity, 1001 = Process Activity, 4002 = HTTP Activity)'),
             'limit' => $schema->integer()
                 ->description('Max results to return (default 20, max 100)')
                 ->default(20),
@@ -41,6 +43,10 @@ class AuditLogTool extends Tool
             $query->where('subject_type', $subjectType);
         }
 
+        if ($ocsfClassUid = $request->get('ocsf_class_uid')) {
+            $query->where('ocsf_class_uid', (int) $ocsfClassUid);
+        }
+
         $limit = min((int) ($request->get('limit', 20)), 100);
 
         $entries = $query->limit($limit)->get();
@@ -52,6 +58,8 @@ class AuditLogTool extends Tool
                 'subject_type' => $e->subject_type,
                 'subject_id' => $e->subject_id,
                 'event' => $e->event,
+                'ocsf_class_uid' => $e->ocsf_class_uid,
+                'ocsf_severity_id' => $e->ocsf_severity_id,
                 'description' => $e->properties
                     ? mb_substr(json_encode($e->properties), 0, 200)
                     : null,

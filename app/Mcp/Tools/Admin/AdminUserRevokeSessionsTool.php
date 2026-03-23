@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Admin;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -37,9 +38,12 @@ class AdminUserRevokeSessionsTool extends Tool
         $count = $user->sanctumTokens()->count();
         $user->sanctumTokens()->delete();
 
+        $ocsf = OcsfMapper::classify('user.tokens_revoked');
         AuditEntry::withoutGlobalScopes()->create([
             'user_id' => auth()->id(),
             'event' => 'user.tokens_revoked',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => User::class,
             'subject_id' => $user->id,
             'properties' => [

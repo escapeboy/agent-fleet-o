@@ -3,6 +3,7 @@
 namespace App\Domain\Signal\Actions;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Signal\Models\SignalConnectorSetting;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -33,10 +34,13 @@ class RotateSignalSecretAction
             'webhook_secret' => $newSecret,
         ]);
 
+        $ocsf = OcsfMapper::classify('signal_webhook_secret_rotated');
         AuditEntry::create([
             'team_id' => $setting->team_id,
             'user_id' => Auth::id(),
             'event' => 'signal_webhook_secret_rotated',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => SignalConnectorSetting::class,
             'subject_id' => $setting->id,
             'properties' => ['driver' => $setting->driver],

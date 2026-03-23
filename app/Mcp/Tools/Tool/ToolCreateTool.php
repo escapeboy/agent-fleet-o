@@ -28,6 +28,9 @@ built_in   — host capability. transport_config depends on kind:
 For mcp_bridge: the bridge_server_name must match a server name reported by the team's bridge daemon.
 For SSH tools: create an ssh_key Credential first, then reference its ID in credential_id.
 Host fingerprints are stored automatically on first connect (TOFU). Manage via tool_ssh_fingerprints.
+
+network_policy controls Docker sandbox egress for built_in bash tools (requires tool_network_policies plan feature).
+Format: {"rules":[{"protocol":"tcp","host":"api.example.com","port":443}],"default_action":"deny"}
 DESC;
 
     public function schema(JsonSchema $schema): array
@@ -49,6 +52,8 @@ DESC;
                 ->enum(['safe', 'read', 'write', 'destructive']),
             'credential_id' => $schema->string()
                 ->description('UUID of a linked Credential to use for this tool (optional; preferred over inline api_key)'),
+            'network_policy' => $schema->string()
+                ->description('JSON string defining egress rules for Docker sandbox (built_in bash only). Example: {"rules":[{"protocol":"tcp","host":"api.example.com","port":443}],"default_action":"deny"}'),
         ];
     }
 
@@ -61,7 +66,17 @@ DESC;
             'transport_config' => 'nullable|array',
             'risk_level' => 'nullable|string|in:safe,read,write,destructive',
             'credential_id' => 'nullable|uuid|exists:credentials,id',
+            'network_policy' => 'nullable|string',
         ]);
+
+        // Parse optional network_policy JSON string into an array
+        $networkPolicy = null;
+        if (! empty($validated['network_policy'])) {
+            $networkPolicy = json_decode($validated['network_policy'], true);
+            if (! is_array($networkPolicy)) {
+                return Response::error('network_policy must be a valid JSON object.');
+            }
+        }
 
         try {
             $tool = app(CreateToolAction::class)->execute(
@@ -75,6 +90,10 @@ DESC;
 
             if (! empty($validated['risk_level'])) {
                 $tool->update(['risk_level' => ToolRiskLevel::from($validated['risk_level'])]);
+            }
+
+            if ($networkPolicy !== null) {
+                $tool->update(['network_policy' => $networkPolicy]);
             }
 
             return Response::text(json_encode([

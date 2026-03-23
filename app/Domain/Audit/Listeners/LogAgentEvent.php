@@ -4,6 +4,7 @@ namespace App\Domain\Audit\Listeners;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 
 class LogAgentEvent
 {
@@ -15,9 +16,12 @@ class LogAgentEvent
 
         $agent = $event->agent;
         $eventName = $event->eventName ?? 'agent.updated';
+        $ocsf = OcsfMapper::classify($eventName);
 
         AuditEntry::create([
             'event' => $eventName,
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'impersonator_id' => session('impersonating_from'),
             'subject_type' => Agent::class,
             'subject_id' => $agent->id,

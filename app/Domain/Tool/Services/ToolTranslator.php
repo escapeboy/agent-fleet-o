@@ -5,6 +5,7 @@ namespace App\Domain\Tool\Services;
 use App\Domain\Agent\Services\DockerSandboxExecutor;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
@@ -243,9 +244,12 @@ class ToolTranslator
 
                         // Audit every command executed in production (cloud) environment
                         if (app()->environment('production') && $tool->team_id) {
+                            $ocsf = OcsfMapper::classify('bash.command_executed');
                             AuditEntry::create([
                                 'team_id' => $tool->team_id,
                                 'event' => 'bash.command_executed',
+                                'ocsf_class_uid' => $ocsf['class_uid'],
+                                'ocsf_severity_id' => $ocsf['severity_id'],
                                 'properties' => [
                                     'command_preview' => substr($command, 0, 200),
                                     'exit_code' => $output['exitCode'],
@@ -270,7 +274,8 @@ class ToolTranslator
                     // Docker sandbox mode: run in isolated container
                     if ($workspace && config('agent.bash_sandbox_mode') === 'docker') {
                         $executor = app(DockerSandboxExecutor::class);
-                        $result = $executor->execute($command, $workspace, $timeout, $credentialEnv ?: null);
+                        $networkPolicy = $tool->network_policy; // nullable array from Tool model
+                        $result = $executor->execute($command, $workspace, $timeout, $credentialEnv ?: null, $networkPolicy);
 
                         return $result['stdout'] ?: $result['stderr'] ?: "(exit {$result['exit_code']})";
                     }
@@ -530,9 +535,12 @@ class ToolTranslator
 
                     // Audit every browser task in production.
                     if (app()->environment('production') && $toolModel->team_id) {
+                        $ocsf = OcsfMapper::classify('browser.task_executed');
                         AuditEntry::create([
                             'team_id' => $toolModel->team_id,
                             'event' => 'browser.task_executed',
+                            'ocsf_class_uid' => $ocsf['class_uid'],
+                            'ocsf_severity_id' => $ocsf['severity_id'],
                             'properties' => [
                                 'task_preview' => substr($task, 0, 200),
                                 'status' => $result['status'],

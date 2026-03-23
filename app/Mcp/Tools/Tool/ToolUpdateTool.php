@@ -37,6 +37,8 @@ class ToolUpdateTool extends Tool
                 ->description('UUID of a linked Credential (set to link; omit to leave unchanged)'),
             'clear_credential_id' => $schema->boolean()
                 ->description('Set true to remove the linked credential from this tool'),
+            'network_policy' => $schema->string()
+                ->description('JSON string defining egress rules for Docker sandbox (built_in bash only). Example: {"rules":[{"protocol":"tcp","host":"api.example.com","port":443}],"default_action":"deny"}. Pass "null" to clear.'),
         ];
     }
 
@@ -50,12 +52,27 @@ class ToolUpdateTool extends Tool
             'risk_level' => 'nullable|string|in:safe,read,write,destructive',
             'credential_id' => 'nullable|uuid|exists:credentials,id',
             'clear_credential_id' => 'nullable|boolean',
+            'network_policy' => 'nullable|string',
         ]);
 
         $tool = ToolModel::find($validated['tool_id']);
 
         if (! $tool) {
             return Response::error('Tool not found.');
+        }
+
+        // Parse optional network_policy JSON string
+        $networkPolicy = null;
+        $clearNetworkPolicy = false;
+        if (isset($validated['network_policy'])) {
+            if ($validated['network_policy'] === 'null') {
+                $clearNetworkPolicy = true;
+            } else {
+                $networkPolicy = json_decode($validated['network_policy'], true);
+                if (! is_array($networkPolicy)) {
+                    return Response::error('network_policy must be a valid JSON object or "null" to clear.');
+                }
+            }
         }
 
         try {
@@ -73,12 +90,22 @@ class ToolUpdateTool extends Tool
                 clearCredentialId: (bool) ($validated['clear_credential_id'] ?? false),
             );
 
+            // Apply network_policy update separately (not handled by UpdateToolAction yet)
+            if ($networkPolicy !== null) {
+                $result->update(['network_policy' => $networkPolicy]);
+                $result = $result->fresh();
+            } elseif ($clearNetworkPolicy) {
+                $result->update(['network_policy' => null]);
+                $result = $result->fresh();
+            }
+
             $updatedFields = array_keys(array_filter([
                 'name' => $validated['name'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'status' => $validated['status'] ?? null,
                 'risk_level' => $validated['risk_level'] ?? null,
                 'credential_id' => $validated['credential_id'] ?? null,
+                'network_policy' => $networkPolicy !== null ? true : ($clearNetworkPolicy ? true : null),
             ], fn ($v) => $v !== null));
 
             if (! empty($validated['clear_credential_id'])) {

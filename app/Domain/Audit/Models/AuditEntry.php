@@ -19,6 +19,8 @@ class AuditEntry extends Model
         'team_id',
         'user_id',
         'event',
+        'ocsf_class_uid',
+        'ocsf_severity_id',
         'subject_type',
         'subject_id',
         'properties',
@@ -34,6 +36,8 @@ class AuditEntry extends Model
         return [
             'properties' => 'array',
             'created_at' => 'datetime',
+            'ocsf_class_uid' => 'integer',
+            'ocsf_severity_id' => 'integer',
         ];
     }
 

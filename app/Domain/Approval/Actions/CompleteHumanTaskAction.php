@@ -5,6 +5,7 @@ namespace App\Domain\Approval\Actions;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
@@ -75,10 +76,13 @@ class CompleteHumanTaskAction
             $this->continueWorkflow($step);
         }
 
+        $ocsf = OcsfMapper::classify('human_task.completed');
         AuditEntry::withoutGlobalScopes()->create([
             'user_id' => $reviewerId,
             'team_id' => $approvalRequest->team_id,
             'event' => 'human_task.completed',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approvalRequest->id,
             'properties' => [
@@ -115,10 +119,13 @@ class CompleteHumanTaskAction
             'reviewed_at' => now(),
         ]);
 
+        $ocsf = OcsfMapper::classify('clarification.completed');
         AuditEntry::withoutGlobalScopes()->create([
             'user_id' => $reviewerId,
             'team_id' => $approvalRequest->team_id,
             'event' => 'clarification.completed',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approvalRequest->id,
             'properties' => [

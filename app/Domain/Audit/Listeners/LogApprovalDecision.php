@@ -4,6 +4,7 @@ namespace App\Domain\Audit\Listeners;
 
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 
 class LogApprovalDecision
 {
@@ -14,11 +15,15 @@ class LogApprovalDecision
         }
 
         $approval = $event->approval;
+        $eventName = 'approval.'.$approval->status->value;
+        $ocsf = OcsfMapper::classify($eventName);
 
         AuditEntry::create([
             'user_id' => $approval->reviewed_by,
             'impersonator_id' => session('impersonating_from'),
-            'event' => 'approval.'.$approval->status->value,
+            'event' => $eventName,
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => ApprovalRequest::class,
             'subject_id' => $approval->id,
             'properties' => [

@@ -3,6 +3,7 @@
 namespace App\Domain\Audit\Listeners;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Models\Experiment;
 
@@ -21,11 +22,16 @@ class LogExperimentTransition
             $triggeredBy = 'scheduler';
         }
 
+        $eventName = 'experiment.transitioned';
+        $ocsf = OcsfMapper::classify($eventName);
+
         AuditEntry::withoutGlobalScopes()->create([
             'user_id' => $userId,
             'impersonator_id' => session('impersonating_from'),
             'team_id' => $event->experiment->team_id,
-            'event' => 'experiment.transitioned',
+            'event' => $eventName,
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => Experiment::class,
             'subject_id' => $event->experiment->id,
             'properties' => [

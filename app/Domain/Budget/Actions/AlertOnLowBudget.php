@@ -3,6 +3,7 @@
 namespace App\Domain\Budget\Actions;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Services\NotificationService;
 use App\Models\GlobalSetting;
@@ -39,9 +40,12 @@ class AlertOnLowBudget
             return false;
         }
 
+        $ocsf = OcsfMapper::classify('budget.low_warning');
         AuditEntry::create([
             'user_id' => $experiment->user_id,
             'event' => 'budget.low_warning',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
             'subject_type' => Experiment::class,
             'subject_id' => $experiment->id,
             'properties' => [

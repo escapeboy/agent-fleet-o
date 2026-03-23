@@ -43,6 +43,7 @@ class Tool extends Model
         'tool_definitions',
         'server_capabilities',
         'settings',
+        'network_policy',
         'last_health_check',
         'health_status',
         'result_as_answer',
@@ -62,6 +63,7 @@ class Tool extends Model
             'tool_definitions' => 'array',
             'server_capabilities' => 'array',
             'settings' => 'array',
+            'network_policy' => 'array',
             'result_as_answer' => 'boolean',
             'last_health_check' => 'datetime',
         ];
