@@ -104,6 +104,8 @@ document.addEventListener('alpine:init', () => {
 
     document.addEventListener('livewire:navigate', (event) => {
         if (!document.startViewTransition) return;
+        // Livewire 4.5+ handles View Transitions natively — detail.visit is absent
+        if (typeof event.detail?.visit !== 'function') return;
         event.preventDefault();
         document.startViewTransition(async () => {
             await event.detail.visit();
