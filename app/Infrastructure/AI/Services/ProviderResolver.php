@@ -4,9 +4,12 @@ namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Bridge\Models\BridgeConnection;
+use App\Domain\Shared\Enums\DataClassification;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Domain\Shared\Services\PlanEnforcer;
 use App\Domain\Skill\Models\Skill;
+use App\Infrastructure\AI\Exceptions\DataClassificationException;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Collection;
 
@@ -28,6 +31,22 @@ class ProviderResolver
         ?Agent $agent = null,
         ?Team $team = null,
         string $purpose = 'run',
+    ): array {
+        $resolved = $this->resolveHierarchy($skill, $agent, $team, $purpose);
+
+        return $this->enforceDataClassification($resolved, $agent, $team);
+    }
+
+    /**
+     * Walk the provider hierarchy and return the first matching (provider, model) pair.
+     *
+     * @return array{provider: string, model: string}
+     */
+    private function resolveHierarchy(
+        ?Skill $skill,
+        ?Agent $agent,
+        ?Team $team,
+        string $purpose,
     ): array {
         // 1. Skill-level override
         if ($skill) {
@@ -445,5 +464,150 @@ class ProviderResolver
         }
 
         return $models;
+    }
+
+    /**
+     * Enforce data classification policy on a resolved (provider, model) pair.
+     *
+     * Confidential and Restricted agents must run on a local provider (bridge_agent,
+     * codex, claude_code, or local_agent). When the resolved provider is a cloud
+     * provider and a local alternative is available, the local provider wins.
+     * When no local provider exists the behaviour depends on plan entitlement:
+     *   - Feature NOT available → silently allow (base / free plans unaffected)
+     *   - Feature IS available  → throw DataClassificationException
+     *
+     * @param  array{provider: string, model: string}  $resolved
+     * @return array{provider: string, model: string}
+     *
+     * @throws DataClassificationException
+     */
+    private function enforceDataClassification(array $resolved, ?Agent $agent, ?Team $team): array
+    {
+        $classification = $agent?->data_classification;
+
+        // Only confidential and restricted classifications require local-only routing.
+        if (
+            $classification === null
+            || ! in_array($classification, [DataClassification::Confidential, DataClassification::Restricted], true)
+        ) {
+            return $resolved;
+        }
+
+        // Already on a local provider — nothing to do.
+        if ($this->isLocalProvider($resolved['provider'])) {
+            return $resolved;
+        }
+
+        // Try to find an available local provider for this team.
+        $localProvider = $this->resolveLocalProvider($agent, $team);
+
+        if ($localProvider !== null) {
+            return $localProvider;
+        }
+
+        // No local provider available. Check plan entitlement before blocking.
+        // The feature is only enforced on plans that have it; base/open-source and
+        // free plans silently allow cloud fallback so they are not broken.
+        if (! $this->planEnforcerHasFeature('data_classification_routing')) {
+            return $resolved;
+        }
+
+        throw new DataClassificationException($agent->id, $classification->value);
+    }
+
+    /**
+     * Attempt to resolve a local provider for the given agent/team context.
+     *
+     * Returns a (provider, model) array when a local provider is available,
+     * or null when none is configured/detected.
+     *
+     * @return array{provider: string, model: string}|null
+     */
+    private function resolveLocalProvider(?Agent $agent, ?Team $team): ?array
+    {
+        // Prefer bridge_agent when an active connection exists.
+        try {
+            $hasActiveBridge = BridgeConnection::active()->exists();
+        } catch (\Throwable) {
+            $hasActiveBridge = false;
+        }
+
+        if ($hasActiveBridge) {
+            $agents = $this->activeBridgeAgents();
+
+            if (! empty($agents)) {
+                $firstKey = array_key_first($agents);
+
+                // Compound keys are "agent_key:model" — split to populate both fields.
+                if (str_contains($firstKey, ':')) {
+                    [$agentKey, $model] = explode(':', $firstKey, 2);
+
+                    return ['provider' => 'bridge_agent', 'model' => "{$agentKey}:{$model}"];
+                }
+
+                return ['provider' => 'bridge_agent', 'model' => $firstKey];
+            }
+        }
+
+        // Fall back to CLI-based local agents (Codex, Claude Code).
+        if (config('local_agents.enabled')) {
+            try {
+                $detected = app(LocalAgentDiscovery::class)->detect();
+            } catch (\Throwable) {
+                $detected = [];
+            }
+
+            if (! empty($detected)) {
+                $agentKey = array_key_first($detected);
+                $info = $detected[$agentKey];
+                $provider = $info['provider'] ?? $agentKey;
+                $model = $info['default_model'] ?? $agentKey;
+
+                return ['provider' => $provider, 'model' => $model];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Determine whether a provider identifier refers to a local (non-cloud) provider.
+     *
+     * Local providers: bridge_agent, codex, claude_code, local_agent, and any provider
+     * that starts with these prefixes (e.g. "bridge_agent" is always local).
+     */
+    private function isLocalProvider(string $provider): bool
+    {
+        $localProviders = ['bridge_agent', 'codex', 'claude_code', 'local_agent'];
+
+        foreach ($localProviders as $local) {
+            if ($provider === $local || str_starts_with($provider, $local)) {
+                return true;
+            }
+        }
+
+        // Also treat any provider flagged as local in config.
+        return (bool) config("llm_providers.{$provider}.local")
+            || (bool) config("llm_providers.{$provider}.bridge");
+    }
+
+    /**
+     * Check whether the plan enforcer (cloud-only) has a specific feature enabled.
+     *
+     * The base / community edition does not ship PlanEnforcer, so this method
+     * silently returns false when the service is not bound — preserving open-source
+     * compatibility and ensuring free users are never unexpectedly blocked.
+     */
+    private function planEnforcerHasFeature(string $feature): bool
+    {
+        try {
+            if (! app()->bound(PlanEnforcer::class)) {
+                return false;
+            }
+
+            return app(PlanEnforcer::class)->hasFeature($feature);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

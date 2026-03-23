@@ -2,6 +2,7 @@
 
 namespace App\Domain\Skill\Actions;
 
+use App\Domain\Shared\Enums\DataClassification;
 use App\Domain\Skill\Enums\ExecutionType;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillStatus;
@@ -28,12 +29,13 @@ class CreateSkillAction
         ?string $systemPrompt = null,
         bool $requiresApproval = false,
         ?string $createdBy = null,
+        DataClassification $dataClassification = DataClassification::Internal,
     ): Skill {
         return DB::transaction(function () use (
             $teamId, $name, $type, $description, $executionType,
             $riskLevel, $inputSchema, $outputSchema, $configuration,
             $costProfile, $safetyFlags, $systemPrompt, $requiresApproval,
-            $createdBy,
+            $createdBy, $dataClassification,
         ) {
             $skill = Skill::withoutGlobalScopes()->create([
                 'team_id' => $teamId,
@@ -52,6 +54,7 @@ class CreateSkillAction
                 'system_prompt' => $systemPrompt,
                 'requires_approval' => $requiresApproval || $riskLevel->requiresApproval(),
                 'current_version' => '1.0.0',
+                'data_classification' => $dataClassification,
             ]);
 
             // Create initial version snapshot

@@ -27,6 +27,9 @@ class SkillUpdateTool extends Tool
                 ->description('New skill description'),
             'prompt_template' => $schema->string()
                 ->description('New system prompt template'),
+            'data_classification' => $schema->string()
+                ->description('Data classification level: public, internal, confidential, restricted.')
+                ->enum(['public', 'internal', 'confidential', 'restricted']),
         ];
     }
 
@@ -37,6 +40,7 @@ class SkillUpdateTool extends Tool
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'prompt_template' => 'nullable|string',
+            'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
         ]);
 
         $skill = Skill::find($validated['skill_id']);
@@ -49,6 +53,7 @@ class SkillUpdateTool extends Tool
             'name' => $validated['name'] ?? null,
             'description' => $validated['description'] ?? null,
             'system_prompt' => $validated['prompt_template'] ?? null,
+            'data_classification' => $validated['data_classification'] ?? null,
         ], fn ($v) => $v !== null);
 
         if (empty($attributes)) {

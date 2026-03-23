@@ -9,6 +9,8 @@ use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Tool\Enums\BuiltInToolKind;
+use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Workflow\Models\Workflow;
 use Illuminate\Support\Str;
 
@@ -108,7 +110,66 @@ class PublishToMarketplaceAction
             'visibility' => $visibility,
             'version' => $version,
             'configuration_snapshot' => $configSnapshot,
+            'execution_profile' => $this->deriveExecutionProfile($item),
         ]);
+    }
+
+    /**
+     * Derive the execution profile from the published item.
+     *
+     * The profile captures capability requirements so marketplace consumers
+     * can evaluate whether the item is safe to install in their environment.
+     *
+     * @return array{
+     *     requires_bash: bool,
+     *     requires_filesystem: list<string>,
+     *     requires_browser: bool,
+     *     network_destinations: list<string>,
+     *     data_classification: string,
+     *     min_sandbox: string
+     * }
+     */
+    private function deriveExecutionProfile(Skill|Agent|Workflow|EmailTheme|EmailTemplate $item): array
+    {
+        $profile = [
+            'requires_bash' => false,
+            'requires_filesystem' => [],
+            'requires_browser' => false,
+            'network_destinations' => [],
+            'data_classification' => 'internal',
+            'min_sandbox' => 'none',
+        ];
+
+        if (! ($item instanceof Agent)) {
+            return $profile;
+        }
+
+        /** @var Agent $agent */
+        $agent = $item;
+
+        $tools = $agent->tools()->where('type', ToolType::BuiltIn->value)->get();
+
+        foreach ($tools as $tool) {
+            $kind = BuiltInToolKind::tryFrom($tool->transport_config['kind'] ?? 'bash');
+
+            if ($kind === BuiltInToolKind::Bash) {
+                $profile['requires_bash'] = true;
+                $profile['min_sandbox'] = 'docker';
+            }
+
+            if ($kind === BuiltInToolKind::Filesystem) {
+                $profile['requires_filesystem'] = ['/workspace'];
+            }
+
+            if ($kind === BuiltInToolKind::Browser) {
+                $profile['requires_browser'] = true;
+            }
+        }
+
+        // Copy data_classification if the agent carries one (added by Phase 3a).
+        $profile['data_classification'] = $agent->data_classification?->value ?? 'internal';
+
+        return $profile;
     }
 
     public function snapshotWorkflow(Workflow $workflow): array

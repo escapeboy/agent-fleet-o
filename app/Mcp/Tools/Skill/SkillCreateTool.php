@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Skill;
 
+use App\Domain\Shared\Enums\DataClassification;
 use App\Domain\Skill\Actions\CreateSkillAction;
 use App\Domain\Skill\Enums\SkillType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -29,6 +30,9 @@ class SkillCreateTool extends Tool
                 ->description('Skill description'),
             'prompt_template' => $schema->string()
                 ->description('System prompt template for LLM-backed skills'),
+            'data_classification' => $schema->string()
+                ->description('Data classification level: public, internal, confidential, restricted.')
+                ->enum(['public', 'internal', 'confidential', 'restricted']),
         ];
     }
 
@@ -39,6 +43,7 @@ class SkillCreateTool extends Tool
             'type' => 'required|string|in:llm,connector,rule,hybrid,boruna_script',
             'description' => 'nullable|string',
             'prompt_template' => 'nullable|string',
+            'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
         ]);
 
         try {
@@ -49,6 +54,9 @@ class SkillCreateTool extends Tool
                 description: $validated['description'] ?? '',
                 systemPrompt: $validated['prompt_template'] ?? null,
                 createdBy: auth()->id(),
+                dataClassification: isset($validated['data_classification'])
+                    ? DataClassification::from($validated['data_classification'])
+                    : DataClassification::Internal,
             );
 
             return Response::text(json_encode([

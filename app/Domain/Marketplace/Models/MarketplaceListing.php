@@ -48,6 +48,7 @@ class MarketplaceListing extends Model
         'price_per_run_credits',
         'monetization_enabled',
         'is_official',
+        'execution_profile',
     ];
 
     protected function casts(): array
@@ -68,6 +69,7 @@ class MarketplaceListing extends Model
             'monetization_enabled' => 'boolean',
             'is_official' => 'boolean',
             'review_count' => 'integer',
+            'execution_profile' => 'array',
         ];
     }
 

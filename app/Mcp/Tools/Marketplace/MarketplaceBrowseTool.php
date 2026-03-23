@@ -65,6 +65,7 @@ class MarketplaceBrowseTool extends Tool
                 'type' => $l->type,
                 'status' => $l->status->value,
                 'description' => mb_substr($l->description ?? '', 0, 200),
+                'execution_profile' => $l->execution_profile,
             ])->toArray(),
         ]));
     }

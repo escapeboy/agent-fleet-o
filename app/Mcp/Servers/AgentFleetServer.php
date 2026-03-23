@@ -262,6 +262,7 @@ use App\Mcp\Tools\Workflow\WorkflowEdgeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowEdgeDeleteTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
 use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
+use App\Mcp\Tools\Workflow\WorkflowExportPolicyTool;
 use App\Mcp\Tools\Workflow\WorkflowExportTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
@@ -414,6 +415,7 @@ class AgentFleetServer extends Server
         WorkflowEdgeDeleteTool::class,
         WorkflowExportTool::class,
         WorkflowImportTool::class,
+        WorkflowExportPolicyTool::class,
 
         // Project (14)
         ProjectListTool::class,

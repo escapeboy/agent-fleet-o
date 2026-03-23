@@ -4,6 +4,7 @@ namespace App\Domain\Skill\Models;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentSkillPivot;
+use App\Domain\Shared\Enums\DataClassification;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Enums\ExecutionType;
@@ -54,6 +55,7 @@ class Skill extends Model
         'avg_latency_ms',
         'provider_requirements',
         'meta',
+        'data_classification',
     ];
 
     protected function casts(): array
@@ -77,6 +79,7 @@ class Skill extends Model
             'success_count' => 'integer',
             'avg_latency_ms' => 'decimal:2',
             'provider_requirements' => 'array',
+            'data_classification' => DataClassification::class,
         ];
     }
 

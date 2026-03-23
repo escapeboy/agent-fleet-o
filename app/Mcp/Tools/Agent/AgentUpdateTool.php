@@ -37,6 +37,9 @@ class AgentUpdateTool extends Tool
                 ->description('Override LLM model name (e.g. claude-sonnet-4-5, gpt-4o)'),
             'budget_cap_credits' => $schema->integer()
                 ->description('Per-agent budget cap in credits. Set to 0 to remove cap.'),
+            'data_classification' => $schema->string()
+                ->description('Data classification level: public, internal, confidential, restricted. Confidential and restricted agents are routed to local-only providers.')
+                ->enum(['public', 'internal', 'confidential', 'restricted']),
         ];
     }
 
@@ -52,6 +55,7 @@ class AgentUpdateTool extends Tool
             'provider' => 'nullable|string',
             'model' => 'nullable|string',
             'budget_cap_credits' => 'nullable|integer|min:0',
+            'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
         ]);
 
         $agent = Agent::find($validated['agent_id']);
@@ -68,6 +72,7 @@ class AgentUpdateTool extends Tool
             'personality' => $validated['personality'] ?? null,
             'provider' => $validated['provider'] ?? null,
             'model' => $validated['model'] ?? null,
+            'data_classification' => $validated['data_classification'] ?? null,
         ], fn ($v) => $v !== null);
 
         // budget_cap_credits: allow explicit 0 (removes cap) so we handle separately

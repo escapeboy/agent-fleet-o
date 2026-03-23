@@ -5,6 +5,7 @@ namespace App\Domain\Agent\Actions;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentRuntimeState;
+use App\Domain\Shared\Enums\DataClassification;
 use Illuminate\Support\Str;
 
 class CreateAgentAction
@@ -24,6 +25,7 @@ class CreateAgentAction
         array $skillIds = [],
         array $toolIds = [],
         ?array $personality = null,
+        ?string $dataClassification = null,
     ): Agent {
         $pricing = config("llm_pricing.providers.{$provider}.{$model}");
 
@@ -45,6 +47,9 @@ class CreateAgentAction
             'budget_spent_credits' => 0,
             'cost_per_1k_input' => $pricing['input'] ?? 0,
             'cost_per_1k_output' => $pricing['output'] ?? 0,
+            'data_classification' => $dataClassification
+                ? DataClassification::from($dataClassification)
+                : DataClassification::Internal,
         ]);
 
         // Seed runtime state (one-per-agent, tracks lifetime stats)

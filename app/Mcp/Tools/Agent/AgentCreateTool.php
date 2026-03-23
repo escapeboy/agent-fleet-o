@@ -34,6 +34,9 @@ class AgentCreateTool extends Tool
                 ->description('LLM model name (default: claude-sonnet-4-5)'),
             'personality' => $schema->object()
                 ->description('Agent personality traits: {tone, communication_style, traits[], behavioral_rules[], response_format_preference}'),
+            'data_classification' => $schema->string()
+                ->description('Data classification level: public, internal, confidential, restricted. Confidential and restricted agents are routed to local-only providers.')
+                ->enum(['public', 'internal', 'confidential', 'restricted']),
         ];
     }
 
@@ -47,6 +50,7 @@ class AgentCreateTool extends Tool
             'provider' => 'nullable|string|in:anthropic,openai,google',
             'model' => 'nullable|string|max:100',
             'personality' => 'nullable|array',
+            'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
         ]);
 
         try {
@@ -59,6 +63,7 @@ class AgentCreateTool extends Tool
                 backstory: $validated['backstory'] ?? null,
                 teamId: auth()->user()->current_team_id,
                 personality: $validated['personality'] ?? null,
+                dataClassification: $validated['data_classification'] ?? null,
             );
 
             return Response::text(json_encode([

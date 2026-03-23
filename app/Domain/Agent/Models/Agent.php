@@ -5,6 +5,7 @@ namespace App\Domain\Agent\Models;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Knowledge\Models\KnowledgeBase;
+use App\Domain\Shared\Enums\DataClassification;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Models\Skill;
@@ -74,6 +75,7 @@ class Agent extends Model
         'risk_profile_updated_at',
         'meta',
         'heartbeat_definition',
+        'data_classification',
     ];
 
     protected function casts(): array
@@ -97,6 +99,7 @@ class Agent extends Model
             'risk_profile' => 'array',
             'risk_profile_updated_at' => 'datetime',
             'heartbeat_definition' => 'array',
+            'data_classification' => DataClassification::class,
         ];
     }
 
