@@ -104,6 +104,7 @@ document.addEventListener('alpine:init', () => {
 
     document.addEventListener('livewire:navigate', (event) => {
         if (!document.startViewTransition) return;
+        if (typeof event.detail?.visit !== 'function') return;
         event.preventDefault();
         document.startViewTransition(async () => {
             await event.detail.visit();
