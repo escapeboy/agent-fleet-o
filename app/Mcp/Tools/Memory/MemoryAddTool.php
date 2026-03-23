@@ -53,9 +53,12 @@ class MemoryAddTool extends Tool
 
         $teamId = auth()->user()?->current_team_id;
 
+        $content = $validated['content'];
+
         $memory = Memory::create([
             'team_id' => $teamId,
-            'content' => $validated['content'],
+            'content' => $content,
+            'content_hash' => hash('sha256', mb_strtolower(trim($content))),
             'source_type' => $validated['source_type'] ?? 'manual',
             'agent_id' => $validated['agent_id'] ?? null,
             'project_id' => $validated['project_id'] ?? null,
