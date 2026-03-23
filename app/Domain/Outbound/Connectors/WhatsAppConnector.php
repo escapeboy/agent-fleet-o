@@ -45,6 +45,10 @@ class WhatsAppConnector implements OutboundConnectorInterface
                 throw new \RuntimeException('WhatsApp Cloud API credentials not configured');
             }
 
+            if (! ctype_digit((string) $phoneNumberId)) {
+                throw new \InvalidArgumentException('WhatsApp phone_number_id must be a numeric string');
+            }
+
             $target = $proposal->target;
             $content = $proposal->content;
 

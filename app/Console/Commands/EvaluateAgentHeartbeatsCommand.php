@@ -27,11 +27,9 @@ class EvaluateAgentHeartbeatsCommand extends Command
         $agents = Agent::withoutGlobalScopes()
             ->whereNotNull('heartbeat_definition')
             ->whereRaw("heartbeat_definition->>'enabled' = 'true'")
-            ->whereRaw("heartbeat_definition->>'next_run_at' <= ?", [now()->toIso8601String()])
-            ->orWhere(function ($q) {
-                $q->whereNotNull('heartbeat_definition')
-                    ->whereRaw("heartbeat_definition->>'enabled' = 'true'")
-                    ->whereRaw("heartbeat_definition->>'next_run_at' IS NULL");
+            ->where(function ($q) {
+                $q->whereRaw("heartbeat_definition->>'next_run_at' <= ?", [now()->toIso8601String()])
+                    ->orWhereRaw("heartbeat_definition->>'next_run_at' IS NULL");
             })
             ->with('team')
             ->get();

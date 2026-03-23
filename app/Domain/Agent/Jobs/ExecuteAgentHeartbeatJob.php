@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Jobs;
 
 use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Models\Agent;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Log;
  * Runs the agent with the heartbeat prompt as input, using the team owner
  * as the acting user (since heartbeats are system-initiated).
  */
-class ExecuteAgentHeartbeatJob implements ShouldQueue
+class ExecuteAgentHeartbeatJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Queueable;
 
@@ -22,12 +23,19 @@ class ExecuteAgentHeartbeatJob implements ShouldQueue
 
     public int $timeout = 300;
 
+    public int $uniqueFor = 300;
+
     public function __construct(
         public readonly string $agentId,
         public readonly string $teamId,
         public readonly string $prompt,
     ) {
         $this->onQueue('experiments');
+    }
+
+    public function uniqueId(): string
+    {
+        return "agent:heartbeat:{$this->agentId}";
     }
 
     public function handle(ExecuteAgentAction $action): void

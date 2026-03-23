@@ -115,7 +115,10 @@ PROMPT;
                 ],
                 confidence: $confidence,
                 tags: $tags,
-                tier: MemoryTier::Failures,
+                // Use Proposed tier so system-extracted lessons are retrievable but not
+                // immediately given the curated (+0.10) boost. A separate curation step
+                // can promote them to MemoryTier::Failures once validated.
+                tier: MemoryTier::Proposed,
                 proposedBy: 'system:failure_extractor',
             );
 
@@ -134,13 +137,14 @@ PROMPT;
 
     private function buildPrompt(Experiment $experiment): string
     {
+        // User-controlled fields are wrapped in XML-style delimiters to prevent prompt injection.
         $parts = [
             '## Experiment',
-            "Title: {$experiment->title}",
+            '<experiment_title>'.htmlspecialchars((string) $experiment->title, ENT_XML1).'</experiment_title>',
         ];
 
         if (! empty($experiment->thesis)) {
-            $parts[] = "Thesis: {$experiment->thesis}";
+            $parts[] = '<experiment_thesis>'.htmlspecialchars((string) $experiment->thesis, ENT_XML1).'</experiment_thesis>';
         }
 
         $parts[] = 'Final status: '.($experiment->status?->value ?? 'unknown');
@@ -159,7 +163,7 @@ PROMPT;
                     $errorText = is_array($stage->error)
                         ? json_encode($stage->error, JSON_UNESCAPED_UNICODE)
                         : (string) $stage->error;
-                    $parts[] = 'Error: '.substr($errorText, 0, 500);
+                    $parts[] = '<stage_error>'.htmlspecialchars(substr($errorText, 0, 500), ENT_XML1).'</stage_error>';
                 }
             }
         }
