@@ -1,6 +1,7 @@
 // FleetQ Service Worker — Workbox-powered caching + Web Push Notifications
 // This file is the source compiled by vite-plugin-pwa with InjectManifest strategy.
 // Workbox injects the precache manifest at build time replacing self.__WB_MANIFEST.
+// SW_VERSION: 2 (bumped to force cache refresh after pwa-features fix)
 
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
@@ -109,6 +110,14 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open('fleetq-offline').then((cache) => cache.add('/offline.html'))
     );
+});
+
+// ─── Activate: clear stale page cache ────────────────────────────────────────
+// On every SW update, purge the HTML page cache so browsers immediately fetch
+// fresh HTML (with up-to-date asset hashes). Build asset caches are safe to keep
+// because Vite uses content-addressed hashes — stale URLs simply won't be requested.
+self.addEventListener('activate', (event) => {
+    event.waitUntil(caches.delete('fleetq-pages'));
 });
 
 // ─── SW Update Message ──────────────────────────────────────────────────────
