@@ -24,7 +24,7 @@ cleanupOutdatedCaches();
 // Precache stable assets (offline.html, icons) injected by workbox at build time.
 // Hashed build assets (/build/**) are NOT precached here — they are runtime-cached
 // by the CacheFirst route below, avoiding stale-URL errors on incremental rebuilds.
-precacheAndRoute(self.__WB_MANIFEST);
+precacheAndRoute(self.__WB_MANIFEST ?? []);
 
 // ─── Routing Strategies ────────────────────────────────────────────────────
 
