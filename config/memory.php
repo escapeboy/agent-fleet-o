@@ -144,6 +144,8 @@ return [
         'max_ttl_days' => (int) env('MEMORY_MAX_TTL_DAYS', 365),
         'protect_importance_above' => 0.8,
         'protect_retrieval_above' => 10,
+        // Cap on total memories per agent — lowest-scoring are evicted when exceeded
+        'max_per_agent' => (int) env('MEMORY_MAX_PER_AGENT', 2000),
     ],
 
     /*

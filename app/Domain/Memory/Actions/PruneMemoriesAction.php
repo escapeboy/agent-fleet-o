@@ -3,6 +3,7 @@
 namespace App\Domain\Memory\Actions;
 
 use App\Domain\Memory\Models\Memory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PruneMemoriesAction
@@ -70,6 +71,54 @@ class PruneMemoriesAction
 
         if ($deleted > 0) {
             Log::info("PruneMemoriesAction: Pruned {$deleted} memories (score < {$scoreThreshold}, ttl={$ttlDays}d, max={$maxTtlDays}d)");
+        }
+
+        // Tier 3: Per-agent capacity cap — evict lowest-scoring memories when an agent exceeds the limit
+        $maxPerAgent = config('memory.pruning.max_per_agent', 2000);
+        if ($maxPerAgent > 0) {
+            $deleted += $this->enforceCapacity($maxPerAgent, $halfLifeDays);
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * Evict the lowest-scoring memories for any agent that exceeds the capacity cap.
+     */
+    private function enforceCapacity(int $maxPerAgent, int $halfLifeDays): int
+    {
+        $deleted = 0;
+
+        // Find agents that exceed the cap
+        $overCapacity = Memory::withoutGlobalScopes()
+            ->select('agent_id', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('agent_id')
+            ->havingRaw('COUNT(*) > ?', [$maxPerAgent])
+            ->pluck('cnt', 'agent_id');
+
+        foreach ($overCapacity as $agentId => $count) {
+            $excess = $count - $maxPerAgent;
+
+            // Delete the $excess lowest-scoring memories for this agent
+            // Score = recency_decay * effective_importance (same formula as Tier 2)
+            $pruneScoreSql = <<<'SQL'
+                POWER(0.5, EXTRACT(EPOCH FROM (NOW() - COALESCE(last_accessed_at, created_at))) / 86400.0 / ?)
+                * LEAST(COALESCE(importance, 0.5) + LN(1 + COALESCE(retrieval_count, 0)) * 0.15, 1.0)
+            SQL;
+
+            $ids = Memory::withoutGlobalScopes()
+                ->where('agent_id', $agentId)
+                ->selectRaw("id, ({$pruneScoreSql}) AS prune_score", [$halfLifeDays])
+                ->orderByRaw("({$pruneScoreSql})", [$halfLifeDays])
+                ->limit($excess)
+                ->pluck('id');
+
+            if ($ids->isNotEmpty()) {
+                $n = Memory::withoutGlobalScopes()->whereIn('id', $ids)->delete();
+                $deleted += $n;
+
+                Log::info("PruneMemoriesAction: Cap eviction for agent {$agentId}: removed {$n} (was {$count}, cap {$maxPerAgent})");
+            }
         }
 
         return $deleted;

@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Memory;
 
+use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Models\Memory;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -32,6 +33,8 @@ class MemorySearchTool extends Tool
             'min_confidence' => $schema->number()
                 ->description('Minimum confidence score to filter results (0.0–1.0, default 0.0 to include all)')
                 ->default(0.0),
+            'category' => $schema->string()
+                ->description('Filter by memory category: preference, knowledge, context, behavior, goal'),
         ];
     }
 
@@ -56,6 +59,13 @@ class MemorySearchTool extends Tool
             $query->where('confidence', '>=', $minConfidence);
         }
 
+        if ($categoryValue = $request->get('category')) {
+            $category = MemoryCategory::tryFrom($categoryValue);
+            if ($category !== null) {
+                $query->where('category', $category->value);
+            }
+        }
+
         $limit = min((int) ($request->get('limit', 10)), 100);
 
         $memories = $query->limit($limit)->get();
@@ -69,6 +79,7 @@ class MemorySearchTool extends Tool
                 'source_type' => $m->source_type,
                 'content' => mb_substr($m->content, 0, 300),
                 'confidence' => $m->confidence,
+                'category' => $m->category?->value,
                 'tags' => $m->tags ?? [],
                 'created' => $m->created_at?->diffForHumans(),
             ])->toArray(),

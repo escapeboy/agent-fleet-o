@@ -3,6 +3,7 @@
 namespace App\Domain\Memory\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Project\Models\Project;
@@ -33,6 +34,7 @@ class Memory extends Model
         'content_hash',
         'tags',
         'tier',
+        'category',
         'proposed_by',
     ];
 
@@ -47,6 +49,7 @@ class Memory extends Model
             'retrieval_count' => 'integer',
             'visibility' => MemoryVisibility::class,
             'tier' => MemoryTier::class,
+            'category' => MemoryCategory::class,
         ];
     }
 

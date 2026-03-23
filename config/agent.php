@@ -145,5 +145,8 @@ return [
         'warning_threshold' => (int) env('AGENT_TOOL_LOOP_WARNING', 8),
         'critical_threshold' => (int) env('AGENT_TOOL_LOOP_CRITICAL', 12),
         'global_breaker' => (int) env('AGENT_TOOL_LOOP_GLOBAL', 30),
+        // Semantic loop detection: fires when the exact same tool call set repeats
+        'semantic_warn_threshold' => (int) env('AGENT_TOOL_LOOP_SEMANTIC_WARN', 3),
+        'semantic_critical_threshold' => (int) env('AGENT_TOOL_LOOP_SEMANTIC_CRITICAL', 5),
     ],
 ];

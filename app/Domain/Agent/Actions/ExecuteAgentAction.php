@@ -7,6 +7,7 @@ use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Events\AgentExecuting;
 use App\Domain\Agent\Exceptions\ToolLoopCriticalException;
+use App\Domain\Agent\Exceptions\ToolLoopSemanticException;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AgentFeedback;
@@ -252,6 +253,26 @@ class ExecuteAgentAction
                 ]);
             }
 
+            // Semantic loop detection (DeerFlow-inspired): catches agents that call the
+            // same tools with the same arguments repeatedly without making progress.
+            // Complements the step-count check above — a 4-step run can still be a
+            // semantic loop if all 4 steps are identical.
+            $semanticMaxRepeat = $response->loopAnalysis['max_repeat'] ?? 0;
+            $semanticWarn = config('agent.tool_loop.semantic_warn_threshold', 3);
+            $semanticCritical = config('agent.tool_loop.semantic_critical_threshold', 5);
+
+            if ($semanticMaxRepeat >= $semanticCritical) {
+                throw new ToolLoopSemanticException($semanticMaxRepeat, $semanticCritical, $agent->id);
+            }
+
+            if ($semanticMaxRepeat >= $semanticWarn) {
+                Log::warning('Agent semantic tool loop detected', [
+                    'agent_id' => $agent->id,
+                    'max_repeat' => $semanticMaxRepeat,
+                    'experiment_id' => $experimentId,
+                ]);
+            }
+
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
             $costCredits = $response->usage->costCredits;
 
@@ -274,7 +295,10 @@ class ExecuteAgentAction
                 'llm_steps_count' => $response->stepsCount,
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
-                'quality_details' => ['tier' => $tierConfig['tier']->value],
+                'quality_details' => array_filter([
+                    'tier' => $tierConfig['tier']->value,
+                    'semantic_loop_max_repeat' => $semanticMaxRepeat >= $semanticWarn ? $semanticMaxRepeat : null,
+                ]),
             ]);
 
             $this->runtimeStateService->recordExecution($agent, $response->usage);

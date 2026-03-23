@@ -2,6 +2,7 @@
 
 namespace App\Domain\Memory\Actions;
 
+use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Memory\Enums\WriteGateDecision;
@@ -49,6 +50,7 @@ PROMPT;
         ?MemoryVisibility $visibility = null,
         MemoryTier $tier = MemoryTier::Working,
         ?string $proposedBy = null,
+        ?MemoryCategory $category = null,
     ): array {
         if (! config('memory.enabled', true)) {
             return [];
@@ -69,7 +71,7 @@ PROMPT;
                 $memory = $this->storeChunk(
                     $teamId, $agentId, $chunk, $sourceType,
                     $projectId, $sourceId, $metadata, $confidence,
-                    $importance, $tags, $visibility, $tier, $proposedBy,
+                    $importance, $tags, $visibility, $tier, $proposedBy, $category,
                 );
 
                 if ($memory) {
@@ -103,6 +105,7 @@ PROMPT;
         MemoryVisibility $visibility,
         MemoryTier $tier = MemoryTier::Working,
         ?string $proposedBy = null,
+        ?MemoryCategory $category = null,
     ): ?Memory {
         $contentHash = hash('sha256', mb_strtolower(trim($chunk)));
         $embedding = $this->generateEmbedding($chunk);
@@ -119,7 +122,7 @@ PROMPT;
             WriteGateDecision::Add => $this->handleAdd(
                 $teamId, $agentId, $chunk, $embedding, $contentHash,
                 $sourceType, $projectId, $sourceId, $metadata,
-                $confidence, $importance, $tags, $visibility, $tier, $proposedBy,
+                $confidence, $importance, $tags, $visibility, $tier, $proposedBy, $category,
             ),
         };
     }
@@ -262,6 +265,7 @@ PROMPT;
         MemoryVisibility $visibility,
         MemoryTier $tier = MemoryTier::Working,
         ?string $proposedBy = null,
+        ?MemoryCategory $category = null,
     ): Memory {
         return Memory::create([
             'team_id' => $teamId,
@@ -278,6 +282,7 @@ PROMPT;
             'tags' => $tags,
             'visibility' => $visibility,
             'tier' => $tier,
+            'category' => $category,
             'proposed_by' => $proposedBy,
         ]);
     }
