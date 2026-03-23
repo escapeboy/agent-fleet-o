@@ -22,6 +22,9 @@ class PolicyExporter
      */
     public function export(Workflow $workflow): string
     {
+        // Eager-load nodes once to avoid N+1 queries across the extract* methods.
+        $workflow->loadMissing('nodes');
+
         $policy = [
             'apiVersion' => 'fleetq.io/v1',
             'kind' => 'WorkflowPolicy',
@@ -46,9 +49,8 @@ class PolicyExporter
      */
     private function extractApprovalGates(Workflow $workflow): array
     {
-        return $workflow->nodes()
+        return $workflow->nodes
             ->where('type', 'human_task')
-            ->get()
             ->map(fn ($node) => [
                 'node_id' => $node->id,
                 'label' => $node->label ?? 'Human Task',
@@ -80,7 +82,7 @@ class PolicyExporter
     {
         $allowedToolIds = [];
 
-        foreach ($workflow->nodes()->where('type', 'agent')->get() as $node) {
+        foreach ($workflow->nodes->where('type', 'agent') as $node) {
             $toolIds = $node->config['allowed_tool_ids'] ?? [];
             $allowedToolIds = array_merge($allowedToolIds, $toolIds);
         }

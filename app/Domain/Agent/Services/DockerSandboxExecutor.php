@@ -16,9 +16,9 @@ use Illuminate\Support\Facades\Process;
  *   --read-only     — root filesystem is immutable
  *   --tmpfs /tmp    — only writeable area besides the workspace mount
  *
- * When a $networkPolicy is provided with non-empty rules, --network bridge is used instead of
- * --network none to allow Docker default bridge connectivity. Full per-rule iptables enforcement
- * is a future iteration; the policy value is stored and the architecture is in place.
+ * Network policy rules are stored and validated but per-destination iptables enforcement is a
+ * future iteration. Until then, --network none is always used regardless of policy rules to
+ * maintain the safe-by-default posture (no outbound access).
  */
 final class DockerSandboxExecutor
 {
@@ -36,15 +36,14 @@ final class DockerSandboxExecutor
         $image = config('agent.sandbox_image', 'python:3.12-alpine');
         $workspaceRoot = $workspace->root();
 
-        // Determine network mode: default is fully isolated ("none").
-        // When the tool's network_policy has explicit rules we switch to bridge
-        // to enable Docker's default routing; per-destination iptables enforcement
-        // will be added in a subsequent iteration.
-        $hasNetworkRules = ! empty($networkPolicy['rules']);
-        $networkMode = $hasNetworkRules ? 'bridge' : 'none';
+        // Always use --network none until per-destination iptables enforcement ships.
+        // network_policy rules are stored for future use but do NOT grant bridge access yet —
+        // switching to bridge before iptables enforcement is in place would invert the
+        // security posture (no-policy = isolated, has-policy = fully open), which is worse.
+        $networkMode = 'none';
 
-        if ($hasNetworkRules) {
-            Log::warning('DockerSandboxExecutor: network policy not yet enforced at iptables level, using bridge network', [
+        if (! empty($networkPolicy['rules'])) {
+            Log::info('DockerSandboxExecutor: network_policy rules present but iptables enforcement not yet active; container stays on --network none', [
                 'rules_count' => count($networkPolicy['rules']),
                 'default_action' => $networkPolicy['default_action'] ?? 'deny',
             ]);

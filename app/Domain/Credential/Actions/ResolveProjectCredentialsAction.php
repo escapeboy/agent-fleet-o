@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Models\Project;
+use Illuminate\Support\Facades\Log;
 
 class ResolveProjectCredentialsAction
 {
@@ -74,7 +75,17 @@ class ResolveProjectCredentialsAction
             );
 
             foreach ($credential->secret_data ?? [] as $key => $value) {
-                $env[$prefix.'_'.strtoupper($key)] = (string) $value;
+                $envKey = $prefix.'_'.strtoupper($key);
+
+                if (array_key_exists($envKey, $env)) {
+                    Log::warning('ResolveProjectCredentialsAction: env var collision — two credentials produce the same key; last write wins', [
+                        'env_key' => $envKey,
+                        'agent_id' => $agent->id,
+                        'credential_id' => $credential->id,
+                    ]);
+                }
+
+                $env[$envKey] = (string) $value;
             }
         }
 

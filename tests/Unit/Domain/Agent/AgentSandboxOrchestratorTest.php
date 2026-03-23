@@ -93,7 +93,7 @@ class AgentSandboxOrchestratorTest extends TestCase
 
         $agent = new Agent;
         $agent->id = 'test-agent-id';
-        $agent->sandbox_profile = ['image' => 'alpine'];
+        $agent->sandbox_profile = ['image' => 'alpine:3.19'];
 
         $this->orchestrator->run($agent, 'printenv', ['MY_VAR' => 'my_value']);
 
@@ -102,6 +102,30 @@ class AgentSandboxOrchestratorTest extends TestCase
 
             return in_array('MY_VAR=my_value', $cmd);
         });
+    }
+
+    public function test_run_throws_for_disallowed_image(): void
+    {
+        $agent = new Agent;
+        $agent->id = 'test-agent-id';
+        $agent->sandbox_profile = ['image' => 'attacker/malicious:latest'];
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/not in the allowed image list/');
+
+        $this->orchestrator->run($agent, 'id');
+    }
+
+    public function test_run_throws_for_disallowed_network_mode(): void
+    {
+        $agent = new Agent;
+        $agent->id = 'test-agent-id';
+        $agent->sandbox_profile = ['image' => 'python:3.12-alpine', 'network' => 'host'];
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/not allowed/');
+
+        $this->orchestrator->run($agent, 'id');
     }
 
     public function test_run_truncates_stdout_at_10000_characters(): void
@@ -115,7 +139,7 @@ class AgentSandboxOrchestratorTest extends TestCase
 
         $agent = new Agent;
         $agent->id = 'test-agent-id';
-        $agent->sandbox_profile = ['image' => 'alpine'];
+        $agent->sandbox_profile = ['image' => 'alpine:3.19'];
 
         $result = $this->orchestrator->run($agent, 'cat bigfile');
 

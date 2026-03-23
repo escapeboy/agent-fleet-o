@@ -53,13 +53,18 @@ class OcsfMapper
     private static function baseClassUid(string $event): int
     {
         return match (true) {
-            str_starts_with($event, 'experiment.') => 3002,
-            str_starts_with($event, 'agent.') => 3002,
-            str_starts_with($event, 'approval.') => 3001,
-            str_starts_with($event, 'budget.') => 3006,
-            str_starts_with($event, 'credential.') => 3001,
-            str_starts_with($event, 'bash.') => 1001,
-            str_starts_with($event, 'browser.') => 4002,
+            str_starts_with($event, 'experiment.') => 3002,  // API Activity
+            str_starts_with($event, 'agent.') => 3002,       // API Activity
+            str_starts_with($event, 'approval.') => 3001,    // Account Change
+            str_starts_with($event, 'budget.') => 3006,      // Financial Activity
+            str_starts_with($event, 'credential.') => 3001,  // Account Change
+            str_starts_with($event, 'bash.') => 1001,        // Process Activity
+            str_starts_with($event, 'browser.') => 4002,     // HTTP Activity
+            str_starts_with($event, 'human_task.') => 3001,  // Account Change (workflow state)
+            str_starts_with($event, 'user.') => 2001,        // Authentication
+            str_starts_with($event, 'clarification.') => 3002,
+            str_starts_with($event, 'feedback.') => 3002,
+            $event === 'signal_webhook_secret_rotated' => 3001, // Account Change (secret rotation)
             default => 3002,
         };
     }
@@ -77,6 +82,12 @@ class OcsfMapper
             str_starts_with($event, 'credential.') => 3,
             str_starts_with($event, 'bash.') => 2,
             str_starts_with($event, 'browser.') => 1,
+            str_starts_with($event, 'human_task.') => 2,
+            str_starts_with($event, 'user.') => 3,            // user events are medium by default
+            $event === 'user.tokens_revoked' => 4,            // token revocation is high
+            $event === 'signal_webhook_secret_rotated' => 3,  // secret rotation is medium
+            str_starts_with($event, 'clarification.') => 1,
+            str_starts_with($event, 'feedback.') => 1,
             default => 1,
         };
     }
