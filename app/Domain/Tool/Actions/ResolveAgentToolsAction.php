@@ -6,11 +6,13 @@ use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Services\SandboxedWorkspace;
+use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Tools\GitRepositoryToolBuilder;
 use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Models\Project;
+use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
@@ -33,6 +35,7 @@ class ResolveAgentToolsAction
         private readonly ToolTranslator $translator,
         private readonly GitRepositoryToolBuilder $gitToolBuilder,
         private readonly SemanticToolSelector $semanticSelector,
+        private readonly ResolveProjectCredentialsAction $resolveCredentials,
     ) {}
 
     /**
@@ -136,6 +139,18 @@ class ResolveAgentToolsAction
                         $config['env'] = array_merge($config['env'] ?? [], [$envKey => $secretValue]);
                         $tool->transport_config = $config;
                     }
+                }
+            }
+
+            // For bash built-in tools: inject all agent credentials as CRED_* env vars
+            // so scripts can authenticate with external services without the LLM seeing secret values.
+            if ($tool->isBuiltIn() && BuiltInToolKind::tryFrom($tool->transport_config['kind'] ?? 'bash') === BuiltInToolKind::Bash) {
+                $credentialEnv = $this->resolveCredentials->resolveAsEnvMap($agent->id);
+                if (! empty($credentialEnv)) {
+                    $tool = clone $tool;
+                    $tool->transport_config = array_merge($tool->transport_config ?? [], [
+                        'env' => array_merge($tool->transport_config['env'] ?? [], $credentialEnv),
+                    ]);
                 }
             }
 

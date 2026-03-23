@@ -192,6 +192,8 @@ class ToolTranslator
         $allowedPaths = $config['allowed_paths'] ?? ['/tmp/agent-workspace'];
         $timeout = $tool->settings['timeout'] ?? 30;
         $maxOutputChars = 10000;
+        // Credential env vars injected by ResolveAgentToolsAction (from agent's tool credentials)
+        $credentialEnv = $config['env'] ?? [];
 
         $pathDescription = $workspace ? 'sandbox workspace' : implode(', ', $allowedPaths);
         $commandDescription = implode(', ', $allowedCommands);
@@ -201,7 +203,7 @@ class ToolTranslator
                 ->for("Execute a shell command. Allowed commands: {$commandDescription}. Working directory restricted to: {$pathDescription}")
                 ->withStringParameter('command', 'The shell command to execute')
                 ->withStringParameter('working_directory', 'Working directory relative to sandbox root (sandbox mode) or absolute path', required: false)
-                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy, $workspace, $tool): string {
+                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy, $workspace, $tool, $credentialEnv): string {
                     // just-bash sidecar mode: route through the Node.js bash-sidecar container
                     if ($workspace && config('agent.bash_sandbox_mode') === 'just_bash') {
                         // Execution-time plan check: allows cloud to block on plan downgrade.
@@ -268,7 +270,7 @@ class ToolTranslator
                     // Docker sandbox mode: run in isolated container
                     if ($workspace && config('agent.bash_sandbox_mode') === 'docker') {
                         $executor = app(DockerSandboxExecutor::class);
-                        $result = $executor->execute($command, $workspace, $timeout);
+                        $result = $executor->execute($command, $workspace, $timeout, $credentialEnv ?: null);
 
                         return $result['stdout'] ?: $result['stderr'] ?: "(exit {$result['exit_code']})";
                     }
@@ -279,15 +281,18 @@ class ToolTranslator
                             ? $workspace->resolve($working_directory)
                             : $workspace->root();
 
-                        return $this->executeBashCommand($command, $cwd, $allowedCommands, [$workspace->root()], $timeout, $maxOutputChars, orgSecurityPolicy: $orgPolicy);
+                        return $this->executeBashCommand($command, $cwd, $allowedCommands, [$workspace->root()], $timeout, $maxOutputChars, orgSecurityPolicy: $orgPolicy, credentialEnv: $credentialEnv ?: null);
                     }
 
                     // Legacy mode: use configured allowed paths
-                    return $this->executeBashCommand($command, $working_directory, $allowedCommands, $allowedPaths, $timeout, $maxOutputChars, orgSecurityPolicy: $orgPolicy);
+                    return $this->executeBashCommand($command, $working_directory, $allowedCommands, $allowedPaths, $timeout, $maxOutputChars, orgSecurityPolicy: $orgPolicy, credentialEnv: $credentialEnv ?: null);
                 }),
         ];
     }
 
+    /**
+     * @param  array<string, string>|null  $credentialEnv  Credential env vars to inject into process
+     */
     private function executeBashCommand(
         string $command,
         ?string $workingDirectory,
@@ -298,6 +303,7 @@ class ToolTranslator
         ?array $projectCommandPolicy = null,
         ?array $agentCommandPolicy = null,
         ?array $orgSecurityPolicy = null,
+        ?array $credentialEnv = null,
     ): string {
         $cwd = $workingDirectory ?? $allowedPaths[0] ?? '/tmp';
 
@@ -327,7 +333,13 @@ class ToolTranslator
             @mkdir($cwd, 0755, true);
         }
 
-        $result = Process::timeout($timeout)->path($cwd)->run($command);
+        $process = Process::timeout($timeout)->path($cwd);
+
+        if (! empty($credentialEnv)) {
+            $process = $process->env($credentialEnv);
+        }
+
+        $result = $process->run($command);
 
         if ($result->successful()) {
             $output = $result->output();

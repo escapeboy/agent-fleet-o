@@ -2,11 +2,9 @@
 
 namespace App\Infrastructure\AI\Gateways;
 
-use App\Domain\Agent\Models\Agent;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Services\BridgeRouter;
-use App\Domain\Credential\Enums\CredentialStatus;
-use App\Domain\Credential\Models\Credential;
+use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -238,7 +236,7 @@ class LocalBridgeGateway implements AiGatewayInterface
                     ->map(fn (string $k) => "- `\${$k}`")
                     ->implode("\n");
                 $payload['system_prompt'] .= "\n\n## Credentials (Environment Variables)\n"
-                    ."The following credentials are injected into your environment as env vars. "
+                    .'The following credentials are injected into your environment as env vars. '
                     ."Access them via bash (e.g. `echo \$CRED_...`). Do NOT try to call any API to fetch credentials.\n\n"
                     .$envVarList;
             }
@@ -278,8 +276,8 @@ class LocalBridgeGateway implements AiGatewayInterface
     /**
      * Resolve credentials from the agent's attached tools and flatten into env vars.
      *
-     * Produces: CRED_{UPPER_NAME}_{KEY} = value
-     * e.g. CRED_REDDIT_CIVIL_COYOTE8676_USERNAME = "price..."
+     * Delegates to ResolveProjectCredentialsAction::resolveAsEnvMap() so the logic
+     * is shared with non-bridge bash tool execution.
      *
      * @return array<string, string>
      */
@@ -289,39 +287,7 @@ class LocalBridgeGateway implements AiGatewayInterface
             return [];
         }
 
-        $agent = Agent::withoutGlobalScopes()->find($agentId);
-        if (! $agent) {
-            return [];
-        }
-
-        // Collect credential IDs from agent's tools
-        $credentialIds = $agent->tools()
-            ->whereNotNull('credential_id')
-            ->pluck('credential_id')
-            ->unique()
-            ->toArray();
-
-        if (empty($credentialIds)) {
-            return [];
-        }
-
-        $env = [];
-        $credentials = Credential::withoutGlobalScopes()
-            ->whereIn('id', $credentialIds)
-            ->where('status', CredentialStatus::Active)
-            ->get();
-
-        foreach ($credentials as $credential) {
-            $prefix = 'CRED_'.strtoupper(
-                preg_replace('/[^A-Za-z0-9]+/', '_', $credential->name),
-            );
-
-            foreach ($credential->secret_data ?? [] as $key => $value) {
-                $env[$prefix.'_'.strtoupper($key)] = (string) $value;
-            }
-        }
-
-        return $env;
+        return app(ResolveProjectCredentialsAction::class)->resolveAsEnvMap($agentId);
     }
 
     /**

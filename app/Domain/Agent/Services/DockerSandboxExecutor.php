@@ -17,15 +17,19 @@ use Illuminate\Support\Facades\Process;
  */
 final class DockerSandboxExecutor
 {
+    /**
+     * @param  array<string, string>|null  $env  Environment variables to inject into the container
+     */
     public function execute(
         string $command,
         SandboxedWorkspace $workspace,
         int $timeoutSeconds = 30,
+        ?array $env = null,
     ): array {
         $image = config('agent.sandbox_image', 'python:3.12-alpine');
         $workspaceRoot = $workspace->root();
 
-        $result = Process::timeout($timeoutSeconds)->run([
+        $dockerArgs = [
             'docker', 'run', '--rm',
             '--network', 'none',
             '--memory', '256m',
@@ -34,9 +38,16 @@ final class DockerSandboxExecutor
             '--tmpfs', '/tmp:rw,size=64m',
             '-v', "{$workspaceRoot}:/workspace:rw",
             '--workdir', '/workspace',
-            $image,
-            'sh', '-c', $command,
-        ]);
+        ];
+
+        foreach ($env ?? [] as $key => $value) {
+            $dockerArgs[] = '--env';
+            $dockerArgs[] = "{$key}={$value}";
+        }
+
+        $dockerArgs = array_merge($dockerArgs, [$image, 'sh', '-c', $command]);
+
+        $result = Process::timeout($timeoutSeconds)->run($dockerArgs);
 
         return [
             'exit_code' => $result->exitCode(),
