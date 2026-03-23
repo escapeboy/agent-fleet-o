@@ -4,6 +4,7 @@ namespace App\Domain\Memory\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -42,12 +43,19 @@ Return ONLY valid JSON (no markdown fences):
     {
       "fact": "concise, durable statement",
       "confidence": 0.85,
+      "category": "knowledge",
       "tags": ["capability"]
     }
   ]
 }
 
 Confidence: 0.0 = speculative, 1.0 = clearly demonstrated.
+Category must be exactly one of: preference, knowledge, context, behavior, goal
+  - preference: user/team style choices, format preferences
+  - knowledge: facts, domain knowledge, learned information
+  - context: situational context, recent events, current state
+  - behavior: working patterns, process preferences, habits
+  - goal: objectives, targets, desired outcomes
 Tags must be one or more of: capability, constraint, preference, pattern, domain, tooling
 PROMPT;
 
@@ -114,6 +122,8 @@ PROMPT;
                 $fact = trim($item['fact'] ?? '');
                 $confidence = (float) ($item['confidence'] ?? 0.0);
                 $tags = array_values(array_filter((array) ($item['tags'] ?? []), 'is_string'));
+                $categoryValue = $item['category'] ?? null;
+                $category = $categoryValue ? MemoryCategory::tryFrom($categoryValue) : null;
 
                 if ($fact === '' || $confidence < self::MIN_CONFIDENCE) {
                     continue;
@@ -131,6 +141,7 @@ PROMPT;
                     tags: $tags,
                     tier: MemoryTier::Proposed,
                     proposedBy: "agent:{$agentId}",
+                    category: $category,
                 );
 
                 $stored++;

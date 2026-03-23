@@ -28,6 +28,8 @@ class MemoryListRecentTool extends Tool
             'limit' => $schema->integer()
                 ->description('Max results to return (default 10, max 100)')
                 ->default(10),
+            'category' => $schema->string()
+                ->description('Filter by memory category: preference, knowledge, context, behavior, goal'),
         ];
     }
 
@@ -48,6 +50,10 @@ class MemoryListRecentTool extends Tool
             $query->where('source_type', $sourceType);
         }
 
+        if ($category = $request->get('category')) {
+            $query->where('category', $category);
+        }
+
         $limit = min((int) ($request->get('limit', 10)), 100);
 
         $memories = $query->limit($limit)->get();
@@ -59,6 +65,7 @@ class MemoryListRecentTool extends Tool
                 'agent' => $m->agent?->name,
                 'project' => $m->project?->title,
                 'source_type' => $m->source_type,
+                'category' => $m->category?->value,
                 'content' => mb_substr($m->content, 0, 300),
                 'created' => $m->created_at?->diffForHumans(),
             ])->toArray(),
