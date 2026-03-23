@@ -6,6 +6,7 @@ use App\Domain\Outbound\Connectors\DummyConnector;
 use App\Domain\Outbound\Connectors\NotificationConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
+use App\Domain\Outbound\Connectors\WhatsAppConnector;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use Illuminate\Support\Manager;
 
@@ -39,6 +40,11 @@ class OutboundConnectorManager extends Manager
     protected function createNotificationDriver(): OutboundConnectorInterface
     {
         return $this->container->make(NotificationConnector::class);
+    }
+
+    protected function createWhatsappDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(WhatsAppConnector::class);
     }
 
     protected function createDummyDriver(): OutboundConnectorInterface

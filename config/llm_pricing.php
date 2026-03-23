@@ -112,6 +112,33 @@ return [
         'litellm_proxy' => [],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Context Window Sizes (tokens)
+    |--------------------------------------------------------------------------
+    | Used by ContextHealthService to compute what fraction of a model's
+    | context window an experiment has consumed across all its LLM calls.
+    | Falls back to 200_000 for unknown models.
+    */
+    'context_windows' => [
+        // Anthropic
+        'claude-sonnet-4-5-20250929' => 200_000,
+        'claude-haiku-4-5-20251001' => 200_000,
+        'claude-opus-4-6' => 200_000,
+        // OpenAI
+        'gpt-4o' => 128_000,
+        'gpt-4o-mini' => 128_000,
+        // Google
+        'gemini-2.5-flash' => 1_048_576,
+        'gemini-2.5-pro' => 1_048_576,
+        // Groq (various Llama models)
+        'llama-3.3-70b-versatile' => 128_000,
+        'llama-3.1-8b-instant' => 128_000,
+        // Mistral
+        'mistral-large-latest' => 128_000,
+        'mistral-small-latest' => 32_000,
+    ],
+
     // Default estimation multiplier for budget reservation
     // Reserve 1.5x the estimated cost to account for retries
     'reservation_multiplier' => 1.5,

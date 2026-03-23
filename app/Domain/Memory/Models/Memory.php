@@ -3,6 +3,7 @@
 namespace App\Domain\Memory\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -31,6 +32,8 @@ class Memory extends Model
         'visibility',
         'content_hash',
         'tags',
+        'tier',
+        'proposed_by',
     ];
 
     protected function casts(): array
@@ -43,6 +46,7 @@ class Memory extends Model
             'last_accessed_at' => 'datetime',
             'retrieval_count' => 'integer',
             'visibility' => MemoryVisibility::class,
+            'tier' => MemoryTier::class,
         ];
     }
 

@@ -6,6 +6,9 @@
         sending: false,
         messageQueue: [],
         userScrolled: false,
+        graceMessage: null,
+        graceSecondsLeft: 3,
+        graceTimers: [],
         panelWidth: parseInt(localStorage.getItem('assistant-panel-width')) || 420,
         resizing: false,
         init() {
@@ -131,7 +134,34 @@
                 return;
             }
 
-            await this._dispatch(text);
+            // If another grace window is active, clear it and start a new one
+            if (this.graceMessage !== null) {
+                this.cancelGrace();
+            }
+
+            // Start grace window — user has 3 seconds to cancel before dispatch
+            this.graceMessage = text;
+            this.graceSecondsLeft = 3;
+
+            const countdown = setInterval(() => {
+                if (this.graceSecondsLeft > 0) this.graceSecondsLeft--;
+            }, 1000);
+
+            const dispatch = setTimeout(async () => {
+                clearInterval(countdown);
+                const msg = this.graceMessage;
+                this.graceMessage = null;
+                this.graceTimers = [];
+                if (msg) await this._dispatch(msg);
+            }, 3000);
+
+            this.graceTimers = [countdown, dispatch];
+        },
+        cancelGrace() {
+            this.graceTimers.forEach(t => clearTimeout(t));
+            this.graceTimers = [];
+            this.graceMessage = null;
+            this.graceSecondsLeft = 3;
         },
         async _dispatch(text) {
             this.sending = true;
@@ -232,7 +262,7 @@
                 {{-- New Conversation --}}
                 <button
                     wire:click="newConversation"
-                    x-on:click="pendingMessage = null; sending = false"
+                    x-on:click="pendingMessage = null; sending = false; cancelGrace()"
                     class="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                     title="New Conversation"
                 >
@@ -305,6 +335,25 @@
             @endif
 
             {{-- Server-side messages --}}
+            {{-- Grace window: pending user message with countdown and cancel --}}
+            <template x-if="graceMessage !== null">
+                <div class="flex justify-end">
+                    <div class="max-w-[85%]">
+                        <div class="rounded-2xl rounded-br-md bg-indigo-400 px-4 py-2.5 text-white opacity-75">
+                            <p class="text-sm whitespace-pre-wrap" x-text="graceMessage"></p>
+                        </div>
+                        <div class="mt-1 flex items-center justify-end gap-2">
+                            <span class="text-[11px] text-gray-400" x-text="'Sending in ' + graceSecondsLeft + 's…'"></span>
+                            <button
+                                type="button"
+                                x-on:click="cancelGrace()"
+                                class="text-[11px] font-medium text-red-500 hover:text-red-700"
+                            >Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
             @foreach($messages as $msg)
                 @if($msg['role'] === 'assistant' && ($msg['pending'] ?? false))
                     {{-- Thinking bubble — replaced by pollPendingMessage when job completes --}}

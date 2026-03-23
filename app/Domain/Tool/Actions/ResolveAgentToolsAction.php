@@ -39,9 +39,12 @@ class ResolveAgentToolsAction
      * Resolve all PrismPHP Tool objects available for an agent execution.
      *
      * @param  int  $agentToolDepth  Current nesting depth for agent-as-tool calls
+     * @param  string[]|null  $allowedToolIds  Crew-member-level tool allowlist (BroodMind worker permissions).
+     *                                         When non-empty, only tools whose IDs are in this list are included,
+     *                                         after project-level restrictions have been applied.
      * @return array<\Prism\Prism\Tool>
      */
-    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null, int $agentToolDepth = 0, ?string $userId = null, ?string $semanticQuery = null): array
+    public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null, int $agentToolDepth = 0, ?string $userId = null, ?string $semanticQuery = null, ?array $allowedToolIds = null): array
     {
         $workspace = ($executionId && $agent->team_id)
             ? new SandboxedWorkspace($executionId, $agent->id, $agent->team_id)
@@ -59,6 +62,14 @@ class ResolveAgentToolsAction
         if ($project && ! empty($project->allowed_tool_ids)) {
             $agentTools = $agentTools->filter(
                 fn (Tool $tool) => in_array($tool->id, $project->allowed_tool_ids),
+            );
+        }
+
+        // Apply crew-member-level restrictions (BroodMind worker permission template).
+        // null = no restriction (all tools allowed); [] = zero tools permitted.
+        if ($allowedToolIds !== null) {
+            $agentTools = $agentTools->filter(
+                fn (Tool $tool) => in_array($tool->id, $allowedToolIds),
             );
         }
 
@@ -340,7 +351,7 @@ class ResolveAgentToolsAction
                         return is_string($output) ? $output : json_encode($output);
                     } catch (\Throwable $e) {
                         Log::warning('Agent-as-tool execution failed', [
-                            'parent_agent' => $teamId,
+                            'parent_agent_id' => $parentAgent->id,
                             'callable_agent_id' => $agentId,
                             'error' => $e->getMessage(),
                         ]);

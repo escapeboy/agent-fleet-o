@@ -54,5 +54,8 @@ Schedule::command('scramble:export --path=public/api.json')->weeklyOn(1, '03:30'
 
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
 
+// Agent heartbeats — evaluate scheduled autonomous tasks every minute
+Schedule::command('agents:heartbeats')->everyMinute()->withoutOverlapping(1);
+
 // Refresh webhooks with expiring TTLs (e.g. Jira Cloud 30-day webhook expiry)
 Schedule::job(new RefreshExpiringWebhooksJob)->weekly();

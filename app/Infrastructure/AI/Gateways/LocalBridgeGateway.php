@@ -2,8 +2,11 @@
 
 namespace App\Infrastructure\AI\Gateways;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Services\BridgeRouter;
+use App\Domain\Credential\Enums\CredentialStatus;
+use App\Domain\Credential\Models\Credential;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -21,7 +24,7 @@ use Sentry\State\Scope;
 
 class LocalBridgeGateway implements AiGatewayInterface
 {
-    private const RELAY_TIMEOUT = 90;
+    private const RELAY_TIMEOUT = 600;
 
     public function __construct(
         private readonly BridgeRequestRegistry $registry,
@@ -212,18 +215,38 @@ class LocalBridgeGateway implements AiGatewayInterface
             $agentKey = $parts[0];
             $agentModel = $parts[1] ?? '';
 
+            $payload = [
+                'request_id' => $requestId,
+                'agent_key' => $agentKey,
+                'model' => $agentModel, // passed as --model to the agent CLI
+                'prompt' => $request->userPrompt ?? '',
+                'system_prompt' => $request->systemPrompt ?? '',
+                'purpose' => $request->purpose ?? '',
+                'stream' => true,
+            ];
+
+            // Inject credentials as env vars so the bridge agent can authenticate
+            // with external services (Reddit, APIs, etc.) via curl/bash.
+            $env = $this->resolveAgentCredentialEnv($request->agentId);
+            if (! empty($env)) {
+                $payload['env'] = $env;
+
+                // Append env var reference to system prompt so the agent knows
+                // credentials are available in its environment, not via API callbacks.
+                $envVarList = collect($env)
+                    ->keys()
+                    ->map(fn (string $k) => "- `\${$k}`")
+                    ->implode("\n");
+                $payload['system_prompt'] .= "\n\n## Credentials (Environment Variables)\n"
+                    ."The following credentials are injected into your environment as env vars. "
+                    ."Access them via bash (e.g. `echo \$CRED_...`). Do NOT try to call any API to fetch credentials.\n\n"
+                    .$envVarList;
+            }
+
             return [
                 'request_id' => $requestId,
                 'frame_type' => 0x0010,
-                'payload' => [
-                    'request_id' => $requestId,
-                    'agent_key' => $agentKey,
-                    'model' => $agentModel, // passed as --model to the agent CLI
-                    'prompt' => $request->userPrompt ?? '',
-                    'system_prompt' => $request->systemPrompt ?? '',
-                    'purpose' => $request->purpose ?? '',
-                    'stream' => true,
-                ],
+                'payload' => $payload,
             ];
         }
 
@@ -250,6 +273,55 @@ class LocalBridgeGateway implements AiGatewayInterface
                 'stream' => true,
             ],
         ];
+    }
+
+    /**
+     * Resolve credentials from the agent's attached tools and flatten into env vars.
+     *
+     * Produces: CRED_{UPPER_NAME}_{KEY} = value
+     * e.g. CRED_REDDIT_CIVIL_COYOTE8676_USERNAME = "price..."
+     *
+     * @return array<string, string>
+     */
+    private function resolveAgentCredentialEnv(?string $agentId): array
+    {
+        if (! $agentId) {
+            return [];
+        }
+
+        $agent = Agent::withoutGlobalScopes()->find($agentId);
+        if (! $agent) {
+            return [];
+        }
+
+        // Collect credential IDs from agent's tools
+        $credentialIds = $agent->tools()
+            ->whereNotNull('credential_id')
+            ->pluck('credential_id')
+            ->unique()
+            ->toArray();
+
+        if (empty($credentialIds)) {
+            return [];
+        }
+
+        $env = [];
+        $credentials = Credential::withoutGlobalScopes()
+            ->whereIn('id', $credentialIds)
+            ->where('status', CredentialStatus::Active)
+            ->get();
+
+        foreach ($credentials as $credential) {
+            $prefix = 'CRED_'.strtoupper(
+                preg_replace('/[^A-Za-z0-9]+/', '_', $credential->name),
+            );
+
+            foreach ($credential->secret_data ?? [] as $key => $value) {
+                $env[$prefix.'_'.strtoupper($key)] = (string) $value;
+            }
+        }
+
+        return $env;
     }
 
     /**

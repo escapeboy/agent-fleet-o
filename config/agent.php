@@ -130,4 +130,20 @@ return [
     | Prevents infinite loops in agent-to-agent delegation chains.
     */
     'max_agent_tool_depth' => (int) env('AGENT_MAX_TOOL_DEPTH', 3),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tool Loop Circuit Breaker Thresholds
+    |--------------------------------------------------------------------------
+    | Warning  — log a warning when an agent uses this many LLM steps.
+    | Critical — throw ToolLoopCriticalException and fail the execution.
+    | Global   — rolling 1-hour per-team step count that pauses all agents.
+    |
+    | Inspired by BroodMind's BROODMIND_TOOL_LOOP_* env vars.
+    */
+    'tool_loop' => [
+        'warning_threshold' => (int) env('AGENT_TOOL_LOOP_WARNING', 8),
+        'critical_threshold' => (int) env('AGENT_TOOL_LOOP_CRITICAL', 12),
+        'global_breaker' => (int) env('AGENT_TOOL_LOOP_GLOBAL', 30),
+    ],
 ];

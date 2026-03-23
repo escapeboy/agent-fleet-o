@@ -15,6 +15,7 @@ use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
+use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
@@ -304,6 +305,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Memory: extract learnings from completed experiments
         Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);
+
+        // Memory: extract failure lesson when experiment enters a failed state
+        Event::listen(ExperimentTransitioned::class, ExtractFailureLessonListener::class);
 
         // Chatbot: capture operator corrections as learning entries
         Event::listen(ChatbotResponseApprovedEvent::class, CaptureResponseCorrectionListener::class);

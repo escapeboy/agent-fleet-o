@@ -4,6 +4,7 @@ namespace App\Domain\Memory\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -128,6 +129,8 @@ PROMPT;
                     metadata: ['extracted_at' => now()->toIso8601String()],
                     confidence: $confidence,
                     tags: $tags,
+                    tier: MemoryTier::Proposed,
+                    proposedBy: "agent:{$agentId}",
                 );
 
                 $stored++;

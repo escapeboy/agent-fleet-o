@@ -121,6 +121,12 @@ class BridgeRequestRegistry
                 return ['chunk' => '', 'done' => true, 'usage' => null];
             }
 
+            // Only output and result carry meaningful text; progress is keepalive-only.
+            $kind = $payload['kind'] ?? 'output';
+            if ($kind === 'progress') {
+                return ['chunk' => '', 'done' => $done, 'usage' => null];
+            }
+
             return ['chunk' => $this->stripAnsi($payload['text'] ?? ''), 'done' => $done, 'usage' => null];
         }
 

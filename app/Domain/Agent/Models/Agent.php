@@ -73,6 +73,7 @@ class Agent extends Model
         'risk_profile',
         'risk_profile_updated_at',
         'meta',
+        'heartbeat_definition',
     ];
 
     protected function casts(): array
@@ -95,6 +96,7 @@ class Agent extends Model
             'risk_score' => 'decimal:2',
             'risk_profile' => 'array',
             'risk_profile_updated_at' => 'datetime',
+            'heartbeat_definition' => 'array',
         ];
     }
 

@@ -6,6 +6,7 @@ use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Crew\Services\CrewOrchestrator;
 use App\Jobs\Middleware\CheckBudgetAvailable;
@@ -93,11 +94,18 @@ class ExecuteCrewTaskJob implements ShouldQueue
                     .'. Please address the feedback from the previous attempt.';
             }
 
+            // Resolve BroodMind-style worker permission allowlist from this agent's CrewMember config
+            $crewMember = CrewMember::where('crew_id', $execution->crew_id)
+                ->where('agent_id', $agent->id)
+                ->first();
+            $allowedToolIds = $crewMember ? $crewMember->allowedToolIds() : null;
+
             $result = $executeAgent->execute(
                 agent: $agent,
                 input: $input,
                 teamId: $execution->team_id,
                 userId: $execution->crew?->user_id ?? $execution->team_id,
+                allowedToolIds: ! empty($allowedToolIds) ? $allowedToolIds : null,
             );
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);

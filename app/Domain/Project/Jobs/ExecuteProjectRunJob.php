@@ -27,6 +27,16 @@ class ExecuteProjectRunJob implements ShouldQueue
 
     public function handle(TriggerProjectRunAction $triggerAction): void
     {
+        // Guard: projectId must be a valid UUID, not a serialized model or JSON blob
+        if (! preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $this->projectId)) {
+            Log::error('ExecuteProjectRunJob: projectId is not a valid UUID — job was dispatched with wrong argument', [
+                'projectId_preview' => mb_substr($this->projectId, 0, 100),
+                'trigger' => $this->trigger,
+            ]);
+
+            return;
+        }
+
         $project = Project::withoutGlobalScopes()->find($this->projectId);
 
         if (! $project) {
