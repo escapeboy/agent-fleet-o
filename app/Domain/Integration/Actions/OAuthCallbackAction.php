@@ -172,6 +172,29 @@ class OAuthCallbackAction
             }
         }
 
+        // LinkedIn: fetch userinfo to get the member's URN (sub field = LinkedIn member ID).
+        // person_urn is required for all author-based API calls (posts, comments).
+        if ($driver === 'linkedin') {
+            try {
+                $userinfo = Http::withToken($credentials['access_token'])
+                    ->timeout(10)
+                    ->get('https://api.linkedin.com/v2/userinfo')
+                    ->json();
+
+                if (! empty($userinfo['sub'])) {
+                    $credentials['person_urn'] = 'urn:li:person:'.$userinfo['sub'];
+                }
+                if (! empty($userinfo['name'])) {
+                    $credentials['name'] = (string) $userinfo['name'];
+                }
+                if (! empty($userinfo['email'])) {
+                    $credentials['email'] = (string) $userinfo['email'];
+                }
+            } catch (\Throwable $e) {
+                Log::warning('OAuthCallbackAction: could not fetch LinkedIn userinfo', ['error' => $e->getMessage()]);
+            }
+        }
+
         // Jira: resolve the Atlassian cloudId from the accessible-resources endpoint.
         // cloudId is required for all Jira Cloud API calls and webhook registration.
         if ($driver === 'jira') {

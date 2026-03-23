@@ -14,6 +14,7 @@ use App\Domain\Integration\Drivers\HubSpot\HubSpotIntegrationDriver;
 use App\Domain\Integration\Drivers\Jira\JiraIntegrationDriver;
 use App\Domain\Integration\Drivers\Klaviyo\KlaviyoIntegrationDriver;
 use App\Domain\Integration\Drivers\Linear\LinearIntegrationDriver;
+use App\Domain\Integration\Drivers\LinkedIn\LinkedInIntegrationDriver;
 use App\Domain\Integration\Drivers\Mailchimp\MailchimpIntegrationDriver;
 use App\Domain\Integration\Drivers\Make\MakeIntegrationDriver;
 use App\Domain\Integration\Drivers\Notion\NotionIntegrationDriver;
@@ -165,5 +166,10 @@ class IntegrationManager extends Manager
     public function createSupabaseDriver(): IntegrationDriverInterface
     {
         return $this->container->make(SupabaseIntegrationDriver::class);
+    }
+
+    public function createLinkedinDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(LinkedInIntegrationDriver::class);
     }
 }

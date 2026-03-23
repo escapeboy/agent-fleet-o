@@ -5,7 +5,9 @@ namespace App\Domain\Integration\Models;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Database\Factories\Domain\Integration\IntegrationFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,7 +15,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Integration extends Model
 {
-    use BelongsToTeam, HasUuids, SoftDeletes;
+    use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
+
+    protected static function newFactory(): IntegrationFactory
+    {
+        return IntegrationFactory::new();
+    }
 
     protected $fillable = [
         'team_id',
