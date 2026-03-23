@@ -13,12 +13,14 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use Closure;
+use Illuminate\Support\Collection;
 use Prism\Prism\Enums\Provider;
 use Prism\Prism\Enums\ToolChoice;
 use Prism\Prism\Exceptions\PrismException;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Streaming\Events\StreamEndEvent;
 use Prism\Prism\Streaming\Events\TextDeltaEvent;
+use Prism\Prism\ValueObjects\Messages\AssistantMessage;
 use RuntimeException;
 
 class PrismAiGateway implements AiGatewayInterface
@@ -247,6 +249,13 @@ class PrismAiGateway implements AiGatewayInterface
             }
         }
 
+        // Analyse tool call sequences for semantic repetition (DeerFlow-inspired).
+        // Detects when the agent calls the same set of tools with the same arguments
+        // across multiple steps — a sign it's stuck in a loop rather than making progress.
+        $loopAnalysis = $request->hasTools() && $response->steps->count() > 2
+            ? $this->analyseToolCallRepetition($response->steps)
+            : null;
+
         // Some OpenRouter/OpenAI-compatible models wrap plain text in {"text": "..."}
         // when they detect tool schemas in the prompt. Unwrap to get clean content.
         $text = $response->text;
@@ -290,7 +299,51 @@ class PrismAiGateway implements AiGatewayInterface
             toolCallsCount: $toolCallsCount,
             stepsCount: $stepsCount,
             reasoningChain: $reasoningChain,
+            loopAnalysis: $loopAnalysis,
         );
+    }
+
+    /**
+     * Detect repeated identical tool call sequences across steps.
+     *
+     * Each step's tool calls are serialised (sorted name+args) and hashed with MD5.
+     * Returns the maximum repeat count for any single hash and the full distribution.
+     *
+     * @param  Collection<int, AssistantMessage>  $steps
+     * @return array{max_repeat: int, distribution: array<string, int>}
+     */
+    private function analyseToolCallRepetition(Collection $steps): array
+    {
+        $hashCounts = [];
+
+        foreach ($steps as $step) {
+            if (empty($step->toolCalls)) {
+                continue;
+            }
+
+            $calls = collect($step->toolCalls)
+                ->map(function ($tc) {
+                    $args = $tc->arguments();
+                    ksort($args);
+
+                    return $tc->name.':'.json_encode($args);
+                })
+                ->sort()
+                ->values()
+                ->implode('|');
+
+            $hash = md5($calls);
+            $hashCounts[$hash] = ($hashCounts[$hash] ?? 0) + 1;
+        }
+
+        if (empty($hashCounts)) {
+            return ['max_repeat' => 0, 'distribution' => []];
+        }
+
+        return [
+            'max_repeat' => max($hashCounts),
+            'distribution' => $hashCounts,
+        ];
     }
 
     /**
