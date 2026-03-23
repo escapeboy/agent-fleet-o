@@ -1,17 +1,21 @@
 // FleetQ Service Worker — Workbox-powered caching + Web Push Notifications
 // This file is the source compiled by vite-plugin-pwa with InjectManifest strategy.
 // Workbox injects the precache manifest at build time replacing self.__WB_MANIFEST.
-// SW_VERSION: 2 (bumped to force cache refresh after pwa-features fix)
+// SW_VERSION: 3 (add skipWaiting so new SW activates immediately)
 
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { NetworkFirst, CacheFirst, NetworkOnly } from 'workbox-strategies';
-import { clientsClaim } from 'workbox-core';
+import { clientsClaim, skipWaiting } from 'workbox-core';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { BackgroundSyncPlugin } from 'workbox-background-sync';
 
-// Take control of all clients as soon as the SW activates (safe — runs after skipWaiting)
+// Skip waiting phase — new SW activates immediately without waiting for tabs to close.
+// Combined with clientsClaim() all open tabs switch to the new SW instantly.
+skipWaiting();
+
+// Take control of all clients as soon as the SW activates
 clientsClaim();
 
 // Clean up precaches from older SW versions
