@@ -325,8 +325,13 @@ class PrismAiGateway implements AiGatewayInterface
                 ->map(function ($tc) {
                     $args = $tc->arguments();
                     ksort($args);
+                    $encoded = json_encode($args);
+                    // Bound per-call serialization to prevent DoS via oversized payloads
+                    if (strlen($encoded) > 4096) {
+                        $encoded = substr($encoded, 0, 4096);
+                    }
 
-                    return $tc->name.':'.json_encode($args);
+                    return $tc->name.':'.$encoded;
                 })
                 ->sort()
                 ->values()

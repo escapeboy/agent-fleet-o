@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Memory;
 
+use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Models\Memory;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -58,8 +59,11 @@ class MemorySearchTool extends Tool
             $query->where('confidence', '>=', $minConfidence);
         }
 
-        if ($category = $request->get('category')) {
-            $query->where('category', $category);
+        if ($categoryValue = $request->get('category')) {
+            $category = MemoryCategory::tryFrom($categoryValue);
+            if ($category !== null) {
+                $query->where('category', $category->value);
+            }
         }
 
         $limit = min((int) ($request->get('limit', 10)), 100);
