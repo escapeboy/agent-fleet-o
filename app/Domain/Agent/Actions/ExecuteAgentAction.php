@@ -65,6 +65,9 @@ class ExecuteAgentAction
      * @param  string|null  $stepId  Playbook step ID — when provided, enables LLM output streaming
      * @return array{execution: AgentExecution, output: array|null}
      */
+    /**
+     * @param  string[]|null  $allowedToolIds  Crew-member-level tool allowlist; passed from ExecuteCrewTaskJob.
+     */
     public function execute(
         Agent $agent,
         array $input,
@@ -73,6 +76,7 @@ class ExecuteAgentAction
         ?string $experimentId = null,
         ?Project $project = null,
         ?string $stepId = null,
+        ?array $allowedToolIds = null,
     ): array {
         // Strip internal underscore-prefixed keys from external input (defense-in-depth).
         // Only trust these keys when injected by buildAgentAsTools (nested calls).
@@ -155,7 +159,7 @@ class ExecuteAgentAction
                 array_filter($input, fn ($k) => ! str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY),
             );
 
-            $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId, $currentDepth, $userId, $semanticQuery);
+            $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId, $currentDepth, $userId, $semanticQuery, $allowedToolIds);
 
             if (! empty($tools)) {
                 try {

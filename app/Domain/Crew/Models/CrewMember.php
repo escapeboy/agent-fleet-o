@@ -45,4 +45,25 @@ class CrewMember extends Model
     {
         return $this->belongsTo(Agent::class);
     }
+
+    /**
+     * Tool IDs this crew member is allowed to use (BroodMind worker permission template).
+     * Empty array means no restriction — all agent tools are available.
+     *
+     * @return string[]
+     */
+    public function allowedToolIds(): array
+    {
+        return (array) ($this->config['allowed_tools'] ?? []);
+    }
+
+    /**
+     * Structured constraints for this crew member's execution context.
+     *
+     * @return array<string, mixed>
+     */
+    public function constraints(): array
+    {
+        return (array) ($this->config['constraints'] ?? []);
+    }
 }
