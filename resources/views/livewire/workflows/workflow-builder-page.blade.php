@@ -140,9 +140,8 @@
              @mouseup="onMouseUp($event)"
              @wheel.prevent="onWheel($event)">
 
-            <svg class="absolute inset-0 h-full w-full" x-ref="canvasSvg"
-                 :viewBox="svgViewBox()">
-                {{-- Grid pattern (scales with viewBox automatically) --}}
+            <svg class="absolute inset-0 h-full w-full" x-ref="canvasSvg">
+                {{-- Grid pattern (fixed in screen space, tiles across canvas) --}}
                 <defs>
                     <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
                         <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>
@@ -150,12 +149,15 @@
                 </defs>
                 <rect width="5000" height="5000" x="-2500" y="-2500" fill="url(#grid)" />
 
-                {{-- Edges (rendered programmatically — <template x-for> is invalid inside SVG) --}}
-                <g x-html="renderEdgesSvg()"></g>
+                {{-- Transform group mirrors the HTML node layer exactly — ensures edges always align with nodes --}}
+                <g :transform="`translate(${panX} ${panY}) scale(${zoom})`">
+                    {{-- Edges (rendered programmatically — <template x-for> is invalid inside SVG) --}}
+                    <g x-html="renderEdgesSvg()"></g>
 
-                {{-- Connection line (while dragging) --}}
-                <line x-show="isConnecting" :x1="connectFromX" :y1="connectFromY" :x2="connectToX" :y2="connectToY"
-                      stroke="#3b82f6" stroke-width="2" stroke-dasharray="4,4" />
+                    {{-- Connection line (while dragging) --}}
+                    <line x-show="isConnecting" :x1="connectFromX" :y1="connectFromY" :x2="connectToX" :y2="connectToY"
+                          stroke="#3b82f6" stroke-width="2" stroke-dasharray="4,4" />
+                </g>
             </svg>
 
             {{-- Nodes --}}
@@ -734,19 +736,6 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
         this.panX = cx - (cx - this.panX) * scale;
         this.panY = cy - (cy - this.panY) * scale;
         this.zoom = newZoom;
-    },
-
-    // SVG viewBox — maps CSS transform coordinates to SVG viewport
-    // so the SVG always fills its container (no clipping on zoom out)
-    svgViewBox() {
-        const svg = this.$refs.canvasSvg;
-        const w = svg ? svg.clientWidth : 1200;
-        const h = svg ? svg.clientHeight : 800;
-        const vx = -this.panX / this.zoom;
-        const vy = -this.panY / this.zoom;
-        const vw = w / this.zoom;
-        const vh = h / this.zoom;
-        return `${vx} ${vy} ${vw} ${vh}`;
     },
 
     onMouseMove(event) {

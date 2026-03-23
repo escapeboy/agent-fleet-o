@@ -16,11 +16,10 @@ clientsClaim();
 // Clean up precaches from older SW versions
 cleanupOutdatedCaches();
 
-// Precache manifest — intentionally empty.
-// Assets are cached at runtime by the CacheFirst route below (/build/*).
-// Using a static precache manifest causes 404 errors when assets are rebuilt
-// with new hashes but sw.js is not rebuilt at the same time.
-precacheAndRoute([]);
+// Precache stable assets (offline.html, icons) injected by workbox at build time.
+// Hashed build assets (/build/**) are NOT precached here — they are runtime-cached
+// by the CacheFirst route below, avoiding stale-URL errors on incremental rebuilds.
+precacheAndRoute(self.__WB_MANIFEST);
 
 // ─── Routing Strategies ────────────────────────────────────────────────────
 

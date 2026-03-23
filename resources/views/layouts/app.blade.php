@@ -191,6 +191,59 @@
         <livewire:assistant.assistant-panel />
     @endauth
 
+    {{--
+        Alpine.data components MUST be registered here — before @livewireScripts loads Alpine.
+        @livewireScripts injects a regular (non-deferred) <script> that starts Alpine synchronously.
+        Vite assets are <script type="module"> (always deferred) so terminal.js runs too late.
+    --}}
+    <script>
+        document.addEventListener('alpine:init', () => {
+            // ── Terminal stubs (step-terminal-panel, multi-terminal-panel) ──────────
+            // terminal.js is a deferred Vite module — loads AFTER Alpine starts.
+            // These stubs prevent ReferenceError; terminal.js upgrades them with real xterm.
+            Alpine.data('stepTerminal', () => ({
+                terminal: null, fitAddon: null, lastLength: 0, _pending: null,
+                init() {
+                    (window.__xtermQ = window.__xtermQ || []).push(this);
+                    window.__xtermInit && window.__xtermInit(this);
+                },
+                appendOutput(text) {
+                    if (this.terminal) {
+                        if (text && text.length > this.lastLength) {
+                            this.terminal.write(text.substring(this.lastLength));
+                            this.lastLength = text.length;
+                        }
+                    } else {
+                        this._pending = text;
+                    }
+                },
+                destroy() { this.terminal && this.terminal.dispose(); },
+            }));
+
+            Alpine.data('multiTerminal', () => ({
+                tabs: [], activeTabId: null, terminals: {}, fitAddons: {}, lastLengths: {}, observer: null,
+                init() {
+                    (window.__xtermMQ = window.__xtermMQ || []).push(this);
+                    window.__xtermMultiInit && window.__xtermMultiInit(this);
+                },
+                addTab(id, label) {
+                    if (this.tabs.find(t => t.id === id)) { this.activeTabId = id; return; }
+                    this.tabs.push({ id, label: label || ('Tab ' + (this.tabs.length + 1)) });
+                    this.activeTabId = id;
+                },
+                removeTab(id) {
+                    if (this.terminals[id]) { this.terminals[id].dispose(); delete this.terminals[id]; delete this.fitAddons[id]; delete this.lastLengths[id]; }
+                    this.tabs = this.tabs.filter(t => t.id !== id);
+                    if (this.activeTabId === id) { this.activeTabId = this.tabs.length ? this.tabs[this.tabs.length - 1].id : null; }
+                },
+                switchTab(id) { this.activeTabId = id; },
+                appendOutput(id, text) {},
+                clearTab(id) {},
+                destroy() { Object.values(this.terminals).forEach(t => t && t.dispose()); this.observer && this.observer.disconnect(); },
+            }));
+        });
+    </script>
+
     @livewireScripts
     @stack('scripts')
 
