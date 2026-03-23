@@ -76,6 +76,7 @@ class Agent extends Model
         'meta',
         'heartbeat_definition',
         'data_classification',
+        'sandbox_profile',
     ];
 
     protected function casts(): array
@@ -100,6 +101,7 @@ class Agent extends Model
             'risk_profile_updated_at' => 'datetime',
             'heartbeat_definition' => 'array',
             'data_classification' => DataClassification::class,
+            'sandbox_profile' => 'array',
         ];
     }
 

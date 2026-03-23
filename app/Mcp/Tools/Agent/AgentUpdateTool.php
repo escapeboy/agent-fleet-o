@@ -40,6 +40,8 @@ class AgentUpdateTool extends Tool
             'data_classification' => $schema->string()
                 ->description('Data classification level: public, internal, confidential, restricted. Confidential and restricted agents are routed to local-only providers.')
                 ->enum(['public', 'internal', 'confidential', 'restricted']),
+            'sandbox_profile' => $schema->string()
+                ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Pass "null" to remove. Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
         ];
     }
 
@@ -56,6 +58,7 @@ class AgentUpdateTool extends Tool
             'model' => 'nullable|string',
             'budget_cap_credits' => 'nullable|integer|min:0',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
+            'sandbox_profile' => 'nullable|string',
         ]);
 
         $agent = Agent::find($validated['agent_id']);
@@ -80,8 +83,21 @@ class AgentUpdateTool extends Tool
             $data['budget_cap_credits'] = $validated['budget_cap_credits'] === 0 ? null : $validated['budget_cap_credits'];
         }
 
+        // sandbox_profile: parse JSON string; "null" string clears the profile
+        if (isset($validated['sandbox_profile'])) {
+            if ($validated['sandbox_profile'] === 'null') {
+                $data['sandbox_profile'] = null;
+            } else {
+                $sandboxProfile = json_decode($validated['sandbox_profile'], true);
+                if (! is_array($sandboxProfile)) {
+                    return Response::error('sandbox_profile must be a valid JSON object or "null" to clear.');
+                }
+                $data['sandbox_profile'] = $sandboxProfile;
+            }
+        }
+
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits.');
+            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, sandbox_profile.');
         }
 
         app(RecordAgentConfigRevisionAction::class)->execute(

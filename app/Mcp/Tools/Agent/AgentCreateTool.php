@@ -37,6 +37,8 @@ class AgentCreateTool extends Tool
             'data_classification' => $schema->string()
                 ->description('Data classification level: public, internal, confidential, restricted. Confidential and restricted agents are routed to local-only providers.')
                 ->enum(['public', 'internal', 'confidential', 'restricted']),
+            'sandbox_profile' => $schema->string()
+                ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
         ];
     }
 
@@ -51,7 +53,17 @@ class AgentCreateTool extends Tool
             'model' => 'nullable|string|max:100',
             'personality' => 'nullable|array',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
+            'sandbox_profile' => 'nullable|string',
         ]);
+
+        // Parse optional sandbox_profile JSON string into an array
+        $sandboxProfile = null;
+        if (! empty($validated['sandbox_profile'])) {
+            $sandboxProfile = json_decode($validated['sandbox_profile'], true);
+            if (! is_array($sandboxProfile)) {
+                return Response::error('sandbox_profile must be a valid JSON object.');
+            }
+        }
 
         try {
             $agent = app(CreateAgentAction::class)->execute(
@@ -65,6 +77,10 @@ class AgentCreateTool extends Tool
                 personality: $validated['personality'] ?? null,
                 dataClassification: $validated['data_classification'] ?? null,
             );
+
+            if ($sandboxProfile !== null) {
+                $agent->update(['sandbox_profile' => $sandboxProfile]);
+            }
 
             return Response::text(json_encode([
                 'success' => true,

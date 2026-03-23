@@ -21,6 +21,7 @@ use App\Mcp\Tools\Agent\AgentGetTool;
 use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
 use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
+use App\Mcp\Tools\Agent\AgentSandboxTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
@@ -322,6 +323,7 @@ class AgentFleetServer extends Server
         AgentConfigHistoryTool::class,
         AgentRollbackConfigTool::class,
         AgentRuntimeStateTool::class,
+        AgentSandboxTool::class,
 
         // Evolution (5)
         EvolutionProposalListTool::class,
