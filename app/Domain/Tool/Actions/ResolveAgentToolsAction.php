@@ -22,7 +22,7 @@ use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Services\SynchronousWorkflowExecutor;
 use App\Infrastructure\Encryption\CredentialEncryption;
-use App\Livewire\Settings\SecurityPolicyPanel;
+use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Schema\StringSchema;
@@ -83,7 +83,7 @@ class ResolveAgentToolsAction
         }
 
         // Read org-level command security policy from GlobalSettings
-        $orgPolicy = SecurityPolicyPanel::getOrgPolicy() ?: null;
+        $orgPolicy = GlobalSetting::get('org_security_policy', []) ?: null;
 
         // Pre-load activations for platform tools to avoid N+1
         $teamId = $agent->team_id;

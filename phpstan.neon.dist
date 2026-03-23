@@ -20,3 +20,9 @@ parameters:
         - '#Cloud\\Domain\\Feedback\\#'
         # Admin billing tool references Stripe SDK which is a cloud-only dependency
         - '#Stripe\\#'
+
+services:
+    -
+        class: App\Infrastructure\Analysis\Rules\DomainImportBoundaryRule
+        tags:
+            - phpstan.rules.rule
