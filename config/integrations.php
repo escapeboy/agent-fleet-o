@@ -74,6 +74,9 @@ return [
 
         // Database & backend platforms
         'supabase' => ['label' => 'Supabase',       'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '⚡'],
+
+        // Social media
+        'linkedin' => ['label' => 'LinkedIn',       'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '💼'],
     ],
 
     /*
@@ -130,6 +133,25 @@ return [
             // Atlassian requires audience and prompt=consent for refresh tokens
             'extra_params' => ['audience' => 'api.atlassian.com', 'prompt' => 'consent'],
         ],
+
+        // LinkedIn: uses the same app credentials as social login (LINKEDIN_CLIENT_ID / SECRET).
+        // Phase 1 scopes (self-service, instant approval via "Share on LinkedIn" product):
+        //   openid, profile, email, w_member_social
+        // Phase 2 scopes (require Community Management API approval, 2-4 weeks):
+        //   w_organization_social, w_member_social_feed, w_organization_social_feed
+        'linkedin' => [
+            'client_id' => env('LINKEDIN_CLIENT_ID'),
+            'client_secret' => env('LINKEDIN_CLIENT_SECRET'),
+            'scopes' => [
+                'openid',
+                'profile',
+                'email',
+                'w_member_social',
+                'w_organization_social',
+                'w_member_social_feed',
+                'w_organization_social_feed',
+            ],
+        ],
     ],
 
     /*
@@ -168,6 +190,11 @@ return [
         'jira' => [
             'authorize' => 'https://auth.atlassian.com/authorize',
             'token' => 'https://auth.atlassian.com/oauth/token',
+        ],
+
+        'linkedin' => [
+            'authorize' => 'https://www.linkedin.com/oauth/v2/authorization',
+            'token' => 'https://www.linkedin.com/oauth/v2/accessToken',
         ],
     ],
 
