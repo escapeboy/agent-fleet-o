@@ -77,15 +77,21 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        $bearerToken = $credentials['bearer_token'] ?? null;
-        if (! $bearerToken) {
-            return false;
+        $required = ['bearer_token', 'api_key', 'api_secret', 'access_token', 'access_token_secret'];
+        foreach ($required as $key) {
+            if (empty($credentials[$key])) {
+                return false;
+            }
         }
 
+        // Validate the app-only bearer token by calling a search endpoint
         try {
-            $response = Http::withToken($bearerToken)
+            $response = Http::withToken($credentials['bearer_token'])
                 ->timeout(10)
-                ->get(self::API_BASE.'/users/me');
+                ->get(self::API_BASE.'/tweets/search/recent', [
+                    'query' => 'AI agents',
+                    'max_results' => 10,
+                ]);
 
             return $response->successful();
         } catch (\Throwable) {
