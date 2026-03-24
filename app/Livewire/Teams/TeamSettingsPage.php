@@ -3,9 +3,11 @@
 namespace App\Livewire\Teams;
 
 use App\Domain\Bridge\Actions\TerminateBridgeConnection;
+use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
+use Illuminate\Support\Facades\Http;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
@@ -65,6 +67,17 @@ class TeamSettingsPage extends Component
     public ?string $preferredBridgeId = null;
 
     public array $agentRouting = [];
+
+    // Bridge HTTP tunnel connect form
+    public string $connectUrl = '';
+
+    public string $connectLabel = '';
+
+    public string $connectSecret = '';
+
+    public string $connectTunnelProvider = 'cloudflare';
+
+    public bool $showConnectForm = false;
 
     // MCP tool preferences
     public string $mcpToolProfile = 'full';
@@ -609,6 +622,93 @@ class TeamSettingsPage extends Component
             ->update(['label' => mb_substr(trim($name), 0, 100)]);
     }
 
+    public function connectViaUrl(): void
+    {
+        $this->validate([
+            'connectUrl' => 'required|url|max:500',
+            'connectLabel' => 'nullable|string|max:100',
+            'connectSecret' => 'nullable|string|max:255',
+            'connectTunnelProvider' => 'nullable|string|max:50',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+        $url = rtrim($this->connectUrl, '/');
+
+        try {
+            $headers = $this->connectSecret ? ['Authorization' => 'Bearer '.$this->connectSecret] : [];
+            $response = Http::timeout(15)->withHeaders($headers)->get($url.'/discover');
+
+            if (! $response->successful()) {
+                $this->addError('connectUrl', 'Bridge server unreachable: HTTP '.$response->status());
+
+                return;
+            }
+        } catch (\Exception $e) {
+            $this->addError('connectUrl', 'Could not reach bridge server: '.$e->getMessage());
+
+            return;
+        }
+
+        $data = $response->json();
+
+        BridgeConnection::updateOrCreate(
+            ['team_id' => $team->id, 'endpoint_url' => $url],
+            [
+                'label' => $this->connectLabel ?: null,
+                'endpoint_secret' => $this->connectSecret ?: null,
+                'tunnel_provider' => $this->connectTunnelProvider ?: null,
+                'status' => BridgeConnectionStatus::Connected,
+                'endpoints' => [
+                    'agents' => $data['agents'] ?? [],
+                    'llm_endpoints' => $data['llm_endpoints'] ?? [],
+                    'mcp_servers' => $data['mcp_servers'] ?? [],
+                ],
+                'connected_at' => now(),
+                'last_seen_at' => now(),
+            ],
+        );
+
+        $this->connectUrl = '';
+        $this->connectLabel = '';
+        $this->connectSecret = '';
+        $this->showConnectForm = false;
+
+        session()->flash('message', 'Bridge connected via HTTP tunnel.');
+    }
+
+    public function pingBridge(string $id): void
+    {
+        $team = auth()->user()->currentTeam;
+        $connection = BridgeConnection::where('team_id', $team->id)
+            ->where('id', $id)
+            ->whereNotNull('endpoint_url')
+            ->first();
+
+        if (! $connection) {
+            return;
+        }
+
+        try {
+            $headers = $connection->endpoint_secret ? ['Authorization' => 'Bearer '.$connection->endpoint_secret] : [];
+            $response = Http::timeout(10)->withHeaders($headers)
+                ->get(rtrim($connection->endpoint_url, '/').'/health');
+
+            if ($response->successful()) {
+                $connection->update([
+                    'status' => BridgeConnectionStatus::Connected,
+                    'last_seen_at' => now(),
+                ]);
+                session()->flash('message', 'Bridge is online.');
+            } else {
+                $connection->update(['status' => BridgeConnectionStatus::Disconnected]);
+                session()->flash('message', 'Bridge is unreachable (HTTP '.$response->status().').');
+            }
+        } catch (\Exception $e) {
+            $connection->update(['status' => BridgeConnectionStatus::Disconnected]);
+            session()->flash('message', 'Ping failed: '.$e->getMessage());
+        }
+    }
+
     public function saveBridgeRouting(): void
     {
         $this->validate([
@@ -673,12 +773,23 @@ class TeamSettingsPage extends Component
                     ->latest()
                     ->get()
                 : collect(),
-            'bridgeConnections' => $bridgeConnections = config('bridge.relay_enabled')
-                ? BridgeConnection::active()
-                    ->orderByDesc('priority')
+            'bridgeConnections' => $bridgeConnections = (function () {
+                // HTTP-mode connections (endpoint_url set) are always shown
+                $http = BridgeConnection::whereNotNull('endpoint_url')
                     ->orderByDesc('connected_at')
-                    ->get()
-                : collect(),
+                    ->get();
+
+                // Relay-mode connections (no endpoint_url) only shown when relay is enabled
+                $relay = config('bridge.relay_enabled')
+                    ? BridgeConnection::whereNull('endpoint_url')
+                        ->active()
+                        ->orderByDesc('priority')
+                        ->orderByDesc('connected_at')
+                        ->get()
+                    : collect();
+
+                return $http->merge($relay);
+            })(),
             'allBridgeAgents' => $bridgeConnections->flatMap(
                 fn ($c) => collect($c->agents())->filter(fn ($a) => $a['found'] ?? false),
             )->unique('key')->values(),
