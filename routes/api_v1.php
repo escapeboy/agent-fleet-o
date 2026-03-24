@@ -259,6 +259,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Bridge
     Route::get('/bridge/status', [BridgeController::class, 'status']);
+    // HTTP tunnel mode (Cloudflare/Tailscale/ngrok)
+    Route::post('/bridge/connect', [BridgeController::class, 'connect']);
+    Route::put('/bridge/{connection}/url', [BridgeController::class, 'updateUrl']);
+    Route::post('/bridge/{connection}/ping', [BridgeController::class, 'ping']);
+    // Legacy relay mode (WebSocket daemon)
     Route::post('/bridge/register', [BridgeController::class, 'register']);
     Route::post('/bridge/endpoints', [BridgeController::class, 'updateEndpoints']);
     Route::post('/bridge/heartbeat', [BridgeController::class, 'heartbeat']);
