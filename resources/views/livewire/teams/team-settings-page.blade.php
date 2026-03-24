@@ -604,20 +604,27 @@
     {{-- FleetQ Bridge --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">FleetQ Bridge</h2>
-        <p class="mb-4 text-sm text-gray-500">Connect your machines to FleetQ. Each Bridge daemon discovers local LLMs, CLI agents, and MCP servers.</p>
+        <p class="mb-4 text-sm text-gray-500">Connect your machines to FleetQ. Run <code class="rounded bg-gray-100 px-1 text-xs">fleetq-bridge serve</code> locally and expose it via a tunnel, or use the relay daemon.</p>
 
         @if($bridgeConnections->isNotEmpty())
             <div class="mb-4 space-y-3">
                 @foreach($bridgeConnections as $conn)
-                <div class="rounded-lg {{ $conn->isActive() ? 'bg-green-50' : 'bg-yellow-50' }} p-4" wire:key="bridge-{{ $conn->id }}">
+                <div class="rounded-lg {{ $conn->isActive() ? 'bg-green-50' : 'bg-gray-50' }} p-4" wire:key="bridge-{{ $conn->id }}">
                     <div class="flex items-center justify-between">
                         <div class="min-w-0 flex-1"
                              x-data="{ editing: false, name: '{{ e($conn->label ?? '') }}' }">
                             <div x-show="!editing" class="flex items-center gap-2">
-                                <span class="inline-block h-2 w-2 rounded-full {{ $conn->isActive() ? 'bg-green-500' : 'bg-yellow-500' }}"></span>
-                                <span class="font-medium {{ $conn->isActive() ? 'text-green-900' : 'text-yellow-900' }}">
-                                    {{ $conn->label ?? $conn->ip_address ?? 'Bridge' }}
+                                <span class="inline-block h-2 w-2 rounded-full {{ $conn->isActive() ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                                <span class="font-medium {{ $conn->isActive() ? 'text-green-900' : 'text-gray-700' }}">
+                                    @if($conn->isHttpMode())
+                                        {{ $conn->label ?: parse_url($conn->endpoint_url, PHP_URL_HOST) ?: 'Bridge' }}
+                                    @else
+                                        {{ $conn->label ?? $conn->ip_address ?? 'Bridge' }}
+                                    @endif
                                 </span>
+                                @if($conn->isHttpMode() && $conn->tunnel_provider)
+                                    <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">{{ ucfirst($conn->tunnel_provider) }}</span>
+                                @endif
                                 <button x-on:click="editing = true; $nextTick(() => $refs.nameInput.focus())"
                                     class="text-gray-400 hover:text-gray-600" title="Rename">
                                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
@@ -632,18 +639,29 @@
                                     class="text-xs text-primary-600 hover:text-primary-800">Save</button>
                                 <button x-on:click="editing = false" class="text-xs text-gray-500">Cancel</button>
                             </div>
-                            <p class="mt-0.5 text-sm {{ $conn->isActive() ? 'text-green-700' : 'text-yellow-700' }}">
-                                v{{ $conn->bridge_version ?? '?' }}
-                                @if($conn->ip_address && $conn->label) · {{ $conn->ip_address }} @endif
-                                @if($conn->connected_at) · {{ $conn->isActive() ? 'Connected' : 'Disconnected' }} {{ $conn->connected_at->diffForHumans() }} @endif
+                            <p class="mt-0.5 text-sm {{ $conn->isActive() ? 'text-green-700' : 'text-gray-500' }}">
+                                @if($conn->isHttpMode())
+                                    HTTP tunnel
+                                    @if($conn->last_seen_at) · Last seen {{ $conn->last_seen_at->diffForHumans() }} @endif
+                                @else
+                                    v{{ $conn->bridge_version ?? '?' }}
+                                    @if($conn->ip_address && $conn->label) · {{ $conn->ip_address }} @endif
+                                    @if($conn->connected_at) · {{ $conn->isActive() ? 'Connected' : 'Disconnected' }} {{ $conn->connected_at->diffForHumans() }} @endif
+                                @endif
                             </p>
                         </div>
-                        @if($conn->isActive())
-                        <button wire:click="disconnectBridge('{{ $conn->id }}')" wire:confirm="Disconnect this bridge?"
-                            class="ml-3 shrink-0 rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50">
-                            Disconnect
-                        </button>
-                        @endif
+                        <div class="ml-3 flex shrink-0 items-center gap-2">
+                            @if($conn->isHttpMode())
+                                <button wire:click="pingBridge('{{ $conn->id }}')"
+                                    class="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50">
+                                    Ping
+                                </button>
+                            @endif
+                            <button wire:click="disconnectBridge('{{ $conn->id }}')" wire:confirm="Disconnect this bridge?"
+                                class="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50">
+                                Remove
+                            </button>
+                        </div>
                     </div>
 
                     {{-- Discovered endpoints for this bridge --}}
@@ -695,7 +713,7 @@
                         <option value="">Select...</option>
                         @foreach($bridgeConnections as $conn)
                             <option value="{{ $conn->id }}">
-                                {{ $conn->label ?? $conn->ip_address ?? 'Bridge' }}
+                                {{ $conn->label ?? ($conn->isHttpMode() ? parse_url($conn->endpoint_url, PHP_URL_HOST) : $conn->ip_address) ?? 'Bridge' }}
                                 ({{ $conn->isActive() ? 'Online' : 'Offline' }})
                             </option>
                         @endforeach
@@ -709,7 +727,7 @@
                     <x-form-select wire:model="agentRouting.{{ $agent['key'] }}" label="{{ $agent['name'] ?? $agent['key'] }}" compact>
                         <option value="auto">Auto (any bridge)</option>
                         @foreach($bridgeConnections->filter(fn($c) => collect($c->agents())->contains('key', $agent['key'])) as $conn)
-                            <option value="{{ $conn->id }}">{{ $conn->label ?? $conn->ip_address ?? 'Bridge' }}</option>
+                            <option value="{{ $conn->id }}">{{ $conn->label ?? ($conn->isHttpMode() ? parse_url($conn->endpoint_url, PHP_URL_HOST) : $conn->ip_address) ?? 'Bridge' }}</option>
                         @endforeach
                     </x-form-select>
                     @endforeach
@@ -727,13 +745,59 @@
         @else
             <div class="rounded-lg border border-dashed border-gray-300 p-4 text-center">
                 <p class="mb-1 text-sm font-medium text-gray-700">No Bridge Connected</p>
-                <p class="mb-3 text-xs text-gray-500">Install and start the FleetQ Bridge daemon on your machine to connect local LLMs and agents.</p>
-                <a href="https://github.com/escapeboy/fleetq-bridge/releases" target="_blank"
-                    class="inline-flex items-center rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-900">
-                    Download FleetQ Bridge
-                </a>
+                <p class="mb-3 text-xs text-gray-500">Connect via URL (recommended) or download the relay daemon.</p>
             </div>
         @endif
+
+        {{-- Connect via URL form --}}
+        <div class="mt-4">
+            @if(!$showConnectForm)
+                <button wire:click="$set('showConnectForm', true)"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>
+                    Connect via URL
+                </button>
+            @else
+                <div class="rounded-lg border border-primary-200 bg-primary-50 p-4">
+                    <h3 class="mb-1 text-sm font-medium text-gray-900">Connect via HTTP Tunnel</h3>
+                    <p class="mb-3 text-xs text-gray-500">
+                        Run <code class="rounded bg-white px-1">fleetq-bridge serve</code> locally, then expose it with
+                        <code class="rounded bg-white px-1">cloudflared tunnel --url http://localhost:8765</code>
+                        or <code class="rounded bg-white px-1">tailscale funnel 8765</code>.
+                    </p>
+                    <div class="space-y-3">
+                        <x-form-input wire:model="connectUrl" label="Tunnel URL"
+                            placeholder="https://abc123.trycloudflare.com"
+                            :error="$errors->first('connectUrl')"
+                            hint="The public HTTPS URL of your tunnel." />
+                        <div class="grid grid-cols-2 gap-3">
+                            <x-form-input wire:model="connectLabel" label="Label (optional)"
+                                placeholder="Home Server" />
+                            <x-form-select wire:model="connectTunnelProvider" label="Tunnel Provider">
+                                <option value="cloudflare">Cloudflare Tunnel</option>
+                                <option value="tailscale">Tailscale Funnel</option>
+                                <option value="ngrok">ngrok</option>
+                                <option value="other">Other</option>
+                            </x-form-select>
+                        </div>
+                        <x-form-input wire:model="connectSecret" label="Secret Token (optional)"
+                            type="password"
+                            placeholder="Bearer token set with --secret flag"
+                            hint="Leave blank if you didn't set --secret when starting fleetq-bridge serve." />
+                        <div class="flex gap-2">
+                            <button wire:click="connectViaUrl"
+                                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                                Connect
+                            </button>
+                            <button wire:click="$set('showConnectForm', false)"
+                                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
     </div>
 
     {{-- Telegram Bot --}}
