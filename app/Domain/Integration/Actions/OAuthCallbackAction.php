@@ -174,6 +174,8 @@ class OAuthCallbackAction
 
         // LinkedIn: fetch userinfo to get the member's URN (sub field = LinkedIn member ID).
         // person_urn is required for all author-based API calls (posts, comments).
+        // Primary: /v2/userinfo (requires openid scope from "Sign In with LinkedIn" product).
+        // Fallback: decode the JWT access token to extract the sub claim (works with w_member_social only).
         if ($driver === 'linkedin') {
             try {
                 $userinfo = Http::withToken($credentials['access_token'])
@@ -192,6 +194,23 @@ class OAuthCallbackAction
                 }
             } catch (\Throwable $e) {
                 Log::warning('OAuthCallbackAction: could not fetch LinkedIn userinfo', ['error' => $e->getMessage()]);
+            }
+
+            // Fallback: if person_urn is still missing, attempt to decode the JWT access token.
+            // LinkedIn access tokens are JWTs whose payload contains the member ID as the "sub" claim.
+            if (empty($credentials['person_urn']) && ! empty($credentials['access_token'])) {
+                try {
+                    $parts = explode('.', $credentials['access_token']);
+                    if (count($parts) === 3) {
+                        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+                        if (! empty($payload['sub'])) {
+                            $credentials['person_urn'] = 'urn:li:person:'.$payload['sub'];
+                            Log::info('OAuthCallbackAction: extracted LinkedIn person URN from JWT', ['person_urn' => $credentials['person_urn']]);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('OAuthCallbackAction: could not decode LinkedIn JWT', ['error' => $e->getMessage()]);
+                }
             }
         }
 
