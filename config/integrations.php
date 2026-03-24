@@ -144,9 +144,6 @@ return [
             'client_id' => env('LINKEDIN_CLIENT_ID'),
             'client_secret' => env('LINKEDIN_CLIENT_SECRET'),
             'scopes' => [
-                'openid',
-                'profile',
-                'email',
                 'w_member_social',
             ],
         ],
