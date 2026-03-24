@@ -6,6 +6,7 @@ Self-hosted AI Agent Mission Control platform. Build, orchestrate, and monitor A
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.4-purple)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/Laravel-12-red)](https://laravel.com/)
+[![agent-fleet-o MCP server](https://glama.ai/mcp/servers/escapeboy/agent-fleet-o/badges/score.svg)](https://glama.ai/mcp/servers/escapeboy/agent-fleet-o)
 
 ## Cloud Version
 
