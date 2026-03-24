@@ -35,7 +35,7 @@ class SendPushNotificationJob implements ShouldQueue
             return;
         }
 
-        $message = WebPushMessage::create()
+        $message = (new WebPushMessage)
             ->title($this->title)
             ->body($this->body)
             ->icon('/icons/icon-192.png')

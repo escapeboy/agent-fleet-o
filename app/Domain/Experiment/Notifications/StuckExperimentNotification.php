@@ -36,7 +36,7 @@ class StuckExperimentNotification extends Notification
 
     public function toWebPush(object $notifiable, self $notification): WebPushMessage
     {
-        return WebPushMessage::create()
+        return (new WebPushMessage)
             ->title("Experiment stuck: {$this->experiment->title}")
             ->body("Stuck in {$this->stuckState} for {$this->stuckDuration}. {$this->recoveryAttempts} recovery attempt(s).")
             ->icon('/favicon.ico')

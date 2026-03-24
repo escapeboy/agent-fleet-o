@@ -40,7 +40,7 @@ class ProjectRunFailedNotification extends Notification
 
     public function toWebPush(object $notifiable, self $notification): WebPushMessage
     {
-        return WebPushMessage::create()
+        return (new WebPushMessage)
             ->title("Run #{$this->run->run_number} failed — {$this->project->title}")
             ->body($this->run->error_message ? "Error: {$this->run->error_message}" : 'Project run failed.')
             ->icon('/favicon.ico')
