@@ -71,15 +71,15 @@ class AiServiceProvider extends ServiceProvider
                 gateway: $app->make(PrismAiGateway::class),
                 circuitBreaker: $app->make(CircuitBreaker::class),
                 fallbackChains: [
-                    // Bridge agent fallbacks — when bridge is down, route to equivalent cloud model
+                    // Bridge agent fallbacks — when bridge is down, route to Google Gemini
                     'bridge_agent/claude-code:claude-haiku-4-5' => [
-                        ['provider' => 'anthropic', 'model' => 'claude-haiku-4-5'],
+                        ['provider' => 'google', 'model' => 'gemini-2.5-flash'],
                     ],
                     'bridge_agent/claude-code:claude-sonnet-4-5' => [
-                        ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
+                        ['provider' => 'google', 'model' => 'gemini-2.5-pro'],
                     ],
                     'bridge_agent/claude-code:claude-opus-4-6' => [
-                        ['provider' => 'anthropic', 'model' => 'claude-opus-4-6'],
+                        ['provider' => 'google', 'model' => 'gemini-2.5-pro'],
                     ],
                     // Cloud provider fallbacks
                     'anthropic/claude-sonnet-4-5-20250929' => [
@@ -89,10 +89,10 @@ class AiServiceProvider extends ServiceProvider
                         ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5-20250929'],
                     ],
                     'google/gemini-2.5-pro' => [
-                        ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5-20250929'],
+                        ['provider' => 'google', 'model' => 'gemini-2.5-flash'],
                     ],
                     'google/gemini-2.5-flash' => [
-                        ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5-20250929'],
+                        ['provider' => 'google', 'model' => 'gemini-2.5-pro'],
                     ],
                 ],
                 localGateway: config('local_agents.enabled')
