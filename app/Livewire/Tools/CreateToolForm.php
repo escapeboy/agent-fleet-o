@@ -195,6 +195,10 @@ class CreateToolForm extends Component
             ];
         }
 
+        if ($this->builtInKind === 'browser_relay') {
+            return ['kind' => 'browser_relay'];
+        }
+
         return [
             'kind' => $this->builtInKind,
             'allowed_commands' => array_filter(array_map('trim', explode(',', $this->allowedCommands))),

@@ -179,6 +179,7 @@ class ToolTranslator
             BuiltInToolKind::Filesystem => $this->buildFilesystemTools($tool, $overrides, $workspace),
             BuiltInToolKind::Browser => $this->buildBrowserTools($tool),
             BuiltInToolKind::Ssh => $this->buildSshTools($tool, $overrides),
+            BuiltInToolKind::BrowserRelay => $this->buildBrowserRelayTools($tool),
             default => [],
         };
     }
@@ -561,6 +562,83 @@ class ToolTranslator
                     }
 
                     return $output ?: '(Task completed with no text output)';
+                }),
+        ];
+    }
+
+    private function buildBrowserRelayTools(Tool $tool): array
+    {
+        $toolDescription = 'Control the user\'s local browser via their connected relay agent and BrowserMCP extension. '
+            .'Available actions: browser_navigate(url), browser_snapshot (read DOM/page state), browser_screenshot, '
+            .'browser_click(element,ref), browser_type(element,ref,text), browser_select_option(element,ref,values[]), '
+            .'browser_press_key(key), browser_hover(element,ref), browser_drag, browser_go_back, browser_go_forward, '
+            .'browser_wait(time?), browser_get_console_logs. '
+            .'Always call browser_snapshot first to see the current page and get element refs for interactions.';
+
+        if (! app()->bound('browser_relay.dispatcher')) {
+            return [
+                PrismTool::as('browser_relay_execute')
+                    ->for($toolDescription)
+                    ->withStringParameter('action', 'BrowserMCP tool name (e.g. browser_navigate, browser_snapshot, browser_click)')
+                    ->withStringParameter('params_json', 'Tool parameters as a JSON object string (e.g. {"url":"https://example.com"}). Pass empty string for tools with no parameters.', required: false)
+                    ->using(fn () => 'Error: Browser relay is not available in this environment. Please configure a relay agent.'),
+            ];
+        }
+
+        $teamId = $tool->team_id;
+        $dispatcher = app('browser_relay.dispatcher');
+
+        return [
+            PrismTool::as('browser_relay_execute')
+                ->for($toolDescription)
+                ->withStringParameter('action', 'BrowserMCP tool name (e.g. browser_navigate, browser_snapshot, browser_click, browser_type, browser_screenshot)')
+                ->withStringParameter('params_json', 'Tool parameters as a JSON object string (e.g. {"url":"https://example.com"} for browser_navigate, {"element":"Submit button","ref":"button#submit","text":"hello"} for browser_type). Pass empty string for tools with no parameters.', required: false)
+                ->using(function (string $action, ?string $params_json = null) use ($teamId, $dispatcher): string {
+                    $params = [];
+
+                    if ($params_json && $params_json !== '') {
+                        $decoded = json_decode($params_json, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                            $params = $decoded;
+                        }
+                    }
+
+                    try {
+                        $result = $dispatcher($teamId, $action, $params);
+                    } catch (\RuntimeException $e) {
+                        return 'Error: '.$e->getMessage();
+                    } catch (\Throwable $e) {
+                        Log::error('BrowserRelayTool error', ['action' => $action, 'error' => $e->getMessage(), 'team_id' => $teamId]);
+
+                        return 'Error: Browser relay encountered an unexpected error. Is the relay agent running?';
+                    }
+
+                    if (empty($result)) {
+                        return '(no output)';
+                    }
+
+                    // BrowserMCP returns a content array — extract text items
+                    $output = '';
+                    foreach ((array) $result as $item) {
+                        if (is_array($item)) {
+                            if (($item['type'] ?? '') === 'text' || isset($item['text'])) {
+                                $output .= $item['text'] ?? '';
+                            }
+                        } elseif (is_string($item)) {
+                            $output .= $item;
+                        }
+                    }
+
+                    if ($output === '') {
+                        $output = json_encode($result);
+                    }
+
+                    // Truncate to avoid context overflow
+                    if (mb_strlen($output) > 50000) {
+                        $output = mb_substr($output, 0, 50000)."\n... [output truncated]";
+                    }
+
+                    return $output;
                 }),
         ];
     }

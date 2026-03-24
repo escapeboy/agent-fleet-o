@@ -117,6 +117,19 @@
                     @endif
                     @endselfhosted
 
+                    @if($builtInKind === 'browser_relay')
+                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                            <p class="font-medium mb-1">Browser Relay Tool</p>
+                            <p class="text-blue-700">
+                                Allows agents to control your local browser via the relay agent and BrowserMCP extension.
+                                The relay agent must be running and connected before an agent can use this tool.
+                            </p>
+                            <p class="mt-2 text-blue-700">
+                                <a href="{{ route('relay.settings') }}" target="_blank" class="underline font-medium">Configure relay agent →</a>
+                            </p>
+                        </div>
+                    @endif
+
                     @if($builtInKind === 'ssh')
                         <x-form-input wire:model="sshHost" label="Host" type="text" placeholder="example.com"
                             :error="$errors->first('sshHost')" hint="Hostname or IP of the remote server" />

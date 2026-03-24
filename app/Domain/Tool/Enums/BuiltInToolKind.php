@@ -8,6 +8,7 @@ enum BuiltInToolKind: string
     case Filesystem = 'filesystem';
     case Browser = 'browser';
     case Ssh = 'ssh';
+    case BrowserRelay = 'browser_relay';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum BuiltInToolKind: string
             self::Filesystem => 'Filesystem',
             self::Browser => 'Browser',
             self::Ssh => 'SSH Remote',
+            self::BrowserRelay => 'Browser Relay (via relay agent)',
         };
     }
 }
