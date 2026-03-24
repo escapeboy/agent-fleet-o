@@ -77,6 +77,7 @@ return [
 
         // Social media
         'linkedin' => ['label' => 'LinkedIn',       'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '💼'],
+        'twitter' => ['label' => 'X (Twitter)',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '𝕏'],
     ],
 
     /*
