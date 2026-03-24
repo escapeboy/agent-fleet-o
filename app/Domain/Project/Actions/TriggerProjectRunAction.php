@@ -54,6 +54,10 @@ class TriggerProjectRunAction
             ]);
 
             // Create experiment for this run
+            /** @var array|null $agentConfig */
+            $agentConfig = $project->agent_config;
+            $leadAgentId = $agentConfig['lead_agent_id'] ?? null;
+
             $experiment = $this->createExperiment->execute(
                 userId: $project->user_id,
                 title: $project->title.' — Run #'.$runNumber,
@@ -62,6 +66,7 @@ class TriggerProjectRunAction
                 budgetCapCredits: $budgetCap,
                 teamId: $project->team_id,
                 workflowId: $project->workflow_id,
+                agentId: $leadAgentId,
             );
 
             // Inject project execution mode + overrides + dependencies into experiment constraints

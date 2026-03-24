@@ -25,10 +25,12 @@ class CreateExperimentAction
         array $successCriteria = [],
         ?string $teamId = null,
         ?string $workflowId = null,
+        ?string $agentId = null,
     ): Experiment {
         $experiment = Experiment::create([
             'user_id' => $userId,
             'team_id' => $teamId,
+            'agent_id' => $agentId,
             'title' => $title,
             'thesis' => $thesis,
             'track' => $track,
