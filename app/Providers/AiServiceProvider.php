@@ -6,6 +6,7 @@ use App\Domain\Bridge\Services\BridgeRouter;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Gateways\FallbackAiGateway;
+use App\Infrastructure\AI\Gateways\HttpBridgeGateway;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Infrastructure\AI\Gateways\LocalBridgeGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
@@ -59,10 +60,17 @@ class AiServiceProvider extends ServiceProvider
 
         $this->app->singleton(BridgeRequestRegistry::class);
 
+        $this->app->singleton(HttpBridgeGateway::class, function ($app) {
+            return new HttpBridgeGateway(
+                router: $app->make(BridgeRouter::class),
+            );
+        });
+
         $this->app->singleton(LocalBridgeGateway::class, function ($app) {
             return new LocalBridgeGateway(
                 registry: $app->make(BridgeRequestRegistry::class),
                 router: $app->make(BridgeRouter::class),
+                httpGateway: $app->make(HttpBridgeGateway::class),
             );
         });
 

@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Bridge\Actions\RegisterBridgeConnection;
 use App\Domain\Bridge\Actions\TerminateBridgeConnection;
 use App\Domain\Bridge\Actions\UpdateBridgeEndpoints;
+use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Services\BridgeRouter;
 use App\Http\Controllers\Controller;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
@@ -338,6 +340,168 @@ class BridgeController extends Controller
             return response()->json([
                 'error' => "Bridge MCP call failed: {$e->getMessage()}",
             ], 502);
+        }
+    }
+
+    /**
+     * Connect a bridge via HTTP tunnel URL (HTTP mode).
+     *
+     * The customer pastes their tunnel URL (Cloudflare Tunnel, Tailscale Funnel, ngrok, etc.).
+     * FleetQ calls /discover to validate and fetch the available agents/LLMs.
+     *
+     * @response 201 {"data": {"id": "...", "endpoint_url": "...", "agents": [...]}}
+     */
+    public function connect(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'endpoint_url' => 'required|url|max:500',
+            'endpoint_secret' => 'nullable|string|max:255',
+            'tunnel_provider' => 'nullable|string|in:cloudflare,tailscale,ngrok,custom|max:50',
+            'label' => 'nullable|string|max:100',
+        ]);
+
+        $teamId = $this->resolveTeamId($request);
+        $endpointUrl = rtrim($validated['endpoint_url'], '/');
+
+        // Validate URL by calling /discover on the bridge server
+        $discoverUrl = $endpointUrl.'/discover';
+        $headers = [];
+
+        if (! empty($validated['endpoint_secret'])) {
+            $headers['Authorization'] = 'Bearer '.$validated['endpoint_secret'];
+        }
+
+        try {
+            $discoverResponse = Http::timeout(10)
+                ->withHeaders($headers)
+                ->get($discoverUrl);
+
+            if (! $discoverResponse->successful()) {
+                return response()->json([
+                    'error' => "Bridge server responded with HTTP {$discoverResponse->status()}. "
+                        .'Ensure your local bridge server is running and the tunnel is active.',
+                ], 422);
+            }
+
+            $discovered = $discoverResponse->json();
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => 'Could not reach the bridge server at the provided URL: '.$e->getMessage(),
+            ], 422);
+        }
+
+        $endpoints = [
+            'agents' => $discovered['agents'] ?? [],
+            'llm_endpoints' => $discovered['llm_endpoints'] ?? [],
+            'mcp_servers' => $discovered['mcp_servers'] ?? [],
+        ];
+
+        $connection = BridgeConnection::updateOrCreate(
+            ['team_id' => $teamId, 'endpoint_url' => $endpointUrl],
+            [
+                'status' => BridgeConnectionStatus::Connected,
+                'endpoint_secret' => $validated['endpoint_secret'] ?? null,
+                'tunnel_provider' => $validated['tunnel_provider'] ?? 'custom',
+                'label' => $validated['label'] ?? null,
+                'endpoints' => $endpoints,
+                'connected_at' => now(),
+                'last_seen_at' => now(),
+            ],
+        );
+
+        return response()->json(['data' => [
+            'id' => $connection->id,
+            'endpoint_url' => $connection->endpoint_url,
+            'tunnel_provider' => $connection->tunnel_provider,
+            'label' => $connection->label,
+            'status' => $connection->status->value,
+            'agents' => $connection->agents(),
+            'llm_endpoints' => $connection->llmEndpoints(),
+            'mcp_servers' => $connection->mcpServers(),
+            'connected_at' => $connection->connected_at->toISOString(),
+        ]], 201);
+    }
+
+    /**
+     * Update the endpoint URL for an HTTP-mode bridge connection.
+     *
+     * Use when the tunnel URL changes (e.g., Cloudflare quick tunnels regenerate on restart).
+     */
+    public function updateUrl(Request $request, BridgeConnection $connection): JsonResponse
+    {
+        $teamId = $this->resolveTeamId($request);
+
+        if ($connection->team_id !== $teamId) {
+            return response()->json(['error' => 'Not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'endpoint_url' => 'required|url|max:500',
+            'endpoint_secret' => 'nullable|string|max:255',
+        ]);
+
+        $connection->update([
+            'endpoint_url' => rtrim($validated['endpoint_url'], '/'),
+            'endpoint_secret' => $validated['endpoint_secret'] ?? $connection->endpoint_secret,
+            'last_seen_at' => now(),
+        ]);
+
+        return response()->json(['data' => [
+            'id' => $connection->id,
+            'endpoint_url' => $connection->endpoint_url,
+            'updated' => true,
+        ]]);
+    }
+
+    /**
+     * Ping an HTTP-mode bridge connection to verify it is reachable.
+     *
+     * Calls GET /health on the bridge server and updates last_seen_at / status.
+     */
+    public function ping(Request $request, BridgeConnection $connection): JsonResponse
+    {
+        $teamId = $this->resolveTeamId($request);
+
+        if ($connection->team_id !== $teamId) {
+            return response()->json(['error' => 'Not found.'], 404);
+        }
+
+        if (! $connection->isHttpMode()) {
+            return response()->json(['error' => 'Ping is only available for HTTP-mode connections.'], 422);
+        }
+
+        $headers = [];
+
+        if (! empty($connection->endpoint_secret)) {
+            $headers['Authorization'] = 'Bearer '.$connection->endpoint_secret;
+        }
+
+        try {
+            $healthResponse = Http::timeout(10)
+                ->withHeaders($headers)
+                ->get(rtrim($connection->endpoint_url, '/').'/health');
+
+            $online = $healthResponse->successful()
+                && ($healthResponse->json('status') === 'ok' || $healthResponse->successful());
+
+            $connection->update([
+                'status' => $online ? BridgeConnectionStatus::Connected : BridgeConnectionStatus::Disconnected,
+                'last_seen_at' => now(),
+            ]);
+
+            return response()->json(['data' => [
+                'online' => $online,
+                'status' => $connection->status->value,
+                'last_seen_at' => $connection->last_seen_at->toISOString(),
+            ]]);
+        } catch (\Throwable $e) {
+            $connection->update(['status' => BridgeConnectionStatus::Disconnected]);
+
+            return response()->json(['data' => [
+                'online' => false,
+                'status' => BridgeConnectionStatus::Disconnected->value,
+                'error' => $e->getMessage(),
+            ]]);
         }
     }
 

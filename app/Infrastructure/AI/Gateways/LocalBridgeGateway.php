@@ -6,6 +6,7 @@ use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Services\BridgeRouter;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Gateways\HttpBridgeGateway;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
@@ -27,11 +28,16 @@ class LocalBridgeGateway implements AiGatewayInterface
     public function __construct(
         private readonly BridgeRequestRegistry $registry,
         private readonly BridgeRouter $router,
+        private readonly HttpBridgeGateway $httpGateway,
     ) {}
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
         $connection = $this->requireActiveConnection($request->teamId, $request);
+
+        if ($connection->isHttpMode()) {
+            return $this->httpGateway->complete($request);
+        }
 
         return $this->routeRequest($connection, $request);
     }
@@ -39,6 +45,10 @@ class LocalBridgeGateway implements AiGatewayInterface
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
         $connection = $this->requireActiveConnection($request->teamId, $request);
+
+        if ($connection->isHttpMode()) {
+            return $this->httpGateway->stream($request, $onChunk);
+        }
 
         return $this->routeRequest($connection, $request, $onChunk);
     }

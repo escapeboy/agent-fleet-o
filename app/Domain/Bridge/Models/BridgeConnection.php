@@ -24,6 +24,9 @@ class BridgeConnection extends Model
         'connected_at',
         'last_seen_at',
         'disconnected_at',
+        'endpoint_url',
+        'endpoint_secret',
+        'tunnel_provider',
     ];
 
     protected function casts(): array
@@ -40,6 +43,23 @@ class BridgeConnection extends Model
     public function isActive(): bool
     {
         return $this->status === BridgeConnectionStatus::Connected;
+    }
+
+    /**
+     * Whether this connection uses the HTTP tunnel mode (endpoint_url configured).
+     * HTTP mode: FleetQ calls the tunnel URL directly via HTTP SSE.
+     */
+    public function isHttpMode(): bool
+    {
+        return ! empty($this->endpoint_url);
+    }
+
+    /**
+     * Whether this connection uses the legacy WebSocket relay mode.
+     */
+    public function isRelayMode(): bool
+    {
+        return ! $this->isHttpMode();
     }
 
     /** @return list<array<string, mixed>> */
