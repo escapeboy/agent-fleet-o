@@ -1,0 +1,17 @@
+{
+  "name": "@fleetq/mcp-gateway",
+  "version": "1.0.0",
+  "description": "MCP gateway for FleetQ — connect any AI agent to your FleetQ instance via stdio",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "AGPL-3.0"
+}
