@@ -24,7 +24,7 @@ class OAuthCallbackAction
     {
         $cacheKey = "integration_oauth_state:{$state}";
 
-        /** @var array{team_id: string, driver: string, name: string}|null $stateData */
+        /** @var array{team_id: string, driver: string, name: string, subdomain: string|null, code_verifier: string|null}|null $stateData */
         $stateData = Cache::store('redis')->get($cacheKey);
 
         if (! $stateData || $stateData['driver'] !== $driver) {
@@ -33,9 +33,9 @@ class OAuthCallbackAction
 
         Cache::store('redis')->forget($cacheKey);
 
-        $tokens = $this->exchangeCode($driver, $code);
+        $tokens = $this->exchangeCode($driver, $code, $stateData);
 
-        $credentials = $this->buildCredentials($driver, $tokens);
+        $credentials = $this->buildCredentials($driver, $tokens, $stateData);
 
         return $this->connectAction->execute(
             teamId: $stateData['team_id'],
@@ -46,12 +46,13 @@ class OAuthCallbackAction
     }
 
     /**
+     * @param  array<string, mixed>  $stateData
      * @return array<string, mixed>
      */
-    private function exchangeCode(string $driver, string $code): array
+    private function exchangeCode(string $driver, string $code, array $stateData): array
     {
         $oauthConfig = config("integrations.oauth.{$driver}");
-        $tokenUrl = config("integrations.oauth_urls.{$driver}.token");
+        $tokenUrl = $this->resolveTokenUrl($driver, $stateData['subdomain'] ?? null);
 
         if ($driver === 'notion') {
             // Notion uses Basic auth + JSON body
@@ -66,8 +67,18 @@ class OAuthCallbackAction
                     'code' => $code,
                     'redirect_uri' => route('integrations.oauth.callback', $driver),
                 ]);
-        } else {
+        } elseif ($driver === 'clickup') {
+            // ClickUp uses query parameters for token exchange, not form body
             $response = Http::timeout(15)
+                ->post($tokenUrl.'?'.http_build_query([
+                    'client_id' => $oauthConfig['client_id'] ?? '',
+                    'client_secret' => $oauthConfig['client_secret'] ?? '',
+                    'code' => $code,
+                ]));
+        } elseif ($driver === 'github') {
+            // GitHub returns JSON but expects Accept: application/json
+            $response = Http::timeout(15)
+                ->withHeaders(['Accept' => 'application/json'])
                 ->asForm()
                 ->post($tokenUrl, [
                     'grant_type' => 'authorization_code',
@@ -76,6 +87,21 @@ class OAuthCallbackAction
                     'client_id' => $oauthConfig['client_id'] ?? '',
                     'client_secret' => $oauthConfig['client_secret'] ?? '',
                 ]);
+        } else {
+            $params = [
+                'grant_type' => 'authorization_code',
+                'code' => $code,
+                'redirect_uri' => route('integrations.oauth.callback', $driver),
+                'client_id' => $oauthConfig['client_id'] ?? '',
+                'client_secret' => $oauthConfig['client_secret'] ?? '',
+            ];
+
+            // PKCE: include code_verifier instead of client_secret verification
+            if (! empty($stateData['code_verifier'])) {
+                $params['code_verifier'] = $stateData['code_verifier'];
+            }
+
+            $response = Http::timeout(15)->asForm()->post($tokenUrl, $params);
         }
 
         if (! $response->successful()) {
@@ -93,12 +119,33 @@ class OAuthCallbackAction
     }
 
     /**
-     * Fetch the first accessible Jira Cloud site and return its id + url.
-     * Returns null if the API call fails or returns no sites.
+     * Resolve the token URL, handling subdomain-based providers.
+     */
+    private function resolveTokenUrl(string $driver, ?string $subdomain): string
+    {
+        $configured = config("integrations.oauth_urls.{$driver}.token");
+
+        if ($configured) {
+            return $configured;
+        }
+
+        if ($subdomain) {
+            return match ($driver) {
+                'zendesk' => "https://{$subdomain}.zendesk.com/oauth/tokens",
+                'freshdesk' => "https://{$subdomain}.freshdesk.com/oauth/token",
+                default => throw new \InvalidArgumentException("No token URL for driver: {$driver}"),
+            };
+        }
+
+        throw new \InvalidArgumentException("No token URL configured for driver: {$driver}");
+    }
+
+    /**
+     * Fetch the first accessible Atlassian Cloud site and return its id + url.
      *
      * @return array{id: string, url: string}|null
      */
-    private function resolveJiraCloudId(string $accessToken): ?array
+    private function resolveAtlassianCloudId(string $accessToken): ?array
     {
         try {
             $response = Http::withToken($accessToken)
@@ -113,7 +160,7 @@ class OAuthCallbackAction
                 }
             }
         } catch (\Throwable $e) {
-            Log::warning('OAuthCallbackAction: could not resolve Jira cloudId', ['error' => $e->getMessage()]);
+            Log::warning('OAuthCallbackAction: could not resolve Atlassian cloudId', ['error' => $e->getMessage()]);
         }
 
         return null;
@@ -123,9 +170,10 @@ class OAuthCallbackAction
      * Normalize token response into a credential secret_data array.
      *
      * @param  array<string, mixed>  $tokens
+     * @param  array<string, mixed>  $stateData
      * @return array<string, mixed>
      */
-    private function buildCredentials(string $driver, array $tokens): array
+    private function buildCredentials(string $driver, array $tokens, array $stateData): array
     {
         $credentials = [
             'access_token' => (string) ($tokens['access_token'] ?? ''),
@@ -174,9 +222,11 @@ class OAuthCallbackAction
 
         // LinkedIn: fetch userinfo to get the member's URN (sub field = LinkedIn member ID).
         // person_urn is required for all author-based API calls (posts, comments).
-        // Primary: /v2/userinfo (requires openid scope from "Sign In with LinkedIn" product).
-        // Fallback: decode the JWT access token to extract the sub claim (works with w_member_social only).
+        // LinkedIn access tokens expire in ~60 days; expires_in is unreliable, so default to 55 days.
         if ($driver === 'linkedin') {
+            // Set a safe 55-day expiry regardless of what expires_in reports
+            $credentials['token_expires_at'] = now()->addDays(55)->toIso8601String();
+
             try {
                 $userinfo = Http::withToken($credentials['access_token'])
                     ->timeout(10)
@@ -197,7 +247,6 @@ class OAuthCallbackAction
             }
 
             // Fallback: if person_urn is still missing, attempt to decode the JWT access token.
-            // LinkedIn access tokens are JWTs whose payload contains the member ID as the "sub" claim.
             if (empty($credentials['person_urn']) && ! empty($credentials['access_token'])) {
                 try {
                     $parts = explode('.', $credentials['access_token']);
@@ -214,13 +263,116 @@ class OAuthCallbackAction
             }
         }
 
-        // Jira: resolve the Atlassian cloudId from the accessible-resources endpoint.
-        // cloudId is required for all Jira Cloud API calls and webhook registration.
-        if ($driver === 'jira') {
-            $cloudInfo = $this->resolveJiraCloudId((string) ($credentials['access_token']));
+        // Jira / Confluence: resolve the Atlassian cloudId from the accessible-resources endpoint.
+        if ($driver === 'jira' || $driver === 'confluence') {
+            $cloudInfo = $this->resolveAtlassianCloudId((string) ($credentials['access_token']));
             if ($cloudInfo) {
                 $credentials['cloud_id'] = $cloudInfo['id'];
                 $credentials['cloud_url'] = rtrim($cloudInfo['url'], '/');
+            }
+        }
+
+        // Salesforce: instance_url is required for all API calls (org-specific)
+        if ($driver === 'salesforce') {
+            if (! empty($tokens['instance_url'])) {
+                $credentials['instance_url'] = rtrim((string) $tokens['instance_url'], '/');
+            }
+        }
+
+        // GitHub: store the authenticated user's login for display purposes
+        if ($driver === 'github') {
+            try {
+                $user = Http::withToken($credentials['access_token'])
+                    ->timeout(10)
+                    ->withHeaders(['Accept' => 'application/vnd.github+json'])
+                    ->get('https://api.github.com/user')
+                    ->json();
+
+                if (! empty($user['login'])) {
+                    $credentials['github_login'] = (string) $user['login'];
+                }
+            } catch (\Throwable $e) {
+                Log::warning('OAuthCallbackAction: could not fetch GitHub user', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Mailchimp: fetch datacenter prefix from metadata endpoint (required for all API calls)
+        if ($driver === 'mailchimp') {
+            try {
+                $meta = Http::withToken($credentials['access_token'])
+                    ->timeout(10)
+                    ->get('https://login.mailchimp.com/oauth2/metadata')
+                    ->json();
+
+                if (! empty($meta['dc'])) {
+                    $credentials['dc'] = (string) $meta['dc'];
+                }
+                if (! empty($meta['accountname'])) {
+                    $credentials['account_name'] = (string) $meta['accountname'];
+                }
+            } catch (\Throwable $e) {
+                Log::warning('OAuthCallbackAction: could not fetch Mailchimp metadata', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Bitbucket: store first accessible workspace slug
+        if ($driver === 'bitbucket') {
+            try {
+                $workspaces = Http::withToken($credentials['access_token'])
+                    ->timeout(10)
+                    ->get('https://api.bitbucket.org/2.0/workspaces')
+                    ->json();
+
+                $slug = $workspaces['values'][0]['slug'] ?? null;
+                if ($slug) {
+                    $credentials['workspace_slug'] = (string) $slug;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('OAuthCallbackAction: could not fetch Bitbucket workspaces', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // ClickUp: store team_id (workspace) for API calls
+        if ($driver === 'clickup') {
+            try {
+                $teams = Http::withHeaders(['Authorization' => $credentials['access_token']])
+                    ->timeout(10)
+                    ->get('https://api.clickup.com/api/v2/team')
+                    ->json();
+
+                $teamId = $teams['teams'][0]['id'] ?? null;
+                if ($teamId) {
+                    $credentials['team_id'] = (string) $teamId;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('OAuthCallbackAction: could not fetch ClickUp team', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Zendesk / Freshdesk: preserve the subdomain for API calls
+        if (in_array($driver, ['zendesk', 'freshdesk'], true) && ! empty($stateData['subdomain'])) {
+            $credentials['subdomain'] = $stateData['subdomain'];
+        }
+
+        // Pipedrive: store api_domain from token response
+        if ($driver === 'pipedrive' && ! empty($tokens['api_domain'])) {
+            $credentials['api_domain'] = rtrim((string) $tokens['api_domain'], '/');
+        }
+
+        // Asana: store workspace GID for API calls
+        if ($driver === 'asana') {
+            try {
+                $workspaces = Http::withToken($credentials['access_token'])
+                    ->timeout(10)
+                    ->get('https://app.asana.com/api/1.0/workspaces')
+                    ->json();
+
+                $workspaceGid = $workspaces['data'][0]['gid'] ?? null;
+                if ($workspaceGid) {
+                    $credentials['workspace_gid'] = (string) $workspaceGid;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('OAuthCallbackAction: could not fetch Asana workspaces', ['error' => $e->getMessage()]);
             }
         }
 

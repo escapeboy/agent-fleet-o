@@ -37,33 +37,42 @@ class PipedriveIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'api_token' => ['type' => 'password', 'required' => true, 'label' => 'API Token',
-                'hint' => 'Pipedrive → Settings → Personal Preferences → API'],
-        ];
+        return [];
     }
 
     private function token(Integration|array $source): string
     {
         return $source instanceof Integration
-            ? ($source->getCredentialSecret('api_token') ?? '')
-            : ($source['api_token'] ?? '');
+            ? ($source->getCredentialSecret('access_token') ?? $source->getCredentialSecret('api_token') ?? '')
+            : ($source['access_token'] ?? $source['api_token'] ?? '');
+    }
+
+    private function apiBase(Integration $integration): string
+    {
+        return $integration->getCredentialSecret('api_domain') ?? self::API_BASE;
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        $token = $credentials['api_token'] ?? null;
+        $token = $credentials['access_token'] ?? $credentials['api_token'] ?? null;
 
         if (! $token) {
             return false;
         }
 
         try {
+            if (isset($credentials['access_token'])) {
+                return Http::withToken($token)
+                    ->timeout(10)
+                    ->get(self::API_BASE.'/users/me')
+                    ->successful();
+            }
+
             return Http::timeout(10)
                 ->get(self::API_BASE.'/users/me', ['api_token' => $token])
                 ->successful();
@@ -82,8 +91,9 @@ class PipedriveIntegrationDriver implements IntegrationDriverInterface
 
         $start = microtime(true);
         try {
-            $response = Http::timeout(10)
-                ->get(self::API_BASE.'/users/me', ['api_token' => $token]);
+            $response = Http::withToken($token)
+                ->timeout(10)
+                ->get($this->apiBase($integration).'/users/me');
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
@@ -147,9 +157,9 @@ class PipedriveIntegrationDriver implements IntegrationDriverInterface
         }
 
         try {
-            $response = Http::timeout(15)
-                ->get(self::API_BASE.'/deals', [
-                    'api_token' => $token,
+            $response = Http::withToken($token)
+                ->timeout(15)
+                ->get($this->apiBase($integration).'/deals', [
                     'sort' => 'update_time DESC',
                     'limit' => 25,
                 ]);
@@ -212,34 +222,31 @@ class PipedriveIntegrationDriver implements IntegrationDriverInterface
         $token = $this->token($integration);
         abort_unless($token, 422, 'Pipedrive API token not configured.');
 
+        $apiBase = $this->apiBase($integration);
+        $http = Http::withToken($token)->timeout(15);
+
         return match ($action) {
-            'create_deal' => Http::timeout(15)
-                ->post(self::API_BASE.'/deals', array_merge(
-                    array_filter(['value' => $params['value'] ?? null, 'person_id' => $params['person_id'] ?? null]),
-                    ['title' => $params['title'], 'api_token' => $token],
-                ))->json(),
+            'create_deal' => $http->post("{$apiBase}/deals", array_filter([
+                'title' => $params['title'],
+                'value' => $params['value'] ?? null,
+                'person_id' => $params['person_id'] ?? null,
+            ]))->json(),
 
-            'update_deal' => Http::timeout(15)
-                ->put(self::API_BASE."/deals/{$params['deal_id']}", array_filter([
-                    'api_token' => $token,
-                    'stage_id' => $params['stage_id'] ?? null,
-                    'status' => $params['status'] ?? null,
-                ]))->json(),
+            'update_deal' => $http->put("{$apiBase}/deals/{$params['deal_id']}", array_filter([
+                'stage_id' => $params['stage_id'] ?? null,
+                'status' => $params['status'] ?? null,
+            ]))->json(),
 
-            'create_person' => Http::timeout(15)
-                ->post(self::API_BASE.'/persons', array_filter([
-                    'api_token' => $token,
-                    'name' => $params['name'],
-                    'email' => $params['email'] ?? null,
-                    'phone' => $params['phone'] ?? null,
-                ]))->json(),
+            'create_person' => $http->post("{$apiBase}/persons", array_filter([
+                'name' => $params['name'],
+                'email' => $params['email'] ?? null,
+                'phone' => $params['phone'] ?? null,
+            ]))->json(),
 
-            'add_activity_note' => Http::timeout(15)
-                ->post(self::API_BASE.'/notes', [
-                    'api_token' => $token,
-                    'deal_id' => $params['deal_id'],
-                    'content' => $params['content'],
-                ])->json(),
+            'add_activity_note' => $http->post("{$apiBase}/notes", [
+                'deal_id' => $params['deal_id'],
+                'content' => $params['content'],
+            ])->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

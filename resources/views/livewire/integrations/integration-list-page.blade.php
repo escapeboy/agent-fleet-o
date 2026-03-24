@@ -91,6 +91,16 @@
                     @endphp
 
                     @if(($driverConfig['auth'] ?? '') === 'oauth2')
+                        @if(!empty($driverConfig['subdomain_required']))
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Subdomain <span class="text-red-500">*</span></label>
+                                <input wire:model="connectConfig.subdomain" type="text"
+                                       placeholder="yourcompany"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none"
+                                       required />
+                                <p class="mt-1 text-xs text-gray-500">From <span class="font-mono">yourcompany.{{ $connectDriver }}.com</span></p>
+                            </div>
+                        @endif
                         <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
                             <p class="font-medium">OAuth2 Authorization Required</p>
                             <p class="mt-1 text-blue-600">You'll be redirected to {{ ucfirst($connectDriver) }} to authorize access. Make sure to return here after authorizing.</p>

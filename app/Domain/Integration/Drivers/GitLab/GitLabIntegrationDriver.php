@@ -45,18 +45,12 @@ class GitLabIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'base_url' => ['type' => 'string', 'required' => false, 'label' => 'GitLab URL',
-                'default' => self::DEFAULT_BASE,
-                'hint' => 'Leave as-is for gitlab.com. For self-hosted: https://gitlab.mycompany.com'],
-            'token' => ['type' => 'password', 'required' => true, 'label' => 'Access Token',
-                'hint' => 'User Settings → Access Tokens → api + read_user scopes'],
-        ];
+        return [];
     }
 
     private function apiBase(Integration|array $source): string
@@ -72,7 +66,7 @@ class GitLabIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function validateCredentials(array $credentials): bool
     {
-        $token = $credentials['token'] ?? null;
+        $token = $credentials['access_token'] ?? $credentials['token'] ?? null;
 
         if (! $token) {
             return false;
@@ -90,7 +84,7 @@ class GitLabIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function ping(Integration $integration): HealthResult
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
 
         if (! $token) {
             return HealthResult::fail('Access token not configured.');
@@ -199,7 +193,7 @@ class GitLabIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function registerWebhook(Integration $integration, array $filterConfig, string $callbackUrl): WebhookRegistrationDTO
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
         $projectId = rawurlencode($filterConfig['project_id'] ?? '');
         $secret = Str::random(40);
 
@@ -225,7 +219,7 @@ class GitLabIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function deregisterWebhook(Integration $integration, string $webhookId, array $filterConfig): void
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
         $projectId = rawurlencode($filterConfig['project_id'] ?? '');
 
         Http::withToken($token)
@@ -256,7 +250,7 @@ class GitLabIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
         $base = $this->apiBase($integration);
         $projectId = rawurlencode($params['project_id'] ?? '');
 

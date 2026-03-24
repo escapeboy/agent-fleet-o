@@ -35,18 +35,12 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'base_url' => ['type' => 'string', 'required' => false, 'label' => 'GitHub URL',
-                'default' => 'https://github.com',
-                'hint' => 'Leave as-is for GitHub.com. For GitHub Enterprise: https://github.mycompany.com'],
-            'token' => ['type' => 'password', 'required' => true, 'label' => 'Personal Access Token',
-                'hint' => 'Settings → Developer settings → Personal access tokens (classic)'],
-        ];
+        return [];
     }
 
     private function apiBase(Integration|array $source): string
@@ -68,7 +62,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function validateCredentials(array $credentials): bool
     {
-        $token = $credentials['token'] ?? null;
+        $token = $credentials['access_token'] ?? $credentials['token'] ?? null;
 
         if (! $token) {
             return false;
@@ -85,7 +79,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function ping(Integration $integration): HealthResult
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
 
         if (! $token) {
             return HealthResult::fail('No token configured.');
@@ -94,7 +88,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
         $start = microtime(true);
 
         try {
-            $response = Http::withToken($token)->timeout(10)->get($this->apiBase($integration).'/user');
+            $response = Http::withToken((string) $token)->timeout(10)->get($this->apiBase($integration).'/user');
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
@@ -179,7 +173,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
         $apiBase = $this->apiBase($integration);
 
         return match ($action) {
@@ -217,7 +211,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function registerWebhook(Integration $integration, array $filterConfig, string $callbackUrl): WebhookRegistrationDTO
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
         $repo = $filterConfig['repo'] ?? null;
 
         if (! $repo) {
@@ -254,7 +248,7 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
 
     public function deregisterWebhook(Integration $integration, string $webhookId, array $filterConfig): void
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
         $repo = $filterConfig['repo'] ?? null;
 
         if (! $repo) {

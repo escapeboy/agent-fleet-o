@@ -48,15 +48,12 @@ class AsanaIntegrationDriver implements IntegrationDriverInterface, Subscribable
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'access_token' => ['type' => 'password', 'required' => true, 'label' => 'Personal Access Token',
-                'hint' => 'My Profile Settings → Apps → Manage Developer Apps → Personal Access Tokens'],
-        ];
+        return [];
     }
 
     private function withAuth(Integration $integration): PendingRequest

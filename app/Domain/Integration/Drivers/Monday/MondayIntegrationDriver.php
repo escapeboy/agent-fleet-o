@@ -41,22 +41,19 @@ class MondayIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'api_key' => ['type' => 'password', 'required' => true, 'label' => 'API Key (v2 Token)',
-                'hint' => 'Profile Photo → Developers → My Access Tokens'],
-        ];
+        return [];
     }
 
     private function graphql(Integration|array $source, string $query, array $variables = []): array
     {
         $token = $source instanceof Integration
-            ? $source->getCredentialSecret('api_key')
-            : ($source['api_key'] ?? '');
+            ? ($source->getCredentialSecret('access_token') ?? $source->getCredentialSecret('api_key'))
+            : ($source['access_token'] ?? $source['api_key'] ?? '');
 
         $response = Http::withToken((string) $token)
             ->withHeaders(['API-Version' => '2024-01'])
@@ -68,7 +65,7 @@ class MondayIntegrationDriver implements IntegrationDriverInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        if (empty($credentials['api_key'])) {
+        if (empty($credentials['access_token']) && empty($credentials['api_key'])) {
             return false;
         }
 
@@ -83,7 +80,7 @@ class MondayIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $token = $integration->getCredentialSecret('api_key');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_key');
 
         if (! $token) {
             return HealthResult::fail('API key not configured.');

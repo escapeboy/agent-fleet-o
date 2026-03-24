@@ -38,51 +38,55 @@ class ConfluenceIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'base_url' => ['type' => 'string', 'required' => true, 'label' => 'Confluence URL',
-                'hint' => 'https://yourcompany.atlassian.net/wiki'],
-            'email' => ['type' => 'string', 'required' => true, 'label' => 'Email'],
-            'api_token' => ['type' => 'password', 'required' => true, 'label' => 'API Token',
-                'hint' => 'https://id.atlassian.com/manage-profile/security/api-tokens'],
-            'space_key' => ['type' => 'string', 'required' => false, 'label' => 'Space Key',
-                'hint' => 'Optional — restrict polling to a specific space'],
-        ];
+        return [];
     }
 
     private function apiBase(Integration|array $source): string
     {
-        $url = $source instanceof Integration
-            ? ($source->config['base_url'] ?? $source->getCredentialSecret('base_url') ?? '')
-            : ($source['base_url'] ?? '');
+        if ($source instanceof Integration) {
+            $cloudId = $source->getCredentialSecret('cloud_id');
+            if ($cloudId) {
+                return "https://api.atlassian.com/ex/confluence/{$cloudId}/rest/api";
+            }
+
+            $url = $source->config['base_url'] ?? $source->getCredentialSecret('base_url') ?? '';
+        } else {
+            $cloudId = $source['cloud_id'] ?? null;
+            if ($cloudId) {
+                return "https://api.atlassian.com/ex/confluence/{$cloudId}/rest/api";
+            }
+
+            $url = $source['base_url'] ?? '';
+        }
 
         return rtrim((string) $url, '/').'/rest/api';
     }
 
-    private function basicAuth(Integration|array $source): string
+    private function bearerToken(Integration $integration): string
     {
-        [$email, $token] = $source instanceof Integration
-            ? [$source->getCredentialSecret('email'), $source->getCredentialSecret('api_token')]
-            : [$source['email'] ?? '', $source['api_token'] ?? ''];
-
-        return base64_encode("{$email}:{$token}");
+        return (string) ($integration->getCredentialSecret('access_token') ?? '');
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        if (empty($credentials['base_url']) || empty($credentials['email']) || empty($credentials['api_token'])) {
+        $accessToken = $credentials['access_token'] ?? null;
+        $cloudId = $credentials['cloud_id'] ?? null;
+
+        if (! $accessToken) {
             return false;
         }
 
         try {
-            $base = rtrim($credentials['base_url'], '/').'/rest/api';
-            $auth = base64_encode("{$credentials['email']}:{$credentials['api_token']}");
+            $base = $cloudId
+                ? "https://api.atlassian.com/ex/confluence/{$cloudId}/rest/api"
+                : rtrim($credentials['base_url'] ?? '', '/').'/rest/api';
 
-            return Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            return Http::withToken($accessToken)
                 ->timeout(10)
                 ->get("{$base}/space?limit=1")
                 ->successful();
@@ -94,11 +98,11 @@ class ConfluenceIntegrationDriver implements IntegrationDriverInterface
     public function ping(Integration $integration): HealthResult
     {
         $base = $this->apiBase($integration);
-        $auth = $this->basicAuth($integration);
+        $token = $this->bearerToken($integration);
 
         $start = microtime(true);
         try {
-            $response = Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            $response = Http::withToken($token)
                 ->timeout(10)
                 ->get("{$base}/space?limit=1");
             $latency = (int) ((microtime(true) - $start) * 1000);
@@ -157,7 +161,7 @@ class ConfluenceIntegrationDriver implements IntegrationDriverInterface
     public function poll(Integration $integration): array
     {
         $base = $this->apiBase($integration);
-        $auth = $this->basicAuth($integration);
+        $token = $this->bearerToken($integration);
         $spaceKey = $integration->config['space_key'] ?? $integration->getCredentialSecret('space_key');
 
         $params = ['type' => 'page', 'orderby' => 'modified', 'limit' => 25];
@@ -166,7 +170,7 @@ class ConfluenceIntegrationDriver implements IntegrationDriverInterface
         }
 
         try {
-            $response = Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            $response = Http::withToken($token)
                 ->timeout(15)
                 ->get("{$base}/content", $params);
 
@@ -224,8 +228,8 @@ class ConfluenceIntegrationDriver implements IntegrationDriverInterface
     public function execute(Integration $integration, string $action, array $params): mixed
     {
         $base = $this->apiBase($integration);
-        $auth = $this->basicAuth($integration);
-        $http = Http::withHeaders(['Authorization' => "Basic {$auth}"])->timeout(15);
+        $token = $this->bearerToken($integration);
+        $http = Http::withToken($token)->timeout(15);
 
         return match ($action) {
             'create_page' => $this->checked($http->post("{$base}/content", [

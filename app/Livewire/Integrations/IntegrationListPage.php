@@ -78,6 +78,7 @@ class IntegrationListPage extends Component
                 teamId: $team->getKey(),
                 driver: $this->connectDriver,
                 name: $this->connectName,
+                subdomain: $this->connectConfig['subdomain'] ?? null,
             );
 
             return redirect()->away($url);

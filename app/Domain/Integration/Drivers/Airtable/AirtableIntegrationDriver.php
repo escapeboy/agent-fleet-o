@@ -31,19 +31,17 @@ class AirtableIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'token' => ['type' => 'string', 'required' => true, 'label' => 'Personal Access Token', 'hint' => 'airtable.com → Account → Developer hub → Personal access tokens'],
-        ];
+        return [];
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        $token = $credentials['token'] ?? null;
+        $token = $credentials['access_token'] ?? $credentials['token'] ?? null;
 
         if (! $token) {
             return false;
@@ -60,7 +58,7 @@ class AirtableIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
 
         if (! $token) {
             return HealthResult::fail('No token configured.');
@@ -121,7 +119,7 @@ class AirtableIntegrationDriver implements IntegrationDriverInterface
         $config = $integration->config ?? [];
         $baseId = $config['base_id'] ?? null;
         $table = $config['table'] ?? null;
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
 
         if (! $baseId || ! $table || ! $token) {
             return [];
@@ -178,7 +176,7 @@ class AirtableIntegrationDriver implements IntegrationDriverInterface
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
 
         return match ($action) {
             'create_record' => Http::withToken((string) $token)

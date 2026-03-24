@@ -3,6 +3,7 @@
 namespace App\Domain\Integration\Actions;
 
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Models\Integration;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -16,16 +17,22 @@ use Illuminate\Support\Facades\Log;
  *   - The driver has no OAuth2 token URL
  *   - No refresh_token is stored
  *   - The current token is still valid beyond the 10-minute threshold
+ *
+ * On permanent failure (invalid_grant / 400), sets integration status
+ * to RequiresReauth so users are prompted to re-authorize.
  */
 class RefreshIntegrationCredentialAction
 {
     /** Seconds before expiry to proactively refresh. */
     private const REFRESH_THRESHOLD_SECONDS = 600;
 
+    /** OAuth2 error codes that indicate a permanently invalid token. */
+    private const PERMANENT_FAILURE_ERRORS = ['invalid_grant', 'invalid_token', 'token_expired'];
+
     public function execute(Integration $integration): void
     {
         $driver = (string) $integration->getAttribute('driver');
-        $tokenUrl = config("integrations.oauth_urls.{$driver}.token");
+        $tokenUrl = $this->resolveTokenUrl($driver, $integration);
 
         if (! $tokenUrl) {
             return;
@@ -77,12 +84,26 @@ class RefreshIntegrationCredentialAction
             ]);
 
             if (! $response->successful()) {
+                $errorCode = $response->json('error') ?? 'unknown';
+
                 Log::error('RefreshIntegrationCredentialAction: refresh failed', [
                     'integration_id' => $integration->getKey(),
                     'driver' => $driver,
                     'status' => $response->status(),
-                    'error' => $response->json('error') ?? 'unknown',
+                    'error' => $errorCode,
                 ]);
+
+                // Permanent failure: the refresh token is invalid or revoked
+                if ($response->status() === 400 || $response->status() === 401) {
+                    if (in_array($errorCode, self::PERMANENT_FAILURE_ERRORS, true) || $response->status() === 401) {
+                        $integration->update(['status' => IntegrationStatus::RequiresReauth]);
+
+                        Log::warning('RefreshIntegrationCredentialAction: token permanently invalid, requires re-auth', [
+                            'integration_id' => $integration->getKey(),
+                            'driver' => $driver,
+                        ]);
+                    }
+                }
 
                 return;
             }
@@ -106,6 +127,11 @@ class RefreshIntegrationCredentialAction
                 'expires_at' => now()->addSeconds($expiresIn),
             ]);
 
+            // Restore active status if it was previously set to requires_reauth
+            if ($integration->getAttribute('status') === IntegrationStatus::RequiresReauth) {
+                $integration->update(['status' => IntegrationStatus::Active]);
+            }
+
             Log::info('RefreshIntegrationCredentialAction: token refreshed', [
                 'integration_id' => $integration->getKey(),
                 'driver' => $driver,
@@ -113,5 +139,37 @@ class RefreshIntegrationCredentialAction
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * Resolve the token URL for the driver, handling subdomain-based providers.
+     */
+    private function resolveTokenUrl(string $driver, Integration $integration): ?string
+    {
+        $configured = config("integrations.oauth_urls.{$driver}.token");
+
+        if ($configured) {
+            return $configured;
+        }
+
+        // Subdomain-based providers store subdomain in credential secret_data
+        $credentialId = $integration->getAttribute('credential_id');
+        if (! $credentialId) {
+            return null;
+        }
+
+        /** @var Credential|null $credential */
+        $credential = Credential::find($credentialId);
+        $subdomain = $credential ? ($credential->getAttribute('secret_data')['subdomain'] ?? null) : null;
+
+        if ($subdomain) {
+            return match ($driver) {
+                'zendesk' => "https://{$subdomain}.zendesk.com/oauth/tokens",
+                'freshdesk' => "https://{$subdomain}.freshdesk.com/oauth/token",
+                default => null,
+            };
+        }
+
+        return null;
     }
 }

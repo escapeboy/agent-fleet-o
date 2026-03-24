@@ -36,20 +36,17 @@ class TypeformIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'token' => ['type' => 'password', 'required' => true, 'label' => 'Personal Access Token',
-                'hint' => 'Typeform → Account → Settings → Personal tokens'],
-        ];
+        return [];
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        $token = $credentials['token'] ?? null;
+        $token = $credentials['access_token'] ?? $credentials['token'] ?? null;
 
         if (! $token) {
             return false;
@@ -67,7 +64,7 @@ class TypeformIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $token = $integration->getCredentialSecret('token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('token');
 
         if (! $token) {
             return HealthResult::fail('Personal access token not configured.');

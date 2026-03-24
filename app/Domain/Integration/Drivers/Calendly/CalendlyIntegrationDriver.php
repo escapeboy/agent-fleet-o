@@ -37,15 +37,12 @@ class CalendlyIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'access_token' => ['type' => 'password', 'required' => true, 'label' => 'Personal Access Token',
-                'hint' => 'Calendly → Account → Integrations → API & Webhooks'],
-        ];
+        return [];
     }
 
     public function validateCredentials(array $credentials): bool

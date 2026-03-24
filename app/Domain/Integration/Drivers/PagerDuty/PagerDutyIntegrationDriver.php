@@ -39,30 +39,23 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'api_key' => ['type' => 'password', 'required' => true,  'label' => 'REST API Key',
-                'hint' => 'From PagerDuty → Integrations → API Access Keys'],
-            'webhook_secret' => ['type' => 'password', 'required' => false, 'label' => 'Webhook Secret',
-                'hint' => 'From PagerDuty → Integrations → Generic Webhooks (V3) → secret'],
-            'service_id' => ['type' => 'string',   'required' => false, 'label' => 'Default Service ID',
-                'hint' => 'Used by create_incident action when no service_id is provided'],
-        ];
+        return [];
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        $apiKey = $credentials['api_key'] ?? null;
+        $apiKey = $credentials['access_token'] ?? $credentials['api_key'] ?? null;
         if (! $apiKey) {
             return false;
         }
 
         try {
-            $response = Http::withHeaders(['Authorization' => "Token token={$apiKey}"])
+            $response = Http::withToken($apiKey)
                 ->timeout(10)
                 ->get(self::API_BASE.'/users/me');
 
@@ -74,14 +67,14 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $apiKey = $integration->getCredentialSecret('api_key');
+        $apiKey = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_key');
         if (! $apiKey) {
             return HealthResult::fail('No API key configured.');
         }
 
         $start = microtime(true);
         try {
-            $response = Http::withHeaders(['Authorization' => "Token token={$apiKey}"])
+            $response = Http::withToken($apiKey)
                 ->timeout(10)
                 ->get(self::API_BASE.'/users/me');
             $latency = (int) ((microtime(true) - $start) * 1000);
@@ -199,10 +192,10 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $apiKey = $integration->getCredentialSecret('api_key');
+        $apiKey = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_key');
         abort_unless($apiKey, 422, 'PagerDuty API key not configured.');
 
-        $headers = ['Authorization' => "Token token={$apiKey}"];
+        $headers = ['Authorization' => "Bearer {$apiKey}"];
 
         return match ($action) {
             'acknowledge_incident' => Http::withHeaders($headers + ['From' => $params['from']])

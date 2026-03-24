@@ -39,22 +39,12 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'base_url' => ['type' => 'string', 'required' => false, 'label' => 'Sentry URL',
-                'default' => self::DEFAULT_BASE,
-                'hint' => 'Leave as-is for sentry.io. For self-hosted: https://sentry.yourdomain.com'],
-            'auth_token' => ['type' => 'password', 'required' => true, 'label' => 'Auth Token',
-                'hint' => 'Sentry Internal Integration → Tokens → Create Token'],
-            'org_slug' => ['type' => 'string', 'required' => true, 'label' => 'Organisation Slug',
-                'hint' => 'From your Sentry URL: {base}/organizations/{slug}/'],
-            'client_secret' => ['type' => 'password', 'required' => false, 'label' => 'Client Secret',
-                'hint' => 'Internal Integration client secret — used for webhook signature verification'],
-        ];
+        return [];
     }
 
     private function apiBase(Integration|array $integration): string
@@ -70,7 +60,7 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        $token = $credentials['auth_token'] ?? null;
+        $token = $credentials['access_token'] ?? $credentials['auth_token'] ?? null;
         $orgSlug = $credentials['org_slug'] ?? null;
 
         if (! $token || ! $orgSlug) {
@@ -91,7 +81,7 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $token = $integration->getCredentialSecret('auth_token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('auth_token');
         $orgSlug = $integration->config['org_slug']
             ?? $integration->getCredentialSecret('org_slug');
 
@@ -158,7 +148,7 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
     public function poll(Integration $integration): array
     {
-        $token = $integration->getCredentialSecret('auth_token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('auth_token');
         $orgSlug = $integration->config['org_slug']
             ?? $integration->getCredentialSecret('org_slug');
 
@@ -235,7 +225,7 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $token = $integration->getCredentialSecret('auth_token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('auth_token');
         $orgSlug = $integration->config['org_slug']
             ?? $integration->getCredentialSecret('org_slug');
 

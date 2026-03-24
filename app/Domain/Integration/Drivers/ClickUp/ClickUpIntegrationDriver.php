@@ -46,27 +46,24 @@ class ClickUpIntegrationDriver implements IntegrationDriverInterface, Subscribab
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'api_token' => ['type' => 'password', 'required' => true, 'label' => 'Personal API Token',
-                'hint' => 'ClickUp → Settings → Apps → API Token'],
-        ];
+        return [];
     }
 
     private function withAuth(Integration $integration): PendingRequest
     {
         // ClickUp uses Authorization header without Bearer prefix
-        return Http::withHeaders(['Authorization' => $integration->getCredentialSecret('api_token')])
+        return Http::withHeaders(['Authorization' => ($integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_token'))])
             ->timeout(15);
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        $token = $credentials['api_token'] ?? null;
+        $token = $credentials['access_token'] ?? $credentials['api_token'] ?? null;
 
         if (! $token) {
             return false;
@@ -84,7 +81,7 @@ class ClickUpIntegrationDriver implements IntegrationDriverInterface, Subscribab
 
     public function ping(Integration $integration): HealthResult
     {
-        $token = $integration->getCredentialSecret('api_token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_token');
 
         if (! $token) {
             return HealthResult::fail('API token not configured.');
@@ -240,7 +237,7 @@ class ClickUpIntegrationDriver implements IntegrationDriverInterface, Subscribab
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $token = $integration->getCredentialSecret('api_token');
+        $token = $integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_token');
         abort_unless($token, 422, 'ClickUp API token not configured.');
 
         $http = Http::withHeaders(['Authorization' => $token])->timeout(15);

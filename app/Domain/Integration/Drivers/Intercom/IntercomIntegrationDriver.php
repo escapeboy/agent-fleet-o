@@ -41,15 +41,12 @@ class IntercomIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'access_token' => ['type' => 'password', 'required' => true, 'label' => 'Access Token',
-                'hint' => 'Settings → Integrations → Developer Hub → your app → Authentication → Access Token'],
-        ];
+        return [];
     }
 
     public function validateCredentials(array $credentials): bool

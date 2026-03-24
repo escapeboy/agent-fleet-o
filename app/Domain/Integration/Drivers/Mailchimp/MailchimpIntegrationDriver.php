@@ -52,15 +52,25 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
 
     public function validateCredentials(array $credentials): bool
     {
+        $accessToken = $credentials['access_token'] ?? null;
         $apiKey = $credentials['api_key'] ?? null;
-        if (! $apiKey) {
+
+        if (! $accessToken && ! $apiKey) {
             return false;
         }
 
         try {
-            $response = Http::withBasicAuth('anystring', $apiKey)
-                ->timeout(10)
-                ->get($this->baseUrl($apiKey).'/');
+            $base = $this->baseUrl($credentials);
+
+            if ($accessToken) {
+                $response = Http::withToken($accessToken)
+                    ->timeout(10)
+                    ->get("{$base}/");
+            } else {
+                $response = Http::withBasicAuth('anystring', $apiKey)
+                    ->timeout(10)
+                    ->get("{$base}/");
+            }
 
             return $response->successful();
         } catch (\Throwable) {
@@ -70,16 +80,21 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
+        $accessToken = $integration->getCredentialSecret('access_token');
         $apiKey = $integration->getCredentialSecret('api_key');
-        if (! $apiKey) {
-            return HealthResult::fail('No API key configured.');
+
+        if (! $accessToken && ! $apiKey) {
+            return HealthResult::fail('No credentials configured.');
         }
 
         $start = microtime(true);
         try {
-            $response = Http::withBasicAuth('anystring', $apiKey)
-                ->timeout(10)
-                ->get($this->baseUrl($apiKey).'/');
+            $base = $this->baseUrlFromIntegration($integration);
+
+            $response = $accessToken
+                ? Http::withToken($accessToken)->timeout(10)->get("{$base}/")
+                : Http::withBasicAuth('anystring', $apiKey)->timeout(10)->get("{$base}/");
+
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
@@ -174,14 +189,18 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
+        $accessToken = $integration->getCredentialSecret('access_token');
         $apiKey = $integration->getCredentialSecret('api_key');
-        abort_unless($apiKey, 422, 'Mailchimp API key not configured.');
 
-        $base = $this->baseUrl($apiKey);
-        $auth = ['anystring', $apiKey];
+        abort_unless($accessToken || $apiKey, 422, 'Mailchimp credentials not configured.');
+
+        $base = $this->baseUrlFromIntegration($integration);
+        $http = $accessToken
+            ? Http::withToken($accessToken)->timeout(15)
+            : Http::withBasicAuth('anystring', $apiKey)->timeout(15);
 
         return match ($action) {
-            'add_subscriber' => Http::withBasicAuth(...$auth)->timeout(15)
+            'add_subscriber' => $http
                 ->put("{$base}/lists/{$params['list_id']}/members/{$this->subscriberHash($params['email'])}", array_filter([
                     'email_address' => $params['email'],
                     'status_if_new' => 'subscribed',
@@ -193,17 +212,17 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
                     'tags' => $params['tags'] ?? null,
                 ]))->json(),
 
-            'update_subscriber_tags' => Http::withBasicAuth(...$auth)->timeout(15)
+            'update_subscriber_tags' => $http
                 ->post("{$base}/lists/{$params['list_id']}/members/{$this->subscriberHash($params['email'])}/tags", [
                     'tags' => $params['tags'],
                 ])->json(),
 
-            'remove_subscriber' => Http::withBasicAuth(...$auth)->timeout(15)
+            'remove_subscriber' => $http
                 ->patch("{$base}/lists/{$params['list_id']}/members/{$this->subscriberHash($params['email'])}", [
                     'status' => 'unsubscribed',
                 ])->json(),
 
-            'trigger_automation' => Http::withBasicAuth(...$auth)->timeout(15)
+            'trigger_automation' => $http
                 ->post("{$base}/automations/{$params['workflow_id']}/emails/{$params['email_id']}/queue", [
                     'email_address' => $params['email'],
                 ])->json(),
@@ -212,14 +231,33 @@ class MailchimpIntegrationDriver implements IntegrationDriverInterface
         };
     }
 
-    private function datacenter(string $apiKey): string
+    private function datacenterFromKey(string $apiKey): string
     {
         return explode('-', $apiKey)[1] ?? 'us1';
     }
 
-    private function baseUrl(string $apiKey): string
+    private function baseUrl(array $credentials): string
     {
-        return 'https://'.$this->datacenter($apiKey).'.api.mailchimp.com/3.0';
+        if (! empty($credentials['dc'])) {
+            return 'https://'.$credentials['dc'].'.api.mailchimp.com/3.0';
+        }
+
+        $apiKey = $credentials['api_key'] ?? '';
+
+        return 'https://'.$this->datacenterFromKey($apiKey).'.api.mailchimp.com/3.0';
+    }
+
+    private function baseUrlFromIntegration(Integration $integration): string
+    {
+        $dc = $integration->getCredentialSecret('dc');
+
+        if ($dc) {
+            return "https://{$dc}.api.mailchimp.com/3.0";
+        }
+
+        $apiKey = (string) $integration->getCredentialSecret('api_key');
+
+        return 'https://'.$this->datacenterFromKey($apiKey).'.api.mailchimp.com/3.0';
     }
 
     private function subscriberHash(string $email): string

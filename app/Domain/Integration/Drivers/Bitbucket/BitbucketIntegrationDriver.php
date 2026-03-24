@@ -46,37 +46,37 @@ class BitbucketIntegrationDriver implements IntegrationDriverInterface, Subscrib
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'workspace' => ['type' => 'string', 'required' => true, 'label' => 'Workspace',
-                'hint' => 'Your Bitbucket workspace slug (from the URL)'],
-            'username' => ['type' => 'string', 'required' => true, 'label' => 'Username'],
-            'app_password' => ['type' => 'password', 'required' => true, 'label' => 'App Password',
-                'hint' => 'Account Settings → App passwords → Create with repository webhooks scope'],
-        ];
+        return [];
     }
 
     private function withAuth(Integration|array $source): PendingRequest
     {
-        [$user, $pass] = $source instanceof Integration
-            ? [$source->getCredentialSecret('username'), $source->getCredentialSecret('app_password')]
-            : [$source['username'] ?? '', $source['app_password'] ?? ''];
+        if ($source instanceof Integration) {
+            $token = $source->getCredentialSecret('access_token') ?? '';
 
-        return Http::withBasicAuth((string) $user, (string) $pass)->timeout(15);
+            return Http::withToken($token)->timeout(15);
+        }
+
+        $token = $source['access_token'] ?? '';
+
+        return Http::withToken($token)->timeout(15);
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        if (empty($credentials['username']) || empty($credentials['app_password'])) {
+        $token = $credentials['access_token'] ?? null;
+
+        if (! $token) {
             return false;
         }
 
         try {
-            return Http::withBasicAuth($credentials['username'], $credentials['app_password'])
+            return Http::withToken($token)
                 ->timeout(10)
                 ->get(self::API_BASE.'/user')
                 ->successful();
@@ -200,7 +200,7 @@ class BitbucketIntegrationDriver implements IntegrationDriverInterface, Subscrib
 
     public function registerWebhook(Integration $integration, array $filterConfig, string $callbackUrl): WebhookRegistrationDTO
     {
-        $workspace = $integration->getCredentialSecret('workspace') ?? $integration->config['workspace'] ?? '';
+        $workspace = $integration->getCredentialSecret('workspace_slug') ?? $integration->getCredentialSecret('workspace') ?? $integration->config['workspace'] ?? '';
         $repoSlug = $filterConfig['repo_slug'] ?? '';
         $events = $filterConfig['events'] ?? ['repo:push', 'pullrequest:created', 'pullrequest:fulfilled'];
         $secret = Str::random(40);
@@ -224,7 +224,7 @@ class BitbucketIntegrationDriver implements IntegrationDriverInterface, Subscrib
 
     public function deregisterWebhook(Integration $integration, string $webhookId, array $filterConfig): void
     {
-        $workspace = $integration->getCredentialSecret('workspace') ?? $integration->config['workspace'] ?? '';
+        $workspace = $integration->getCredentialSecret('workspace_slug') ?? $integration->getCredentialSecret('workspace') ?? $integration->config['workspace'] ?? '';
         $repoSlug = $filterConfig['repo_slug'] ?? '';
 
         $this->withAuth($integration)
@@ -255,7 +255,7 @@ class BitbucketIntegrationDriver implements IntegrationDriverInterface, Subscrib
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $workspace = $integration->getCredentialSecret('workspace') ?? $integration->config['workspace'] ?? '';
+        $workspace = $integration->getCredentialSecret('workspace_slug') ?? $integration->getCredentialSecret('workspace') ?? $integration->config['workspace'] ?? '';
         $repoSlug = $params['repo_slug'] ?? '';
         $http = $this->withAuth($integration);
 

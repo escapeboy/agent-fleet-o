@@ -7,6 +7,22 @@
         <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
     @endif
 
+    {{-- Re-authorization Warning --}}
+    @if($integration->status === \App\Domain\Integration\Enums\IntegrationStatus::RequiresReauth)
+        <div class="rounded-lg border border-orange-200 bg-orange-50 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="font-medium text-orange-800">Re-authorization Required</p>
+                    <p class="mt-0.5 text-sm text-orange-700">The OAuth2 token for this integration has expired or been revoked. Please re-authorize to restore access.</p>
+                </div>
+                <button wire:click="reconnect"
+                        class="ml-4 shrink-0 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700">
+                    Reconnect →
+                </button>
+            </div>
+        </div>
+    @endif
+
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <div>

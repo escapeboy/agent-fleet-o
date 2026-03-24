@@ -8,6 +8,7 @@ enum IntegrationStatus: string
     case Disconnected = 'disconnected';
     case Error = 'error';
     case PendingAuth = 'pending_auth';
+    case RequiresReauth = 'requires_reauth';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum IntegrationStatus: string
             self::Disconnected => 'Disconnected',
             self::Error => 'Error',
             self::PendingAuth => 'Pending Auth',
+            self::RequiresReauth => 'Requires Re-authorization',
         };
     }
 
@@ -26,6 +28,7 @@ enum IntegrationStatus: string
             self::Disconnected => 'bg-gray-100 text-gray-800',
             self::Error => 'bg-red-100 text-red-800',
             self::PendingAuth => 'bg-yellow-100 text-yellow-800',
+            self::RequiresReauth => 'bg-orange-100 text-orange-800',
         };
     }
 

@@ -40,15 +40,12 @@ class AttioIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'access_token' => ['type' => 'password', 'required' => true, 'label' => 'Access Token',
-                'hint' => 'Attio → Workspace Settings → API → Create token'],
-        ];
+        return [];
     }
 
     public function validateCredentials(array $credentials): bool

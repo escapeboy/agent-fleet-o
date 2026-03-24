@@ -39,47 +39,50 @@ class ZendeskIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'subdomain' => ['type' => 'string', 'required' => true, 'label' => 'Subdomain',
-                'hint' => 'yourcompany (from yourcompany.zendesk.com)'],
-            'email' => ['type' => 'string', 'required' => true, 'label' => 'Agent Email'],
-            'api_token' => ['type' => 'password', 'required' => true, 'label' => 'API Token',
-                'hint' => 'Admin Center → Apps and Integrations → Zendesk API → Add API token'],
-        ];
+        return [];
     }
 
     private function apiBase(Integration|array $source): string
     {
         $subdomain = $source instanceof Integration
-            ? ($source->config['subdomain'] ?? $source->getCredentialSecret('subdomain') ?? '')
+            ? ($source->getCredentialSecret('subdomain') ?? $source->config['subdomain'] ?? '')
             : ($source['subdomain'] ?? '');
 
         return "https://{$subdomain}.zendesk.com/api/v2";
     }
 
-    private function basicAuth(Integration|array $source): string
+    private function bearerToken(Integration $integration): string
     {
-        [$email, $token] = $source instanceof Integration
-            ? [$source->getCredentialSecret('email'), $source->getCredentialSecret('api_token')]
-            : [$source['email'] ?? '', $source['api_token'] ?? ''];
-
-        return base64_encode("{$email}/token:{$token}");
+        return (string) ($integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_token') ?? '');
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        if (empty($credentials['subdomain']) || empty($credentials['email']) || empty($credentials['api_token'])) {
+        $subdomain = $credentials['subdomain'] ?? null;
+        $accessToken = $credentials['access_token'] ?? null;
+        $apiToken = $credentials['api_token'] ?? null;
+        $email = $credentials['email'] ?? null;
+
+        if (! $subdomain || (! $accessToken && (! $email || ! $apiToken))) {
             return false;
         }
 
         try {
-            $base = "https://{$credentials['subdomain']}.zendesk.com/api/v2";
-            $auth = base64_encode("{$credentials['email']}/token:{$credentials['api_token']}");
+            $base = "https://{$subdomain}.zendesk.com/api/v2";
+
+            if ($accessToken) {
+                return Http::withToken($accessToken)
+                    ->timeout(10)
+                    ->get("{$base}/users/me.json")
+                    ->successful();
+            }
+
+            $auth = base64_encode("{$email}/token:{$apiToken}");
 
             return Http::withHeaders(['Authorization' => "Basic {$auth}"])
                 ->timeout(10)
@@ -93,11 +96,11 @@ class ZendeskIntegrationDriver implements IntegrationDriverInterface
     public function ping(Integration $integration): HealthResult
     {
         $base = $this->apiBase($integration);
-        $auth = $this->basicAuth($integration);
+        $token = $this->bearerToken($integration);
 
         $start = microtime(true);
         try {
-            $response = Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            $response = Http::withToken($token)
                 ->timeout(10)
                 ->get("{$base}/users/me.json");
             $latency = (int) ((microtime(true) - $start) * 1000);
@@ -157,10 +160,10 @@ class ZendeskIntegrationDriver implements IntegrationDriverInterface
     public function poll(Integration $integration): array
     {
         $base = $this->apiBase($integration);
-        $auth = $this->basicAuth($integration);
+        $token = $this->bearerToken($integration);
 
         try {
-            $response = Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            $response = Http::withToken($token)
                 ->timeout(15)
                 ->get("{$base}/tickets.json", ['sort_by' => 'updated_at', 'sort_order' => 'desc', 'per_page' => 25]);
 
@@ -235,8 +238,8 @@ class ZendeskIntegrationDriver implements IntegrationDriverInterface
     public function execute(Integration $integration, string $action, array $params): mixed
     {
         $base = $this->apiBase($integration);
-        $auth = $this->basicAuth($integration);
-        $http = Http::withHeaders(['Authorization' => "Basic {$auth}"])->timeout(15);
+        $token = $this->bearerToken($integration);
+        $http = Http::withToken($token)->timeout(15);
 
         return match ($action) {
             'create_ticket' => $this->checked($http->post("{$base}/tickets.json", ['ticket' => array_filter([

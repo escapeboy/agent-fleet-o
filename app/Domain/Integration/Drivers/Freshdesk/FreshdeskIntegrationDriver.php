@@ -39,50 +39,43 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::ApiKey;
+        return AuthType::OAuth2;
     }
 
     public function credentialSchema(): array
     {
-        return [
-            'domain' => ['type' => 'string', 'required' => true, 'label' => 'Freshdesk Domain',
-                'hint' => 'yourcompany (from yourcompany.freshdesk.com)'],
-            'api_key' => ['type' => 'password', 'required' => true, 'label' => 'API Key',
-                'hint' => 'Profile Settings → Your API Key (top right)'],
-        ];
+        return [];
     }
 
     private function apiBase(Integration|array $source): string
     {
         $domain = $source instanceof Integration
-            ? ($source->config['domain'] ?? $source->getCredentialSecret('domain') ?? '')
-            : ($source['domain'] ?? '');
+            ? ($source->getCredentialSecret('subdomain') ?? $source->getCredentialSecret('domain') ?? $source->config['domain'] ?? '')
+            : ($source['subdomain'] ?? $source['domain'] ?? '');
 
         $domain = rtrim((string) $domain, '/');
 
         return "https://{$domain}.freshdesk.com/api/v2";
     }
 
-    private function basicAuth(Integration|array $source): string
+    private function bearerToken(Integration $integration): string
     {
-        $key = $source instanceof Integration
-            ? $source->getCredentialSecret('api_key')
-            : ($source['api_key'] ?? '');
-
-        return base64_encode("{$key}:X");
+        return (string) ($integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_key') ?? '');
     }
 
     public function validateCredentials(array $credentials): bool
     {
-        if (empty($credentials['domain']) || empty($credentials['api_key'])) {
+        $subdomain = $credentials['subdomain'] ?? $credentials['domain'] ?? null;
+        $accessToken = $credentials['access_token'] ?? $credentials['api_key'] ?? null;
+
+        if (! $subdomain || ! $accessToken) {
             return false;
         }
 
         try {
             $base = $this->apiBase($credentials);
-            $auth = $this->basicAuth($credentials);
 
-            return Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            return Http::withToken($accessToken)
                 ->timeout(10)
                 ->get("{$base}/tickets?per_page=1")
                 ->successful();
@@ -93,18 +86,16 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $domain = $integration->config['domain'] ?? $integration->getCredentialSecret('domain');
-        $apiKey = $integration->getCredentialSecret('api_key');
+        $token = $this->bearerToken($integration);
 
-        if (! $domain || ! $apiKey) {
-            return HealthResult::fail('Domain or API key not configured.');
+        if (! $token) {
+            return HealthResult::fail('Credentials not configured.');
         }
 
         $start = microtime(true);
         try {
             $base = $this->apiBase($integration);
-            $auth = $this->basicAuth($integration);
-            $response = Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            $response = Http::withToken($token)
                 ->timeout(10)
                 ->get("{$base}/tickets?per_page=1");
             $latency = (int) ((microtime(true) - $start) * 1000);
@@ -162,11 +153,11 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 
     public function poll(Integration $integration): array
     {
-        $auth = $this->basicAuth($integration);
+        $token = $this->bearerToken($integration);
         $base = $this->apiBase($integration);
 
         try {
-            $response = Http::withHeaders(['Authorization' => "Basic {$auth}"])
+            $response = Http::withToken($token)
                 ->timeout(15)
                 ->get("{$base}/tickets", [
                     'order_type' => 'desc',
@@ -231,39 +222,32 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $auth = $this->basicAuth($integration);
+        $token = $this->bearerToken($integration);
         $base = $this->apiBase($integration);
+        $http = Http::withToken($token)->timeout(15);
 
         return match ($action) {
-            'create_ticket' => $this->checked(Http::withHeaders(['Authorization' => "Basic {$auth}"])
-                ->timeout(15)
-                ->post("{$base}/tickets", array_filter([
-                    'subject' => $params['subject'],
-                    'description' => $params['description'],
-                    'email' => $params['email'],
-                    'priority' => isset($params['priority']) ? (int) $params['priority'] : null,
-                    'status' => 2,
-                ])))->json(),
+            'create_ticket' => $this->checked($http->post("{$base}/tickets", array_filter([
+                'subject' => $params['subject'],
+                'description' => $params['description'],
+                'email' => $params['email'],
+                'priority' => isset($params['priority']) ? (int) $params['priority'] : null,
+                'status' => 2,
+            ])))->json(),
 
-            'update_ticket' => $this->checked(Http::withHeaders(['Authorization' => "Basic {$auth}"])
-                ->timeout(15)
-                ->put("{$base}/tickets/{$params['ticket_id']}", array_filter([
-                    'status' => isset($params['status']) ? (int) $params['status'] : null,
-                    'priority' => isset($params['priority']) ? (int) $params['priority'] : null,
-                ])))->json(),
+            'update_ticket' => $this->checked($http->put("{$base}/tickets/{$params['ticket_id']}", array_filter([
+                'status' => isset($params['status']) ? (int) $params['status'] : null,
+                'priority' => isset($params['priority']) ? (int) $params['priority'] : null,
+            ])))->json(),
 
-            'reply_to_ticket' => $this->checked(Http::withHeaders(['Authorization' => "Basic {$auth}"])
-                ->timeout(15)
-                ->post("{$base}/tickets/{$params['ticket_id']}/reply", [
-                    'body' => $params['body'],
-                ]))->json(),
+            'reply_to_ticket' => $this->checked($http->post("{$base}/tickets/{$params['ticket_id']}/reply", [
+                'body' => $params['body'],
+            ]))->json(),
 
-            'assign_ticket' => $this->checked(Http::withHeaders(['Authorization' => "Basic {$auth}"])
-                ->timeout(15)
-                ->put("{$base}/tickets/{$params['ticket_id']}", array_filter([
-                    'responder_id' => isset($params['responder_id']) ? (int) $params['responder_id'] : null,
-                    'group_id' => isset($params['group_id']) ? (int) $params['group_id'] : null,
-                ])))->json(),
+            'assign_ticket' => $this->checked($http->put("{$base}/tickets/{$params['ticket_id']}", array_filter([
+                'responder_id' => isset($params['responder_id']) ? (int) $params['responder_id'] : null,
+                'group_id' => isset($params['group_id']) ? (int) $params['group_id'] : null,
+            ])))->json(),
 
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };

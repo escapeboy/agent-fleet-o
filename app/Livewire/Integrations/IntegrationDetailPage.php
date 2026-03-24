@@ -3,6 +3,7 @@
 namespace App\Livewire\Integrations;
 
 use App\Domain\Integration\Actions\DisconnectIntegrationAction;
+use App\Domain\Integration\Actions\OAuthConnectAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
@@ -26,6 +27,27 @@ class IntegrationDetailPage extends Component
             session()->flash('message', 'Ping successful ('.$result->latencyMs.'ms).');
         } else {
             session()->flash('error', 'Ping failed: '.$result->message);
+        }
+    }
+
+    public function reconnect(OAuthConnectAction $action): mixed
+    {
+        $driver = (string) $this->integration->getAttribute('driver');
+        $name = (string) $this->integration->getAttribute('name');
+        $teamId = (string) $this->integration->getAttribute('team_id');
+
+        $subdomain = $this->integration->getCredentialSecret('subdomain')
+            ?? $this->integration->getCredentialSecret('domain')
+            ?? null;
+
+        try {
+            $url = $action->execute(teamId: $teamId, driver: $driver, name: $name, subdomain: $subdomain);
+
+            return redirect()->away($url);
+        } catch (\Throwable $e) {
+            session()->flash('error', 'Re-authorization failed: '.$e->getMessage());
+
+            return null;
         }
     }
 
