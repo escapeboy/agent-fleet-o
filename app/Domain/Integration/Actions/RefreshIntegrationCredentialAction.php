@@ -163,6 +163,16 @@ class RefreshIntegrationCredentialAction
         $subdomain = $credential ? ($credential->getAttribute('secret_data')['subdomain'] ?? null) : null;
 
         if ($subdomain) {
+            // Fix 2: validate subdomain before interpolating into URLs (defense-in-depth)
+            if (! preg_match('/^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$/', $subdomain)) {
+                Log::warning('RefreshIntegrationCredentialAction: invalid subdomain in credentials, skipping refresh', [
+                    'integration_id' => $integration->getKey(),
+                    'driver' => $driver,
+                ]);
+
+                return null;
+            }
+
             return match ($driver) {
                 'zendesk' => "https://{$subdomain}.zendesk.com/oauth/tokens",
                 'freshdesk' => "https://{$subdomain}.freshdesk.com/oauth/token",

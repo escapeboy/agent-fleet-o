@@ -90,6 +90,9 @@ class OAuthConnectAction
 
         // Subdomain-based providers
         if ($subdomain) {
+            // Fix 2: validate subdomain before interpolating into URLs
+            $this->validateSubdomain($subdomain);
+
             return match ($driver) {
                 'zendesk' => "https://{$subdomain}.zendesk.com/oauth/authorizations/new",
                 'freshdesk' => "https://{$subdomain}.freshdesk.com/oauth/authorize",
@@ -98,5 +101,17 @@ class OAuthConnectAction
         }
 
         return null;
+    }
+
+    /**
+     * Validate that a subdomain contains only safe hostname label characters.
+     *
+     * @throws \InvalidArgumentException
+     */
+    private function validateSubdomain(string $subdomain): void
+    {
+        if (! preg_match('/^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$/', $subdomain)) {
+            throw new \InvalidArgumentException('Invalid subdomain: must be 2–63 characters and contain only letters, digits, and hyphens.');
+        }
     }
 }

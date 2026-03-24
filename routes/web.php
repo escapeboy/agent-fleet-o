@@ -217,8 +217,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/credentials/{credential}', CredentialDetailPage::class)->name('credentials.show');
 
     Route::get('/integrations', IntegrationListPage::class)->name('integrations.index');
-    Route::get('/integrations/oauth/{driver}', [IntegrationOAuthController::class, 'redirect'])->name('integrations.oauth.redirect');
-    Route::get('/integrations/oauth/{driver}/callback', [IntegrationOAuthController::class, 'callback'])->name('integrations.oauth.callback');
+    Route::get('/integrations/oauth/{driver}', [IntegrationOAuthController::class, 'redirect'])->where('driver', '[a-z0-9_-]+')->name('integrations.oauth.redirect');
+    Route::get('/integrations/oauth/{driver}/callback', [IntegrationOAuthController::class, 'callback'])->where('driver', '[a-z0-9_-]+')->name('integrations.oauth.callback');
     Route::get('/integrations/{integration}', IntegrationDetailPage::class)->name('integrations.show');
 
     Route::get('/crews', CrewListPage::class)->name('crews.index');

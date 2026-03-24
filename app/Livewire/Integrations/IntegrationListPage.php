@@ -69,6 +69,8 @@ class IntegrationListPage extends Component
         $this->validate([
             'connectDriver' => 'required|string',
             'connectName' => 'required|string|min:2|max:255',
+            // Fix 2: validate subdomain format for subdomain-based OAuth providers (Zendesk, Freshdesk)
+            'connectConfig.subdomain' => 'sometimes|nullable|regex:/^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$/|max:63',
         ]);
 
         $team = auth()->user()->currentTeam;

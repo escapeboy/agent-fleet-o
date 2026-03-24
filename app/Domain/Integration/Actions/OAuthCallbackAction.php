@@ -20,7 +20,7 @@ class OAuthCallbackAction
         private readonly ConnectIntegrationAction $connectAction,
     ) {}
 
-    public function execute(string $driver, string $code, string $state): Integration
+    public function execute(string $driver, string $code, string $state, ?string $authenticatedTeamId = null): Integration
     {
         $cacheKey = "integration_oauth_state:{$state}";
 
@@ -29,6 +29,12 @@ class OAuthCallbackAction
 
         if (! $stateData || $stateData['driver'] !== $driver) {
             throw new \InvalidArgumentException('Invalid or expired OAuth2 state. Please start the connection again.');
+        }
+
+        // Fix 1: bind state token to the authenticated user's team to prevent cross-team token hijacking
+        if ($authenticatedTeamId !== null && $stateData['team_id'] !== $authenticatedTeamId) {
+            Cache::store('redis')->forget($cacheKey);
+            throw new \InvalidArgumentException('OAuth2 state token does not match your current team. Please start the connection again.');
         }
 
         Cache::store('redis')->forget($cacheKey);
@@ -130,6 +136,11 @@ class OAuthCallbackAction
         }
 
         if ($subdomain) {
+            // Fix 2: validate subdomain before interpolating into URLs
+            if (! preg_match('/^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$/', $subdomain)) {
+                throw new \InvalidArgumentException('Invalid subdomain in OAuth state: must contain only letters, digits, and hyphens.');
+            }
+
             return match ($driver) {
                 'zendesk' => "https://{$subdomain}.zendesk.com/oauth/tokens",
                 'freshdesk' => "https://{$subdomain}.freshdesk.com/oauth/token",
@@ -245,22 +256,6 @@ class OAuthCallbackAction
             } catch (\Throwable $e) {
                 Log::warning('OAuthCallbackAction: could not fetch LinkedIn userinfo', ['error' => $e->getMessage()]);
             }
-
-            // Fallback: if person_urn is still missing, attempt to decode the JWT access token.
-            if (empty($credentials['person_urn']) && ! empty($credentials['access_token'])) {
-                try {
-                    $parts = explode('.', $credentials['access_token']);
-                    if (count($parts) === 3) {
-                        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
-                        if (! empty($payload['sub'])) {
-                            $credentials['person_urn'] = 'urn:li:person:'.$payload['sub'];
-                            Log::info('OAuthCallbackAction: extracted LinkedIn person URN from JWT', ['person_urn' => $credentials['person_urn']]);
-                        }
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning('OAuthCallbackAction: could not decode LinkedIn JWT', ['error' => $e->getMessage()]);
-                }
-            }
         }
 
         // Jira / Confluence: resolve the Atlassian cloudId from the accessible-resources endpoint.
@@ -273,9 +268,14 @@ class OAuthCallbackAction
         }
 
         // Salesforce: instance_url is required for all API calls (org-specific)
-        if ($driver === 'salesforce') {
-            if (! empty($tokens['instance_url'])) {
-                $credentials['instance_url'] = rtrim((string) $tokens['instance_url'], '/');
+        // Fix 6: validate host to prevent SSRF via compromised token endpoint
+        if ($driver === 'salesforce' && ! empty($tokens['instance_url'])) {
+            $instanceUrl = rtrim((string) $tokens['instance_url'], '/');
+            $host = (string) parse_url($instanceUrl, PHP_URL_HOST);
+            if ($host && (str_ends_with($host, '.salesforce.com') || str_ends_with($host, '.force.com'))) {
+                $credentials['instance_url'] = $instanceUrl;
+            } else {
+                Log::warning('OAuthCallbackAction: rejected invalid Salesforce instance_url', ['host' => $host]);
             }
         }
 
@@ -355,8 +355,15 @@ class OAuthCallbackAction
         }
 
         // Pipedrive: store api_domain from token response
+        // Fix 6: validate host to prevent SSRF via compromised token endpoint
         if ($driver === 'pipedrive' && ! empty($tokens['api_domain'])) {
-            $credentials['api_domain'] = rtrim((string) $tokens['api_domain'], '/');
+            $apiDomain = rtrim((string) $tokens['api_domain'], '/');
+            $host = (string) parse_url($apiDomain, PHP_URL_HOST);
+            if ($host && str_ends_with($host, '.pipedrive.com')) {
+                $credentials['api_domain'] = $apiDomain;
+            } else {
+                Log::warning('OAuthCallbackAction: rejected invalid Pipedrive api_domain', ['host' => $host]);
+            }
         }
 
         // Asana: store workspace GID for API calls

@@ -15,6 +15,12 @@ class IntegrationOAuthController extends Controller
      */
     public function redirect(Request $request, string $driver): RedirectResponse
     {
+        // Fix 3: reject unknown drivers early
+        if (! array_key_exists($driver, config('integrations.oauth', []))) {
+            return redirect()->route('integrations.index')
+                ->with('error', 'Unknown integration driver.');
+        }
+
         /** @var User $user */
         $user = $request->user();
         $team = $user->currentTeam;
@@ -46,10 +52,17 @@ class IntegrationOAuthController extends Controller
      */
     public function callback(Request $request, string $driver): RedirectResponse
     {
+        // Fix 3: reject unknown drivers early
+        if (! array_key_exists($driver, config('integrations.oauth', []))) {
+            return redirect()->route('integrations.index')
+                ->with('error', 'Unknown integration driver.');
+        }
+
         $error = $request->query('error');
 
         if ($error) {
-            $description = (string) ($request->query('error_description') ?? $error);
+            // Fix 4: sanitize provider-supplied error description before reflecting it
+            $description = strip_tags(mb_substr((string) ($request->query('error_description') ?? $error), 0, 200));
 
             return redirect()->route('integrations.index')
                 ->with('error', "Authorization denied: {$description}");
@@ -63,19 +76,25 @@ class IntegrationOAuthController extends Controller
                 ->with('error', 'Missing authorization code or state parameter.');
         }
 
+        /** @var User $user */
+        $user = $request->user();
+
         try {
             $action = app(OAuthCallbackAction::class);
             $integration = $action->execute(
                 driver: $driver,
                 code: (string) $code,
                 state: (string) $state,
+                // Fix 1: bind state token to the authenticated user's team
+                authenticatedTeamId: $user->currentTeam?->getKey(),
             );
 
             return redirect()->route('integrations.show', $integration)
                 ->with('message', ucfirst($driver).' connected successfully.');
         } catch (\Throwable $e) {
+            // Fix 4: sanitize exception messages that may contain provider-supplied strings
             return redirect()->route('integrations.index')
-                ->with('error', 'Connection failed: '.$e->getMessage());
+                ->with('error', 'Connection failed: '.strip_tags(mb_substr($e->getMessage(), 0, 300)));
         }
     }
 }
