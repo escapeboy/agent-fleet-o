@@ -56,6 +56,7 @@ class Experiment extends Model
     protected $fillable = [
         'team_id',
         'user_id',
+        'agent_id',
         'parent_experiment_id',
         'nesting_depth',
         'workflow_id',
