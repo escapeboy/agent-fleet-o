@@ -25,18 +25,6 @@ class FallbackAiGateway implements AiGatewayInterface
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
-        // Route bridge providers through the FleetQ Bridge daemon
-        if ($this->isBridgeProvider($request->provider)) {
-            if (! $this->bridgeGateway) {
-                throw new \RuntimeException(
-                    "Bridge provider '{$request->provider}' is not available. "
-                    .'FleetQ Bridge must be installed and connected.',
-                );
-            }
-
-            return $this->bridgeGateway->complete($request);
-        }
-
         // Route local agent requests directly — no fallback chain
         if ($this->isLocalProvider($request->provider)) {
             if (! $this->localGateway) {
@@ -57,6 +45,46 @@ class FallbackAiGateway implements AiGatewayInterface
         foreach ($chain as $target) {
             $providerName = $target['provider'];
             $modelName = $target['model'];
+
+            // Bridge provider — route through bridge daemon, fall through to next on failure
+            if ($this->isBridgeProvider($providerName)) {
+                if (! $this->bridgeGateway) {
+                    Log::warning("AI Gateway: bridge provider '{$providerName}' not available, trying next in chain");
+                    continue;
+                }
+
+                try {
+                    $adjustedRequest = new AiRequestDTO(
+                        provider: $providerName,
+                        model: $modelName,
+                        systemPrompt: $request->systemPrompt,
+                        userPrompt: $request->userPrompt,
+                        maxTokens: $request->maxTokens,
+                        outputSchema: $request->outputSchema,
+                        userId: $request->userId,
+                        experimentId: $request->experimentId,
+                        experimentStageId: $request->experimentStageId,
+                        agentId: $request->agentId,
+                        purpose: $request->purpose,
+                        idempotencyKey: $request->idempotencyKey,
+                        temperature: $request->temperature,
+                        teamId: $request->teamId,
+                        fallbackChain: $request->fallbackChain,
+                        tools: $request->tools,
+                        maxSteps: $request->maxSteps,
+                        toolChoice: $request->toolChoice,
+                    );
+
+                    return $this->bridgeGateway->complete($adjustedRequest);
+                } catch (\Throwable $e) {
+                    $firstException ??= $e;
+                    $lastException = $e;
+                    Log::warning("AI Gateway: bridge provider '{$providerName}' failed, trying next in chain", [
+                        'error' => $e->getMessage(),
+                    ]);
+                    continue;
+                }
+            }
 
             if (! $this->circuitBreaker->isAvailable($providerName)) {
                 Log::debug("CircuitBreaker: skipping {$providerName} (circuit open)");
@@ -123,18 +151,6 @@ class FallbackAiGateway implements AiGatewayInterface
 
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
-        // Route bridge providers through the FleetQ Bridge daemon
-        if ($this->isBridgeProvider($request->provider)) {
-            if (! $this->bridgeGateway) {
-                throw new \RuntimeException(
-                    "Bridge provider '{$request->provider}' is not available. "
-                    .'FleetQ Bridge must be installed and connected.',
-                );
-            }
-
-            return $this->bridgeGateway->stream($request, $onChunk);
-        }
-
         // Route local agent requests directly — no fallback chain
         if ($this->isLocalProvider($request->provider)) {
             if (! $this->localGateway) {
@@ -147,7 +163,6 @@ class FallbackAiGateway implements AiGatewayInterface
             return $this->localGateway->stream($request, $onChunk);
         }
 
-        // For cloud providers, try streaming with fallback chain
         $chain = $this->getFallbackChain($request->provider, $request->model, $request->fallbackChain);
         $firstException = null;
         $lastException = null;
@@ -155,6 +170,46 @@ class FallbackAiGateway implements AiGatewayInterface
         foreach ($chain as $target) {
             $providerName = $target['provider'];
             $modelName = $target['model'];
+
+            // Bridge provider — route through bridge daemon, fall through to next on failure
+            if ($this->isBridgeProvider($providerName)) {
+                if (! $this->bridgeGateway) {
+                    Log::warning("AI Gateway: bridge provider '{$providerName}' not available, trying next in chain");
+                    continue;
+                }
+
+                try {
+                    $adjustedRequest = new AiRequestDTO(
+                        provider: $providerName,
+                        model: $modelName,
+                        systemPrompt: $request->systemPrompt,
+                        userPrompt: $request->userPrompt,
+                        maxTokens: $request->maxTokens,
+                        outputSchema: $request->outputSchema,
+                        userId: $request->userId,
+                        experimentId: $request->experimentId,
+                        experimentStageId: $request->experimentStageId,
+                        agentId: $request->agentId,
+                        purpose: $request->purpose,
+                        idempotencyKey: $request->idempotencyKey,
+                        temperature: $request->temperature,
+                        teamId: $request->teamId,
+                        fallbackChain: $request->fallbackChain,
+                        tools: $request->tools,
+                        maxSteps: $request->maxSteps,
+                        toolChoice: $request->toolChoice,
+                    );
+
+                    return $this->bridgeGateway->stream($adjustedRequest, $onChunk);
+                } catch (\Throwable $e) {
+                    $firstException ??= $e;
+                    $lastException = $e;
+                    Log::warning("AI Gateway: bridge provider '{$providerName}' failed, trying next in chain", [
+                        'error' => $e->getMessage(),
+                    ]);
+                    continue;
+                }
+            }
 
             if (! $this->circuitBreaker->isAvailable($providerName)) {
                 continue;
