@@ -29,7 +29,7 @@ class ConsolidateMemoriesCommand extends Command
         $query = Memory::withoutGlobalScopes()
             ->select('agent_id', 'team_id', DB::raw('COUNT(*) as count'))
             ->groupBy('agent_id', 'team_id')
-            ->having('count', '>=', $minMemories);
+            ->havingRaw('COUNT(*) >= ?', [$minMemories]);
 
         if ($agentId = $this->option('agent')) {
             $query->where('agent_id', $agentId);
