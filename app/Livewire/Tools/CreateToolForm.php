@@ -146,8 +146,8 @@ class CreateToolForm extends Component
             type: $type,
             description: $this->description ?: null,
             transportConfig: $transportConfig,
-            credentials: $credentials ?: null,
-            toolDefinitions: $toolDefinitions ?: null,
+            credentials: $credentials ?: [],
+            toolDefinitions: $toolDefinitions ?: [],
             settings: $settings,
             credentialId: $this->credentialMode === 'reference' && $this->credentialId ? $this->credentialId : null,
         );

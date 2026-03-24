@@ -157,7 +157,7 @@ class RunBuildingStage extends BaseStageJob
                     }
                 }
             })
-            ->catch(function (\Throwable $e) use ($experimentId) {
+            ->catch(function (\Illuminate\Bus\Batch $batch, \Throwable $e) use ($experimentId) {
                 Log::warning('RunBuildingStage: Batch has failures', [
                     'experiment_id' => $experimentId,
                     'error' => $e->getMessage(),
