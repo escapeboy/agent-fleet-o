@@ -14,7 +14,7 @@ class CostBreakdownPanel extends Component
     {
         $runs = AiRun::withoutGlobalScopes()
             ->where('experiment_id', $this->experiment->id)
-            ->with('experimentStage:id,stage_type')
+            ->with('experimentStage:id,stage')
             ->orderBy('created_at')
             ->get();
 
@@ -34,7 +34,7 @@ class CostBreakdownPanel extends Component
         // Cost breakdown by stage type
         $byStage = $runs
             ->filter(fn ($r) => $r->cost_credits > 0)
-            ->groupBy(fn ($r) => $r->experimentStage?->stage_type ?? 'unknown')
+            ->groupBy(fn ($r) => $r->experimentStage?->stage ?? 'unknown')
             ->map(fn ($group) => [
                 'runs' => $group->count(),
                 'cost' => $group->sum('cost_credits'),
