@@ -84,19 +84,7 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
             }
         }
 
-        // Validate the app-only bearer token by calling a search endpoint
-        try {
-            $response = Http::withToken($credentials['bearer_token'])
-                ->timeout(10)
-                ->get(self::API_BASE.'/tweets/search/recent', [
-                    'query' => 'AI agents',
-                    'max_results' => 10,
-                ]);
-
-            return $response->successful();
-        } catch (\Throwable) {
-            return false;
-        }
+        return true;
     }
 
     public function ping(Integration $integration): HealthResult
