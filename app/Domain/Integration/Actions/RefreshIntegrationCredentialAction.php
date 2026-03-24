@@ -5,6 +5,8 @@ namespace App\Domain\Integration\Actions;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Models\Integration;
+use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Notifications\IntegrationRequiresReauthNotification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -102,6 +104,8 @@ class RefreshIntegrationCredentialAction
                             'integration_id' => $integration->getKey(),
                             'driver' => $driver,
                         ]);
+
+                        $this->notifyTeamOwner($integration);
                     }
                 }
 
@@ -139,6 +143,24 @@ class RefreshIntegrationCredentialAction
         } finally {
             $lock->release();
         }
+    }
+
+    private function notifyTeamOwner(Integration $integration): void
+    {
+        $teamId = $integration->getAttribute('team_id');
+        if (! $teamId) {
+            return;
+        }
+
+        /** @var Team|null $team */
+        $team = Team::with('owner')->find($teamId);
+        $owner = $team?->owner;
+
+        if (! $owner) {
+            return;
+        }
+
+        $owner->notify(new IntegrationRequiresReauthNotification($integration));
     }
 
     /**
