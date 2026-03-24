@@ -89,16 +89,22 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $bearerToken = $integration->getCredentialSecret('bearer_token');
-        if (! $bearerToken) {
-            return HealthResult::fail('No bearer token configured.');
+        $apiKey = $integration->getCredentialSecret('api_key');
+        $apiSecret = $integration->getCredentialSecret('api_secret');
+        $accessToken = $integration->getCredentialSecret('access_token');
+        $accessTokenSecret = $integration->getCredentialSecret('access_token_secret');
+
+        if (! $apiKey || ! $apiSecret || ! $accessToken || ! $accessTokenSecret) {
+            return HealthResult::fail('Missing OAuth 1.0a credentials (api_key, api_secret, access_token, access_token_secret).');
         }
 
         $start = microtime(true);
         try {
-            $response = Http::withToken($bearerToken)
+            // /2/users/me requires OAuth 1.0a User Context — bearer token (App-Only) is not accepted.
+            $url = self::API_BASE.'/users/me';
+            $response = Http::withHeaders($this->oauth1Headers('GET', $url, [], $apiKey, $apiSecret, $accessToken, $accessTokenSecret))
                 ->timeout(10)
-                ->get(self::API_BASE.'/users/me');
+                ->get($url);
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
@@ -107,7 +113,7 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
                 return HealthResult::ok($latency, "Connected as @{$username}");
             }
 
-            return HealthResult::fail($response->json('detail') ?? 'Authentication failed');
+            return HealthResult::fail($response->json('detail') ?? $response->json('error_description') ?? 'Authentication failed');
         } catch (\Throwable $e) {
             return HealthResult::fail($e->getMessage());
         }
@@ -168,18 +174,21 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
     public function poll(Integration $integration): array
     {
         $bearerToken = $integration->getCredentialSecret('bearer_token');
-        if (! $bearerToken) {
-            return [];
-        }
+        $apiKey = $integration->getCredentialSecret('api_key');
+        $apiSecret = $integration->getCredentialSecret('api_secret');
+        $accessToken = $integration->getCredentialSecret('access_token');
+        $accessTokenSecret = $integration->getCredentialSecret('access_token_secret');
 
         $signals = [];
 
-        // Poll mentions
-        $signals = array_merge($signals, $this->pollMentions($integration, $bearerToken));
+        // Poll mentions (uses OAuth 1.0a)
+        if ($apiKey && $apiSecret && $accessToken && $accessTokenSecret) {
+            $signals = array_merge($signals, $this->pollMentions($integration, $apiKey, $apiSecret, $accessToken, $accessTokenSecret));
+        }
 
-        // Poll keyword matches if a query is configured
+        // Poll keyword matches if a query is configured (uses bearer token — App-only is OK for search)
         $keywordQuery = $integration->config['poll_query'] ?? null;
-        if ($keywordQuery) {
+        if ($keywordQuery && $bearerToken) {
             $signals = array_merge($signals, $this->pollKeywords($integration, $bearerToken, $keywordQuery));
         }
 
@@ -212,10 +221,10 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
         return match ($action) {
             'post_tweet' => $this->postTweet($apiKey, $apiSecret, $accessToken, $accessTokenSecret, $params['text']),
             'reply_to_tweet' => $this->replyToTweet($apiKey, $apiSecret, $accessToken, $accessTokenSecret, $params['tweet_id'], $params['text']),
-            'like_tweet' => $this->likeTweet($bearerToken, $apiKey, $apiSecret, $accessToken, $accessTokenSecret, $params['tweet_id']),
+            'like_tweet' => $this->likeTweet($apiKey, $apiSecret, $accessToken, $accessTokenSecret, $params['tweet_id']),
             'search_tweets' => $this->searchTweets($bearerToken, $params['query'], (int) ($params['max_results'] ?? 10)),
-            'get_mentions' => $this->getMentions($bearerToken, (int) ($params['max_results'] ?? 10), $params['since_id'] ?? null),
-            'get_user_timeline' => $this->getUserTimeline($bearerToken, (int) ($params['max_results'] ?? 10)),
+            'get_mentions' => $this->getMentions($apiKey, $apiSecret, $accessToken, $accessTokenSecret, (int) ($params['max_results'] ?? 10), $params['since_id'] ?? null),
+            'get_user_timeline' => $this->getUserTimeline($apiKey, $apiSecret, $accessToken, $accessTokenSecret, (int) ($params['max_results'] ?? 10)),
             'retweet' => $this->retweet($apiKey, $apiSecret, $accessToken, $accessTokenSecret, $params['tweet_id']),
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };
@@ -245,11 +254,9 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
             ->json();
     }
 
-    private function likeTweet(?string $bearerToken, ?string $apiKey, ?string $apiSecret, ?string $accessToken, ?string $accessTokenSecret, string $tweetId): array
+    private function likeTweet(?string $apiKey, ?string $apiSecret, ?string $accessToken, ?string $accessTokenSecret, string $tweetId): array
     {
-        // Resolve authenticated user ID first (use bearer token for lookup)
-        $meResponse = Http::withToken($bearerToken)->get(self::API_BASE.'/users/me');
-        $userId = $meResponse->json('data.id');
+        $userId = $this->resolveAuthenticatedUserId($apiKey, $apiSecret, $accessToken, $accessTokenSecret);
         if (! $userId) {
             return ['error' => 'Could not resolve authenticated user ID'];
         }
@@ -300,10 +307,9 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
             ->json();
     }
 
-    private function getMentions(?string $bearerToken, int $maxResults = 10, ?string $sinceId = null): array
+    private function getMentions(?string $apiKey, ?string $apiSecret, ?string $accessToken, ?string $accessTokenSecret, int $maxResults = 10, ?string $sinceId = null): array
     {
-        $meResponse = Http::withToken($bearerToken)->get(self::API_BASE.'/users/me');
-        $userId = $meResponse->json('data.id');
+        $userId = $this->resolveAuthenticatedUserId($apiKey, $apiSecret, $accessToken, $accessTokenSecret);
         if (! $userId) {
             return ['error' => 'Could not resolve authenticated user ID'];
         }
@@ -319,23 +325,25 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
             $params['since_id'] = $sinceId;
         }
 
-        return Http::withToken($bearerToken)
-            ->get(self::API_BASE."/users/{$userId}/mentions", $params)
+        $url = self::API_BASE."/users/{$userId}/mentions";
+
+        return Http::withHeaders($this->oauth1Headers('GET', $url, [], $apiKey, $apiSecret, $accessToken, $accessTokenSecret))
+            ->get($url, $params)
             ->json();
     }
 
-    private function getUserTimeline(?string $bearerToken, int $maxResults = 10): array
+    private function getUserTimeline(?string $apiKey, ?string $apiSecret, ?string $accessToken, ?string $accessTokenSecret, int $maxResults = 10): array
     {
-        $meResponse = Http::withToken($bearerToken)->get(self::API_BASE.'/users/me');
-        $userId = $meResponse->json('data.id');
+        $userId = $this->resolveAuthenticatedUserId($apiKey, $apiSecret, $accessToken, $accessTokenSecret);
         if (! $userId) {
             return ['error' => 'Could not resolve authenticated user ID'];
         }
 
         $maxResults = max(5, min(100, $maxResults));
+        $url = self::API_BASE."/users/{$userId}/tweets";
 
-        return Http::withToken($bearerToken)
-            ->get(self::API_BASE."/users/{$userId}/tweets", [
+        return Http::withHeaders($this->oauth1Headers('GET', $url, [], $apiKey, $apiSecret, $accessToken, $accessTokenSecret))
+            ->get($url, [
                 'max_results' => $maxResults,
                 'tweet.fields' => 'created_at,text,public_metrics',
             ])
@@ -346,13 +354,12 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
     // Private — Polling helpers
     // -------------------------------------------------------------------------
 
-    private function pollMentions(Integration $integration, string $bearerToken): array
+    private function pollMentions(Integration $integration, string $apiKey, string $apiSecret, string $accessToken, string $accessTokenSecret): array
     {
         $cacheKey = "twitter_poll_mention_since:{$integration->id}";
         $sinceId = Cache::get($cacheKey);
 
-        $meResponse = Http::withToken($bearerToken)->timeout(10)->get(self::API_BASE.'/users/me');
-        $userId = $meResponse->json('data.id');
+        $userId = $this->resolveAuthenticatedUserId($apiKey, $apiSecret, $accessToken, $accessTokenSecret);
         if (! $userId) {
             return [];
         }
@@ -368,9 +375,10 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
         }
 
         try {
-            $response = Http::withToken($bearerToken)
+            $url = self::API_BASE."/users/{$userId}/mentions";
+            $response = Http::withHeaders($this->oauth1Headers('GET', $url, [], $apiKey, $apiSecret, $accessToken, $accessTokenSecret))
                 ->timeout(15)
-                ->get(self::API_BASE."/users/{$userId}/mentions", $params);
+                ->get($url, $params);
 
             if (! $response->successful()) {
                 return [];
@@ -439,6 +447,32 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
             ], $tweets);
         } catch (\Throwable) {
             return [];
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Private — User ID resolution (OAuth 1.0a required — App-Only bearer not accepted by /users/me)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Resolve the authenticated user's numeric ID using OAuth 1.0a user context.
+     * /2/users/me requires OAuth 1.0a or OAuth 2.0 User Context; bearer token (App-Only) is forbidden.
+     */
+    private function resolveAuthenticatedUserId(?string $apiKey, ?string $apiSecret, ?string $accessToken, ?string $accessTokenSecret): ?string
+    {
+        if (! $apiKey || ! $apiSecret || ! $accessToken || ! $accessTokenSecret) {
+            return null;
+        }
+
+        $url = self::API_BASE.'/users/me';
+        try {
+            $response = Http::withHeaders($this->oauth1Headers('GET', $url, [], $apiKey, $apiSecret, $accessToken, $accessTokenSecret))
+                ->timeout(10)
+                ->get($url);
+
+            return $response->json('data.id');
+        } catch (\Throwable) {
+            return null;
         }
     }
 
