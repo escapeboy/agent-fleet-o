@@ -13,6 +13,7 @@ use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\ContextCompaction;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
+use App\Infrastructure\AI\Middleware\LangfuseExportMiddleware;
 use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
@@ -47,7 +48,7 @@ class AiServiceProvider extends ServiceProvider
                 costCalculator: $app->make(CostCalculator::class),
             );
 
-            return $gateway->withMiddleware([
+            $middleware = [
                 $app->make(RateLimiting::class),
                 $app->make(BudgetEnforcement::class),
                 $app->make(IdempotencyCheck::class),
@@ -55,7 +56,13 @@ class AiServiceProvider extends ServiceProvider
                 $app->make(ContextCompaction::class),
                 $app->make(SchemaValidation::class),
                 $app->make(UsageTracking::class),
-            ]);
+            ];
+
+            if (config('llmops.langfuse.enabled')) {
+                $middleware[] = $app->make(LangfuseExportMiddleware::class);
+            }
+
+            return $gateway->withMiddleware($middleware);
         });
 
         $this->app->singleton(BridgeRequestRegistry::class);

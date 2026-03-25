@@ -36,6 +36,7 @@ use App\Mcp\Tools\Artifact\ArtifactContentTool;
 use App\Mcp\Tools\Artifact\ArtifactDownloadTool;
 use App\Mcp\Tools\Artifact\ArtifactGetTool;
 use App\Mcp\Tools\Artifact\ArtifactListTool;
+use App\Mcp\Tools\Assistant\AssistantAnnotateMessageTool;
 use App\Mcp\Tools\Assistant\AssistantConversationClearTool;
 use App\Mcp\Tools\Assistant\AssistantConversationGetTool;
 use App\Mcp\Tools\Assistant\AssistantConversationListTool;
@@ -603,11 +604,12 @@ class AgentFleetServer extends Server
         BridgeRenameTool::class,
         BridgeSetRoutingTool::class,
 
-        // Assistant (4)
+        // Assistant (5)
         AssistantConversationListTool::class,
         AssistantConversationGetTool::class,
         AssistantSendMessageTool::class,
         AssistantConversationClearTool::class,
+        AssistantAnnotateMessageTool::class,
 
         // Feedback (2) — super admin only
         FeedbackListTool::class,

@@ -233,6 +233,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/assistant/conversations/{conversation}', [AssistantController::class, 'show']);
     Route::delete('/assistant/conversations/{conversation}', [AssistantController::class, 'destroy']);
     Route::post('/assistant/conversations/{conversation}/messages', [AssistantController::class, 'send']);
+    Route::post('/assistant/messages/{message}/annotate', [AssistantController::class, 'annotate']);
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);

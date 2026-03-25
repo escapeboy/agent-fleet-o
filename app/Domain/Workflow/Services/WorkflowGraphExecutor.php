@@ -13,6 +13,7 @@ use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Workflow\Actions\DispatchSubWorkflowAction;
 use App\Domain\Workflow\Actions\HandleTimeGateAction;
+use App\Domain\Workflow\Jobs\ExecuteWorkflowNodeJob;
 use App\Domain\Workflow\Models\WorkflowNode;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -243,7 +244,9 @@ class WorkflowGraphExecutor
             return;
         }
 
-        if ($type === 'agent' || $type === 'crew' || $type === 'human_task' || $type === 'time_gate' || $type === 'sub_workflow' || $type === 'boruna_step') {
+        if ($type === 'agent' || $type === 'crew' || $type === 'human_task' || $type === 'time_gate' || $type === 'sub_workflow' || $type === 'boruna_step'
+            || $type === 'llm' || $type === 'http_request' || $type === 'parameter_extractor'
+            || $type === 'variable_aggregator' || $type === 'template_transform' || $type === 'knowledge_retrieval') {
             $step = $steps[$nodeId] ?? null;
 
             if (! $step) {
@@ -617,6 +620,9 @@ class WorkflowGraphExecutor
 
             if ($nodeType === 'crew') {
                 $jobs[] = new ExecuteCrewWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
+            } elseif (in_array($nodeType, ['llm', 'http_request', 'parameter_extractor', 'variable_aggregator', 'template_transform', 'knowledge_retrieval'], true)) {
+                // Lightweight node types use the dedicated ExecuteWorkflowNodeJob
+                $jobs[] = new ExecuteWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
             } else {
                 // agent, boruna_step, and any future execution node types all use ExecutePlaybookStepJob
                 $jobs[] = new ExecutePlaybookStepJob($step->id, $experiment->id, $experiment->team_id);
@@ -745,6 +751,12 @@ class WorkflowGraphExecutor
                 'time_gate' => 2,
                 'agent' => 1,
                 'boruna_step' => 1,
+                'llm' => 1,
+                'http_request' => 1,
+                'parameter_extractor' => 1,
+                'knowledge_retrieval' => 1,
+                'variable_aggregator' => 0,
+                'template_transform' => 0,
                 default => 0,
             };
 

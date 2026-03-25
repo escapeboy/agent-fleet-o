@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Assistant\Actions\AnnotateMessageAction;
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
+use App\Domain\Assistant\Enums\AnnotationRating;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Http\Controllers\Controller;
@@ -74,6 +76,35 @@ class AssistantController extends Controller
         $conversation->delete();
 
         return response()->json(['message' => 'Conversation deleted.']);
+    }
+
+    /**
+     * Annotate an assistant message with a thumbs-up/down rating and optional correction.
+     */
+    public function annotate(Request $request, AssistantMessage $message, AnnotateMessageAction $action): JsonResponse
+    {
+        $validated = $request->validate([
+            'rating' => ['required', 'string', 'in:positive,negative'],
+            'correction' => ['sometimes', 'nullable', 'string', 'max:10000'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:2000'],
+        ]);
+
+        $annotation = $action->execute(
+            message: $message,
+            userId: $request->user()->id,
+            rating: AnnotationRating::from($validated['rating']),
+            correction: $validated['correction'] ?? null,
+            note: $validated['note'] ?? null,
+        );
+
+        return response()->json([
+            'id' => $annotation->id,
+            'message_id' => $annotation->message_id,
+            'rating' => $annotation->rating->value,
+            'correction' => $annotation->correction,
+            'note' => $annotation->note,
+            'created_at' => $annotation->created_at,
+        ]);
     }
 
     /**
