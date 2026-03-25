@@ -17,6 +17,12 @@ enum WorkflowNodeType: string
     case Merge = 'merge';
     case SubWorkflow = 'sub_workflow';
     case BorunaStep = 'boruna_step';
+    case Llm = 'llm';
+    case HttpRequest = 'http_request';
+    case ParameterExtractor = 'parameter_extractor';
+    case VariableAggregator = 'variable_aggregator';
+    case TemplateTransform = 'template_transform';
+    case KnowledgeRetrieval = 'knowledge_retrieval';
 
     public function label(): string
     {
@@ -34,6 +40,12 @@ enum WorkflowNodeType: string
             self::Merge => 'Merge',
             self::SubWorkflow => 'Sub-Workflow',
             self::BorunaStep => 'Boruna Script',
+            self::Llm => 'LLM',
+            self::HttpRequest => 'HTTP Request',
+            self::ParameterExtractor => 'Parameter Extractor',
+            self::VariableAggregator => 'Variable Aggregator',
+            self::TemplateTransform => 'Template',
+            self::KnowledgeRetrieval => 'Knowledge Retrieval',
         };
     }
 
@@ -53,6 +65,12 @@ enum WorkflowNodeType: string
             self::Merge => 'funnel',
             self::SubWorkflow => 'rectangle-stack',
             self::BorunaStep => 'shield-check',
+            self::Llm => 'chat-bubble-left-right',
+            self::HttpRequest => 'globe-alt',
+            self::ParameterExtractor => 'tag',
+            self::VariableAggregator => 'squares-plus',
+            self::TemplateTransform => 'document-text',
+            self::KnowledgeRetrieval => 'magnifying-glass',
         };
     }
 
@@ -131,6 +149,30 @@ enum WorkflowNodeType: string
                 'inputs' => [['name' => 'context', 'type' => 'text|structured']],
                 'outputs' => [['name' => 'result', 'type' => 'structured']],
             ],
+            self::Llm => [
+                'inputs' => [['name' => 'context', 'type' => 'text']],
+                'outputs' => [['name' => 'text', 'type' => 'text']],
+            ],
+            self::HttpRequest => [
+                'inputs' => [['name' => 'body', 'type' => 'text|structured'], ['name' => 'url_params', 'type' => 'structured']],
+                'outputs' => [['name' => 'response_body', 'type' => 'text'], ['name' => 'status_code', 'type' => 'integer']],
+            ],
+            self::ParameterExtractor => [
+                'inputs' => [['name' => 'context', 'type' => 'text']],
+                'outputs' => [['name' => 'extracted', 'type' => 'structured']],
+            ],
+            self::VariableAggregator => [
+                'inputs' => [['name' => 'data', 'type' => 'any']],
+                'outputs' => [['name' => 'aggregated_results', 'type' => 'structured']],
+            ],
+            self::TemplateTransform => [
+                'inputs' => [['name' => 'variables', 'type' => 'structured']],
+                'outputs' => [['name' => 'rendered', 'type' => 'text']],
+            ],
+            self::KnowledgeRetrieval => [
+                'inputs' => [['name' => 'query', 'type' => 'text']],
+                'outputs' => [['name' => 'chunks', 'type' => 'structured']],
+            ],
             default => [
                 'inputs' => [['name' => 'data', 'type' => 'any']],
                 'outputs' => [['name' => 'data', 'type' => 'any']],
@@ -163,6 +205,12 @@ enum WorkflowNodeType: string
             self::TimeGate,
             self::SubWorkflow,
             self::BorunaStep,
+            self::Llm,
+            self::HttpRequest,
+            self::ParameterExtractor,
+            self::VariableAggregator,
+            self::TemplateTransform,
+            self::KnowledgeRetrieval,
         ]);
     }
 }

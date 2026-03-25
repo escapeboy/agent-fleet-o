@@ -26,19 +26,24 @@ class EstimateWorkflowCostAction
         $loopNodeIds = $this->detectLoopNodes($workflow);
 
         foreach ($workflow->nodes as $node) {
-            if ($node->type !== WorkflowNodeType::Agent) {
-                continue;
+            $costPerRun = 0;
+
+            if ($node->type === WorkflowNodeType::Agent && $node->agent) {
+                $costPerRun = $this->estimateNodeCost($node);
+            } elseif ($node->type === WorkflowNodeType::Llm || $node->type === WorkflowNodeType::ParameterExtractor) {
+                // LLM and ParameterExtractor nodes use a direct LLM call — estimate using Haiku pricing
+                // (assumes claude-haiku-4-5 unless configured otherwise)
+                $config = is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []);
+                $maxTokens = (int) ($config['max_tokens'] ?? 1024);
+                // Haiku: ~3 credits input / 15 credits output per 1k tokens
+                $costPerRun = (int) ceil((1000 / 1000 * 3) + ($maxTokens / 1000 * 15));
             }
+            // TemplateTransform, VariableAggregator, KnowledgeRetrieval, HttpRequest = zero LLM cost
 
-            if (! $node->agent) {
-                continue;
+            if ($costPerRun > 0) {
+                $multiplier = in_array($node->id, $loopNodeIds) ? $loopMultiplier : 1;
+                $totalCredits += $costPerRun * $multiplier;
             }
-
-            // Estimate cost per execution based on agent's cost profile
-            $costPerRun = $this->estimateNodeCost($node);
-            $multiplier = in_array($node->id, $loopNodeIds) ? $loopMultiplier : 1;
-
-            $totalCredits += $costPerRun * $multiplier;
         }
 
         $workflow->update(['estimated_cost_credits' => $totalCredits]);

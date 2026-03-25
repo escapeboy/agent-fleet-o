@@ -8,6 +8,7 @@ use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -64,21 +65,33 @@ class LinkedInIntegrationDriver implements IntegrationDriverInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        // OAuth2 access tokens are already validated by LinkedIn during the token exchange.
-        // The /v2/userinfo endpoint requires the openid scope which is not requested by
-        // the w_member_social (Share on LinkedIn) product tier, so we simply verify that
-        // a non-empty access token was returned.
-        return ! empty($credentials['access_token']);
+        $token = $credentials['access_token'] ?? null;
+
+        if (empty($token)) {
+            return false;
+        }
+
+        $cacheKey = 'linkedin_cred_valid_'.hash('sha256', $token);
+
+        return Cache::remember($cacheKey, 300, function () use ($token): bool {
+            $response = Http::withToken($token)->timeout(10)->get(self::API_BASE.'/v2/userinfo');
+
+            return $response->successful();
+        });
     }
 
     public function ping(Integration $integration): HealthResult
     {
-        // w_member_social scope does not include any GET endpoints suitable for health checks.
-        // We verify the token is present and not expired using locally-stored credentials.
         try {
-            $this->resolveAccessToken($integration);
+            $token = $this->resolveAccessToken($integration);
         } catch (\Throwable $e) {
             return HealthResult::fail('Token refresh failed: '.$e->getMessage());
+        }
+
+        $response = Http::withToken($token)->timeout(10)->get(self::API_BASE.'/v2/userinfo');
+
+        if (! $response->successful()) {
+            return HealthResult::fail('LinkedIn API returned '.$response->status());
         }
 
         return HealthResult::ok(0);
@@ -169,16 +182,18 @@ class LinkedInIntegrationDriver implements IntegrationDriverInterface
      */
     private function getProfile(string $token): array
     {
-        // /v2/userinfo requires the openid scope (OpenID Connect product).
-        // With w_member_social only, return the profile data stored during OAuth2 callback.
-        // The person_urn, name and email are populated by OAuthCallbackAction when available.
+        $response = Http::withToken($token)->timeout(15)->get(self::API_BASE.'/v2/userinfo');
+
+        abort_unless($response->successful(), 422, 'LinkedIn /v2/userinfo failed: '.$response->body());
+
+        $data = $response->json();
+        $sub = $data['sub'] ?? null;
+
         return [
-            'person_urn' => null,
-            'name' => null,
-            'email' => null,
-            'picture' => null,
-            'note' => 'Profile data requires the openid scope (Sign In with LinkedIn product). '
-                .'Currently connected with w_member_social (Share on LinkedIn) only.',
+            'person_urn' => $sub ? 'urn:li:person:'.$sub : null,
+            'name' => $data['name'] ?? null,
+            'email' => $data['email'] ?? null,
+            'picture' => $data['picture'] ?? null,
         ];
     }
 

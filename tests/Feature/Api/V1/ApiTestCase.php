@@ -5,6 +5,8 @@ namespace Tests\Feature\Api\V1;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -19,14 +21,13 @@ abstract class ApiTestCase extends TestCase
 
     protected function tearDown(): void
     {
-        Cache::flush();
         parent::tearDown();
     }
 
     protected function setUp(): void
     {
         parent::setUp();
-        Cache::flush(); // Clear rate limiter state before each test
+        $this->withoutMiddleware([ThrottleRequests::class, ThrottleRequestsWithRedis::class]);
 
         $this->user = User::factory()->create();
 
