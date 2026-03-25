@@ -106,6 +106,36 @@
                     hint="Minimum QA score (0.0 - 1.0) to pass"
                     :error="$errors->first('qualityThreshold')" />
             </div>
+
+            {{-- Convergence Mode --}}
+            <div class="mt-4">
+                <label class="mb-1 block text-sm font-medium text-gray-700">Convergence Mode</label>
+                <p class="mb-2 text-xs text-gray-500">Determines when the crew considers its goal complete.</p>
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    @foreach([
+                        ['value' => 'any_validated',   'label' => 'Any Validated',    'hint' => 'Done when any task passes QA'],
+                        ['value' => 'all_validated',   'label' => 'All Validated',    'hint' => 'Done when all tasks pass QA'],
+                        ['value' => 'threshold_ratio', 'label' => 'Threshold Ratio',  'hint' => 'Done when enough tasks pass QA'],
+                        ['value' => 'quality_gate',    'label' => 'Quality Gate',     'hint' => 'Done when final score ≥ threshold'],
+                    ] as $mode)
+                        <label class="relative flex cursor-pointer flex-col rounded-lg border p-3 transition
+                            {{ $convergenceMode === $mode['value'] ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-gray-200 hover:border-gray-300' }}">
+                            <input type="radio" wire:model.live="convergenceMode" value="{{ $mode['value'] }}" class="sr-only">
+                            <span class="text-sm font-medium text-gray-900">{{ $mode['label'] }}</span>
+                            <span class="mt-0.5 text-xs text-gray-500">{{ $mode['hint'] }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                @error('convergenceMode') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
+
+            @if($convergenceMode === 'threshold_ratio')
+                <div class="mt-4">
+                    <x-form-input wire:model="minValidatedRatio" type="number" label="Min Validated Ratio" min="0" max="1" step="0.05"
+                        hint="Fraction of tasks that must pass QA (e.g. 0.8 = 80%)"
+                        :error="$errors->first('minValidatedRatio')" />
+                </div>
+            @endif
         </div>
 
         {{-- Submit --}}

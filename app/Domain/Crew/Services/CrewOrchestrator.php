@@ -79,7 +79,11 @@ class CrewOrchestrator
 
         if ($ready->isEmpty()) {
             if ($this->dependencyResolver->allTerminal($tasks)) {
-                $this->synthesizeAndComplete($execution);
+                if ($this->checkConvergenceReached($execution)) {
+                    $this->synthesizeAndComplete($execution);
+                } else {
+                    $this->failExecution($execution, 'Convergence condition not met — insufficient validated tasks.');
+                }
             } elseif ($this->dependencyResolver->hasDeadlock($tasks)) {
                 $this->failExecution($execution, 'Deadlock: remaining tasks depend on failed tasks.');
             }
@@ -103,7 +107,11 @@ class CrewOrchestrator
 
         if ($ready->isEmpty()) {
             if ($this->dependencyResolver->allTerminal($tasks)) {
-                $this->synthesizeAndComplete($execution);
+                if ($this->checkConvergenceReached($execution)) {
+                    $this->synthesizeAndComplete($execution);
+                } else {
+                    $this->failExecution($execution, 'Convergence condition not met — insufficient validated tasks.');
+                }
             } elseif ($this->dependencyResolver->hasDeadlock($tasks)) {
                 $this->failExecution($execution, 'Deadlock: remaining tasks depend on failed tasks.');
             }
@@ -239,7 +247,11 @@ class CrewOrchestrator
 
                 if ($ready->isEmpty()) {
                     if ($this->dependencyResolver->allTerminal($tasks)) {
-                        $this->synthesizeAndComplete($execution);
+                        if ($this->checkConvergenceReached($execution)) {
+                            $this->synthesizeAndComplete($execution);
+                        } else {
+                            $this->failExecution($execution, 'Convergence condition not met — insufficient validated tasks.');
+                        }
                     } elseif ($this->dependencyResolver->hasDeadlock($tasks)) {
                         $this->failExecution($execution, 'Deadlock: remaining tasks depend on failed tasks.');
                     }
@@ -306,7 +318,11 @@ class CrewOrchestrator
         if ($ready->isNotEmpty()) {
             $this->dispatchParallel($execution);
         } elseif ($this->dependencyResolver->allTerminal($tasks)) {
-            $this->synthesizeAndComplete($execution);
+            if ($this->checkConvergenceReached($execution)) {
+                $this->synthesizeAndComplete($execution);
+            } else {
+                $this->failExecution($execution, 'Convergence condition not met — insufficient validated tasks.');
+            }
         } elseif ($this->dependencyResolver->hasDeadlock($tasks)) {
             $this->failExecution($execution, 'Deadlock: remaining tasks depend on failed tasks.');
         }
@@ -318,19 +334,13 @@ class CrewOrchestrator
         $tasks = $execution->taskExecutions()->get();
 
         if ($this->dependencyResolver->allTerminal($tasks)) {
-            // Check if we have enough validated tasks to produce a result
-            $validatedCount = $tasks->filter(fn ($t) => $t->isValidated())->count();
-
-            if ($validatedCount > 0) {
+            if ($this->checkConvergenceReached($execution)) {
                 $this->synthesizeAndComplete($execution);
             } else {
-                $this->failExecution($execution, 'All tasks failed — no validated outputs to synthesize.');
+                $this->failExecution($execution, 'Convergence condition not met — insufficient validated tasks.');
             }
         } elseif ($this->dependencyResolver->hasDeadlock($tasks)) {
-            // Partial completion with whatever is validated
-            $validatedCount = $tasks->filter(fn ($t) => $t->isValidated())->count();
-
-            if ($validatedCount > 0) {
+            if ($this->checkConvergenceReached($execution)) {
                 $this->synthesizeAndComplete($execution);
             } else {
                 $this->failExecution($execution, 'Deadlock with no validated outputs.');
@@ -428,6 +438,24 @@ class CrewOrchestrator
                 'issues' => [],
             ];
         }
+    }
+
+    /**
+     * Check if the crew's convergence condition has been met for the given execution.
+     */
+    private function checkConvergenceReached(CrewExecution $execution): bool
+    {
+        $crew = $execution->crew;
+        $tasks = $execution->taskExecutions;
+        $total = $tasks->count();
+        $validated = $tasks->where('status', CrewTaskStatus::Validated->value)->count();
+
+        return match ($crew->convergence_mode) {
+            'all_validated' => $validated === $total && $total > 0,
+            'threshold_ratio' => $total > 0 && ($validated / $total) >= $crew->min_validated_ratio,
+            'quality_gate' => ($execution->quality_score ?? 0.0) >= ($crew->quality_threshold ?? 0.7),
+            default => $validated > 0, // any_validated
+        };
     }
 
     private function failExecution(CrewExecution $execution, string $error): void

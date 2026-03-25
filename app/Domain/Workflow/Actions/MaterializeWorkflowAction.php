@@ -26,13 +26,21 @@ class MaterializeWorkflowAction
 
             // Snapshot workflow graph into experiment
             $graphSnapshot = $this->buildGraphSnapshot($workflow);
-            $experiment->update([
+            $updateData = [
                 'workflow_id' => $workflow->id,
                 'workflow_version' => $workflow->version,
                 'constraints' => array_merge($experiment->constraints ?? [], [
                     'workflow_graph' => $graphSnapshot,
                 ]),
-            ]);
+            ];
+
+            // Propagate per-workflow budget cap only if the workflow defines one
+            // and the experiment does not already have a more restrictive cap set.
+            if ($workflow->budget_cap_credits !== null && $experiment->budget_cap_credits === null) {
+                $updateData['budget_cap_credits'] = $workflow->budget_cap_credits;
+            }
+
+            $experiment->update($updateData);
 
             // Create PlaybookSteps for executable nodes (agent, crew, human_task)
             $agentNodes = $workflow->nodes

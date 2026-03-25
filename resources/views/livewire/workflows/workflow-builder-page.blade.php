@@ -9,6 +9,7 @@
                 <option value="async">Async</option>
                 <option value="exit">Exit</option>
             </x-form-select>
+            <x-form-input wire:model="budgetCapCredits" type="number" placeholder="Budget cap (credits)" compact class="w-40" min="1" />
         </div>
 
         <div class="flex items-center gap-2">
@@ -39,6 +40,18 @@
             <ul class="mt-1 list-disc pl-5 text-sm text-red-700">
                 @foreach($validationErrors as $err)
                     <li>{{ $err['message'] }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- Validation Warnings --}}
+    @if(count($validationWarnings) > 0)
+        <div class="mx-4 mt-2 rounded-lg bg-yellow-50 border border-yellow-200 p-3">
+            <h4 class="text-sm font-medium text-yellow-800">Workflow Warnings</h4>
+            <ul class="mt-1 list-disc pl-5 text-sm text-yellow-700">
+                @foreach($validationWarnings as $warning)
+                    <li>{{ $warning['message'] }}</li>
                 @endforeach
             </ul>
         </div>
@@ -297,6 +310,58 @@
                                             <option :value="skill.id" x-text="skill.name"></option>
                                         </template>
                                     </select>
+                                </div>
+
+                                {{-- Structured Output Schema --}}
+                                <div x-data="{
+                                    schemaError: '',
+                                    get schemaText() {
+                                        const s = selectedNode.config?.output_schema;
+                                        if (!s) return '';
+                                        try { return JSON.stringify(s, null, 2); } catch { return ''; }
+                                    },
+                                    onSchemaInput(val) {
+                                        if (!val.trim()) {
+                                            this.schemaError = '';
+                                            if (selectedNode.config) delete selectedNode.config.output_schema;
+                                            syncToLivewire();
+                                            return;
+                                        }
+                                        try {
+                                            const parsed = JSON.parse(val);
+                                            this.schemaError = '';
+                                            if (!selectedNode.config) selectedNode.config = {};
+                                            selectedNode.config.output_schema = parsed;
+                                            syncToLivewire();
+                                        } catch (e) {
+                                            this.schemaError = e.message;
+                                        }
+                                    }
+                                }">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="text-xs font-medium text-gray-600">Output Schema (JSON)</label>
+                                        <button type="button"
+                                                @click="
+                                                    if (!selectedNode.config) selectedNode.config = {};
+                                                    selectedNode.config.output_schema = {type:'object',properties:{result:{type:'string'},confidence:{type:'number'}},required:['result']};
+                                                    schemaError = '';
+                                                    syncToLivewire();
+                                                    $nextTick(() => $el.closest('.space-y-3').querySelector('textarea').value = JSON.stringify(selectedNode.config.output_schema, null, 2));
+                                                "
+                                                class="text-[10px] text-primary-600 hover:text-primary-700">
+                                            Insert template
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        :value="schemaText"
+                                        @input.debounce.400ms="onSchemaInput($event.target.value)"
+                                        rows="5"
+                                        placeholder='{"type":"object","properties":{...}}'
+                                        class="w-full rounded-lg border px-3 py-1.5 text-xs font-mono focus:ring-primary-500 focus:border-primary-500"
+                                        :class="schemaError ? 'border-red-400 bg-red-50' : 'border-gray-300'"></textarea>
+                                    <p x-show="schemaError" x-text="schemaError" class="mt-0.5 text-[10px] text-red-600"></p>
+                                    <p x-show="!schemaError && selectedNode.config?.output_schema" class="mt-0.5 text-[10px] text-green-600">Valid JSON schema</p>
+                                    <p class="mt-0.5 text-[10px] text-gray-400">Leave empty for free-form output. When set, the agent's response must conform to this schema.</p>
                                 </div>
                             </div>
                         </template>

@@ -26,6 +26,10 @@ class CreateCrewForm extends Component
 
     public float $qualityThreshold = 0.70;
 
+    public string $convergenceMode = 'any_validated';
+
+    public float $minValidatedRatio = 1.0;
+
     protected function rules(): array
     {
         return [
@@ -35,6 +39,8 @@ class CreateCrewForm extends Component
             'processType' => 'required|in:sequential,parallel,hierarchical',
             'maxTaskIterations' => 'required|integer|min:1|max:10',
             'qualityThreshold' => 'required|numeric|min:0|max:1',
+            'convergenceMode' => 'required|in:any_validated,all_validated,threshold_ratio,quality_gate',
+            'minValidatedRatio' => 'required_if:convergenceMode,threshold_ratio|numeric|min:0|max:1',
         ];
     }
 
@@ -52,6 +58,11 @@ class CreateCrewForm extends Component
         $this->validate();
 
         try {
+            $settings = ['convergence_mode' => $this->convergenceMode];
+            if ($this->convergenceMode === 'threshold_ratio') {
+                $settings['min_validated_ratio'] = $this->minValidatedRatio;
+            }
+
             $crew = $action->execute(
                 userId: auth()->id(),
                 name: $this->name,
@@ -62,6 +73,7 @@ class CreateCrewForm extends Component
                 maxTaskIterations: $this->maxTaskIterations,
                 qualityThreshold: $this->qualityThreshold,
                 workerAgentIds: $this->workerAgentIds,
+                settings: $settings,
                 teamId: auth()->user()->currentTeam?->id,
             );
 

@@ -27,6 +27,8 @@ class WorkflowBuilderPage extends Component
 
     public string $checkpointMode = 'sync';
 
+    public ?int $budgetCapCredits = null;
+
     // Graph state (synced with Alpine.js canvas)
     public array $nodes = [];
 
@@ -34,6 +36,8 @@ class WorkflowBuilderPage extends Component
 
     // Validation
     public array $validationErrors = [];
+
+    public array $validationWarnings = [];
 
     public bool $isValid = false;
 
@@ -54,6 +58,7 @@ class WorkflowBuilderPage extends Component
             $this->description = $workflow->description ?? '';
             $this->maxLoopIterations = $workflow->max_loop_iterations;
             $this->checkpointMode = $workflow->settings['checkpoint_mode'] ?? 'sync';
+            $this->budgetCapCredits = $workflow->budget_cap_credits;
 
             $workflow->load(['nodes.agent', 'nodes.skill', 'edges']);
 
@@ -147,6 +152,7 @@ class WorkflowBuilderPage extends Component
             'name' => 'required|string|max:255',
             'maxLoopIterations' => 'required|integer|min:1|max:100',
             'checkpointMode' => 'required|in:sync,async,exit',
+            'budgetCapCredits' => 'nullable|integer|min:1',
         ]);
 
         try {
@@ -161,6 +167,8 @@ class WorkflowBuilderPage extends Component
                     nodes: $this->nodes,
                     edges: $this->edges,
                     settings: ['checkpoint_mode' => $this->checkpointMode],
+                    budgetCapCredits: $this->budgetCapCredits,
+                    clearBudgetCap: $this->budgetCapCredits === null,
                 );
 
                 if ($flash) {
@@ -178,6 +186,7 @@ class WorkflowBuilderPage extends Component
                     nodes: $this->nodes,
                     edges: $this->edges,
                     settings: ['checkpoint_mode' => $this->checkpointMode],
+                    budgetCapCredits: $this->budgetCapCredits,
                 );
 
                 $this->workflowId = $workflow->id;
@@ -204,6 +213,7 @@ class WorkflowBuilderPage extends Component
         $result = app(ValidateWorkflowGraphAction::class)->execute($workflow);
 
         $this->validationErrors = $result['errors'];
+        $this->validationWarnings = $result['warnings'] ?? [];
         $this->isValid = $result['valid'];
 
         if ($result['valid']) {
@@ -224,6 +234,7 @@ class WorkflowBuilderPage extends Component
         $result = app(ValidateWorkflowGraphAction::class)->execute($workflow, activateIfValid: true);
 
         $this->validationErrors = $result['errors'];
+        $this->validationWarnings = $result['warnings'] ?? [];
         $this->isValid = $result['valid'];
 
         if ($result['activated']) {
