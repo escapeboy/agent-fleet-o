@@ -63,6 +63,10 @@ class RegisterBridgeConnection
                 'connected_at' => now(),
                 'last_seen_at' => now(),
                 'disconnected_at' => null,
+                // Relay WebSocket connections are NOT HTTP-mode — clear any stale endpoint_url
+                // inherited from a previous HTTP tunnel session (e.g. Cloudflare Tunnel).
+                'endpoint_url' => null,
+                'endpoint_secret' => null,
             ]);
 
             return $existing->fresh();
