@@ -276,16 +276,88 @@ class WorkflowBuilderPage extends Component
                 $this->description = $data['description'];
             }
             if (! empty($data['nodes']) && is_array($data['nodes'])) {
-                $this->nodes = $data['nodes'];
+                $this->nodes = $this->sanitizeImportedNodes($data['nodes']);
             }
             if (! empty($data['edges']) && is_array($data['edges'])) {
-                $this->edges = $data['edges'];
+                $nodeIds = array_column($this->nodes, 'id');
+                $this->edges = $this->sanitizeImportedEdges($data['edges'], $nodeIds);
             }
 
             session()->flash('success', "Workflow imported from {$name}. Review and save when ready.");
         } catch (\JsonException $e) {
             $this->addError('import', 'Could not parse file: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Sanitize nodes from an imported JSON file.
+     * - Strips invalid node types.
+     * - Validates entity UUID references against the current team's resources so
+     *   a crafted import file cannot reference another team's agents/crews/skills.
+     */
+    private function sanitizeImportedNodes(array $nodes): array
+    {
+        $validTypes = array_map(fn ($t) => $t->value, WorkflowNodeType::cases());
+        $validAgentIds = array_column($this->availableAgents, 'id');
+        $validCrewIds = array_column($this->availableCrews, 'id');
+        $validSkillIds = array_column($this->availableSkills, 'id');
+        $validWorkflowIds = array_column($this->availableWorkflows, 'id');
+
+        $sanitized = [];
+        foreach ($nodes as $node) {
+            if (! is_array($node)) {
+                continue;
+            }
+            $type = $node['type'] ?? null;
+            if (! in_array($type, $validTypes, true)) {
+                continue;
+            }
+            $sanitized[] = [
+                'id' => isset($node['id']) && is_string($node['id']) ? $node['id'] : 'node-'.uniqid(),
+                'type' => $type,
+                'label' => isset($node['label']) && is_string($node['label']) ? mb_substr($node['label'], 0, 255) : $type,
+                'agent_id' => isset($node['agent_id']) && in_array($node['agent_id'], $validAgentIds, true) ? $node['agent_id'] : null,
+                'skill_id' => isset($node['skill_id']) && in_array($node['skill_id'], $validSkillIds, true) ? $node['skill_id'] : null,
+                'crew_id' => isset($node['crew_id']) && in_array($node['crew_id'], $validCrewIds, true) ? $node['crew_id'] : null,
+                'sub_workflow_id' => isset($node['sub_workflow_id']) && in_array($node['sub_workflow_id'], $validWorkflowIds, true) ? $node['sub_workflow_id'] : null,
+                'config' => isset($node['config']) && is_array($node['config']) ? $node['config'] : [],
+                'position_x' => isset($node['position_x']) ? (float) $node['position_x'] : 0.0,
+                'position_y' => isset($node['position_y']) ? (float) $node['position_y'] : 0.0,
+                'order' => isset($node['order']) ? (int) $node['order'] : 0,
+            ];
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Sanitize edges from an imported JSON file.
+     * Strips edges whose source or target node IDs are not present in the sanitized node list.
+     */
+    private function sanitizeImportedEdges(array $edges, array $nodeIds): array
+    {
+        $sanitized = [];
+        foreach ($edges as $edge) {
+            if (! is_array($edge)) {
+                continue;
+            }
+            $source = $edge['source_node_id'] ?? null;
+            $target = $edge['target_node_id'] ?? null;
+            if (! in_array($source, $nodeIds, true) || ! in_array($target, $nodeIds, true)) {
+                continue;
+            }
+            $sanitized[] = [
+                'id' => isset($edge['id']) && is_string($edge['id']) ? $edge['id'] : 'edge-'.uniqid(),
+                'source_node_id' => $source,
+                'target_node_id' => $target,
+                'condition' => isset($edge['condition']) && is_string($edge['condition']) ? $edge['condition'] : null,
+                'label' => isset($edge['label']) && is_string($edge['label']) ? mb_substr($edge['label'], 0, 255) : null,
+                'is_default' => ! empty($edge['is_default']),
+                'sort_order' => isset($edge['sort_order']) ? (int) $edge['sort_order'] : 0,
+            ];
+        }
+
+        return $sanitized;
     }
 
     public function render()
