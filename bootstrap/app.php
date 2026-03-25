@@ -53,6 +53,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', EnsureTermsAccepted::class);
         $middleware->appendToGroup('web', SetPostgresRlsContext::class);
         $middleware->statefulApi();
+        $middleware->alias([
+            'scope' => \Laravel\Passport\Http\Middleware\CheckToken::class,
+            'scopes' => \Laravel\Passport\Http\Middleware\CheckTokenForAnyScope::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         Integration::handles($exceptions);
