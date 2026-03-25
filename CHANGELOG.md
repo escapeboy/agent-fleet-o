@@ -2,13 +2,77 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
-## [Unreleased]
+## [1.11.0] - 2026-03-25
+
+### Added
+
+- **6 New Workflow Node Executors** — New inline node types for building rich workflows without custom agents:
+  - *HttpRequestNode*: outbound HTTP calls (GET/POST/PUT/PATCH/DELETE) with credential template interpolation, SSRF guard, and configurable timeout/redirect handling.
+  - *LlmNode*: direct LLM inference inside a workflow step — model, system/user prompt, output variable, and schema validation all configurable per node.
+  - *KnowledgeRetrievalNode*: semantic search against team memory with configurable top-k and score threshold; results injected as context into subsequent nodes.
+  - *ParameterExtractorNode*: extracts structured parameters from unstructured text via LLM with JSON Schema validation.
+  - *VariableAggregatorNode*: collects outputs from all completed predecessor steps and merges them via `array`, `concat`, or `json_merge` strategy. Output capped at 1 MB to prevent memory exhaustion.
+  - *TemplateTransformNode*: Mustache-style template rendering using step outputs as context.
+- **Langfuse LLMOps Tracing** — New `LangfuseExportMiddleware` in the AI gateway pipeline exports every LLM call as a Langfuse generation trace (fire-and-forget, zero latency impact). Configure via `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`. Set `LANGFUSE_MASK_CONTENT=true` to redact prompts before export.
+- **Assistant Message Annotations** — Users can rate assistant replies with thumbs-up/down, submit corrections, and add notes. `POST /api/v1/assistant/conversations/{id}/messages/{mid}/annotate`. `AssistantAnnotateMessageTool` for MCP access.
+- **Bridge HTTP Tunnel Mode** — Connect a local bridge agent directly via an HTTP endpoint URL instead of the relay WebSocket. Useful when the relay is unreachable. UI in Team Settings with connect/disconnect/ping controls.
+- **Bridge-First AI Gateway Default** — New `bridge-first` provider resolution strategy: routes AI calls to a local bridge agent first, falls back to cloud providers when no bridge is available.
+- **Integration OAuth2 Migration** — 18 integration drivers migrated from static API-key credentials to OAuth2 token flows with automatic refresh.
+- **LinkedIn Integration** — Full OAuth2 integration driver: publish text/link posts, comment on posts, list managed organisations. Uses `/v2/userinfo` OpenID endpoint.
+- **Twitter/X Integration** — OAuth 1.0a integration driver: post tweets, reply, like/unlike, retweet, search recent tweets, and get user profiles.
+- **WhatsApp Outbound Connector** — New `WhatsAppConnector` registered in `OutboundConnectorManager` for outbound message delivery.
+- **Integration Re-Auth Notifications** — Team owner is notified by email and in-app when a connected integration's OAuth token expires and requires re-authorization.
+- **Browser Relay Built-In Tool** — New `browser_relay` kind in `BuiltInToolKind` enum; routes browser automation through the bridge relay for remote agent use.
+- **SLANG-Inspired Workflow Improvements**:
+  - *Workflow Budget Cap*: per-workflow credit cap enforced at runtime; experiments are auto-paused when the cap is hit.
+  - *Schema Editor*: visual JSON Schema editor embedded in workflow node config panel.
+  - *Graph Overlay*: execution status overlaid on the workflow DAG builder in real time.
+  - *Crew Convergence*: configurable quality gate with `max_iterations` and `min_score` thresholds for iterative crew tasks.
+- **BroodMind-Inspired Features**:
+  - *Send Grace Window*: 3-second cancel window after submitting an assistant message, allowing users to abort before the LLM call fires.
+  - *Crew Worker Permission Templates*: per-`CrewMember` permission sets (read/write/admin) evaluated at task execution time.
+  - *Agent Heartbeat Scheduling*: agents emit structured heartbeat events on a configurable interval during long-running executions.
+- **Memory Tier System** — Five memory tiers (`proposed`, `canonical`, `facts`, `decisions`, `failures`) with promotion/demotion logic and per-tier search filtering.
+- **Memory Category Classification** — Memories are auto-classified into categories (instruction, context, fact, decision, lesson) at write time.
+- **Per-Agent Memory Capacity Cap** — Pruning command respects a configurable per-agent `memory_capacity` limit, evicting lowest-ranked memories first.
+- **Failure Lesson Extraction** — `ExtractFailureLessonsAction` analyses failed experiments and writes structured `failure` memories to prevent repeat mistakes.
+- **Agent Context Health Monitoring** — `ContextHealthMonitor` tracks token budget consumption and emits warnings when nearing limits during the tool loop.
+- **Semantic Tool-Call Repetition Detection** — Agent tool loop detects semantically duplicate calls (via embedding cosine similarity) and skips or aborts repeated tool invocations.
+- **Tool Loop Circuit Breakers** — Configurable `max_consecutive_errors` and `max_total_calls` limits abort runaway tool loops before they exhaust budget.
+- **Network Egress Policy for Tools** — Per-tool `network_policy` JSONB column; `EgressPolicyEnforcer` blocks tool calls that would contact disallowed host/port patterns.
+- **OCSF Audit Schema** — Audit entries now include OCSF-compatible `category_uid`, `class_uid`, `severity_id`, and `activity_id` fields for SIEM integration.
+- **Data Classification Routing** — Agents and skills declare a `data_classification` level (`public`/`internal`/`confidential`/`restricted`); the AI gateway rejects routing classified data to providers below the required tier.
+- **Agent Process Isolation Sandbox** *(Enterprise)* — Run agent tool executions inside an isolated subprocess with configurable CPU/memory limits, syscall allowlists, and ephemeral filesystems.
+- **Credential Env-Var Injection** — Credential values are injected as `CRED_{NAME}_{KEY}` environment variables into bash tool processes and bridge payloads, so agent scripts can reference secrets without hardcoding.
+- **Reddit Browser Session Auto-Refresh** — `RedditSessionRefresher` automatically refreshes browser session tokens for Reddit integration before expiry.
+- **Domain Import Boundary PHPStan Rule** — Custom PHPStan rule enforces that domain classes do not import from other domains directly; cross-domain access must go through contracts or actions.
+- **311 MCP Tools** — Tool count expanded from 268 to 311 across 38 domains.
+
+### Fixed
+
+- **Passport `scope` Middleware Alias** — Registered `scope` → `CheckToken` and `scopes` → `CheckTokenForAnyScope` aliases in `bootstrap/app.php`; Passport v13 no longer auto-registers these, causing `BindingResolutionException` on every unauthenticated MCP request.
+- **Assistant Message IDOR** — `AssistantMessage` had no team scope; route model binding could resolve cross-team messages. Added explicit team ownership check (`abort_if`) in `AssistantController::annotate()`.
+- **HTTP Request Node Timeout Cap** — `HttpRequestNodeExecutor` timeout is now capped at 120 s (was unbounded) to prevent long-held outbound connections during workflow execution.
+- **Workflow JSON Import Sanitisation** — Imported workflow JSON nodes/edges now validate `type` and team-owned entity UUIDs before materialising, blocking crafted payloads.
+- **Crew Quality Gate Convergence** — Quality gate was checking QA score before synthesis completed; reordered to allow synthesis to proceed before scoring.
+- **Bridge Relay Response Streaming** — Skips SSE progress keepalive chunks (`:keepalive`) that were causing JSON parse errors in the relay response handler.
+- **Bridge Stale Endpoint URL** — Clears `endpoint_url` on the `BridgeConnection` when the relay re-registers a WebSocket connection, preventing stale tunnel references.
+- **AI Gateway Google Fallback** — Falls back to `google/gemini-2.5-flash` when no Anthropic or OpenAI keys are configured, preventing silent failures on fresh installs.
+- **Memory Agent ID Nullable** — `agent_id` on `memories` is now nullable; `MemoryAddTool` no longer requires an agent context.
+- **Reverb Connection Stability** — Increased `ping_interval` to 120 s, `activity_timeout` to 300 s, and tuned Cloudflare-compatible settings to prevent idle connection drops.
+- **PWA Service Worker** — Guarded `view transitions` against Livewire 4.5+ `navigate` events; forced SW activation via `skipWaiting`; added play icon for Runs sidebar.
+- **LinkedIn API Scope** — Removed unapproved scopes; uses only `w_member_social` to unblock OAuth connection flow.
+- **Twitter OAuth** — Switched credential validation to use OAuth 1.0a; bearer token (App-Only) is forbidden on `/users/me`.
+- **Project Lead Agent Propagation** — `ExecuteProjectRunJob` now propagates `lead_agent_id` from the project to the newly created experiment.
+- **Various Bug Fixes** — `agent_id` added to experiments fillable array, missing `system.deploy` notification label, Blade compile errors in email/approvals docs, `havingRaw` → `whereRaw` for pgvector compatibility.
 
 ### Security
 
-- **Langfuse HTTPS enforcement** — `ExportToLangfuseJob` now rejects any `LANGFUSE_HOST` that does not use `https`, preventing accidental credential or prompt data leakage over plain HTTP. SSRF validation (RFC 1918 IP blocking) is also applied when `services.ssrf.validate_host` is enabled.
-- **Langfuse prompt masking** — New `LANGFUSE_MASK_CONTENT=true` environment variable replaces `systemPrompt` and `userPrompt` with `[REDACTED]` before exporting to Langfuse. Enable this if your prompts may contain PII or secrets.
-- **VariableAggregator output cap** — `VariableAggregatorNodeExecutor` now throws a `RuntimeException` when the aggregated output exceeds 1 MB, preventing memory exhaustion from excessively large predecessor step outputs.
+- **Langfuse HTTPS Enforcement** — `ExportToLangfuseJob` rejects any `LANGFUSE_HOST` that does not use `https`, preventing credential or prompt data leakage over plain HTTP.
+- **Langfuse Prompt Masking** — `LANGFUSE_MASK_CONTENT=true` replaces `systemPrompt`/`userPrompt` with `[REDACTED]` before export.
+- **Security Hardening Round 5** — MCP tenant isolation hardened; API token scoping tightened; login throttle applied; webhook replay protection added; SMTP host validation added; header allowlists enforced.
+- **OAuth2 Security Hardening** — 6 OAuth2 flow hardening fixes applied across integration drivers (state parameter validation, PKCE enforcement, redirect URI pinning).
+- **CVE Patches** — `phpseclib/phpseclib` 3.0.49 → 3.0.50 (CVE-2026-32935 padding oracle); `league/commonmark` 2.8.1 → 2.8.2 (CVE-2026-33347 embed bypass).
 
 ## [1.10.0] - 2026-03-21
 
