@@ -66,7 +66,7 @@ class HttpRequestNodeExecutor implements NodeExecutorInterface
             $body = $this->interpolate($config['body'], $context);
         }
 
-        $timeout = (int) ($config['timeout'] ?? 30);
+        $timeout = min((int) ($config['timeout'] ?? 30), 120);
         $followRedirects = (bool) ($config['follow_redirects'] ?? true);
 
         try {

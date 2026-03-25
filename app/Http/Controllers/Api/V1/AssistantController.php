@@ -83,6 +83,11 @@ class AssistantController extends Controller
      */
     public function annotate(Request $request, AssistantMessage $message, AnnotateMessageAction $action): JsonResponse
     {
+        // Verify the message belongs to the authenticated user's team (IDOR guard).
+        // AssistantMessage has no TeamScope so we check via its conversation.
+        $ownerTeamId = $message->conversation()->withoutGlobalScopes()->value('team_id');
+        abort_if($ownerTeamId !== $request->user()->current_team_id, 403);
+
         $validated = $request->validate([
             'rating' => ['required', 'string', 'in:positive,negative'],
             'correction' => ['sometimes', 'nullable', 'string', 'max:10000'],
