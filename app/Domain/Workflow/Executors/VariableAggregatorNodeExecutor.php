@@ -23,6 +23,9 @@ class VariableAggregatorNodeExecutor implements NodeExecutorInterface
 {
     use InterpolatesTemplates;
 
+    /** Maximum serialized output size in bytes (1 MB) to prevent memory exhaustion. */
+    private const MAX_OUTPUT_BYTES = 1_048_576;
+
     public function execute(WorkflowNode $node, PlaybookStep $step, Experiment $experiment): array
     {
         $config = $this->parseConfig($node->config);
@@ -41,6 +44,14 @@ class VariableAggregatorNodeExecutor implements NodeExecutorInterface
             ->all();
 
         $merged = $this->merge($predecessorOutputs, $mergeStrategy);
+
+        // Guard against excessive output that could exhaust memory when stored.
+        if (strlen(json_encode($merged) ?: '') > self::MAX_OUTPUT_BYTES) {
+            throw new \RuntimeException(
+                'VariableAggregator: aggregated output exceeds the '.
+                (self::MAX_OUTPUT_BYTES / 1_048_576).' MB limit. Reduce predecessor output sizes.',
+            );
+        }
 
         return [
             $outputVariable => $merged,

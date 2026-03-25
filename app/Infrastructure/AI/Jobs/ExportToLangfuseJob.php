@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\AI\Jobs;
 
+use App\Domain\Shared\Services\SsrfGuard;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -30,7 +31,7 @@ class ExportToLangfuseJob implements ShouldQueue
         $this->onQueue('metrics');
     }
 
-    public function handle(): void
+    public function handle(SsrfGuard $ssrfGuard): void
     {
         $host = config('llmops.langfuse.host', 'https://cloud.langfuse.com');
         $publicKey = config('llmops.langfuse.public_key', '');
@@ -39,6 +40,16 @@ class ExportToLangfuseJob implements ShouldQueue
         if (empty($publicKey) || empty($secretKey)) {
             return;
         }
+
+        // Require HTTPS unconditionally — Langfuse receives API keys and prompt data.
+        if (parse_url($host, PHP_URL_SCHEME) !== 'https') {
+            Log::warning('ExportToLangfuseJob: LANGFUSE_HOST must use https. Export skipped.', ['host' => $host]);
+
+            return;
+        }
+
+        // Block private/internal IP ranges when SSRF validation is enabled.
+        $ssrfGuard->assertPublicUrl(rtrim($host, '/').'/api/public/ingestion');
 
         Http::timeout(10)
             ->withBasicAuth($publicKey, $secretKey)

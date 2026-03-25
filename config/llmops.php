@@ -19,6 +19,9 @@ return [
         'host' => env('LANGFUSE_HOST', 'https://cloud.langfuse.com'),
         'public_key' => env('LANGFUSE_PUBLIC_KEY', ''),
         'secret_key' => env('LANGFUSE_SECRET_KEY', ''),
+        // When true, system prompt and user prompt are replaced with [REDACTED]
+        // before export. Enable if your prompts may contain PII or secrets.
+        'mask_content' => (bool) env('LANGFUSE_MASK_CONTENT', false),
     ],
 
 ];

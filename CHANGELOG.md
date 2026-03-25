@@ -2,6 +2,14 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [Unreleased]
+
+### Security
+
+- **Langfuse HTTPS enforcement** — `ExportToLangfuseJob` now rejects any `LANGFUSE_HOST` that does not use `https`, preventing accidental credential or prompt data leakage over plain HTTP. SSRF validation (RFC 1918 IP blocking) is also applied when `services.ssrf.validate_host` is enabled.
+- **Langfuse prompt masking** — New `LANGFUSE_MASK_CONTENT=true` environment variable replaces `systemPrompt` and `userPrompt` with `[REDACTED]` before exporting to Langfuse. Enable this if your prompts may contain PII or secrets.
+- **VariableAggregator output cap** — `VariableAggregatorNodeExecutor` now throws a `RuntimeException` when the aggregated output exceeds 1 MB, preventing memory exhaustion from excessively large predecessor step outputs.
+
 ## [1.10.0] - 2026-03-21
 
 ### Added

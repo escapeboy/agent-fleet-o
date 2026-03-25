@@ -52,10 +52,9 @@ class LangfuseExportMiddleware implements AiMiddlewareInterface
                     'temperature' => $request->temperature,
                     'maxTokens' => $request->maxTokens,
                 ],
-                'input' => [
-                    'system' => $request->systemPrompt,
-                    'user' => $request->userPrompt,
-                ],
+                'input' => config('llmops.langfuse.mask_content', false)
+                    ? ['system' => '[REDACTED]', 'user' => '[REDACTED]']
+                    : ['system' => $request->systemPrompt, 'user' => $request->userPrompt],
                 'output' => $response->parsedOutput ?? ['text' => $response->content],
                 'usage' => [
                     'input' => $response->usage->promptTokens,

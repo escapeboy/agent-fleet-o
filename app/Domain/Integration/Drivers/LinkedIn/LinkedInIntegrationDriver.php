@@ -8,6 +8,7 @@ use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -70,9 +71,13 @@ class LinkedInIntegrationDriver implements IntegrationDriverInterface
             return false;
         }
 
-        $response = Http::withToken($token)->timeout(10)->get(self::API_BASE.'/v2/userinfo');
+        $cacheKey = 'linkedin_cred_valid_'.hash('sha256', $token);
 
-        return $response->successful();
+        return Cache::remember($cacheKey, 300, function () use ($token): bool {
+            $response = Http::withToken($token)->timeout(10)->get(self::API_BASE.'/v2/userinfo');
+
+            return $response->successful();
+        });
     }
 
     public function ping(Integration $integration): HealthResult
