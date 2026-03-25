@@ -25,6 +25,8 @@ class WorkflowCreateTool extends Tool
             'checkpoint_mode' => $schema->string()
                 ->description('Checkpoint durability mode: sync (safest, DB write per step), async (Redis buffer + background flush), exit (in-memory, flushed on completion). Default: sync')
                 ->enum(['sync', 'async', 'exit']),
+            'budget_cap_credits' => $schema->integer()
+                ->description('Maximum credits this workflow may consume per execution. Propagated to each experiment created from this workflow. Omit for no cap.'),
         ];
     }
 
@@ -34,6 +36,7 @@ class WorkflowCreateTool extends Tool
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'checkpoint_mode' => 'nullable|string|in:sync,async,exit',
+            'budget_cap_credits' => 'nullable|integer|min:1',
         ]);
 
         try {
@@ -50,6 +53,7 @@ class WorkflowCreateTool extends Tool
                 edges: [],
                 teamId: auth()->user()->current_team_id,
                 settings: $settings,
+                budgetCapCredits: $validated['budget_cap_credits'] ?? null,
             );
 
             return Response::text(json_encode([

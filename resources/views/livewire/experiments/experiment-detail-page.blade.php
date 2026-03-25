@@ -101,6 +101,9 @@
                 class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
                 {{ $experiment->share_enabled ? '🔗 Sharing On' : 'Public Link' }}
             </button>
+            <x-send-to-assistant-button
+                :message="'Debug experiment: ' . $experiment->name . '. Status: ' . $experiment->status->value . ($experiment->thesis ? '. Thesis: ' . $experiment->thesis : '')"
+            />
         </div>
     </div>
 

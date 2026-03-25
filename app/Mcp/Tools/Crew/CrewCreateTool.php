@@ -33,6 +33,11 @@ class CrewCreateTool extends Tool
                 ->description('Process type: sequential, parallel, hierarchical (default: hierarchical)')
                 ->enum(['sequential', 'parallel', 'hierarchical'])
                 ->default('hierarchical'),
+            'convergence_mode' => $schema->string()
+                ->description('How to determine when the crew is done: any_validated (default), all_validated, threshold_ratio, quality_gate')
+                ->enum(['any_validated', 'all_validated', 'threshold_ratio', 'quality_gate']),
+            'min_validated_ratio' => $schema->number()
+                ->description('Fraction of tasks that must be validated when using threshold_ratio mode (e.g. 0.8 = 80%). Default: 1.0'),
         ];
     }
 
@@ -44,9 +49,19 @@ class CrewCreateTool extends Tool
             'qa_agent_id' => 'required|string',
             'description' => 'nullable|string',
             'process_type' => 'nullable|string|in:sequential,parallel,hierarchical',
+            'convergence_mode' => 'nullable|string|in:any_validated,all_validated,threshold_ratio,quality_gate',
+            'min_validated_ratio' => 'nullable|numeric|min:0|max:1',
         ]);
 
         try {
+            $settings = [];
+            if (! empty($validated['convergence_mode'])) {
+                $settings['convergence_mode'] = $validated['convergence_mode'];
+            }
+            if (isset($validated['min_validated_ratio'])) {
+                $settings['min_validated_ratio'] = (float) $validated['min_validated_ratio'];
+            }
+
             $crew = app(CreateCrewAction::class)->execute(
                 userId: auth()->id(),
                 name: $validated['name'],
@@ -54,6 +69,7 @@ class CrewCreateTool extends Tool
                 qaAgentId: $validated['qa_agent_id'],
                 description: $validated['description'] ?? null,
                 processType: CrewProcessType::from($validated['process_type'] ?? 'hierarchical'),
+                settings: $settings,
                 teamId: auth()->user()->current_team_id,
             );
 

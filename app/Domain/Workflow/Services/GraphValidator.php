@@ -426,6 +426,18 @@ class GraphValidator
                     'node_id' => $node->id,
                 ];
             }
+
+            // Warn if output_schema is set but not a valid JSON Schema object
+            $schema = $node->config['output_schema'] ?? null;
+            if ($schema !== null) {
+                if (! is_array($schema) || ! isset($schema['type'])) {
+                    $this->warnings[] = [
+                        'type' => 'agent_invalid_output_schema',
+                        'message' => "Agent node '{$node->label}' has an output_schema but it is missing a 'type' field. Schema may not be enforced correctly.",
+                        'node_id' => $node->id,
+                    ];
+                }
+            }
         }
     }
 

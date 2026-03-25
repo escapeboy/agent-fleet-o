@@ -37,6 +37,9 @@
             <button wire:click="toggleStatus" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 {{ $crew->status === \App\Domain\Crew\Enums\CrewStatus::Active ? 'Archive' : 'Activate' }}
             </button>
+            <x-send-to-assistant-button
+                :message="'Explain this crew: ' . $crew->name . '. Process: ' . $crew->process_type->label() . '. Status: ' . $crew->status->label() . ($crew->description ? '. ' . $crew->description : '')"
+            />
         </div>
     </div>
 

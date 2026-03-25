@@ -100,4 +100,26 @@ class Crew extends Model
     {
         return 2 + $this->workerMembers()->count(); // coordinator + QA + workers
     }
+
+    /**
+     * How crew convergence is evaluated.
+     * Stored in settings['convergence_mode']:
+     *   any_validated     — complete when any task passes QA (default, legacy behaviour)
+     *   all_validated     — complete only when ALL tasks pass QA
+     *   threshold_ratio   — complete when min_validated_ratio fraction of tasks pass QA
+     *   quality_gate      — complete when final synthesis quality_score >= quality_threshold
+     */
+    public function getConvergenceModeAttribute(): string
+    {
+        return $this->settings['convergence_mode'] ?? 'any_validated';
+    }
+
+    /**
+     * Minimum fraction of tasks that must be validated when using threshold_ratio mode.
+     * E.g. 0.8 = 80 % of tasks must pass QA before synthesis begins.
+     */
+    public function getMinValidatedRatioAttribute(): float
+    {
+        return (float) ($this->settings['min_validated_ratio'] ?? 1.0);
+    }
 }

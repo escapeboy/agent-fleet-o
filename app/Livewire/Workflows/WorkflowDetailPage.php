@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Workflows;
 
+use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Workflow\Actions\DeleteWorkflowAction;
 use App\Domain\Workflow\Actions\EstimateWorkflowCostAction;
 use App\Domain\Workflow\Enums\WorkflowStatus;
@@ -65,12 +68,46 @@ class WorkflowDetailPage extends Component
 
     public function render()
     {
+        $experiments = $this->workflow->experiments()
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        // Find the most recent running/recent experiment to show live status overlay
+        $activeExperiment = $experiments->first(
+            fn (Experiment $e) => in_array($e->status, [
+                ExperimentStatus::Executing,
+                ExperimentStatus::Building,
+                ExperimentStatus::Planning,
+            ]),
+        ) ?? $experiments->first();
+
+        $stepStatuses = [];
+        $hasRunningSteps = false;
+
+        if ($activeExperiment) {
+            $steps = PlaybookStep::where('experiment_id', $activeExperiment->id)
+                ->whereNotNull('workflow_node_id')
+                ->get();
+
+            foreach ($steps as $step) {
+                $stepStatuses[$step->workflow_node_id] = [
+                    'status' => $step->status,
+                    'duration' => $step->duration_ms,
+                    'error' => $step->error_message,
+                    'cost' => $step->cost_credits,
+                ];
+            }
+
+            $hasRunningSteps = $steps->where('status', 'running')->isNotEmpty();
+        }
+
         return view('livewire.workflows.workflow-detail-page', [
-            'experiments' => $this->workflow->experiments()
-                ->orderByDesc('created_at')
-                ->limit(10)
-                ->get(),
+            'experiments' => $experiments,
             'agentNodes' => $this->workflow->agentNodes(),
+            'activeExperiment' => $activeExperiment,
+            'stepStatuses' => $stepStatuses,
+            'hasRunningSteps' => $hasRunningSteps,
         ])->layout('layouts.app', ['header' => $this->workflow->name]);
     }
 }

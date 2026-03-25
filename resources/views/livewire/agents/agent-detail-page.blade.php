@@ -275,6 +275,9 @@
                     class="rounded-lg border px-3 py-1.5 text-sm font-medium {{ $agent->status === \App\Domain\Agent\Enums\AgentStatus::Active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-green-300 text-green-700 hover:bg-green-50' }}">
                     {{ $agent->status === \App\Domain\Agent\Enums\AgentStatus::Active ? 'Disable' : 'Enable' }}
                 </button>
+                <x-send-to-assistant-button
+                    :message="'How should I configure this agent? Name: ' . $agent->name . ($agent->role ? '. Role: ' . $agent->role : '') . ($agent->goal ? '. Goal: ' . $agent->goal : '')"
+                />
             </div>
         </div>
 

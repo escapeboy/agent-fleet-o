@@ -28,6 +28,8 @@ class WorkflowUpdateTool extends Tool
             'checkpoint_mode' => $schema->string()
                 ->description('Checkpoint durability mode: sync (safest), async (Redis buffer), exit (in-memory). Default: sync')
                 ->enum(['sync', 'async', 'exit']),
+            'budget_cap_credits' => $schema->integer()
+                ->description('Maximum credits per execution. Set to 0 to remove the cap.'),
         ];
     }
 
@@ -38,6 +40,7 @@ class WorkflowUpdateTool extends Tool
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'checkpoint_mode' => 'nullable|string|in:sync,async,exit',
+            'budget_cap_credits' => 'nullable|integer|min:0',
         ]);
 
         $workflow = Workflow::find($validated['workflow_id']);
@@ -48,7 +51,8 @@ class WorkflowUpdateTool extends Tool
 
         $hasUpdates = ($validated['name'] ?? null) !== null
             || ($validated['description'] ?? null) !== null
-            || ($validated['checkpoint_mode'] ?? null) !== null;
+            || ($validated['checkpoint_mode'] ?? null) !== null
+            || array_key_exists('budget_cap_credits', $validated);
 
         if (! $hasUpdates) {
             return Response::error('No fields to update. Provide at least one of: name, description, checkpoint_mode.');
@@ -60,11 +64,15 @@ class WorkflowUpdateTool extends Tool
                 $settings = ['checkpoint_mode' => $validated['checkpoint_mode']];
             }
 
+            $budgetCap = $validated['budget_cap_credits'] ?? null;
+
             $result = app(UpdateWorkflowAction::class)->execute(
                 workflow: $workflow,
                 name: $validated['name'] ?? null,
                 description: $validated['description'] ?? null,
                 settings: $settings,
+                budgetCapCredits: $budgetCap === null ? null : ($budgetCap === 0 ? null : $budgetCap),
+                clearBudgetCap: $budgetCap === 0,
             );
 
             return Response::text(json_encode([

@@ -33,6 +33,7 @@ class Workflow extends Model
         'version',
         'max_loop_iterations',
         'estimated_cost_credits',
+        'budget_cap_credits',
         'settings',
         'meta',
     ];
@@ -45,6 +46,7 @@ class Workflow extends Model
             'version' => 'integer',
             'max_loop_iterations' => 'integer',
             'estimated_cost_credits' => 'integer',
+            'budget_cap_credits' => 'integer',
             'settings' => 'array',
         ];
     }

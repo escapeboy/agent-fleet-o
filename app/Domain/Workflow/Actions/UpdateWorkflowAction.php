@@ -23,8 +23,10 @@ class UpdateWorkflowAction
         ?array $nodes = null,
         ?array $edges = null,
         ?array $settings = null,
+        ?int $budgetCapCredits = null,
+        bool $clearBudgetCap = false,
     ): Workflow {
-        return DB::transaction(function () use ($workflow, $name, $description, $maxLoopIterations, $nodes, $edges, $settings) {
+        return DB::transaction(function () use ($workflow, $name, $description, $maxLoopIterations, $nodes, $edges, $settings, $budgetCapCredits, $clearBudgetCap) {
             $changes = [];
 
             if ($name !== null && $name !== $workflow->name) {
@@ -45,6 +47,14 @@ class UpdateWorkflowAction
             if ($settings !== null) {
                 $workflow->settings = array_merge($workflow->settings ?? [], $settings);
                 $changes['settings'] = 'updated';
+            }
+
+            if ($clearBudgetCap) {
+                $workflow->budget_cap_credits = null;
+                $changes['budget_cap_credits'] = null;
+            } elseif ($budgetCapCredits !== null) {
+                $workflow->budget_cap_credits = $budgetCapCredits;
+                $changes['budget_cap_credits'] = $budgetCapCredits;
             }
 
             // If graph is being updated and workflow is active, bump version

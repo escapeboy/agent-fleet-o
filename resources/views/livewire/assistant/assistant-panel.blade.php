@@ -23,6 +23,17 @@
                 }
             });
 
+            // Open panel and pre-fill message from browser event
+            window.addEventListener('open-assistant', (e) => {
+                this.open = true;
+                if (e.detail?.message) {
+                    this.$nextTick(() => {
+                        $wire.set('inputText', e.detail.message);
+                        this.$refs.messageInput?.focus();
+                    });
+                }
+            });
+
             // Keyboard shortcut: Cmd+K / Ctrl+K
             document.addEventListener('keydown', (e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
