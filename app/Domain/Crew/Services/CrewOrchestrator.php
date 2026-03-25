@@ -453,7 +453,9 @@ class CrewOrchestrator
         return match ($crew->convergence_mode) {
             'all_validated' => $validated === $total && $total > 0,
             'threshold_ratio' => $total > 0 && ($validated / $total) >= $crew->min_validated_ratio,
-            'quality_gate' => ($execution->quality_score ?? 0.0) >= ($crew->quality_threshold ?? 0.7),
+            // quality_gate defers to post-synthesis QA score evaluated inside synthesizeAndComplete(); allow
+            // synthesis to proceed whenever at least one task is validated so the QA stage can run.
+            'quality_gate' => $validated > 0,
             default => $validated > 0, // any_validated
         };
     }
