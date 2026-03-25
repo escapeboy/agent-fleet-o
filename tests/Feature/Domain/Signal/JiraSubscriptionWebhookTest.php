@@ -7,6 +7,8 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Models\ConnectorSignalSubscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -26,6 +28,7 @@ class JiraSubscriptionWebhookTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutMiddleware([ThrottleRequests::class, ThrottleRequestsWithRedis::class]);
 
         Queue::fake();
 

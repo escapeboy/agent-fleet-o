@@ -5,7 +5,8 @@ namespace Tests\Feature\Mcp;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
 use Tests\TestCase;
 
 /**
@@ -26,7 +27,7 @@ class McpOAuthFlowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Cache::flush();
+        $this->withoutMiddleware([ThrottleRequests::class, ThrottleRequestsWithRedis::class]);
 
         $this->user = User::factory()->create();
         $this->team = Team::create([
@@ -41,7 +42,6 @@ class McpOAuthFlowTest extends TestCase
 
     protected function tearDown(): void
     {
-        Cache::flush();
         parent::tearDown();
     }
 
