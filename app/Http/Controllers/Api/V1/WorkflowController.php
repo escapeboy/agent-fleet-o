@@ -51,6 +51,7 @@ class WorkflowController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'max_loop_iterations' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'budget_cap_credits' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'nodes' => ['sometimes', 'array'],
             'nodes.*.type' => ['required_with:nodes', 'in:start,end,agent,conditional'],
             'nodes.*.label' => ['required_with:nodes', 'string', 'max:100'],
@@ -72,6 +73,9 @@ class WorkflowController extends Controller
             maxLoopIterations: $request->input('max_loop_iterations', 5),
             teamId: $request->user()->current_team_id,
             settings: $settings,
+            budgetCapCredits: $request->input('budget_cap_credits') !== null
+                ? (int) $request->input('budget_cap_credits')
+                : null,
         );
 
         return (new WorkflowResource($workflow->load(['nodes', 'edges'])))
@@ -85,6 +89,7 @@ class WorkflowController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'max_loop_iterations' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'budget_cap_credits' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'checkpoint_mode' => ['sometimes', 'string', 'in:sync,async,exit'],
         ]);
 
@@ -99,6 +104,10 @@ class WorkflowController extends Controller
             description: $request->input('description'),
             maxLoopIterations: $request->input('max_loop_iterations'),
             settings: $settings,
+            budgetCapCredits: $request->has('budget_cap_credits') && $request->input('budget_cap_credits') !== null
+                ? (int) $request->input('budget_cap_credits')
+                : null,
+            clearBudgetCap: $request->has('budget_cap_credits') && $request->input('budget_cap_credits') === null,
         );
 
         return new WorkflowResource($workflow);

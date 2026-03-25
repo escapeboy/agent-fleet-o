@@ -13,7 +13,23 @@ class WorkflowNodeAddTool extends Tool
 {
     protected string $name = 'workflow_node_add';
 
-    protected string $description = 'Add a new node to an existing workflow. The node is appended after existing nodes. Use workflow_edge_add to connect it to other nodes.';
+    protected string $description = <<<'DESC'
+Add a new node to an existing workflow. The node is appended after existing nodes. Use workflow_edge_add to connect it to other nodes.
+
+Node types:
+  agent              — executes an agent (set agent_id)
+  conditional        — branches on expression
+  human_task         — waits for human completion
+  switch             — multi-way branch on expression
+  dynamic_fork       — parallel split
+  do_while           — loop until condition met
+  llm                — direct LLM call; config: {model, prompt_template}
+  http_request       — outbound HTTP with SSRF guard; config: {url, method, headers, body_template}
+  parameter_extractor — extract structured JSON from input; config: {schema} (JSON Schema)
+  variable_aggregator — merge outputs from multiple predecessor nodes; no special config
+  template_transform — Mustache-style {{variable}} rendering, zero LLM cost; config: {template}
+  knowledge_retrieval — pgvector semantic search against a KnowledgeBase; config: {knowledge_base_id, top_k}
+DESC;
 
     public function schema(JsonSchema $schema): array
     {
@@ -22,8 +38,8 @@ class WorkflowNodeAddTool extends Tool
                 ->description('The workflow UUID to add the node to')
                 ->required(),
             'type' => $schema->string()
-                ->description('Node type: agent (executes an agent), conditional (branches on expression), human_task (waits for human), switch (multi-way branch), dynamic_fork (parallel split), do_while (loop)')
-                ->enum(['agent', 'conditional', 'human_task', 'switch', 'dynamic_fork', 'do_while'])
+                ->description('Node type (see tool description for full list and config details)')
+                ->enum(['agent', 'conditional', 'human_task', 'switch', 'dynamic_fork', 'do_while', 'llm', 'http_request', 'parameter_extractor', 'variable_aggregator', 'template_transform', 'knowledge_retrieval'])
                 ->required(),
             'label' => $schema->string()
                 ->description('Human-readable label for this node')
@@ -51,7 +67,7 @@ class WorkflowNodeAddTool extends Tool
     {
         $validated = $request->validate([
             'workflow_id' => 'required|string',
-            'type' => 'required|string|in:agent,conditional,human_task,switch,dynamic_fork,do_while',
+            'type' => 'required|string|in:agent,conditional,human_task,switch,dynamic_fork,do_while,llm,http_request,parameter_extractor,variable_aggregator,template_transform,knowledge_retrieval',
             'label' => 'required|string|max:255',
             'agent_id' => 'nullable|uuid|exists:agents,id',
             'skill_id' => 'nullable|uuid|exists:skills,id',

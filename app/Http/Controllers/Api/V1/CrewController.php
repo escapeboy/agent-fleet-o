@@ -64,8 +64,22 @@ class CrewController extends Controller
             'quality_threshold' => ['sometimes', 'numeric', 'min:0', 'max:1'],
             'worker_agent_ids' => ['sometimes', 'array'],
             'worker_agent_ids.*' => ['uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
+            'convergence_mode' => ['sometimes', 'string', Rule::in(['any_validated', 'all_validated', 'threshold_ratio', 'quality_gate'])],
+            'min_validated_count' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'min_validated_ratio' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:1'],
             'settings' => ['sometimes', 'array'],
         ]);
+
+        $settings = $request->input('settings', []);
+        if ($request->has('convergence_mode')) {
+            $settings['convergence_mode'] = $request->convergence_mode;
+        }
+        if ($request->has('min_validated_count')) {
+            $settings['min_validated_count'] = $request->min_validated_count;
+        }
+        if ($request->has('min_validated_ratio')) {
+            $settings['min_validated_ratio'] = $request->min_validated_ratio;
+        }
 
         $crew = $action->execute(
             userId: $request->user()->id,
@@ -79,7 +93,7 @@ class CrewController extends Controller
             maxTaskIterations: $request->input('max_task_iterations', 3),
             qualityThreshold: (float) $request->input('quality_threshold', 0.70),
             workerAgentIds: $request->input('worker_agent_ids', []),
-            settings: $request->input('settings', []),
+            settings: $settings,
             teamId: $request->user()->current_team_id,
         );
 
@@ -103,8 +117,25 @@ class CrewController extends Controller
             'worker_agent_ids' => ['sometimes', 'array'],
             'worker_agent_ids.*' => ['uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
             'status' => ['sometimes', new Enum(CrewStatus::class)],
+            'convergence_mode' => ['sometimes', 'string', Rule::in(['any_validated', 'all_validated', 'threshold_ratio', 'quality_gate'])],
+            'min_validated_count' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'min_validated_ratio' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:1'],
             'settings' => ['sometimes', 'array'],
         ]);
+
+        $settings = $request->input('settings');
+        if ($request->has('convergence_mode') || $request->has('min_validated_count') || $request->has('min_validated_ratio')) {
+            $settings = $settings ?? [];
+            if ($request->has('convergence_mode')) {
+                $settings['convergence_mode'] = $request->convergence_mode;
+            }
+            if ($request->has('min_validated_count')) {
+                $settings['min_validated_count'] = $request->min_validated_count;
+            }
+            if ($request->has('min_validated_ratio')) {
+                $settings['min_validated_ratio'] = $request->min_validated_ratio;
+            }
+        }
 
         $crew = $action->execute(
             crew: $crew,
@@ -121,7 +152,7 @@ class CrewController extends Controller
                 : null,
             workerAgentIds: $request->input('worker_agent_ids'),
             status: $request->status ? CrewStatus::from($request->status) : null,
-            settings: $request->input('settings'),
+            settings: $settings,
         );
 
         return new CrewResource($crew->load(['coordinator', 'qaAgent', 'members.agent']));

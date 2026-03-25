@@ -48,13 +48,16 @@ use App\Mcp\Tools\Boruna\BorunaEvidenceTool;
 use App\Mcp\Tools\Boruna\BorunaRunTool;
 use App\Mcp\Tools\Boruna\BorunaSkillManageTool;
 use App\Mcp\Tools\Boruna\BorunaValidateTool;
+use App\Mcp\Tools\Bridge\BridgeConnectTool;
 use App\Mcp\Tools\Bridge\BridgeDisconnectTool;
 use App\Mcp\Tools\Bridge\BridgeEndpointListTool;
 use App\Mcp\Tools\Bridge\BridgeEndpointToggleTool;
 use App\Mcp\Tools\Bridge\BridgeListTool;
+use App\Mcp\Tools\Bridge\BridgePingTool;
 use App\Mcp\Tools\Bridge\BridgeRenameTool;
 use App\Mcp\Tools\Bridge\BridgeSetRoutingTool;
 use App\Mcp\Tools\Bridge\BridgeStatusTool;
+use App\Mcp\Tools\Bridge\BridgeUpdateUrlTool;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
 use App\Mcp\Tools\Budget\BudgetForecastTool;
 use App\Mcp\Tools\Budget\BudgetSummaryTool;
@@ -595,9 +598,12 @@ class AgentFleetServer extends Server
         ChatbotAnalyticsSummaryTool::class,
         ChatbotLearningEntriesListTool::class,
 
-        // Bridge (7)
+        // Bridge (10)
         BridgeStatusTool::class,
         BridgeListTool::class,
+        BridgeConnectTool::class,
+        BridgePingTool::class,
+        BridgeUpdateUrlTool::class,
         BridgeEndpointListTool::class,
         BridgeEndpointToggleTool::class,
         BridgeDisconnectTool::class,
