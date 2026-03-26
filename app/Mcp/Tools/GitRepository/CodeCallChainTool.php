@@ -48,39 +48,40 @@ class CodeCallChainTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $repo = GitRepository::find($request->get('git_repository_id'));
+        $teamId = app('mcp.team_id');
+        $repo = GitRepository::where('team_id', $teamId)->find($request->get('git_repository_id'));
 
         if (! $repo) {
             return Response::error('Repository not found.');
         }
 
-        $hops     = (int) ($request->get('hops') ?? 2);
-        $hops     = max(1, min(4, $hops));
+        $hops = (int) ($request->get('hops') ?? 2);
+        $hops = max(1, min(4, $hops));
         $edgeType = $request->get('edge_type') ?: null;
 
         $elements = app(CodeGraphTraversal::class)->traverse(
-            $repo->team_id,
+            $teamId,
             (string) $request->get('element_id'),
             $hops,
             $edgeType,
         );
 
         $results = $elements->map(fn ($el) => [
-            'id'           => $el->id,
-            'name'         => $el->name,
+            'id' => $el->id,
+            'name' => $el->name,
             'element_type' => $el->element_type,
-            'file_path'    => $el->file_path,
-            'line_start'   => $el->line_start,
-            'line_end'     => $el->line_end,
-            'signature'    => $el->signature,
+            'file_path' => $el->file_path,
+            'line_start' => $el->line_start,
+            'line_end' => $el->line_end,
+            'signature' => $el->signature,
         ])->values()->all();
 
         return Response::text(json_encode([
             'start_element_id' => $request->get('element_id'),
-            'hops'             => $hops,
-            'edge_type'        => $edgeType,
-            'count'            => count($results),
-            'elements'         => $results,
+            'hops' => $hops,
+            'edge_type' => $edgeType,
+            'count' => count($results),
+            'elements' => $results,
         ]));
     }
 }

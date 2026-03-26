@@ -49,26 +49,26 @@ class MemorySearchTool extends Tool
     {
         $validated = $request->validate(['query' => 'required|string']);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id');
 
         $searchMode = $request->get('search_mode', 'semantic');
 
         // For graph-based modes, attempt entity-seeded traversal first
         if (in_array($searchMode, ['local', 'global', 'hybrid', 'mix'], true)) {
-            $entityIds = $this->getQueryEntityIds($teamId ?? '', $validated['query']);
+            $entityIds = $this->getQueryEntityIds($teamId, $validated['query']);
 
             if (! empty($entityIds)) {
                 $traversal = app(KnowledgeGraphTraversal::class);
                 $limit = min((int) ($request->get('limit', 10)), 100);
 
                 $memories = match ($searchMode) {
-                    'local' => $traversal->localSearch($teamId ?? '', $entityIds, hops: 1),
-                    'global' => $traversal->globalSearch($teamId ?? '', $entityIds, topK: 20),
+                    'local' => $traversal->localSearch($teamId, $entityIds, hops: 1),
+                    'global' => $traversal->globalSearch($teamId, $entityIds, topK: 20),
                     'hybrid' => $this->semanticSearch($teamId, $request, $validated['query'])
-                        ->merge($traversal->localSearch($teamId ?? '', $entityIds))
+                        ->merge($traversal->localSearch($teamId, $entityIds))
                         ->unique('id'),
                     'mix' => $this->semanticSearch($teamId, $request, $validated['query'])
-                        ->merge($traversal->globalSearch($teamId ?? '', $entityIds))
+                        ->merge($traversal->globalSearch($teamId, $entityIds))
                         ->unique('id'),
                 };
 
@@ -93,11 +93,11 @@ class MemorySearchTool extends Tool
      *
      * @return Collection<int, Memory>
      */
-    private function semanticSearch(?string $teamId, Request $request, string $queryText): Collection
+    private function semanticSearch(string $teamId, Request $request, string $queryText): Collection
     {
         $query = Memory::withoutGlobalScopes()
             ->with(['agent:id,name', 'project:id,title'])
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->where('content', 'ilike', '%'.addcslashes($queryText, '%_').'%')
             ->orderByDesc('created_at');
 

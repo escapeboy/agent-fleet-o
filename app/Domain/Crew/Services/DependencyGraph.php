@@ -24,9 +24,10 @@ class DependencyGraph
         string $crewExecutionId,
         string $taskId,
         array $newDependsOn,
+        string $teamId = '',
     ): void {
         // Build adjacency map from the current DB state, then simulate the new edges
-        $graph = $this->buildAdjacencyMap($crewExecutionId);
+        $graph = $this->buildAdjacencyMap($crewExecutionId, $teamId);
 
         // Merge the proposed new dependencies into the graph
         $graph[$taskId] = array_unique(
@@ -72,7 +73,20 @@ class DependencyGraph
             ->get();
 
         foreach ($dependents as $dependent) {
-            $depIds = $dependent->depends_on ?? [];
+            // Re-acquire the row with a pessimistic lock to prevent duplicate dispatch
+            // when two tasks complete concurrently and both try to unblock the same dependent.
+            $locked = CrewTaskExecution::query()
+                ->where('id', $dependent->id)
+                ->where('status', CrewTaskStatus::Blocked)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $locked) {
+                // Another process has already transitioned this task
+                continue;
+            }
+
+            $depIds = $locked->depends_on ?? [];
 
             if (empty($depIds)) {
                 continue;
@@ -88,11 +102,11 @@ class DependencyGraph
                 ->exists();
 
             if (! $hasPendingDep) {
-                $dependent->update(['status' => CrewTaskStatus::Pending]);
+                $locked->update(['status' => CrewTaskStatus::Pending]);
 
                 ExecuteCrewTaskJob::dispatch(
                     crewExecutionId: $execution->id,
-                    taskExecutionId: $dependent->id,
+                    taskExecutionId: $locked->id,
                     teamId: $execution->team_id,
                 );
             }
@@ -104,10 +118,11 @@ class DependencyGraph
      *
      * @return array<string, string[]>
      */
-    private function buildAdjacencyMap(string $crewExecutionId): array
+    private function buildAdjacencyMap(string $crewExecutionId, string $teamId = ''): array
     {
         $tasks = CrewTaskExecution::query()
             ->where('crew_execution_id', $crewExecutionId)
+            ->when($teamId !== '', fn ($q) => $q->where('team_id', $teamId))
             ->get(['id', 'depends_on']);
 
         $graph = [];

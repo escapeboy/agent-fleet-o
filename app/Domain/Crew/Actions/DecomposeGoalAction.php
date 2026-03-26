@@ -33,7 +33,7 @@ class DecomposeGoalAction
         $config = $execution->config_snapshot;
         $coordinator = Agent::withoutGlobalScopes()->find($config['coordinator']['id']);
 
-        if (! $coordinator) {
+        if (! $coordinator || $coordinator->team_id !== $execution->team_id) {
             throw new \RuntimeException('Coordinator agent not found.');
         }
 
@@ -92,7 +92,11 @@ class DecomposeGoalAction
                 // Match by name (case-insensitive)
                 $worker = $workerMap->first(fn ($w) => strcasecmp($w['name'], $assignedTo) === 0);
                 if ($worker) {
-                    $assignedAgent = Agent::withoutGlobalScopes()->find($worker['id']);
+                    $found = Agent::withoutGlobalScopes()->find($worker['id']);
+                    // Only use the agent if it belongs to the same team as the execution
+                    if ($found && $found->team_id === $execution->team_id) {
+                        $assignedAgent = $found;
+                    }
                 }
             }
 

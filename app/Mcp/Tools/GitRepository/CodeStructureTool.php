@@ -40,7 +40,8 @@ class CodeStructureTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $repo = GitRepository::find($request->get('git_repository_id'));
+        $teamId = app('mcp.team_id');
+        $repo = GitRepository::where('team_id', $teamId)->find($request->get('git_repository_id'));
 
         if (! $repo) {
             return Response::error('Repository not found.');
@@ -49,24 +50,24 @@ class CodeStructureTool extends Tool
         $filePath = (string) $request->get('file_path');
 
         $elements = app(CodeSkimmingService::class)->skimFile(
-            $repo->team_id,
+            $teamId,
             $repo->id,
             $filePath,
         );
 
         $structured = $elements->map(fn ($el) => [
-            'id'           => $el->id,
+            'id' => $el->id,
             'element_type' => $el->element_type,
-            'name'         => $el->name,
-            'line_start'   => $el->line_start,
-            'line_end'     => $el->line_end,
-            'signature'    => $el->signature,
+            'name' => $el->name,
+            'line_start' => $el->line_start,
+            'line_end' => $el->line_end,
+            'signature' => $el->signature,
         ])->values()->all();
 
         return Response::text(json_encode([
             'file_path' => $filePath,
-            'count'     => count($structured),
-            'elements'  => $structured,
+            'count' => count($structured),
+            'elements' => $structured,
         ]));
     }
 }

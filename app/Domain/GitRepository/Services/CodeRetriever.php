@@ -90,6 +90,15 @@ class CodeRetriever
 
         $ids = array_column($results, 'id');
 
+        // Validate that all IDs are syntactically valid UUIDs before interpolating
+        // into the raw SQL expression (defence-in-depth against injection).
+        $uuidPattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
+        $ids = array_values(array_filter($ids, fn ($id) => is_string($id) && preg_match($uuidPattern, $id)));
+
+        if (empty($ids)) {
+            return collect();
+        }
+
         return CodeElement::whereIn('id', $ids)
             ->orderByRaw('array_position(ARRAY['.implode(',', array_map(fn ($id) => "'{$id}'", $ids)).']::uuid[], id)')
             ->get();

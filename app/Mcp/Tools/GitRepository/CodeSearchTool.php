@@ -7,6 +7,7 @@ namespace App\Mcp\Tools\GitRepository;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\CodeRetriever;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -48,7 +49,8 @@ class CodeSearchTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $repo = GitRepository::find($request->get('git_repository_id'));
+        $teamId = app('mcp.team_id');
+        $repo = GitRepository::where('team_id', $teamId)->find($request->get('git_repository_id'));
 
         if (! $repo) {
             return Response::error('Repository not found.');
@@ -57,9 +59,9 @@ class CodeSearchTool extends Tool
         $limit = (int) ($request->get('limit') ?? 5);
         $limit = max(1, min(20, $limit));
 
-        /** @var \Illuminate\Support\Collection $elements */
+        /** @var Collection $elements */
         $elements = app(CodeRetriever::class)->search(
-            $repo->team_id,
+            $teamId,
             $repo->id,
             (string) $request->get('query'),
             $limit,
@@ -72,18 +74,18 @@ class CodeSearchTool extends Tool
         }
 
         $results = $elements->map(fn ($el) => [
-            'id'           => $el->id,
-            'name'         => $el->name,
+            'id' => $el->id,
+            'name' => $el->name,
             'element_type' => $el->element_type,
-            'file_path'    => $el->file_path,
-            'line_start'   => $el->line_start,
-            'line_end'     => $el->line_end,
-            'signature'    => $el->signature,
+            'file_path' => $el->file_path,
+            'line_start' => $el->line_start,
+            'line_end' => $el->line_end,
+            'signature' => $el->signature,
         ])->values()->all();
 
         return Response::text(json_encode([
-            'query'   => $request->get('query'),
-            'count'   => count($results),
+            'query' => $request->get('query'),
+            'count' => count($results),
             'results' => $results,
         ]));
     }

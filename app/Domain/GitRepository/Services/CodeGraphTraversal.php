@@ -43,8 +43,11 @@ class CodeGraphTraversal
         ?string $edgeType,
     ): Collection {
         $edgeFilter = $edgeType !== null ? 'AND e.edge_type = ?' : '';
+        // The edge_type filter must appear in BOTH the anchor and the recursive part;
+        // omitting it from the recursive step causes traversal to follow edges of the
+        // wrong type on hops > 1.
         $bindings = $edgeType !== null
-            ? [$elementId, $teamId, $edgeType, $teamId, $hops]
+            ? [$elementId, $teamId, $edgeType, $teamId, $edgeType, $hops]
             : [$elementId, $teamId, $teamId, $hops];
 
         $sql = <<<SQL
@@ -58,11 +61,12 @@ class CodeGraphTraversal
 
             UNION
 
-            -- Recursive: follow edges from discovered elements
+            -- Recursive: follow edges from discovered elements (same edge_type filter)
             SELECT e.target_id, t.depth + 1
             FROM code_edges e
             INNER JOIN traversal t ON e.source_id = t.element_id
             WHERE e.team_id = ?
+              {$edgeFilter}
               AND t.depth < ?
         )
         SELECT DISTINCT element_id FROM traversal
