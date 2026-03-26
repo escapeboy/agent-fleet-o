@@ -90,6 +90,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/experiments/{experiment}/retry-from-step', [ExperimentController::class, 'retryFromStep']);
     Route::get('/experiments/{experiment}/steps', [ExperimentController::class, 'steps']);
     Route::get('/experiments/{experiment}/snapshots', [ExperimentController::class, 'snapshots']);
+    Route::get('/experiments/{experiment}/cost', [ExperimentController::class, 'cost']);
 
     // Agents
     Route::apiResource('agents', AgentController::class);
@@ -280,6 +281,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/knowledge-bases', [KnowledgeBaseController::class, 'index']);
     Route::post('/knowledge-bases', [KnowledgeBaseController::class, 'store']);
     Route::get('/knowledge-bases/{knowledgeBase}', [KnowledgeBaseController::class, 'show']);
+    Route::put('/knowledge-bases/{knowledgeBase}', [KnowledgeBaseController::class, 'update']);
     Route::delete('/knowledge-bases/{knowledgeBase}', [KnowledgeBaseController::class, 'destroy']);
     Route::post('/knowledge-bases/{knowledgeBase}/ingest', [KnowledgeBaseController::class, 'ingest']);
     Route::post('/knowledge-bases/search', [KnowledgeBaseController::class, 'search']);
@@ -289,6 +291,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/knowledge-graph/entity-facts', [KnowledgeGraphController::class, 'entityFacts']);
     Route::post('/knowledge-graph/search', [KnowledgeGraphController::class, 'search']);
     Route::post('/knowledge-graph/facts', [KnowledgeGraphController::class, 'store']);
+    Route::delete('/knowledge-graph/facts/{factId}', [KnowledgeGraphController::class, 'destroy']);
 
     // Metrics
     Route::get('/metrics', [MetricsController::class, 'index']);

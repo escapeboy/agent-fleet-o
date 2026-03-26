@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\KnowledgeGraph\Actions\AddKnowledgeFactAction;
+use App\Domain\KnowledgeGraph\Actions\InvalidateKgFactAction;
 use App\Domain\KnowledgeGraph\Actions\SearchKgFactsAction;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Signal\Models\Entity;
@@ -120,6 +121,31 @@ class KnowledgeGraphController extends Controller
         );
 
         return response()->json(['data' => new KgEdgeResource($edge->load(['sourceEntity', 'targetEntity']))], 201);
+    }
+
+    /**
+     * Invalidate a knowledge graph fact (soft invalidation via invalid_at).
+     *
+     * @response 200 {"message": "Fact invalidated.", "id": "..."}
+     */
+    public function destroy(Request $request, string $factId, InvalidateKgFactAction $action): JsonResponse
+    {
+        $edge = KgEdge::withoutGlobalScopes()
+            ->where('id', $factId)
+            ->where('team_id', $request->user()->current_team_id)
+            ->first();
+
+        if (! $edge) {
+            return response()->json(['message' => 'KG fact not found.'], 404);
+        }
+
+        if ($edge->invalid_at !== null) {
+            return response()->json(['message' => 'Already invalidated.', 'id' => $edge->id]);
+        }
+
+        $action->execute($edge);
+
+        return response()->json(['message' => 'Fact invalidated.', 'id' => $edge->id]);
     }
 
     /**

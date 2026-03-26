@@ -6,6 +6,7 @@ use App\Domain\Knowledge\Actions\CreateKnowledgeBaseAction;
 use App\Domain\Knowledge\Actions\DeleteKnowledgeBaseAction;
 use App\Domain\Knowledge\Actions\IngestDocumentAction;
 use App\Domain\Knowledge\Actions\SearchKnowledgeAction;
+use App\Domain\Knowledge\Actions\UpdateKnowledgeBaseAction;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -94,6 +95,25 @@ class KnowledgeBaseController extends Controller
             'data' => $results,
             'total' => count($results),
         ]);
+    }
+
+    public function update(Request $request, KnowledgeBase $knowledgeBase, UpdateKnowledgeBaseAction $action): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'agent_id' => ['sometimes', 'nullable', 'uuid', 'exists:agents,id'],
+        ]);
+
+        $kb = $action->execute(
+            knowledgeBase: $knowledgeBase,
+            name: $validated['name'] ?? null,
+            description: $validated['description'] ?? null,
+            updateAgentId: array_key_exists('agent_id', $validated),
+            agentId: $validated['agent_id'] ?? null,
+        );
+
+        return response()->json(['data' => $kb]);
     }
 
     public function destroy(KnowledgeBase $knowledgeBase, DeleteKnowledgeBaseAction $action): JsonResponse

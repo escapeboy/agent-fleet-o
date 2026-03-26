@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Agent\Models\AiRun;
 use App\Domain\Experiment\Actions\CreateExperimentAction;
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
@@ -189,6 +190,69 @@ class ExperimentController extends Controller
                 'metadata' => $s->metadata,
                 'created_at' => $s->created_at?->toIso8601String(),
             ]),
+        ]);
+    }
+
+    /**
+     * Get detailed cost breakdown for an experiment.
+     *
+     * @response 200 {"experiment_id": "uuid", "total_cost_credits": 120, "by_stage": [], "by_model": []}
+     */
+    public function cost(Experiment $experiment): JsonResponse
+    {
+        $runs = AiRun::withoutGlobalScopes()
+            ->where('experiment_id', $experiment->id)
+            ->with('experimentStage:id,stage_type')
+            ->get();
+
+        $totalCost = $runs->sum('cost_credits');
+        $totalTokensIn = $runs->sum('input_tokens');
+        $totalTokensOut = $runs->sum('output_tokens');
+        $cachedCount = $runs->where('cost_credits', 0)->where('status', 'completed')->count();
+
+        $nonCachedRuns = $runs->where('cost_credits', '>', 0);
+        $avgCost = $nonCachedRuns->isNotEmpty() ? $nonCachedRuns->avg('cost_credits') : 0;
+        $estimatedSavings = (int) round($cachedCount * $avgCost);
+
+        $byStage = $runs
+            ->filter(fn ($r) => $r->cost_credits > 0)
+            ->groupBy(fn ($r) => $r->experimentStage?->stage_type ?? 'unknown')
+            ->map(fn ($group) => [
+                'runs' => $group->count(),
+                'cost_credits' => $group->sum('cost_credits'),
+                'tokens_in' => $group->sum('input_tokens'),
+                'tokens_out' => $group->sum('output_tokens'),
+            ])
+            ->sortByDesc('cost_credits')
+            ->values()
+            ->toArray();
+
+        $byModel = $runs
+            ->filter(fn ($r) => $r->cost_credits > 0)
+            ->groupBy(fn ($r) => "{$r->provider}/{$r->model}")
+            ->map(fn ($group, $key) => [
+                'provider_model' => $key,
+                'runs' => $group->count(),
+                'cost_credits' => $group->sum('cost_credits'),
+                'tokens_in' => $group->sum('input_tokens'),
+                'tokens_out' => $group->sum('output_tokens'),
+                'avg_latency_ms' => (int) $group->avg('latency_ms'),
+            ])
+            ->sortByDesc('cost_credits')
+            ->values()
+            ->toArray();
+
+        return response()->json([
+            'experiment_id' => $experiment->id,
+            'experiment_title' => $experiment->title,
+            'total_cost_credits' => $totalCost,
+            'total_tokens_in' => $totalTokensIn,
+            'total_tokens_out' => $totalTokensOut,
+            'total_runs' => $runs->count(),
+            'cached_runs' => $cachedCount,
+            'estimated_savings_credits' => $estimatedSavings,
+            'by_stage' => $byStage,
+            'by_model' => $byModel,
         ]);
     }
 }

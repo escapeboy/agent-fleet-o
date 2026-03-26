@@ -19,6 +19,7 @@ use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
 use App\Mcp\Tools\Agent\AgentFeedbackSubmitTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
 use App\Mcp\Tools\Agent\AgentListTool;
+use App\Mcp\Tools\Agent\AgentResetSessionTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
 use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
 use App\Mcp\Tools\Agent\AgentSandboxTool;
@@ -218,6 +219,7 @@ use App\Mcp\Tools\Signal\KgAddFactTool;
 use App\Mcp\Tools\Signal\KgEdgeProvenanceTool;
 use App\Mcp\Tools\Signal\KgEntityFactsTool;
 use App\Mcp\Tools\Signal\KgGraphSearchTool;
+use App\Mcp\Tools\Signal\KgInvalidateFactTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
@@ -245,6 +247,8 @@ use App\Mcp\Tools\System\BlacklistManageTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
 use App\Mcp\Tools\System\LangfuseConfigTool;
+use App\Mcp\Tools\System\MetricsAggregationsTool;
+use App\Mcp\Tools\System\MetricsModelComparisonTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
@@ -301,14 +305,14 @@ class AgentFleetServer extends Server
 
     protected string $name = 'FleetQ';
 
-    protected string $version = '1.1.0';
+    protected string $version = '1.13.0';
 
     // Return all tools in a single page — MCP clients like Claude.ai/Codex don't follow cursors
     public int $defaultPaginationLength = 300;
 
     public int $maxPaginationLength = 300;
 
-    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, marketplace, artifacts, webhooks, chatbots, email themes, email templates, and team settings.';
+    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, memory, knowledge bases, knowledge graph, git repositories, chatbots, email templates/themes, integrations, marketplace, artifacts, webhooks, assistant conversations, bridge connections, evaluations, evolution proposals, and team settings.';
 
     protected function boot(): void
     {
@@ -339,6 +343,7 @@ class AgentFleetServer extends Server
         AgentConfigHistoryTool::class,
         AgentRollbackConfigTool::class,
         AgentRuntimeStateTool::class,
+        AgentResetSessionTool::class,
         AgentSandboxTool::class,
 
         // Evolution (5)
@@ -462,7 +467,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (21)
+        // Signal (16)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -480,9 +485,12 @@ class AgentFleetServer extends Server
         SupabaseConnectorTool::class,
         ConnectorSubscriptionTool::class,
         IntentScoreTool::class,
+
+        // KnowledgeGraph (6)
         KgSearchTool::class,
         KgEntityFactsTool::class,
         KgAddFactTool::class,
+        KgInvalidateFactTool::class,
         KgGraphSearchTool::class,
         KgEdgeProvenanceTool::class,
 
@@ -595,7 +603,7 @@ class AgentFleetServer extends Server
         EmailTemplateDeleteTool::class,
         EmailTemplateGenerateTool::class,
 
-        // System (8)
+        // System (10)
         DashboardKpisTool::class,
         SystemHealthTool::class,
         SystemVersionCheckTool::class,
@@ -604,6 +612,8 @@ class AgentFleetServer extends Server
         BlacklistManageTool::class,
         SecurityPolicyManageTool::class,
         LangfuseConfigTool::class,
+        MetricsAggregationsTool::class,
+        MetricsModelComparisonTool::class,
 
         // Chatbot (10)
         ChatbotListTool::class,
