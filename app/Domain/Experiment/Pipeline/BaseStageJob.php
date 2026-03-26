@@ -199,6 +199,9 @@ abstract class BaseStageJob implements ShouldQueue
             StageType::Planning => ExperimentStatus::PlanningFailed,
             StageType::Building => ExperimentStatus::BuildingFailed,
             StageType::Executing => ExperimentStatus::ExecutionFailed,
+            // Post-execution stages: treat failure as completed — the experiment ran and
+            // delivered its output; metrics/evaluation are best-effort secondary steps.
+            StageType::CollectingMetrics, StageType::Evaluating => ExperimentStatus::Completed,
             default => null,
         };
     }

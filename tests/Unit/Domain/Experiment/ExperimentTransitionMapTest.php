@@ -53,6 +53,7 @@ class ExperimentTransitionMapTest extends TestCase
             'execution_failed -> executing' => ['execution_failed', 'executing'],
             'execution_failed -> killed' => ['execution_failed', 'killed'],
             'collecting_metrics -> evaluating' => ['collecting_metrics', 'evaluating'],
+            'collecting_metrics -> completed' => ['collecting_metrics', 'completed'],
             'evaluating -> iterating' => ['evaluating', 'iterating'],
             'evaluating -> completed' => ['evaluating', 'completed'],
             'evaluating -> killed' => ['evaluating', 'killed'],

@@ -24,7 +24,7 @@ class ExperimentTransitionMap
         'executing' => ['collecting_metrics', 'completed', 'execution_failed', 'awaiting_children', 'awaiting_approval'],
         'awaiting_children' => ['executing'],
         'execution_failed' => ['executing', 'killed'],
-        'collecting_metrics' => ['evaluating'],
+        'collecting_metrics' => ['evaluating', 'completed'],
         'evaluating' => ['iterating', 'completed', 'killed'],
         'iterating' => ['planning', 'executing'],
     ];
