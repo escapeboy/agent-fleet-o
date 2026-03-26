@@ -62,10 +62,49 @@ class CreateSkillForm extends Component
 
     public int $computeTimeout = 90;
 
+    // Step 3: Configuration (RunPod Endpoint — serverless)
+    public string $runpodEndpointId = '';
+
+    public string $runpodRoutePath = '/run';
+
+    public bool $runpodUseSync = true;
+
+    public int $runpodTimeout = 90;
+
+    // Step 3: Configuration (RunPod Pod — full GPU pod)
+    public string $runpodDockerImage = '';
+
+    public string $runpodGpuType = 'NVIDIA RTX 4090';
+
+    public int $runpodGpuCount = 1;
+
+    public int $runpodContainerDiskGb = 20;
+
+    public int $runpodEstimatedMinutes = 10;
+
+    // Step 3: Configuration (Boruna Script)
+    public string $borunaScript = '';
+
+    public int $borunaScriptTimeout = 60;
+
+    // Step 3: Configuration (Supabase Edge Function)
+    public string $supabaseProjectUrl = '';
+
+    public string $supabaseFunctionName = '';
+
+    public string $supabaseAnonKey = '';
+
+    // Step 3: Configuration (Multi-Model Consensus)
+    public array $consensusModels = [];
+
+    public float $consensusThreshold = 0.5;
+
+    public string $consensusAggregation = 'majority';
+
     public function nextStep(): void
     {
         if ($this->step === 1) {
-            $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute';
+            $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute,runpod_endpoint,runpod_pod,boruna_script,supabase_edge_function';
             if (config('browser.enabled', false)) {
                 $allowedTypes .= ',browser';
             }
@@ -108,8 +147,31 @@ class CreateSkillForm extends Component
         $this->outputFields = array_values($this->outputFields);
     }
 
+    public function addConsensusModel(): void
+    {
+        $this->consensusModels[] = ['provider' => '', 'model' => ''];
+    }
+
+    public function removeConsensusModel(int $index): void
+    {
+        unset($this->consensusModels[$index]);
+        $this->consensusModels = array_values($this->consensusModels);
+    }
+
     public function save(): void
     {
+        $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute,runpod_endpoint,runpod_pod,boruna_script,supabase_edge_function';
+        if (config('browser.enabled', false)) {
+            $allowedTypes .= ',browser';
+        }
+
+        $this->validate([
+            'name' => 'required|min:2|max:255',
+            'description' => 'max:1000',
+            'type' => "required|in:{$allowedTypes}",
+            'riskLevel' => 'required|in:low,medium,high,critical',
+        ]);
+
         $team = auth()->user()->currentTeam;
 
         $inputSchema = $this->buildSchema($this->inputFields);
@@ -122,6 +184,42 @@ class CreateSkillForm extends Component
                 'route_path' => $this->computeRoutePath ?: '/',
                 'use_sync' => $this->computeUseSync,
                 'timeout_seconds' => $this->computeTimeout,
+            ], fn ($v) => $v !== null);
+        } elseif ($this->type === 'runpod_endpoint') {
+            $configuration = array_filter([
+                'endpoint_id' => $this->runpodEndpointId ?: null,
+                'route_path' => $this->runpodRoutePath ?: '/run',
+                'use_sync' => $this->runpodUseSync,
+                'timeout_seconds' => $this->runpodTimeout,
+            ], fn ($v) => $v !== null);
+        } elseif ($this->type === 'runpod_pod') {
+            $configuration = array_filter([
+                'docker_image' => $this->runpodDockerImage ?: null,
+                'gpu_type' => $this->runpodGpuType ?: null,
+                'gpu_count' => $this->runpodGpuCount,
+                'container_disk_gb' => $this->runpodContainerDiskGb,
+                'estimated_minutes' => $this->runpodEstimatedMinutes,
+            ], fn ($v) => $v !== null);
+        } elseif ($this->type === 'boruna_script') {
+            $configuration = array_filter([
+                'script' => $this->borunaScript ?: null,
+                'timeout_seconds' => $this->borunaScriptTimeout,
+            ], fn ($v) => $v !== null);
+        } elseif ($this->type === 'supabase_edge_function') {
+            $configuration = array_filter([
+                'project_url' => $this->supabaseProjectUrl ?: null,
+                'function_name' => $this->supabaseFunctionName ?: null,
+                'anon_key' => $this->supabaseAnonKey ?: null,
+            ], fn ($v) => $v !== null);
+        } elseif ($this->type === 'multi_model_consensus') {
+            $configuration = array_filter([
+                'models' => $this->consensusModels ?: null,
+                'consensus_threshold' => $this->consensusThreshold,
+                'aggregation' => $this->consensusAggregation,
+                'system_prompt' => $this->systemPrompt ?: null,
+                'prompt_template' => $this->promptTemplate ?: null,
+                'max_tokens' => $this->maxTokens,
+                'temperature' => $this->temperature,
             ], fn ($v) => $v !== null);
         } elseif ($this->splitModelMode) {
             $configuration = array_filter([

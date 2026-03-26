@@ -11,6 +11,7 @@ use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Tool\Services\BashSidecarClient;
+use App\Infrastructure\AI\Models\SemanticCacheEntry;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
 use App\Models\Connector;
 use Illuminate\Support\Collection;
@@ -30,6 +31,7 @@ class HealthPage extends Component
             'connectorStats' => $this->getConnectorStats(),
             'localLlmStats' => $this->getLocalLlmStats(),
             'bashSidecarStatus' => $this->getBashSidecarStatus(),
+            'cacheStats' => $this->getCacheStats(),
         ])->layout('layouts.app', ['header' => 'System Health']);
     }
 
@@ -232,6 +234,60 @@ class HealthPage extends Component
             'total_budget_cap' => $totalBudgetCap,
             'total_spent' => $totalSpent,
         ];
+    }
+
+    private function getCacheStats(): array
+    {
+        if (! config('semantic_cache.enabled', false)) {
+            return ['enabled' => false];
+        }
+
+        $teamId = auth()->user()?->current_team_id;
+        $base = SemanticCacheEntry::withoutGlobalScopes()->where('team_id', $teamId);
+
+        $total = (clone $base)->count();
+        $totalHits = (int) (clone $base)->sum('hit_count');
+        $expired = (clone $base)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->count();
+
+        $byModel = (clone $base)
+            ->selectRaw('provider, model, COUNT(*) as entries, SUM(hit_count) as hits')
+            ->groupBy('provider', 'model')
+            ->orderByDesc('hits')
+            ->limit(5)
+            ->get()
+            ->map(fn ($r) => [
+                'provider' => $r->provider,
+                'model' => $r->model,
+                'entries' => (int) $r->entries,
+                'hits' => (int) $r->hits,
+            ])
+            ->values()
+            ->toArray();
+
+        return [
+            'enabled' => true,
+            'total_entries' => $total,
+            'total_hits_saved' => $totalHits,
+            'expired_entries' => $expired,
+            'by_model' => $byModel,
+            'similarity_threshold' => config('semantic_cache.similarity_threshold', 0.92),
+            'ttl_days' => config('semantic_cache.ttl_days', 7),
+        ];
+    }
+
+    public function purgeSemanticCache(): void
+    {
+        if (! auth()->user()?->is_super_admin) {
+            return;
+        }
+
+        $teamId = auth()->user()?->current_team_id;
+        SemanticCacheEntry::withoutGlobalScopes()->where('team_id', $teamId)->delete();
+
+        $this->dispatch('notify', message: 'Semantic cache purged successfully.', type: 'success');
     }
 
     private function getBashSidecarStatus(): array

@@ -117,6 +117,48 @@
                     </span>
                     Sub-Workflow
                 </button>
+                <button @click="addNode('llm')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-purple-300 hover:bg-purple-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-purple-100 text-purple-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                    </span>
+                    LLM Call
+                </button>
+                <button @click="addNode('http_request')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-teal-300 hover:bg-teal-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-teal-100 text-teal-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
+                    </span>
+                    HTTP Request
+                </button>
+                <button @click="addNode('parameter_extractor')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-orange-300 hover:bg-orange-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-orange-100 text-orange-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </span>
+                    Param Extractor
+                </button>
+                <button @click="addNode('variable_aggregator')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-cyan-300 hover:bg-cyan-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-cyan-100 text-cyan-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                    </span>
+                    Var Aggregator
+                </button>
+                <button @click="addNode('template_transform')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-lime-300 hover:bg-lime-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-lime-100 text-lime-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+                    </span>
+                    Template Transform
+                </button>
+                <button @click="addNode('knowledge_retrieval')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-indigo-300 hover:bg-indigo-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-indigo-100 text-indigo-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    </span>
+                    Knowledge Retrieval
+                </button>
+                <button @click="addNode('boruna_step')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-fuchsia-300 hover:bg-fuchsia-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-fuchsia-100 text-fuchsia-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </span>
+                    Boruna Step
+                </button>
                 <button @click="addNode('end')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-red-300 hover:bg-red-50">
                     <span class="flex h-6 w-6 items-center justify-center rounded bg-red-100 text-red-600">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
@@ -474,6 +516,219 @@
                                 </div>
                                 <div class="rounded-lg bg-violet-50 p-3 text-xs text-violet-700">
                                     Spawns a child experiment from the selected workflow. The parent workflow waits until the child reaches a terminal state before continuing.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'llm'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Prompt</label>
+                                    <textarea x-model="selectedNode.prompt" @input="syncToLivewire()" rows="4"
+                                              placeholder="Enter your prompt. Use {{variable}} for interpolation."
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Model</label>
+                                    <select x-model="selectedNode.model" @change="syncToLivewire()"
+                                            class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                        <option value="">Use team default</option>
+                                        <option value="anthropic/claude-sonnet-4-5">Claude Sonnet 4.5</option>
+                                        <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5</option>
+                                        <option value="openai/gpt-4o">GPT-4o</option>
+                                        <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                                        <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                        <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Output variable name</label>
+                                    <input type="text" x-model="selectedNode.output_variable" @input="syncToLivewire()"
+                                           placeholder="e.g. llm_output"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div class="rounded-lg bg-purple-50 p-3 text-xs text-purple-700">
+                                    Calls the LLM directly with the given prompt. Output is stored as a workflow variable for use in downstream nodes.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'http_request'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Method</label>
+                                    <select x-model="selectedNode.method" @change="syncToLivewire()"
+                                            class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                        <option value="GET">GET</option>
+                                        <option value="POST">POST</option>
+                                        <option value="PUT">PUT</option>
+                                        <option value="PATCH">PATCH</option>
+                                        <option value="DELETE">DELETE</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">URL</label>
+                                    <input type="text" x-model="selectedNode.url" @input="syncToLivewire()"
+                                           placeholder="https://api.example.com/endpoint"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Headers (JSON)</label>
+                                    <textarea x-model="selectedNode.headers" @input="syncToLivewire()" rows="2"
+                                              placeholder='{"Authorization": "Bearer {{token}}"}'
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Body (JSON)</label>
+                                    <textarea x-model="selectedNode.body" @input="syncToLivewire()" rows="3"
+                                              placeholder='{"key": "{{variable}}"}'
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Output variable name</label>
+                                    <input type="text" x-model="selectedNode.output_variable" @input="syncToLivewire()"
+                                           placeholder="e.g. api_response"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div class="rounded-lg bg-teal-50 p-3 text-xs text-teal-700">
+                                    Makes an HTTP request to an external API. Use {{variable}} syntax for dynamic values from prior steps.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'parameter_extractor'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Source variable</label>
+                                    <input type="text" x-model="selectedNode.source_variable" @input="syncToLivewire()"
+                                           placeholder="e.g. llm_output"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Extraction schema (JSON)</label>
+                                    <textarea x-model="selectedNode.schema" @input="syncToLivewire()" rows="4"
+                                              placeholder='{"name": "string", "score": "number"}'
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Output variable prefix</label>
+                                    <input type="text" x-model="selectedNode.output_prefix" @input="syncToLivewire()"
+                                           placeholder="e.g. extracted (→ extracted.name, extracted.score)"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div class="rounded-lg bg-orange-50 p-3 text-xs text-orange-700">
+                                    Extracts structured parameters from a text variable using LLM parsing. Outputs each field as a separate workflow variable.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'variable_aggregator'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Variables to aggregate (comma-separated)</label>
+                                    <input type="text" x-model="selectedNode.variables" @input="syncToLivewire()"
+                                           placeholder="e.g. step1_output, step2_output, api_response"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Aggregation mode</label>
+                                    <select x-model="selectedNode.mode" @change="syncToLivewire()"
+                                            class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                        <option value="concat">Concatenate (text)</option>
+                                        <option value="array">Collect into array</option>
+                                        <option value="merge">Merge (JSON objects)</option>
+                                        <option value="sum">Sum (numeric)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Output variable name</label>
+                                    <input type="text" x-model="selectedNode.output_variable" @input="syncToLivewire()"
+                                           placeholder="e.g. aggregated"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div class="rounded-lg bg-cyan-50 p-3 text-xs text-cyan-700">
+                                    Combines multiple workflow variables into a single output. Useful after parallel branches or iterative steps.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'template_transform'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Template</label>
+                                    <textarea x-model="selectedNode.template" @input="syncToLivewire()" rows="5"
+                                              placeholder="Use {{variable}} placeholders from prior steps."
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Output variable name</label>
+                                    <input type="text" x-model="selectedNode.output_variable" @input="syncToLivewire()"
+                                           placeholder="e.g. formatted_output"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div class="rounded-lg bg-lime-50 p-3 text-xs text-lime-700">
+                                    Renders a Mustache-style template using workflow variables. No LLM call — pure string interpolation.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'knowledge_retrieval'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Query</label>
+                                    <textarea x-model="selectedNode.query" @input="syncToLivewire()" rows="2"
+                                              placeholder="Search query or {{variable}} from prior step"
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Top K results</label>
+                                    <input type="number" x-model.number="selectedNode.top_k" @input="syncToLivewire()"
+                                           min="1" max="20" placeholder="5"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Source</label>
+                                    <select x-model="selectedNode.source" @change="syncToLivewire()"
+                                            class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                        <option value="memory">Memory Bank</option>
+                                        <option value="knowledge_graph">Knowledge Graph</option>
+                                        <option value="both">Both</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Output variable name</label>
+                                    <input type="text" x-model="selectedNode.output_variable" @input="syncToLivewire()"
+                                           placeholder="e.g. retrieved_context"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div class="rounded-lg bg-indigo-50 p-3 text-xs text-indigo-700">
+                                    Performs semantic search over Memory Bank and/or Knowledge Graph. Injects retrieved context as a workflow variable.
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedNode.type === 'boruna_step'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Step name</label>
+                                    <input type="text" x-model="selectedNode.step_name" @input="syncToLivewire()"
+                                           placeholder="Descriptive step identifier"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Action</label>
+                                    <input type="text" x-model="selectedNode.action" @input="syncToLivewire()"
+                                           placeholder="e.g. evaluate, score, rank"
+                                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Config (JSON)</label>
+                                    <textarea x-model="selectedNode.config" @input="syncToLivewire()" rows="4"
+                                              placeholder="{}"
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
+                                </div>
+                                <div class="rounded-lg bg-fuchsia-50 p-3 text-xs text-fuchsia-700">
+                                    Custom Boruna pipeline step. Executes a named action with JSON configuration within the experiment pipeline.
                                 </div>
                             </div>
                         </template>

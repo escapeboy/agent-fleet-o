@@ -132,6 +132,119 @@
 
                     <x-form-checkbox wire:model="computeUseSync" label="Use synchronous mode (recommended)" />
                 </div>
+            @elseif($type === 'runpod_endpoint')
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                        RunPod Serverless Endpoint — submits jobs to a RunPod endpoint and waits for the result. Billed per-second on RunPod.
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-form-input wire:model="runpodEndpointId" label="Endpoint ID" type="text"
+                            placeholder="e.g. abc123def456" hint="Found in RunPod dashboard → Serverless → Endpoints" />
+                        <x-form-input wire:model="runpodRoutePath" label="Route Path" type="text"
+                            placeholder="/run" hint="Use /run for async or /runsync for sync" />
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-form-input wire:model.number="runpodTimeout" label="Timeout (seconds)" type="number" min="10" max="600" />
+                    </div>
+                    <x-form-checkbox wire:model="runpodUseSync" label="Use synchronous execution (/runsync)" />
+                </div>
+            @elseif($type === 'runpod_pod')
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-violet-200 bg-violet-50 p-3 text-sm text-violet-800">
+                        RunPod GPU Pod — starts a dedicated GPU pod for the job and terminates it when done. Use for workloads requiring full control of the environment.
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-form-input wire:model="runpodDockerImage" label="Docker Image" type="text"
+                            placeholder="e.g. runpod/pytorch:2.4.0-py3.11-cuda12.4.1" />
+                        <x-form-select wire:model="runpodGpuType" label="GPU Type">
+                            @foreach(array_keys(config('compute_providers.gpu_credits_per_hour', [])) as $gpu)
+                                @if($gpu !== 'default')
+                                    <option value="{{ $gpu }}">{{ $gpu }}</option>
+                                @endif
+                            @endforeach
+                        </x-form-select>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <x-form-input wire:model.number="runpodGpuCount" label="GPU Count" type="number" min="1" max="8" />
+                        <x-form-input wire:model.number="runpodContainerDiskGb" label="Container Disk (GB)" type="number" min="5" max="200" />
+                        <x-form-input wire:model.number="runpodEstimatedMinutes" label="Est. Runtime (min)" type="number" min="1" max="180" hint="For cost tracking" />
+                    </div>
+                </div>
+            @elseif($type === 'boruna_script')
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        Boruna Script — executes a custom Python/JS pipeline script inside a sandboxed environment.
+                    </div>
+                    <x-form-textarea wire:model="borunaScript" label="Script" rows="10" :mono="true"
+                        placeholder="# Python script&#10;def run(input_data):&#10;    # Process input&#10;    return {'result': input_data}" />
+                    <x-form-input wire:model.number="borunaScriptTimeout" label="Timeout (seconds)" type="number" min="5" max="300" />
+                </div>
+            @elseif($type === 'supabase_edge_function')
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                        Supabase Edge Function — invokes a Deno function deployed to your Supabase project.
+                    </div>
+                    <x-form-input wire:model="supabaseProjectUrl" label="Project URL" type="text"
+                        placeholder="https://xyzabc.supabase.co" />
+                    <x-form-input wire:model="supabaseFunctionName" label="Function Name" type="text"
+                        placeholder="e.g. my-function" hint="The function slug, not the full URL" />
+                    <x-form-input wire:model="supabaseAnonKey" label="Anon Key" type="password"
+                        hint="Supabase anon/public key — stored encrypted" />
+                </div>
+            @elseif($type === 'multi_model_consensus')
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-800">
+                        Multi-Model Consensus — runs the same prompt across multiple LLMs and aggregates their responses.
+                    </div>
+
+                    <div>
+                        <div class="mb-2 flex items-center justify-between">
+                            <label class="text-sm font-medium text-gray-700">Models to consult</label>
+                            <button wire:click="addConsensusModel" class="text-sm text-primary-600 hover:text-primary-800">+ Add Model</button>
+                        </div>
+                        @foreach($consensusModels as $i => $cm)
+                            <div class="mb-2 flex items-center gap-2 rounded border border-gray-200 p-2">
+                                <x-form-select wire:model.live="consensusModels.{{ $i }}.provider" label="">
+                                    <option value="">Provider...</option>
+                                    @foreach($providers as $key => $providerConfig)
+                                        <option value="{{ $key }}">{{ $providerConfig['name'] }}</option>
+                                    @endforeach
+                                </x-form-select>
+                                @if(!empty($consensusModels[$i]['provider']) && isset($providers[$consensusModels[$i]['provider']]))
+                                    <x-form-select wire:model="consensusModels.{{ $i }}.model" label="">
+                                        @foreach($providers[$consensusModels[$i]['provider']]['models'] as $modelKey => $modelConfig)
+                                            <option value="{{ $modelKey }}">{{ $modelConfig['label'] }}</option>
+                                        @endforeach
+                                    </x-form-select>
+                                @else
+                                    <input wire:model="consensusModels.{{ $i }}.model" type="text" placeholder="model ID"
+                                           class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                @endif
+                                <button wire:click="removeConsensusModel({{ $i }})" class="text-red-400 hover:text-red-600">&times;</button>
+                            </div>
+                        @endforeach
+                        @if(empty($consensusModels))
+                            <p class="text-sm text-gray-400">Add at least 2 models for consensus to work.</p>
+                        @endif
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-form-select wire:model="consensusAggregation" label="Aggregation Strategy">
+                            <option value="majority">Majority vote</option>
+                            <option value="average">Average (numeric)</option>
+                            <option value="best_of">Best-of (by score)</option>
+                            <option value="merge">Merge all responses</option>
+                        </x-form-select>
+                        <x-form-input wire:model.number="consensusThreshold" label="Consensus Threshold" type="number"
+                            min="0" max="1" step="0.05" hint="Fraction of models that must agree (0.5 = majority)" />
+                    </div>
+
+                    <x-form-textarea wire:model="systemPrompt" label="System Prompt (applied to all models)" rows="4" :mono="true"
+                        placeholder="Instruct all models how to process input..." />
+
+                    <x-form-textarea wire:model="promptTemplate" label="Prompt Template (optional)" rows="2" :mono="true"
+                        placeholder="Use @{{field_name}} for variable substitution" />
+                </div>
             @else
                 <div class="space-y-4">
                     {{-- Model selection mode toggle --}}
@@ -254,6 +367,35 @@
                         <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
                             <dt class="text-sm font-medium text-gray-500">Endpoint ID</dt>
                             <dd class="text-sm text-gray-900 sm:col-span-2">{{ $computeEndpointId ?: '—' }}</dd>
+                        </div>
+                    @elseif($type === 'runpod_endpoint')
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">RunPod Endpoint</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ $runpodEndpointId ?: '—' }}</dd>
+                        </div>
+                    @elseif($type === 'runpod_pod')
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">Docker Image</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ $runpodDockerImage ?: '—' }}</dd>
+                        </div>
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">GPU</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ $runpodGpuCount }}× {{ $runpodGpuType }}</dd>
+                        </div>
+                    @elseif($type === 'boruna_script')
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">Script</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ $borunaScript ? \Illuminate\Support\Str::limit($borunaScript, 80) : '—' }}</dd>
+                        </div>
+                    @elseif($type === 'supabase_edge_function')
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">Function</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ $supabaseFunctionName ?: '—' }} @ {{ $supabaseProjectUrl ?: '—' }}</dd>
+                        </div>
+                    @elseif($type === 'multi_model_consensus')
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">Models</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ count($consensusModels) }} model(s), {{ $consensusAggregation }}</dd>
                         </div>
                     @elseif($systemPrompt)
                         <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
