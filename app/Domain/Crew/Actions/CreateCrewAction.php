@@ -32,6 +32,8 @@ class CreateCrewAction
             throw new InvalidArgumentException('Coordinator and QA agents must be different.');
         }
 
+        $this->validateTaskRubrics($settings);
+
         // Validate all agents exist and are active
         $allAgentIds = array_unique(array_merge([$coordinatorAgentId, $qaAgentId], $workerAgentIds));
         $agents = Agent::withoutGlobalScopes()->whereIn('id', $allAgentIds)->get();
@@ -49,7 +51,10 @@ class CreateCrewAction
         // Workers must not include coordinator or QA
         $workerAgentIds = array_values(array_diff($workerAgentIds, [$coordinatorAgentId, $qaAgentId]));
 
-        return DB::transaction(function () use ($userId, $name, $description, $coordinatorAgentId, $qaAgentId, $processType, $maxTaskIterations, $qualityThreshold, $workerAgentIds, $settings, $teamId) {
+        return DB::transaction(function () use (
+            $userId, $name, $description, $coordinatorAgentId, $qaAgentId,
+            $processType, $maxTaskIterations, $qualityThreshold, $workerAgentIds, $settings, $teamId
+        ) {
             $crew = Crew::create([
                 'team_id' => $teamId,
                 'user_id' => $userId,
@@ -88,5 +93,84 @@ class CreateCrewAction
 
             return $crew->load('members');
         });
+    }
+
+    /**
+     * Validate task_rubrics in crew settings to prevent prompt-injection payloads
+     * from reaching QA agent system prompts via ValidateTaskOutputAction.
+     *
+     * @throws InvalidArgumentException
+     */
+    private function validateTaskRubrics(array $settings): void
+    {
+        $rubrics = $settings['task_rubrics'] ?? null;
+
+        if ($rubrics === null) {
+            return;
+        }
+
+        if (! is_array($rubrics)) {
+            throw new InvalidArgumentException('settings.task_rubrics must be an array.');
+        }
+
+        if (count($rubrics) > 10) {
+            throw new InvalidArgumentException('settings.task_rubrics may not contain more than 10 rubric types.');
+        }
+
+        foreach ($rubrics as $key => $rubric) {
+            if (! is_string($key) || mb_strlen($key) > 50) {
+                throw new InvalidArgumentException('Rubric key must be a string of at most 50 characters.');
+            }
+
+            if (! is_array($rubric)) {
+                throw new InvalidArgumentException("Rubric '{$key}' must be an array.");
+            }
+
+            if (isset($rubric['min_score'])) {
+                $minScore = $rubric['min_score'];
+                if (! is_numeric($minScore) || $minScore < 0 || $minScore > 1) {
+                    throw new InvalidArgumentException("Rubric '{$key}' min_score must be a number between 0 and 1.");
+                }
+            }
+
+            $criteria = $rubric['criteria'] ?? null;
+            if (! is_array($criteria) || empty($criteria)) {
+                throw new InvalidArgumentException("Rubric '{$key}' must have a non-empty 'criteria' array.");
+            }
+
+            if (count($criteria) > 10) {
+                throw new InvalidArgumentException("Rubric '{$key}' may not have more than 10 criteria.");
+            }
+
+            foreach ($criteria as $i => $criterion) {
+                if (! is_array($criterion)) {
+                    throw new InvalidArgumentException("Rubric '{$key}' criterion #{$i} must be an array.");
+                }
+
+                $name = $criterion['name'] ?? null;
+                if (! is_string($name) || mb_strlen(trim($name)) === 0) {
+                    throw new InvalidArgumentException("Rubric '{$key}' criterion #{$i} must have a non-empty 'name'.");
+                }
+                if (mb_strlen($name) > 100) {
+                    throw new InvalidArgumentException("Rubric '{$key}' criterion name must not exceed 100 characters.");
+                }
+                if (! preg_match('/^[\w\s\-]+$/u', $name)) {
+                    throw new InvalidArgumentException("Rubric '{$key}' criterion name '{$name}' may only contain letters, numbers, spaces, and hyphens.");
+                }
+
+                $description = $criterion['description'] ?? null;
+                if (! is_string($description) || mb_strlen(trim($description)) === 0) {
+                    throw new InvalidArgumentException("Rubric '{$key}' criterion '{$name}' must have a non-empty 'description'.");
+                }
+                if (mb_strlen($description) > 500) {
+                    throw new InvalidArgumentException("Rubric '{$key}' criterion '{$name}' description must not exceed 500 characters.");
+                }
+
+                $weight = $criterion['weight'] ?? null;
+                if (! is_numeric($weight) || $weight < 0 || $weight > 1) {
+                    throw new InvalidArgumentException("Rubric '{$key}' criterion '{$name}' weight must be a number between 0 and 1.");
+                }
+            }
+        }
     }
 }
