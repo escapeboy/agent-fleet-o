@@ -66,4 +66,45 @@ interface GitClientInterface
      * @return array<array{pr_number: string, pr_url: string, title: string, status: string, author: string|null, created_at: string}>
      */
     public function listPullRequests(string $state = 'open'): array;
+
+    /**
+     * Merge a pull request.
+     *
+     * @return array{sha: string, merged: bool, message: string}
+     */
+    public function mergePullRequest(int $prNumber, string $method = 'squash', ?string $commitTitle = null, ?string $commitMessage = null): array;
+
+    /**
+     * Get the status of a pull request (CI checks + review state).
+     *
+     * @return array{mergeable: bool|null, ci_passing: bool, reviews_approved: bool, checks: array<array{name: string, status: string, conclusion: string|null}>, state: string}
+     */
+    public function getPullRequestStatus(int $prNumber): array;
+
+    /**
+     * Dispatch a workflow (e.g. GitHub Actions) by workflow file name or ID.
+     *
+     * @param  array<string, string>  $inputs
+     * @return array{dispatched: bool}
+     */
+    public function dispatchWorkflow(string $workflowId, string $ref = 'main', array $inputs = []): array;
+
+    /**
+     * Create a release with a tag and release notes.
+     *
+     * @return array{id: int|string, tag_name: string, name: string, url: string, draft: bool, prerelease: bool}
+     */
+    public function createRelease(string $tagName, string $name, string $body, string $targetCommitish = 'main', bool $draft = false, bool $prerelease = false): array;
+
+    /**
+     * Close (abandon) a pull request without merging.
+     */
+    public function closePullRequest(int $prNumber): void;
+
+    /**
+     * Get commit log between two refs.
+     *
+     * @return array<int, array{sha: string, message: string, author: string, date: string}>
+     */
+    public function getCommitLog(?string $fromRef = null, string $toRef = 'HEAD', int $limit = 100): array;
 }

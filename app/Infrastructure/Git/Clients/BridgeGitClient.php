@@ -115,6 +115,81 @@ class BridgeGitClient implements GitClientInterface
         return $result['pull_requests'] ?? [];
     }
 
+    public function mergePullRequest(int $prNumber, string $method = 'squash', ?string $commitTitle = null, ?string $commitMessage = null): array
+    {
+        $result = $this->dispatch('merge_pr', array_filter([
+            'pr_number' => $prNumber,
+            'method' => $method,
+            'commit_title' => $commitTitle,
+            'commit_message' => $commitMessage,
+        ]));
+
+        return [
+            'sha' => $result['sha'] ?? '',
+            'merged' => $result['merged'] ?? true,
+            'message' => $result['message'] ?? 'Merged.',
+        ];
+    }
+
+    public function getPullRequestStatus(int $prNumber): array
+    {
+        $result = $this->dispatch('pr_status', ['pr_number' => $prNumber]);
+
+        return [
+            'mergeable' => $result['mergeable'] ?? null,
+            'ci_passing' => $result['ci_passing'] ?? false,
+            'reviews_approved' => $result['reviews_approved'] ?? false,
+            'checks' => $result['checks'] ?? [],
+            'state' => $result['state'] ?? 'unknown',
+        ];
+    }
+
+    public function dispatchWorkflow(string $workflowId, string $ref = 'main', array $inputs = []): array
+    {
+        $this->dispatch('dispatch_workflow', [
+            'workflow_id' => $workflowId,
+            'ref' => $ref,
+            'inputs' => $inputs,
+        ]);
+
+        return ['dispatched' => true];
+    }
+
+    public function createRelease(string $tagName, string $name, string $body, string $targetCommitish = 'main', bool $draft = false, bool $prerelease = false): array
+    {
+        $result = $this->dispatch('create_release', [
+            'tag_name' => $tagName,
+            'name' => $name,
+            'body' => $body,
+            'target_commitish' => $targetCommitish,
+            'draft' => $draft,
+            'prerelease' => $prerelease,
+        ]);
+
+        return [
+            'id' => $result['id'] ?? '',
+            'tag_name' => $result['tag_name'] ?? $tagName,
+            'name' => $result['name'] ?? $name,
+            'url' => $result['url'] ?? '',
+            'draft' => $result['draft'] ?? $draft,
+            'prerelease' => $result['prerelease'] ?? $prerelease,
+        ];
+    }
+
+    public function closePullRequest(int $prNumber): void
+    {
+        $this->dispatch('close_pr', ['pr_number' => $prNumber]);
+    }
+
+    public function getCommitLog(?string $fromRef = null, string $toRef = 'HEAD', int $limit = 100): array
+    {
+        return $this->dispatch('commit_log', [
+            'from_ref' => $fromRef,
+            'to_ref' => $toRef,
+            'limit' => $limit,
+        ]);
+    }
+
     private function dispatch(string $operation, array $payload): array
     {
         $connection = $this->getActiveConnection();

@@ -127,6 +127,38 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
                 'issue_number' => ['type' => 'integer', 'required' => true],
                 'body' => ['type' => 'string', 'required' => true],
             ]),
+            new ActionDefinition('create_pull_request', 'Create Pull Request', 'Open a pull request.', [
+                'owner' => ['type' => 'string', 'required' => true],
+                'repo' => ['type' => 'string', 'required' => true],
+                'title' => ['type' => 'string', 'required' => true],
+                'body' => ['type' => 'string', 'required' => false],
+                'head' => ['type' => 'string', 'required' => true],
+                'base' => ['type' => 'string', 'required' => true],
+            ]),
+            new ActionDefinition('merge_pull_request', 'Merge Pull Request', 'Merge an open pull request.', [
+                'owner' => ['type' => 'string', 'required' => true],
+                'repo' => ['type' => 'string', 'required' => true],
+                'pull_number' => ['type' => 'integer', 'required' => true],
+                'merge_method' => ['type' => 'string', 'required' => false, 'enum' => ['squash', 'merge', 'rebase']],
+                'commit_title' => ['type' => 'string', 'required' => false],
+            ]),
+            new ActionDefinition('dispatch_workflow', 'Trigger Workflow', 'Trigger a GitHub Actions workflow.', [
+                'owner' => ['type' => 'string', 'required' => true],
+                'repo' => ['type' => 'string', 'required' => true],
+                'workflow_id' => ['type' => 'string', 'required' => true],
+                'ref' => ['type' => 'string', 'required' => true],
+                'inputs' => ['type' => 'object', 'required' => false],
+            ]),
+            new ActionDefinition('create_release', 'Create Release', 'Create a GitHub release with a tag and notes.', [
+                'owner' => ['type' => 'string', 'required' => true],
+                'repo' => ['type' => 'string', 'required' => true],
+                'tag_name' => ['type' => 'string', 'required' => true],
+                'name' => ['type' => 'string', 'required' => true],
+                'body' => ['type' => 'string', 'required' => false],
+                'target_commitish' => ['type' => 'string', 'required' => false],
+                'draft' => ['type' => 'boolean', 'required' => false],
+                'prerelease' => ['type' => 'boolean', 'required' => false],
+            ]),
         ];
     }
 
@@ -179,6 +211,10 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
         return match ($action) {
             'create_issue' => $this->createIssue($token, $params, $apiBase),
             'add_comment' => $this->addComment($token, $params, $apiBase),
+            'create_pull_request' => $this->createPullRequest($token, $params, $apiBase),
+            'merge_pull_request' => $this->mergePullRequest($token, $params, $apiBase),
+            'dispatch_workflow' => $this->dispatchWorkflow($token, $params, $apiBase),
+            'create_release' => $this->createRelease($token, $params, $apiBase),
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };
     }
@@ -201,6 +237,64 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
             ->post("{$apiBase}/repos/{$params['owner']}/{$params['repo']}/issues/{$params['issue_number']}/comments", [
                 'body' => $params['body'],
             ]);
+
+        return $response->json();
+    }
+
+    private function createPullRequest(?string $token, array $params, string $apiBase): array
+    {
+        $response = Http::withToken((string) $token)
+            ->post("{$apiBase}/repos/{$params['owner']}/{$params['repo']}/pulls", array_filter([
+                'title' => $params['title'],
+                'body' => $params['body'] ?? null,
+                'head' => $params['head'],
+                'base' => $params['base'],
+            ]));
+
+        $response->throw();
+
+        return $response->json();
+    }
+
+    private function mergePullRequest(?string $token, array $params, string $apiBase): array
+    {
+        $response = Http::withToken((string) $token)
+            ->put("{$apiBase}/repos/{$params['owner']}/{$params['repo']}/pulls/{$params['pull_number']}/merge", array_filter([
+                'merge_method' => $params['merge_method'] ?? 'squash',
+                'commit_title' => $params['commit_title'] ?? null,
+            ]));
+
+        $response->throw();
+
+        return $response->json();
+    }
+
+    private function dispatchWorkflow(?string $token, array $params, string $apiBase): array
+    {
+        $response = Http::withToken((string) $token)
+            ->post("{$apiBase}/repos/{$params['owner']}/{$params['repo']}/actions/workflows/{$params['workflow_id']}/dispatches", array_filter([
+                'ref' => $params['ref'],
+                'inputs' => $params['inputs'] ?? null,
+            ]));
+
+        $response->throw();
+
+        return ['dispatched' => true, 'status' => $response->status()];
+    }
+
+    private function createRelease(?string $token, array $params, string $apiBase): array
+    {
+        $response = Http::withToken((string) $token)
+            ->post("{$apiBase}/repos/{$params['owner']}/{$params['repo']}/releases", array_filter([
+                'tag_name' => $params['tag_name'],
+                'name' => $params['name'],
+                'body' => $params['body'] ?? null,
+                'target_commitish' => $params['target_commitish'] ?? null,
+                'draft' => $params['draft'] ?? false,
+                'prerelease' => $params['prerelease'] ?? false,
+            ]));
+
+        $response->throw();
 
         return $response->json();
     }

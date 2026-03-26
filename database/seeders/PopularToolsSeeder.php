@@ -75,7 +75,7 @@ class PopularToolsSeeder extends Seeder
                 'risk_level' => ToolRiskLevel::Destructive,
                 'transport_config' => [
                     'kind' => 'bash',
-                    'allowed_commands' => ['curl', 'jq', 'python3', 'node', 'grep', 'awk', 'sed', 'cat', 'echo', 'ls', 'find', 'wc', 'head', 'tail', 'sort', 'uniq', 'wget', 'tar', 'gzip', 'gunzip'],
+                    'allowed_commands' => ['curl', 'jq', 'python3', 'python', 'node', 'npm', 'npx', 'grep', 'awk', 'sed', 'cat', 'echo', 'ls', 'find', 'wc', 'head', 'tail', 'sort', 'uniq', 'wget', 'tar', 'gzip', 'gunzip', 'php', 'composer', 'phpunit', 'pest', 'pytest', 'jest', 'go'],
                     'allowed_paths' => ['/tmp/agent-workspace'],
                 ],
                 'tool_definitions' => [

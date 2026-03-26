@@ -67,6 +67,36 @@ class SandboxGitClient implements GitClientInterface
         $this->notImplemented();
     }
 
+    public function mergePullRequest(int $prNumber, string $method = 'squash', ?string $commitTitle = null, ?string $commitMessage = null): array
+    {
+        $this->notImplemented();
+    }
+
+    public function getPullRequestStatus(int $prNumber): array
+    {
+        $this->notImplemented();
+    }
+
+    public function dispatchWorkflow(string $workflowId, string $ref = 'main', array $inputs = []): array
+    {
+        $this->notImplemented();
+    }
+
+    public function createRelease(string $tagName, string $name, string $body, string $targetCommitish = 'main', bool $draft = false, bool $prerelease = false): array
+    {
+        $this->notImplemented();
+    }
+
+    public function closePullRequest(int $prNumber): void
+    {
+        $this->notImplemented();
+    }
+
+    public function getCommitLog(?string $fromRef = null, string $toRef = 'HEAD', int $limit = 100): array
+    {
+        $this->notImplemented();
+    }
+
     private function notImplemented(): never
     {
         throw new RuntimeException(

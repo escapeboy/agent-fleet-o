@@ -17,16 +17,19 @@ use App\Domain\Integration\Drivers\Linear\LinearIntegrationDriver;
 use App\Domain\Integration\Drivers\LinkedIn\LinkedInIntegrationDriver;
 use App\Domain\Integration\Drivers\Mailchimp\MailchimpIntegrationDriver;
 use App\Domain\Integration\Drivers\Make\MakeIntegrationDriver;
+use App\Domain\Integration\Drivers\Netlify\NetlifyIntegrationDriver;
 use App\Domain\Integration\Drivers\Notion\NotionIntegrationDriver;
 use App\Domain\Integration\Drivers\PagerDuty\PagerDutyIntegrationDriver;
 use App\Domain\Integration\Drivers\Salesforce\SalesforceIntegrationDriver;
 use App\Domain\Integration\Drivers\Sentry\SentryIntegrationDriver;
 use App\Domain\Integration\Drivers\Slack\SlackIntegrationDriver;
+use App\Domain\Integration\Drivers\SshDeploy\SshDeployIntegrationDriver;
 use App\Domain\Integration\Drivers\Stripe\StripeIntegrationDriver;
 use App\Domain\Integration\Drivers\Supabase\SupabaseIntegrationDriver;
 use App\Domain\Integration\Drivers\Teams\TeamsIntegrationDriver;
 use App\Domain\Integration\Drivers\Telegram\TelegramIntegrationDriver;
 use App\Domain\Integration\Drivers\Twitter\TwitterIntegrationDriver;
+use App\Domain\Integration\Drivers\Vercel\VercelIntegrationDriver;
 use App\Domain\Integration\Drivers\WhatsApp\WhatsAppIntegrationDriver;
 use App\Domain\Integration\Drivers\Zapier\ZapierIntegrationDriver;
 use Illuminate\Support\Manager;
@@ -177,5 +180,20 @@ class IntegrationManager extends Manager
     public function createTwitterDriver(): IntegrationDriverInterface
     {
         return $this->container->make(TwitterIntegrationDriver::class);
+    }
+
+    public function createVercelDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(VercelIntegrationDriver::class);
+    }
+
+    public function createNetlifyDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(NetlifyIntegrationDriver::class);
+    }
+
+    public function createSshDeployDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(SshDeployIntegrationDriver::class);
     }
 }

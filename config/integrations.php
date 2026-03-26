@@ -78,6 +78,11 @@ return [
         // Social media
         'linkedin' => ['label' => 'LinkedIn',       'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '💼'],
         'twitter' => ['label' => 'X (Twitter)',     'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '𝕏'],
+
+        // Deployment platforms
+        'vercel' => ['label' => 'Vercel',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '▲'],
+        'netlify' => ['label' => 'Netlify',         'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🌐'],
+        'ssh_deploy' => ['label' => 'SSH Deploy',   'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🚀'],
     ],
 
     /*

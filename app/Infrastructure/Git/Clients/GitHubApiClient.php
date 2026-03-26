@@ -271,6 +271,200 @@ class GitHubApiClient implements GitClientInterface
         ])->toArray();
     }
 
+    public function mergePullRequest(int $prNumber, string $method = 'squash', ?string $commitTitle = null, ?string $commitMessage = null): array
+    {
+        $payload = ['merge_method' => $method];
+
+        if ($commitTitle !== null) {
+            $payload['commit_title'] = $commitTitle;
+        }
+
+        if ($commitMessage !== null) {
+            $payload['commit_message'] = $commitMessage;
+        }
+
+        $response = $this->http()->put(
+            "/repos/{$this->owner}/{$this->repo}/pulls/{$prNumber}/merge",
+            $payload,
+        );
+
+        $this->checkAuth($response);
+
+        if ($response->status() === 405) {
+            throw new RuntimeException('Pull request is not mergeable: '.($response->json('message') ?? 'unknown reason'));
+        }
+
+        if ($response->status() === 409) {
+            throw new GitConflictException($response->json('message', 'Merge conflict'));
+        }
+
+        $response->throw();
+
+        return [
+            'sha' => $response->json('sha') ?? '',
+            'merged' => $response->json('merged') ?? true,
+            'message' => $response->json('message') ?? 'Pull request successfully merged.',
+        ];
+    }
+
+    public function getPullRequestStatus(int $prNumber): array
+    {
+        $prResponse = $this->http()->get("/repos/{$this->owner}/{$this->repo}/pulls/{$prNumber}");
+        $this->checkAuth($prResponse);
+        $prResponse->throw();
+
+        $pr = $prResponse->json();
+        $mergeable = $pr['mergeable'] ?? null;
+        $sha = $pr['head']['sha'] ?? null;
+
+        $checks = [];
+        $ciPassing = false;
+
+        if ($sha) {
+            $checksResponse = $this->http()->get("/repos/{$this->owner}/{$this->repo}/commits/{$sha}/check-runs", [
+                'per_page' => 50,
+            ]);
+
+            if ($checksResponse->successful()) {
+                $checkRuns = $checksResponse->json('check_runs', []);
+                $checks = collect($checkRuns)->map(fn ($c) => [
+                    'name' => $c['name'],
+                    'status' => $c['status'],
+                    'conclusion' => $c['conclusion'],
+                ])->toArray();
+
+                $allCompleted = collect($checkRuns)->every(fn ($c) => $c['status'] === 'completed');
+                $allPassed = collect($checkRuns)->every(fn ($c) => in_array($c['conclusion'], ['success', 'skipped', 'neutral'], true));
+                $ciPassing = $allCompleted && $allPassed;
+            }
+        }
+
+        // Check reviews
+        $reviewsResponse = $this->http()->get("/repos/{$this->owner}/{$this->repo}/pulls/{$prNumber}/reviews");
+        $reviewsApproved = false;
+
+        if ($reviewsResponse->successful()) {
+            $reviews = $reviewsResponse->json();
+            $latestByUser = [];
+
+            foreach ($reviews as $review) {
+                $user = $review['user']['login'] ?? 'unknown';
+                $latestByUser[$user] = $review['state'];
+            }
+
+            $hasApproval = in_array('APPROVED', $latestByUser, true);
+            $hasChangesRequested = in_array('CHANGES_REQUESTED', $latestByUser, true);
+            $reviewsApproved = $hasApproval && ! $hasChangesRequested;
+        }
+
+        return [
+            'mergeable' => $mergeable,
+            'ci_passing' => $ciPassing,
+            'reviews_approved' => $reviewsApproved,
+            'checks' => $checks,
+            'state' => $pr['state'] ?? 'unknown',
+        ];
+    }
+
+    public function dispatchWorkflow(string $workflowId, string $ref = 'main', array $inputs = []): array
+    {
+        $response = $this->http()->post(
+            "/repos/{$this->owner}/{$this->repo}/actions/workflows/{$workflowId}/dispatches",
+            array_filter([
+                'ref' => $ref,
+                'inputs' => $inputs ?: null,
+            ]),
+        );
+
+        $this->checkAuth($response);
+
+        if (! $response->successful()) {
+            throw new RuntimeException("Failed to dispatch workflow '{$workflowId}': HTTP {$response->status()} — {$response->body()}");
+        }
+
+        return ['dispatched' => true];
+    }
+
+    public function createRelease(string $tagName, string $name, string $body, string $targetCommitish = 'main', bool $draft = false, bool $prerelease = false): array
+    {
+        $response = $this->http()->post("/repos/{$this->owner}/{$this->repo}/releases", [
+            'tag_name' => $tagName,
+            'name' => $name,
+            'body' => $body,
+            'target_commitish' => $targetCommitish,
+            'draft' => $draft,
+            'prerelease' => $prerelease,
+        ]);
+
+        $this->checkAuth($response);
+        $response->throw();
+
+        $release = $response->json();
+
+        return [
+            'id' => $release['id'],
+            'tag_name' => $release['tag_name'],
+            'name' => $release['name'],
+            'url' => $release['html_url'],
+            'draft' => $release['draft'],
+            'prerelease' => $release['prerelease'],
+        ];
+    }
+
+    public function closePullRequest(int $prNumber): void
+    {
+        $response = $this->http()->patch(
+            "/repos/{$this->owner}/{$this->repo}/pulls/{$prNumber}",
+            ['state' => 'closed'],
+        );
+
+        $this->checkAuth($response);
+        $response->throw();
+    }
+
+    public function getCommitLog(?string $fromRef = null, string $toRef = 'HEAD', int $limit = 100): array
+    {
+        $sha = $toRef === 'HEAD' ? $this->defaultBranch() : $toRef;
+
+        $response = $this->http()->get("/repos/{$this->owner}/{$this->repo}/commits", [
+            'sha' => $sha,
+            'per_page' => min($limit, 100),
+        ]);
+
+        $this->checkAuth($response);
+        $response->throw();
+
+        $commits = collect($response->json() ?? [])->map(fn ($c) => [
+            'sha' => $c['sha'] ?? '',
+            'message' => explode("\n", $c['commit']['message'] ?? '')[0],
+            'author' => $c['commit']['author']['name'] ?? $c['author']['login'] ?? '',
+            'date' => $c['commit']['author']['date'] ?? '',
+        ])->toArray();
+
+        // If fromRef is given, filter to commits newer than the tag
+        if ($fromRef) {
+            $compareResponse = $this->http()->get("/repos/{$this->owner}/{$this->repo}/compare/{$fromRef}...{$sha}");
+
+            if ($compareResponse->successful()) {
+                $commits = collect($compareResponse->json('commits', []))->map(fn ($c) => [
+                    'sha' => $c['sha'] ?? '',
+                    'message' => explode("\n", $c['commit']['message'] ?? '')[0],
+                    'author' => $c['commit']['author']['name'] ?? '',
+                    'date' => $c['commit']['author']['date'] ?? '',
+                ])->toArray();
+            }
+        }
+
+        return $commits;
+    }
+
+    private function defaultBranch(): string
+    {
+        $response = $this->http()->get("/repos/{$this->owner}/{$this->repo}");
+
+        return $response->json('default_branch', 'main');
+    }
+
     private function http(): PendingRequest
     {
         return Http::baseUrl('https://api.github.com')

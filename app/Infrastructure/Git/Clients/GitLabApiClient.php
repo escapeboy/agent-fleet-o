@@ -237,6 +237,190 @@ class GitLabApiClient implements GitClientInterface
         ])->toArray();
     }
 
+    public function mergePullRequest(int $prNumber, string $method = 'squash', ?string $commitTitle = null, ?string $commitMessage = null): array
+    {
+        $id = urlencode($this->projectPath);
+
+        $payload = ['should_remove_source_branch' => false];
+
+        if ($method === 'squash') {
+            $payload['squash'] = true;
+        }
+
+        if ($commitTitle !== null) {
+            $payload['merge_commit_message'] = $commitTitle;
+        }
+
+        $response = $this->http()->put("/projects/{$id}/merge_requests/{$prNumber}/merge", $payload);
+
+        $this->checkAuth($response);
+
+        if ($response->status() === 405 || $response->status() === 406) {
+            throw new RuntimeException('Merge request is not mergeable: '.($response->json('message') ?? 'unknown reason'));
+        }
+
+        $response->throw();
+
+        $mr = $response->json();
+
+        return [
+            'sha' => $mr['merge_commit_sha'] ?? $mr['sha'] ?? '',
+            'merged' => $mr['state'] === 'merged',
+            'message' => 'Merge request successfully merged.',
+        ];
+    }
+
+    public function getPullRequestStatus(int $prNumber): array
+    {
+        $id = urlencode($this->projectPath);
+
+        $mrResponse = $this->http()->get("/projects/{$id}/merge_requests/{$prNumber}");
+        $this->checkAuth($mrResponse);
+        $mrResponse->throw();
+
+        $mr = $mrResponse->json();
+        $sha = $mr['sha'] ?? null;
+
+        $checks = [];
+        $ciPassing = false;
+
+        if ($sha) {
+            $pipelineResponse = $this->http()->get("/projects/{$id}/repository/commits/{$sha}/statuses");
+
+            if ($pipelineResponse->successful()) {
+                $statuses = $pipelineResponse->json();
+                $checks = collect($statuses)->map(fn ($s) => [
+                    'name' => $s['name'],
+                    'status' => $s['status'],
+                    'conclusion' => $s['status'] === 'success' ? 'success' : ($s['status'] === 'failed' ? 'failure' : null),
+                ])->toArray();
+
+                $allPassed = collect($statuses)->every(fn ($s) => in_array($s['status'], ['success', 'skipped'], true));
+                $ciPassing = $allPassed && count($statuses) > 0;
+            }
+        }
+
+        $approvalsResponse = $this->http()->get("/projects/{$id}/merge_requests/{$prNumber}/approvals");
+        $reviewsApproved = false;
+
+        if ($approvalsResponse->successful()) {
+            $approvals = $approvalsResponse->json();
+            $reviewsApproved = ($approvals['approved'] ?? false) === true;
+        }
+
+        return [
+            'mergeable' => $mr['merge_status'] === 'can_be_merged' ? true : ($mr['merge_status'] === 'cannot_be_merged' ? false : null),
+            'ci_passing' => $ciPassing,
+            'reviews_approved' => $reviewsApproved,
+            'checks' => $checks,
+            'state' => $mr['state'] ?? 'unknown',
+        ];
+    }
+
+    public function dispatchWorkflow(string $workflowId, string $ref = 'main', array $inputs = []): array
+    {
+        $id = urlencode($this->projectPath);
+
+        $response = $this->http()->post("/projects/{$id}/pipeline", [
+            'ref' => $ref,
+            'variables' => collect($inputs)->map(fn ($v, $k) => ['key' => $k, 'value' => $v])->values()->toArray(),
+        ]);
+
+        $this->checkAuth($response);
+
+        if (! $response->successful()) {
+            throw new RuntimeException("Failed to trigger pipeline: HTTP {$response->status()} — {$response->body()}");
+        }
+
+        return ['dispatched' => true];
+    }
+
+    public function createRelease(string $tagName, string $name, string $body, string $targetCommitish = 'main', bool $draft = false, bool $prerelease = false): array
+    {
+        $id = urlencode($this->projectPath);
+
+        // GitLab requires tag to exist first or create with ref
+        $response = $this->http()->post("/projects/{$id}/releases", [
+            'tag_name' => $tagName,
+            'name' => $name,
+            'description' => $body,
+            'ref' => $targetCommitish,
+        ]);
+
+        $this->checkAuth($response);
+        $response->throw();
+
+        $release = $response->json();
+
+        return [
+            'id' => $release['tag_name'],
+            'tag_name' => $release['tag_name'],
+            'name' => $release['name'],
+            'url' => $release['_links']['self'] ?? '',
+            'draft' => false,
+            'prerelease' => $prerelease,
+        ];
+    }
+
+    public function closePullRequest(int $prNumber): void
+    {
+        $id = urlencode($this->projectPath);
+
+        $response = $this->http()->put("/projects/{$id}/merge_requests/{$prNumber}", [
+            'state_event' => 'close',
+        ]);
+
+        $this->checkAuth($response);
+        $response->throw();
+    }
+
+    public function getCommitLog(?string $fromRef = null, string $toRef = 'HEAD', int $limit = 100): array
+    {
+        $id = urlencode($this->projectPath);
+
+        if ($fromRef) {
+            $response = $this->http()->get("/projects/{$id}/repository/compare", [
+                'from' => $fromRef,
+                'to' => $toRef === 'HEAD' ? $this->defaultBranch() : $toRef,
+            ]);
+
+            $this->checkAuth($response);
+            $response->throw();
+
+            return collect($response->json('commits', []))->map(fn ($c) => [
+                'sha' => $c['id'] ?? '',
+                'message' => explode("\n", $c['message'] ?? '')[0],
+                'author' => $c['author_name'] ?? '',
+                'date' => $c['authored_date'] ?? '',
+            ])->toArray();
+        }
+
+        $ref = $toRef === 'HEAD' ? $this->defaultBranch() : $toRef;
+
+        $response = $this->http()->get("/projects/{$id}/repository/commits", [
+            'ref_name' => $ref,
+            'per_page' => min($limit, 100),
+        ]);
+
+        $this->checkAuth($response);
+        $response->throw();
+
+        return collect($response->json() ?? [])->map(fn ($c) => [
+            'sha' => $c['id'] ?? '',
+            'message' => explode("\n", $c['message'] ?? '')[0],
+            'author' => $c['author_name'] ?? '',
+            'date' => $c['authored_date'] ?? '',
+        ])->toArray();
+    }
+
+    private function defaultBranch(): string
+    {
+        $id = urlencode($this->projectPath);
+        $response = $this->http()->get("/projects/{$id}");
+
+        return $response->json('default_branch', 'main');
+    }
+
     private function http(): PendingRequest
     {
         return Http::baseUrl("{$this->baseUrl}/api/v4")
