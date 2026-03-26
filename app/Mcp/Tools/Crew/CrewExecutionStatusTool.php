@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Crew;
 
+use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -60,6 +61,10 @@ class CrewExecutionStatusTool extends Tool
                 : null;
         }
 
+        $taskExecutions = $execution->taskExecutions()
+            ->orderBy('sort_order')
+            ->get(['id', 'title', 'status', 'sort_order', 'depends_on', 'agent_id', 'started_at', 'completed_at']);
+
         return Response::text(json_encode([
             'id' => $execution->id,
             'status' => $execution->status->value,
@@ -67,6 +72,18 @@ class CrewExecutionStatusTool extends Tool
             'goal' => $execution->goal,
             'result' => $resultText,
             'artifacts_count' => $execution->artifacts_count,
+            'blocked_count' => $execution->taskExecutions()
+                ->where('status', CrewTaskStatus::Blocked->value)
+                ->count(),
+            'tasks' => $taskExecutions->map(fn ($t) => [
+                'id' => $t->id,
+                'title' => $t->title,
+                'status' => $t->status->value,
+                'sort_order' => $t->sort_order,
+                'depends_on' => $t->depends_on ?? [],
+                'started_at' => $t->started_at?->toIso8601String(),
+                'completed_at' => $t->completed_at?->toIso8601String(),
+            ]),
             'created_at' => $execution->created_at?->toIso8601String(),
             'updated_at' => $execution->updated_at?->toIso8601String(),
         ]));

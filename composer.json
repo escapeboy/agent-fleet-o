@@ -33,6 +33,7 @@
         "spatie/laravel-query-builder": "^6.4",
         "spatie/laravel-webhook-server": "^3.9",
         "tpetry/laravel-postgresql-enhanced": "^3.5",
+        "nikic/php-parser": "^5.0",
         "webklex/php-imap": "^6.2"
     },
     "require-dev": {

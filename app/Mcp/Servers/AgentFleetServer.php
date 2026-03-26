@@ -124,6 +124,10 @@ use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
+use App\Mcp\Tools\GitRepository\CodeCallChainTool;
+use App\Mcp\Tools\GitRepository\CodeSearchTool;
+use App\Mcp\Tools\GitRepository\CodeSkimFileTool;
+use App\Mcp\Tools\GitRepository\CodeStructureTool;
 use App\Mcp\Tools\GitRepository\GitBranchCreateTool;
 use App\Mcp\Tools\GitRepository\GitCommitTool;
 use App\Mcp\Tools\GitRepository\GitFileListTool;
@@ -211,7 +215,9 @@ use App\Mcp\Tools\Signal\ImapMailboxTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
 use App\Mcp\Tools\Signal\IntentScoreTool;
 use App\Mcp\Tools\Signal\KgAddFactTool;
+use App\Mcp\Tools\Signal\KgEdgeProvenanceTool;
 use App\Mcp\Tools\Signal\KgEntityFactsTool;
+use App\Mcp\Tools\Signal\KgGraphSearchTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
@@ -456,7 +462,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (19)
+        // Signal (21)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -477,6 +483,8 @@ class AgentFleetServer extends Server
         KgSearchTool::class,
         KgEntityFactsTool::class,
         KgAddFactTool::class,
+        KgGraphSearchTool::class,
+        KgEdgeProvenanceTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,
@@ -633,7 +641,7 @@ class AgentFleetServer extends Server
         FeedbackListTool::class,
         FeedbackUpdateTool::class,
 
-        // Git Repository (13)
+        // Git Repository (17)
         GitRepositoryListTool::class,
         GitRepositoryGetTool::class,
         GitRepositoryCreateTool::class,
@@ -647,6 +655,10 @@ class AgentFleetServer extends Server
         GitCommitTool::class,
         GitPullRequestCreateTool::class,
         GitPullRequestListTool::class,
+        CodeSearchTool::class,
+        CodeStructureTool::class,
+        CodeCallChainTool::class,
+        CodeSkimFileTool::class,
 
         // Auth / Social Login (2)
         SocialAccountListTool::class,

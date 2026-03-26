@@ -70,6 +70,11 @@ class CrewTaskExecution extends Model
         return $this->status === CrewTaskStatus::Pending;
     }
 
+    public function isBlocked(): bool
+    {
+        return $this->status === CrewTaskStatus::Blocked;
+    }
+
     public function isValidated(): bool
     {
         return $this->status === CrewTaskStatus::Validated;
