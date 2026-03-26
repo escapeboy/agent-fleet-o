@@ -56,8 +56,8 @@ class SearxngConnector implements InputConnectorInterface
         $categories = implode(',', (array) ($config['categories'] ?? ['general']));
         $engines = $config['engines'] ?? '';
         $language = $config['language'] ?? 'en';
-        $maxResults = (int) ($config['max_results'] ?? 10);
-        $timeout = (int) ($config['timeout'] ?? 15);
+        $maxResults = min((int) ($config['max_results'] ?? 10), 100);
+        $timeout = min((int) ($config['timeout'] ?? 15), 30);
 
         try {
             $this->ssrfGuard->assertPublicUrl($url);
@@ -117,8 +117,8 @@ class SearxngConnector implements InputConnectorInterface
         $categories = implode(',', (array) ($options['categories'] ?? ['general']));
         $engines = $options['engines'] ?? '';
         $language = $options['language'] ?? 'en';
-        $maxResults = (int) ($options['max_results'] ?? 5);
-        $timeout = (int) ($options['timeout'] ?? 15);
+        $maxResults = min((int) ($options['max_results'] ?? 5), 20);
+        $timeout = min((int) ($options['timeout'] ?? 15), 30);
 
         try {
             $this->ssrfGuard->assertPublicUrl($url);
@@ -193,6 +193,7 @@ class SearxngConnector implements InputConnectorInterface
                     ],
                     tags: $tags,
                     experimentId: $config['experiment_id'] ?? null,
+                    teamId: $config['team_id'] ?? null,
                 );
 
                 if ($ingested) {

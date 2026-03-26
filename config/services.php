@@ -139,4 +139,8 @@ return [
         'redirect' => env('LUKANET_REDIRECT_URI'),
     ],
 
+    'searxng' => [
+        'url' => env('SEARXNG_URL'),
+    ],
+
 ];

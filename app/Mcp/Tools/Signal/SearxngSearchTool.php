@@ -15,10 +15,11 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 /**
  * MCP tool for synchronous web search via a self-hosted Searxng instance.
  *
- * Resolves the Searxng URL from (in priority order):
- *   1. The `url` parameter passed directly by the agent
- *   2. GlobalSetting::get('searxng_url')
- *   3. env('SEARXNG_URL')
+ * Resolves the Searxng URL from operator configuration only (in priority order):
+ *   1. GlobalSetting::get('searxng_url')
+ *   2. config('services.searxng.url') / SEARXNG_URL env var
+ *
+ * The URL is intentionally not agent-supplied to prevent SSRF via LLM tool calls.
  *
  * @see https://github.com/searxng/searxng
  */
@@ -41,8 +42,6 @@ class SearxngSearchTool extends Tool
             'max_results' => $schema->integer()
                 ->description('Maximum number of results to return (default: 5, max: 20)')
                 ->default(5),
-            'url' => $schema->string()
-                ->description('Override Searxng instance URL (e.g. http://searxng:8888). Uses SEARXNG_URL env var by default.'),
         ];
     }
 
@@ -54,10 +53,9 @@ class SearxngSearchTool extends Tool
             return Response::error('query is required.');
         }
 
-        $instanceUrl = $request->get('url')
-            ?? GlobalSetting::get('searxng_url')
-            ?? config('services.searxng.url')
-            ?? env('SEARXNG_URL');
+        // URL is operator-configured only — never agent-supplied — to prevent SSRF.
+        $instanceUrl = GlobalSetting::get('searxng_url')
+            ?? config('services.searxng.url');
 
         if (! $instanceUrl) {
             return Response::error(

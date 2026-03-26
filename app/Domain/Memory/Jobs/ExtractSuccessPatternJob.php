@@ -25,7 +25,7 @@ class ExtractSuccessPatternJob implements ShouldBeUniqueUntilProcessing, ShouldQ
         public readonly string $experimentId,
         public readonly string $teamId,
     ) {
-        $this->onQueue('default');
+        $this->onQueue('ai-calls');
     }
 
     public function uniqueId(): string

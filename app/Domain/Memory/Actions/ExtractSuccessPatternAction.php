@@ -164,7 +164,8 @@ PROMPT;
                     $outputText = is_array($stage->output_snapshot)
                         ? json_encode($stage->output_snapshot, JSON_UNESCAPED_UNICODE)
                         : (string) $stage->output_snapshot;
-                    $parts[] = '<stage_output>'.htmlspecialchars(substr($outputText, 0, 300), ENT_XML1).'</stage_output>';
+                    // Truncate after encoding to avoid splitting mid-entity.
+                    $parts[] = '<stage_output>'.substr(htmlspecialchars($outputText, ENT_XML1), 0, 400).'</stage_output>';
                 }
             }
         }
