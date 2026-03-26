@@ -17,6 +17,7 @@ use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
+use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
@@ -46,6 +47,7 @@ use App\Domain\Signal\Connectors\ManualSignalConnector;
 use App\Domain\Signal\Connectors\MatrixConnector;
 use App\Domain\Signal\Connectors\PagerDutyConnector;
 use App\Domain\Signal\Connectors\RssConnector;
+use App\Domain\Signal\Connectors\SearxngConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
 use App\Domain\Signal\Connectors\SignalProtocolConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
@@ -145,6 +147,7 @@ class AppServiceProvider extends ServiceProvider
             HttpMonitorConnector::class,
             CalendarConnector::class,
             SupabaseWebhookConnector::class,
+            SearxngConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors
@@ -314,6 +317,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Memory: extract failure lesson when experiment enters a failed state
         Event::listen(ExperimentTransitioned::class, ExtractFailureLessonListener::class);
+
+        // Memory: extract success pattern when experiment reaches Completed
+        Event::listen(ExperimentTransitioned::class, ExtractSuccessPatternListener::class);
 
         // Chatbot: capture operator corrections as learning entries
         Event::listen(ChatbotResponseApprovedEvent::class, CaptureResponseCorrectionListener::class);
