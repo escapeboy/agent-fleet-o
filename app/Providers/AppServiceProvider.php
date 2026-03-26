@@ -56,6 +56,7 @@ use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Domain\Tool\Services\McpHandleRegistry;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
@@ -109,6 +110,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
+
+        // Lazy MCP stdio handle registry — one instance per request/job lifecycle
+        $this->app->singleton(McpHandleRegistry::class);
 
         // Plugin extension points
         $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);

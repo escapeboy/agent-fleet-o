@@ -80,6 +80,8 @@ class DecomposeGoalAction
         $taskExecutions = [];
         $workerMap = collect($config['workers'] ?? [])->keyBy('name');
 
+        // First pass: create all task records with sort_order-based depends_on temporarily,
+        // so that the UUID remapping in the second pass can resolve them.
         foreach ($tasks as $index => $task) {
             $assignedAgent = null;
             $assignedTo = $task['assigned_to'] ?? 'self';
@@ -101,12 +103,14 @@ class DecomposeGoalAction
                 'agent_id' => $assignedAgent?->id,
                 'title' => $task['title'] ?? 'Task '.($index + 1),
                 'description' => $task['description'] ?? '',
-                'status' => CrewTaskStatus::Pending,
+                // Tasks with dependencies start as Blocked; they are unblocked by DependencyGraph::autoUnblock()
+                // once all their dependencies reach a satisfied terminal state (Validated or Skipped).
+                'status' => ! empty($dependencies) ? CrewTaskStatus::Blocked : CrewTaskStatus::Pending,
                 'input_context' => [
                     'expected_output' => $task['expected_output'] ?? null,
                     'assigned_to' => $assignedTo,
                 ],
-                'depends_on' => $dependencies,
+                'depends_on' => $dependencies, // Temporarily sort_order integers; remapped to UUIDs below
                 'skip_condition' => $task['skip_condition'] ?? null,
                 'attempt_number' => 1,
                 'max_attempts' => $execution->config_snapshot['max_task_iterations'] ?? 3,
@@ -114,6 +118,22 @@ class DecomposeGoalAction
             ]);
 
             $taskExecutions[] = $taskExecution;
+        }
+
+        // Second pass: remap sort_order integer dependencies to UUID strings.
+        // DependencyGraph::autoUnblock() uses whereJsonContains('depends_on', uuid), so
+        // depends_on must store task UUIDs, not sort_order integers.
+        foreach ($taskExecutions as $taskExecution) {
+            $sortOrderDeps = $taskExecution->depends_on ?? [];
+            if (! empty($sortOrderDeps)) {
+                $uuidDeps = [];
+                foreach ($sortOrderDeps as $depIndex) {
+                    if (isset($taskExecutions[(int) $depIndex])) {
+                        $uuidDeps[] = $taskExecutions[(int) $depIndex]->id;
+                    }
+                }
+                $taskExecution->update(['depends_on' => $uuidDeps]);
+            }
         }
 
         return $taskExecutions;
