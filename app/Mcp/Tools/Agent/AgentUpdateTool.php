@@ -61,7 +61,7 @@ class AgentUpdateTool extends Tool
             'budget_cap_credits' => 'nullable|integer|min:0',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'sandbox_profile' => 'nullable|string',
-            'thinking_budget' => 'nullable|integer|min:0',
+            'thinking_budget' => 'nullable|integer|min:0|max:100000',
         ]);
 
         $agent = Agent::find($validated['agent_id']);

@@ -37,7 +37,7 @@ class ResolveTierConfigAction
             'max_tokens' => $config['max_tokens'] ?? $tierDefaults['max_tokens'],
             'max_steps' => $config['max_steps'] ?? $tierDefaults['max_steps'],
             'temperature' => $config['temperature'] ?? $tierDefaults['temperature'],
-            'thinking_budget' => isset($config['thinking_budget']) ? (int) $config['thinking_budget'] : null,
+            'thinking_budget' => isset($config['thinking_budget']) ? min((int) $config['thinking_budget'], 100_000) : null,
             'tier' => $tier,
         ]);
     }

@@ -35,9 +35,27 @@ class CaptureScreenshotArtifactsAction
                 continue;
             }
 
-            $content = strlen($base64) > self::MAX_SCREENSHOT_BYTES
-                ? '[screenshot truncated — exceeds 200 KB limit]'
-                : 'data:image/png;base64,'.$base64;
+            // Reject oversized payloads before any decoding attempt.
+            if (strlen($base64) > self::MAX_SCREENSHOT_BYTES) {
+                $content = '[screenshot truncated — exceeds 200 KB limit]';
+            } else {
+                // Validate the decoded bytes start with the PNG magic signature (\x89PNG)
+                // to prevent storing crafted content (e.g. SVG/HTML) that could cause
+                // stored XSS when served via the artifact preview controller.
+                $decoded = base64_decode($base64, strict: true);
+
+                if ($decoded === false || ! str_starts_with($decoded, "\x89PNG")) {
+                    Log::warning('CaptureScreenshotArtifactsAction: rejected non-PNG screenshot payload', [
+                        'team_id' => $teamId,
+                        'step_index' => $stepIndex,
+                        'screenshot_index' => $index,
+                    ]);
+
+                    continue;
+                }
+
+                $content = 'data:image/png;base64,'.$base64;
+            }
 
             $label = $screenshot['label'] ?? "Screenshot {$stepIndex}.{$index}";
 

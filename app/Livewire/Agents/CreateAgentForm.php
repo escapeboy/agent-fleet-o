@@ -85,6 +85,7 @@ class CreateAgentForm extends Component
             'goal' => 'required|max:1000',
             'provider' => 'required|string|max:255',
             'model' => 'required|max:255',
+            'thinkingBudget' => 'nullable|integer|min:0|max:100000',
         ];
     }
 

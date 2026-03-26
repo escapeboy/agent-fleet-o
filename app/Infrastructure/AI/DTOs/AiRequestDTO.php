@@ -53,6 +53,7 @@ final readonly class AiRequestDTO
             $this->experimentId ?? '',
             $this->experimentStageId ?? '',
             $this->purpose ?? '',
+            (string) ($this->thinkingBudget ?? ''),
         ]));
     }
 }

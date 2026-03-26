@@ -59,7 +59,14 @@ class PrismAiGateway implements AiGatewayInterface
 
         $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeRequest($req));
 
-        return $pipeline($request);
+        try {
+            return $pipeline($request);
+        } finally {
+            // Clear per-call context bindings so stale values don't leak across
+            // Horizon jobs that share the same worker process/container instance.
+            app()->forgetInstance('ai.current_experiment_id');
+            app()->forgetInstance('ai.current_agent_id');
+        }
     }
 
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
@@ -572,6 +579,7 @@ class PrismAiGateway implements AiGatewayInterface
             maxSteps: $request->maxSteps,
             toolChoice: $request->toolChoice,
             providerName: $name,
+            thinkingBudget: $request->thinkingBudget,
         );
     }
 
