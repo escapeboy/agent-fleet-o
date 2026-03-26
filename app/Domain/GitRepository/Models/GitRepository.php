@@ -29,6 +29,9 @@ class GitRepository extends Model
         'status',
         'last_ping_at',
         'last_ping_status',
+        'indexing_status',
+        'last_indexed_at',
+        'indexed_commit_sha',
     ];
 
     protected function casts(): array
@@ -39,6 +42,7 @@ class GitRepository extends Model
             'status' => GitRepositoryStatus::class,
             'config' => 'array',
             'last_ping_at' => 'datetime',
+            'last_indexed_at' => 'datetime',
         ];
     }
 
@@ -55,6 +59,16 @@ class GitRepository extends Model
     public function pullRequests(): HasMany
     {
         return $this->hasMany(GitPullRequest::class);
+    }
+
+    public function codeElements(): HasMany
+    {
+        return $this->hasMany(CodeElement::class);
+    }
+
+    public function codeEdges(): HasMany
+    {
+        return $this->hasMany(CodeEdge::class);
     }
 
     public function isActive(): bool

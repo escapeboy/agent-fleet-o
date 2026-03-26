@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SkillVersion extends Model
 {
@@ -25,6 +26,8 @@ class SkillVersion extends Model
         'output_schema',
         'configuration',
         'changelog',
+        'parent_version_id',
+        'evolution_type',
         'created_by',
     ];
 
@@ -34,6 +37,7 @@ class SkillVersion extends Model
             'input_schema' => 'array',
             'output_schema' => 'array',
             'configuration' => 'array',
+            'evolution_type' => 'string',
         ];
     }
 
@@ -45,5 +49,15 @@ class SkillVersion extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(SkillVersion::class, 'parent_version_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(SkillVersion::class, 'parent_version_id');
     }
 }

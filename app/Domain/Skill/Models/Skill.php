@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Skill extends Model
@@ -53,6 +54,10 @@ class Skill extends Model
         'execution_count',
         'success_count',
         'avg_latency_ms',
+        'applied_count',
+        'completed_count',
+        'effective_count',
+        'fallback_count',
         'provider_requirements',
         'meta',
         'data_classification',
@@ -78,6 +83,10 @@ class Skill extends Model
             'execution_count' => 'integer',
             'success_count' => 'integer',
             'avg_latency_ms' => 'decimal:2',
+            'applied_count' => 'integer',
+            'completed_count' => 'integer',
+            'effective_count' => 'integer',
+            'fallback_count' => 'integer',
             'provider_requirements' => 'array',
             'data_classification' => DataClassification::class,
         ];
@@ -91,6 +100,11 @@ class Skill extends Model
     public function executions(): HasMany
     {
         return $this->hasMany(SkillExecution::class)->orderByDesc('created_at');
+    }
+
+    public function embedding(): HasOne
+    {
+        return $this->hasOne(SkillEmbedding::class);
     }
 
     public function agents(): BelongsToMany
@@ -122,5 +136,51 @@ class Skill extends Model
         // Running average for latency
         $total = ($this->avg_latency_ms * ($this->execution_count - 1)) + $durationMs;
         $this->update(['avg_latency_ms' => $total / $this->execution_count]);
+    }
+
+    public function getReliabilityRateAttribute(): float
+    {
+        if ($this->applied_count === 0) {
+            return 0.0;
+        }
+
+        return round($this->completed_count / $this->applied_count, 4);
+    }
+
+    public function getQualityRateAttribute(): float
+    {
+        if ($this->completed_count === 0) {
+            return 0.0;
+        }
+
+        return round($this->effective_count / $this->completed_count, 4);
+    }
+
+    public function getFallbackRateAttribute(): float
+    {
+        if ($this->applied_count === 0) {
+            return 0.0;
+        }
+
+        return round($this->fallback_count / $this->applied_count, 4);
+    }
+
+    public function getHealthScoreAttribute(): float
+    {
+        return round(
+            ($this->getReliabilityRateAttribute() * 0.4) +
+            ($this->getQualityRateAttribute() * 0.4) +
+            ((1 - $this->getFallbackRateAttribute()) * 0.2),
+            4,
+        );
+    }
+
+    public function isDegraded(): bool
+    {
+        return $this->applied_count >= config('skills.degradation.min_sample_size', 10)
+            && (
+                $this->getReliabilityRateAttribute() < config('skills.degradation.reliability_threshold', 0.6)
+                || $this->getQualityRateAttribute() < config('skills.degradation.quality_threshold', 0.5)
+            );
     }
 }

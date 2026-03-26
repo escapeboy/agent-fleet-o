@@ -18,6 +18,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\SemanticToolSelector;
+use App\Domain\Tool\Services\ToolRagSelector;
 use App\Domain\Tool\Services\ToolTranslator;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Enums\WorkflowStatus;
@@ -35,6 +36,7 @@ class ResolveAgentToolsAction
         private readonly ToolTranslator $translator,
         private readonly GitRepositoryToolBuilder $gitToolBuilder,
         private readonly SemanticToolSelector $semanticSelector,
+        private readonly ToolRagSelector $toolRagSelector,
         private readonly ResolveProjectCredentialsAction $resolveCredentials,
     ) {}
 
@@ -82,6 +84,20 @@ class ResolveAgentToolsAction
                 fn (Tool $tool) => $tool->risk_level === null
                     || $tool->risk_level === ToolRiskLevel::Safe
                     || $tool->risk_level === ToolRiskLevel::Read,
+            );
+        }
+
+        // RAG-style pre-filter: narrow the Tool model collection before expensive translation.
+        // Runs keyword match → fuzzy name match → semantic pgvector (stages 1-3).
+        // Only kicks in when a semantic query is provided and tool count exceeds the threshold.
+        $threshold = SemanticToolSelector::threshold();
+        if ($semanticQuery !== null && $agentTools->count() > $threshold) {
+            $agentTools = $this->toolRagSelector->select(
+                $agentTools,
+                $semanticQuery,
+                3,
+                $agent->team_id,
+                $agentTools->pluck('id')->toArray(),
             );
         }
 
@@ -176,79 +192,7 @@ class ResolveAgentToolsAction
         // Inject workflow-as-tool wrappers for callable workflows (if within depth limit)
         $prismTools = array_merge($prismTools, $this->buildWorkflowAsTools($agent, $agentToolDepth, $userId));
 
-        // Semantic pre-filtering: if tool count exceeds threshold, filter by relevance to query
-        $prismTools = $this->applySemanticFilter($prismTools, $agent, $semanticQuery);
-
         return $prismTools;
-    }
-
-    /**
-     * Apply semantic pre-filtering when tool count exceeds threshold.
-     *
-     * Uses pgvector cosine similarity to select the most relevant tools
-     * for the given query. Falls back to returning all tools when:
-     * - No query provided
-     * - Tool count below threshold
-     * - pgvector unavailable (SQLite tests)
-     * - Embedding search fails
-     * - Coverage below 80% of threshold (too few matches)
-     *
-     * @param  array<\Prism\Prism\Tool>  $prismTools
-     * @return array<\Prism\Prism\Tool>
-     */
-    private function applySemanticFilter(array $prismTools, Agent $agent, ?string $semanticQuery): array
-    {
-        $threshold = SemanticToolSelector::threshold();
-
-        if ($semanticQuery === null || count($prismTools) <= $threshold) {
-            return $prismTools;
-        }
-
-        // Collect tool model IDs that contributed to this agent's tools
-        $toolIds = $agent->tools()
-            ->pluck('tools.id')
-            ->toArray();
-
-        if (empty($toolIds)) {
-            return $prismTools;
-        }
-
-        $limit = (int) config('tools.semantic_filter_limit', 12);
-        $similarityThreshold = (float) config('tools.semantic_filter_similarity', 0.75);
-
-        $matchingNames = $this->semanticSelector->searchToolNames(
-            $semanticQuery,
-            $agent->team_id,
-            $toolIds,
-            $limit,
-            $similarityThreshold,
-        );
-
-        // If too few matches, return all tools (fallback)
-        $minCoverage = (int) ceil($threshold * 0.8);
-        if ($matchingNames->isEmpty() || $matchingNames->count() < $minCoverage) {
-            Log::debug('SemanticToolSelector: insufficient matches, returning all tools', [
-                'agent_id' => $agent->id,
-                'total_tools' => count($prismTools),
-                'matches' => $matchingNames->count(),
-                'min_coverage' => $minCoverage,
-            ]);
-
-            return $prismTools;
-        }
-
-        $nameSet = $matchingNames->flip();
-
-        $filtered = array_filter($prismTools, fn ($tool) => isset($nameSet[$tool->name()]));
-
-        Log::debug('SemanticToolSelector: filtered tools', [
-            'agent_id' => $agent->id,
-            'total_tools' => count($prismTools),
-            'filtered_to' => count($filtered),
-            'query_preview' => substr($semanticQuery, 0, 100),
-        ]);
-
-        return array_values($filtered);
     }
 
     /**

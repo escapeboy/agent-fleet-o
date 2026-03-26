@@ -11,19 +11,25 @@ class TaskDependencyResolver
     /**
      * Return tasks that are ready to execute — all dependencies validated.
      *
+     * A task is ready if it is Pending (not Blocked or other) and every UUID in
+     * its depends_on array refers to a task that is Validated or Skipped.
+     * Tasks with an empty depends_on are always ready when Pending.
+     *
      * @param  Collection<int, CrewTaskExecution>  $tasks
      * @return Collection<int, CrewTaskExecution>
      */
     public function resolveReady(Collection $tasks): Collection
     {
-        // Validated and Skipped dependencies are both considered satisfied
-        $satisfiedIndices = $tasks
+        // Build a set of satisfied task UUIDs (Validated or Skipped)
+        $satisfiedIds = $tasks
             ->filter(fn (CrewTaskExecution $t) => $t->isValidated() || $t->status === CrewTaskStatus::Skipped)
-            ->pluck('sort_order')
+            ->pluck('id')
+            ->flip() // O(1) lookup
             ->toArray();
 
         return $tasks
-            ->filter(function (CrewTaskExecution $task) use ($satisfiedIndices) {
+            ->filter(function (CrewTaskExecution $task) use ($satisfiedIds) {
+                // Only Pending tasks can be dispatched; Blocked tasks wait for autoUnblock
                 if (! $task->isPending()) {
                     return false;
                 }
@@ -33,9 +39,9 @@ class TaskDependencyResolver
                     return true;
                 }
 
-                // All dependency indices must be in the satisfied set
-                foreach ($deps as $depIndex) {
-                    if (! in_array((int) $depIndex, $satisfiedIndices, true)) {
+                // All dependency UUIDs must be in the satisfied set
+                foreach ($deps as $depId) {
+                    if (! isset($satisfiedIds[(string) $depId])) {
                         return false;
                     }
                 }
@@ -54,26 +60,29 @@ class TaskDependencyResolver
     }
 
     /**
-     * Check if there are any blocked tasks that can never be unblocked
-     * (their dependencies are in a terminal failed state).
+     * Check if there are any Pending or Blocked tasks that can never be unblocked
+     * because at least one of their UUID dependencies reached a terminal failed state
+     * (QaFailed or Failed).
      */
     public function hasDeadlock(Collection $tasks): bool
     {
-        $failedIndices = $tasks
+        $failedIds = $tasks
             ->filter(fn (CrewTaskExecution $t) => $t->status === CrewTaskStatus::QaFailed || $t->status === CrewTaskStatus::Failed)
-            ->pluck('sort_order')
+            ->pluck('id')
+            ->flip() // O(1) lookup
             ->toArray();
 
-        if (empty($failedIndices)) {
+        if (empty($failedIds)) {
             return false;
         }
 
+        // Both Pending and Blocked tasks with a failed dependency are deadlocked
         return $tasks
-            ->filter(fn (CrewTaskExecution $t) => $t->isPending())
-            ->contains(function (CrewTaskExecution $task) use ($failedIndices) {
+            ->filter(fn (CrewTaskExecution $t) => $t->isPending() || $t->isBlocked())
+            ->contains(function (CrewTaskExecution $task) use ($failedIds) {
                 $deps = $task->depends_on ?? [];
-                foreach ($deps as $depIndex) {
-                    if (in_array((int) $depIndex, $failedIndices, true)) {
+                foreach ($deps as $depId) {
+                    if (isset($failedIds[(string) $depId])) {
                         return true;
                     }
                 }
@@ -84,6 +93,7 @@ class TaskDependencyResolver
 
     /**
      * Gather validated outputs from dependency tasks for input context.
+     * Dependencies are stored as UUID strings after the second-pass remap in DecomposeGoalAction.
      *
      * @return array<string, mixed>
      */
@@ -94,9 +104,12 @@ class TaskDependencyResolver
             return [];
         }
 
+        // Index tasks by UUID for O(1) lookup
+        $taskById = $allTasks->keyBy('id');
+
         $outputs = [];
-        foreach ($deps as $depIndex) {
-            $depTask = $allTasks->firstWhere('sort_order', (int) $depIndex);
+        foreach ($deps as $depId) {
+            $depTask = $taskById->get((string) $depId);
             if ($depTask && $depTask->output) {
                 $outputs[$depTask->title] = $depTask->output;
             }

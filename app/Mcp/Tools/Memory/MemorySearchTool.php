@@ -2,9 +2,12 @@
 
 namespace App\Mcp\Tools\Memory;
 
+use App\Domain\KnowledgeGraph\Services\KnowledgeGraphTraversal;
 use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Models\Memory;
+use App\Domain\Signal\Models\Entity;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -17,7 +20,7 @@ class MemorySearchTool extends Tool
 {
     protected string $name = 'memory_search';
 
-    protected string $description = 'Search agent memories by keyword. Returns matching memories with agent and project context.';
+    protected string $description = 'Search agent memories by keyword with configurable retrieval modes. Supports flat keyword search (semantic), graph-local traversal, global high-centrality, or hybrid combinations.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -35,6 +38,10 @@ class MemorySearchTool extends Tool
                 ->default(0.0),
             'category' => $schema->string()
                 ->description('Filter by memory category: preference, knowledge, context, behavior, goal'),
+            'search_mode' => $schema->string()
+                ->description('Retrieval mode: semantic=flat keyword search, local=1-hop graph traversal from matched entities, global=high-centrality entities, hybrid=semantic+local merged, mix=semantic+global merged')
+                ->enum(['semantic', 'local', 'global', 'hybrid', 'mix'])
+                ->default('semantic'),
         ];
     }
 
@@ -42,12 +49,56 @@ class MemorySearchTool extends Tool
     {
         $validated = $request->validate(['query' => 'required|string']);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id');
 
+        $searchMode = $request->get('search_mode', 'semantic');
+
+        // For graph-based modes, attempt entity-seeded traversal first
+        if (in_array($searchMode, ['local', 'global', 'hybrid', 'mix'], true)) {
+            $entityIds = $this->getQueryEntityIds($teamId, $validated['query']);
+
+            if (! empty($entityIds)) {
+                $traversal = app(KnowledgeGraphTraversal::class);
+                $limit = min((int) ($request->get('limit', 10)), 100);
+
+                $memories = match ($searchMode) {
+                    'local' => $traversal->localSearch($teamId, $entityIds, hops: 1),
+                    'global' => $traversal->globalSearch($teamId, $entityIds, topK: 20),
+                    'hybrid' => $this->semanticSearch($teamId, $request, $validated['query'])
+                        ->merge($traversal->localSearch($teamId, $entityIds))
+                        ->unique('id'),
+                    'mix' => $this->semanticSearch($teamId, $request, $validated['query'])
+                        ->merge($traversal->globalSearch($teamId, $entityIds))
+                        ->unique('id'),
+                };
+
+                if ($memories->isNotEmpty()) {
+                    return $this->formatMemories($memories->take($limit));
+                }
+            }
+
+            // Fall through to semantic search if no entities matched or graph returned empty
+        }
+
+        // Default: flat keyword search
+        $limit = min((int) ($request->get('limit', 10)), 100);
+        $memories = $this->semanticSearch($teamId, $request, $validated['query'])
+            ->take($limit);
+
+        return $this->formatMemories($memories);
+    }
+
+    /**
+     * Perform a keyword (ilike) search on memories, applying optional agent/confidence/category filters.
+     *
+     * @return Collection<int, Memory>
+     */
+    private function semanticSearch(string $teamId, Request $request, string $queryText): Collection
+    {
         $query = Memory::withoutGlobalScopes()
             ->with(['agent:id,name', 'project:id,title'])
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
-            ->where('content', 'ilike', '%'.addcslashes($validated['query'], '%_').'%')
+            ->where('team_id', $teamId)
+            ->where('content', 'ilike', '%'.addcslashes($queryText, '%_').'%')
             ->orderByDesc('created_at');
 
         if ($agentId = $request->get('agent_id')) {
@@ -66,13 +117,54 @@ class MemorySearchTool extends Tool
             }
         }
 
-        $limit = min((int) ($request->get('limit', 10)), 100);
+        return $query->limit(100)->get();
+    }
 
-        $memories = $query->limit($limit)->get();
+    /**
+     * Look up entity UUIDs whose names contain keywords from the query string.
+     *
+     * Uses simple substring matching on entity names for words longer than 3 characters.
+     * Returns an empty array when no keywords are extractable or no entities match.
+     *
+     * @return string[]
+     */
+    private function getQueryEntityIds(string $teamId, string $query): array
+    {
+        if (empty($teamId)) {
+            return [];
+        }
 
+        $keywords = array_filter(
+            explode(' ', strtolower($query)),
+            fn (string $word) => strlen($word) > 3,
+        );
+
+        if (empty($keywords)) {
+            return [];
+        }
+
+        return Entity::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->where(function ($q) use ($keywords) {
+                foreach ($keywords as $kw) {
+                    $q->orWhere('name', 'LIKE', '%'.$kw.'%');
+                }
+            })
+            ->limit(10)
+            ->pluck('id')
+            ->toArray();
+    }
+
+    /**
+     * Serialize a collection of Memory models to a standard MCP Response.
+     *
+     * @param  Collection<int, Memory>  $memories
+     */
+    private function formatMemories(Collection $memories): Response
+    {
         return Response::text(json_encode([
             'count' => $memories->count(),
-            'memories' => $memories->map(fn ($m) => [
+            'memories' => $memories->map(fn (Memory $m) => [
                 'id' => $m->id,
                 'agent' => $m->agent?->name,
                 'project' => $m->project?->title,
@@ -82,7 +174,7 @@ class MemorySearchTool extends Tool
                 'category' => $m->category?->value,
                 'tags' => $m->tags ?? [],
                 'created' => $m->created_at?->diffForHumans(),
-            ])->toArray(),
+            ])->values()->toArray(),
         ]));
     }
 }

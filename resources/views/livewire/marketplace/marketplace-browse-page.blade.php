@@ -57,7 +57,16 @@
                 class="rounded-lg border px-3 py-2 text-sm {{ $sortField === 'run_count' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-300 text-gray-600' }}">
                 Most Used
             </button>
+            <button wire:click="sortBy('community_quality_score')"
+                class="rounded-lg border px-3 py-2 text-sm {{ $sortField === 'community_quality_score' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-300 text-gray-600' }}">
+                Best Quality
+            </button>
         </div>
+
+        <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" wire:model.live="verifiedQualityOnly" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+            Verified Quality
+        </label>
 
         @auth
             @if($canPublish)
@@ -157,6 +166,11 @@
                             <span class="flex items-center gap-1">
                                 <svg class="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                                 {{ number_format($listing->avg_rating, 1) }} ({{ $listing->review_count }})
+                            </span>
+                        @endif
+                        @if(($listing->community_quality_score ?? 0) > 0.5 && ($listing->install_success_rate ?? 0) > 0)
+                            <span class="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700" title="Community quality score: {{ number_format($listing->community_quality_score * 100, 0) }}%">
+                                &#11088; {{ number_format($listing->install_success_rate * 100, 0) }}% effective
                             </span>
                         @endif
                     </div>

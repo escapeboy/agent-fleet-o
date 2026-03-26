@@ -27,6 +27,7 @@ class CrewOrchestrator
         private readonly SynthesizeResultAction $synthesizeResult,
         private readonly ValidateTaskOutputAction $validateTaskOutput,
         private readonly TaskDependencyResolver $dependencyResolver,
+        private readonly DependencyGraph $dependencyGraph,
         private readonly CollectCrewArtifactsAction $collectArtifacts,
         private readonly NotificationService $notifications,
         private readonly ConditionEvaluator $conditionEvaluator,
@@ -147,10 +148,15 @@ class CrewOrchestrator
     }
 
     /**
-     * Called after a task is validated — continue the flow.
+     * Called after a task is validated — unblock any dependent tasks then continue the flow.
      */
     public function onTaskValidated(CrewExecution $execution, CrewTaskExecution $task): void
     {
+        // Unblock tasks whose UUID-based depends_on list is now fully satisfied.
+        // autoUnblock() checks that $task->status is Validated or Skipped before acting,
+        // and directly dispatches ExecuteCrewTaskJob for each newly unblocked task.
+        $this->dependencyGraph->autoUnblock($execution, $task);
+
         $processType = CrewProcessType::from($execution->config_snapshot['process_type']);
 
         match ($processType) {

@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Skill\Models\Skill;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +38,8 @@ class EvolutionProposal extends Model
         'team_id',
         'agent_id',
         'execution_id',
+        'skill_id',
+        'trigger',
         'status',
         'analysis',
         'proposed_changes',
@@ -53,6 +56,7 @@ class EvolutionProposal extends Model
             'proposed_changes' => 'array',
             'confidence_score' => 'float',
             'reviewed_at' => 'datetime',
+            'trigger' => 'string',
         ];
     }
 
@@ -69,5 +73,10 @@ class EvolutionProposal extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function skill(): BelongsTo
+    {
+        return $this->belongsTo(Skill::class);
     }
 }

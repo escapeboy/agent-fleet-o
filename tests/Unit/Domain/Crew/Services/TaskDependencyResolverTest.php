@@ -5,24 +5,34 @@ namespace Tests\Unit\Domain\Crew\Services;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Crew\Services\TaskDependencyResolver;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class TaskDependencyResolverTest extends TestCase
 {
     private TaskDependencyResolver $resolver;
 
+    /** @var array<int, string> */
+    private array $uuids = [];
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->resolver = new TaskDependencyResolver;
+        // Pre-generate UUIDs for each sort_order slot used in tests
+        for ($i = 0; $i < 5; $i++) {
+            $this->uuids[$i] = Str::uuid()->toString();
+        }
     }
 
-    private function makeTask(int $sortOrder, CrewTaskStatus $status, array $dependsOn = []): CrewTaskExecution
+    private function makeTask(int $sortOrder, CrewTaskStatus $status, array $dependsOnSortOrders = []): CrewTaskExecution
     {
         $task = new CrewTaskExecution;
+        $task->id = $this->uuids[$sortOrder];
         $task->sort_order = $sortOrder;
         $task->status = $status;
-        $task->depends_on = $dependsOn;
+        // Convert sort_order integers to UUID strings
+        $task->depends_on = array_map(fn (int $i) => $this->uuids[$i], $dependsOnSortOrders);
 
         return $task;
     }

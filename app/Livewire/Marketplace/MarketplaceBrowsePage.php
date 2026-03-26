@@ -27,6 +27,8 @@ class MarketplaceBrowsePage extends Component
     #[Url]
     public string $pricingFilter = '';
 
+    public bool $verifiedQualityOnly = false;
+
     public string $sortField = 'install_count';
 
     public string $sortDirection = 'desc';
@@ -57,6 +59,11 @@ class MarketplaceBrowsePage extends Component
     }
 
     public function updatedPricingFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedVerifiedQualityOnly(): void
     {
         $this->resetPage();
     }
@@ -135,7 +142,17 @@ class MarketplaceBrowsePage extends Component
             $query->where('monetization_enabled', true)->where('price_per_run_credits', '>', 0);
         }
 
-        $query->orderBy($this->sortField, $this->sortDirection);
+        if ($this->verifiedQualityOnly) {
+            $query->where('community_quality_score', '>=', 0.75);
+        }
+
+        // Sort nulls last for quality score so listings without computed scores appear at the end
+        if ($this->sortField === 'community_quality_score') {
+            $query->orderByRaw('community_quality_score IS NULL ASC')
+                ->orderBy('community_quality_score', $this->sortDirection);
+        } else {
+            $query->orderBy($this->sortField, $this->sortDirection);
+        }
 
         $categories = MarketplaceListing::query()
             ->where('status', MarketplaceStatus::Published)

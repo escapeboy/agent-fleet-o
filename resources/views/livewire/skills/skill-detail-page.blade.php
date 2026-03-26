@@ -261,6 +261,9 @@
                 </table>
                 </div>
             </div>
+
+            {{-- Version lineage DAG — collapsible panel showing parent→child evolution graph --}}
+            <livewire:skills.skill-lineage-panel :skill-id="$skill->id" />
         @elseif($activeTab === 'executions')
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
                 <div class="overflow-x-auto">

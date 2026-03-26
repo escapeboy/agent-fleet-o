@@ -124,6 +124,10 @@ use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
+use App\Mcp\Tools\GitRepository\CodeCallChainTool;
+use App\Mcp\Tools\GitRepository\CodeSearchTool;
+use App\Mcp\Tools\GitRepository\CodeSkimFileTool;
+use App\Mcp\Tools\GitRepository\CodeStructureTool;
 use App\Mcp\Tools\GitRepository\GitBranchCreateTool;
 use App\Mcp\Tools\GitRepository\GitCommitTool;
 use App\Mcp\Tools\GitRepository\GitFileListTool;
@@ -153,6 +157,7 @@ use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
 use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
+use App\Mcp\Tools\Marketplace\MarketplaceQualityReportTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
@@ -210,7 +215,9 @@ use App\Mcp\Tools\Signal\ImapMailboxTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
 use App\Mcp\Tools\Signal\IntentScoreTool;
 use App\Mcp\Tools\Signal\KgAddFactTool;
+use App\Mcp\Tools\Signal\KgEdgeProvenanceTool;
 use App\Mcp\Tools\Signal\KgEntityFactsTool;
+use App\Mcp\Tools\Signal\KgGraphSearchTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
@@ -223,9 +230,13 @@ use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
+use App\Mcp\Tools\Skill\SkillDegradationReportTool;
 use App\Mcp\Tools\Skill\SkillDeleteTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
+use App\Mcp\Tools\Skill\SkillLineageTool;
 use App\Mcp\Tools\Skill\SkillListTool;
+use App\Mcp\Tools\Skill\SkillQualityTool;
+use App\Mcp\Tools\Skill\SkillSearchTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
@@ -362,13 +373,17 @@ class AgentFleetServer extends Server
         ExperimentShareTool::class,
         WorkflowSnapshotListTool::class,
 
-        // Skill (10)
+        // Skill (15)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
         SkillUpdateTool::class,
         SkillDeleteTool::class,
         SkillVersionsTool::class,
+        SkillQualityTool::class,
+        SkillSearchTool::class,
+        SkillLineageTool::class,
+        SkillDegradationReportTool::class,
         GuardrailTool::class,
         MultiModelConsensusTool::class,
         CodeExecutionTool::class,
@@ -447,7 +462,7 @@ class AgentFleetServer extends Server
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
 
-        // Signal (19)
+        // Signal (21)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -468,6 +483,8 @@ class AgentFleetServer extends Server
         KgSearchTool::class,
         KgEntityFactsTool::class,
         KgAddFactTool::class,
+        KgGraphSearchTool::class,
+        KgEdgeProvenanceTool::class,
 
         // Budget (3)
         BudgetSummaryTool::class,
@@ -482,13 +499,14 @@ class AgentFleetServer extends Server
         SemanticCacheStatsTool::class,
         SemanticCachePurgeTool::class,
 
-        // Marketplace (6)
+        // Marketplace (7)
         MarketplaceBrowseTool::class,
         MarketplacePublishTool::class,
         MarketplaceInstallTool::class,
         MarketplaceAnalyticsTool::class,
         MarketplaceReviewTool::class,
         MarketplaceCategoriesListTool::class,
+        MarketplaceQualityReportTool::class,
 
         // Knowledge Bases (5)
         KnowledgeBaseListTool::class,
@@ -623,7 +641,7 @@ class AgentFleetServer extends Server
         FeedbackListTool::class,
         FeedbackUpdateTool::class,
 
-        // Git Repository (13)
+        // Git Repository (17)
         GitRepositoryListTool::class,
         GitRepositoryGetTool::class,
         GitRepositoryCreateTool::class,
@@ -637,6 +655,10 @@ class AgentFleetServer extends Server
         GitCommitTool::class,
         GitPullRequestCreateTool::class,
         GitPullRequestListTool::class,
+        CodeSearchTool::class,
+        CodeStructureTool::class,
+        CodeCallChainTool::class,
+        CodeSkimFileTool::class,
 
         // Auth / Social Login (2)
         SocialAccountListTool::class,
