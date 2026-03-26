@@ -115,7 +115,7 @@ class AnalyzeExecutionForEvolutionJob implements ShouldQueue
      */
     private function analyzeWithLlm(AgentExecution $execution, Skill $skill, float $minConfidence): ?array
     {
-        $apiKey = config('prism.providers.anthropic.api_key') ?? env('ANTHROPIC_API_KEY');
+        $apiKey = config('prism.providers.anthropic.api_key');
         if (empty($apiKey)) {
             return null;
         }

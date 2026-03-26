@@ -81,7 +81,7 @@ class GenerateSkillEmbeddingJob implements ShouldQueue
 
     private function generateEmbedding(string $text): ?array
     {
-        $apiKey = config('prism.providers.openai.api_key') ?? env('OPENAI_API_KEY');
+        $apiKey = config('prism.providers.openai.api_key');
         if (empty($apiKey)) {
             Log::warning('GenerateSkillEmbeddingJob: no OpenAI API key configured, skipping embedding.');
 

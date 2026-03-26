@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Skill;
 
+use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillVersion;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -35,21 +36,27 @@ class SkillLineageTool extends Tool
     {
         $validated = $request->validate(['skill_id' => 'required|string']);
 
+        // TeamScope on Skill::find() ensures only the authenticated team's skills are accessible.
+        $skill = Skill::find($validated['skill_id']);
+        if (! $skill) {
+            return Response::error('Skill not found.');
+        }
+
         $versions = SkillVersion::query()
-            ->where('skill_id', $validated['skill_id'])
+            ->where('skill_id', $skill->id)
             ->orderBy('created_at')
             ->get(['id', 'version', 'evolution_type', 'changelog', 'parent_version_id', 'created_at']);
 
         if ($versions->isEmpty()) {
             return Response::text(json_encode([
-                'skill_id' => $validated['skill_id'],
+                'skill_id' => $skill->id,
                 'total_versions' => 0,
                 'versions' => [],
             ]));
         }
 
         return Response::text(json_encode([
-            'skill_id' => $validated['skill_id'],
+            'skill_id' => $skill->id,
             'total_versions' => $versions->count(),
             'versions' => $versions->map(fn ($v) => [
                 'id' => $v->id,

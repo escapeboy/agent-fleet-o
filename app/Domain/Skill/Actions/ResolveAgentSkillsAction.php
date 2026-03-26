@@ -120,7 +120,7 @@ class ResolveAgentSkillsAction
      */
     private function semanticSearch(string $teamId, string $taskDescription, int $limit): Collection
     {
-        $apiKey = config('prism.providers.openai.api_key') ?? env('OPENAI_API_KEY');
+        $apiKey = config('prism.providers.openai.api_key');
         if (empty($apiKey)) {
             return collect();
         }

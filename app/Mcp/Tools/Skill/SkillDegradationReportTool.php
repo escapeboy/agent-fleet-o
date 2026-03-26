@@ -28,7 +28,7 @@ class SkillDegradationReportTool extends Tool
     {
         return [
             'team_id' => $schema->string()
-                ->description('Team ID to scope the report. Omit to check across all teams.'),
+                ->description('Team ID to filter the report. Defaults to the authenticated team.'),
         ];
     }
 
