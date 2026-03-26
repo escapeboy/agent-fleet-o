@@ -221,6 +221,7 @@ use App\Mcp\Tools\Signal\KgEntityFactsTool;
 use App\Mcp\Tools\Signal\KgGraphSearchTool;
 use App\Mcp\Tools\Signal\KgInvalidateFactTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
+use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
@@ -485,6 +486,9 @@ class AgentFleetServer extends Server
         SupabaseConnectorTool::class,
         ConnectorSubscriptionTool::class,
         IntentScoreTool::class,
+
+        // Web Search (1)
+        SearxngSearchTool::class,
 
         // KnowledgeGraph (6)
         KgSearchTool::class,
