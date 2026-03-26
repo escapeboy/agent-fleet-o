@@ -233,6 +233,7 @@ use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\BlacklistManageTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
+use App\Mcp\Tools\System\LangfuseConfigTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
@@ -576,7 +577,7 @@ class AgentFleetServer extends Server
         EmailTemplateDeleteTool::class,
         EmailTemplateGenerateTool::class,
 
-        // System (7)
+        // System (8)
         DashboardKpisTool::class,
         SystemHealthTool::class,
         SystemVersionCheckTool::class,
@@ -584,6 +585,7 @@ class AgentFleetServer extends Server
         GlobalSettingsUpdateTool::class,
         BlacklistManageTool::class,
         SecurityPolicyManageTool::class,
+        LangfuseConfigTool::class,
 
         // Chatbot (10)
         ChatbotListTool::class,

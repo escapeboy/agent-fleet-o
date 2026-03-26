@@ -27,15 +27,18 @@ class ExportToLangfuseJob implements ShouldQueue
 
     public function __construct(
         private readonly array $payload,
+        private readonly string $host = 'https://cloud.langfuse.com',
+        private readonly string $publicKey = '',
+        private readonly string $secretKey = '',
     ) {
         $this->onQueue('metrics');
     }
 
     public function handle(SsrfGuard $ssrfGuard): void
     {
-        $host = config('llmops.langfuse.host', 'https://cloud.langfuse.com');
-        $publicKey = config('llmops.langfuse.public_key', '');
-        $secretKey = config('llmops.langfuse.secret_key', '');
+        $host = $this->host;
+        $publicKey = $this->publicKey;
+        $secretKey = $this->secretKey;
 
         if (empty($publicKey) || empty($secretKey)) {
             return;

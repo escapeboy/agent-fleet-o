@@ -56,11 +56,9 @@ class AiServiceProvider extends ServiceProvider
                 $app->make(ContextCompaction::class),
                 $app->make(SchemaValidation::class),
                 $app->make(UsageTracking::class),
+                // Always registered — handles its own enabled check via GlobalSetting / env
+                $app->make(LangfuseExportMiddleware::class),
             ];
-
-            if (config('llmops.langfuse.enabled')) {
-                $middleware[] = $app->make(LangfuseExportMiddleware::class);
-            }
 
             return $gateway->withMiddleware($middleware);
         });

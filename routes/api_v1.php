@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\KnowledgeGraphController;
+use App\Http\Controllers\Api\V1\LangfuseConfigController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\MetricsController;
@@ -257,6 +258,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Provider config (LLM provider settings per team)
     Route::get('/config/providers/{provider}', [ProviderConfigController::class, 'show']);
     Route::put('/config/providers/{provider}', [ProviderConfigController::class, 'update']);
+
+    // Langfuse LLMOps config (platform-level, DB override takes precedence over env)
+    Route::get('/config/langfuse', [LangfuseConfigController::class, 'show']);
+    Route::put('/config/langfuse', [LangfuseConfigController::class, 'update']);
 
     // Bridge
     Route::get('/bridge/status', [BridgeController::class, 'status']);
