@@ -406,10 +406,18 @@ if ($method === 'POST' && $path === '/execute') {
     $model = $body['model'] ?? null;
     $isAssistant = $purpose === 'platform_assistant';
 
-    // Resolve working directory
-    $cwd = $workdir ?: dirname(__DIR__);
-    if (! is_dir($cwd)) {
-        $cwd = dirname(__DIR__);
+    // Resolve working directory — canonicalise with realpath() to prevent path
+    // traversal (e.g. a server-supplied value of "/etc" or "../../etc").
+    // Only accept paths that actually resolve to an existing directory;
+    // fall back to the application root for any invalid value.
+    $cwd = dirname(__DIR__);
+    if ($workdir !== null && $workdir !== '') {
+        $resolved = realpath($workdir);
+        if ($resolved !== false && is_dir($resolved)) {
+            $cwd = $resolved;
+        } else {
+            error_log("Bridge: invalid working_directory '{$workdir}', falling back to app root");
+        }
     }
 
     $descriptors = [
