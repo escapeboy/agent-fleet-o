@@ -131,14 +131,18 @@ Failed tasks display detailed error information including provider, error type, 
 - **AI Agents** -- Configure agents with roles, goals, backstories, personality traits, and skill assignments
 - **Agent Templates** -- 14 pre-built templates across 5 categories (engineering, content, business, design, research)
 - **Agent Evolution** -- AI-driven self-improvement: analyze execution history, propose config changes, and apply improvements
-- **Agent Crews** -- Multi-agent teams with lead/member roles and shared context
+- **Agent Crews** -- Multi-agent teams with coordinator, QA, and worker roles; domain-specific evaluation rubrics; weighted QA scoring per task type
+- **Pre-Execution Scout Phase** -- Optional cheap LLM pre-call before memory retrieval that identifies what knowledge the agent needs, enabling targeted semantic search instead of generic recall
+- **Step Budget Awareness** -- Agents receive an execution budget section in their system prompt, targeting 80% of allowed steps for core work and reserving the rest for synthesis
 - **Skills** -- Reusable AI skill definitions (LLM, connector, rule, hybrid, browser, RunPod, GPU compute) with versioning and cost tracking
 - **RunPod GPU Integration** -- Invoke RunPod serverless endpoints or manage full GPU pod lifecycles as skills; BYOK API key; spot pricing; cost tracking
 - **Pluggable Compute Providers** -- `gpu_compute` skill type backed by RunPod, Replicate, Fal.ai, and Vast.ai; configure via `compute_manage` MCP tool; zero platform credits
 - **Local LLM Support** -- Run Ollama or any OpenAI-compatible server (LM Studio, vLLM, llama.cpp) as a provider; 17 preset Ollama models; zero cost; SSRF protection
-- **Integrations** -- Connect GitHub, Slack, Notion, Airtable, Linear, Stripe, and generic webhooks/polling sources via unified driver interface with OAuth 2.0 support
+- **Integrations** -- Connect GitHub, Slack, Notion, Airtable, Linear, Stripe, Vercel, Netlify, and generic webhooks/polling sources via unified driver interface with OAuth 2.0 support
+- **Autonomous Web Dev Pipeline** -- Agents can open PRs, merge, dispatch CI workflows, create releases, and trigger Vercel/Netlify/SSH deploys through MCP tools and integration drivers
+- **Per-Call Working Directory** -- Local and bridge agents can operate in a configured working directory per-agent, enabling isolated project contexts
 - **Playbooks** -- Sequential or parallel multi-step workflows combining skills
-- **Workflows** -- Visual DAG builder with 8 node types: agent, conditional, human task, switch, dynamic fork, do-while loops
+- **Workflows** -- Visual DAG builder with 8 node types: agent, conditional, human task, switch, dynamic fork, do-while loops; pre-built Web Dev Cycle template
 - **Projects** -- One-shot and continuous long-running agent projects with cron scheduling, budget caps, milestones, and overlap policies
 - **Human-in-the-Loop** -- Approval queue and human task forms with SLA enforcement and escalation
 - **Multi-Channel Outbound** -- Email (SMTP), Telegram, Slack, and webhook delivery with rate limiting
@@ -146,7 +150,7 @@ Failed tasks display detailed error information including provider, error type, 
 - **Budget Controls** -- Per-experiment and per-project credit ledger with pessimistic locking and auto-pause on overspend
 - **Marketplace** -- Browse, publish, and install shared skills, agents, and workflows
 - **REST API** -- 175+ endpoints under `/api/v1/` with Sanctum auth, cursor pagination, and auto-generated OpenAPI 3.1 docs at `/docs/api`
-- **MCP Server** -- 200+ Model Context Protocol tools across 31 domains for LLM/agent access (stdio + HTTP/SSE)
+- **MCP Server** -- 316+ Model Context Protocol tools across 38 domains for LLM/agent access (stdio + HTTP/SSE)
 - **Tool Management** -- MCP servers (stdio/HTTP), built-in tools (bash/filesystem/browser), risk classification, per-agent assignment
 - **Credentials** -- Encrypted credential vault for external services with rotation, expiry tracking, and per-project injection
 - **Testing** -- Regression test suites for agent outputs with automated evaluation

@@ -2,6 +2,27 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.13.0] - 2026-03-26
+
+### Added
+
+- **Autonomous Web Dev Pipeline** — Full end-to-end agentic software development cycle. New Git operation MCP tools: `git_pr_merge`, `git_pr_status`, `git_pr_close`, `git_workflow_dispatch`, `git_release_create`. `GitClientInterface` extended with `mergePullRequest`, `getPullRequestStatus`, `dispatchWorkflow`, `createRelease`, `closePullRequest`, `getCommitLog` — implemented in GitHub, GitLab, Sandbox, and Bridge clients.
+- **Deploy Integration Drivers** — Three new integration drivers: `VercelIntegrationDriver` (deploy, get_deployment, list_deployments, cancel, rollback), `NetlifyIntegrationDriver` (trigger_build, get_deploy, list_deploys, cancel, publish), `SshDeployIntegrationDriver` (run_deploy, check_health, rollback via SSH). GitHub driver extended with `create_pr`, `merge_pr`, `dispatch_workflow`, `create_release` actions.
+- **Web Dev Cycle Workflow Template** — Pre-built DAG workflow: plan → implement → test → fix-loop → lint → review → human approval → deploy. Seeded via `PlatformWorkflowsSeeder`.
+- **Per-Call Working Directory** — `AiRequestDTO` gains a `workingDirectory` field. `LocalAgentGateway` now prefers the per-call value over global config in both direct-exec and bridge-exec modes (`executeViaBridge` + `streamViaBridge`). `ExecuteAgentAction` passes `agent.configuration['working_directory']` into both `executeWithTools()` and `executeDirectPrompt()` requests.
+- **Pre-Execution Scout Phase** — New `PreExecutionScout` middleware runs a cheap lightweight LLM call (Haiku / GPT-4o-mini / Gemini Flash) before memory and KG injection to identify what specific knowledge the agent needs. Results are stored in `AgentExecutionContext::$scoutQueries` and consumed by `InjectMemoryContext` and `InjectKnowledgeGraphContext` for targeted retrieval instead of generic semantic search. Enable per-agent via `config['enable_scout_phase']` or globally via `AGENT_SCOUT_PHASE_ENABLED`. Disabled by default.
+- **Domain-Specific QA Rubrics** — `crew.settings.task_rubrics` JSONB map allows per-task-type weighted evaluation criteria. `ValidateTaskOutputAction` keyword-matches the task title/description against rubric keys, falls back to `default`, and injects weighted criteria into the QA agent's system prompt. `criterion_scores` are captured per rubric dimension in `qa_feedback`.
+- **Crew QA Rubric Validation** — `CreateCrewAction` and `UpdateCrewAction` validate `task_rubrics` at write time: max 10 rubric types, criterion names restricted to `[\w\s\-]+` (blocks prompt injection), descriptions capped at 500 chars, weights must be 0–1 numerics.
+- **Step Budget Awareness** — Agent system prompt now includes an `## Execution Budget` section when `max_steps > 1`, instructing the agent to complete core work by 80% of its step budget and reserve remaining steps for summarising and delivering results.
+- **Chatbot Knowledge Source Toggle** — `chatbot_knowledge_sources.is_enabled` boolean column allows individual knowledge sources to be enabled or disabled without deletion. `ChatbotResponseService` filters to enabled sources only when building RAG context. Toggle UI added to ChatbotKnowledgeBasePage.
+
+### Fixed
+
+- `PreExecutionScout` uses `ProviderResolver` to respect the BYOK credential hierarchy (skill → agent → team → platform) instead of hardcoding `anthropic`. Scout queries are capped at 200 chars and 5 queries to prevent prompt-injection amplification when prepended to embedding inputs.
+- `host-bridge.php` `working_directory` hardened against path traversal: realpath validation, null byte stripping, and assertion that the resolved path is within an allowed prefix.
+- `InjectKnowledgeGraphContext` fixed `array_filter` without callback (was incorrectly filtering non-empty strings).
+- `ValidateTaskOutputAction::resolveRubric` applies `strtolower()` to rubric keys before `str_contains` match (previously uppercase keys never matched lowercased task text).
+
 ## [1.12.0] - 2026-03-26
 
 ### Added
