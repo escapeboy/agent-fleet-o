@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
@@ -53,6 +54,7 @@ use App\Domain\Signal\Connectors\TelegramSignalConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
+use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
@@ -311,6 +313,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Chatbot: capture operator corrections as learning entries
         Event::listen(ChatbotResponseApprovedEvent::class, CaptureResponseCorrectionListener::class);
+
+        // Skill evolution: analyze completed executions and auto-propose improvements
+        Event::listen(AgentExecuted::class, DispatchEvolutionAnalysisListener::class);
 
         // Agent memory: store execution output as memory after completion
         AgentExecution::created(function (AgentExecution $execution) {

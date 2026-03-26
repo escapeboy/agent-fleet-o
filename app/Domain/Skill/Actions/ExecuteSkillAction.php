@@ -202,6 +202,12 @@ class ExecuteSkillAction
             // 7. Update skill stats
             $skill->recordExecution(true, $durationMs);
 
+            // 7a. Increment quality counters
+            $skill->increment('completed_count');
+            if ($execution->quality_score !== null && $execution->quality_score >= config('skills.degradation.quality_threshold', 0.5)) {
+                $skill->increment('effective_count');
+            }
+
             // 8. Settle budget
             $this->settleBudget->execute($reservation, $response->usage->costCredits);
 

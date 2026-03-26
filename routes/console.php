@@ -47,6 +47,12 @@ Schedule::command('memories:prune')->dailyAt('03:00');
 // Agent feedback analysis — weekly batch generates EvolutionProposals for underperforming agents
 Schedule::command('agents:analyze-feedback')->weeklyOn(1, '06:00');
 
+// Skill degradation monitor — hourly scan creates EvolutionProposals for underperforming skills
+Schedule::command('skills:monitor-degradation')->hourly();
+
+// Marketplace quality aggregation — roll up installed skill metrics into listing quality scores
+Schedule::command('marketplace:aggregate-quality')->everySixHours();
+
 // Prune growing tables: llm_request_logs (30d), semantic_cache_entries (expired+90d), assistant_messages (90d)
 Schedule::command('model:prune')->dailyAt('04:00');
 

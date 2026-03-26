@@ -3,6 +3,7 @@
 namespace App\Domain\Marketplace\Models;
 
 use App\Domain\Shared\Models\Team;
+use App\Domain\Skill\Models\Skill;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -55,5 +56,10 @@ class MarketplaceInstallation extends Model
     public function installer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'installed_by');
+    }
+
+    public function installedSkill(): BelongsTo
+    {
+        return $this->belongsTo(Skill::class, 'installed_skill_id');
     }
 }

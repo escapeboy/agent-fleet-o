@@ -2,6 +2,7 @@
 
 namespace App\Domain\Skill\Actions;
 
+use App\Domain\Skill\Jobs\GenerateSkillEmbeddingJob;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillVersion;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,7 @@ class UpdateSkillAction
         ?string $changelog = null,
         ?string $updatedBy = null,
     ): Skill {
-        return DB::transaction(function () use ($skill, $attributes, $changelog, $updatedBy) {
+        $skill = DB::transaction(function () use ($skill, $attributes, $changelog, $updatedBy) {
             // Determine if schema/config changed (triggers version bump)
             $schemaChanged = isset($attributes['input_schema']) || isset($attributes['output_schema']);
             $configChanged = isset($attributes['configuration']);
@@ -40,6 +41,12 @@ class UpdateSkillAction
 
             return $skill->fresh();
         });
+
+        if (app()->environment() !== 'testing') {
+            GenerateSkillEmbeddingJob::dispatch($skill->id);
+        }
+
+        return $skill;
     }
 
     private function bumpVersion(string $currentVersion): string

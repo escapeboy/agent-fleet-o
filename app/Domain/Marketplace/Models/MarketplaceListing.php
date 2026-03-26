@@ -49,6 +49,11 @@ class MarketplaceListing extends Model
         'monetization_enabled',
         'is_official',
         'execution_profile',
+        'community_quality_score',
+        'install_success_rate',
+        'community_reliability_rate',
+        'effective_run_count',
+        'quality_computed_at',
     ];
 
     protected function casts(): array
@@ -70,6 +75,11 @@ class MarketplaceListing extends Model
             'is_official' => 'boolean',
             'review_count' => 'integer',
             'execution_profile' => 'array',
+            'community_quality_score' => 'float',
+            'install_success_rate' => 'float',
+            'community_reliability_rate' => 'float',
+            'effective_run_count' => 'integer',
+            'quality_computed_at' => 'datetime',
         ];
     }
 

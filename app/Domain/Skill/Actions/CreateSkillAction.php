@@ -7,6 +7,7 @@ use App\Domain\Skill\Enums\ExecutionType;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Enums\SkillType;
+use App\Domain\Skill\Jobs\GenerateSkillEmbeddingJob;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillVersion;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,7 @@ class CreateSkillAction
         ?string $createdBy = null,
         DataClassification $dataClassification = DataClassification::Internal,
     ): Skill {
-        return DB::transaction(function () use (
+        $skill = DB::transaction(function () use (
             $teamId, $name, $type, $description, $executionType,
             $riskLevel, $inputSchema, $outputSchema, $configuration,
             $costProfile, $safetyFlags, $systemPrompt, $requiresApproval,
@@ -70,5 +71,11 @@ class CreateSkillAction
 
             return $skill;
         });
+
+        if (app()->environment() !== 'testing') {
+            GenerateSkillEmbeddingJob::dispatch($skill->id);
+        }
+
+        return $skill;
     }
 }

@@ -153,6 +153,7 @@ use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
 use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
+use App\Mcp\Tools\Marketplace\MarketplaceQualityReportTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
@@ -223,9 +224,13 @@ use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
+use App\Mcp\Tools\Skill\SkillDegradationReportTool;
 use App\Mcp\Tools\Skill\SkillDeleteTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
+use App\Mcp\Tools\Skill\SkillLineageTool;
 use App\Mcp\Tools\Skill\SkillListTool;
+use App\Mcp\Tools\Skill\SkillQualityTool;
+use App\Mcp\Tools\Skill\SkillSearchTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
@@ -362,13 +367,17 @@ class AgentFleetServer extends Server
         ExperimentShareTool::class,
         WorkflowSnapshotListTool::class,
 
-        // Skill (10)
+        // Skill (15)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
         SkillUpdateTool::class,
         SkillDeleteTool::class,
         SkillVersionsTool::class,
+        SkillQualityTool::class,
+        SkillSearchTool::class,
+        SkillLineageTool::class,
+        SkillDegradationReportTool::class,
         GuardrailTool::class,
         MultiModelConsensusTool::class,
         CodeExecutionTool::class,
@@ -482,13 +491,14 @@ class AgentFleetServer extends Server
         SemanticCacheStatsTool::class,
         SemanticCachePurgeTool::class,
 
-        // Marketplace (6)
+        // Marketplace (7)
         MarketplaceBrowseTool::class,
         MarketplacePublishTool::class,
         MarketplaceInstallTool::class,
         MarketplaceAnalyticsTool::class,
         MarketplaceReviewTool::class,
         MarketplaceCategoriesListTool::class,
+        MarketplaceQualityReportTool::class,
 
         // Knowledge Bases (5)
         KnowledgeBaseListTool::class,
