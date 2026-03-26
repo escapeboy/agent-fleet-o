@@ -124,6 +124,10 @@ use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
+use App\Mcp\Tools\GitRepository\CodeCallChainTool;
+use App\Mcp\Tools\GitRepository\CodeSearchTool;
+use App\Mcp\Tools\GitRepository\CodeSkimFileTool;
+use App\Mcp\Tools\GitRepository\CodeStructureTool;
 use App\Mcp\Tools\GitRepository\GitBranchCreateTool;
 use App\Mcp\Tools\GitRepository\GitCommitTool;
 use App\Mcp\Tools\GitRepository\GitFileListTool;
@@ -637,7 +641,7 @@ class AgentFleetServer extends Server
         FeedbackListTool::class,
         FeedbackUpdateTool::class,
 
-        // Git Repository (13)
+        // Git Repository (17)
         GitRepositoryListTool::class,
         GitRepositoryGetTool::class,
         GitRepositoryCreateTool::class,
@@ -651,6 +655,10 @@ class AgentFleetServer extends Server
         GitCommitTool::class,
         GitPullRequestCreateTool::class,
         GitPullRequestListTool::class,
+        CodeSearchTool::class,
+        CodeStructureTool::class,
+        CodeCallChainTool::class,
+        CodeSkimFileTool::class,
 
         // Auth / Social Login (2)
         SocialAccountListTool::class,
