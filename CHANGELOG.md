@@ -2,6 +2,16 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.14.0] - 2026-03-26
+
+### Added
+
+- **Searxng Web Search Connector** — Self-hosted meta-search integration via `SearxngConnector` implementing `InputConnectorInterface`. `poll()` ingests search results as signals with SSRF guard for user-configured URLs. `search()` provides direct result fetching for agent use, skipping SSRF guard for operator-configured internal Docker hostnames. `searxng_search` MCP tool added. Config: `SEARXNG_URL` env var / `services.searxng.url`. Engines: Google, Bing, DuckDuckGo, Wikipedia. JSON-only API mode, rate limiter disabled for internal use.
+
+### Fixed
+
+- Bridge disconnect goroutine race condition — stale `conn` reference captured by agent dispatch goroutines caused frames to be sent on dead connections after reconnect. `sendFn` now uses `c.Send()` which dynamically resolves the current live connection.
+
 ## [1.13.0] - 2026-03-26
 
 ### Added
