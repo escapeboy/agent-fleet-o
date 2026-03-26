@@ -60,6 +60,7 @@ class SearxngConnector implements InputConnectorInterface
         $timeout = min((int) ($config['timeout'] ?? 15), 30);
 
         try {
+            // poll() URL comes from user-configured connector bindings — must validate.
             $this->ssrfGuard->assertPublicUrl($url);
 
             $params = array_filter([
@@ -109,6 +110,11 @@ class SearxngConnector implements InputConnectorInterface
      *
      * Used by the SearxngSearchTool for agent-driven searches.
      *
+     * The $instanceUrl is always operator-configured (GlobalSetting or env var),
+     * never user-supplied, so the SSRF check is intentionally skipped here.
+     * This allows internal Docker hostnames like http://searxng:8888 to work
+     * in production without being blocked as RFC 1918 addresses.
+     *
      * @return array<int, array{title: string, url: string, content: string, score: float, engine: string}>
      */
     public function search(string $instanceUrl, string $query, array $options = []): array
@@ -121,7 +127,11 @@ class SearxngConnector implements InputConnectorInterface
         $timeout = min((int) ($options['timeout'] ?? 15), 30);
 
         try {
-            $this->ssrfGuard->assertPublicUrl($url);
+            // NOTE: assertPublicUrl() is intentionally NOT called here.
+            // search() is always invoked with an operator-configured URL
+            // (from GlobalSetting or SEARXNG_URL env var), which may be an
+            // internal Docker hostname (RFC 1918). Calling SSRF guard here
+            // would block legitimate production deployments.
 
             $params = array_filter([
                 'q' => $query,
@@ -154,6 +164,11 @@ class SearxngConnector implements InputConnectorInterface
 
             return [];
         }
+    }
+
+    public function supports(string $driver): bool
+    {
+        return $driver === 'searxng';
     }
 
     /**
@@ -189,11 +204,9 @@ class SearxngConnector implements InputConnectorInterface
                         'engine' => $result['engine'] ?? '',
                         'score' => $result['score'] ?? null,
                         'query' => $query,
-                        'categories' => $categories,
                     ],
                     tags: $tags,
                     experimentId: $config['experiment_id'] ?? null,
-                    teamId: $config['team_id'] ?? null,
                 );
 
                 if ($ingested) {

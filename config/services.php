@@ -95,6 +95,10 @@ return [
         'webhook_secret' => env('CLEARCUE_WEBHOOK_SECRET'),
     ],
 
+    'searxng' => [
+        'url' => env('SEARXNG_URL'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Social Login (OAuth) Providers
