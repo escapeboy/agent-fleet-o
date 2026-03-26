@@ -151,7 +151,7 @@ PROMPT;
         $parts[] = 'Final status: '.($experiment->status?->value ?? 'unknown');
 
         $completedStages = $experiment->stages()
-            ->whereNull('error')
+            ->where('status', 'completed')
             ->orderByDesc('created_at')
             ->limit(3)
             ->get(['stage', 'output_snapshot']);
