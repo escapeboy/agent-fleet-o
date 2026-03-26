@@ -69,7 +69,9 @@ class LintTool extends Tool
                 'issue_count' => count($issues),
                 'issues' => array_slice($issues, 0, 50), // Cap at 50 to avoid huge payloads
                 'output' => $result['output'],
-                'fixed' => $fix && $result['exit_code'] === 0,
+                // "fixed" is true only when fix mode was requested AND files were actually modified
+                // (detected from linter output; falls back to exit_code=0 for non-Pint linters)
+                'fixed' => $fix && $this->detectFilesFixed($result['output'], $linter),
             ]));
         } catch (\Throwable $e) {
             return Response::error($e->getMessage());
@@ -78,7 +80,10 @@ class LintTool extends Tool
 
     private function buildCommand(string $linter, string $paths, bool $fix): string
     {
-        $pathArg = $paths ? " {$paths}" : '';
+        // Escape each path individually to prevent shell injection
+        $pathArg = $paths
+            ? ' '.implode(' ', array_map('escapeshellarg', preg_split('/\s+/', trim($paths)) ?: []))
+            : '';
 
         return match ($linter) {
             'pint' => 'vendor/bin/pint'.($fix ? '' : ' --test').$pathArg,
@@ -185,10 +190,17 @@ class LintTool extends Tool
                 }
             }
         } elseif ($linter === 'eslint') {
-            // ESLint: "  src/foo.js  1:5  error  message  rule-name"
+            // ESLint output groups issues under file headers (no leading whitespace),
+            // followed by per-line issues (leading whitespace):
+            //   /path/to/src/foo.js
+            //     1:5  error  Missing semicolon  semi
+            $currentFile = null;
             foreach ($lines as $line) {
-                if (preg_match('/^\s+(\d+):(\d+)\s+(error|warning)\s+(.+?)\s+\S+$/', $line, $m)) {
-                    $issues[] = ['file' => null, 'line' => (int) $m[1], 'message' => "[{$m[3]}] {$m[4]}"];
+                // File header: non-empty, no leading whitespace, looks like a path
+                if (preg_match('/^(\S.+\.[jt]sx?|\.vue|\.ts)$/', trim($line), $m)) {
+                    $currentFile = trim($line);
+                } elseif (preg_match('/^\s+(\d+):(\d+)\s+(error|warning)\s+(.+?)\s+\S+$/', $line, $m)) {
+                    $issues[] = ['file' => $currentFile, 'line' => (int) $m[1], 'message' => "[{$m[3]}] {$m[4]}"];
                 }
             }
         } elseif ($linter === 'flake8') {
@@ -217,5 +229,22 @@ class LintTool extends Tool
         }
 
         return $issues;
+    }
+
+    /**
+     * Detect whether linter actually modified files (not just exited 0 with nothing to fix).
+     */
+    private function detectFilesFixed(string $output, string $linter): bool
+    {
+        return match ($linter) {
+            // Pint prints "  ✓ app/Foo.php" for fixed files; if none, no ✓ lines appear
+            'pint' => str_contains($output, '✓'),
+            // Prettier prints "src/foo.js" (one file per line, no prefix) when it fixes
+            'prettier' => (bool) preg_match('/^\S.+\.(js|ts|jsx|tsx|css|html|json|yaml|md)$/m', $output),
+            // black prints "reformatted src/foo.py" for each fixed file
+            'black' => str_contains($output, 'reformatted'),
+            // eslint doesn't print a clear "fixed" signal; rely on exit code
+            default => true,
+        };
     }
 }

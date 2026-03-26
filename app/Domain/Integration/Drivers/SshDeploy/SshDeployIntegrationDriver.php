@@ -38,6 +38,7 @@ class SshDeployIntegrationDriver implements IntegrationDriverInterface
             'port' => ['type' => 'integer', 'required' => false, 'label' => 'SSH Port (default: 22)'],
             'username' => ['type' => 'string', 'required' => true, 'label' => 'SSH Username'],
             'private_key' => ['type' => 'string', 'required' => false, 'label' => 'SSH Private Key (PEM)'],
+            'public_key' => ['type' => 'string', 'required' => false, 'label' => 'SSH Public Key (OpenSSH format, required when using private_key)'],
             'password' => ['type' => 'string', 'required' => false, 'label' => 'SSH Password'],
             'deploy_path' => ['type' => 'string', 'required' => false, 'label' => 'Deploy Path (default: /var/www/app)'],
         ];
@@ -69,6 +70,7 @@ class SshDeployIntegrationDriver implements IntegrationDriverInterface
         try {
             $connection = $this->connect($integration);
             $latency = (int) ((microtime(true) - $start) * 1000);
+            @ssh2_disconnect($connection);
 
             return HealthResult::ok($latency);
         } catch (\Throwable $e) {
@@ -145,14 +147,26 @@ class SshDeployIntegrationDriver implements IntegrationDriverInterface
         }
 
         if ($privateKey) {
+            $publicKey = $integration->getCredentialSecret('public_key');
+
+            if (! $publicKey) {
+                throw new \RuntimeException('public_key is required when using private_key authentication.');
+            }
+
             $keyFile = tempnam(sys_get_temp_dir(), 'sshk_');
-            file_put_contents($keyFile, (string) $privateKey);
-            chmod($keyFile, 0600);
+            $pubFile = $keyFile.'.pub';
 
-            $authenticated = ssh2_auth_pubkey_file($connection, $username, $keyFile.'.pub', $keyFile);
+            try {
+                file_put_contents($keyFile, (string) $privateKey);
+                file_put_contents($pubFile, (string) $publicKey);
+                chmod($keyFile, 0600);
+                chmod($pubFile, 0644);
 
-            @unlink($keyFile);
-            @unlink($keyFile.'.pub');
+                $authenticated = ssh2_auth_pubkey_file($connection, $username, $pubFile, $keyFile);
+            } finally {
+                @unlink($keyFile);
+                @unlink($pubFile);
+            }
 
             if (! $authenticated) {
                 throw new \RuntimeException('SSH public key authentication failed.');
@@ -176,18 +190,29 @@ class SshDeployIntegrationDriver implements IntegrationDriverInterface
 
         $connection = $this->connect($integration);
 
-        $envPrefix = $environment ? "ENVIRONMENT={$environment} " : '';
-        $stream = ssh2_exec($connection, "cd {$deployPath} && {$envPrefix}bash {$scriptName} 2>&1");
+        try {
+            // Escape all values interpolated into the remote shell command
+            $envPrefix = $environment ? 'ENVIRONMENT='.escapeshellarg($environment).' ' : '';
+            $cmd = 'cd '.escapeshellarg($deployPath).' && '.$envPrefix.'bash '.escapeshellarg($scriptName).' 2>&1';
 
-        if ($stream === false) {
-            throw new \RuntimeException("Failed to run script {$scriptName} in {$deployPath}");
+            $stream = ssh2_exec($connection, $cmd);
+
+            if ($stream === false) {
+                throw new \RuntimeException("Failed to run script {$scriptName} in {$deployPath}");
+            }
+
+            stream_set_blocking($stream, true);
+            $output = (string) stream_get_contents($stream);
+            fclose($stream);
+        } finally {
+            // Always close the connection to avoid resource leaks in Horizon workers
+            @ssh2_disconnect($connection);
         }
 
-        stream_set_blocking($stream, true);
-        $output = (string) stream_get_contents($stream);
-        fclose($stream);
-
         $output = trim($output);
+
+        // ssh2_exec() does not expose exit codes; use a conservative heuristic
+        // (false-positive on scripts that print "error" in info messages is acceptable)
         $success = ! str_contains(strtolower($output), 'error') && ! str_contains(strtolower($output), 'failed');
 
         return [

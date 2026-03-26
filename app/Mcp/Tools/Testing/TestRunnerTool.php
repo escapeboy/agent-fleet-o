@@ -78,11 +78,11 @@ class TestRunnerTool extends Tool
     private function buildCommand(string $framework, ?string $filter): string
     {
         return match ($framework) {
-            'phpunit' => 'vendor/bin/phpunit'.($filter ? " --filter=\"{$filter}\"" : ''),
-            'pest' => 'vendor/bin/pest'.($filter ? " --filter=\"{$filter}\"" : ''),
-            'jest' => 'npx jest'.($filter ? " --testNamePattern=\"{$filter}\"" : ''),
-            'pytest' => 'python -m pytest'.($filter ? " -k \"{$filter}\"" : ''),
-            'go' => 'go test ./...'.($filter ? " -run \"{$filter}\"" : ''),
+            'phpunit' => 'vendor/bin/phpunit'.($filter ? ' --filter='.escapeshellarg($filter) : ''),
+            'pest' => 'vendor/bin/pest'.($filter ? ' --filter='.escapeshellarg($filter) : ''),
+            'jest' => 'npx jest'.($filter ? ' --testNamePattern='.escapeshellarg($filter) : ''),
+            'pytest' => 'python -m pytest'.($filter ? ' -k '.escapeshellarg($filter) : ''),
+            'go' => 'go test ./...'.($filter ? ' -run '.escapeshellarg($filter) : ''),
             default => throw new \InvalidArgumentException("Unknown test framework: {$framework}. Use custom_command for custom setups."),
         };
     }
@@ -169,14 +169,19 @@ class TestRunnerTool extends Tool
 
         if (in_array($framework, ['phpunit', 'pest'], true)) {
             // PHPUnit/Pest: "Tests: 42, Assertions: 156, Failures: 2"
+            // "Tests:" is the total count; compute passed = total - failed - skipped
+            $total = null;
             if (preg_match('/Tests:\s+(\d+)/', $output, $m)) {
-                $passed = (int) $m[1];
+                $total = (int) $m[1];
             }
             if (preg_match('/Failures:\s+(\d+)/', $output, $m)) {
                 $failed = (int) $m[1];
             }
             if (preg_match('/Skipped:\s+(\d+)/', $output, $m)) {
                 $skipped = (int) $m[1];
+            }
+            if ($total !== null) {
+                $passed = $total - ($failed ?? 0) - ($skipped ?? 0);
             }
         } elseif ($framework === 'jest') {
             // Jest: "Tests: 2 failed, 40 passed, 42 total"

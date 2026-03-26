@@ -199,7 +199,12 @@ class VersionBumpTool extends Tool
             ) ?? $content;
         }
 
-        // Plain version file — replace the version string
-        return str_replace($oldVersion, $newVersion, $content);
+        // Plain version file — replace only the first occurrence on its own line
+        return preg_replace(
+            '/^'.preg_quote($oldVersion, '/').'$/m',
+            $newVersion,
+            $content,
+            1,
+        ) ?? $content;
     }
 }

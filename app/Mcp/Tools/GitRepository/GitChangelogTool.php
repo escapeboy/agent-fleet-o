@@ -121,9 +121,14 @@ class GitChangelogTool extends Tool
             ];
         }
 
-        // Sort groups by importance
+        // Sort groups by importance — use !== false to handle index 0 (Features) correctly
         $order = array_values($typeLabels);
-        uksort($groups, fn ($a, $b) => (array_search($a, $order) ?: 99) <=> (array_search($b, $order) ?: 99));
+        uksort($groups, function ($a, $b) use ($order): int {
+            $posA = array_search($a, $order);
+            $posB = array_search($b, $order);
+
+            return ($posA !== false ? $posA : 99) <=> ($posB !== false ? $posB : 99);
+        });
 
         return $groups;
     }
