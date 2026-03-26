@@ -104,7 +104,7 @@ class ValidateTaskOutputAction
                 continue;
             }
 
-            if (str_contains($taskText, $key)) {
+            if (str_contains($taskText, strtolower($key))) {
                 return $rubric;
             }
         }

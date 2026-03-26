@@ -399,7 +399,8 @@ class ExecuteAgentAction
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
             $tierConfig = $this->resolveTierConfig->execute($agent);
-            $systemPrompt = $this->buildAgentSystemPrompt($agent, null, $input, $systemPromptParts, $tierConfig);
+            // Direct prompt has no tool loop — suppress the budget section (max_steps irrelevant)
+            $systemPrompt = $this->buildAgentSystemPrompt($agent, null, $input, $systemPromptParts, array_merge($tierConfig, ['max_steps' => 0]));
 
             $model = ($agent->model !== null && $agent->model !== 'auto')
                 ? $agent->model
