@@ -225,6 +225,7 @@ use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SupabaseConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
@@ -476,6 +477,7 @@ class AgentFleetServer extends Server
         AlertConnectorTool::class,
         SlackConnectorTool::class,
         HttpMonitorTool::class,
+        SearxngSearchTool::class,
         InboundConnectorManageTool::class,
         ConnectorBindingTool::class,
         ConnectorBindingDeleteTool::class,

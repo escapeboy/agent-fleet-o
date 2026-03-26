@@ -508,17 +508,44 @@ class BridgeController extends Controller
     /**
      * Disconnect a bridge session.
      *
-     * Accepts optional connection_id to disconnect a specific bridge.
-     * Without connection_id, disconnects all active bridges for the team.
+     * Accepts optional session_id (relay-generated, used to guard against reconnect races)
+     * or connection_id to disconnect a specific bridge.
+     * Without either, disconnects all active bridges for the team.
      */
     public function disconnect(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'session_id' => 'nullable|string|max:255',
             'connection_id' => 'nullable|uuid',
         ]);
 
         $teamId = $this->resolveTeamId($request);
+        $sessionId = $validated['session_id'] ?? null;
         $connectionId = $validated['connection_id'] ?? null;
+
+        // If session_id is provided (relay disconnect), only disconnect if it still
+        // matches the active connection. Guards against the reconnect race where the
+        // old relay goroutine fires DELETE after a new session has already registered.
+        if ($sessionId) {
+            $connection = BridgeConnection::where('team_id', $teamId)
+                ->where('session_id', $sessionId)
+                ->active()
+                ->first();
+
+            if (! $connection) {
+                // Either already superseded by a newer session or already disconnected.
+                Log::info('BridgeController: stale disconnect ignored', [
+                    'team_id' => $teamId,
+                    'session_id' => $sessionId,
+                ]);
+
+                return response()->json(['data' => ['disconnected' => 0, 'reason' => 'stale']]);
+            }
+
+            app(TerminateBridgeConnection::class)->execute($connection);
+
+            return response()->json(['data' => ['disconnected' => 1]]);
+        }
 
         $query = BridgeConnection::where('team_id', $teamId)->active();
 

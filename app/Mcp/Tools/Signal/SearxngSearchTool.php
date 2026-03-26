@@ -2,7 +2,10 @@
 
 namespace App\Mcp\Tools\Signal;
 
+use App\Domain\Shared\Services\SsrfGuard;
+use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Connectors\SearxngConnector;
+use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -10,71 +13,81 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 /**
- * MCP tool for web search via a self-hosted Searxng instance.
+ * MCP tool for synchronous web search via a self-hosted Searxng instance.
  *
- * Requires SEARXNG_URL to be configured. The URL is always operator-set,
- * never user-supplied, so the SSRF check is skipped for internal Docker URLs.
+ * Resolves the Searxng URL from operator configuration only (in priority order):
+ *   1. GlobalSetting::get('searxng_url')
+ *   2. config('services.searxng.url') / SEARXNG_URL env var
+ *
+ * The URL is intentionally not agent-supplied to prevent SSRF via LLM tool calls.
+ *
+ * @see https://github.com/searxng/searxng
  */
 #[IsReadOnly]
 class SearxngSearchTool extends Tool
 {
     protected string $name = 'searxng_search';
 
-    protected string $description = 'Search the web using the platform\'s self-hosted Searxng instance. Returns titles, URLs, and content snippets from multiple search engines. Use for current events, research, and finding external information.';
+    protected string $description = 'Search the web using a self-hosted Searxng meta-search instance. Returns titles, URLs, and snippets. Requires a Searxng instance configured via SEARXNG_URL env var or platform settings.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
             'query' => $schema->string()
-                ->description('Search query')
+                ->description('Search query string')
                 ->required(),
-            'engines' => $schema->array()
-                ->description('Search engines to use (e.g. ["google", "bing", "duckduckgo"]). Omit to use Searxng defaults.')
+            'categories' => $schema->array()
+                ->description("Searxng categories to search (default: ['general']). Options: general, images, news, science, social_media, videos")
                 ->items($schema->string()),
-            'language' => $schema->string()
-                ->description('Language code for results (default: en)')
-                ->default('en'),
-            'time_range' => $schema->string()
-                ->description('Filter by time range: day | week | month | year')
-                ->enum(['day', 'week', 'month', 'year']),
-            'limit' => $schema->integer()
-                ->description('Number of results to return (default: 10, max: 50)'),
+            'max_results' => $schema->integer()
+                ->description('Maximum number of results to return (default: 5, max: 20)')
+                ->default(5),
         ];
     }
 
     public function handle(Request $request): Response
     {
-        $validated = $request->validate([
-            'query' => 'required|string|max:500',
-            'engines' => 'nullable|array',
-            'engines.*' => 'string|max:50',
-            'language' => 'nullable|string|max:10',
-            'time_range' => 'nullable|string|in:day,week,month,year',
-            'limit' => 'nullable|integer|min:1|max:50',
-        ]);
+        $query = $request->get('query');
 
-        /** @var SearxngConnector $connector */
-        $connector = app(SearxngConnector::class);
-
-        if (! $connector->isConfigured()) {
-            return Response::error('Searxng is not configured on this instance. Set SEARXNG_URL in your environment.');
+        if (empty($query)) {
+            return Response::error('query is required.');
         }
 
-        $results = $connector->search(
-            query: $validated['query'],
-            options: array_filter([
-                'engines' => $validated['engines'] ?? null,
-                'language' => $validated['language'] ?? 'en',
-                'time_range' => $validated['time_range'] ?? null,
-                'limit' => isset($validated['limit']) ? (int) $validated['limit'] : 10,
-            ], fn ($v) => $v !== null),
-            skipSsrfCheck: true, // URL is always operator-configured, never user-supplied
+        // URL is operator-configured only — never agent-supplied — to prevent SSRF.
+        $instanceUrl = GlobalSetting::get('searxng_url')
+            ?? config('services.searxng.url');
+
+        if (! $instanceUrl) {
+            return Response::error(
+                'No Searxng instance configured. Set SEARXNG_URL in your environment or configure it in platform settings (searxng_url).'
+            );
+        }
+
+        $maxResults = min((int) ($request->get('max_results') ?? 5), 20);
+        $categories = $request->get('categories') ?? ['general'];
+
+        $connector = new SearxngConnector(
+            app(IngestSignalAction::class),
+            app(SsrfGuard::class),
         );
 
+        $results = $connector->search($instanceUrl, $query, [
+            'categories' => $categories,
+            'max_results' => $maxResults,
+        ]);
+
+        if (empty($results)) {
+            return Response::text(json_encode([
+                'query' => $query,
+                'results' => [],
+                'message' => 'No results found.',
+            ]));
+        }
+
         return Response::text(json_encode([
+            'query' => $query,
             'results' => $results,
             'count' => count($results),
-            'query' => $validated['query'],
         ]));
     }
 }

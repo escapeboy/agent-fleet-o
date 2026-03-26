@@ -15,6 +15,7 @@ namespace App\Domain\Memory\Enums;
  *   facts     → stable factual assertions (sub-tier of canonical)
  *   decisions → architectural / strategic decisions with rationale
  *   failures  → lessons learned from failed experiments (see ExtractFailureLessonAction)
+ *   successes → effective patterns from completed experiments (see ExtractSuccessPatternAction)
  */
 enum MemoryTier: string
 {
@@ -24,12 +25,13 @@ enum MemoryTier: string
     case Facts = 'facts';
     case Decisions = 'decisions';
     case Failures = 'failures';
+    case Successes = 'successes';
 
     /** Whether this tier is considered curated (canonical or above). */
     public function isCurated(): bool
     {
         return match ($this) {
-            self::Canonical, self::Facts, self::Decisions, self::Failures => true,
+            self::Canonical, self::Facts, self::Decisions, self::Failures, self::Successes => true,
             default => false,
         };
     }

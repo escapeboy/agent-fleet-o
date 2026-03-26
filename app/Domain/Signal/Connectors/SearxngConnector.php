@@ -3,60 +3,80 @@
 namespace App\Domain\Signal\Connectors;
 
 use App\Domain\Shared\Services\SsrfGuard;
+use App\Domain\Signal\Actions\IngestSignalAction;
+use App\Domain\Signal\Contracts\InputConnectorInterface;
+use App\Domain\Signal\Models\Signal;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Searxng search connector.
+ * Searxng self-hosted meta-search connector.
  *
- * Queries a self-hosted Searxng instance for web search results.
- * The URL is always operator-configured (GlobalSetting or config), never user-supplied.
+ * Polls a Searxng instance for search results and ingests them as signals.
+ * Searxng is a free, privacy-respecting meta-search engine that can be self-hosted
+ * via Docker at zero per-query cost.
  *
- * Note: assertPublicUrl() is skipped when $skipSsrfCheck=true because Searxng
- * may run as an internal Docker service (RFC 1918) that is operator-trusted.
- * Never pass skipSsrfCheck=true with user-supplied URLs.
+ * Config keys:
+ *   url         — Searxng instance base URL, e.g. http://searxng:8888 (required)
+ *   query       — search query string (required for poll mode)
+ *   categories  — array of Searxng categories (default: ['general'])
+ *   engines     — comma-separated engine names to restrict search (default: '' = all active)
+ *   language    — language code, e.g. 'en' (default: 'en')
+ *   max_results — maximum results to ingest per poll cycle (default: 10)
+ *   timeout     — HTTP request timeout in seconds (default: 15)
+ *
+ * @see https://github.com/searxng/searxng
  */
-class SearxngConnector
+class SearxngConnector implements InputConnectorInterface
 {
     public function __construct(
+        private readonly IngestSignalAction $ingestAction,
         private readonly SsrfGuard $ssrfGuard,
     ) {}
 
-    /**
-     * Search Searxng and return an array of result items.
-     *
-     * @param  string  $query  Search query
-     * @param  array{engines?: string[], language?: string, time_range?: string, safesearch?: int, limit?: int}  $options
-     * @param  bool  $skipSsrfCheck  Set true when URL is operator-configured (e.g. internal Docker hostname)
-     * @return array<int, array{title: string, url: string, content: string, engine: string}>
-     */
-    public function search(string $query, array $options = [], bool $skipSsrfCheck = false): array
+    public function getDriverName(): string
     {
-        $url = $this->resolveUrl();
-        if (! $url) {
+        return 'searxng';
+    }
+
+    /**
+     * @return Signal[]
+     */
+    public function poll(array $config): array
+    {
+        $url = rtrim($config['url'] ?? '', '/');
+        $query = $config['query'] ?? null;
+
+        if (! $url || ! $query) {
+            Log::warning('SearxngConnector: url and query are required', $config);
+
             return [];
         }
 
-        if (! $skipSsrfCheck) {
-            $this->ssrfGuard->assertPublicUrl($url);
-        }
+        $categories = implode(',', (array) ($config['categories'] ?? ['general']));
+        $engines = $config['engines'] ?? '';
+        $language = $config['language'] ?? 'en';
+        $maxResults = min((int) ($config['max_results'] ?? 10), 100);
+        $timeout = min((int) ($config['timeout'] ?? 15), 30);
 
         try {
+            // poll() URL comes from user-configured connector bindings — must validate.
+            $this->ssrfGuard->assertPublicUrl($url);
+
             $params = array_filter([
                 'q' => $query,
                 'format' => 'json',
-                'engines' => isset($options['engines']) ? implode(',', $options['engines']) : null,
-                'language' => $options['language'] ?? 'en',
-                'time_range' => $options['time_range'] ?? null,
-                'safesearch' => $options['safesearch'] ?? 1,
-            ], fn ($v) => $v !== null && $v !== '');
+                'categories' => $categories,
+                'engines' => $engines,
+                'language' => $language,
+            ]);
 
-            $response = Http::timeout(15)->get(rtrim($url, '/').'/search', $params);
+            $response = Http::timeout($timeout)->get("{$url}/search", $params);
 
             if (! $response->successful()) {
-                Log::warning('SearxngConnector: search failed', [
+                Log::warning('SearxngConnector: request failed', [
+                    'url' => $url,
                     'status' => $response->status(),
-                    'query' => $query,
                 ]);
 
                 return [];
@@ -64,17 +84,20 @@ class SearxngConnector
 
             $data = $response->json();
             $results = $data['results'] ?? [];
-            $limit = min((int) ($options['limit'] ?? 10), 50);
 
-            return array_map(fn (array $item) => [
-                'title' => $item['title'] ?? '',
-                'url' => $item['url'] ?? '',
-                'content' => $item['content'] ?? '',
-                'engine' => $item['engine'] ?? '',
-            ], array_slice($results, 0, $limit));
+            if (empty($results)) {
+                return [];
+            }
+
+            return $this->ingestResults(
+                array_slice($results, 0, $maxResults),
+                $query,
+                $categories,
+                $config,
+            );
         } catch (\Throwable $e) {
-            Log::error('SearxngConnector: error during search', [
-                'query' => $query,
+            Log::warning('SearxngConnector: poll failed', [
+                'url' => $url,
                 'error' => $e->getMessage(),
             ]);
 
@@ -83,15 +106,120 @@ class SearxngConnector
     }
 
     /**
-     * Check whether a Searxng instance is configured and reachable.
+     * Execute a one-off synchronous search and return raw results (no signal ingestion).
+     *
+     * Used by the SearxngSearchTool for agent-driven searches.
+     *
+     * The $instanceUrl is always operator-configured (GlobalSetting or env var),
+     * never user-supplied, so the SSRF check is intentionally skipped here.
+     * This allows internal Docker hostnames like http://searxng:8888 to work
+     * in production without being blocked as RFC 1918 addresses.
+     *
+     * @return array<int, array{title: string, url: string, content: string, score: float, engine: string}>
      */
-    public function isConfigured(): bool
+    public function search(string $instanceUrl, string $query, array $options = []): array
     {
-        return (bool) $this->resolveUrl();
+        $url = rtrim($instanceUrl, '/');
+        $categories = implode(',', (array) ($options['categories'] ?? ['general']));
+        $engines = $options['engines'] ?? '';
+        $language = $options['language'] ?? 'en';
+        $maxResults = min((int) ($options['max_results'] ?? 5), 20);
+        $timeout = min((int) ($options['timeout'] ?? 15), 30);
+
+        try {
+            // NOTE: assertPublicUrl() is intentionally NOT called here.
+            // search() is always invoked with an operator-configured URL
+            // (from GlobalSetting or SEARXNG_URL env var), which may be an
+            // internal Docker hostname (RFC 1918). Calling SSRF guard here
+            // would block legitimate production deployments.
+
+            $params = array_filter([
+                'q' => $query,
+                'format' => 'json',
+                'categories' => $categories,
+                'engines' => $engines,
+                'language' => $language,
+            ]);
+
+            $response = Http::timeout($timeout)->get("{$url}/search", $params);
+
+            if (! $response->successful()) {
+                return [];
+            }
+
+            $results = $response->json('results', []);
+
+            return array_map(fn (array $r) => [
+                'title' => $r['title'] ?? '',
+                'url' => $r['url'] ?? '',
+                'content' => $r['content'] ?? '',
+                'score' => (float) ($r['score'] ?? 0),
+                'engine' => $r['engine'] ?? '',
+            ], array_slice($results, 0, $maxResults));
+        } catch (\Throwable $e) {
+            Log::warning('SearxngConnector: search failed', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
     }
 
-    private function resolveUrl(): ?string
+    public function supports(string $driver): bool
     {
-        return config('services.searxng.url') ?: null;
+        return $driver === 'searxng';
+    }
+
+    /**
+     * @return Signal[]
+     */
+    private function ingestResults(array $results, string $query, string $categories, array $config): array
+    {
+        $signals = [];
+        $tags = array_merge(
+            ['search', 'searxng'],
+            array_filter(explode(',', $categories)),
+        );
+
+        foreach ($results as $result) {
+            $title = $result['title'] ?? '';
+            $resultUrl = $result['url'] ?? '';
+            $content = $result['content'] ?? '';
+
+            if (empty($resultUrl)) {
+                continue;
+            }
+
+            $body = trim($title ? "{$title}\n\n{$content}" : $content) ?: $resultUrl;
+
+            try {
+                $ingested = $this->ingestAction->execute(
+                    sourceType: 'searxng',
+                    sourceIdentifier: $resultUrl,
+                    payload: [
+                        'url' => $resultUrl,
+                        'title' => $title,
+                        'body' => $body,
+                        'engine' => $result['engine'] ?? '',
+                        'score' => $result['score'] ?? null,
+                        'query' => $query,
+                    ],
+                    tags: $tags,
+                    experimentId: $config['experiment_id'] ?? null,
+                );
+
+                if ($ingested) {
+                    $signals[] = $ingested;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('SearxngConnector: failed to ingest result', [
+                    'url' => $resultUrl,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $signals;
     }
 }

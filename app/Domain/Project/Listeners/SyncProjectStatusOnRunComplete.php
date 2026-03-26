@@ -61,11 +61,18 @@ class SyncProjectStatusOnRunComplete
             'output_summary' => $outputSummary,
         ]);
 
-        $project->update([
+        $updateData = [
             'successful_runs' => $project->successful_runs + 1,
             'total_spend_credits' => $project->total_spend_credits + ($run->experiment?->budget_spent_credits ?? 0),
             'last_run_at' => now(),
-        ]);
+        ];
+
+        // A successful run recovers a failed continuous project back to active.
+        if ($project->isContinuous() && $project->status === ProjectStatus::Failed) {
+            $updateData['status'] = ProjectStatus::Active;
+        }
+
+        $project->update($updateData);
 
         // One-shot projects complete when their run completes
         if ($project->type === ProjectType::OneShot) {
