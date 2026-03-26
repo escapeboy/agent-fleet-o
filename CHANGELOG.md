@@ -2,6 +2,35 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.12.0] - 2026-03-26
+
+### Added
+
+- **Crew Task Dependency Graph** — Tasks in a Crew execution can now declare explicit dependencies (`depends_on` UUID array). Tasks with unmet dependencies start in a `Blocked` state and are automatically unblocked — inside the same DB transaction, with pessimistic locking to prevent duplicate dispatch — as soon as all their dependencies reach `Validated` or `Skipped` status. Cyclic dependency detection (DFS) is enforced at creation time.
+- **LightRAG-Style Memory Graph Retrieval** — `memory_search` MCP tool now accepts a `search_mode` parameter: `semantic` (flat keyword search, default), `local` (1-hop entity graph traversal), `global` (high-centrality entity traversal), `hybrid` (semantic + local), and `mix` (semantic + global). Graph traversal uses recursive CTEs on `kg_edges`.
+- **MiniRAG Heterogeneous Knowledge Graph** — `kg_edges` table extended with `source_node_type`, `target_node_type` (entity/chunk), and `edge_type` (relates_to/contains/co_occurs/similar) columns. Source provenance tracing (chunk→entity) now supported.
+- **Two New KG MCP Tools** — `kg_graph_search` (multi-hop entity traversal with configurable mode and hops) and `kg_edge_provenance` (trace which memory chunks sourced a given entity).
+- **AnyTool-Style Progressive Tool RAG** — `ResolveAgentToolsAction` now pre-filters tools through a 3-stage pipeline before the expensive pgvector lookup: (1) keyword token match, (2) fuzzy name similarity (`similar_text` > 60%), (3) semantic pgvector fallback. Reduces LLM context pollution for agents with large tool sets.
+- **Lazy MCP Stdio Handle Registry** — `McpHandleRegistry` singleton manages lazily-initialised MCP stdio process handles, preventing redundant subprocess spawns across tool resolutions in the same request.
+- **FastCode-Style Code Intelligence Foundation** — New `code_elements` and `code_edges` tables with pgvector HNSW index for semantic code search. `PhpCodeParser` extracts classes, methods, and functions via `nikic/php-parser`. `IndexRepositoryAction` indexes repositories through the existing `GitClientInterface` (no local filesystem clone required). `IndexRepositoryJob` dispatched on repository sync.
+- **Code Intelligence Services** — `CodeRetriever` (hybrid pgvector + tsvector search with configurable weights), `CodeGraphTraversal` (N-hop recursive CTE traversal, edge-type filtered in both anchor and recursive parts), `CodeSkimmingService` (signatures-only view, no full content load).
+- **Four New Code Intelligence MCP Tools** — `code_search` (hybrid semantic + keyword search over code elements), `code_structure` (file structure outline — classes/methods/functions with line numbers), `code_call_chain` (N-hop call/import/inheritance graph traversal), `code_skim_file` (compact signatures-only file survey).
+
+### Changed
+
+- `CrewTaskStatus` enum extended with `Blocked` case. `blocked` tasks are excluded from active/terminal counts and displayed in orange in the UI.
+- `TaskDependencyResolver` updated to use UUID-based `depends_on` references (previously sort_order integers).
+- `KgEdge` model extended with `node_type` and `edge_type` scopes for heterogeneous graph queries.
+
+### Fixed
+
+- GitRepository MCP tools now resolve `team_id` explicitly from MCP context (`app('mcp.team_id')`) instead of deriving it from the repository model — prevents cross-tenant access if `TeamScope` is not active in queue context.
+- `MemorySearchTool` replaced `auth()->user()?->current_team_id` with `app('mcp.team_id')` — fixes null team_id in stdio MCP connections which previously caused the `team_id` WHERE clause to be silently dropped.
+- `DependencyGraph::autoUnblock` adds `lockForUpdate()` on per-dependent re-fetch to prevent duplicate `ExecuteCrewTaskJob` dispatch in concurrent task completion scenarios.
+- `CodeGraphTraversal` CTE now applies `edge_type` filter in the recursive part (was anchor-only, causing hops > 1 to traverse edges of wrong type).
+- `DecomposeGoalAction` asserts coordinator and worker agent `team_id` matches execution `team_id` after `withoutGlobalScopes()` lookup.
+- `CodeRetriever` validates DB-sourced UUIDs with a regex before interpolating into raw SQL `orderByRaw` expression.
+
 ## [1.11.0] - 2026-03-25
 
 ### Added
