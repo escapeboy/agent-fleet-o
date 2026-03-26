@@ -43,6 +43,8 @@ class CreateAgentForm extends Component
 
     public string $executionTier = 'standard';
 
+    public ?int $thinkingBudget = null;
+
     public function mount(): void
     {
         $templateSlug = request('template');
@@ -93,6 +95,10 @@ class CreateAgentForm extends Component
         $team = auth()->user()->currentTeam;
 
         $config = ['execution_tier' => $this->executionTier];
+
+        if ($this->thinkingBudget !== null && $this->thinkingBudget > 0) {
+            $config['thinking_budget'] = $this->thinkingBudget;
+        }
         $filteredChain = array_filter($this->fallbackChain, fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']));
         if (! empty($filteredChain)) {
             $config['fallback_chain'] = array_values($filteredChain);

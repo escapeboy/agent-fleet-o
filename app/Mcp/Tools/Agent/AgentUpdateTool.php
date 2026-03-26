@@ -42,6 +42,8 @@ class AgentUpdateTool extends Tool
                 ->enum(['public', 'internal', 'confidential', 'restricted']),
             'sandbox_profile' => $schema->string()
                 ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Pass "null" to remove. Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
+            'thinking_budget' => $schema->integer()
+                ->description('Anthropic extended thinking budget in tokens (e.g. 1024, 4096, 8192). Only applies when agent provider is "anthropic". Set to 0 to disable. Enables chain-of-thought reasoning visible in experiment steps.'),
         ];
     }
 
@@ -59,6 +61,7 @@ class AgentUpdateTool extends Tool
             'budget_cap_credits' => 'nullable|integer|min:0',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'sandbox_profile' => 'nullable|string',
+            'thinking_budget' => 'nullable|integer|min:0',
         ]);
 
         $agent = Agent::find($validated['agent_id']);
@@ -96,8 +99,19 @@ class AgentUpdateTool extends Tool
             }
         }
 
+        // thinking_budget: stored in agent.config JSONB, not as a top-level column
+        if (array_key_exists('thinking_budget', $validated) && $validated['thinking_budget'] !== null) {
+            $currentConfig = $agent->config ?? [];
+            if ((int) $validated['thinking_budget'] === 0) {
+                unset($currentConfig['thinking_budget']);
+            } else {
+                $currentConfig['thinking_budget'] = (int) $validated['thinking_budget'];
+            }
+            $data['config'] = $currentConfig;
+        }
+
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, sandbox_profile.');
+            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, sandbox_profile, thinking_budget.');
         }
 
         app(RecordAgentConfigRevisionAction::class)->execute(

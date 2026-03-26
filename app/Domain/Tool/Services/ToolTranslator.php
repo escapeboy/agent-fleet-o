@@ -6,6 +6,7 @@ use App\Domain\Agent\Services\DockerSandboxExecutor;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Audit\Services\OcsfMapper;
+use App\Domain\Experiment\Actions\CaptureScreenshotArtifactsAction;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
@@ -180,6 +181,7 @@ class ToolTranslator
             BuiltInToolKind::Browser => $this->buildBrowserTools($tool),
             BuiltInToolKind::Ssh => $this->buildSshTools($tool, $overrides),
             BuiltInToolKind::BrowserRelay => $this->buildBrowserRelayTools($tool),
+            BuiltInToolKind::ComputerUse => $this->buildComputerUseTools($tool),
             default => [],
         };
     }
@@ -534,6 +536,25 @@ class ToolTranslator
                         return 'Error: Browser task encountered an unexpected error. Please try again.';
                     }
 
+                    // Capture screenshots as artifacts when available and experiment context is set.
+                    $screenshots = $result['screenshots'] ?? [];
+                    if (! empty($screenshots) && $toolModel->team_id && app()->bound('ai.current_experiment_id')) {
+                        try {
+                            app(CaptureScreenshotArtifactsAction::class)->execute(
+                                screenshots: $screenshots,
+                                teamId: $toolModel->team_id,
+                                experimentId: app('ai.current_experiment_id'),
+                                agentId: app()->bound('ai.current_agent_id') ? app('ai.current_agent_id') : null,
+                                stepIndex: 1,
+                            );
+                        } catch (\Throwable $e) {
+                            Log::warning('ToolTranslator: screenshot artifact capture failed', [
+                                'error' => $e->getMessage(),
+                                'team_id' => $toolModel->team_id,
+                            ]);
+                        }
+                    }
+
                     // Audit every browser task in production.
                     if (app()->environment('production') && $toolModel->team_id) {
                         $ocsf = OcsfMapper::classify('browser.task_executed');
@@ -726,5 +747,22 @@ class ToolTranslator
         }
 
         return false;
+    }
+
+    private function buildComputerUseTools(Tool $tool): array
+    {
+        // Base: always disabled — computer use requires a sandboxed container with X11 display.
+        // Cloud overrides this by registering 'computer_use.executor' in the service container.
+        if (app()->bound('computer_use.executor')) {
+            return app('computer_use.executor')($tool);
+        }
+
+        return [
+            PrismTool::as('computer_screenshot')
+                ->for('Capture a screenshot of the current screen (computer use — not available in this environment)')
+                ->using(fn () => json_encode([
+                    'error' => 'Computer use requires a Pro plan with sandbox enabled. Please upgrade to access desktop automation.',
+                ])),
+        ];
     }
 }

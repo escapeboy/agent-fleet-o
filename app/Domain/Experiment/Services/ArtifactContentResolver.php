@@ -21,9 +21,17 @@ class ArtifactContentResolver
         'config', 'deployment', 'deployment_config', 'json', 'configuration',
     ];
 
+    private const IMAGE_TYPES = [
+        'image', 'screenshot', 'photo', 'picture',
+    ];
+
     public static function category(string $type, ?string $content = null): string
     {
         $type = strtolower(trim($type));
+
+        if (in_array($type, self::IMAGE_TYPES, true)) {
+            return 'image';
+        }
 
         if (in_array($type, self::HTML_TYPES, true)) {
             return 'html';
@@ -167,6 +175,11 @@ class ArtifactContentResolver
     private static function sniffContent(string $content): string
     {
         $trimmed = ltrim($content);
+
+        // Base64 image data URI detection
+        if (str_starts_with($trimmed, 'data:image/')) {
+            return 'image';
+        }
 
         // HTML detection
         if (str_starts_with($trimmed, '<!DOCTYPE') || str_starts_with($trimmed, '<html') || str_starts_with($trimmed, '<HTML')) {

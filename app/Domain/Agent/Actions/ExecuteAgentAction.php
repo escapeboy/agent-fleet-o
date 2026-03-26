@@ -229,6 +229,7 @@ class ExecuteAgentAction
                 temperature: $tierConfig['temperature'],
                 tools: $tools,
                 maxSteps: $tierConfig['max_steps'],
+                thinkingBudget: $tierConfig['thinking_budget'] ?? null,
             );
 
             $response = $this->gateway->complete($request);

@@ -49,6 +49,14 @@ class PrismAiGateway implements AiGatewayInterface
             app()->instance('ai.current_team_id', $request->teamId);
         }
 
+        if ($request->experimentId) {
+            app()->instance('ai.current_experiment_id', $request->experimentId);
+        }
+
+        if ($request->agentId) {
+            app()->instance('ai.current_agent_id', $request->agentId);
+        }
+
         $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeRequest($req));
 
         return $pipeline($request);
@@ -189,6 +197,16 @@ class PrismAiGateway implements AiGatewayInterface
             ->usingTemperature($request->temperature)
             ->withClientOptions(['timeout' => 120])
             ->withClientRetry(2, 500);
+
+        // Extended thinking (Anthropic-only, budget > 0)
+        if ($request->thinkingBudget !== null && $request->thinkingBudget > 0 && $request->provider === 'anthropic') {
+            $builder->withProviderOptions([
+                'thinking' => [
+                    'enabled' => true,
+                    'budgetTokens' => $request->thinkingBudget,
+                ],
+            ]);
+        }
 
         // Add tool support when tools are provided
         if ($request->hasTools()) {

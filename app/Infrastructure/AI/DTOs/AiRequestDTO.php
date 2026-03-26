@@ -29,6 +29,8 @@ final readonly class AiRequestDTO
         public ?string $toolChoice = null,
         /** Custom endpoint credential name (only when provider='custom_endpoint') */
         public ?string $providerName = null,
+        /** Anthropic extended thinking budget in tokens (null = disabled, only used when provider='anthropic') */
+        public ?int $thinkingBudget = null,
     ) {}
 
     public function isStructured(): bool
