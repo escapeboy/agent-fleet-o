@@ -11,6 +11,7 @@ use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -80,7 +81,7 @@ class KnowledgeBaseController extends Controller
     public function search(Request $request, SearchKnowledgeAction $action): JsonResponse
     {
         $validated = $request->validate([
-            'knowledge_base_id' => ['required', 'uuid', 'exists:knowledge_bases,id'],
+            'knowledge_base_id' => ['required', 'uuid', Rule::exists('knowledge_bases', 'id')->where('team_id', $request->user()->current_team_id)],
             'query' => ['required', 'string', 'min:1', 'max:500'],
             'top_k' => ['sometimes', 'integer', 'min:1', 'max:20'],
         ]);
