@@ -19,10 +19,13 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Add pgvector column and HNSW index only on PostgreSQL
+        // Add pgvector column and HNSW index only when extension is available
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement('ALTER TABLE skill_embeddings ADD COLUMN embedding vector(1536)');
-            DB::statement('CREATE INDEX skill_embeddings_embedding_idx ON skill_embeddings USING hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=64)');
+            $hasVector = DB::selectOne("SELECT COUNT(*) AS cnt FROM pg_extension WHERE extname = 'vector'");
+            if ($hasVector && $hasVector->cnt > 0) {
+                DB::statement('ALTER TABLE skill_embeddings ADD COLUMN embedding vector(1536)');
+                DB::statement('CREATE INDEX skill_embeddings_embedding_idx ON skill_embeddings USING hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=64)');
+            }
         }
     }
 
