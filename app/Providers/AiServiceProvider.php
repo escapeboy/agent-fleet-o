@@ -86,16 +86,13 @@ class AiServiceProvider extends ServiceProvider
                 gateway: $app->make(PrismAiGateway::class),
                 circuitBreaker: $app->make(CircuitBreaker::class),
                 fallbackChains: [
-                    // Bridge agent fallbacks — when bridge is down, route to Google Gemini
-                    'bridge_agent/claude-code:claude-haiku-4-5' => [
-                        ['provider' => 'google', 'model' => 'gemini-2.5-flash'],
-                    ],
-                    'bridge_agent/claude-code:claude-sonnet-4-5' => [
-                        ['provider' => 'google', 'model' => 'gemini-2.5-pro'],
-                    ],
-                    'bridge_agent/claude-code:claude-opus-4-6' => [
-                        ['provider' => 'google', 'model' => 'gemini-2.5-pro'],
-                    ],
+                    // Bridge agent — no fallback when bridge is down.
+                    // Bridge agents require local tools (Playwright, filesystem, etc.) that cloud providers
+                    // cannot access. Falling back to a cloud LLM causes hallucinated results, not a
+                    // graceful degradation. Fail fast so the error is visible and actionable.
+                    'bridge_agent/claude-code:claude-haiku-4-5' => [],
+                    'bridge_agent/claude-code:claude-sonnet-4-5' => [],
+                    'bridge_agent/claude-code:claude-opus-4-6' => [],
                     // Cloud provider fallbacks
                     'anthropic/claude-sonnet-4-5-20250929' => [
                         ['provider' => 'openai', 'model' => 'gpt-4o'],
