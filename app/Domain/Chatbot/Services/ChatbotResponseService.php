@@ -57,7 +57,7 @@ class ChatbotResponseService
         // RAG retrieval — only if chatbot has indexed knowledge sources
         $ragChunks = [];
         $bestRagScore = 0.0;
-        if ($chatbot->knowledgeSources()->where('status', 'ready')->exists()) {
+        if ($chatbot->knowledgeSources()->where('status', 'ready')->where('is_enabled', true)->exists()) {
             $ragChunks = $this->retrieveRelevantChunks($chatbot, $userText);
             $bestRagScore = ! empty($ragChunks) ? (float) ($ragChunks[0]['similarity'] ?? 0.0) : 0.0;
         }
@@ -370,14 +370,15 @@ class ChatbotResponseService
             ];
 
             $rows = DB::select(
-                "SELECT id, content, access_level, source_id, 1 - (embedding <=> ?::vector) AS similarity
-                 FROM chatbot_kb_chunks
-                 WHERE chatbot_id = ?
-                   AND team_id = ?
-                   AND embedding IS NOT NULL
-                   AND access_level IN ({$placeholders})
-                   AND 1 - (embedding <=> ?::vector) >= ?
-                 ORDER BY embedding <=> ?::vector
+                "SELECT ckc.id, ckc.content, ckc.access_level, ckc.source_id, 1 - (ckc.embedding <=> ?::vector) AS similarity
+                 FROM chatbot_kb_chunks ckc
+                 JOIN chatbot_knowledge_sources cks ON cks.id = ckc.source_id AND cks.is_enabled = true AND cks.deleted_at IS NULL
+                 WHERE ckc.chatbot_id = ?
+                   AND ckc.team_id = ?
+                   AND ckc.embedding IS NOT NULL
+                   AND ckc.access_level IN ({$placeholders})
+                   AND 1 - (ckc.embedding <=> ?::vector) >= ?
+                 ORDER BY ckc.embedding <=> ?::vector
                  LIMIT ?",
                 $params,
             );

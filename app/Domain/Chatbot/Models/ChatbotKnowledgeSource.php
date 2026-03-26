@@ -26,6 +26,7 @@ class ChatbotKnowledgeSource extends Model
         'source_url',
         'source_data',
         'status',
+        'is_enabled',
         'error_message',
         'chunk_count',
         'indexed_at',
@@ -35,6 +36,7 @@ class ChatbotKnowledgeSource extends Model
         'type' => KnowledgeSourceType::class,
         'status' => KnowledgeSourceStatus::class,
         'source_data' => 'array',
+        'is_enabled' => 'boolean',
         'chunk_count' => 'integer',
         'indexed_at' => 'datetime',
     ];

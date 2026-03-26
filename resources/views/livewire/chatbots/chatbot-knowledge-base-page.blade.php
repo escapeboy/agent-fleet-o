@@ -87,7 +87,10 @@
                     <div class="flex items-center justify-between px-6 py-4">
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-3">
-                                <span class="text-sm font-medium text-gray-900">{{ $source->name }}</span>
+                                <span class="text-sm font-medium {{ $source->is_enabled ? 'text-gray-900' : 'text-gray-400' }}">{{ $source->name }}</span>
+                                @if(! $source->is_enabled)
+                                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-400">Disabled</span>
+                                @endif
                                 <span class="rounded-full px-2 py-0.5 text-xs font-medium
                                     {{ $source->status->value === 'ready' ? 'bg-green-100 text-green-700' : '' }}
                                     {{ $source->status->value === 'indexing' ? 'bg-blue-100 text-blue-700' : '' }}
@@ -117,6 +120,14 @@
                             @endif
                         </div>
                         <div class="ml-4 flex shrink-0 items-center gap-2">
+                            {{-- Enable/disable toggle --}}
+                            <button wire:click="toggleSource('{{ $source->id }}')"
+                                title="{{ $source->is_enabled ? 'Disable source' : 'Enable source' }}"
+                                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none
+                                    {{ $source->is_enabled ? 'bg-primary-600' : 'bg-gray-300' }}">
+                                <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
+                                    {{ $source->is_enabled ? 'translate-x-4' : 'translate-x-0.5' }}"></span>
+                            </button>
                             @if($source->chunks_count > 0)
                                 <button wire:click="viewChunks('{{ $source->id }}')"
                                     class="rounded border border-gray-300 px-2 py-1 text-xs {{ $viewingSourceId === $source->id ? 'bg-primary-50 border-primary-300 text-primary-700' : 'text-gray-600 hover:bg-gray-50' }}">

@@ -114,6 +114,17 @@ class ChatbotKnowledgeBasePage extends Component
         $this->chunkSearch = '';
     }
 
+    public function toggleSource(string $sourceId): void
+    {
+        $source = ChatbotKnowledgeSource::where('id', $sourceId)
+            ->where('chatbot_id', $this->chatbot->id)
+            ->firstOrFail();
+
+        $source->update(['is_enabled' => ! $source->is_enabled]);
+
+        session()->flash('message', $source->is_enabled ? 'Source enabled.' : 'Source disabled.');
+    }
+
     public function deleteSource(string $sourceId): void
     {
         $source = ChatbotKnowledgeSource::where('id', $sourceId)
