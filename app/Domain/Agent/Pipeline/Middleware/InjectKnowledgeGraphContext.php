@@ -25,8 +25,13 @@ class InjectKnowledgeGraphContext
     public function handle(AgentExecutionContext $ctx, Closure $next): AgentExecutionContext
     {
         $inputText = is_array($ctx->input)
-            ? ($ctx->input['task'] ?? $ctx->input['content'] ?? $ctx->input['query'] ?? implode(' ', array_filter($ctx->input)))
+            ? ($ctx->input['task'] ?? $ctx->input['content'] ?? $ctx->input['query'] ?? implode(' ', array_filter($ctx->input, 'is_string')))
             : (string) $ctx->input;
+
+        // If the scout phase identified targeted queries, prepend them to focus the embedding search
+        if (! empty($ctx->scoutQueries)) {
+            $inputText = implode(' ', $ctx->scoutQueries).' '.$inputText;
+        }
 
         if (mb_strlen(trim($inputText)) < 10) {
             return $next($ctx);

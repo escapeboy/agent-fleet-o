@@ -18,9 +18,14 @@ class InjectMemoryContext
 
     public function handle(AgentExecutionContext $ctx, Closure $next): AgentExecutionContext
     {
+        // If the scout phase identified targeted queries, use them to improve retrieval
+        $input = ! empty($ctx->scoutQueries)
+            ? array_merge($ctx->input, ['_scout_queries' => implode(' | ', $ctx->scoutQueries)])
+            : $ctx->input;
+
         $memoryContext = $this->injector->buildContext(
             agentId: $ctx->agent->id,
-            input: $ctx->input,
+            input: $input,
             projectId: $ctx->project?->id,
             teamId: $ctx->teamId,
         );

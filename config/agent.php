@@ -149,4 +149,19 @@ return [
         'semantic_warn_threshold' => (int) env('AGENT_TOOL_LOOP_SEMANTIC_WARN', 3),
         'semantic_critical_threshold' => (int) env('AGENT_TOOL_LOOP_SEMANTIC_CRITICAL', 5),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pre-Execution Scout Phase
+    |--------------------------------------------------------------------------
+    | When enabled, a cheap Haiku call runs before memory/KG injection to
+    | identify what specific knowledge the agent needs. The resulting queries
+    | are used to focus semantic retrieval on what matters for the task.
+    |
+    | Off by default. Enable globally here or per-agent via
+    | agent.config['enable_scout_phase'] = true.
+    */
+    'scout_phase' => [
+        'enabled' => (bool) env('AGENT_SCOUT_PHASE_ENABLED', false),
+    ],
 ];
