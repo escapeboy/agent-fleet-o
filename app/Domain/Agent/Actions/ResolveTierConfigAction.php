@@ -23,6 +23,7 @@ class ResolveTierConfigAction
      *   allow_sub_agents: bool,
      *   planning_depth: int,
      *   tier: ExecutionTier,
+     *   thinking_budget: int|null,
      * }
      */
     public function execute(Agent $agent): array

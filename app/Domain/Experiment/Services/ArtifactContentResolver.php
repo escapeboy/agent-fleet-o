@@ -59,6 +59,7 @@ class ArtifactContentResolver
             'html' => 'text/html; charset=utf-8',
             'markdown' => 'text/markdown; charset=utf-8',
             'json' => 'application/json; charset=utf-8',
+            'image' => 'image/png',
             default => 'text/plain; charset=utf-8',
         };
     }
@@ -69,6 +70,7 @@ class ArtifactContentResolver
             'html' => 'html',
             'markdown' => 'md',
             'json' => 'json',
+            'image' => 'png',
             default => 'txt',
         };
     }

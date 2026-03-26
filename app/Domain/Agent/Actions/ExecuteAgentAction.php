@@ -413,6 +413,7 @@ class ExecuteAgentAction
                 experimentId: $experimentId,
                 purpose: 'agent.workflow_step',
                 temperature: $tierConfig['temperature'],
+                thinkingBudget: $tierConfig['thinking_budget'] ?? null,
             );
 
             // Use streaming when we have a step ID (enables real-time output in UI)
