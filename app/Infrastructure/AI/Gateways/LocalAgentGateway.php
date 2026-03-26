@@ -40,7 +40,7 @@ class LocalAgentGateway implements AiGatewayInterface
 
         $isAssistant = $request->purpose === 'platform_assistant';
         $timeout = config('local_agents.timeout', 300);
-        $workdir = config('local_agents.working_directory') ?? base_path();
+        $workdir = $request->workingDirectory ?? config('local_agents.working_directory') ?? base_path();
 
         // Claude Code assistant: use array-based Process for proper system prompt
         // separation via --system-prompt flag (avoids prompt injection detection).
@@ -226,7 +226,7 @@ class LocalAgentGateway implements AiGatewayInterface
                     'user_prompt' => $request->userPrompt,
                     'model' => $request->model,
                     'timeout' => $bridgeTimeout,
-                    'working_directory' => config('local_agents.working_directory'),
+                    'working_directory' => $request->workingDirectory ?? config('local_agents.working_directory'),
                     'purpose' => $request->purpose,
                 ]);
         } catch (\Throwable $e) {
@@ -355,7 +355,7 @@ class LocalAgentGateway implements AiGatewayInterface
                     'model' => $request->model,
                     'timeout' => $bridgeTimeout,
                     'stream' => true,
-                    'working_directory' => config('local_agents.working_directory'),
+                    'working_directory' => $request->workingDirectory ?? config('local_agents.working_directory'),
                     'purpose' => $request->purpose,
                 ],
                 'headers' => [

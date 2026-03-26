@@ -31,6 +31,8 @@ final readonly class AiRequestDTO
         public ?string $providerName = null,
         /** Anthropic extended thinking budget in tokens (null = disabled, only used when provider='anthropic') */
         public ?int $thinkingBudget = null,
+        /** Per-call working directory override for local agent execution (e.g. a specific repo path) */
+        public ?string $workingDirectory = null,
     ) {}
 
     public function isStructured(): bool

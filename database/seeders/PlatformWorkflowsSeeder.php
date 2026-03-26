@@ -234,6 +234,39 @@ class PlatformWorkflowsSeeder extends Seeder
                     ['source' => 4, 'target' => 5],
                 ],
             ],
+
+            [
+                'slug' => 'fleetq-web-dev-cycle',
+                'name' => 'Web Dev Cycle',
+                'description' => 'Full autonomous web project lifecycle: plan → build → test → lint → review → deploy. Covers feature development, automated testing, code quality checks, human approval, and one-click deployment. Assign your Developer Agent and QA Agent to the corresponding nodes.',
+                'max_loop_iterations' => 3,
+                'nodes' => [
+                    ['type' => 'start', 'label' => 'Feature Request', 'position_x' => 0, 'position_y' => 200],
+                    ['type' => 'agent', 'label' => 'Plan Implementation', 'position_x' => 220, 'position_y' => 200, 'config' => ['agent_role' => 'Developer Agent', 'task' => 'Analyse the feature request and produce an implementation plan: list files to change, functions to add, and edge cases to handle']],
+                    ['type' => 'agent', 'label' => 'Implement Feature', 'position_x' => 440, 'position_y' => 200, 'config' => ['agent_role' => 'Developer Agent', 'task' => 'Implement the feature according to the plan. Write clean, well-structured code following the project conventions']],
+                    ['type' => 'agent', 'label' => 'Run Tests', 'position_x' => 660, 'position_y' => 200, 'config' => ['agent_role' => 'QA Agent', 'task' => 'Run the test suite and report pass/fail counts. If tests fail, describe the failures in detail']],
+                    ['type' => 'conditional', 'label' => 'Tests Pass?', 'position_x' => 880, 'position_y' => 200, 'config' => ['expression' => 'tests.failed == 0']],
+                    ['type' => 'agent', 'label' => 'Fix Failures', 'position_x' => 1100, 'position_y' => 350, 'config' => ['agent_role' => 'Developer Agent', 'task' => 'Fix the failing tests identified in the previous step. Address each failure and re-run to confirm resolution']],
+                    ['type' => 'agent', 'label' => 'Run Linter', 'position_x' => 1100, 'position_y' => 100, 'config' => ['agent_role' => 'QA Agent', 'task' => 'Run the linter and static analysis. Report any style violations or type errors']],
+                    ['type' => 'agent', 'label' => 'Code Review', 'position_x' => 1320, 'position_y' => 200, 'config' => ['agent_role' => 'Developer Agent', 'task' => 'Review the implementation for security issues, performance concerns, and adherence to best practices. Summarise findings']],
+                    ['type' => 'human_task', 'label' => 'Approve & Deploy', 'position_x' => 1540, 'position_y' => 200, 'config' => ['instructions' => 'Review the implementation summary, test results, lint report, and code review findings. Approve to trigger deployment or reject with feedback.', 'form_schema' => ['type' => 'object', 'properties' => ['environment' => ['type' => 'string', 'enum' => ['staging', 'production'], 'title' => 'Deploy to'], 'feedback' => ['type' => 'string', 'title' => 'Feedback (if rejecting)']]]]],
+                    ['type' => 'agent', 'label' => 'Deploy', 'position_x' => 1760, 'position_y' => 200, 'config' => ['agent_role' => 'Developer Agent', 'task' => 'Deploy the feature to the environment specified in the approval step. Verify the deployment succeeded and report the live URL']],
+                    ['type' => 'end', 'label' => 'Shipped', 'position_x' => 1980, 'position_y' => 200],
+                ],
+                'edges' => [
+                    ['source' => 0, 'target' => 1],
+                    ['source' => 1, 'target' => 2],
+                    ['source' => 2, 'target' => 3],
+                    ['source' => 3, 'target' => 4],
+                    ['source' => 4, 'target' => 5, 'label' => 'Failures', 'condition' => 'tests.failed > 0'],
+                    ['source' => 4, 'target' => 6, 'is_default' => true, 'label' => 'Passing'],
+                    ['source' => 5, 'target' => 6, 'label' => 'Fixed'],
+                    ['source' => 6, 'target' => 7],
+                    ['source' => 7, 'target' => 8],
+                    ['source' => 8, 'target' => 9, 'label' => 'Approved'],
+                    ['source' => 9, 'target' => 10],
+                ],
+            ],
         ];
     }
 }

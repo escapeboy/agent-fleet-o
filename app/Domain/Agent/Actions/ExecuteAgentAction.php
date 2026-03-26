@@ -230,6 +230,7 @@ class ExecuteAgentAction
                 tools: $tools,
                 maxSteps: $tierConfig['max_steps'],
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
+                workingDirectory: $agent->configuration['working_directory'] ?? null,
             );
 
             $response = $this->gateway->complete($request);
@@ -414,6 +415,7 @@ class ExecuteAgentAction
                 purpose: 'agent.workflow_step',
                 temperature: $tierConfig['temperature'],
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
+                workingDirectory: $agent->configuration['working_directory'] ?? null,
             );
 
             // Use streaming when we have a step ID (enables real-time output in UI)
