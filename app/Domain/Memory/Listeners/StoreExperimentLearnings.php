@@ -84,7 +84,7 @@ class StoreExperimentLearnings
             ->whereIn('stage', [
                 StageType::Scoring->value,
                 StageType::Planning->value,
-                StageType::Evaluation->value,
+                StageType::Evaluating->value,
             ])
             ->whereNotNull('output_snapshot')
             ->orderBy('iteration')
