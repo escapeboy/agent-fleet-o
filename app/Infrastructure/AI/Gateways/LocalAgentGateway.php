@@ -40,7 +40,9 @@ class LocalAgentGateway implements AiGatewayInterface
 
         $isAssistant = $request->purpose === 'platform_assistant';
         $timeout = config('local_agents.timeout', 300);
-        $workdir = $request->workingDirectory ?? config('local_agents.working_directory') ?? base_path();
+        $workdir = $this->resolveWorkingDirectory(
+            $request->workingDirectory ?? config('local_agents.working_directory'),
+        );
 
         // Claude Code assistant: use array-based Process for proper system prompt
         // separation via --system-prompt flag (avoids prompt injection detection).
@@ -958,5 +960,32 @@ class LocalAgentGateway implements AiGatewayInterface
     private function estimateTokens(string $text): int
     {
         return (int) ceil(strlen($text) / 4);
+    }
+
+    /**
+     * Resolve and validate a working directory path.
+     *
+     * Prevents path traversal by canonicalising the path with realpath() and
+     * verifying the result is a readable directory. Falls back to base_path()
+     * when the supplied value is null, empty, or does not resolve to a real
+     * directory, so callers can always rely on a valid cwd being returned.
+     */
+    private function resolveWorkingDirectory(?string $path): string
+    {
+        if ($path === null || $path === '') {
+            return base_path();
+        }
+
+        $resolved = realpath($path);
+
+        if ($resolved === false || ! is_dir($resolved)) {
+            Log::warning('LocalAgentGateway: invalid working_directory, falling back to base_path', [
+                'requested' => $path,
+            ]);
+
+            return base_path();
+        }
+
+        return $resolved;
     }
 }

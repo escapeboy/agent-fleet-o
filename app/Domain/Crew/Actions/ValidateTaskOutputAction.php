@@ -20,7 +20,7 @@ class ValidateTaskOutputAction
     /**
      * Have the QA agent validate a task's output.
      *
-     * @return array{passed: bool, score: float, feedback: string, issues: array}
+     * @return array{passed: bool, score: float, feedback: string, issues: array, criterion_scores?: array<string, float>}
      */
     public function execute(CrewTaskExecution $taskExecution, CrewExecution $execution): array
     {
@@ -33,12 +33,14 @@ class ValidateTaskOutputAction
 
         $resolved = $this->providerResolver->resolve(agent: $qaAgent);
 
-        $qualityThreshold = $config['quality_threshold'] ?? 0.70;
+        $rubric = $this->resolveRubric($taskExecution, $config);
+        $qualityThreshold = $rubric['min_score'] ?? $config['quality_threshold'] ?? 0.70;
 
         $systemPrompt = "You are {$qaAgent->role}. {$qaAgent->goal}\n\n"
-            ."Evaluate the output of a completed task. Check for: accuracy, completeness, relevance to the task description, and quality.\n"
+            ."Evaluate the output of a completed task.\n"
+            .$this->buildRubricSection($rubric)
             ."The quality threshold is {$qualityThreshold} (0.0-1.0).\n\n"
-            .'Respond with valid JSON: { "passed": bool, "score": float (0.0-1.0), "feedback": string, "issues": [string] }';
+            .'Respond with valid JSON: { "passed": bool, "score": float (0.0-1.0), "feedback": string, "issues": [string], "criterion_scores": {"criterion_name": float} }';
 
         $expectedOutput = $taskExecution->input_context['expected_output'] ?? 'No specific format expected';
 
@@ -79,6 +81,63 @@ class ValidateTaskOutputAction
         return $validation;
     }
 
+    /**
+     * Resolve the rubric for the task from crew config, matching by keyword in task title/description.
+     * Falls back to the "default" rubric, then to an empty array (generic evaluation).
+     *
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function resolveRubric(CrewTaskExecution $taskExecution, array $config): array
+    {
+        $rubrics = $config['task_rubrics'] ?? [];
+
+        if (empty($rubrics)) {
+            return [];
+        }
+
+        $taskText = strtolower($taskExecution->title.' '.$taskExecution->description);
+
+        // Try each rubric key (except "default") as a keyword match against the task text
+        foreach ($rubrics as $key => $rubric) {
+            if ($key === 'default') {
+                continue;
+            }
+
+            if (str_contains($taskText, $key)) {
+                return $rubric;
+            }
+        }
+
+        return $rubrics['default'] ?? [];
+    }
+
+    /**
+     * Build the rubric instruction section for the QA system prompt.
+     *
+     * @param  array<string, mixed>  $rubric
+     */
+    private function buildRubricSection(array $rubric): string
+    {
+        $criteria = $rubric['criteria'] ?? [];
+
+        if (empty($criteria)) {
+            return "Check for: accuracy, completeness, relevance to the task description, and quality.\n";
+        }
+
+        $lines = ['Evaluate against these weighted criteria:'];
+        foreach ($criteria as $criterion) {
+            $weightPct = (int) round(($criterion['weight'] ?? 0) * 100);
+            $lines[] = "- **{$criterion['name']}** ({$weightPct}%): {$criterion['description']}";
+        }
+        $lines[] = '';
+
+        return implode("\n", $lines)."\n";
+    }
+
+    /**
+     * @return array{passed: bool, score: float, feedback: string, issues: array, criterion_scores: array<string, float>}
+     */
     private function parseValidation(string $content): array
     {
         $content = trim($content);
@@ -96,6 +155,7 @@ class ValidateTaskOutputAction
                 'score' => 0.0,
                 'feedback' => 'QA agent did not produce a valid validation response.',
                 'issues' => ['Invalid QA response format'],
+                'criterion_scores' => [],
             ];
         }
 
@@ -104,6 +164,7 @@ class ValidateTaskOutputAction
             'score' => (float) min(1.0, max(0.0, $parsed['score'])),
             'feedback' => (string) $parsed['feedback'],
             'issues' => $parsed['issues'] ?? [],
+            'criterion_scores' => is_array($parsed['criterion_scores'] ?? null) ? $parsed['criterion_scores'] : [],
         ];
     }
 }

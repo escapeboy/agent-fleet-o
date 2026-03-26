@@ -206,10 +206,10 @@ class ExecuteAgentAction
         $startTime = hrtime(true);
 
         try {
-            $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input, $systemPromptParts);
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
             $tierConfig = $this->resolveTierConfig->execute($agent);
+            $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input, $systemPromptParts, $tierConfig);
 
             // Tier preference applies only when agent model is set to 'auto' or not set
             $model = ($agent->model !== null && $agent->model !== 'auto')
@@ -230,7 +230,7 @@ class ExecuteAgentAction
                 tools: $tools,
                 maxSteps: $tierConfig['max_steps'],
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
-                workingDirectory: $agent->configuration['working_directory'] ?? null,
+                workingDirectory: $agent->config['working_directory'] ?? null,
             );
 
             $response = $this->gateway->complete($request);
@@ -381,8 +381,6 @@ class ExecuteAgentAction
         $startTime = hrtime(true);
 
         try {
-            $systemPrompt = $this->buildAgentSystemPrompt($agent, null, $input, $systemPromptParts);
-
             // Build user prompt from task + goal + context
             $userPromptParts = [];
             if (! empty($input['task'])) {
@@ -398,6 +396,7 @@ class ExecuteAgentAction
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
             $tierConfig = $this->resolveTierConfig->execute($agent);
+            $systemPrompt = $this->buildAgentSystemPrompt($agent, null, $input, $systemPromptParts, $tierConfig);
 
             $model = ($agent->model !== null && $agent->model !== 'auto')
                 ? $agent->model
@@ -415,7 +414,7 @@ class ExecuteAgentAction
                 purpose: 'agent.workflow_step',
                 temperature: $tierConfig['temperature'],
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
-                workingDirectory: $agent->configuration['working_directory'] ?? null,
+                workingDirectory: $agent->config['working_directory'] ?? null,
             );
 
             // Use streaming when we have a step ID (enables real-time output in UI)
@@ -472,7 +471,10 @@ class ExecuteAgentAction
      *
      * @param  array<string>  $extraParts  Additional sections injected by the pipeline middleware
      */
-    private function buildAgentSystemPrompt(Agent $agent, ?Project $project = null, array $input = [], array $extraParts = []): string
+    /**
+     * @param  array<string, mixed>  $tierConfig  Resolved execution tier config (max_steps, etc.)
+     */
+    private function buildAgentSystemPrompt(Agent $agent, ?Project $project = null, array $input = [], array $extraParts = [], array $tierConfig = []): string
     {
         $parts = [];
 
@@ -525,6 +527,21 @@ class ExecuteAgentAction
         if (! empty($agent->constraints)) {
             $constraintList = collect($agent->constraints)->map(fn ($c) => "- {$c}")->implode("\n");
             $parts[] = "Constraints:\n{$constraintList}";
+        }
+
+        // Execution budget awareness — only meaningful for agentic (multi-step) calls
+        $maxSteps = $tierConfig['max_steps'] ?? 0;
+        if ($maxSteps > 1) {
+            $targetStep = max(1, (int) floor($maxSteps * 0.80));
+            $reservedSteps = $maxSteps - $targetStep;
+            $parts[] = implode("\n", [
+                '## Execution Budget',
+                "You have a maximum of {$maxSteps} tool calls for this task.",
+                "Plan to complete your core work by tool call {$targetStep}.",
+                "Reserve the final {$reservedSteps} call(s) for summarising and delivering your result.",
+                'If you approach the limit with work still remaining: prioritise the most important items,',
+                'then deliver a partial result with clear notes on what was not completed.',
+            ]);
         }
 
         // Include available credentials from project scope

@@ -28,5 +28,7 @@ final class AgentExecutionContext
         public ?string $clarificationQuestion = null,
         /** Set by SummarizeContext when input was compressed */
         public bool $contextSummarized = false,
+        /** Set by PreExecutionScout — targeted knowledge queries to improve memory/KG retrieval */
+        public array $scoutQueries = [],
     ) {}
 }
