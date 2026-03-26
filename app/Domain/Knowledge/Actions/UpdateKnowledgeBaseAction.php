@@ -9,6 +9,7 @@ class UpdateKnowledgeBaseAction
     public function execute(
         KnowledgeBase $knowledgeBase,
         ?string $name = null,
+        bool $updateDescription = false,
         ?string $description = null,
         bool $updateAgentId = false,
         ?string $agentId = null,
@@ -17,7 +18,7 @@ class UpdateKnowledgeBaseAction
             $knowledgeBase->name = $name;
         }
 
-        if ($description !== null) {
+        if ($updateDescription) {
             $knowledgeBase->description = $description;
         }
 

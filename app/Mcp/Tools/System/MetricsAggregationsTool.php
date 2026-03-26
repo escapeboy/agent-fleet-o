@@ -45,6 +45,14 @@ class MetricsAggregationsTool extends Tool
         $to = $request->input('to');
         $limit = min((int) ($request->input('limit') ?? 100), 500);
 
+        if ($from !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $from)) {
+            return Response::error('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');
+        }
+
+        if ($to !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $to)) {
+            return Response::error('Invalid date format for "to". Use ISO 8601 (YYYY-MM-DD).');
+        }
+
         $aggregations = MetricAggregation::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->when($period !== null, fn ($q) => $q->where('period', $period))

@@ -202,6 +202,7 @@ class ExperimentController extends Controller
     {
         $runs = AiRun::withoutGlobalScopes()
             ->where('experiment_id', $experiment->id)
+            ->where('team_id', $experiment->team_id)
             ->with('experimentStage:id,stage_type')
             ->get();
 

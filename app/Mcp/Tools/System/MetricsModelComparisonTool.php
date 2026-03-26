@@ -37,6 +37,14 @@ class MetricsModelComparisonTool extends Tool
         $from = $request->input('from');
         $to = $request->input('to');
 
+        if ($from !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $from)) {
+            return Response::error('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');
+        }
+
+        if ($to !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $to)) {
+            return Response::error('Invalid date format for "to". Use ISO 8601 (YYYY-MM-DD).');
+        }
+
         $query = LlmRequestLog::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->when($from !== null, fn ($q) => $q->where('created_at', '>=', $from))

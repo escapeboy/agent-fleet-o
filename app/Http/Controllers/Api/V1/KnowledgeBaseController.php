@@ -108,6 +108,7 @@ class KnowledgeBaseController extends Controller
         $kb = $action->execute(
             knowledgeBase: $knowledgeBase,
             name: $validated['name'] ?? null,
+            updateDescription: array_key_exists('description', $validated),
             description: $validated['description'] ?? null,
             updateAgentId: array_key_exists('agent_id', $validated),
             agentId: $validated['agent_id'] ?? null,

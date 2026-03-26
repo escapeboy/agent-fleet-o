@@ -47,6 +47,7 @@ class AgentResetSessionTool extends Tool
 
         $state = AgentRuntimeState::withoutGlobalScopes()
             ->where('agent_id', $agent->id)
+            ->where('team_id', $teamId)
             ->first();
 
         if ($state) {
