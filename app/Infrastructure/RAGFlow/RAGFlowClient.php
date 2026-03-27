@@ -39,13 +39,12 @@ class RAGFlowClient
      */
     public function createDataset(
         string $name,
-        string $chunkMethod = 'general',
+        string $chunkMethod = 'naive',
         string $embeddingModel = 'BAAI/bge-small-en-v1.5',
     ): array {
         return $this->post('/datasets', [
             'name' => $name,
             'chunk_method' => $chunkMethod,
-            'embedding_model' => $embeddingModel,
         ]);
     }
 
@@ -54,7 +53,7 @@ class RAGFlowClient
      */
     public function deleteDataset(string $datasetId): void
     {
-        $this->delete("/datasets/{$datasetId}");
+        $this->deleteWithBody('/datasets', ['ids' => [$datasetId]]);
     }
 
     /**
@@ -315,6 +314,19 @@ class RAGFlowClient
     {
         $response = Http::timeout($this->timeout)
             ->withToken($this->apiKey)
+            ->delete($this->url($path));
+
+        $this->parseResponse($response, "DELETE {$path}");
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function deleteWithBody(string $path, array $payload): void
+    {
+        $response = Http::timeout($this->timeout)
+            ->withToken($this->apiKey)
+            ->withBody(json_encode($payload), 'application/json')
             ->delete($this->url($path));
 
         $this->parseResponse($response, "DELETE {$path}");

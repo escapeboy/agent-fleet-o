@@ -15,7 +15,7 @@ class RagflowDatasetCreateTool extends Tool
 {
     protected string $name = 'ragflow_dataset_create';
 
-    protected string $description = 'Enable RAGFlow deep document understanding on a knowledge base. Creates a RAGFlow dataset and links it to the knowledge base. Supports 12 domain-specific chunking templates: general, paper, book, laws, qa, table, naive, manual, picture, one, email, presentation.';
+    protected string $description = 'Enable RAGFlow deep document understanding on a knowledge base. Creates a RAGFlow dataset and links it to the knowledge base. Supports 13 domain-specific chunking templates: naive (default/general), paper, book, laws, qa, table, manual, picture, one, knowledge_graph, email, presentation, tag.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -24,8 +24,8 @@ class RagflowDatasetCreateTool extends Tool
                 ->description('UUID of the knowledge base to enable RAGFlow on')
                 ->required(),
             'chunk_method' => $schema->string()
-                ->description('Chunking template. Options: general (default), paper, book, laws, qa, table, naive, manual, picture, one, email, presentation')
-                ->default('general'),
+                ->description('Chunking template. Options: naive (default/general), paper, book, laws, qa, table, manual, picture, one, knowledge_graph, email, presentation, tag')
+                ->default('naive'),
         ];
     }
 
@@ -41,10 +41,10 @@ class RagflowDatasetCreateTool extends Tool
             ->where('id', $request->get('knowledge_base_id'))
             ->firstOrFail();
 
-        $validChunkMethods = ['general', 'paper', 'book', 'laws', 'qa', 'table', 'naive', 'manual', 'picture', 'one', 'email', 'presentation'];
-        $chunkMethod = in_array($request->get('chunk_method', 'general'), $validChunkMethods, true)
-            ? $request->get('chunk_method', 'general')
-            : 'general';
+        $validChunkMethods = ['naive', 'paper', 'book', 'laws', 'qa', 'table', 'manual', 'picture', 'one', 'knowledge_graph', 'email', 'presentation', 'tag'];
+        $chunkMethod = in_array($request->get('chunk_method', 'naive'), $validChunkMethods, true)
+            ? $request->get('chunk_method', 'naive')
+            : 'naive';
 
         // Create dataset on RAGFlow
         $dataset = $client->createDataset(
