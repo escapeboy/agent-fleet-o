@@ -21,6 +21,7 @@ use App\Mcp\Tools\Compact\EvolutionManageTool;
 use App\Mcp\Tools\Compact\ExperimentManageTool;
 use App\Mcp\Tools\Compact\GitManageTool;
 use App\Mcp\Tools\Compact\IntegrationManageTool;
+use App\Mcp\Tools\Integration\IntegrationExecuteTool;
 use App\Mcp\Tools\Compact\KnowledgeManageTool;
 use App\Mcp\Tools\Compact\MarketplaceManageTool;
 use App\Mcp\Tools\Compact\MemoryManageTool;
@@ -113,6 +114,7 @@ TXT;
         WebhookManageTool::class,
         TeamManageTool::class,
         IntegrationManageTool::class,
+        IntegrationExecuteTool::class,
         MarketplaceManageTool::class,
 
         // Specialized operations
