@@ -183,8 +183,8 @@ class Project extends Model
     public function consecutiveFailures(): int
     {
         return $this->runs()
-            ->where('status', 'failed')
             ->orderByDesc('run_number')
+            ->orderByDesc('created_at')
             ->get()
             ->takeWhile(fn (ProjectRun $run) => $run->status->value === 'failed')
             ->count();
