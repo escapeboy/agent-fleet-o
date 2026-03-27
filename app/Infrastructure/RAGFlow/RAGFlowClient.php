@@ -88,12 +88,21 @@ class RAGFlowClient
 
     /**
      * Upload a file from disk.
+     *
+     * @throws \InvalidArgumentException if the path is outside application storage
      */
     public function uploadDocumentFile(string $datasetId, string $filePath): array
     {
+        $realPath = realpath($filePath);
+        $storagePath = realpath(storage_path());
+
+        if ($realPath === false || $storagePath === false || ! str_starts_with($realPath, $storagePath.DIRECTORY_SEPARATOR)) {
+            throw new \InvalidArgumentException('File path must be within the application storage directory.');
+        }
+
         $response = Http::timeout($this->timeout)
             ->withToken($this->apiKey)
-            ->attach('file', fopen($filePath, 'r'), basename($filePath))
+            ->attach('file', fopen($realPath, 'r'), basename($realPath))
             ->post($this->url("/datasets/{$datasetId}/documents"));
 
         return $this->parseResponse($response, "uploadDocumentFile[{$datasetId}]");
@@ -314,8 +323,14 @@ class RAGFlowClient
     private function parseResponse(Response $response, string $context): array
     {
         if (! $response->successful()) {
+            Log::debug('RAGFlow API error', [
+                'context' => $context,
+                'status' => $response->status(),
+                'body' => mb_substr($response->body(), 0, 500),
+            ]);
+
             throw new RAGFlowException(
-                "RAGFlow {$context} [{$response->status()}]: ".mb_substr($response->body(), 0, 500),
+                "RAGFlow {$context} returned HTTP {$response->status()}",
                 $response->status(),
             );
         }

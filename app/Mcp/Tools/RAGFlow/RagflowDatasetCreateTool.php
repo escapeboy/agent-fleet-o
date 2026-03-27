@@ -8,7 +8,9 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class RagflowDatasetCreateTool extends Tool
 {
     protected string $name = 'ragflow_dataset_create';
@@ -39,7 +41,10 @@ class RagflowDatasetCreateTool extends Tool
             ->where('id', $request->get('knowledge_base_id'))
             ->firstOrFail();
 
-        $chunkMethod = $request->get('chunk_method', 'general');
+        $validChunkMethods = ['general', 'paper', 'book', 'laws', 'qa', 'table', 'naive', 'manual', 'picture', 'one', 'email', 'presentation'];
+        $chunkMethod = in_array($request->get('chunk_method', 'general'), $validChunkMethods, true)
+            ? $request->get('chunk_method', 'general')
+            : 'general';
 
         // Create dataset on RAGFlow
         $dataset = $client->createDataset(
