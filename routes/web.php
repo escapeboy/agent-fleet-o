@@ -38,6 +38,8 @@ use App\Livewire\Email\EmailTemplateBuilderPage;
 use App\Livewire\Email\EmailTemplateListPage;
 use App\Livewire\Email\EmailThemeDetailPage;
 use App\Livewire\Email\EmailThemeListPage;
+use App\Livewire\Evaluation\EvaluationPage;
+use App\Livewire\Evolution\EvolutionListPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
 use App\Livewire\Experiments\ExperimentListPage;
 use App\Livewire\GitRepositories\CreateGitRepositoryForm;
@@ -46,6 +48,7 @@ use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Health\HealthPage;
 use App\Livewire\Integrations\IntegrationDetailPage;
 use App\Livewire\Integrations\IntegrationListPage;
+use App\Livewire\KnowledgeGraph\KnowledgeGraphBrowserPage;
 use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
@@ -75,6 +78,7 @@ use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
 use App\Livewire\Skills\SkillListPage;
 use App\Livewire\Teams\TeamSettingsPage;
+use App\Livewire\Telegram\TelegramBotsPage;
 use App\Livewire\Tools\CreateToolForm;
 use App\Livewire\Tools\FederationGroupsPage;
 use App\Livewire\Tools\ToolDetailPage;
@@ -249,6 +253,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
+    Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
 
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
     Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
@@ -261,6 +266,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
+    Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
+    Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
+    Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
     Route::get('/health', HealthPage::class)->name('health');
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');

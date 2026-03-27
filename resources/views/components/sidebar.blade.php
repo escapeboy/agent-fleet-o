@@ -77,6 +77,18 @@
             Memory
         </x-sidebar-link>
 
+        <x-sidebar-link href="{{ route('knowledge-graph.index') }}" :active="request()->routeIs('knowledge-graph.*')" icon="share">
+            Knowledge Graph
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('evaluation.index') }}" :active="request()->routeIs('evaluation.*')" icon="scale">
+            Evaluation
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('telegram.bots') }}" :active="request()->routeIs('telegram.*')" icon="chat-bubble-left-right">
+            Telegram Bots
+        </x-sidebar-link>
+
         <x-sidebar-link href="{{ route('app.marketplace.index') }}" :active="request()->routeIs('app.marketplace.*')" icon="shopping-bag">
             Marketplace
         </x-sidebar-link>
@@ -146,6 +158,14 @@
 
         <x-sidebar-link href="{{ route('triggers.index') }}" :active="request()->routeIs('triggers.*')" icon="bolt">
             Triggers
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('evolution.index') }}" :active="request()->routeIs('evolution.*')" icon="sparkles">
+            Evolution
+            @php $pendingEvolutionCount = \App\Domain\Evolution\Models\EvolutionProposal::where('status', 'pending')->count(); @endphp
+            @if($pendingEvolutionCount > 0)
+                <span class="ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs font-medium">{{ $pendingEvolutionCount }}</span>
+            @endif
         </x-sidebar-link>
 
         <x-sidebar-link href="{{ route('audit') }}" :active="request()->routeIs('audit')" icon="document-text">

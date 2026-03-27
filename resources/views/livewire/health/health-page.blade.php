@@ -191,6 +191,53 @@
             </div>
         @endif
 
+        {{-- Semantic Cache Stats --}}
+        @if($cacheStats['enabled'] ?? false)
+            <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-gray-500">Semantic Cache</h3>
+                    @if(auth()->user()?->is_super_admin)
+                        <button wire:click="purgeSemanticCache"
+                            wire:confirm="Purge all semantic cache entries for this team?"
+                            class="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
+                            Purge Cache
+                        </button>
+                    @endif
+                </div>
+                <div class="mt-4 grid grid-cols-3 gap-4">
+                    <div class="rounded-lg bg-gray-50 p-3 text-center">
+                        <div class="text-2xl font-bold text-gray-900">{{ number_format($cacheStats['total_entries']) }}</div>
+                        <div class="mt-1 text-xs text-gray-500">Cached Entries</div>
+                    </div>
+                    <div class="rounded-lg bg-green-50 p-3 text-center">
+                        <div class="text-2xl font-bold text-green-700">{{ number_format($cacheStats['total_hits_saved']) }}</div>
+                        <div class="mt-1 text-xs text-gray-500">Cache Hits Saved</div>
+                    </div>
+                    <div class="rounded-lg bg-gray-50 p-3 text-center">
+                        <div class="text-2xl font-bold text-gray-500">{{ number_format($cacheStats['expired_entries']) }}</div>
+                        <div class="mt-1 text-xs text-gray-500">Expired Entries</div>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center gap-4 text-xs text-gray-400">
+                    <span>Similarity threshold: <strong>{{ $cacheStats['similarity_threshold'] }}</strong></span>
+                    <span>TTL: <strong>{{ $cacheStats['ttl_days'] }} days</strong></span>
+                </div>
+                @if(!empty($cacheStats['by_model']))
+                    <div class="mt-4">
+                        <p class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">Top Models</p>
+                        <div class="space-y-1">
+                            @foreach($cacheStats['by_model'] as $row)
+                                <div class="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-1.5 text-xs">
+                                    <span class="text-gray-700">{{ $row['provider'] }} / {{ $row['model'] }}</span>
+                                    <span class="text-gray-500">{{ $row['entries'] }} entries · {{ $row['hits'] }} hits</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         {{-- Recent Errors --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h3 class="text-sm font-medium text-gray-500">Recent Errors</h3>
