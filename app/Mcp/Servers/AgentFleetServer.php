@@ -278,6 +278,7 @@ use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolPoolListTool;
 use App\Mcp\Tools\Tool\ToolProbeRemoteMcpTool;
+use App\Mcp\Tools\Tool\ToolSearchTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
@@ -325,7 +326,58 @@ class AgentFleetServer extends Server
 
     public int $maxPaginationLength = 300;
 
-    protected string $instructions = 'FleetQ MCP Server — AI Agent Mission Control Platform. Manage agents, experiments, projects, workflows, crews, skills, tools, credentials, approvals, signals, budgets, memory, knowledge bases, knowledge graph, git repositories, chatbots, email templates/themes, integrations, marketplace, artifacts, webhooks, assistant conversations, bridge connections, evaluations, evolution proposals, and team settings.';
+    protected string $instructions = <<<'INSTRUCTIONS'
+        FleetQ — AI Agent Mission Control Platform (Laravel 12, multi-tenant, event-driven pipeline)
+
+        DOMAINS — use prefix to navigate to the right tool group:
+        agent_*       AI agent CRUD, execution, config history, rollback, runtime state, templates
+        experiment_*  Pipeline execution — 20-state machine: draft→scoring→planning→building→executing→completed/killed
+        workflow_*    Visual DAG builder — node types: start/end/agent/conditional/human_task/switch/dynamic_fork/do_while
+        project_*     Continuous & one-shot projects with scheduling and runs
+        crew_*        Multi-agent team execution (hierarchical or sequential process)
+        skill_*       Reusable AI building blocks: llm/connector/rule/hybrid/guardrail types
+        tool_*        External tools: mcp_stdio/mcp_http/built_in (bash/filesystem/browser)
+        credential_*  Encrypted service credentials: api_key/oauth2/bearer_token/basic_auth/custom
+        approval_*    Human-in-the-loop: approve/reject decisions, human task forms, webhooks
+        signal_*      Inbound signals: webhook/rss/manual connectors, contacts, intent scoring
+        budget_*      Credit tracking (1 credit = $0.001 USD), forecast, check before execution
+        memory_*      Persistent semantic memory with vector search across agent sessions
+        artifact_*    Versioned outputs from experiments, crews, and projects
+        outbound_*    Delivery channels: email, Telegram, Slack, webhook
+        trigger_*     Event-driven automation rules with condition evaluator
+        integration_* Third-party service connections with capability discovery
+        marketplace_* Browse, publish, and install skills/agents/workflows
+        bridge_*      Local agent relay — connects Claude Code, Codex, Kiro on remote machines
+        kg_*          Knowledge graph: entities, typed facts, semantic search (signal_* group)
+        evolution_*   AI-suggested agent improvement proposals — apply or reject
+        system_*      Health, KPI dashboard, audit log, global settings
+        email_*       Email templates + themes with AI generation
+        chatbot_*     Embeddable chat widgets with session analytics and learning
+        git_*         Git repository management for agent codebases
+        team_*        Members, BYOK LLM keys, API tokens, team settings
+        assistant_*   Conversational AI assistant — send messages, manage conversations
+
+        SEQUENCING — order matters:
+        1. Before executing: call budget_check — experiments and crews consume credits
+        2. Experiments: call experiment_valid_transitions before experiment_transition to see allowed next states
+        3. Workflows: must have status="active" before execution — call workflow_activate first if draft/archived
+        4. Agents: must have status="active" to run — call agent_toggle_status to enable if disabled
+        5. Human tasks: read the form_schema from approval_list first, then approval_complete_human_task
+        6. Credentials: never returned in full after creation — use credential_rotate to update secrets
+
+        CONSTRAINTS:
+        - All operations are scoped to the authenticated team (team_id is implicit — never pass it)
+        - All IDs are UUID v7 strings (e.g. "018e4b2a-7c3f-7000-9b1a-000000000001")
+        - Pagination: limit (default 20, max 100) + cursor (opaque token from previous response's next_cursor)
+        - Experiment states are a strict state machine — invalid transitions return a validation error
+        - Credential secret values are write-only — read operations never return secret data
+
+        SELF-CORRECTION:
+        - On tool errors: read the returned message field — it contains corrective guidance
+        - Experiment stuck: use experiment_valid_transitions to see what transitions are currently allowed
+        - Budget error: call budget_check to inspect remaining credits and reservation state
+        - Not sure which tool: start with {domain}_list to orient, then {domain}_get for details
+        INSTRUCTIONS;
 
     protected function boot(): void
     {
@@ -428,6 +480,7 @@ class AgentFleetServer extends Server
         ToolFederationEnableTool::class,
         ToolFederationGroupListTool::class,
         ToolFederationGroupCreateTool::class,
+        ToolSearchTool::class,
 
         // Credential (8)
         CredentialListTool::class,

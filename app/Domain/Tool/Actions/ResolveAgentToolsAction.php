@@ -80,6 +80,28 @@ class ResolveAgentToolsAction
             );
         }
 
+        // Role-based tag filtering — narrow tool set when agent declares tool_tags in config.
+        // A tool passes if it has no tags (unrestricted) or shares at least one tag with the agent.
+        // Fallback: if filtering would leave fewer than 3 tools, skip and log a warning.
+        $agentToolTags = $agent->config['tool_tags'] ?? [];
+        if (! empty($agentToolTags)) {
+            $filtered = $agentTools->filter(function (Tool $tool) use ($agentToolTags) {
+                $toolTags = $tool->tags ?? [];
+
+                return empty($toolTags) || count(array_intersect($agentToolTags, $toolTags)) > 0;
+            });
+
+            if ($filtered->count() >= 3) {
+                $agentTools = $filtered;
+            } else {
+                Log::warning('ResolveAgentTools: tag filter produced fewer than 3 tools, falling back to unfiltered set.', [
+                    'agent_id' => $agent->id,
+                    'tool_tags' => $agentToolTags,
+                    'filtered_count' => $filtered->count(),
+                ]);
+            }
+        }
+
         // Tool federation: merge team-wide tool pool when enabled on the agent.
         // Federation is opt-in (use_tool_federation flag defaults to false).
         $federatedTools = $this->federationResolver->resolve($agent);

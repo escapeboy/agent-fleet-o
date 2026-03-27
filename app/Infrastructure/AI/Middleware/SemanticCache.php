@@ -7,13 +7,15 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Models\SemanticCacheEntry;
+use App\Infrastructure\AI\Services\EmbeddingService;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 class SemanticCache implements AiMiddlewareInterface
 {
+    public function __construct(private readonly EmbeddingService $embeddingService) {}
+
     public function handle(AiRequestDTO $request, Closure $next): AiResponseDTO
     {
         if (! config('semantic_cache.enabled', false)) {
@@ -142,15 +144,8 @@ class SemanticCache implements AiMiddlewareInterface
 
     private function generateEmbedding(string $text): string
     {
-        $model = config('semantic_cache.embedding_model', 'text-embedding-3-small');
-
-        $response = Prism::embeddings()
-            ->using(config('semantic_cache.embedding_provider', 'openai'), $model)
-            ->fromInput($text)
-            ->asEmbeddings();
-
-        $vector = $response->embeddings[0]->embedding;
-
-        return '['.implode(',', $vector).']';
+        return $this->embeddingService->formatForPgvector(
+            $this->embeddingService->embed($text),
+        );
     }
 }

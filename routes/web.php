@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgentCardController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
@@ -91,6 +92,11 @@ use App\Livewire\Workflows\WorkflowListPage;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
+
+// A2A Agent Card — public discovery endpoint (RFC 8615 well-known URI, no auth required)
+Route::get('/.well-known/agent.json', AgentCardController::class)
+    ->name('a2a.agent-card')
+    ->middleware('throttle:60,1');
 
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');

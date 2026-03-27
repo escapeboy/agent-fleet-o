@@ -33,6 +33,8 @@ final readonly class AiRequestDTO
         public ?int $thinkingBudget = null,
         /** Per-call working directory override for local agent execution (e.g. a specific repo path) */
         public ?string $workingDirectory = null,
+        /** Enable Anthropic prompt caching — marks system prompt and tool definitions with cache_control: ephemeral */
+        public bool $enablePromptCaching = false,
     ) {}
 
     public function isStructured(): bool

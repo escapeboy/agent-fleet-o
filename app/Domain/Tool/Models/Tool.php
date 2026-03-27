@@ -47,6 +47,7 @@ class Tool extends Model
         'last_health_check',
         'health_status',
         'result_as_answer',
+        'tags',
     ];
 
     protected $hidden = ['credentials'];
@@ -65,6 +66,7 @@ class Tool extends Model
             'settings' => 'array',
             'network_policy' => 'array',
             'result_as_answer' => 'boolean',
+            'tags' => 'array',
             'last_health_check' => 'datetime',
         ];
     }

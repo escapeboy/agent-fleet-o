@@ -21,6 +21,7 @@ use Prism\Prism\Facades\Prism;
 use Prism\Prism\Streaming\Events\StreamEndEvent;
 use Prism\Prism\Streaming\Events\TextDeltaEvent;
 use Prism\Prism\ValueObjects\Messages\AssistantMessage;
+use Prism\Prism\ValueObjects\Messages\SystemMessage;
 use RuntimeException;
 
 class PrismAiGateway implements AiGatewayInterface
@@ -196,9 +197,14 @@ class PrismAiGateway implements AiGatewayInterface
             );
         }
 
+        // Build system prompt — wrap in SystemMessage with cache_control when caching is enabled (Anthropic only)
+        $systemPromptArg = ($request->enablePromptCaching && $request->provider === 'anthropic')
+            ? (new SystemMessage($request->systemPrompt))->withProviderOptions(['cacheType' => 'ephemeral'])
+            : $request->systemPrompt;
+
         $builder = Prism::text()
             ->using($provider, $request->model, $localConfig)
-            ->withSystemPrompt($request->systemPrompt)
+            ->withSystemPrompt($systemPromptArg)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
             ->usingTemperature($request->temperature)
@@ -217,7 +223,15 @@ class PrismAiGateway implements AiGatewayInterface
 
         // Add tool support when tools are provided
         if ($request->hasTools()) {
-            $builder->withTools($request->tools)
+            $tools = $request->tools;
+
+            // Mark the last tool with cache_control so Anthropic caches the entire tools block (Anthropic only)
+            if ($request->enablePromptCaching && $request->provider === 'anthropic' && count($tools) > 0) {
+                $lastIndex = count($tools) - 1;
+                $tools[$lastIndex] = (clone $tools[$lastIndex])->withProviderOptions(['cacheType' => 'ephemeral']);
+            }
+
+            $builder->withTools($tools)
                 ->withMaxSteps($request->maxSteps);
 
             if ($request->toolChoice !== null) {
