@@ -79,6 +79,7 @@ use App\Livewire\Skills\SkillListPage;
 use App\Livewire\Teams\TeamSettingsPage;
 use App\Livewire\Telegram\TelegramBotsPage;
 use App\Livewire\Tools\CreateToolForm;
+use App\Livewire\Tools\FederationGroupsPage;
 use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
@@ -214,6 +215,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/tools', ToolListPage::class)->name('tools.index');
     Route::get('/tools/create', CreateToolForm::class)->name('tools.create');
+    Route::get('/tools/federation-groups', FederationGroupsPage::class)->name('tools.federation-groups');
     Route::get('/tools/{tool}', ToolDetailPage::class)->name('tools.show');
 
     Route::get('/credentials', CredentialListPage::class)->name('credentials.index');

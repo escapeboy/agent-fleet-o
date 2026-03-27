@@ -18,6 +18,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\SemanticToolSelector;
+use App\Domain\Tool\Services\ToolFederationResolver;
 use App\Domain\Tool\Services\ToolRagSelector;
 use App\Domain\Tool\Services\ToolTranslator;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
@@ -38,6 +39,7 @@ class ResolveAgentToolsAction
         private readonly SemanticToolSelector $semanticSelector,
         private readonly ToolRagSelector $toolRagSelector,
         private readonly ResolveProjectCredentialsAction $resolveCredentials,
+        private readonly ToolFederationResolver $federationResolver,
     ) {}
 
     /**
@@ -76,6 +78,13 @@ class ResolveAgentToolsAction
             $agentTools = $agentTools->filter(
                 fn (Tool $tool) => in_array($tool->id, $allowedToolIds),
             );
+        }
+
+        // Tool federation: merge team-wide tool pool when enabled on the agent.
+        // Federation is opt-in (use_tool_federation flag defaults to false).
+        $federatedTools = $this->federationResolver->resolve($agent);
+        if ($federatedTools->isNotEmpty()) {
+            $agentTools = $agentTools->merge($federatedTools)->unique('id');
         }
 
         // Filter by execution mode: watcher projects only get safe/read tools

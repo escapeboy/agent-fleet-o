@@ -17,6 +17,7 @@ enum SkillType: string
     case GpuCompute = 'gpu_compute';
     case BorunaScript = 'boruna_script';
     case SupabaseEdgeFunction = 'supabase_edge_function';
+    case RagflowRetrieval = 'ragflow_retrieval';
 
     public function label(): string
     {
@@ -34,6 +35,7 @@ enum SkillType: string
             self::GpuCompute => 'GPU Compute',
             self::BorunaScript => 'Boruna Script',
             self::SupabaseEdgeFunction => 'Supabase Edge Function',
+            self::RagflowRetrieval => 'RAGFlow Retrieval',
         };
     }
 }

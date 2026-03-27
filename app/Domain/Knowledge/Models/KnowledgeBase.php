@@ -28,6 +28,10 @@ class KnowledgeBase extends Model
         'status',
         'chunks_count',
         'last_ingested_at',
+        'ragflow_enabled',
+        'ragflow_dataset_id',
+        'ragflow_chunk_method',
+        'ragflow_last_synced_at',
     ];
 
     protected function casts(): array
@@ -36,7 +40,14 @@ class KnowledgeBase extends Model
             'status' => KnowledgeBaseStatus::class,
             'chunks_count' => 'integer',
             'last_ingested_at' => 'datetime',
+            'ragflow_enabled' => 'boolean',
+            'ragflow_last_synced_at' => 'datetime',
         ];
+    }
+
+    public function isRagflowReady(): bool
+    {
+        return $this->ragflow_enabled && $this->ragflow_dataset_id !== null;
     }
 
     public function agent(): BelongsTo

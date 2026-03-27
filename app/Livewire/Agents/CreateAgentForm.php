@@ -45,6 +45,10 @@ class CreateAgentForm extends Component
 
     public ?int $thinkingBudget = null;
 
+    public bool $useFederation = false;
+
+    public string $federationGroupId = '';
+
     public function mount(): void
     {
         $templateSlug = request('template');
@@ -103,6 +107,13 @@ class CreateAgentForm extends Component
         $filteredChain = array_filter($this->fallbackChain, fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']));
         if (! empty($filteredChain)) {
             $config['fallback_chain'] = array_values($filteredChain);
+        }
+
+        if ($this->useFederation) {
+            $config['use_tool_federation'] = true;
+            if ($this->federationGroupId !== '') {
+                $config['tool_federation_group_id'] = $this->federationGroupId;
+            }
         }
 
         // Build personality array from form fields

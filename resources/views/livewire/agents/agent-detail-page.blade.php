@@ -147,6 +147,27 @@
                     @endif
                 </div>
 
+                {{-- Tool Federation --}}
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Tool Federation</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Allow this agent to dynamically access all active team tools without explicit assignment</p>
+                        </div>
+                        <x-form-checkbox name="editUseFederation" wire:model.live="editUseFederation" />
+                    </div>
+                    @if($editUseFederation)
+                        <div class="mt-3">
+                            <x-form-select name="editFederationGroupId" wire:model="editFederationGroupId" label="Limit to federation group (optional)">
+                                <option value="">All team tools</option>
+                                @foreach(\App\Domain\Tool\Models\ToolFederationGroup::where('is_active', true)->orderBy('name')->get() as $group)
+                                    <option value="{{ $group->id }}">{{ $group->name }} ({{ count($group->tool_ids ?? []) }} tools)</option>
+                                @endforeach
+                            </x-form-select>
+                        </div>
+                    @endif
+                </div>
+
                 {{-- Tool Assignment --}}
                 <div>
                     <label class="mb-2 block text-sm font-medium text-gray-700">Assign Tools</label>

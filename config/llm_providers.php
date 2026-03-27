@@ -169,6 +169,19 @@ return [
         ],
     ],
 
+    // RAGFlow — self-hosted deep document understanding & hybrid RAG engine
+    'ragflow' => [
+        'name' => 'RAGFlow (Self-Hosted)',
+        'http_local' => true,
+        'ragflow' => true, // marks this as a RAGFlow endpoint, not an LLM
+        'default_url' => env('RAGFLOW_URL', 'http://ragflow:9380'),
+        'url_hint' => 'RAGFlow base URL — e.g. http://ragflow:9380 or https://ragflow.example.com',
+        'display_name' => 'RAGFlow',
+        'description' => 'Deep document understanding (PDF/table/OCR), hybrid BM25+vector retrieval, RAPTOR, and GraphRAG.',
+        'credential_fields' => ['api_key', 'base_url'],
+        'models' => [], // RAGFlow is not an LLM provider
+    ],
+
     // HTTP-based local LLM providers (Ollama, OpenAI-compatible endpoints)
     'ollama' => [
         'name' => 'Ollama',
