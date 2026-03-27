@@ -88,8 +88,10 @@ use App\Mcp\Tools\Crew\CrewCreateTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
+use App\Mcp\Tools\Crew\CrewGetMessagesTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
+use App\Mcp\Tools\Crew\CrewSendMessageTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
 use App\Mcp\Tools\Email\EmailTemplateCreateTool;
 use App\Mcp\Tools\Email\EmailTemplateDeleteTool;
@@ -418,7 +420,7 @@ class AgentFleetServer extends Server
         EvolutionApplyTool::class,
         EvolutionRejectTool::class,
 
-        // Crew (7)
+        // Crew (9)
         CrewListTool::class,
         CrewGetTool::class,
         CrewCreateTool::class,
@@ -426,6 +428,8 @@ class AgentFleetServer extends Server
         CrewExecuteTool::class,
         CrewExecutionStatusTool::class,
         CrewExecutionsListTool::class,
+        CrewSendMessageTool::class,
+        CrewGetMessagesTool::class,
 
         // Experiment (13)
         ExperimentListTool::class,
