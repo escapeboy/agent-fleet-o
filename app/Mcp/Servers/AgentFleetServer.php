@@ -191,6 +191,13 @@ use App\Mcp\Tools\Project\ProjectScheduleManageTool;
 use App\Mcp\Tools\Project\ProjectScheduleNlpTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
+use App\Mcp\Tools\RAGFlow\RagflowDatasetCreateTool;
+use App\Mcp\Tools\RAGFlow\RagflowDatasetListTool;
+use App\Mcp\Tools\RAGFlow\RagflowDocumentParseTool;
+use App\Mcp\Tools\RAGFlow\RagflowDocumentUploadTool;
+use App\Mcp\Tools\RAGFlow\RagflowKnowledgeGraphBuildTool;
+use App\Mcp\Tools\RAGFlow\RagflowRaptorBuildTool;
+use App\Mcp\Tools\RAGFlow\RagflowSearchTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
@@ -225,7 +232,6 @@ use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
-use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SupabaseConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
@@ -263,9 +269,14 @@ use App\Mcp\Tools\Tool\ToolDeleteTool;
 use App\Mcp\Tools\Tool\ToolDiscoverMcpTool;
 use App\Mcp\Tools\Tool\ToolEmbeddingManageTool;
 use App\Mcp\Tools\Tool\ToolEmbeddingSearchTool;
+use App\Mcp\Tools\Tool\ToolFederationEnableTool;
+use App\Mcp\Tools\Tool\ToolFederationGroupCreateTool;
+use App\Mcp\Tools\Tool\ToolFederationGroupListTool;
+use App\Mcp\Tools\Tool\ToolFederationStatusTool;
 use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
+use App\Mcp\Tools\Tool\ToolPoolListTool;
 use App\Mcp\Tools\Tool\ToolProbeRemoteMcpTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
@@ -397,7 +408,7 @@ class AgentFleetServer extends Server
         BrowserSkillTool::class,
         SupabaseEdgeFunctionSkillTool::class,
 
-        // Tool (12)
+        // Tool (17)
         ToolListTool::class,
         ToolGetTool::class,
         ToolCreateTool::class,
@@ -412,6 +423,11 @@ class AgentFleetServer extends Server
         ToolBashPolicyTool::class,
         ToolEmbeddingManageTool::class,
         ToolEmbeddingSearchTool::class,
+        ToolPoolListTool::class,
+        ToolFederationStatusTool::class,
+        ToolFederationEnableTool::class,
+        ToolFederationGroupListTool::class,
+        ToolFederationGroupCreateTool::class,
 
         // Credential (8)
         CredentialListTool::class,
@@ -528,6 +544,15 @@ class AgentFleetServer extends Server
         KnowledgeBaseIngestTool::class,
         KnowledgeBaseSearchTool::class,
         KnowledgeBaseDeleteTool::class,
+
+        // RAGFlow — deep document understanding & hybrid retrieval (7)
+        RagflowDatasetCreateTool::class,
+        RagflowDatasetListTool::class,
+        RagflowDocumentUploadTool::class,
+        RagflowDocumentParseTool::class,
+        RagflowSearchTool::class,
+        RagflowKnowledgeGraphBuildTool::class,
+        RagflowRaptorBuildTool::class,
 
         // Memory (8)
         MemorySearchTool::class,

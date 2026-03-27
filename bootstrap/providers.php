@@ -1,5 +1,6 @@
 <?php
 
+use App\Infrastructure\RAGFlow\RAGFlowServiceProvider;
 use App\Providers\AiServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\ComputeServiceProvider;
@@ -15,6 +16,7 @@ use SocialiteProviders\Manager\ServiceProvider;
 
 return [
     AppServiceProvider::class,
+    RAGFlowServiceProvider::class,
     ServiceProvider::class,
     FortifyServiceProvider::class,
     HorizonServiceProvider::class,
