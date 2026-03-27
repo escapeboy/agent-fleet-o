@@ -42,9 +42,9 @@ class ToolSearchTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $query = trim((string) $request->get('query', ''));
+        $query = mb_substr(trim((string) $request->get('query', '')), 0, 500);
         $limit = min((int) ($request->get('limit', 10)), 20);
-        $group = $request->get('group');
+        $group = $request->get('group') ? mb_substr((string) $request->get('group'), 0, 64) : null;
 
         if ($query === '') {
             return Response::text(json_encode(['count' => 0, 'tools' => [], 'tip' => 'Provide a non-empty query.']));
@@ -84,7 +84,10 @@ class ToolSearchTool extends Tool
             $embeddingService = app(EmbeddingService::class);
             $vector = $embeddingService->formatForPgvector($embeddingService->embed($query));
 
-            $groupFilter = $group ? "AND \"group\" = '".addslashes($group)."'" : '';
+            $groupSql = $group ? 'AND "group" = ?' : '';
+            $bindings = $group
+                ? [$vector, $vector, $group, $vector, $limit]
+                : [$vector, $vector, $vector, $limit];
 
             $rows = DB::select(
                 "SELECT tool_name, \"group\", description, schema,
@@ -92,10 +95,10 @@ class ToolSearchTool extends Tool
                  FROM tool_registry_entries
                  WHERE embedding IS NOT NULL
                    AND 1 - (embedding <=> ?::vector) > 0.65
-                   {$groupFilter}
+                   {$groupSql}
                  ORDER BY embedding <=> ?::vector
                  LIMIT ?",
-                [$vector, $vector, $vector, $limit],
+                $bindings,
             );
 
             return collect($rows);
