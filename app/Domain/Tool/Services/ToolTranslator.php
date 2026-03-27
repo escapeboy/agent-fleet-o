@@ -100,7 +100,12 @@ class ToolTranslator
             $serverUrl = $tool->transport_config['url'] ?? null;
             $credentials = (array) $tool->credentials;
             $authHeader = $credentials['api_key'] ?? $credentials['bearer_token'] ?? null;
-            $mcpHeaders = $authHeader ? ['Authorization' => "Bearer {$authHeader}"] : [];
+            // Merge transport_config headers (e.g. stored Authorization) with credentials-derived header
+            $configHeaders = $tool->transport_config['headers'] ?? [];
+            $mcpHeaders = array_merge(
+                $configHeaders,
+                $authHeader ? ['Authorization' => "Bearer {$authHeader}"] : []
+            );
             $toolModel = $tool;
             $defName = $name;
             $paramNames = array_keys($properties);
