@@ -93,7 +93,7 @@ class StoreExperimentLearnings
 
         $outputs = [];
         foreach ($stages as $stage) {
-            $outputs[$stage->stage] = json_encode($stage->output_snapshot, JSON_UNESCAPED_UNICODE);
+            $outputs[$stage->stage->value] = json_encode($stage->output_snapshot, JSON_UNESCAPED_UNICODE);
         }
 
         return $outputs;

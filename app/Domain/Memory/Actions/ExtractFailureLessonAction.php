@@ -150,19 +150,20 @@ PROMPT;
         $parts[] = 'Final status: '.($experiment->status?->value ?? 'unknown');
 
         $failedStages = $experiment->stages()
-            ->whereNotNull('error')
+            ->whereNotNull('output_snapshot->error')
             ->orderByDesc('created_at')
             ->limit(3)
-            ->get(['stage', 'error', 'output_snapshot']);
+            ->get(['stage', 'output_snapshot']);
 
         if ($failedStages->isNotEmpty()) {
             $parts[] = "\n## Failed Stages";
             foreach ($failedStages as $stage) {
-                $parts[] = "Stage: {$stage->stage}";
-                if (! empty($stage->error)) {
-                    $errorText = is_array($stage->error)
-                        ? json_encode($stage->error, JSON_UNESCAPED_UNICODE)
-                        : (string) $stage->error;
+                $parts[] = 'Stage: '.$stage->stage->value;
+                $error = $stage->output_snapshot['error'] ?? null;
+                if (! empty($error)) {
+                    $errorText = is_array($error)
+                        ? json_encode($error, JSON_UNESCAPED_UNICODE)
+                        : (string) $error;
                     $parts[] = '<stage_error>'.htmlspecialchars(substr($errorText, 0, 500), ENT_XML1).'</stage_error>';
                 }
             }
