@@ -1,4 +1,4 @@
-<div wire:ignore.self x-data="workflowBuilder(@js($nodes), @js($edges), @js($availableAgents), @js($availableSkills), @js($availableCrews), @js($availableWorkflows))" class="flex flex-col h-[calc(100vh-8rem)]">
+<div wire:ignore.self wire:poll.{{ $hasRunningSteps ? '3' : '15' }}s x-data="workflowBuilder(@js($nodes), @js($edges), @js($availableAgents), @js($availableSkills), @js($availableCrews), @js($availableWorkflows))" class="flex flex-col h-[calc(100vh-8rem)]">
     {{-- Top Bar --}}
     <div class="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-3">
         <div class="flex-1 flex items-center gap-3">
@@ -31,6 +31,15 @@
     @endif
     @if(session('error'))
         <div class="mx-4 mt-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
+    @endif
+
+    {{-- Execution Mode Banner --}}
+    @if($executionMode)
+    <div class="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm text-yellow-800">
+        <svg class="h-4 w-4 animate-spin flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Workflow is executing — canvas editing disabled
+        <a href="{{ route('experiments.show', $activeExperimentId) }}" class="ml-auto text-yellow-700 underline hover:text-yellow-900">View experiment →</a>
+    </div>
     @endif
 
     {{-- Validation Errors --}}
@@ -196,6 +205,11 @@
                                 'border-amber-400': node.type === 'time_gate' && selectedNodeId !== node.id,
                                 'border-rose-400': node.type === 'merge' && selectedNodeId !== node.id,
                                 'border-violet-400': node.type === 'sub_workflow' && selectedNodeId !== node.id,
+                                'ring-2 ring-yellow-400 animate-pulse': stepStatuses[node.id]?.status === 'running',
+                                'ring-2 ring-green-500': stepStatuses[node.id]?.status === 'completed',
+                                'ring-2 ring-red-500': stepStatuses[node.id]?.status === 'failed',
+                                'ring-2 ring-blue-400': stepStatuses[node.id]?.status === 'waiting_human',
+                                'opacity-50': stepStatuses[node.id]?.status === 'skipped',
                              }"
                              style="min-width: 160px;">
 
@@ -233,6 +247,23 @@
                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
                             </div>
+
+                            {{-- Execution status dot --}}
+                            <template x-if="stepStatuses[node.id]">
+                                <div class="absolute -top-1.5 -right-1.5 z-10">
+                                    <span class="relative flex h-3 w-3">
+                                        <span x-show="stepStatuses[node.id]?.status === 'running'" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-3 w-3"
+                                              :class="{
+                                                  'bg-yellow-500': stepStatuses[node.id]?.status === 'running',
+                                                  'bg-green-500': stepStatuses[node.id]?.status === 'completed',
+                                                  'bg-red-500': stepStatuses[node.id]?.status === 'failed',
+                                                  'bg-blue-500': stepStatuses[node.id]?.status === 'waiting_human',
+                                                  'bg-gray-400': stepStatuses[node.id]?.status === 'skipped',
+                                              }"></span>
+                                    </span>
+                                </div>
+                            </template>
 
                             {{-- Label --}}
                             <div class="px-3 py-2">
@@ -275,6 +306,72 @@
                 </button>
             </div>
         </div>
+
+        {{-- Execution Sidebar Panel (slides in when workflow is executing) --}}
+        @if($activeExperimentId)
+        <div class="w-64 flex-shrink-0 border-l border-gray-200 bg-white overflow-y-auto flex flex-col">
+            <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Live Execution</span>
+                @if($executionMode)
+                <span class="ml-auto flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-yellow-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                </span>
+                @endif
+            </div>
+
+            @if(count($stepStatuses) > 0)
+            <div class="divide-y divide-gray-50 flex-1">
+                @foreach($stepStatuses as $nodeId => $step)
+                @php
+                    $node = collect($nodes)->firstWhere('id', $nodeId);
+                    $statusColor = match($step['status']) {
+                        'running' => 'text-yellow-600',
+                        'completed' => 'text-green-600',
+                        'failed' => 'text-red-600',
+                        'waiting_human' => 'text-blue-600',
+                        'skipped' => 'text-gray-400',
+                        default => 'text-gray-500',
+                    };
+                    $statusIcon = match($step['status']) {
+                        'running' => 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
+                        'completed' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+                        'failed' => 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
+                        'waiting_human' => 'M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0',
+                        default => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+                    };
+                @endphp
+                <div class="px-4 py-2.5 flex items-center gap-2 min-w-0">
+                    <svg class="h-4 w-4 flex-shrink-0 {{ $statusColor }}{{ $step['status'] === 'running' ? ' animate-spin' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $statusIcon }}"/>
+                    </svg>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs text-gray-700 truncate">{{ $node['label'] ?? $nodeId }}</p>
+                        @if($step['error'])
+                            <p class="text-xs text-red-500 truncate" title="{{ $step['error'] }}">{{ Str::limit($step['error'], 40) }}</p>
+                        @endif
+                    </div>
+                    @if($step['duration'])
+                    <span class="text-xs text-gray-400 flex-shrink-0">{{ round($step['duration'] / 1000, 1) }}s</span>
+                    @endif
+                </div>
+                @endforeach
+            </div>
+            @else
+            <div class="px-4 py-6 text-center">
+                <p class="text-xs text-gray-400">No steps tracked yet</p>
+            </div>
+            @endif
+
+            <div class="px-4 py-3 border-t border-gray-100 mt-auto">
+                <a href="{{ route('experiments.show', $activeExperimentId) }}"
+                   class="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 hover:underline">
+                    View full experiment
+                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+            </div>
+        </div>
+        @endif
 
         {{-- Right Panel: Node config (Alpine-managed: wire:ignore prevents morph from collapsing x-if) --}}
         <div wire:ignore x-show="selectedNodeId || selectedEdgeId" x-cloak class="w-72 flex-shrink-0 overflow-y-auto border-l border-gray-200 bg-white p-4">
@@ -647,6 +744,10 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
 
     nodeCounter: initialNodes.length,
 
+    // Execution overlay state
+    stepStatuses: {},
+    isExecutionMode: false,
+
     // Condition editor state
     conditionMode: 'simple',
     conditionRules: [],
@@ -672,6 +773,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     },
 
     addNode(type) {
+        if (this.isExecutionMode) return;
         this.nodeCounter++;
         const id = 'node-' + Date.now() + '-' + this.nodeCounter;
         const labels = { agent: 'Agent ' + this.nodeCounter, crew: 'Crew ' + this.nodeCounter, conditional: 'Condition', human_task: 'Human Task ' + this.nodeCounter, switch: 'Switch', do_while: 'Do While', dynamic_fork: 'Dynamic Fork', time_gate: 'Time Gate', merge: 'Merge', sub_workflow: 'Sub-Workflow', end: 'End' };
@@ -694,6 +796,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
     },
 
     removeNode(nodeId) {
+        if (this.isExecutionMode) return;
         this.localNodes = this.localNodes.filter(n => n.id !== nodeId);
         this.localEdges = this.localEdges.filter(e => e.source_node_id !== nodeId && e.target_node_id !== nodeId);
         if (this.selectedNodeId === nodeId) this.selectedNodeId = null;
@@ -1067,6 +1170,14 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
                 this.selectedEdgeId = null;
                 this.isConnecting = false;
             }
+        });
+
+        // Watch for execution status updates from Livewire
+        this.$wire.watch('stepStatuses', (value) => {
+            this.stepStatuses = value || {};
+        });
+        this.$wire.watch('executionMode', (value) => {
+            this.isExecutionMode = value || false;
         });
 
         // WebMCP imperative tools for browser AI agents

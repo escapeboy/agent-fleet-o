@@ -58,6 +58,10 @@ class AgentDetailPage extends Component
 
     public array $editToolIds = [];
 
+    public bool $editUseFederation = false;
+
+    public string $editFederationGroupId = '';
+
     public function mount(Agent $agent): void
     {
         $this->agent = $agent;
@@ -93,6 +97,8 @@ class AgentDetailPage extends Component
         $this->editPersonalityResponseFormat = $personality['response_format_preference'] ?? '';
         $this->editSkillIds = $this->agent->skills()->pluck('skills.id')->toArray();
         $this->editToolIds = $this->agent->tools()->pluck('tools.id')->toArray();
+        $this->editUseFederation = (bool) ($this->agent->config['use_tool_federation'] ?? false);
+        $this->editFederationGroupId = $this->agent->config['tool_federation_group_id'] ?? '';
         $this->editing = true;
     }
 
@@ -154,6 +160,17 @@ class AgentDetailPage extends Component
         }
 
         $config['execution_tier'] = $this->editExecutionTier;
+
+        if ($this->editUseFederation) {
+            $config['use_tool_federation'] = true;
+            if ($this->editFederationGroupId !== '') {
+                $config['tool_federation_group_id'] = $this->editFederationGroupId;
+            } else {
+                unset($config['tool_federation_group_id']);
+            }
+        } else {
+            unset($config['use_tool_federation'], $config['tool_federation_group_id']);
+        }
 
         $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");
 

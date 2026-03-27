@@ -4,6 +4,9 @@ namespace App\Livewire\Workflows;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\EstimateWorkflowCostAction;
@@ -49,6 +52,15 @@ class WorkflowBuilderPage extends Component
     public array $availableCrews = [];
 
     public array $availableWorkflows = [];
+
+    // Execution overlay
+    public array $stepStatuses = [];
+
+    public ?string $activeExperimentId = null;
+
+    public bool $hasRunningSteps = false;
+
+    public bool $executionMode = false;
 
     public function mount(?Workflow $workflow = null): void
     {
@@ -360,8 +372,67 @@ class WorkflowBuilderPage extends Component
         return $sanitized;
     }
 
+    private function resolveExecutionState(): void
+    {
+        if (! $this->workflowId) {
+            $this->stepStatuses = [];
+            $this->hasRunningSteps = false;
+            $this->executionMode = false;
+            $this->activeExperimentId = null;
+
+            return;
+        }
+
+        $activeExperiment = Experiment::query()
+            ->where('team_id', current_team()->id)
+            ->whereJsonContains('constraints->workflow_id', $this->workflowId)
+            ->whereIn('status', [
+                ExperimentStatus::Executing,
+                ExperimentStatus::Building,
+                ExperimentStatus::Planning,
+                ExperimentStatus::CollectingMetrics,
+                ExperimentStatus::Evaluating,
+            ])
+            ->latest()
+            ->first();
+
+        // Fallback to most recent experiment (for showing last run status)
+        $experiment = $activeExperiment ?? Experiment::query()
+            ->where('team_id', current_team()->id)
+            ->whereJsonContains('constraints->workflow_id', $this->workflowId)
+            ->latest()
+            ->first();
+
+        $this->activeExperimentId = $experiment?->id;
+        $this->executionMode = $activeExperiment !== null;
+
+        if (! $experiment) {
+            $this->stepStatuses = [];
+            $this->hasRunningSteps = false;
+
+            return;
+        }
+
+        $steps = PlaybookStep::query()
+            ->where('experiment_id', $experiment->id)
+            ->whereNotNull('workflow_node_id')
+            ->get(['workflow_node_id', 'status', 'duration_ms', 'error_message', 'cost_credits']);
+
+        $this->stepStatuses = $steps->keyBy('workflow_node_id')->map(fn ($s) => [
+            'status' => $s->status,
+            'duration' => $s->duration_ms,
+            'error' => $s->error_message,
+            'cost' => $s->cost_credits,
+        ])->all();
+
+        $this->hasRunningSteps = collect($this->stepStatuses)
+            ->contains(fn ($s) => $s['status'] === 'running');
+    }
+
     public function render()
     {
+        $this->resolveExecutionState();
+
         return view('livewire.workflows.workflow-builder-page', [
             'nodeTypes' => WorkflowNodeType::cases(),
             'availableWorkflows' => $this->availableWorkflows,

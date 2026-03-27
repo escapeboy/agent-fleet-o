@@ -47,9 +47,15 @@
             Skills
         </x-sidebar-link>
 
-        <x-sidebar-link href="{{ route('tools.index') }}" :active="request()->routeIs('tools.*')" icon="wrench-screwdriver">
+        <x-sidebar-link href="{{ route('tools.index') }}" :active="request()->routeIs('tools.index') || request()->routeIs('tools.show') || request()->routeIs('tools.create')" icon="wrench-screwdriver">
             Tools
         </x-sidebar-link>
+
+        @if(request()->routeIs('tools.*'))
+            <x-sidebar-link href="{{ route('tools.federation-groups') }}" :active="request()->routeIs('tools.federation-groups')" icon="rectangle-stack" class="ml-4">
+                Federation Groups
+            </x-sidebar-link>
+        @endif
 
         <x-sidebar-link href="{{ route('credentials.index') }}" :active="request()->routeIs('credentials.*')" icon="key">
             Credentials

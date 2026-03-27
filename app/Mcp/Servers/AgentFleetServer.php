@@ -408,7 +408,7 @@ class AgentFleetServer extends Server
         BrowserSkillTool::class,
         SupabaseEdgeFunctionSkillTool::class,
 
-        // Tool (17)
+        // Tool (19)
         ToolListTool::class,
         ToolGetTool::class,
         ToolCreateTool::class,
