@@ -33,6 +33,7 @@ class CrewTaskExecution extends Model
         'batch_id',
         'started_at',
         'completed_at',
+        'claimed_at',
     ];
 
     protected function casts(): array
@@ -52,6 +53,7 @@ class CrewTaskExecution extends Model
             'sort_order' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'claimed_at' => 'datetime',
         ];
     }
 
@@ -93,5 +95,10 @@ class CrewTaskExecution extends Model
     public function canRetry(): bool
     {
         return $this->attempt_number < $this->max_attempts;
+    }
+
+    public function isTerminal(): bool
+    {
+        return $this->status->isTerminal();
     }
 }
