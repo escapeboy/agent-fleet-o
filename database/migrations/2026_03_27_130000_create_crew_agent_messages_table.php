@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignUuid('crew_execution_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('sender_agent_id')->nullable()->constrained('agents')->nullOnDelete();
             $table->foreignUuid('recipient_agent_id')->nullable()->constrained('agents')->nullOnDelete();
-            $table->foreignUuid('parent_message_id')->nullable()->constrained('crew_agent_messages')->nullOnDelete();
+            $table->uuid('parent_message_id')->nullable();
             // finding|challenge|query|broadcast|system
             $table->string('message_type');
             $table->integer('round')->default(0);
@@ -24,6 +24,14 @@ return new class extends Migration
 
             $table->index(['crew_execution_id', 'round']);
             $table->index(['crew_execution_id', 'recipient_agent_id', 'is_read']);
+        });
+
+        // Self-referential FK must be added after table creation in PostgreSQL
+        Schema::table('crew_agent_messages', function (Blueprint $table) {
+            $table->foreign('parent_message_id')
+                ->references('id')
+                ->on('crew_agent_messages')
+                ->nullOnDelete();
         });
     }
 
