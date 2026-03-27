@@ -55,7 +55,7 @@
                             class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500">
                             <option value="">Select a project…</option>
                             @foreach($projects as $project)
-                                <option value="{{ $project->id }}">{{ $project->name }}</option>
+                                <option value="{{ $project->id }}">{{ $project->title }}</option>
                             @endforeach
                         </select>
                         @error('defaultProjectId') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -124,7 +124,7 @@
                     <strong class="text-gray-700">{{ $bot->chatBindings->count() }}</strong> active chats
                 </span>
                 @if($bot->routing_mode === 'project' && $bot->defaultProject)
-                    <span>Project: <strong class="text-gray-700">{{ $bot->defaultProject->name }}</strong></span>
+                    <span>Project: <strong class="text-gray-700">{{ $bot->defaultProject->title }}</strong></span>
                 @endif
                 @if($bot->last_message_at)
                     <span>Last message: <strong class="text-gray-700">{{ $bot->last_message_at->diffForHumans() }}</strong></span>

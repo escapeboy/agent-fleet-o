@@ -89,7 +89,7 @@ class TelegramBotsPage extends Component
     public function render()
     {
         $bots = TelegramBot::with(['defaultProject', 'chatBindings'])->get();
-        $projects = Project::orderBy('name')->get(['id', 'name']);
+        $projects = Project::orderBy('title')->get(['id', 'title']);
 
         return view('livewire.telegram.telegram-bots-page', [
             'bots' => $bots,
