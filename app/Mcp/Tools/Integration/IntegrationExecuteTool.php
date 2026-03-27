@@ -23,8 +23,8 @@ class IntegrationExecuteTool extends Tool
             'integration_id' => $schema->string()
                 ->description('Integration UUID')
                 ->required(),
-            'action' => $schema->string()
-                ->description('Driver action key, e.g. create_issue, send_message, create_record')
+            'integration_action' => $schema->string()
+                ->description('Driver action key, e.g. post_tweet, create_issue, send_message')
                 ->required(),
             'params' => $schema->object()
                 ->description('Action parameters (driver-specific)'),
@@ -48,10 +48,11 @@ class IntegrationExecuteTool extends Tool
             return Response::error('Integration not found.');
         }
 
-        $actionKey = $request->get('action');
+        // Use integration_action (not action, which is consumed by the CompactTool dispatcher)
+        $actionKey = $request->get('integration_action') ?? $request->get('action');
 
-        if (! $actionKey) {
-            return Response::error('action is required.');
+        if (! $actionKey || $actionKey === 'execute') {
+            return Response::error('integration_action is required (e.g. post_tweet, create_issue).');
         }
 
         try {

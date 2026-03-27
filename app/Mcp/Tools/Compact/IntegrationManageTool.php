@@ -13,7 +13,7 @@ class IntegrationManageTool extends CompactTool
 {
     protected string $name = 'integration_manage';
 
-    protected string $description = 'Manage third-party integrations. Actions: list, connect (integration_type, credentials), disconnect (integration_id), ping (integration_id — test connection), execute (integration_id, command, params), capabilities (integration_id).';
+    protected string $description = 'Manage third-party integrations. Actions: list, connect (driver, name, credentials), disconnect (integration_id), ping (integration_id), execute (integration_id, integration_action, params), capabilities (integration_id).';
 
     protected function toolMap(): array
     {
