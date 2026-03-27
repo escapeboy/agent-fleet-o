@@ -2,10 +2,12 @@
 
 namespace App\Domain\Experiment\Pipeline;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Enums\ExperimentTaskStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentTask;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -112,17 +114,56 @@ class BuildArtifactJob implements ShouldQueue
             $plan = $inputData['plan'] ?? [];
             $artifactSpec = $inputData['artifact_spec'] ?? [];
 
+            // Load experiment agent and resolve its tools when available
+            $agent = $experiment->agent_id
+                ? Agent::withoutGlobalScopes()->find($experiment->agent_id)
+                : null;
+
+            $prismTools = [];
+            if ($agent) {
+                $prismTools = app(ResolveAgentToolsAction::class)->execute(
+                    agent: $agent,
+                    executionId: $experiment->id,
+                    userId: $experiment->user_id,
+                );
+            }
+
+            // Build system prompt: use agent backstory/role when available
+            if ($agent) {
+                $systemPromptParts = [];
+                if ($agent->role) {
+                    $systemPromptParts[] = "You are {$agent->name}, a {$agent->role}.";
+                }
+                if ($agent->backstory) {
+                    $systemPromptParts[] = $agent->backstory;
+                }
+                $systemPromptParts[] = 'After completing your task, return a JSON object with: content (string - a summary of what you did), metadata (object - any relevant metadata).';
+                $systemPrompt = implode("\n\n", $systemPromptParts);
+            } else {
+                $systemPrompt = 'You are a content builder agent. Generate the requested artifact content. Return a JSON object with: content (string - the actual artifact content), metadata (object - any relevant metadata about the artifact).';
+            }
+
+            // Build user prompt: use thesis as primary instruction for agent-driven tasks
+            if ($agent && $experiment->thesis) {
+                $userPrompt = "{$experiment->thesis}\n\n---\nArtifact to produce:\nType: {$artifactSpec['type']}\nName: {$artifactSpec['name']}\nDescription: {$artifactSpec['description']}\n\nPlan context: ".json_encode($plan);
+            } else {
+                $userPrompt = "Build this artifact:\n\nType: {$artifactSpec['type']}\nName: {$artifactSpec['name']}\nDescription: {$artifactSpec['description']}\n\nExperiment context:\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nPlan: ".json_encode($plan);
+            }
+
             $request = new AiRequestDTO(
                 provider: $llm['provider'],
                 model: $llm['model'],
-                systemPrompt: 'You are a content builder agent. Generate the requested artifact content. Return a JSON object with: content (string - the actual artifact content), metadata (object - any relevant metadata about the artifact).',
-                userPrompt: "Build this artifact:\n\nType: {$artifactSpec['type']}\nName: {$artifactSpec['name']}\nDescription: {$artifactSpec['description']}\n\nExperiment context:\nTitle: {$experiment->title}\nThesis: {$experiment->thesis}\nPlan: ".json_encode($plan),
-                maxTokens: 2048,
+                systemPrompt: $systemPrompt,
+                userPrompt: $userPrompt,
+                maxTokens: 4096,
                 userId: $experiment->user_id,
                 teamId: $experiment->team_id,
                 experimentId: $experiment->id,
+                agentId: $agent?->id,
                 purpose: 'building',
                 temperature: 0.7,
+                tools: $prismTools ?: null,
+                maxSteps: $prismTools ? 10 : 1,
             );
 
             $response = $gateway->complete($request);
@@ -247,7 +288,7 @@ class BuildArtifactJob implements ShouldQueue
 
     /**
      * Resolve LLM provider/model for this task.
-     * Priority: task agent → experiment constraints → team default → platform default.
+     * Priority: task agent → experiment agent → experiment constraints → team default → platform default.
      *
      * @return array{provider: string, model: string}
      */
@@ -255,11 +296,22 @@ class BuildArtifactJob implements ShouldQueue
     {
         // 1. Task-level agent override
         if ($task->agent_id) {
-            $agent = $task->agent;
-            if ($agent && $agent->llm_provider && $agent->llm_model) {
+            $agent = Agent::withoutGlobalScopes()->find($task->agent_id);
+            if ($agent && $agent->provider && $agent->model) {
                 return [
-                    'provider' => $agent->llm_provider,
-                    'model' => $agent->llm_model,
+                    'provider' => $agent->provider,
+                    'model' => $agent->model,
+                ];
+            }
+        }
+
+        // 1.5. Experiment-level agent override
+        if ($experiment->agent_id) {
+            $agent = Agent::withoutGlobalScopes()->find($experiment->agent_id);
+            if ($agent && $agent->provider && $agent->model) {
+                return [
+                    'provider' => $agent->provider,
+                    'model' => $agent->model,
                 ];
             }
         }
