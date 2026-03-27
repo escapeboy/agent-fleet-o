@@ -234,6 +234,7 @@ class ExecuteAgentAction
                 maxSteps: $tierConfig['max_steps'],
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
                 workingDirectory: $agent->config['working_directory'] ?? null,
+                enablePromptCaching: true,
             );
 
             $response = $this->gateway->complete($request);
@@ -547,6 +548,13 @@ class ExecuteAgentAction
                 'then deliver a partial result with clear notes on what was not completed.',
             ]);
         }
+
+        // Explicit tool-selection chain-of-thought — improves traceability and reduces incorrect selections
+        $parts[] = implode("\n", [
+            '## Tool Selection',
+            'Before each tool call, output one line:',
+            '"I need [outcome] — calling [tool_name] because [reason]."',
+        ]);
 
         // Include available credentials from project scope
         $credentials = $this->resolveCredentials->execute($project);
