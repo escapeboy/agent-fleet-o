@@ -2,8 +2,12 @@
 
 namespace App\Domain\Crew\Services;
 
+use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Actions\BuildAdversarialRoundTasksAction;
+use App\Domain\Crew\Actions\ClaimNextTaskAction;
 use App\Domain\Crew\Actions\CollectCrewArtifactsAction;
 use App\Domain\Crew\Actions\DecomposeGoalAction;
+use App\Domain\Crew\Actions\SendAgentMessageAction;
 use App\Domain\Crew\Actions\SynthesizeResultAction;
 use App\Domain\Crew\Actions\ValidateTaskOutputAction;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
@@ -58,6 +62,8 @@ class CrewOrchestrator
                 CrewProcessType::Sequential => $this->dispatchSequential($execution),
                 CrewProcessType::Parallel => $this->dispatchParallel($execution),
                 CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution),
+                CrewProcessType::SelfClaim => $this->dispatchSelfClaim($execution),
+                CrewProcessType::Adversarial => $this->dispatchAdversarial($execution),
             };
         } catch (\Throwable $e) {
             Log::error('Crew orchestration failed', [
@@ -148,6 +154,65 @@ class CrewOrchestrator
     }
 
     /**
+     * Self-Claim: seed one task per worker; agents claim subsequent tasks themselves after completion.
+     */
+    public function dispatchSelfClaim(CrewExecution $execution): void
+    {
+        $config = $execution->config_snapshot;
+        $workers = collect($config['workers'] ?? []);
+        $tasks = $execution->taskExecutions()->get();
+
+        if ($tasks->isEmpty()) {
+            $this->failExecution($execution, 'No tasks to execute.');
+
+            return;
+        }
+
+        $pendingTasks = $tasks->where('status', CrewTaskStatus::Pending->value);
+
+        // Seed: dispatch one task per worker (they self-claim after each completion)
+        foreach ($workers->take($pendingTasks->count()) as $workerConfig) {
+            $agent = Agent::withoutGlobalScopes()->find($workerConfig['id']);
+            if (! $agent) {
+                continue;
+            }
+
+            $claimed = app(ClaimNextTaskAction::class)->execute($execution, $agent);
+            if ($claimed) {
+                ExecuteCrewTaskJob::dispatch(
+                    crewExecutionId: $execution->id,
+                    taskExecutionId: $claimed->id,
+                    teamId: $execution->team_id,
+                );
+            }
+        }
+
+        // If no workers but tasks exist, seed with coordinator
+        if ($workers->isEmpty() && $pendingTasks->isNotEmpty()) {
+            $coordinator = Agent::withoutGlobalScopes()->find($config['coordinator']['id']);
+            if ($coordinator) {
+                $claimed = app(ClaimNextTaskAction::class)->execute($execution, $coordinator);
+                if ($claimed) {
+                    ExecuteCrewTaskJob::dispatch(
+                        crewExecutionId: $execution->id,
+                        taskExecutionId: $claimed->id,
+                        teamId: $execution->team_id,
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Adversarial: round 1 tasks are already created by DecomposeGoalAction — dispatch them as parallel.
+     */
+    public function dispatchAdversarial(CrewExecution $execution): void
+    {
+        // Round 1 hypothesis tasks are created as Pending by DecomposeGoalAction; dispatch them in parallel
+        $this->dispatchParallel($execution);
+    }
+
+    /**
      * Called after a task is validated — unblock any dependent tasks then continue the flow.
      */
     public function onTaskValidated(CrewExecution $execution, CrewTaskExecution $task): void
@@ -163,6 +228,8 @@ class CrewOrchestrator
             CrewProcessType::Sequential => $this->dispatchSequential($execution),
             CrewProcessType::Parallel => $this->checkParallelProgress($execution),
             CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution),
+            CrewProcessType::SelfClaim => $this->continueSelfClaim($execution, $task),
+            CrewProcessType::Adversarial => $this->advanceAdversarialRound($execution),
         };
     }
 
@@ -191,7 +258,7 @@ class CrewOrchestrator
                 // Let coordinator decide what to do
                 $this->dispatchHierarchical($execution);
             } else {
-                // Check if we can continue (sequential/parallel skip this task)
+                // Check if we can continue (sequential/parallel/self_claim/adversarial skip this task)
                 $this->checkContinuation($execution);
             }
         }
@@ -213,6 +280,103 @@ class CrewOrchestrator
         } else {
             $task->update(['status' => CrewTaskStatus::Failed]);
             $this->checkContinuation($execution);
+        }
+    }
+
+    /**
+     * Continue a Self-Claim execution after a task completes:
+     * the same agent claims the next available task, or we check for completion.
+     */
+    private function continueSelfClaim(CrewExecution $execution, CrewTaskExecution $completedTask): void
+    {
+        // The agent who just finished claims the next task
+        $agent = Agent::withoutGlobalScopes()->find($completedTask->agent_id);
+
+        if ($agent) {
+            $nextTask = app(ClaimNextTaskAction::class)->execute($execution, $agent);
+            if ($nextTask) {
+                ExecuteCrewTaskJob::dispatch(
+                    crewExecutionId: $execution->id,
+                    taskExecutionId: $nextTask->id,
+                    teamId: $execution->team_id,
+                );
+
+                return;
+            }
+        }
+
+        // No more tasks available for this agent — check if all agents are done
+        $tasks = $execution->taskExecutions()->get();
+        if ($this->dependencyResolver->allTerminal($tasks)) {
+            if ($this->checkConvergenceReached($execution)) {
+                $this->synthesizeAndComplete($execution);
+            } else {
+                $this->failExecution($execution, 'Convergence not met.');
+            }
+        }
+        // Otherwise other agents are still working; they will trigger continueSelfClaim when done
+    }
+
+    /**
+     * Advance an adversarial execution after a task validates:
+     * store findings as messages, then either start the next debate round or synthesize.
+     */
+    private function advanceAdversarialRound(CrewExecution $execution): void
+    {
+        $config = $execution->config_snapshot;
+        $maxRounds = $config['adversarial_rounds'] ?? 2;
+
+        $tasks = $execution->taskExecutions()->get();
+
+        // Determine the current round from task input_context
+        $currentRound = $tasks->max(fn ($t) => $t->input_context['debate_round'] ?? 1) ?? 1;
+
+        // Collect tasks for the current round
+        $roundTasks = $tasks->filter(fn ($t) => ($t->input_context['debate_round'] ?? 1) === $currentRound);
+
+        // Wait until all tasks in the current round are terminal before advancing
+        $allRoundDone = $roundTasks->every(fn ($t) => $t->status->isTerminal());
+        if (! $allRoundDone) {
+            return;
+        }
+
+        // Store each validated task's output as a "finding" message for the next round to reference
+        $completedRoundTasks = $roundTasks->filter(fn ($t) => $t->isValidated());
+        foreach ($completedRoundTasks as $task) {
+            if ($task->output) {
+                app(SendAgentMessageAction::class)->execute(
+                    execution: $execution,
+                    messageType: 'finding',
+                    content: json_encode($task->output, JSON_UNESCAPED_UNICODE),
+                    sender: Agent::withoutGlobalScopes()->find($task->agent_id),
+                    round: $currentRound,
+                );
+            }
+        }
+
+        // Advance to next round or synthesize
+        if ($currentRound < $maxRounds) {
+            $nextRoundTasks = app(BuildAdversarialRoundTasksAction::class)->execute(
+                $execution,
+                $currentRound + 1,
+                $roundTasks->values()->all(),
+            );
+
+            // Dispatch the new round's tasks directly (they are created as Pending)
+            foreach ($nextRoundTasks as $newTask) {
+                ExecuteCrewTaskJob::dispatch(
+                    crewExecutionId: $execution->id,
+                    taskExecutionId: $newTask->id,
+                    teamId: $execution->team_id,
+                );
+            }
+        } else {
+            // All rounds complete — synthesize into a final conclusion
+            if ($this->checkConvergenceReached($execution)) {
+                $this->synthesizeAndComplete($execution);
+            } else {
+                $this->failExecution($execution, 'Adversarial convergence not met.');
+            }
         }
     }
 
@@ -358,6 +522,10 @@ class CrewOrchestrator
                 CrewProcessType::Sequential => $this->dispatchSequential($execution),
                 CrewProcessType::Parallel => $this->dispatchParallel($execution),
                 CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution),
+                // For self-claim, re-seed available workers
+                CrewProcessType::SelfClaim => $this->dispatchSelfClaim($execution),
+                // For adversarial, re-dispatch the current round
+                CrewProcessType::Adversarial => $this->dispatchAdversarial($execution),
             };
         }
     }

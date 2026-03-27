@@ -45,14 +45,29 @@ class DecomposeGoalAction
 
         $isCoordinatorOnly = empty($config['workers']);
 
-        $systemPrompt = "You are {$coordinator->role}. {$coordinator->goal}\n\n"
-            .($isCoordinatorOnly
-                ? "You are working alone. Decompose the goal into concrete tasks that you will execute yourself.\n"
-                : "Your team:\n{$workerDescriptions}\n\nDecompose the goal into tasks. Assign each to the most suitable team member by their name, or 'self' if you will do it.\n")
-            ."\nOutput valid JSON: an array of task objects with keys: title, description, assigned_to, dependencies (array of 0-based indices), expected_output."
-            ."\nOptionally include skip_condition to conditionally skip a task based on dependency outputs. Format: {\"field\": \"output.key\", \"operator\": \"==\", \"value\": \"...\"} or compound: {\"all\": [...]} / {\"any\": [...]}. Operators: ==, !=, >, <, >=, <=, contains, in, is_null, is_not_null.";
+        $processType = $config['process_type'] ?? 'parallel';
+        $isAdversarial = $processType === 'adversarial';
 
-        $userPrompt = "Goal: {$execution->goal}\n\nProduce a task plan as a JSON array.";
+        if ($isAdversarial) {
+            $systemPrompt = "You are {$coordinator->role}. {$coordinator->goal}\n\n"
+                ."Your team will investigate this goal using an adversarial debate format.\n"
+                ."Assign EXACTLY ONE hypothesis to each worker. Each worker will argue for their hypothesis and challenge others.\n"
+                .(! $isCoordinatorOnly ? "Team members:\n{$workerDescriptions}\n\n" : '')
+                ."Output valid JSON: an array of tasks with keys: title, description, assigned_to, expected_output.\n"
+                ."Each task should define ONE hypothesis to investigate. No dependencies — all tasks run in parallel in Round 1.\n"
+                ."Prefix each title with 'Round 1: Hypothesis — '.";
+
+            $userPrompt = "Goal: {$execution->goal}\n\nCreate one hypothesis per team member as the starting positions for a structured debate.";
+        } else {
+            $systemPrompt = "You are {$coordinator->role}. {$coordinator->goal}\n\n"
+                .($isCoordinatorOnly
+                    ? "You are working alone. Decompose the goal into concrete tasks that you will execute yourself.\n"
+                    : "Your team:\n{$workerDescriptions}\n\nDecompose the goal into tasks. Assign each to the most suitable team member by their name, or 'self' if you will do it.\n")
+                ."\nOutput valid JSON: an array of task objects with keys: title, description, assigned_to, dependencies (array of 0-based indices), expected_output."
+                ."\nOptionally include skip_condition to conditionally skip a task based on dependency outputs. Format: {\"field\": \"output.key\", \"operator\": \"==\", \"value\": \"...\"} or compound: {\"all\": [...]} / {\"any\": [...]}. Operators: ==, !=, >, <, >=, <=, contains, in, is_null, is_not_null.";
+
+            $userPrompt = "Goal: {$execution->goal}\n\nProduce a task plan as a JSON array.";
+        }
 
         $request = new AiRequestDTO(
             provider: $resolved['provider'],
@@ -110,10 +125,12 @@ class DecomposeGoalAction
                 // Tasks with dependencies start as Blocked; they are unblocked by DependencyGraph::autoUnblock()
                 // once all their dependencies reach a satisfied terminal state (Validated or Skipped).
                 'status' => ! empty($dependencies) ? CrewTaskStatus::Blocked : CrewTaskStatus::Pending,
-                'input_context' => [
+                'input_context' => array_filter([
                     'expected_output' => $task['expected_output'] ?? null,
                     'assigned_to' => $assignedTo,
-                ],
+                    // Tag adversarial round-1 tasks so the orchestrator can identify them by round
+                    'debate_round' => $isAdversarial ? 1 : null,
+                ]),
                 'depends_on' => $dependencies, // Temporarily sort_order integers; remapped to UUIDs below
                 'skip_condition' => $task['skip_condition'] ?? null,
                 'attempt_number' => 1,

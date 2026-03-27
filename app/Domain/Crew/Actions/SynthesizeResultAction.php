@@ -3,6 +3,7 @@
 namespace App\Domain\Crew\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Models\CrewAgentMessage;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -31,29 +32,53 @@ class SynthesizeResultAction
 
         $resolved = $this->providerResolver->resolve(agent: $coordinator);
 
-        $validatedOutputs = $execution->taskExecutions()
-            ->whereIn('status', ['validated', 'completed'])
-            ->orderBy('sort_order')
-            ->get()
-            ->map(fn ($t) => [
-                'title' => $t->title,
-                'description' => $t->description,
-                'output' => $t->output,
-                'qa_score' => $t->qa_score,
-            ])
-            ->toArray();
+        $processType = $config['process_type'] ?? 'parallel';
+        $isAdversarial = $processType === 'adversarial';
 
-        $systemPrompt = "You are {$coordinator->role}. {$coordinator->goal}\n\n"
-            ."You have completed all tasks for the goal below. Now synthesize the individual task outputs into one cohesive final result.\n"
-            .'Output valid JSON with a "result" key containing the assembled output and a "summary" key with a brief overview.';
+        if ($isAdversarial) {
+            // Build debate transcript from all inter-agent messages
+            $messages = CrewAgentMessage::where('crew_execution_id', $execution->id)
+                ->orderBy('round')
+                ->orderBy('created_at')
+                ->get();
 
-        $taskSummaries = collect($validatedOutputs)
-            ->map(fn ($t, $i) => ($i + 1).". {$t['title']}:\n".json_encode($t['output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
-            ->implode("\n\n");
+            $transcript = $messages->map(fn ($m) => "[Round {$m->round}] {$m->message_type}: {$m->content}")
+                ->implode("\n\n");
 
-        $userPrompt = "Goal: {$execution->goal}\n\n"
-            ."Completed task outputs:\n{$taskSummaries}\n\n"
-            .'Synthesize these into a final result.';
+            $systemPrompt = "You are {$coordinator->role}. {$coordinator->goal}\n\n"
+                ."You have facilitated a structured debate between your agents.\n"
+                ."Synthesize the debate into a final conclusion.\n"
+                .'Output valid JSON with: "result" (the conclusion), "summary" (brief overview), '
+                .'"surviving_hypothesis" (the most supported position), "confidence" (0-1 score), "debate_transcript" (condensed version).';
+
+            $userPrompt = "Goal: {$execution->goal}\n\n"
+                ."Debate transcript:\n{$transcript}\n\n"
+                .'Synthesize into a final conclusion with confidence assessment.';
+        } else {
+            $validatedOutputs = $execution->taskExecutions()
+                ->whereIn('status', ['validated', 'completed'])
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn ($t) => [
+                    'title' => $t->title,
+                    'description' => $t->description,
+                    'output' => $t->output,
+                    'qa_score' => $t->qa_score,
+                ])
+                ->toArray();
+
+            $systemPrompt = "You are {$coordinator->role}. {$coordinator->goal}\n\n"
+                ."You have completed all tasks for the goal below. Now synthesize the individual task outputs into one cohesive final result.\n"
+                .'Output valid JSON with a "result" key containing the assembled output and a "summary" key with a brief overview.';
+
+            $taskSummaries = collect($validatedOutputs)
+                ->map(fn ($t, $i) => ($i + 1).". {$t['title']}:\n".json_encode($t['output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
+                ->implode("\n\n");
+
+            $userPrompt = "Goal: {$execution->goal}\n\n"
+                ."Completed task outputs:\n{$taskSummaries}\n\n"
+                .'Synthesize these into a final result.';
+        }
 
         $request = new AiRequestDTO(
             provider: $resolved['provider'],
