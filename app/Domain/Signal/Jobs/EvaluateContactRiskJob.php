@@ -33,7 +33,7 @@ class EvaluateContactRiskJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(EntityRiskEngine $engine, CreateSecurityReviewRequestAction $securityReview): void
     {
-        $contact = ContactIdentity::find($this->contactId);
+        $contact = ContactIdentity::withoutGlobalScopes()->find($this->contactId);
 
         if ($contact === null) {
             return;

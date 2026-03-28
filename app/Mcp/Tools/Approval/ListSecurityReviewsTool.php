@@ -43,7 +43,7 @@ class ListSecurityReviewsTool extends Tool
 
         $query = ApprovalRequest::withoutGlobalScopes()
             ->where('team_id', $teamId)
-            ->whereJsonContains('context->type', 'security_review')
+            ->where('context->type', 'security_review')
             ->orderByDesc('created_at')
             ->limit($limit);
 

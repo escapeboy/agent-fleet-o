@@ -3,6 +3,7 @@
 namespace App\Domain\Assistant\Tools;
 
 use App\Domain\Shared\Models\ContactIdentity;
+use Illuminate\Support\Facades\Auth;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
 
@@ -25,7 +26,14 @@ class SecurityTools
             ->for('Get the current risk score, triggered rule flags, and evaluation timestamp for a specific contact identity')
             ->withStringParameter('contact_id', 'The UUID of the contact identity')
             ->using(function (string $contact_id) {
+                $teamId = Auth::user()?->current_team_id;
+
+                if (! $teamId) {
+                    return json_encode(['error' => 'No current team.']);
+                }
+
                 $contact = ContactIdentity::withoutGlobalScopes()
+                    ->where('team_id', $teamId)
                     ->find($contact_id);
 
                 if (! $contact) {
@@ -49,10 +57,17 @@ class SecurityTools
             ->withIntegerParameter('threshold', 'Minimum risk score to include (default: 30)')
             ->withIntegerParameter('limit', 'Maximum number of results to return (default: 25, max: 100)')
             ->using(function (int $threshold = 30, int $limit = 25) {
+                $teamId = Auth::user()?->current_team_id;
+
+                if (! $teamId) {
+                    return json_encode(['error' => 'No current team.']);
+                }
+
                 $threshold = min(max($threshold, 0), 1000);
                 $limit = min($limit, 100);
 
                 $contacts = ContactIdentity::withoutGlobalScopes()
+                    ->where('team_id', $teamId)
                     ->where('risk_score', '>=', $threshold)
                     ->orderByDesc('risk_score')
                     ->limit($limit)

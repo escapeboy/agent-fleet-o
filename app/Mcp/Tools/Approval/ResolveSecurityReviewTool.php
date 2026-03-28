@@ -44,7 +44,7 @@ class ResolveSecurityReviewTool extends Tool
 
         $review = ApprovalRequest::withoutGlobalScopes()
             ->where('team_id', $teamId)
-            ->whereJsonContains('context->type', 'security_review')
+            ->where('context->type', 'security_review')
             ->find($request->get('review_id'));
 
         if (! $review) {

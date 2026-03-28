@@ -15,6 +15,6 @@ readonly class IpReputationResult
 
     public function isHighRisk(int $threshold = 75): bool
     {
-        return $this->abuseScore >= $threshold;
+        return $this->abuseScore >= $threshold || $this->isTor;
     }
 }

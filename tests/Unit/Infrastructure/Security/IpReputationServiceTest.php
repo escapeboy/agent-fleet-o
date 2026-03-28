@@ -94,4 +94,21 @@ class IpReputationServiceTest extends TestCase
         $this->assertTrue($result->isHighRisk(75));
         $this->assertFalse($result->isHighRisk(90));
     }
+
+    public function test_tor_exit_node_is_always_high_risk_regardless_of_score(): void
+    {
+        config(['security.ip_reputation.abuseipdb_key' => 'test-key']);
+
+        Http::fake([
+            'api.abuseipdb.com/*' => Http::response([
+                'data' => ['abuseConfidenceScore' => 0, 'isTor' => true, 'isWhitelisted' => false, 'usageType' => 'Tor Exit Node', 'countryCode' => 'DE'],
+            ], 200),
+        ]);
+
+        $result = $this->service->check('45.33.32.156');
+
+        $this->assertEquals(0, $result->abuseScore);
+        $this->assertTrue($result->isTor);
+        $this->assertTrue($result->isHighRisk(75), 'Tor exit nodes must be high-risk regardless of abuse score');
+    }
 }
