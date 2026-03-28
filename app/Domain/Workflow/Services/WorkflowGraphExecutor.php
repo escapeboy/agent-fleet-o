@@ -12,6 +12,7 @@ use App\Domain\Experiment\Pipeline\ExecutePlaybookStepJob;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Workflow\Actions\DispatchSubWorkflowAction;
+use App\Domain\Workflow\Actions\DynamicForkFanOutAction;
 use App\Domain\Workflow\Actions\HandleTimeGateAction;
 use App\Domain\Workflow\Jobs\ExecuteWorkflowNodeJob;
 use App\Domain\Workflow\Models\WorkflowNode;
@@ -393,6 +394,13 @@ class WorkflowGraphExecutor
                 }
             }
 
+            // Enforce max_parallel_branches limit
+            $maxBranches = max(1, (int) ($config['max_parallel_branches'] ?? 50));
+            $arrayData = array_slice($arrayData, 0, $maxBranches);
+
+            $forkVariableName = $config['fork_variable_name'] ?? 'fork_item';
+            $forkMode = $config['fork_execution_mode'] ?? 'inline';
+
             // Get the single outgoing edge (the template path)
             $outgoingEdge = collect($edgeMap[$nodeId] ?? [])->first();
 
@@ -412,12 +420,22 @@ class WorkflowGraphExecutor
             $templateNodeId = $outgoingEdge['target_node_id'];
             $templateStep = $steps[$templateNodeId] ?? null;
 
-            if ($templateStep && $templateStep->isPending()) {
-                // Store fork data in the step's input mapping for the executor to use
+            if ($forkMode === 'sub_workflow' && $templateStep && $templateStep->isPending()) {
+                // Fan-out: spawn one child experiment per array element
+                app(DynamicForkFanOutAction::class)->execute(
+                    step: $templateStep,
+                    parent: $experiment,
+                    forkItems: array_values($arrayData),
+                    forkVariableName: $forkVariableName,
+                    nodeData: $nodeMap[$templateNodeId] ?? [],
+                );
+            } elseif ($templateStep && $templateStep->isPending()) {
+                // Inline (default): inject fork data into the template step for the executor to iterate
                 $templateStep->update([
                     'input_mapping' => array_merge($templateStep->input_mapping ?? [], [
-                        '_fork_items' => $arrayData,
+                        '_fork_items' => array_values($arrayData),
                         '_fork_source' => $forkSource,
+                        '_fork_variable' => $forkVariableName,
                     ]),
                 ]);
                 $executable[] = $templateNodeId;
@@ -854,7 +872,7 @@ class WorkflowGraphExecutor
         $context = ['_experiment' => $experiment->toArray()];
 
         foreach ($steps as $nodeId => $step) {
-            if ($step->isCompleted() && is_array($step->output)) {
+            if ($step && $step->isCompleted() && is_array($step->output)) {
                 $context[$nodeId] = $step->output;
             }
         }
