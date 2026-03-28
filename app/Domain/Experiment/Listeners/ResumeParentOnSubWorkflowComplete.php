@@ -36,7 +36,8 @@ class ResumeParentOnSubWorkflowComplete
             return;
         }
 
-        $step = PlaybookStep::find($parentStepId);
+        $step = PlaybookStep::whereHas('experiment', fn ($q) => $q->where('team_id', $child->team_id))
+            ->find($parentStepId);
 
         if (! $step || $step->status !== 'running') {
             return;
@@ -95,7 +96,9 @@ class ResumeParentOnSubWorkflowComplete
     private function handleForkChild(Experiment $child, ExperimentTransitioned $event, string $forkParentStepId): void
     {
         $allDone = DB::transaction(function () use ($child, $event, $forkParentStepId): bool {
-            $step = PlaybookStep::lockForUpdate()->find($forkParentStepId);
+            $step = PlaybookStep::lockForUpdate()
+                ->whereHas('experiment', fn ($q) => $q->where('team_id', $child->team_id))
+                ->find($forkParentStepId);
 
             if (! $step || $step->status !== 'running') {
                 return false;

@@ -38,8 +38,12 @@ class ExecuteCompensationJob implements ShouldQueue
             return;
         }
 
-        $compensationNode = WorkflowNode::find($this->compensationNodeId);
-        $originalStep = PlaybookStep::find($this->originalStepId);
+        $compensationNode = WorkflowNode::withoutGlobalScopes()
+            ->whereHas('workflow', fn ($q) => $q->where('team_id', $experiment->team_id))
+            ->find($this->compensationNodeId);
+
+        $originalStep = PlaybookStep::where('experiment_id', $this->experimentId)
+            ->find($this->originalStepId);
 
         if (! $compensationNode || ! $originalStep) {
             return;

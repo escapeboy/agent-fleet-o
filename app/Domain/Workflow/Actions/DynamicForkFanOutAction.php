@@ -64,7 +64,22 @@ class DynamicForkFanOutAction
             return;
         }
 
-        $subWorkflow = Workflow::find($subWorkflowId);
+        // Nesting depth guard — prevent infinite recursion
+        $maxDepth = (int) config('workflow.max_nesting_depth', 5);
+        if (($parent->nesting_depth ?? 0) >= $maxDepth) {
+            $step->update([
+                'status' => 'failed',
+                'error_message' => "Max nesting depth {$maxDepth} exceeded for DynamicFork",
+                'completed_at' => now(),
+            ]);
+
+            return;
+        }
+
+        // Tenant isolation — sub_workflow_id must belong to the same team
+        $subWorkflow = Workflow::withoutGlobalScopes()
+            ->where('team_id', $parent->team_id)
+            ->find($subWorkflowId);
 
         if (! $subWorkflow) {
             $step->update([

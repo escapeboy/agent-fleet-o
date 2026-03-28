@@ -8,6 +8,7 @@ use App\Domain\Workflow\Events\CompensationCompleted;
 use App\Domain\Workflow\Events\CompensationStarted;
 use App\Domain\Workflow\Jobs\ExecuteCompensationJob;
 use App\Domain\Workflow\Models\WorkflowNode;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -30,6 +31,16 @@ class RunCompensationChainAction
             return;
         }
 
+        // Idempotency guard — prevent duplicate compensation dispatch on double-invocation
+        $lockKey = "compensation_dispatched:{$experiment->id}";
+        if (! Cache::add($lockKey, 1, now()->addHours(24))) {
+            Log::info('RunCompensationChainAction: compensation already dispatched for experiment, skipping', [
+                'experiment_id' => $experiment->id,
+            ]);
+
+            return;
+        }
+
         $maxDepth = (int) config('workflow.max_compensation_depth', 20);
 
         // Find completed steps with compensation nodes, ordered by completion time DESC
@@ -38,8 +49,10 @@ class RunCompensationChainAction
             ->whereNotNull('workflow_node_id')
             ->orderByDesc('completed_at')
             ->get()
-            ->filter(function (PlaybookStep $step) {
-                $node = WorkflowNode::select('id', 'compensation_node_id')
+            ->filter(function (PlaybookStep $step) use ($experiment) {
+                $node = WorkflowNode::withoutGlobalScopes()
+                    ->whereHas('workflow', fn ($q) => $q->where('team_id', $experiment->team_id))
+                    ->select('id', 'compensation_node_id')
                     ->find($step->workflow_node_id);
 
                 return $node && $node->compensation_node_id !== null;
@@ -61,7 +74,9 @@ class RunCompensationChainAction
 
         $dispatched = 0;
         foreach ($stepsWithCompensation as $step) {
-            $node = WorkflowNode::find($step->workflow_node_id);
+            $node = WorkflowNode::withoutGlobalScopes()
+                ->whereHas('workflow', fn ($q) => $q->where('team_id', $experiment->team_id))
+                ->find($step->workflow_node_id);
 
             if (! $node?->compensation_node_id) {
                 continue;
