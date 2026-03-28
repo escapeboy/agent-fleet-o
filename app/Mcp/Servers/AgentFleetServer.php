@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Servers;
 
+use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Resources\ApprovalsResource;
 use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
@@ -300,16 +301,20 @@ use App\Mcp\Tools\Webhook\WebhookListTool;
 use App\Mcp\Tools\Webhook\WebhookUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
+use App\Mcp\Tools\Workflow\WorkflowDisableGatewayTool;
 use App\Mcp\Tools\Workflow\WorkflowDuplicateTool;
 use App\Mcp\Tools\Workflow\WorkflowEdgeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowEdgeDeleteTool;
+use App\Mcp\Tools\Workflow\WorkflowEnableGatewayTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
 use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
 use App\Mcp\Tools\Workflow\WorkflowExportPolicyTool;
 use App\Mcp\Tools\Workflow\WorkflowExportTool;
+use App\Mcp\Tools\Workflow\WorkflowGatewayTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowImportTool;
+use App\Mcp\Tools\Workflow\WorkflowListGatewayToolsTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeDeleteTool;
@@ -396,6 +401,21 @@ class AgentFleetServer extends Server
             if (! in_array($toolClass, $this->tools, true)) {
                 $this->tools[] = $toolClass;
             }
+        }
+
+        // Dynamically register each MCP-exposed workflow as a named gateway tool.
+        // ServerContext supports both class-string and Tool instances.
+        try {
+            $exposed = Workflow::withoutGlobalScopes()
+                ->where('mcp_exposed', true)
+                ->whereNotNull('mcp_tool_name')
+                ->get();
+
+            foreach ($exposed as $workflow) {
+                $this->tools[] = app(WorkflowGatewayTool::class, ['workflow' => $workflow]);
+            }
+        } catch (\Throwable) {
+            // Silently skip if DB is unavailable (e.g. during migrations or tests)
         }
     }
 
@@ -502,7 +522,7 @@ class AgentFleetServer extends Server
         CredentialOAuthInitiateTool::class,
         CredentialOAuthFinalizeTool::class,
 
-        // Workflow (16)
+        // Workflow (19)
         WorkflowListTool::class,
         WorkflowGetTool::class,
         WorkflowCreateTool::class,
@@ -524,6 +544,9 @@ class AgentFleetServer extends Server
         WorkflowExportTool::class,
         WorkflowImportTool::class,
         WorkflowExportPolicyTool::class,
+        WorkflowEnableGatewayTool::class,
+        WorkflowDisableGatewayTool::class,
+        WorkflowListGatewayToolsTool::class,
 
         // Project (14)
         ProjectListTool::class,
