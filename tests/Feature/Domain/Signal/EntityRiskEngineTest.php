@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Domain\Signal;
 
+use App\Domain\Approval\Actions\CreateSecurityReviewRequestAction;
 use App\Domain\Shared\Models\ContactChannel;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Models\Team;
-use App\Domain\Approval\Actions\CreateSecurityReviewRequestAction;
 use App\Domain\Signal\Jobs\EvaluateContactRiskJob;
 use App\Domain\Signal\Services\EntityRiskEngine;
 use App\Infrastructure\Security\DTOs\IpReputationResult;

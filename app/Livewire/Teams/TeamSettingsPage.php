@@ -7,13 +7,13 @@ use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
-use Illuminate\Support\Facades\Http;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Facades\Http;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component

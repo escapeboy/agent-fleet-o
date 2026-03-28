@@ -10,6 +10,7 @@ use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentTask;
+use Illuminate\Bus\Batch;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
@@ -157,7 +158,7 @@ class RunBuildingStage extends BaseStageJob
                     }
                 }
             })
-            ->catch(function (\Illuminate\Bus\Batch $batch, \Throwable $e) use ($experimentId) {
+            ->catch(function (Batch $batch, \Throwable $e) use ($experimentId) {
                 Log::warning('RunBuildingStage: Batch has failures', [
                     'experiment_id' => $experimentId,
                     'error' => $e->getMessage(),

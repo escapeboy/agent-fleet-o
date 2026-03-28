@@ -59,7 +59,7 @@ class SearxngSearchTool extends Tool
 
         if (! $instanceUrl) {
             return Response::error(
-                'No Searxng instance configured. Set SEARXNG_URL in your environment or configure it in platform settings (searxng_url).'
+                'No Searxng instance configured. Set SEARXNG_URL in your environment or configure it in platform settings (searxng_url).',
             );
         }
 

@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Bridge\Models\BridgeConnection;
+use App\Domain\Shared\Models\Team;
 use Illuminate\Support\Facades\Http;
 
 class BridgeControllerTest extends ApiTestCase
@@ -134,7 +135,7 @@ class BridgeControllerTest extends ApiTestCase
 
     public function test_update_url_forbidden_for_other_team(): void
     {
-        $otherTeam = \App\Domain\Shared\Models\Team::create([
+        $otherTeam = Team::create([
             'name' => 'Other Team',
             'slug' => 'other-team',
             'owner_id' => $this->user->id,

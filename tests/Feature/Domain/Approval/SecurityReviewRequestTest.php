@@ -96,7 +96,8 @@ class SecurityReviewRequestTest extends TestCase
     {
         DisposableDomains::shouldReceive('isDisposable')->andReturn(true);
 
-        $this->app->instance(IpReputationService::class, new class extends IpReputationService {
+        $this->app->instance(IpReputationService::class, new class extends IpReputationService
+        {
             public function check(string $ip): IpReputationResult
             {
                 return new IpReputationResult($ip, 0, false, false, 'US', false);

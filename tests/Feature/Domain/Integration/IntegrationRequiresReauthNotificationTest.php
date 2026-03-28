@@ -12,7 +12,6 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Notifications\IntegrationRequiresReauthNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;

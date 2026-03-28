@@ -13,7 +13,8 @@ class IpReputationWebhookTest extends TestCase
 
     private function stubIpReputation(int $abuseScore = 0, bool $isTor = false): void
     {
-        $this->app->instance(IpReputationService::class, new class($abuseScore, $isTor) extends IpReputationService {
+        $this->app->instance(IpReputationService::class, new class($abuseScore, $isTor) extends IpReputationService
+        {
             public function __construct(
                 private int $score,
                 private bool $tor,
