@@ -8,4 +8,5 @@ enum KnowledgeSourceStatus: string
     case Indexing = 'indexing';
     case Ready = 'ready';
     case Failed = 'failed';
+    case Error = 'error';
 }

@@ -95,7 +95,7 @@
                                     {{ $source->status->value === 'ready' ? 'bg-green-100 text-green-700' : '' }}
                                     {{ $source->status->value === 'indexing' ? 'bg-blue-100 text-blue-700' : '' }}
                                     {{ $source->status->value === 'pending' ? 'bg-gray-100 text-gray-600' : '' }}
-                                    {{ $source->status->value === 'failed' ? 'bg-red-100 text-red-700' : '' }}">
+                                    {{ in_array($source->status->value, ['failed', 'error']) ? 'bg-red-100 text-red-700' : '' }}">
                                     {{ ucfirst($source->status->value) }}
                                 </span>
                                 <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
@@ -134,7 +134,7 @@
                                     {{ $viewingSourceId === $source->id ? 'Hide Chunks' : 'View Chunks' }}
                                 </button>
                             @endif
-                            @if(in_array($source->status->value, ['ready', 'failed']))
+                            @if(in_array($source->status->value, ['ready', 'failed', 'error']))
                                 <button wire:click="reindex('{{ $source->id }}')"
                                     class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
                                     Re-index
