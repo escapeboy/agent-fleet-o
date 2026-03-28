@@ -220,6 +220,8 @@ use App\Mcp\Tools\Signal\ConnectorBindingTool;
 use App\Mcp\Tools\Signal\ConnectorSubscriptionTool;
 use App\Mcp\Tools\Signal\ContactManageTool;
 use App\Mcp\Tools\Signal\EmailReplyTool;
+use App\Mcp\Tools\Signal\ForceReevaluateContactRiskTool;
+use App\Mcp\Tools\Signal\GetContactRiskScoreTool;
 use App\Mcp\Tools\Signal\HttpMonitorTool;
 use App\Mcp\Tools\Signal\ImapMailboxTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
@@ -230,6 +232,7 @@ use App\Mcp\Tools\Signal\KgEntityFactsTool;
 use App\Mcp\Tools\Signal\KgGraphSearchTool;
 use App\Mcp\Tools\Signal\KgInvalidateFactTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
+use App\Mcp\Tools\Signal\ListHighRiskContactsTool;
 use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
@@ -555,6 +558,9 @@ class AgentFleetServer extends Server
         ConnectorBindingTool::class,
         ConnectorBindingDeleteTool::class,
         ContactManageTool::class,
+        GetContactRiskScoreTool::class,
+        ListHighRiskContactsTool::class,
+        ForceReevaluateContactRiskTool::class,
         ImapMailboxTool::class,
         EmailReplyTool::class,
         ClearCueConnectorTool::class,

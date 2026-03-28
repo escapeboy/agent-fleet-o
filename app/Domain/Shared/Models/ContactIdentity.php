@@ -3,6 +3,7 @@
 namespace App\Domain\Shared\Models;
 
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Signal\Models\Signal;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,17 +18,28 @@ class ContactIdentity extends Model
         'email',
         'phone',
         'metadata',
+        'risk_score',
+        'risk_flags',
+        'risk_evaluated_at',
     ];
 
     protected function casts(): array
     {
         return [
             'metadata' => 'array',
+            'risk_flags' => 'array',
+            'risk_score' => 'integer',
+            'risk_evaluated_at' => 'datetime',
         ];
     }
 
     public function channels(): HasMany
     {
         return $this->hasMany(ContactChannel::class);
+    }
+
+    public function signals(): HasMany
+    {
+        return $this->hasMany(Signal::class);
     }
 }

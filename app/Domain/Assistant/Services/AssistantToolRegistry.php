@@ -9,6 +9,7 @@ use App\Domain\Assistant\Tools\ListEntitiesTools;
 use App\Domain\Assistant\Tools\MemoryTools;
 use App\Domain\Assistant\Tools\MutationTools;
 use App\Domain\Assistant\Tools\SchedulingTools;
+use App\Domain\Assistant\Tools\SecurityTools;
 use App\Domain\Assistant\Tools\StatusTools;
 use App\Models\User;
 use Prism\Prism\Tool as PrismToolObject;
@@ -29,6 +30,7 @@ class AssistantToolRegistry
         $tools = array_merge($tools, GetEntityTools::tools());
         $tools = array_merge($tools, StatusTools::tools());
         $tools = array_merge($tools, MemoryTools::tools());
+        $tools = array_merge($tools, SecurityTools::tools());
 
         // WRITE tools - available to Owner/Admin/Member
         $role = $user->teamRole($user->currentTeam);
