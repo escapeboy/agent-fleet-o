@@ -15,7 +15,10 @@ class ToolFederationGroupController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $groups = ToolFederationGroup::query()
+        $teamId = $request->user()->current_team_id;
+
+        $groups = ToolFederationGroup::withoutGlobalScopes()
+            ->where('team_id', $teamId)
             ->orderBy('name')
             ->get()
             ->map(fn (ToolFederationGroup $g) => [
@@ -74,6 +77,8 @@ class ToolFederationGroupController extends Controller
 
     public function update(Request $request, ToolFederationGroup $toolFederationGroup): JsonResponse
     {
+        abort_if($toolFederationGroup->team_id !== $request->user()->current_team_id, 403);
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
@@ -105,8 +110,10 @@ class ToolFederationGroupController extends Controller
         ]);
     }
 
-    public function destroy(ToolFederationGroup $toolFederationGroup): JsonResponse
+    public function destroy(Request $request, ToolFederationGroup $toolFederationGroup): JsonResponse
     {
+        abort_if($toolFederationGroup->team_id !== $request->user()->current_team_id, 403);
+
         $toolFederationGroup->delete();
 
         return response()->json(['message' => 'Federation group deleted.']);

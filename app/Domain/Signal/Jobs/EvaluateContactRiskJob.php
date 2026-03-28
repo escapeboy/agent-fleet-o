@@ -6,12 +6,12 @@ use App\Domain\Approval\Actions\CreateSecurityReviewRequestAction;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Signal\Services\EntityRiskEngine;
 use Illuminate\Bus\Queueable;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class EvaluateContactRiskJob implements ShouldBeUnique, ShouldQueue
 {
@@ -49,8 +49,8 @@ class EvaluateContactRiskJob implements ShouldBeUnique, ShouldQueue
                 $securityReview->execute($contact->fresh());
             } catch (\Throwable $e) {
                 Log::warning('EvaluateContactRiskJob: failed to create security review', [
-                    'contact_id' => $this->contactId,
-                    'error' => $e->getMessage(),
+                    'contact_ref' => substr(hash('sha256', $this->contactId), 0, 12),
+                    'error_type' => get_class($e),
                 ]);
             }
         }
