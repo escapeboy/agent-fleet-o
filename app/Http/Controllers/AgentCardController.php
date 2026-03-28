@@ -17,7 +17,7 @@ class AgentCardController extends Controller
             'name' => 'FleetQ',
             'description' => 'AI Agent Mission Control — manage experiments, workflows, crews, approvals, and full agent lifecycle.',
             'url' => config('app.url').'/mcp',
-            'version' => '1.13.0',
+            'version' => config('app.version', '1.0.0'),
             'authentication' => [
                 'schemes' => ['Bearer'],
             ],

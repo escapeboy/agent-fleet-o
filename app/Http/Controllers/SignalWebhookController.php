@@ -23,9 +23,9 @@ class SignalWebhookController extends Controller
      */
     public function __invoke(Request $request): JsonResponse
     {
-        // In production, a webhook secret is mandatory — fail closed if not configured.
+        // Outside of local dev, a webhook secret is mandatory — fail closed if not configured.
         $secret = config('services.signal_webhook.secret');
-        if (! $secret && app()->isProduction()) {
+        if (! $secret && ! app()->isLocal()) {
             Log::warning('SignalWebhookController: SIGNAL_WEBHOOK_SECRET not configured in production');
 
             return response()->json(['error' => 'Webhook not configured'], 403);

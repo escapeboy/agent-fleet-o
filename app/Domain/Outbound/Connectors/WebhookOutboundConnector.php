@@ -111,9 +111,15 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
                 ]);
             }
         } catch (\Throwable $e) {
+            // Log full message internally; store sanitised short message in DB to avoid
+            // persisting URLs with embedded credentials or sensitive TLS error details.
+            Log::error('WebhookOutboundConnector: send failed', [
+                'proposal_id' => $proposal->id,
+                'error' => $e->getMessage(),
+            ]);
             $action->update([
                 'status' => OutboundActionStatus::Failed,
-                'response' => ['error' => $e->getMessage()],
+                'response' => ['error' => substr(preg_replace('/https?:\/\/\S+/i', '[url]', $e->getMessage()), 0, 200)],
                 'retry_count' => $action->retry_count + 1,
             ]);
         }
