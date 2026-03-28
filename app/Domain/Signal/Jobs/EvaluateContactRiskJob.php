@@ -6,6 +6,7 @@ use App\Domain\Approval\Actions\CreateSecurityReviewRequestAction;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Signal\Services\EntityRiskEngine;
 use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -46,8 +47,11 @@ class EvaluateContactRiskJob implements ShouldBeUnique, ShouldQueue
         if ($contact->fresh()->risk_score >= $threshold) {
             try {
                 $securityReview->execute($contact->fresh());
-            } catch (\Throwable) {
-                // Non-blocking — risk score persisted regardless of review creation failure.
+            } catch (\Throwable $e) {
+                Log::warning('EvaluateContactRiskJob: failed to create security review', [
+                    'contact_id' => $this->contactId,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
     }

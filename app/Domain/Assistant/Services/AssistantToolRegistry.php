@@ -30,11 +30,12 @@ class AssistantToolRegistry
         $tools = array_merge($tools, GetEntityTools::tools());
         $tools = array_merge($tools, StatusTools::tools());
         $tools = array_merge($tools, MemoryTools::tools());
-        $tools = array_merge($tools, SecurityTools::tools());
 
         // WRITE tools - available to Owner/Admin/Member
         $role = $user->teamRole($user->currentTeam);
         if ($role?->canEdit()) {
+            // Security tools expose PII (email, phone, risk flags) — member+ only
+            $tools = array_merge($tools, SecurityTools::tools());
             $tools = array_merge($tools, MutationTools::writeTools());
             $tools = array_merge($tools, SchedulingTools::tools($user->currentTeam->id, $user->id));
 

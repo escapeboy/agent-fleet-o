@@ -24,7 +24,9 @@ class I01HighRiskIpRule extends EntityRule
 
     public function evaluate(ContactRiskContext $context): bool
     {
+        $threshold = config('security.ip_reputation.block_threshold', 75);
+
         return $context->ipReputation !== null
-            && $context->ipReputation->isHighRisk(75);
+            && $context->ipReputation->isHighRisk($threshold);
     }
 }

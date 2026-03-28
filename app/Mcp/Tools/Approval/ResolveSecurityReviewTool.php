@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Approval;
 
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Signal\Jobs\EvaluateContactRiskJob;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
@@ -68,8 +69,16 @@ class ResolveSecurityReviewTool extends Tool
                 'reviewed_at' => now(),
             ]);
 
-            // Re-evaluate to clear stale flags after manual review.
-            EvaluateContactRiskJob::dispatch($review->context['entity_id']);
+            // Verify the referenced contact still belongs to this team before re-evaluating.
+            $entityId = $review->context['entity_id'] ?? null;
+            $contactExists = $entityId && ContactIdentity::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('id', $entityId)
+                ->exists();
+
+            if ($contactExists) {
+                EvaluateContactRiskJob::dispatch($entityId);
+            }
         } else {
             $review->update([
                 'status' => ApprovalStatus::Rejected,
