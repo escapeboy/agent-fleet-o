@@ -28,7 +28,11 @@ class ExperimentStartTool extends Tool
     public function handle(Request $request): Response
     {
         $experimentId = $request->get('experiment_id');
-        $experiment = Experiment::find($experimentId);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($experimentId);
 
         if (! $experiment) {
             return Response::error("Experiment {$experimentId} not found. Use experiment_list to discover valid experiment IDs.");

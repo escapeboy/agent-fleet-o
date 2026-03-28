@@ -39,6 +39,10 @@ class ExperimentCreateTool extends Tool
             'track' => 'nullable|string|in:growth,retention,revenue,engagement',
             'budget_cap_credits' => 'nullable|numeric|min:1',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         try {
             $experiment = app(CreateExperimentAction::class)->execute(
@@ -47,7 +51,7 @@ class ExperimentCreateTool extends Tool
                 thesis: $validated['thesis'] ?? $validated['title'],
                 track: $validated['track'] ?? 'growth',
                 budgetCapCredits: (int) ($validated['budget_cap_credits'] ?? 10000),
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
             );
 
             return Response::text(json_encode([

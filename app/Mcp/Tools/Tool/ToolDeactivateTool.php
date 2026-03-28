@@ -38,7 +38,7 @@ class ToolDeactivateTool extends Tool
             return Response::error('Only platform tools can be deactivated this way.');
         }
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return Response::error('No active team context.');
         }

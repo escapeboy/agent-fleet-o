@@ -31,7 +31,7 @@ class SignalGetTool extends Tool
     {
         $validated = $request->validate(['signal_id' => 'required|string']);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $signal = Signal::withoutGlobalScopes()
             ->with('contactIdentity')

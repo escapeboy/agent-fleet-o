@@ -37,7 +37,11 @@ class WebhookUpdateTool extends Tool
     {
         $validated = $request->validate(['webhook_id' => 'required|string']);
 
-        $endpoint = WebhookEndpoint::find($validated['webhook_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $endpoint = WebhookEndpoint::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['webhook_id']);
 
         if (! $endpoint) {
             return Response::error('Webhook endpoint not found.');

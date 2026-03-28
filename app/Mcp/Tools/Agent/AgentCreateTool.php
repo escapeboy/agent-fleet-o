@@ -55,6 +55,10 @@ class AgentCreateTool extends Tool
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'sandbox_profile' => 'nullable|string',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         // Parse optional sandbox_profile JSON string into an array
         $sandboxProfile = null;
@@ -73,7 +77,7 @@ class AgentCreateTool extends Tool
                 role: $validated['role'] ?? null,
                 goal: $validated['goal'] ?? null,
                 backstory: $validated['backstory'] ?? null,
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 personality: $validated['personality'] ?? null,
                 dataClassification: $validated['data_classification'] ?? null,
             );

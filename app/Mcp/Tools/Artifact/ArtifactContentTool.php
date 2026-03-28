@@ -38,7 +38,11 @@ class ArtifactContentTool extends Tool
             'version' => 'sometimes|integer|min:1',
         ]);
 
-        $artifact = Artifact::find($validated['artifact_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $artifact = Artifact::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['artifact_id']);
 
         if (! $artifact) {
             return Response::error('Artifact not found.');

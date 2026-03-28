@@ -27,7 +27,11 @@ class EvolutionAnalyzeTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $agent = Agent::findOrFail($request->get('agent_id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->findOrFail($request->get('agent_id'));
         /** @var AgentExecution|null $latestExecution */
         $latestExecution = $agent->executions()->latest()->first();
 

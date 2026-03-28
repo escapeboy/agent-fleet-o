@@ -4,7 +4,6 @@ namespace App\Mcp\Tools\Trigger;
 
 use App\Domain\Trigger\Actions\CreateTriggerRuleAction;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -41,12 +40,7 @@ class TriggerRuleCreateTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $user = Auth::user();
-        if (! $user) {
-            return Response::error('Authentication required.');
-        }
-
-        $teamId = $user->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return Response::error('No current team.');
         }

@@ -25,7 +25,11 @@ class ConnectorConfigDeleteTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $config = OutboundConnectorConfig::find($request->get('id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $config = OutboundConnectorConfig::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('id'));
 
         if (! $config) {
             return Response::error('Connector config not found');

@@ -28,7 +28,11 @@ class ProjectActivateTool extends Tool
     public function handle(Request $request): Response
     {
         $projectId = $request->get('project_id');
-        $project = Project::find($projectId);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $project = Project::withoutGlobalScopes()->where('team_id', $teamId)->find($projectId);
 
         if (! $project) {
             return Response::error("Project {$projectId} not found. Use project_list to discover valid project IDs.");

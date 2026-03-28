@@ -31,7 +31,7 @@ class ProjectRunGetTool extends Tool
     {
         $validated = $request->validate(['run_id' => 'required|string']);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $run = ProjectRun::whereHas('project', fn ($q) => $q->where('team_id', $teamId))
             ->with(['experiment', 'crewExecution', 'artifacts'])

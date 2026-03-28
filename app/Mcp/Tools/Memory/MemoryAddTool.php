@@ -51,7 +51,7 @@ class MemoryAddTool extends Tool
             'metadata' => 'nullable|array',
         ]);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $content = $validated['content'];
 

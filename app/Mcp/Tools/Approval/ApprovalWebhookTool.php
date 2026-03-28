@@ -37,7 +37,11 @@ class ApprovalWebhookTool extends Tool
             'callback_secret' => 'nullable|string|max:255',
         ]);
 
-        $approval = ApprovalRequest::find($validated['approval_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $approval = ApprovalRequest::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['approval_id']);
 
         if (! $approval) {
             return Response::error('Approval request not found.');

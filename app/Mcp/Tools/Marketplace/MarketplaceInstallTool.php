@@ -29,6 +29,10 @@ class MarketplaceInstallTool extends Tool
         $validated = $request->validate([
             'listing_slug' => 'required|string',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         $listing = MarketplaceListing::where('slug', $validated['listing_slug'])->first();
 
@@ -39,7 +43,7 @@ class MarketplaceInstallTool extends Tool
         try {
             $installation = app(InstallFromMarketplaceAction::class)->execute(
                 listing: $listing,
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 userId: auth()->id(),
             );
 

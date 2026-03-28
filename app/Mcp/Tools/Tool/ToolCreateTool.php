@@ -69,6 +69,10 @@ DESC;
             'credential_id' => 'nullable|uuid|exists:credentials,id',
             'network_policy' => 'nullable|string',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         // Parse optional network_policy JSON string into an array
         $networkPolicy = null;
@@ -81,7 +85,7 @@ DESC;
 
         try {
             $tool = app(CreateToolAction::class)->execute(
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 name: $validated['name'],
                 type: ToolType::from($validated['type'] ?? 'mcp_stdio'),
                 description: $validated['description'] ?? '',

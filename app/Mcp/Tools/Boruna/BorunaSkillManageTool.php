@@ -58,7 +58,7 @@ class BorunaSkillManageTool extends McpTool
             'limit' => 'nullable|integer|min:1|max:100',
         ]);
 
-        $teamId = auth()->user()->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         return match ($validated['action']) {
             'create' => $this->create($validated, $teamId),

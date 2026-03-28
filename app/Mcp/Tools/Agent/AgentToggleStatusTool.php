@@ -36,7 +36,11 @@ class AgentToggleStatusTool extends Tool
             'status' => 'required|string|in:active,disabled',
         ]);
 
-        $agent = Agent::find($validated['agent_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['agent_id']);
 
         if (! $agent) {
             return Response::error('Agent not found.');

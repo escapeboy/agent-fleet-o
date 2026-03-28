@@ -34,7 +34,11 @@ class EvolutionRejectTool extends Tool
         $proposalId = $request->get('proposal_id');
         $reason = $request->get('reason');
 
-        $proposal = EvolutionProposal::find($proposalId);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $proposal = EvolutionProposal::withoutGlobalScopes()->where('team_id', $teamId)->find($proposalId);
 
         if (! $proposal) {
             return Response::error("Evolution proposal {$proposalId} not found.");

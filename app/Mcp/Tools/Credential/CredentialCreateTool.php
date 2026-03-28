@@ -49,6 +49,10 @@ class CredentialCreateTool extends Tool
             'expires_at' => 'nullable|string|date',
             'agent_id' => 'nullable|uuid',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         try {
             $creatorSource = CredentialSource::Human;
@@ -57,7 +61,7 @@ class CredentialCreateTool extends Tool
 
             if (! empty($validated['agent_id'])) {
                 $agent = Agent::withoutGlobalScopes()
-                    ->where('team_id', auth()->user()->current_team_id)
+                    ->where('team_id', $teamId)
                     ->find($validated['agent_id']);
 
                 if (! $agent) {
@@ -70,7 +74,7 @@ class CredentialCreateTool extends Tool
             }
 
             $credential = app(CreateCredentialAction::class)->execute(
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 name: $validated['name'],
                 credentialType: CredentialType::from($validated['type']),
                 secretData: $validated['secret_data'],

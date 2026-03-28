@@ -34,7 +34,7 @@ class BorunaCapabilityListTool extends McpTool
             'boruna_tool_id' => 'nullable|uuid',
         ]);
 
-        $teamId = auth()->user()->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         // Try to fetch live capability list from the Boruna server
         if ($validated['boruna_tool_id'] ?? null) {

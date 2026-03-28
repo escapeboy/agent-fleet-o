@@ -45,10 +45,14 @@ class SkillCreateTool extends Tool
             'prompt_template' => 'nullable|string',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         try {
             $skill = app(CreateSkillAction::class)->execute(
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 name: $validated['name'],
                 type: SkillType::from($validated['type']),
                 description: $validated['description'] ?? '',

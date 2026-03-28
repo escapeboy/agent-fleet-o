@@ -5,7 +5,6 @@ namespace App\Mcp\Tools\Tool;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Tool\Models\ToolFederationGroup;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -29,7 +28,7 @@ class ToolFederationEnableTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = Auth::user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
             return Response::error('No current team.');

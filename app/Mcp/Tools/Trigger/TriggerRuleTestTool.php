@@ -37,7 +37,7 @@ class TriggerRuleTestTool extends Tool
     public function handle(Request $request): Response
     {
         $user = Auth::user();
-        $teamId = $user?->current_team_id;
+        $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
             return Response::error('No current team.');
@@ -57,7 +57,7 @@ class TriggerRuleTestTool extends Tool
 
         // If rule_id is provided, test only that rule
         if ($ruleId = $request->get('rule_id')) {
-            $rule = TriggerRule::find($ruleId);
+            $rule = TriggerRule::withoutGlobalScopes()->where('team_id', $teamId)->find($ruleId);
             if (! $rule) {
                 return Response::error('Trigger rule not found.');
             }

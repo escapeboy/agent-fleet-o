@@ -32,7 +32,11 @@ class SkillDeleteTool extends Tool
             'skill_id' => 'required|string',
         ]);
 
-        $skill = Skill::find($validated['skill_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $skill = Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['skill_id']);
 
         if (! $skill) {
             return Response::error('Skill not found.');

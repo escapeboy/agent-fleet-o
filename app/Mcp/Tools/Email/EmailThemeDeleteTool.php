@@ -28,7 +28,11 @@ class EmailThemeDeleteTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $theme = EmailTheme::find($request->get('id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $theme = EmailTheme::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('id'));
 
         if (! $theme) {
             return Response::error('Email theme not found.');

@@ -34,7 +34,11 @@ class CredentialRotateTool extends Tool
             'secret_data' => 'required|array',
         ]);
 
-        $credential = Credential::find($validated['credential_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $credential = Credential::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['credential_id']);
 
         if (! $credential) {
             return Response::error('Credential not found.');

@@ -29,7 +29,7 @@ class WorkflowNodeDeleteTool extends Tool
     {
         $validated = $request->validate(['node_id' => 'required|string']);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $node = WorkflowNode::whereHas('workflow', fn ($q) => $q->where('team_id', $teamId))
             ->find($validated['node_id']);

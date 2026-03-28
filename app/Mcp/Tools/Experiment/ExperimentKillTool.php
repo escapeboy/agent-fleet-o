@@ -35,7 +35,11 @@ class ExperimentKillTool extends Tool
             'reason' => 'nullable|string',
         ]);
 
-        $experiment = Experiment::find($validated['experiment_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['experiment_id']);
 
         if (! $experiment) {
             return Response::error('Experiment not found.');

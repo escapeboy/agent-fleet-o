@@ -32,7 +32,11 @@ class ChatbotDeleteTool extends Tool
             'chatbot_id' => 'required|string',
         ]);
 
-        $chatbot = Chatbot::find($validated['chatbot_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $chatbot = Chatbot::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['chatbot_id']);
 
         if (! $chatbot) {
             return Response::error('Chatbot not found.');

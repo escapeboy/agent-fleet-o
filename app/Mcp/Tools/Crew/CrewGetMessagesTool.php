@@ -39,7 +39,11 @@ class CrewGetMessagesTool extends Tool
             'limit' => 'nullable|integer|min:1|max:500',
         ]);
 
-        $execution = CrewExecution::find($validated['crew_execution_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $execution = CrewExecution::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['crew_execution_id']);
 
         if (! $execution) {
             return Response::error('Crew execution not found.');

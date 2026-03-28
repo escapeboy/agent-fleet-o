@@ -28,7 +28,7 @@ class ExperimentCostTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $experiment = Experiment::withoutGlobalScopes()
             ->where('team_id', $teamId)

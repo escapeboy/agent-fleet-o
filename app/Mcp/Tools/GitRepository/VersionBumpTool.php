@@ -54,7 +54,11 @@ class VersionBumpTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $repo = GitRepository::find($request->get('repository_id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('repository_id'));
 
         if (! $repo) {
             return Response::error('Repository not found.');

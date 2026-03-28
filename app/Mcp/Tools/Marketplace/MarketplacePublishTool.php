@@ -56,7 +56,7 @@ class MarketplacePublishTool extends Tool
 
         try {
             $visibility = ListingVisibility::from($validated['visibility'] ?? 'public');
-            $teamId = auth()->user()->current_team_id;
+            $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
             $userId = auth()->id();
 
             if ($validated['entity_type'] === 'bundle') {
@@ -75,9 +75,9 @@ class MarketplacePublishTool extends Tool
                 );
             } else {
                 $entity = match ($validated['entity_type']) {
-                    'skill' => Skill::find($validated['entity_id']),
-                    'agent' => Agent::find($validated['entity_id']),
-                    'workflow' => Workflow::find($validated['entity_id']),
+                    'skill' => Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['entity_id']),
+                    'agent' => Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['entity_id']),
+                    'workflow' => Workflow::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['entity_id']),
                 };
 
                 if (! $entity) {

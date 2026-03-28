@@ -37,11 +37,8 @@ class WorkflowImportTool extends Tool
         ]);
 
         $user = auth()->user();
-        if (! $user) {
-            return Response::error('Authentication required.');
-        }
 
-        $teamId = $validated['team_id'] ?? $user->current_team_id;
+        $teamId = $validated['team_id'] ?? app('mcp.team_id') ?? $user?->current_team_id;
         if (! $teamId) {
             return Response::error('No team context available.');
         }

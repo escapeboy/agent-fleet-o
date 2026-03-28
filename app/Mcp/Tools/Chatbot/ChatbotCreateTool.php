@@ -68,10 +68,14 @@ class ChatbotCreateTool extends Tool
             'workflow_id' => 'nullable|uuid',
             'approval_timeout_hours' => 'nullable|integer|min:1|max:720',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         try {
             $result = app(CreateChatbotAction::class)->execute(
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 name: $validated['name'],
                 type: ChatbotType::from($validated['type']),
                 systemPrompt: $validated['system_prompt'],

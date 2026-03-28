@@ -28,7 +28,11 @@ class TriggerRuleDeleteTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $rule = TriggerRule::find($request->get('rule_id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $rule = TriggerRule::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('rule_id'));
         if (! $rule) {
             return Response::error('Trigger rule not found.');
         }
