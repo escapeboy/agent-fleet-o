@@ -23,7 +23,10 @@ class ConversationManager
         ?string $contextId = null,
     ): AssistantConversation {
         if ($conversationId) {
-            $conversation = AssistantConversation::where('user_id', $userId)->find($conversationId);
+            $conversation = AssistantConversation::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('user_id', $userId)
+                ->find($conversationId);
             if ($conversation) {
                 return $conversation;
             }
@@ -139,11 +142,12 @@ class ConversationManager
             'content' => $item['message']->content,
         ], $selected);
 
-        // Prepend pinned snapshot as context floor (if exists)
+        // Prepend pinned snapshot as context floor (if exists).
+        // Cap at 4000 chars to bound attacker-influenced snapshot content.
         if ($snapshot !== null) {
             array_unshift($history, [
                 'role' => 'system',
-                'content' => $snapshot->content,
+                'content' => mb_substr($snapshot->content ?? '', 0, 4000),
             ]);
         }
 

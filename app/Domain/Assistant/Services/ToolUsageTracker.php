@@ -26,6 +26,12 @@ class ToolUsageTracker
      */
     public function increment(string $conversationId, string $toolName): int
     {
+        // Reject malformed tool names (e.g. from a prompt-injected LLM response)
+        // to prevent Redis hash field pollution.
+        if (! preg_match('/^[a-z][a-z0-9_]*$/', $toolName)) {
+            return 0;
+        }
+
         $key = self::KEY_PREFIX.$conversationId;
         $count = (int) Redis::hincrby($key, $toolName, 1);
         Redis::expire($key, self::TTL);

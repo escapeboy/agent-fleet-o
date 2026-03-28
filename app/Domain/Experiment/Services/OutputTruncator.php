@@ -8,6 +8,8 @@ class OutputTruncator
 
     private const CONTEXT_MAX_BYTES = 8192; // 8KB for inter-stage passing
 
+    private const HARD_CAP_BYTES = 10 * 1024 * 1024; // 10MB absolute max before line-splitting
+
     private const HEAD_RATIO = 0.6;
 
     private const TAIL_RATIO = 0.4;
@@ -20,6 +22,11 @@ class OutputTruncator
     {
         if (strlen($output) <= $maxBytes) {
             return $output;
+        }
+
+        // Hard cap before line-splitting prevents memory exhaustion on single-line mega-inputs.
+        if (strlen($output) > self::HARD_CAP_BYTES) {
+            $output = substr($output, 0, self::HARD_CAP_BYTES);
         }
 
         $lines = explode("\n", $output);

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Assistant;
 
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Services\ConversationCompactor;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -53,7 +54,12 @@ class AssistantConversationCompactTool extends Tool
                 'compacted_at' => $snapshot->metadata['compacted_at'] ?? null,
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Compaction failed: '.$e->getMessage());
+            Log::error('AssistantConversationCompactTool: compaction failed', [
+                'conversation_id' => $request->get('conversation_id'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return Response::error('Compaction failed. Please try again.');
         }
     }
 }

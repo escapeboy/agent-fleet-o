@@ -18,12 +18,19 @@ class ShellChainDecomposer
      * Chain operator patterns that join separate shell commands.
      * Semicolon is only flagged when followed by a space ("; ") to avoid
      * matching legitimate URL path params (e.g. ?a=1;b=2).
+     *
+     * Additional shell expansion operators (backtick, $(), newlines) are
+     * also rejected since they are never valid in webhook URL context.
      */
     private const CHAIN_PATTERNS = [
         '&&',
         '||',
         '; ',
         ' | ',
+        '`',
+        '$(',
+        "\n",
+        "\r",
     ];
 
     /**

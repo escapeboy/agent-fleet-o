@@ -85,8 +85,8 @@ class ConversationCompactor
         $userMessages = $messages->where('role', 'user')->values();
         $assistantMessages = $messages->where('role', 'assistant')->values();
 
-        // Extract signals for each priority tier
-        $lastUserQuestions = $userMessages->slice(-3)->pluck('content')->map(fn ($c) => mb_substr($c, 0, 200))->implode("\n- ");
+        // Extract signals for each priority tier (escaped to prevent prompt injection)
+        $lastUserQuestions = $userMessages->slice(-3)->pluck('content')->map(fn ($c) => htmlspecialchars(mb_substr($c, 0, 200), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'))->implode("\n- ");
         $lastToolOutcomes = $assistantMessages->filter(fn ($m) => ! empty($m->tool_calls))->slice(-5)->map(function ($m) {
             $calls = is_array($m->tool_calls) ? $m->tool_calls : [];
 
@@ -96,7 +96,14 @@ class ConversationCompactor
         // Errors: assistant messages containing error keywords
         $errors = $assistantMessages->filter(fn ($m) => preg_match('/error|fail|exception|cannot|unable/i', $m->content ?? ''))->slice(-3)->pluck('content')->map(fn ($c) => mb_substr($c, 0, 150))->implode("\n- ");
 
-        $rawHistory = $messages->map(fn ($m) => "[{$m->role}] ".mb_substr($m->content ?? '', 0, 300))->implode("\n");
+        // Escape message content so user-supplied text cannot break out of the XML structure
+        // in the LLM prompt and cause prompt injection into the produced snapshot.
+        $rawHistory = $messages->map(function ($m) {
+            $role = htmlspecialchars($m->role, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $body = htmlspecialchars(mb_substr($m->content ?? '', 0, 300), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+            return "<message role=\"{$role}\">{$body}</message>";
+        })->implode("\n");
 
         $model = config('context_compaction.summarizer_model', 'anthropic/claude-haiku-4-5');
         [$modelProvider, $modelName] = array_pad(explode('/', $model, 2), 2, 'claude-haiku-4-5');
@@ -135,7 +142,17 @@ PROMPT;
                 ->withMaxTokens(600)
                 ->generate();
 
-            return $response->text;
+            $text = $response->text;
+
+            // Reject responses that don't conform to the expected XML structure
+            // to prevent a prompt-injected snapshot from persisting.
+            if (! str_contains($text, '<context_snapshot>') || ! str_contains($text, '</context_snapshot>')) {
+                Log::warning('ConversationCompactor: LLM returned malformed snapshot, using fallback');
+
+                return $this->fallbackSnapshot($conversation, $messages, $lastUserQuestions);
+            }
+
+            return $text;
         } catch (\Throwable $e) {
             Log::warning('ConversationCompactor: LLM synthesis failed, using fallback', [
                 'error' => $e->getMessage(),
