@@ -7,6 +7,7 @@ enum AuthType: string
     case OAuth2 = 'oauth2';
     case ApiKey = 'api_key';
     case BasicAuth = 'basic_auth';
+    case BearerToken = 'bearer_token';
     case WebhookOnly = 'webhook_only';
 
     public function label(): string
@@ -15,6 +16,7 @@ enum AuthType: string
             self::OAuth2 => 'OAuth 2.0',
             self::ApiKey => 'API Key',
             self::BasicAuth => 'Username & Password',
+            self::BearerToken => 'Bearer Token',
             self::WebhookOnly => 'Webhook Only',
         };
     }
