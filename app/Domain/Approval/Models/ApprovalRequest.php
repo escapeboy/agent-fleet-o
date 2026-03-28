@@ -136,6 +136,11 @@ class ApprovalRequest extends Model
         return $this->worktreeExecution()->exists();
     }
 
+    public function isSecurityReview(): bool
+    {
+        return ($this->context['type'] ?? null) === 'security_review';
+    }
+
     public function isClarification(): bool
     {
         return ($this->context['type'] ?? null) === 'clarification' && ! empty($this->form_schema);

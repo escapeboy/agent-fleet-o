@@ -2,6 +2,7 @@
 
 namespace App\Domain\Signal\Jobs;
 
+use App\Domain\Approval\Actions\CreateSecurityReviewRequestAction;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Signal\Services\EntityRiskEngine;
 use Illuminate\Bus\Queueable;
@@ -30,7 +31,7 @@ class EvaluateContactRiskJob implements ShouldBeUnique, ShouldQueue
         return $this->contactId;
     }
 
-    public function handle(EntityRiskEngine $engine): void
+    public function handle(EntityRiskEngine $engine, CreateSecurityReviewRequestAction $securityReview): void
     {
         $contact = ContactIdentity::find($this->contactId);
 
@@ -39,5 +40,15 @@ class EvaluateContactRiskJob implements ShouldBeUnique, ShouldQueue
         }
 
         $engine->evaluate($contact);
+
+        $threshold = config('security.risk.review_threshold', 30);
+
+        if ($contact->fresh()->risk_score >= $threshold) {
+            try {
+                $securityReview->execute($contact->fresh());
+            } catch (\Throwable) {
+                // Non-blocking — risk score persisted regardless of review creation failure.
+            }
+        }
     }
 }

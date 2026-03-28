@@ -33,6 +33,8 @@ use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
 use App\Mcp\Tools\Approval\ApprovalRejectTool;
 use App\Mcp\Tools\Approval\ApprovalWebhookTool;
+use App\Mcp\Tools\Approval\ListSecurityReviewsTool;
+use App\Mcp\Tools\Approval\ResolveSecurityReviewTool;
 use App\Mcp\Tools\Artifact\ArtifactContentTool;
 use App\Mcp\Tools\Artifact\ArtifactDownloadTool;
 use App\Mcp\Tools\Artifact\ArtifactGetTool;
@@ -544,6 +546,8 @@ class AgentFleetServer extends Server
         ApprovalRejectTool::class,
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
+        ListSecurityReviewsTool::class,
+        ResolveSecurityReviewTool::class,
 
         // Signal (16)
         SignalListTool::class,
