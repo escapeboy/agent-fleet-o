@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Signal\Connectors\WebhookConnector;
+use App\Infrastructure\Security\IpReputationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +12,7 @@ class SignalWebhookController extends Controller
 {
     public function __construct(
         private readonly WebhookConnector $webhookConnector,
+        private readonly IpReputationService $ipReputation,
     ) {}
 
     /**
@@ -35,6 +37,24 @@ class SignalWebhookController extends Controller
                 Log::warning('SignalWebhookController: Invalid signature');
 
                 return response()->json(['error' => 'Invalid signature'], 403);
+            }
+        }
+
+        if (config('security.ip_reputation.enabled', true)) {
+            $clientIp = $request->ip() ?? '';
+            $result = $this->ipReputation->check($clientIp);
+            $threshold = (int) config('security.ip_reputation.block_threshold', 75);
+
+            if ($result->isHighRisk($threshold)) {
+                Log::warning('SignalWebhookController: high-risk IP blocked', [
+                    'ip' => $clientIp,
+                    'abuse_score' => $result->abuseScore,
+                    'is_tor' => $result->isTor,
+                ]);
+
+                if (! config('security.ip_reputation.log_only', false)) {
+                    return response()->json(['error' => 'high_risk_ip'], 403);
+                }
             }
         }
 
