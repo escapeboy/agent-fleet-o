@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Tool;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Tool\Models\ToolFederationGroup;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -28,7 +29,20 @@ class ToolFederationEnableTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $agent = Agent::findOrFail($request->get('agent_id'));
+        $teamId = Auth::user()?->current_team_id;
+
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+
+        $agent = Agent::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->find($request->get('agent_id'));
+
+        if (! $agent) {
+            return Response::error('Agent not found.');
+        }
+
         $enabled = (bool) $request->get('enabled', true);
         $groupId = $request->get('group_id');
 
@@ -36,7 +50,9 @@ class ToolFederationEnableTool extends Tool
         $config['use_tool_federation'] = $enabled;
 
         if ($groupId !== null) {
-            $group = ToolFederationGroup::where('team_id', $agent->team_id)->find($groupId);
+            $group = ToolFederationGroup::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->find($groupId);
             $config['tool_federation_group_id'] = $group?->id;
         } elseif (! $enabled) {
             unset($config['tool_federation_group_id']);

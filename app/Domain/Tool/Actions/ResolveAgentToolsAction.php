@@ -236,7 +236,9 @@ class ResolveAgentToolsAction
     {
         // Option 1: linked Credential domain record
         if ($tool->credential_id) {
-            $credential = Credential::find($tool->credential_id);
+            $credential = Credential::withoutGlobalScopes()
+                ->where('team_id', $tool->team_id)
+                ->find($tool->credential_id);
 
             if ($credential && $credential->isUsable()) {
                 CredentialEncryption::logAccess(

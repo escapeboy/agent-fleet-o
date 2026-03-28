@@ -7,6 +7,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool as ToolModel;
 use App\Domain\Tool\Models\ToolFederationGroup;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -31,15 +32,29 @@ class ToolFederationStatusTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $agent = Agent::findOrFail($request->get('agent_id'));
+        $teamId = Auth::user()?->current_team_id;
+
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+
+        $agent = Agent::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->find($request->get('agent_id'));
+
+        if (! $agent) {
+            return Response::error('Agent not found.');
+        }
 
         $enabled = (bool) ($agent->config['use_tool_federation'] ?? false);
         $groupId = $agent->config['tool_federation_group_id'] ?? null;
 
-        $group = $groupId ? ToolFederationGroup::find($groupId) : null;
+        $group = $groupId
+            ? ToolFederationGroup::withoutGlobalScopes()->where('team_id', $teamId)->find($groupId)
+            : null;
 
-        $poolCount = ToolModel::query()
-            ->where('team_id', $agent->team_id)
+        $poolCount = ToolModel::withoutGlobalScopes()
+            ->where('team_id', $teamId)
             ->where('status', ToolStatus::Active)
             ->when($group && ! empty($group->tool_ids), fn ($q) => $q->whereIn('id', $group->tool_ids))
             ->count();

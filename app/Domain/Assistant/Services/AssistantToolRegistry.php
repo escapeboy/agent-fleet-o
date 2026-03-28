@@ -9,6 +9,7 @@ use App\Domain\Assistant\Tools\ListEntitiesTools;
 use App\Domain\Assistant\Tools\MemoryTools;
 use App\Domain\Assistant\Tools\MutationTools;
 use App\Domain\Assistant\Tools\SchedulingTools;
+use App\Domain\Assistant\Tools\SecurityTools;
 use App\Domain\Assistant\Tools\StatusTools;
 use App\Models\User;
 use Prism\Prism\Tool as PrismToolObject;
@@ -33,6 +34,8 @@ class AssistantToolRegistry
         // WRITE tools - available to Owner/Admin/Member
         $role = $user->teamRole($user->currentTeam);
         if ($role?->canEdit()) {
+            // Security tools expose PII (email, phone, risk flags) — member+ only
+            $tools = array_merge($tools, SecurityTools::tools());
             $tools = array_merge($tools, MutationTools::writeTools());
             $tools = array_merge($tools, SchedulingTools::tools($user->currentTeam->id, $user->id));
 

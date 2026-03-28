@@ -50,12 +50,15 @@ class ToolSearchTool extends Tool
             return Response::text(json_encode(['count' => 0, 'tools' => [], 'tip' => 'Provide a non-empty query.']));
         }
 
+        // Escape LIKE metacharacters to prevent wildcard injection
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query);
+
         // Fast keyword match
         $results = DB::table('tool_registry_entries')
             ->when($group, fn ($q) => $q->where('group', $group))
-            ->where(function ($q) use ($query) {
-                $q->whereRaw('tool_name LIKE ?', ["%{$query}%"])
-                    ->orWhereRaw('description LIKE ?', ["%{$query}%"]);
+            ->where(function ($q) use ($escaped) {
+                $q->whereRaw('tool_name LIKE ?', ["%{$escaped}%"])
+                    ->orWhereRaw('description LIKE ?', ["%{$escaped}%"]);
             })
             ->limit($limit)
             ->get(['tool_name', 'group', 'description', 'schema']);

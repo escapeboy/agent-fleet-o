@@ -33,6 +33,8 @@ use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
 use App\Mcp\Tools\Approval\ApprovalRejectTool;
 use App\Mcp\Tools\Approval\ApprovalWebhookTool;
+use App\Mcp\Tools\Approval\ListSecurityReviewsTool;
+use App\Mcp\Tools\Approval\ResolveSecurityReviewTool;
 use App\Mcp\Tools\Artifact\ArtifactContentTool;
 use App\Mcp\Tools\Artifact\ArtifactDownloadTool;
 use App\Mcp\Tools\Artifact\ArtifactGetTool;
@@ -220,6 +222,8 @@ use App\Mcp\Tools\Signal\ConnectorBindingTool;
 use App\Mcp\Tools\Signal\ConnectorSubscriptionTool;
 use App\Mcp\Tools\Signal\ContactManageTool;
 use App\Mcp\Tools\Signal\EmailReplyTool;
+use App\Mcp\Tools\Signal\ForceReevaluateContactRiskTool;
+use App\Mcp\Tools\Signal\GetContactRiskScoreTool;
 use App\Mcp\Tools\Signal\HttpMonitorTool;
 use App\Mcp\Tools\Signal\ImapMailboxTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
@@ -230,6 +234,7 @@ use App\Mcp\Tools\Signal\KgEntityFactsTool;
 use App\Mcp\Tools\Signal\KgGraphSearchTool;
 use App\Mcp\Tools\Signal\KgInvalidateFactTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
+use App\Mcp\Tools\Signal\ListHighRiskContactsTool;
 use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
@@ -541,6 +546,8 @@ class AgentFleetServer extends Server
         ApprovalRejectTool::class,
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
+        ListSecurityReviewsTool::class,
+        ResolveSecurityReviewTool::class,
 
         // Signal (16)
         SignalListTool::class,
@@ -555,6 +562,9 @@ class AgentFleetServer extends Server
         ConnectorBindingTool::class,
         ConnectorBindingDeleteTool::class,
         ContactManageTool::class,
+        GetContactRiskScoreTool::class,
+        ListHighRiskContactsTool::class,
+        ForceReevaluateContactRiskTool::class,
         ImapMailboxTool::class,
         EmailReplyTool::class,
         ClearCueConnectorTool::class,

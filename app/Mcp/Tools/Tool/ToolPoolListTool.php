@@ -6,6 +6,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool as ToolModel;
 use App\Domain\Tool\Models\ToolFederationGroup;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -30,12 +31,21 @@ class ToolPoolListTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $query = ToolModel::query()
+        $teamId = Auth::user()?->current_team_id;
+
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+
+        $query = ToolModel::withoutGlobalScopes()
+            ->where('team_id', $teamId)
             ->where('status', ToolStatus::Active)
             ->orderBy('name');
 
         if ($groupId = $request->get('federation_group_id')) {
-            $group = ToolFederationGroup::find($groupId);
+            $group = ToolFederationGroup::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->find($groupId);
             if ($group && ! empty($group->tool_ids)) {
                 $query->whereIn('id', $group->tool_ids);
             }
