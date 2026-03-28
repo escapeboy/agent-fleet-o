@@ -5,12 +5,15 @@ namespace App\Domain\Assistant\Services;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 
 class ConversationManager
 {
     private const MAX_CONTEXT_MESSAGES = 30;
 
     private const MAX_ESTIMATED_TOKENS = 50_000;
+
+    private const COMPACTION_THRESHOLD = 40;
 
     public function getOrCreateConversation(
         string $userId,
@@ -20,7 +23,10 @@ class ConversationManager
         ?string $contextId = null,
     ): AssistantConversation {
         if ($conversationId) {
-            $conversation = AssistantConversation::where('user_id', $userId)->find($conversationId);
+            $conversation = AssistantConversation::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('user_id', $userId)
+                ->find($conversationId);
             if ($conversation) {
                 return $conversation;
             }
@@ -68,10 +74,26 @@ class ConversationManager
      */
     public function buildMessageHistory(AssistantConversation $conversation): array
     {
-        // Fetch 2x candidates to have a larger pool for scoring
+        // Trigger compaction if the conversation has grown past the threshold.
+        if (config('context_compaction.enabled', true)) {
+            $this->maybeCompact($conversation);
+        }
+
+        // Load the most recent pinned snapshot (if any) to prepend as context floor.
+        $snapshot = $conversation->messages()
+            ->where('role', 'system')
+            ->where('metadata->is_snapshot', true)
+            ->orderByDesc('created_at')
+            ->first();
+
+        // Fetch 2x candidates — only non-archived messages
         /** @var Collection<int, AssistantMessage> $messages */
         $messages = $conversation->messages()
             ->whereIn('role', ['user', 'assistant'])
+            ->where(function ($q) {
+                $q->whereNull('metadata->archived')
+                    ->orWhere('metadata->archived', false);
+            })
             ->orderByDesc('created_at')
             ->limit(self::MAX_CONTEXT_MESSAGES * 2)
             ->get()
@@ -115,10 +137,52 @@ class ConversationManager
         // Re-sort by original chronological order
         usort($selected, fn ($a, $b) => $a['index'] <=> $b['index']);
 
-        return array_map(fn ($item) => [
+        $history = array_map(fn ($item) => [
             'role' => $item['message']->role,
             'content' => $item['message']->content,
         ], $selected);
+
+        // Prepend pinned snapshot as context floor (if exists).
+        // Cap at 4000 chars to bound attacker-influenced snapshot content.
+        if ($snapshot !== null) {
+            array_unshift($history, [
+                'role' => 'system',
+                'content' => mb_substr($snapshot->content ?? '', 0, 4000),
+            ]);
+        }
+
+        return $history;
+    }
+
+    /**
+     * Trigger compaction if the conversation exceeds the threshold and no recent
+     * snapshot covers the current message count.
+     */
+    private function maybeCompact(AssistantConversation $conversation): void
+    {
+        $threshold = config('context_compaction.compaction_message_threshold', self::COMPACTION_THRESHOLD);
+
+        $activeCount = $conversation->messages()
+            ->whereIn('role', ['user', 'assistant'])
+            ->where(function ($q) {
+                $q->whereNull('metadata->archived')
+                    ->orWhere('metadata->archived', false);
+            })
+            ->count();
+
+        if ($activeCount < $threshold) {
+            return;
+        }
+
+        try {
+            app(ConversationCompactor::class)->compact($conversation);
+        } catch (\Throwable $e) {
+            // Compaction is best-effort — never block the conversation
+            Log::warning('ConversationManager: compaction failed', [
+                'conversation_id' => $conversation->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

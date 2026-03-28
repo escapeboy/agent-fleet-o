@@ -57,7 +57,7 @@ class IngestToRagflowAction
             'knowledge_base_id' => $knowledgeBase->id,
             'dataset_id' => $datasetId,
             'document_id' => $documentId,
-            'source_name' => $sourceName,
+            'source_name' => str_replace(["\n", "\r"], ' ', $sourceName),
         ]);
 
         // Poll parse status asynchronously

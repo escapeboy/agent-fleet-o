@@ -127,6 +127,16 @@ class NetlifyIntegrationDriver implements IntegrationDriverInterface
         return false;
     }
 
+    public function verifyWebhookSignature(string $rawBody, array $headers, string $secret): bool
+    {
+        return false;
+    }
+
+    public function parseWebhookPayload(array $payload, array $headers): array
+    {
+        return [];
+    }
+
     public function execute(Integration $integration, string $action, array $params): mixed
     {
         $token = $integration->getCredentialSecret('token');

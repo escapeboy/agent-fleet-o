@@ -7,6 +7,7 @@ use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Services\SsrfGuard;
+use App\Infrastructure\Security\ShellChainDecomposer;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -44,7 +45,7 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
                 // No actionable URL — simulate the send (dry-run)
                 Log::info('WebhookOutboundConnector: No URL in target, simulating send', [
                     'proposal_id' => $proposal->id,
-                    'target' => $target,
+                    'target' => app(ShellChainDecomposer::class)->sanitizeForLog((string) json_encode($target)),
                 ]);
 
                 $action->update([
@@ -55,6 +56,11 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
                 ]);
 
                 return $action;
+            }
+
+            // Reject shell chain operators in URL to prevent SSRF guard bypass.
+            if (app(ShellChainDecomposer::class)->containsChain($url)) {
+                throw new \InvalidArgumentException('Webhook URL contains shell chain operators and was rejected.');
             }
 
             // Block SSRF — validate host is a public, routable address.
@@ -105,9 +111,15 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
                 ]);
             }
         } catch (\Throwable $e) {
+            // Log full message internally; store sanitised short message in DB to avoid
+            // persisting URLs with embedded credentials or sensitive TLS error details.
+            Log::error('WebhookOutboundConnector: send failed', [
+                'proposal_id' => $proposal->id,
+                'error' => $e->getMessage(),
+            ]);
             $action->update([
                 'status' => OutboundActionStatus::Failed,
-                'response' => ['error' => $e->getMessage()],
+                'response' => ['error' => substr(preg_replace('/https?:\/\/\S+/i', '[url]', $e->getMessage()), 0, 200)],
                 'retry_count' => $action->retry_count + 1,
             ]);
         }

@@ -95,7 +95,7 @@ class IpReputationService
             $result = [
                 'abuse_score' => (int) ($data['abuseConfidenceScore'] ?? 0),
                 'is_tor' => (bool) ($data['isTor'] ?? false),
-                'is_vpn' => (bool) ($data['isWhitelisted'] === false && ($data['usageType'] ?? '') === 'VPN Service'),
+                'is_vpn' => (bool) in_array($data['usageType'] ?? '', ['VPN Service', 'Hosting/Data Center']),
                 'country_code' => $data['countryCode'] ?? null,
             ];
 
@@ -117,6 +117,14 @@ class IpReputationService
     private function failOpen(string $ip, string $reason): IpReputationResult
     {
         Log::warning('IpReputationService: fail-open', ['ip' => $ip, 'reason' => $reason]);
+
+        // Cache fail-open results briefly to avoid hammering AbuseIPDB during outages.
+        Cache::put('ip_reputation:'.$ip, [
+            'abuse_score' => 0,
+            'is_tor' => false,
+            'is_vpn' => false,
+            'country_code' => null,
+        ], 120);
 
         return new IpReputationResult(
             ip: $ip,

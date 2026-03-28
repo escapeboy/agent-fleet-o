@@ -10,6 +10,8 @@ class StepOutputBroadcaster
 
     private const TTL = 3600; // 1 hour
 
+    public function __construct(private readonly OutputTruncator $truncator) {}
+
     /**
      * Append a chunk of streaming output for a step.
      */
@@ -21,11 +23,31 @@ class StepOutputBroadcaster
     }
 
     /**
-     * Get the accumulated streaming output for a step.
+     * Get the accumulated streaming output for a step, truncated for display (≤32KB).
      */
     public function getAccumulatedOutput(string $stepId): ?string
     {
-        return Redis::get(self::KEY_PREFIX.$stepId);
+        $raw = Redis::get(self::KEY_PREFIX.$stepId);
+
+        if ($raw === null) {
+            return null;
+        }
+
+        return $this->truncator->truncate($raw);
+    }
+
+    /**
+     * Get tightly truncated output (≤8KB) suitable for passing between pipeline stages.
+     */
+    public function getContextOutput(string $stepId): ?string
+    {
+        $raw = Redis::get(self::KEY_PREFIX.$stepId);
+
+        if ($raw === null) {
+            return null;
+        }
+
+        return $this->truncator->truncateForContext($raw);
     }
 
     /**

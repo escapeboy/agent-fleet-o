@@ -96,7 +96,12 @@ class ToolFederationGroupController extends Controller
                 ->toArray();
         }
 
-        $toolFederationGroup->update($validated);
+        $toolFederationGroup->update([
+            'name' => $validated['name'] ?? $toolFederationGroup->name,
+            'description' => $validated['description'] ?? $toolFederationGroup->description,
+            'tool_ids' => $validated['tool_ids'] ?? $toolFederationGroup->tool_ids,
+            'is_active' => $validated['is_active'] ?? $toolFederationGroup->is_active,
+        ]);
 
         return response()->json([
             'data' => [

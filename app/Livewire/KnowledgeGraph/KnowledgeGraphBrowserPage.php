@@ -123,8 +123,11 @@ class KnowledgeGraphBrowserPage extends Component
 
     public function render()
     {
+        $teamId = auth()->user()->current_team_id;
+
         $query = KgEdge::query()
             ->with(['sourceEntity', 'targetEntity'])
+            ->where('team_id', $teamId)
             ->where('source_node_type', KgEdge::NODE_TYPE_ENTITY)
             ->where('target_node_type', KgEdge::NODE_TYPE_ENTITY);
 
@@ -149,8 +152,6 @@ class KnowledgeGraphBrowserPage extends Component
         }
 
         $facts = $query->latest('valid_at')->paginate(25);
-
-        $teamId = auth()->user()->current_team_id;
 
         $stats = [
             'total' => KgEdge::where('team_id', $teamId)->whereNull('invalid_at')->count(),
