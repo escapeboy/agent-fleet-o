@@ -14,6 +14,7 @@ use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Workflow\Actions\DispatchSubWorkflowAction;
 use App\Domain\Workflow\Actions\DynamicForkFanOutAction;
 use App\Domain\Workflow\Actions\HandleTimeGateAction;
+use App\Domain\Workflow\Actions\RunCompensationChainAction;
 use App\Domain\Workflow\Jobs\ExecuteWorkflowNodeJob;
 use App\Domain\Workflow\Models\WorkflowNode;
 use Illuminate\Support\Facades\Bus;
@@ -944,6 +945,9 @@ class WorkflowGraphExecutor
                     ExperimentStatus::ExecutionFailed,
                     "Workflow step failed ({$failedSteps} failed step(s))",
                 );
+
+                // Trigger saga compensation for nodes that declared a compensation_node_id
+                app(RunCompensationChainAction::class)->execute($experiment->fresh() ?? $experiment);
             }
         } catch (\Throwable $e) {
             Log::error('WorkflowGraphExecutor: handleBatchFailure failed', [

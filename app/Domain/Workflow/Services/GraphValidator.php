@@ -45,6 +45,7 @@ class GraphValidator
         $this->validateMergeNodes();
         $this->validateActivationModes();
         $this->validateSubWorkflowNodes();
+        $this->validateCompensationNodes();
         $this->validateDataTypeCompatibility();
 
         return $this->errors;
@@ -593,6 +594,38 @@ class GraphValidator
      * DoWhile back-edges (edges that target a DoWhile node and create a cycle) are skipped.
      * Custom output_schema / input_schema in node config override default port schemas.
      */
+    private function validateCompensationNodes(): void
+    {
+        $nodeIds = $this->nodes->pluck('id')->all();
+
+        foreach ($this->nodes as $node) {
+            if (! $node->compensation_node_id) {
+                continue;
+            }
+
+            // Compensation node must be in the same workflow
+            if (! in_array($node->compensation_node_id, $nodeIds, true)) {
+                $this->errors[] = [
+                    'type' => 'compensation_node_not_in_workflow',
+                    'message' => "Node '{$node->label}' references a compensation_node_id that does not belong to this workflow.",
+                    'node_id' => $node->id,
+                ];
+
+                continue;
+            }
+
+            // Compensation nodes cannot have their own compensation node
+            $compensationNode = $this->nodes->firstWhere('id', $node->compensation_node_id);
+            if ($compensationNode && $compensationNode->compensation_node_id) {
+                $this->errors[] = [
+                    'type' => 'recursive_compensation',
+                    'message' => "Compensation node '{$compensationNode->label}' cannot itself have a compensation node (no recursive saga).",
+                    'node_id' => $node->id,
+                ];
+            }
+        }
+    }
+
     private function validateDataTypeCompatibility(): void
     {
         // Build lookup maps

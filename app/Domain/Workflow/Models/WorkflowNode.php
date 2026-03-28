@@ -42,6 +42,7 @@ class WorkflowNode extends Model
         'activation_threshold',
         'expression',
         'order',
+        'compensation_node_id',
     ];
 
     protected function casts(): array
@@ -85,6 +86,11 @@ class WorkflowNode extends Model
     public function subWorkflow(): BelongsTo
     {
         return $this->belongsTo(Workflow::class, 'sub_workflow_id');
+    }
+
+    public function compensationNode(): BelongsTo
+    {
+        return $this->belongsTo(WorkflowNode::class, 'compensation_node_id');
     }
 
     public function outgoingEdges(): HasMany

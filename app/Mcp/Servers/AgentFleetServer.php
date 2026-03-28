@@ -320,6 +320,7 @@ use App\Mcp\Tools\Workflow\WorkflowNodeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeDeleteTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowSaveGraphTool;
+use App\Mcp\Tools\Workflow\WorkflowSetCompensationNodeTool;
 use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
@@ -547,6 +548,7 @@ class AgentFleetServer extends Server
         WorkflowEnableGatewayTool::class,
         WorkflowDisableGatewayTool::class,
         WorkflowListGatewayToolsTool::class,
+        WorkflowSetCompensationNodeTool::class,
 
         // Project (14)
         ProjectListTool::class,
