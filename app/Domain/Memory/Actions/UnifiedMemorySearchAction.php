@@ -175,22 +175,67 @@ class UnifiedMemorySearchAction
     private function getKeywordResults(string $teamId, ?string $agentId, string $query): Collection
     {
         try {
-            $builder = Memory::withoutGlobalScopes()
-                ->where('team_id', $teamId)
-                ->where('content', 'ILIKE', '%'.str_replace(['%', '_'], ['\%', '\_'], $query).'%')
-                ->orderByDesc('importance')
-                ->limit(20);
-
-            if ($agentId) {
-                $builder->where('agent_id', $agentId);
+            // PostgreSQL: use full-text search with BM25 ranking (ts_rank_cd).
+            // Falls back to ILIKE for SQLite (tests) or if content_tsv column is absent.
+            if (\DB::getDriverName() === 'pgsql') {
+                return $this->getFtsResults($teamId, $agentId, $query);
             }
 
-            return $builder->get();
+            return $this->getIlikeResults($teamId, $agentId, $query);
         } catch (\Throwable $e) {
             Log::debug('UnifiedSearch: keyword search failed', ['error' => $e->getMessage()]);
 
             return collect();
         }
+    }
+
+    private function getFtsResults(string $teamId, ?string $agentId, string $query): Collection
+    {
+        $safeQuery = str_replace(['\'', '\\'], ['\'\'', '\\\\'], $query);
+
+        $builder = Memory::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->whereRaw("content_tsv @@ plainto_tsquery('english', ?)", [$safeQuery])
+            ->orderByRaw("ts_rank_cd(content_tsv, plainto_tsquery('english', ?)) DESC", [$safeQuery])
+            ->limit(20);
+
+        if ($agentId) {
+            $builder->where('agent_id', $agentId);
+        }
+
+        $results = $builder->get();
+
+        // Trigram fallback for short queries and proper nouns that tokenise poorly.
+        if ($results->isEmpty() && mb_strlen($query) >= 3) {
+            $trigramBuilder = Memory::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->whereRaw('content % ?', [$query])
+                ->orderByRaw('similarity(content, ?) DESC', [$query])
+                ->limit(10);
+
+            if ($agentId) {
+                $trigramBuilder->where('agent_id', $agentId);
+            }
+
+            $results = $trigramBuilder->get();
+        }
+
+        return $results;
+    }
+
+    private function getIlikeResults(string $teamId, ?string $agentId, string $query): Collection
+    {
+        $builder = Memory::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->where('content', 'ILIKE', '%'.str_replace(['%', '_'], ['\%', '\_'], $query).'%')
+            ->orderByDesc('importance')
+            ->limit(20);
+
+        if ($agentId) {
+            $builder->where('agent_id', $agentId);
+        }
+
+        return $builder->get();
     }
 
     private function vectorOnlyFallback(?string $agentId, string $query, ?string $projectId, int $topK, ?string $teamId): Collection

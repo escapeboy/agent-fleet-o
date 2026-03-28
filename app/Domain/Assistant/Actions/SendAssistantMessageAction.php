@@ -8,6 +8,7 @@ use App\Domain\Assistant\Services\AssistantIntentClassifier;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\Assistant\Services\ContextResolver;
 use App\Domain\Assistant\Services\ConversationManager;
+use App\Domain\Assistant\Services\ToolUsageTracker;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -30,6 +31,7 @@ class SendAssistantMessageAction
         private readonly AssistantToolRegistry $toolRegistry,
         private readonly AssistantIntentClassifier $intentClassifier,
         private readonly LocalAgentDiscovery $agentDiscovery,
+        private readonly ToolUsageTracker $toolUsageTracker,
     ) {}
 
     /**
@@ -117,6 +119,12 @@ class SendAssistantMessageAction
         $context = $this->contextResolver->resolve($contextType, $contextId);
         $systemPrompt = $this->buildSystemPrompt($context, $user, $supportsToolLoop, $canExecuteTools, $tools, $supportsMcpNatively);
 
+        // Append tool budget hint when any tool approaches its throttle threshold.
+        $budgetHint = $this->toolUsageTracker->buildBudgetHint($conversation->id);
+        if ($budgetHint !== null) {
+            $systemPrompt .= "\n\n".$budgetHint;
+        }
+
         // Build conversation history
         $history = $this->conversationManager->buildMessageHistory($conversation);
         $userPrompt = $this->buildUserPrompt($history, $userMessage);
@@ -194,9 +202,10 @@ class SendAssistantMessageAction
             }
         }
 
-        // Log tool executions for audit
+        // Log tool executions for audit and track usage for throttling
         if ($response->toolCallsCount > 0) {
             $this->logToolExecutions($conversation, $response, $user);
+            $this->trackToolUsage($conversation->id, $response->toolResults ?? []);
         }
 
         // Detect empty bridge response before saving — prevents a race condition where
@@ -913,6 +922,21 @@ class SendAssistantMessageAction
                     'tool_args' => $toolResult['args'] ?? [],
                 ])
                 ->log('assistant.tool_executed');
+        }
+    }
+
+    /**
+     * Increment per-conversation tool counters after each LLM response.
+     *
+     * @param  array<array{toolName?: string}>  $toolResults
+     */
+    private function trackToolUsage(string $conversationId, array $toolResults): void
+    {
+        foreach ($toolResults as $toolResult) {
+            $toolName = $toolResult['toolName'] ?? null;
+            if ($toolName) {
+                $this->toolUsageTracker->increment($conversationId, $toolName);
+            }
         }
     }
 }

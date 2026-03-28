@@ -68,4 +68,30 @@ return [
 
     'default_context_limit' => (int) env('CONTEXT_COMPACTION_DEFAULT_LIMIT', 128000),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Assistant Conversation Compaction Threshold
+    |--------------------------------------------------------------------------
+    |
+    | Number of active (non-archived) messages in an AssistantConversation
+    | before ConversationCompactor creates a pinned summary snapshot.
+    | Older messages are archived (kept in DB, excluded from context builds).
+    |
+    */
+
+    'compaction_message_threshold' => (int) env('CONTEXT_COMPACTION_MESSAGE_THRESHOLD', 40),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tool Throttle
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, per-conversation tool call counts are tracked in Redis and
+    | a <tool_budget> hint is injected into the assistant system prompt when
+    | any tool approaches its configured warn threshold.
+    |
+    */
+
+    'tool_throttle_enabled' => env('CONTEXT_TOOL_THROTTLE_ENABLED', true),
+
 ];
