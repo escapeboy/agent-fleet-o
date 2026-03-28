@@ -34,7 +34,11 @@ class CrewExecuteTool extends Tool
             'goal' => 'required|string',
         ]);
 
-        $crew = Crew::find($validated['crew_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $crew = Crew::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['crew_id']);
 
         if (! $crew) {
             return Response::error('Crew not found.');

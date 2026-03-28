@@ -94,6 +94,10 @@ class ProjectCreateTool extends Tool
             'schedule.catchup_missed' => 'nullable|boolean',
             'schedule.run_immediately' => 'nullable|boolean',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         try {
             $project = app(CreateProjectAction::class)->execute(
@@ -102,7 +106,7 @@ class ProjectCreateTool extends Tool
                 type: $validated['type'] ?? 'one_shot',
                 description: $validated['description'] ?? null,
                 goal: $validated['goal'] ?? null,
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 workflowId: $validated['workflow_id'] ?? null,
                 crewId: $validated['crew_id'] ?? null,
                 executionMode: isset($validated['execution_mode'])

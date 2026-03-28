@@ -27,7 +27,11 @@ class EmailThemeGetTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $theme = EmailTheme::findOrFail($request->get('id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $theme = EmailTheme::withoutGlobalScopes()->where('team_id', $teamId)->findOrFail($request->get('id'));
 
         return Response::text(json_encode([
             'id' => $theme->id,

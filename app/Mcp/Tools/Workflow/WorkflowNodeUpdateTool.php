@@ -53,7 +53,7 @@ class WorkflowNodeUpdateTool extends Tool
             'position_y' => 'nullable|integer',
         ]);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $node = WorkflowNode::whereHas('workflow', fn ($q) => $q->where('team_id', $teamId))
             ->find($validated['node_id']);

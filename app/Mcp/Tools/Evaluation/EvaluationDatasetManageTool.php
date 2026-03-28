@@ -69,7 +69,8 @@ class EvaluationDatasetManageTool extends Tool
             return Response::text(json_encode(['error' => 'dataset_id required']));
         }
 
-        $dataset = EvaluationDataset::with('cases:id,dataset_id,input,expected_output')->find($id);
+        $teamId = auth()->user()?->currentTeam?->id;
+        $dataset = $teamId ? EvaluationDataset::withoutGlobalScopes()->where('team_id', $teamId)->with('cases:id,dataset_id,input,expected_output')->find($id) : null;
         if (! $dataset) {
             return Response::text(json_encode(['error' => 'Dataset not found']));
         }
@@ -95,7 +96,8 @@ class EvaluationDatasetManageTool extends Tool
             return Response::text(json_encode(['error' => 'dataset_id required']));
         }
 
-        $dataset = EvaluationDataset::find($datasetId);
+        $datasetTeamId = auth()->user()?->currentTeam?->id;
+        $dataset = $datasetTeamId ? EvaluationDataset::withoutGlobalScopes()->where('team_id', $datasetTeamId)->find($datasetId) : null;
         if (! $dataset) {
             return Response::text(json_encode(['error' => 'Dataset not found']));
         }
@@ -119,7 +121,8 @@ class EvaluationDatasetManageTool extends Tool
             return Response::text(json_encode(['error' => 'dataset_id required']));
         }
 
-        $dataset = EvaluationDataset::find($id);
+        $teamId = auth()->user()?->currentTeam?->id;
+        $dataset = $teamId ? EvaluationDataset::withoutGlobalScopes()->where('team_id', $teamId)->find($id) : null;
         if (! $dataset) {
             return Response::text(json_encode(['error' => 'Dataset not found']));
         }

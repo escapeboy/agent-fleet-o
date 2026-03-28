@@ -40,7 +40,8 @@ class EmailTemplateGenerateTool extends Tool
         $theme = null;
         $themeId = $request->get('theme_id');
         if ($themeId) {
-            $theme = EmailTheme::find($themeId);
+            $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+            $theme = $teamId ? EmailTheme::withoutGlobalScopes()->where('team_id', $teamId)->find($themeId) : null;
             if (! $theme) {
                 return Response::error("Email theme '{$themeId}' not found.");
             }

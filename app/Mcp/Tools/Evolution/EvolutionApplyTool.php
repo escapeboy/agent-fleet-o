@@ -29,7 +29,11 @@ class EvolutionApplyTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $proposal = EvolutionProposal::findOrFail($request->get('proposal_id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $proposal = EvolutionProposal::withoutGlobalScopes()->where('team_id', $teamId)->findOrFail($request->get('proposal_id'));
 
         // Auto-approve if pending
         if ($proposal->status === EvolutionProposalStatus::Pending) {

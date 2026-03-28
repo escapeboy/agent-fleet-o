@@ -31,7 +31,11 @@ class WorkflowSuggestionTool extends Tool
         $validated = $request->validate(['experiment_id' => 'required|string']);
         $experimentId = $validated['experiment_id'];
 
-        $experiment = Experiment::find($experimentId);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($experimentId);
 
         if (! $experiment) {
             return Response::error("Experiment '{$experimentId}' not found.");

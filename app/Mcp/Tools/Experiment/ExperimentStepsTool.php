@@ -32,7 +32,11 @@ class ExperimentStepsTool extends Tool
     {
         $validated = $request->validate(['experiment_id' => 'required|string']);
 
-        $experiment = Experiment::find($validated['experiment_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['experiment_id']);
 
         if (! $experiment) {
             return Response::error('Experiment not found.');

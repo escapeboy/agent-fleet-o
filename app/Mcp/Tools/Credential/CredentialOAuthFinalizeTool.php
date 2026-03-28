@@ -33,7 +33,7 @@ class CredentialOAuthFinalizeTool extends Tool
             return Response::error('OAuth session not found or expired. Sessions expire after 10 minutes.');
         }
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if ($session['team_id'] !== $teamId) {
             return Response::error('OAuth session belongs to a different team.');

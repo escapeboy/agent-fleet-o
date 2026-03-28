@@ -38,7 +38,11 @@ class AgentDeleteTool extends Tool
             return Response::error('confirm must be set to true to delete an agent. This action is irreversible.');
         }
 
-        $agent = Agent::find($agentId);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($agentId);
         if (! $agent) {
             return Response::error("Agent {$agentId} not found.");
         }

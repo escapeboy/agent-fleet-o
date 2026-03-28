@@ -37,9 +37,13 @@ class ConnectorConfigGetTool extends Tool
             return Response::error('Provide either id or channel');
         }
 
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
         $config = $id
-            ? OutboundConnectorConfig::find($id)
-            : OutboundConnectorConfig::where('channel', $channel)->first();
+            ? OutboundConnectorConfig::withoutGlobalScopes()->where('team_id', $teamId)->find($id)
+            : OutboundConnectorConfig::withoutGlobalScopes()->where('team_id', $teamId)->where('channel', $channel)->first();
 
         if (! $config) {
             return Response::error('Connector config not found');

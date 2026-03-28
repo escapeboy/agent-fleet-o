@@ -43,7 +43,11 @@ class WorkflowUpdateTool extends Tool
             'budget_cap_credits' => 'nullable|integer|min:0',
         ]);
 
-        $workflow = Workflow::find($validated['workflow_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $workflow = Workflow::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['workflow_id']);
 
         if (! $workflow) {
             return Response::error('Workflow not found.');

@@ -28,7 +28,11 @@ class EmailTemplateDeleteTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $template = EmailTemplate::find($request->get('id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $template = EmailTemplate::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('id'));
 
         if (! $template) {
             return Response::error('Email template not found.');

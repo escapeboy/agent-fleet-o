@@ -32,7 +32,11 @@ class ToolDeleteTool extends Tool
             'tool_id' => 'required|string',
         ]);
 
-        $tool = ToolModel::find($validated['tool_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $tool = ToolModel::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['tool_id']);
 
         if (! $tool) {
             return Response::error('Tool not found.');

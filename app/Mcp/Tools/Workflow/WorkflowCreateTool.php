@@ -38,6 +38,10 @@ class WorkflowCreateTool extends Tool
             'checkpoint_mode' => 'nullable|string|in:sync,async,exit',
             'budget_cap_credits' => 'nullable|integer|min:1',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         try {
             $settings = [];
@@ -51,7 +55,7 @@ class WorkflowCreateTool extends Tool
                 description: $validated['description'] ?? null,
                 nodes: [],
                 edges: [],
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 settings: $settings,
                 budgetCapCredits: $validated['budget_cap_credits'] ?? null,
             );

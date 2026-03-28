@@ -36,8 +36,11 @@ class SkillLineageTool extends Tool
     {
         $validated = $request->validate(['skill_id' => 'required|string']);
 
-        // TeamScope on Skill::find() ensures only the authenticated team's skills are accessible.
-        $skill = Skill::find($validated['skill_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $skill = Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['skill_id']);
         if (! $skill) {
             return Response::error('Skill not found.');
         }

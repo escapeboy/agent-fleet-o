@@ -40,7 +40,7 @@ class ArtifactGetTool extends Tool
             'include_content' => 'sometimes|boolean',
         ]);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $artifact = Artifact::withoutGlobalScopes()
             ->withCount('versions')

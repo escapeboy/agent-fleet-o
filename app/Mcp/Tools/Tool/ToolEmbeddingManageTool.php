@@ -50,7 +50,7 @@ class ToolEmbeddingManageTool extends Tool
             return Response::text(json_encode(['error' => 'tool_id is required for embed action']));
         }
 
-        $tool = ToolModel::find($toolId);
+        $tool = ToolModel::withoutGlobalScopes()->where('team_id', $teamId)->find($toolId);
         if (! $tool) {
             return Response::text(json_encode(['error' => 'Tool not found']));
         }

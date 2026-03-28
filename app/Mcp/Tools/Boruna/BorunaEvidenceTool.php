@@ -40,7 +40,7 @@ class BorunaEvidenceTool extends McpTool
             'execution_id' => 'required|uuid',
         ]);
 
-        $teamId = auth()->user()->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $execution = SkillExecution::with('skill')
             ->where('id', $validated['execution_id'])

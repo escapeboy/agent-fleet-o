@@ -32,7 +32,11 @@ class EvolutionApproveTool extends Tool
             'proposal_id' => 'required|string',
         ]);
 
-        $proposal = EvolutionProposal::find($validated['proposal_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $proposal = EvolutionProposal::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['proposal_id']);
 
         if (! $proposal) {
             return Response::error('Evolution proposal not found.');

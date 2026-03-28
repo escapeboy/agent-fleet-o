@@ -30,8 +30,11 @@ class ToolProbeRemoteMcpTool extends McpTool
     {
         $toolId = $request->get('tool_id');
 
-        // TeamScope global scope ensures tenant isolation automatically
-        $tool = Tool::find($toolId);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $tool = Tool::withoutGlobalScopes()->where('team_id', $teamId)->find($toolId);
 
         if (! $tool) {
             return Response::error('Tool not found.');

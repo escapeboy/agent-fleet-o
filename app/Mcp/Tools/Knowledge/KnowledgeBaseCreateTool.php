@@ -33,7 +33,7 @@ class KnowledgeBaseCreateTool extends Tool
     {
         $request->validate(['name' => 'required|string|max:255']);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $kb = $action->execute(
             teamId: $teamId,

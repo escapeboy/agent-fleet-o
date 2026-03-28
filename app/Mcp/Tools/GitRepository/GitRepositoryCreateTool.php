@@ -61,10 +61,14 @@ DESC;
             'credential_id' => 'nullable|uuid|exists:credentials,id',
             'config' => 'nullable|array',
         ]);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
 
         try {
             $repo = app(CreateGitRepositoryAction::class)->execute(
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
                 name: $validated['name'],
                 url: $validated['url'],
                 mode: GitRepoMode::from($validated['mode'] ?? 'api_only'),

@@ -32,7 +32,11 @@ class ProjectRestartTool extends Tool
             'project_id' => 'required|string',
         ]);
 
-        $project = Project::find($validated['project_id']);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+        $project = Project::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['project_id']);
 
         if (! $project) {
             return Response::error('Project not found.');

@@ -37,7 +37,7 @@ class ResolveSecurityReviewTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = Auth::user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
             return Response::error('No current team.');

@@ -57,7 +57,7 @@ class BorunaRunTool extends McpTool
             'skill_id' => 'nullable|uuid',
         ]);
 
-        $teamId = auth()->user()->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         $userId = auth()->id();
 
         if ($validated['mode'] === 'skill') {

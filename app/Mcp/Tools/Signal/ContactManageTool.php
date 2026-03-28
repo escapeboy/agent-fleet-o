@@ -41,7 +41,7 @@ class ContactManageTool extends Tool
     public function handle(Request $request): Response
     {
         $user = Auth::user();
-        $teamId = $user?->current_team_id;
+        $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
             return Response::error('No current team.');

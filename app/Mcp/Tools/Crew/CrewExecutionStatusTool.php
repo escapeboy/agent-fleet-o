@@ -37,7 +37,7 @@ class CrewExecutionStatusTool extends Tool
             'include_full_output' => 'sometimes|boolean',
         ]);
 
-        $teamId = auth()->user()?->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $execution = CrewExecution::withoutGlobalScopes()
             ->where('team_id', $teamId)

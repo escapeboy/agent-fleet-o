@@ -49,7 +49,7 @@ class ToolImportMcpTool extends Tool
             ]));
         }
 
-        $teamId = auth()->user()->current_team_id;
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         $importer = app(ImportMcpServersAction::class);
 
         $importResult = $importer->execute(
