@@ -43,6 +43,17 @@ class ConnectorConfigModal extends Component
 
     public string $secret = '';
 
+    // Ntfy-specific fields
+    public string $ntfyBaseUrl = '';
+
+    public string $ntfyTopic = '';
+
+    public string $ntfyPriority = 'default';
+
+    public string $ntfyTags = '';
+
+    public string $ntfyToken = '';
+
     // Test state
     public ?string $testResult = null;
 
@@ -61,6 +72,7 @@ class ConnectorConfigModal extends Component
         'whatsapp' => 'WhatsApp',
         'email' => 'Email (SMTP)',
         'webhook' => 'Webhook',
+        'ntfy' => 'Ntfy',
     ];
 
     private const CHANNEL_DESCRIPTIONS = [
@@ -72,6 +84,7 @@ class ConnectorConfigModal extends Component
         'whatsapp' => 'Send messages via Meta WhatsApp Cloud API.',
         'email' => 'Send emails via SMTP. Configure your mail server credentials.',
         'webhook' => 'Send data via generic HTTP POST webhook.',
+        'ntfy' => 'Send push notifications via ntfy (ntfy.sh or self-hosted). Lightweight and open-source.',
     ];
 
     #[On('openModal')]
@@ -139,6 +152,7 @@ class ConnectorConfigModal extends Component
                 'whatsapp' => $this->testWhatsApp(),
                 'email' => $this->testSmtp(),
                 'webhook' => $this->testWebhook(),
+                'ntfy' => $this->testNtfy(),
                 default => throw new \RuntimeException('Unknown channel'),
             };
             $this->testResult = $result;
@@ -344,6 +358,36 @@ class ConnectorConfigModal extends Component
         throw new \RuntimeException('Webhook returned '.$response->status().': '.substr($response->body(), 0, 200));
     }
 
+    private function testNtfy(): string
+    {
+        if (! $this->ntfyBaseUrl) {
+            throw new \RuntimeException('Base URL is required');
+        }
+
+        if (! $this->ntfyTopic) {
+            throw new \RuntimeException('Topic is required');
+        }
+
+        $url = rtrim($this->ntfyBaseUrl, '/').'/'.$this->ntfyTopic;
+
+        $headers = ['Priority' => $this->ntfyPriority ?: 'default', 'Title' => '[Test] FleetQ connectivity check'];
+
+        if ($this->ntfyToken) {
+            $headers['Authorization'] = 'Bearer '.$this->ntfyToken;
+        }
+
+        $response = Http::timeout(10)
+            ->withHeaders($headers)
+            ->withBody('[Test] FleetQ connectivity check', 'text/plain')
+            ->post($url);
+
+        if ($response->successful()) {
+            return 'Notification sent to topic "'.$this->ntfyTopic.'"';
+        }
+
+        throw new \RuntimeException('Ntfy returned '.$response->status().': '.substr($response->body(), 0, 200));
+    }
+
     // ── Helpers ──
 
     private function loadCredentials(string $channel, array $creds): void
@@ -373,6 +417,13 @@ class ConnectorConfigModal extends Component
                 $this->defaultUrl = $creds['default_url'] ?? '';
                 $this->secret = $creds['secret'] ?? '';
             })(),
+            'ntfy' => (function () use ($creds) {
+                $this->ntfyBaseUrl = $creds['base_url'] ?? '';
+                $this->ntfyTopic = $creds['topic'] ?? '';
+                $this->ntfyPriority = $creds['default_priority'] ?? 'default';
+                $this->ntfyTags = $creds['default_tags'] ?? '';
+                $this->ntfyToken = $creds['token'] ?? '';
+            })(),
             default => null,
         };
     }
@@ -396,6 +447,13 @@ class ConnectorConfigModal extends Component
                 'from_name' => $this->fromName,
             ],
             'webhook' => ['default_url' => $this->defaultUrl, 'secret' => $this->secret],
+            'ntfy' => [
+                'base_url' => $this->ntfyBaseUrl,
+                'topic' => $this->ntfyTopic,
+                'default_priority' => $this->ntfyPriority,
+                'default_tags' => $this->ntfyTags,
+                'token' => $this->ntfyToken,
+            ],
             default => [],
         };
     }
@@ -415,6 +473,11 @@ class ConnectorConfigModal extends Component
         $this->fromName = '';
         $this->defaultUrl = '';
         $this->secret = '';
+        $this->ntfyBaseUrl = '';
+        $this->ntfyTopic = '';
+        $this->ntfyPriority = 'default';
+        $this->ntfyTags = '';
+        $this->ntfyToken = '';
     }
 
     private function updateTestStatus(string $status): void

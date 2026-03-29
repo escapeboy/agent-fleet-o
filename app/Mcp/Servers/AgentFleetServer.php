@@ -161,6 +161,8 @@ use App\Mcp\Tools\GitRepository\GitRepositoryGetTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryListTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryTestTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryUpdateTool;
+use App\Mcp\Tools\Integration\ActivepiecesListPiecesTool;
+use App\Mcp\Tools\Integration\ActivepiecesSyncTool;
 use App\Mcp\Tools\Integration\IntegrationCapabilitiesTool;
 use App\Mcp\Tools\Integration\IntegrationConnectTool;
 use App\Mcp\Tools\Integration\IntegrationDisconnectTool;
@@ -195,6 +197,7 @@ use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
+use App\Mcp\Tools\Outbound\NtfySendTool;
 use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
 use App\Mcp\Tools\Profile\ProfileGetTool;
 use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
@@ -694,12 +697,13 @@ class AgentFleetServer extends Server
         ArtifactContentTool::class,
         ArtifactDownloadTool::class,
 
-        // Outbound (5)
+        // Outbound (6)
         ConnectorConfigListTool::class,
         ConnectorConfigGetTool::class,
         ConnectorConfigSaveTool::class,
         ConnectorConfigDeleteTool::class,
         ConnectorConfigTestTool::class,
+        NtfySendTool::class,
 
         // Webhook (4)
         WebhookListTool::class,
@@ -731,13 +735,15 @@ class AgentFleetServer extends Server
         TriggerRuleDeleteTool::class,
         TriggerRuleTestTool::class,
 
-        // Integration (6)
+        // Integration (8)
         IntegrationListTool::class,
         IntegrationConnectTool::class,
         IntegrationDisconnectTool::class,
         IntegrationPingTool::class,
         IntegrationExecuteTool::class,
         IntegrationCapabilitiesTool::class,
+        ActivepiecesSyncTool::class,
+        ActivepiecesListPiecesTool::class,
 
         // Compute (1)
         ComputeManageTool::class,

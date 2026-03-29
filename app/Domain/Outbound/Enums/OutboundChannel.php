@@ -22,6 +22,7 @@ enum OutboundChannel: string
     case SignalProtocol = 'signal_protocol';
     case Matrix = 'matrix';
     case SupabaseRealtime = 'supabase_realtime';
+    case Ntfy = 'ntfy';
 
     /**
      * Whether this is a core channel with a built-in connector.
