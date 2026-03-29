@@ -243,9 +243,13 @@
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @php
-                $tabs = $experiment->hasWorkflow()
-                    ? ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions']
-                    : ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions'];
+                $workflowTabs = ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions'];
+                $standardTabs = ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions'];
+                if ($experiment->status->isFailed()) {
+                    $workflowTabs['lessons'] = 'Lessons Learned';
+                    $standardTabs['lessons'] = 'Lessons Learned';
+                }
+                $tabs = $experiment->hasWorkflow() ? $workflowTabs : $standardTabs;
             @endphp
             @foreach($tabs as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
@@ -269,6 +273,8 @@
                         @endif
                     @elseif($tab === 'reasoning' && $reasoningCount > 0)
                         <span class="ml-1 rounded-full bg-purple-100 px-1.5 py-0.5 text-xs text-purple-700">{{ $reasoningCount }}</span>
+                    @elseif($tab === 'lessons' && $failureLessons->isNotEmpty())
+                        <span class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700">{{ $failureLessons->count() }}</span>
                     @endif
                 </button>
             @endforeach
@@ -358,6 +364,49 @@
 
     @elseif($activeTab === 'chain')
         <livewire:experiments.execution-chain-panel :experiment="$experiment" :key="'chain-'.$experiment->id" />
+
+    @elseif($activeTab === 'lessons')
+        {{-- Lessons Learned: failure-tier memory records extracted from this experiment --}}
+        <div class="space-y-4">
+            <div class="mb-2">
+                <h3 class="text-sm font-semibold text-gray-700">Lessons Learned</h3>
+                <p class="mt-0.5 text-xs text-gray-500">Automatically extracted failure lessons stored in the team memory for future reference.</p>
+            </div>
+
+            @if($failureLessons->isEmpty())
+                <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center">
+                    <svg class="mx-auto h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500">Extracting lesson…</p>
+                    <p class="mt-1 text-xs text-gray-400">A background job analyses this failure and stores a lesson. Refresh in a few seconds.</p>
+                </div>
+            @else
+                @foreach($failureLessons as $lesson)
+                    <div class="rounded-xl border border-red-100 bg-red-50 p-5">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
+                                <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800">{{ $lesson->content }}</p>
+                                <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                                    @if(!empty($lesson->metadata['root_cause']))
+                                        <span class="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">{{ $lesson->metadata['root_cause'] }}</span>
+                                    @endif
+                                    @if(!empty($lesson->metadata['final_status']))
+                                        <span>status: {{ $lesson->metadata['final_status'] }}</span>
+                                    @endif
+                                    <span>extracted: {{ $lesson->created_at?->diffForHumans() }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            @endif
+        </div>
 
     @elseif($activeTab === 'suggestions')
         <div class="space-y-4">

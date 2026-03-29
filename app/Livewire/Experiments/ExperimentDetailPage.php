@@ -10,7 +10,11 @@ use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Memory\Enums\MemoryTier;
+use App\Domain\Memory\Models\Memory;
 use App\Domain\Workflow\Actions\SuggestWorkflowAction;
+use Illuminate\Support\Collection;
+use Illuminate\View\View;
 use Livewire\Component;
 
 class ExperimentDetailPage extends Component
@@ -176,7 +180,7 @@ class ExperimentDetailPage extends Component
         session()->flash('message', 'Evolution proposal created successfully.');
     }
 
-    public function render()
+    public function render(): View
     {
         $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions', 'tasks', 'playbookSteps', 'children']);
 
@@ -195,10 +199,37 @@ class ExperimentDetailPage extends Component
             ->where('has_reasoning', true)
             ->count();
 
+        // Load failure lessons only when the experiment is in a failed state and
+        // the "lessons" tab is active (or the experiment is a known terminal failure).
+        $failureLessons = $this->loadFailureLessons();
+
         return view('livewire.experiments.experiment-detail-page', [
             'hasOrchestration' => $hasOrchestration,
             'reasoningRuns' => $reasoningRuns,
             'reasoningCount' => $reasoningCount,
+            'failureLessons' => $failureLessons,
         ])->layout('layouts.app', ['header' => $this->experiment->title]);
+    }
+
+    /**
+     * Load failure-tier memory records linked to this experiment.
+     *
+     * Returns an empty collection when the experiment has not failed, or when
+     * memory is disabled. The "Lessons Learned" tab only renders when isFailed().
+     *
+     * @return Collection<int, Memory>
+     */
+    private function loadFailureLessons(): Collection
+    {
+        if (! $this->experiment->status->isFailed() || ! config('memory.enabled', true)) {
+            return collect();
+        }
+
+        return Memory::withoutGlobalScopes()
+            ->where('source_type', 'experiment')
+            ->where('source_id', $this->experiment->id)
+            ->where('tier', MemoryTier::Failures)
+            ->orderByDesc('created_at')
+            ->get(['id', 'content', 'metadata', 'created_at']);
     }
 }

@@ -4,6 +4,8 @@ namespace App\Domain\Memory\Services;
 
 use App\Domain\Memory\Actions\RetrieveRelevantMemoriesAction;
 use App\Domain\Memory\Actions\UnifiedMemorySearchAction;
+use App\Domain\Memory\Enums\MemoryTier;
+use App\Domain\Memory\Models\Memory;
 use Carbon\Carbon;
 
 class MemoryContextInjector
@@ -18,6 +20,9 @@ class MemoryContextInjector
      *
      * When unified search is enabled, queries vector memory, knowledge graph,
      * and keyword search via RRF fusion. Each result includes source attribution.
+     *
+     * Always appends the top 3 past failure lessons (tier = failures) for the
+     * team so agents avoid repeating known failure patterns.
      *
      * Returns null if memory is disabled, input is empty, or no relevant memories found.
      */
@@ -35,11 +40,55 @@ class MemoryContextInjector
 
         // Try unified search first (RRF fusion across vector + KG + keyword)
         if ($this->unifiedSearch && config('memory.unified_search.enabled', true) && $teamId) {
-            return $this->buildUnifiedContext($teamId, $queryText, $agentId, $projectId);
+            $context = $this->buildUnifiedContext($teamId, $queryText, $agentId, $projectId);
+        } else {
+            // Fallback to vector-only search
+            $context = $this->buildVectorOnlyContext($agentId, $queryText, $projectId, $teamId);
         }
 
-        // Fallback to vector-only search
-        return $this->buildVectorOnlyContext($agentId, $queryText, $projectId, $teamId);
+        // Append failure lessons for the team so agents avoid known failure patterns.
+        $failureLessons = $this->buildFailureLessonsContext($teamId);
+        if ($failureLessons !== null) {
+            $context = $context !== null
+                ? $context."\n\n".$failureLessons
+                : $failureLessons;
+        }
+
+        return $context;
+    }
+
+    /**
+     * Build a "Past Failure Lessons" section from the top 3 failure-tier memories for the team.
+     *
+     * These lessons are sourced from experiments that previously failed. Surfacing them
+     * in the system prompt helps agents avoid repeating the same mistakes.
+     */
+    private function buildFailureLessonsContext(?string $teamId): ?string
+    {
+        if (! $teamId) {
+            return null;
+        }
+
+        $lessons = Memory::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->where('tier', MemoryTier::Failures)
+            ->orderByDesc('importance')
+            ->orderByDesc('created_at')
+            ->limit(3)
+            ->get(['content', 'source_id', 'created_at']);
+
+        if ($lessons->isEmpty()) {
+            return null;
+        }
+
+        $lines = $lessons->map(function (Memory $m): string {
+            $date = $m->created_at?->format('Y-m-d') ?? 'unknown';
+            $expId = $m->source_id ? substr($m->source_id, 0, 8) : 'unknown';
+
+            return "[failure: {$date} | experiment: {$expId}] {$m->content}";
+        })->implode("\n");
+
+        return "## Past Failure Lessons\n{$lines}";
     }
 
     /**
