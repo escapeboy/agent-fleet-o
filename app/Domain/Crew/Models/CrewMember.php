@@ -25,6 +25,7 @@ class CrewMember extends Model
         'role',
         'sort_order',
         'config',
+        'context_scope',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class CrewMember extends Model
         return [
             'role' => CrewMemberRole::class,
             'config' => 'array',
+            'context_scope' => 'array',
             'sort_order' => 'integer',
         ];
     }

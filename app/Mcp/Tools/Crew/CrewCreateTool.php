@@ -13,7 +13,9 @@ class CrewCreateTool extends Tool
 {
     protected string $name = 'crew_create';
 
-    protected string $description = 'Create a new crew (multi-agent team). Requires a name, coordinator agent, and QA agent.';
+    protected string $description = 'Create a new crew (multi-agent team). Requires a name, coordinator agent, and QA agent. '
+        .'Optionally add an output_reviewer_agent_id for an agent that reviews the final synthesized result before it is returned. '
+        .'Members can be assigned the process_reviewer role (inter-agent collaboration quality) or output_reviewer role (final output quality) via crew_member_update_policy.';
 
     public function schema(JsonSchema $schema): array
     {

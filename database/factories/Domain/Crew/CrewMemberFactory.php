@@ -20,6 +20,7 @@ class CrewMemberFactory extends Factory
             'role' => CrewMemberRole::Worker,
             'sort_order' => 0,
             'config' => [],
+            'context_scope' => null,
         ];
     }
 
@@ -31,5 +32,15 @@ class CrewMemberFactory extends Factory
     public function qa(): static
     {
         return $this->state(['role' => CrewMemberRole::Qa]);
+    }
+
+    public function processReviewer(): static
+    {
+        return $this->state(['role' => CrewMemberRole::ProcessReviewer]);
+    }
+
+    public function outputReviewer(): static
+    {
+        return $this->state(['role' => CrewMemberRole::OutputReviewer]);
     }
 }
