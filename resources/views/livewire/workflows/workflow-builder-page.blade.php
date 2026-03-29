@@ -622,7 +622,7 @@
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Prompt</label>
                                     <textarea x-model="selectedNode.prompt" @input="syncToLivewire()" rows="4"
-                                              placeholder="Enter your prompt. Use {{variable}} for interpolation."
+                                              placeholder="Enter your prompt. Use @{{variable}} for interpolation."
                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
                                 </div>
                                 <div>
@@ -754,7 +754,7 @@
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Template</label>
                                     <textarea x-model="selectedNode.template" @input="syncToLivewire()" rows="5"
-                                              placeholder="Use {{variable}} placeholders from prior steps."
+                                              placeholder="Use @{{variable}} placeholders from prior steps."
                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
                                 </div>
                                 <div>
