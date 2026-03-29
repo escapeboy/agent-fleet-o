@@ -10,6 +10,7 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Skill\Models\SkillVersion;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class SkillDetailPage extends Component
@@ -119,6 +120,15 @@ class SkillDetailPage extends Component
 
         session()->flash('message', 'Skill deleted.');
         $this->redirect(route('skills.index'));
+    }
+
+    /**
+     * Refresh the version selector in the Playground tab when a new version is created.
+     */
+    #[On('skill-version-created')]
+    public function onSkillVersionCreated(): void
+    {
+        $this->skill->refresh();
     }
 
     public function render()

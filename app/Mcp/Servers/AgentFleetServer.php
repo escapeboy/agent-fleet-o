@@ -88,8 +88,10 @@ use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialDeleteTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
 use App\Mcp\Tools\Credential\CredentialListTool;
+use App\Mcp\Tools\Credential\CredentialListVersionsTool;
 use App\Mcp\Tools\Credential\CredentialOAuthFinalizeTool;
 use App\Mcp\Tools\Credential\CredentialOAuthInitiateTool;
+use App\Mcp\Tools\Credential\CredentialRollbackTool;
 use App\Mcp\Tools\Credential\CredentialRotateTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
@@ -550,7 +552,7 @@ class AgentFleetServer extends Server
         ToolFederationGroupCreateTool::class,
         ToolSearchTool::class,
 
-        // Credential (8)
+        // Credential (10)
         CredentialListTool::class,
         CredentialGetTool::class,
         CredentialCreateTool::class,
@@ -559,6 +561,8 @@ class AgentFleetServer extends Server
         CredentialRotateTool::class,
         CredentialOAuthInitiateTool::class,
         CredentialOAuthFinalizeTool::class,
+        CredentialListVersionsTool::class,
+        CredentialRollbackTool::class,
 
         // Workflow (19)
         WorkflowListTool::class,

@@ -147,7 +147,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'versions' => 'Versions', 'executions' => 'Executions'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'versions' => 'Versions', 'executions' => 'Executions', 'playground' => 'Playground'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -297,6 +297,21 @@
                 </table>
                 </div>
             </div>
+        @elseif($activeTab === 'playground')
+            @php
+                $latestVersion = $versions->first();
+            @endphp
+            @if($latestVersion)
+                <livewire:skills.skill-playground
+                    :skill-id="$skill->id"
+                    :version-id="$latestVersion->id"
+                    :key="'playground-'.$skill->id"
+                />
+            @else
+                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center">
+                    <p class="text-sm text-gray-500">No versions found. Save the skill configuration first to create a version.</p>
+                </div>
+            @endif
         @endif
     @endif
 
