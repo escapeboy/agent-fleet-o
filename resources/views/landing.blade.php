@@ -71,7 +71,7 @@
                     "name": "What AI providers are supported?",
                     "acceptedAnswer": {
                         "@@type": "Answer",
-                        "text": "FleetQ supports cloud providers — Anthropic (Claude), OpenAI (GPT-4o), Google (Gemini), Groq, and OpenRouter — with automatic failover. You bring your own API keys. Seven local CLI agents (Claude Code, Codex, Gemini CLI, Kiro, Aider, Amp, OpenCode) are also supported at zero platform cost."
+                        "text": "FleetQ supports 10+ cloud providers — Anthropic (Claude), OpenAI (GPT-4o), Google (Gemini), Groq, OpenRouter, Mistral, DeepSeek, xAI (Grok), Perplexity, and Fireworks — with automatic failover. You bring your own API keys. Local CLI agents (Claude Code, Codex, Gemini CLI, Kiro, Aider, Amp, OpenCode, Ollama, and more) are also supported at zero platform cost."
                     }
                 },
                 {
@@ -95,7 +95,7 @@
                     "name": "What is MCP integration?",
                     "acceptedAnswer": {
                         "@@type": "Answer",
-                        "text": "FleetQ includes a Model Context Protocol (MCP) server with 140+ tools across 24 domains. External AI agents — Claude Code, Codex, Gemini CLI, Kiro, Amp, Cursor, and more — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace."
+                        "text": "FleetQ includes a Model Context Protocol (MCP) server with 350+ tools across 40 domains. External AI agents — Claude Code, Codex, Gemini CLI, Kiro, Amp, Cursor, and more — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace."
                     }
                 },
                 {
