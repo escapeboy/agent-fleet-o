@@ -72,6 +72,15 @@ class ConfluenceConnector implements KnowledgeConnectorInterface
             return [];
         }
 
+        if (! $this->isSafeUrl($baseUrl)) {
+            Log::warning('ConfluenceConnector: Blocked SSRF attempt — URL targets a private/internal address', [
+                'binding_id' => $bindingId,
+                'url' => $baseUrl,
+            ]);
+
+            return [];
+        }
+
         $keys = array_filter(array_map('trim', explode(',', $spaceKeys)));
         if (empty($keys)) {
             Log::warning('ConfluenceConnector: No space_keys configured', ['binding_id' => $bindingId]);
@@ -102,6 +111,42 @@ class ConfluenceConnector implements KnowledgeConnectorInterface
         ]);
 
         return [];
+    }
+
+    /**
+     * Returns false when the URL resolves to a private/link-local/loopback address
+     * to prevent SSRF attacks via a user-controlled confluence_url parameter.
+     */
+    private function isSafeUrl(string $url): bool
+    {
+        $parsed = parse_url($url);
+        $scheme = strtolower($parsed['scheme'] ?? '');
+        $host = strtolower($parsed['host'] ?? '');
+
+        if (! in_array($scheme, ['https', 'http'], true)) {
+            return false;
+        }
+
+        if (empty($host)) {
+            return false;
+        }
+
+        // Reject IP literals that map to private/link-local/loopback ranges
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            if (
+                filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false
+            ) {
+                return false;
+            }
+        }
+
+        // Reject well-known internal hostnames
+        $blocked = ['localhost', 'metadata.google.internal', '169.254.169.254'];
+        if (in_array($host, $blocked, true)) {
+            return false;
+        }
+
+        return true;
     }
 
     private function pollSpace(
