@@ -14,12 +14,9 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // tier, proposed_by, category columns already exist from earlier migrations.
+        // Only add the compound index which did not exist before.
         Schema::table('memories', function (Blueprint $table) {
-            $table->string('tier', 20)->default('working')->after('content_hash');
-            $table->string('proposed_by', 100)->nullable()->after('tier');
-            $table->string('category', 50)->nullable()->after('proposed_by');
-
-            // Partial index to quickly surface unreviewed proposed memories per team
             $table->index(['team_id', 'tier'], 'memories_team_tier_idx');
         });
     }
@@ -28,7 +25,6 @@ return new class extends Migration
     {
         Schema::table('memories', function (Blueprint $table) {
             $table->dropIndex('memories_team_tier_idx');
-            $table->dropColumn(['tier', 'proposed_by', 'category']);
         });
     }
 };

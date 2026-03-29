@@ -69,13 +69,17 @@ class MemoryContextInjector
             return null;
         }
 
-        $lessons = Memory::withoutGlobalScopes()
-            ->where('team_id', $teamId)
-            ->where('tier', MemoryTier::Failures)
-            ->orderByDesc('importance')
-            ->orderByDesc('created_at')
-            ->limit(3)
-            ->get(['content', 'source_id', 'created_at']);
+        try {
+            $lessons = Memory::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('tier', MemoryTier::Failures)
+                ->orderByDesc('importance')
+                ->orderByDesc('created_at')
+                ->limit(3)
+                ->get(['content', 'source_id', 'created_at']);
+        } catch (\Throwable) {
+            return null;
+        }
 
         if ($lessons->isEmpty()) {
             return null;
