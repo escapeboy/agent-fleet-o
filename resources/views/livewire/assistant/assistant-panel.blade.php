@@ -266,6 +266,41 @@
                 <h2 class="text-sm font-semibold text-gray-900">Assistant</h2>
             </div>
             <div class="flex items-center gap-1">
+                {{-- Review Conversation --}}
+                @if($conversationId && count($messages) > 5 && auth()->user()?->currentTeam?->userRole(auth()->user())?->value !== 'viewer')
+                    <button
+                        x-data="{ reviewing: false, reviewResult: null }"
+                        x-on:click="
+                            if (reviewing) return;
+                            reviewing = true;
+                            reviewResult = null;
+                            fetch('/api/v1/assistant/conversations/{{ $conversationId }}/review', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                                    'Accept': 'application/json',
+                                }
+                            })
+                            .then(r => r.json())
+                            .then(data => {
+                                reviewing = false;
+                                reviewResult = data.review ?? null;
+                                if (reviewResult) {
+                                    $dispatch('assistant-review-complete', { review: reviewResult });
+                                }
+                            })
+                            .catch(() => { reviewing = false; })
+                        "
+                        :disabled="reviewing"
+                        class="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                        title="Review Conversation Quality"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4" :class="reviewing ? 'animate-spin' : ''">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                        </svg>
+                    </button>
+                @endif
                 {{-- History Toggle --}}
                 <button
                     wire:click="toggleHistory"

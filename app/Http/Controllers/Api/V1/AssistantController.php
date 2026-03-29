@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Assistant\Actions\AnnotateMessageAction;
+use App\Domain\Assistant\Actions\ReviewAssistantConversationAction;
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
 use App\Domain\Assistant\Enums\AnnotationRating;
 use App\Domain\Assistant\Models\AssistantConversation;
@@ -110,6 +111,19 @@ class AssistantController extends Controller
             'note' => $annotation->note,
             'created_at' => $annotation->created_at,
         ]);
+    }
+
+    /**
+     * Review the quality of an assistant conversation.
+     */
+    public function reviewConversation(Request $request, AssistantConversation $conversation, ReviewAssistantConversationAction $action): JsonResponse
+    {
+        // Authorization: only team members can review their own team's conversations
+        abort_if($conversation->team_id !== $request->user()->current_team_id, 403);
+
+        $review = $action->execute($conversation);
+
+        return response()->json(['review' => $review]);
     }
 
     /**
