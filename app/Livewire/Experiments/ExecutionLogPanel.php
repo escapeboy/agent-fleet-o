@@ -2,11 +2,15 @@
 
 namespace App\Livewire\Experiments;
 
-use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Approval\Actions\ApproveAction;
+use App\Domain\Approval\Actions\RejectAction;
+use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Infrastructure\AI\Models\LlmRequestLog;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class ExecutionLogPanel extends Component
@@ -15,9 +19,55 @@ class ExecutionLogPanel extends Component
 
     public ?string $expandedEventId = null;
 
+    /** ID of the ApprovalRequest currently being rejected (drives modal visibility). */
+    public string $rejectingApprovalId = '';
+
+    /** Rejection reason text entered by the user in the modal. */
+    public string $rejectReason = '';
+
     public function toggleEvent(string $eventId): void
     {
         $this->expandedEventId = $this->expandedEventId === $eventId ? null : $eventId;
+    }
+
+    /**
+     * Approve the given pending ApprovalRequest inline.
+     */
+    public function approveInline(string $approvalId): void
+    {
+        $approval = ApprovalRequest::where('experiment_id', $this->experimentId)
+            ->findOrFail($approvalId);
+
+        app(ApproveAction::class)->execute($approval, auth()->id());
+
+        $this->dispatch('notify', type: 'success', message: 'Approved successfully.');
+    }
+
+    /**
+     * Open the rejection reason modal for the given ApprovalRequest.
+     */
+    public function openRejectModal(string $approvalId): void
+    {
+        $this->rejectingApprovalId = $approvalId;
+        $this->rejectReason = '';
+    }
+
+    /**
+     * Submit the rejection with the entered reason.
+     */
+    public function confirmReject(): void
+    {
+        $this->validate(['rejectReason' => 'required|min:10']);
+
+        $approval = ApprovalRequest::where('experiment_id', $this->experimentId)
+            ->findOrFail($this->rejectingApprovalId);
+
+        app(RejectAction::class)->execute($approval, auth()->id(), $this->rejectReason);
+
+        $this->rejectingApprovalId = '';
+        $this->rejectReason = '';
+
+        $this->dispatch('notify', type: 'success', message: 'Rejected.');
     }
 
     public function render()
@@ -113,6 +163,32 @@ class ExecutionLogPanel extends Component
                 },
             ]);
         $events = $events->merge($llmLogs);
+
+        // ApprovalRequest events — shown as inline approval cards
+        $approvalEvents = ApprovalRequest::where('experiment_id', $this->experimentId)
+            ->with('reviewer')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (ApprovalRequest $approval) => [
+                'id' => 'approval-'.$approval->id,
+                'approval_id' => $approval->id,
+                'type' => 'approval',
+                'time' => $approval->created_at,
+                'summary' => 'Approval required: '.Str::limit($approval->context['message'] ?? 'Human review needed', 80),
+                'detail' => json_encode($approval->context ?? []),
+                'metadata' => null,
+                'icon' => 'clock',
+                'color' => match ($approval->status) {
+                    ApprovalStatus::Pending => 'amber',
+                    ApprovalStatus::Approved => 'green',
+                    ApprovalStatus::Rejected => 'red',
+                    default => 'gray',
+                },
+                'status' => $approval->status->value,
+                'reviewer' => $approval->reviewer?->name,
+                'reviewed_at' => $approval->reviewed_at,
+            ]);
+        $events = $events->merge($approvalEvents);
 
         return view('livewire.experiments.execution-log-panel', [
             'events' => $events->sortBy('time')->values(),

@@ -180,6 +180,39 @@ class ExperimentDetailPage extends Component
         session()->flash('message', 'Evolution proposal created successfully.');
     }
 
+    /**
+     * Returns the current UX pipeline phase (1, 2, or 3) based on the
+     * experiment's status, collapsing the 20-state machine into 3 user-facing
+     * phases: Define Goal → Execute Plan → Review Results.
+     */
+    public function getPipelinePhase(): int
+    {
+        return match ($this->experiment->status) {
+            ExperimentStatus::Draft,
+            ExperimentStatus::SignalDetected => 1,
+
+            ExperimentStatus::Completed,
+            ExperimentStatus::Killed,
+            ExperimentStatus::Discarded => 3,
+
+            // All remaining states (active, failed, paused, expired) are phase 2.
+            default => 2,
+        };
+    }
+
+    /**
+     * Returns the label for the current pipeline phase.
+     */
+    public function getPipelineLabel(): string
+    {
+        return match ($this->getPipelinePhase()) {
+            1 => 'Define Goal',
+            2 => 'Execute Plan',
+            3 => 'Review Results',
+            default => '',
+        };
+    }
+
     public function render(): View
     {
         $this->experiment->loadCount(['stages', 'artifacts', 'outboundProposals', 'metrics', 'stateTransitions', 'tasks', 'playbookSteps', 'children']);

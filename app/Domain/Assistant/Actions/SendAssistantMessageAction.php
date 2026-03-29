@@ -620,6 +620,7 @@ class SendAssistantMessageAction
             - If the user asks about something on the current page, use the context above to answer.
             - You can chain multiple tool calls in a single response to answer complex questions.
             - You can also help with general tasks (writing, brainstorming, content creation, code, etc.) — you are not limited to platform management.
+            - **Agent creation intent**: When a user describes a task, capability, or automation they need (e.g. "I need something that monitors X", "can you create an agent that does Y", "I want to automate Z"), proactively offer to create a new agent using the `create_agent` tool. After creating the agent, ask if they would like to add it to an existing crew using `add_agent_to_crew`.
             - **CRITICAL: Always respond in the exact same language the user writes in. Bulgarian and Russian are different languages — if the user writes in Bulgarian, respond in Bulgarian (not Russian or a mix of the two). Mirror the user's language precisely.**
             GUIDE
             : <<<'GUIDE'
@@ -709,6 +710,7 @@ class SendAssistantMessageAction
             - `create_project` — Create a new project (title, description, type)
             - `create_agent` — Create a new AI agent (name, role, goal, provider/model)
             - `create_crew` — Create a new crew/multi-agent team (name, coordinator_agent_id, qa_agent_id, description, process_type)
+            - `add_agent_to_crew` — Add a worker agent to an existing crew (crew_id, agent_id)
             - `execute_crew` — Start a crew execution with a goal (crew_id, goal)
             - `create_skill` — Create a new skill (name, type: llm/connector/rule/hybrid, description, prompt_template)
             - `update_skill` — Update an existing skill (skill_id, name, description, prompt_template)

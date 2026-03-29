@@ -1,22 +1,136 @@
 <div wire:poll.5s.visible>
-    {{-- KPI Cards --}}
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <x-stat-card label="Active Runs" :value="$active" />
-        <x-stat-card label="Success Rate" :value="$successRate . '%'" :change="$completed . ' of ' . $total . ' completed'" changeType="neutral" />
-        <x-stat-card label="Total Spend" :value="number_format($totalSpend) . ' credits'" />
-        <x-stat-card label="Pending Approvals" :value="$pendingApprovals"
-            :change="$pendingApprovals > 0 ? 'Action required' : 'All clear'"
-            :changeType="$pendingApprovals > 0 ? 'negative' : 'positive'" />
+    {{-- Bento KPI Grid --}}
+    <div class="grid grid-cols-12 gap-4">
+
+        {{-- Active Experiments — large featured card (7 cols) --}}
+        <div class="col-span-12 flex min-h-36 flex-col rounded-xl border border-gray-200 bg-white p-5 sm:col-span-7">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wider text-gray-400">Active Runs</p>
+                    <p class="mt-1 text-4xl font-bold text-gray-900">{{ $active }}</p>
+                </div>
+                <a href="{{ route('experiments.index') }}" class="shrink-0 text-xs text-primary-600 hover:text-primary-800">View all</a>
+            </div>
+
+            {{-- Recent active experiments as status chips --}}
+            @if($activeExperiments->isNotEmpty())
+                <div class="mt-4 flex flex-wrap gap-2">
+                    @foreach($activeExperiments->take(3) as $exp)
+                        <a href="{{ route('experiments.show', $exp) }}"
+                           class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 transition">
+                            <span class="max-w-32 truncate">{{ $exp->title }}</span>
+                            <x-status-badge :status="$exp->status->value" class="scale-90" />
+                        </a>
+                    @endforeach
+                    @if($activeExperiments->count() > 3)
+                        <span class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-400">
+                            +{{ $activeExperiments->count() - 3 }} more
+                        </span>
+                    @endif
+                </div>
+            @else
+                <p class="mt-auto text-sm text-gray-400">No active runs.</p>
+            @endif
+        </div>
+
+        {{-- Pending Approvals (5 cols) --}}
+        <div class="col-span-12 sm:col-span-5">
+            <a wire:navigate href="{{ route('approvals.index') }}"
+               class="flex h-full min-h-36 flex-col rounded-xl border p-5 transition hover:shadow-sm
+                   {{ $pendingApprovals > 0 ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-white' }}">
+                <p class="text-xs font-medium uppercase tracking-wider {{ $pendingApprovals > 0 ? 'text-amber-500' : 'text-gray-400' }}">
+                    Pending Approvals
+                </p>
+                <p class="mt-1 text-4xl font-bold {{ $pendingApprovals > 0 ? 'text-amber-700' : 'text-gray-900' }}">
+                    {{ $pendingApprovals }}
+                </p>
+                <p class="mt-auto text-xs {{ $pendingApprovals > 0 ? 'text-amber-600' : 'text-gray-400' }}">
+                    {{ $pendingApprovals > 0 ? 'Action required →' : 'All clear' }}
+                </p>
+            </a>
+        </div>
+
+        {{-- Row 2: Completed / Success Rate / Total Spend / Forecast --}}
+        <div class="col-span-12 sm:col-span-3">
+            <x-stat-card label="Completed" :value="$completed" :change="'of ' . $total . ' total'" changeType="neutral" />
+        </div>
+        <div class="col-span-12 sm:col-span-3">
+            <x-stat-card label="Success Rate" :value="$successRate . '%'" :change="$completed . ' completed'" changeType="neutral" />
+        </div>
+        <div class="col-span-12 sm:col-span-3">
+            <x-stat-card label="Total Spend" :value="number_format($totalSpend) . ' cr'" />
+        </div>
+        <div class="col-span-12 sm:col-span-3">
+            @if($spendForecast['total_spent'] > 0)
+                <x-stat-card label="Spend Forecast (30d)" :value="number_format($spendForecast['projected_30d']) . ' cr'" />
+            @else
+                <x-stat-card label="Spend Forecast" value="—" change="No spend yet" changeType="neutral" />
+            @endif
+        </div>
+
+        {{-- Row 3: Active Agents / Active Skills / Active Projects --}}
+        <div class="col-span-12 sm:col-span-4">
+            <x-stat-card label="Active Agents" :value="$activeAgents" />
+        </div>
+        <div class="col-span-12 sm:col-span-4">
+            <x-stat-card label="Active Skills" :value="$activeSkills" />
+        </div>
+        <div class="col-span-12 sm:col-span-4">
+            <x-stat-card label="Active Projects" :value="$activeProjects" />
+        </div>
+
+        {{-- Row 4: Agent Runs 24h / Skill Executions 24h --}}
+        <div class="col-span-12 sm:col-span-6">
+            <x-stat-card label="Agent Runs (24h)" :value="number_format($agentRuns24h)" />
+        </div>
+        <div class="col-span-12 sm:col-span-6">
+            <x-stat-card label="Skill Executions (24h)" :value="number_format($skillExecutions24h)" />
+        </div>
+
     </div>
 
-    {{-- Skills, Agents & Projects KPIs --}}
-    <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3 lg:grid-cols-6">
-        <x-stat-card label="Active Skills" :value="$activeSkills" />
-        <x-stat-card label="Active Agents" :value="$activeAgents" />
-        <x-stat-card label="Skill Executions (24h)" :value="number_format($skillExecutions24h)" />
-        <x-stat-card label="Agent Runs (24h)" :value="number_format($agentRuns24h)" />
-        <x-stat-card label="Active Projects" :value="$activeProjects" />
-        <x-stat-card label="Project Runs (24h)" :value="number_format($projectRuns24h)" />
+    {{-- Usage Progress Bar --}}
+    <div class="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+        @php
+            $runsTotal = max(1, $agentRuns24h + $skillExecutions24h + $projectRuns24h);
+            $agentPct = min(100, ($agentRuns24h / $runsTotal) * 100);
+            $skillPct = min(100, ($skillExecutions24h / $runsTotal) * 100);
+            $projectPct = min(100, ($projectRuns24h / $runsTotal) * 100);
+            $totalActivity = $agentRuns24h + $skillExecutions24h + $projectRuns24h;
+        @endphp
+        <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-700">Activity Today</span>
+            <span class="text-sm text-gray-500">{{ number_format($totalActivity) }} total operations (24h)</span>
+        </div>
+        {{-- Segmented bar: agents / skills / project runs --}}
+        <div class="mt-2 flex h-2 w-full overflow-hidden rounded-full bg-gray-100">
+            @if($agentRuns24h > 0)
+                <div class="h-2 bg-primary-500 transition-all" style="width: {{ $agentPct }}%" title="Agent runs: {{ $agentRuns24h }}"></div>
+            @endif
+            @if($skillExecutions24h > 0)
+                <div class="h-2 bg-violet-400 transition-all" style="width: {{ $skillPct }}%" title="Skill executions: {{ $skillExecutions24h }}"></div>
+            @endif
+            @if($projectRuns24h > 0)
+                <div class="h-2 bg-sky-400 transition-all" style="width: {{ $projectPct }}%" title="Project runs: {{ $projectRuns24h }}"></div>
+            @endif
+            @if($totalActivity === 0)
+                <div class="h-2 w-full rounded-full bg-gray-100"></div>
+            @endif
+        </div>
+        <div class="mt-2 flex flex-wrap gap-4 text-xs text-gray-500">
+            <span class="flex items-center gap-1.5">
+                <span class="inline-block h-2 w-2 rounded-full bg-primary-500"></span>
+                Agent runs
+            </span>
+            <span class="flex items-center gap-1.5">
+                <span class="inline-block h-2 w-2 rounded-full bg-violet-400"></span>
+                Skill executions
+            </span>
+            <span class="flex items-center gap-1.5">
+                <span class="inline-block h-2 w-2 rounded-full bg-sky-400"></span>
+                Project runs
+            </span>
+        </div>
     </div>
 
     {{-- Quick Start — shown when no AI provider keys are configured --}}

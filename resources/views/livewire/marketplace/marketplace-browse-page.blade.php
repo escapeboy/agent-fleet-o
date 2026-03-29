@@ -7,6 +7,28 @@
         <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
     @endif
 
+    {{-- Tab Navigation --}}
+    <div class="mb-6">
+        <div class="inline-flex gap-1 rounded-xl bg-gray-100 p-1">
+            <button wire:click="setTab('all')"
+                class="{{ $activeTab === 'all' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900' }} px-4 py-2 rounded-lg text-sm font-medium transition-all">
+                All
+            </button>
+            <button wire:click="setTab('skills')"
+                class="{{ $activeTab === 'skills' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900' }} px-4 py-2 rounded-lg text-sm font-medium transition-all">
+                Skills
+            </button>
+            <button wire:click="setTab('connectors')"
+                class="{{ $activeTab === 'connectors' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900' }} px-4 py-2 rounded-lg text-sm font-medium transition-all">
+                Connectors
+            </button>
+            <button wire:click="setTab('channels')"
+                class="{{ $activeTab === 'channels' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900' }} px-4 py-2 rounded-lg text-sm font-medium transition-all">
+                Channels
+            </button>
+        </div>
+    </div>
+
     {{-- Toolbar --}}
     <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_marketplace" tooldescription="Filter marketplace listings by type, category, pricing, and search query">
         <div class="relative flex-1">

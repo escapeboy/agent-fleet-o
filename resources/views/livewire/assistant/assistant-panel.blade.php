@@ -34,6 +34,12 @@
                 }
             });
 
+            // Pre-fill textarea with a prompt from the gallery
+            window.addEventListener('use-prompt', (e) => {
+                this.inputText = e.detail.text ?? '';
+                this.$nextTick(() => this.$refs.messageInput?.focus());
+            });
+
             // Keyboard shortcut: Cmd+K / Ctrl+K
             document.addEventListener('keydown', (e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -320,22 +326,30 @@
             class="flex-1 space-y-4 overflow-y-auto px-4 py-4"
         >
             @if(empty($messages))
-                <div x-show="!pendingMessage" class="flex h-full flex-col items-center justify-center text-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="mb-3 h-12 w-12 text-gray-300">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
-                    </svg>
-                    <p class="text-sm font-medium text-gray-500">FleetQ Assistant</p>
-                    <p class="mt-1 text-xs text-gray-400">Ask me anything about your projects,<br>experiments, agents, and more.</p>
-                    <div class="mt-4 flex flex-wrap justify-center gap-2">
-                        <button x-on:click="quickSend('List my recent experiments')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
-                            List experiments
-                        </button>
-                        <button x-on:click="quickSend('Show dashboard KPIs')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
-                            Dashboard KPIs
-                        </button>
-                        <button x-on:click="quickSend('What is my budget status?')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
-                            Budget status
-                        </button>
+                <div x-show="!pendingMessage" class="h-full overflow-y-auto">
+                    {{-- Gallery heading --}}
+                    <div class="mb-4 text-center">
+                        <p class="text-sm font-medium text-gray-600">What would you like to do?</p>
+                        <p class="mt-0.5 text-xs text-gray-400">Click any prompt to get started</p>
+                    </div>
+
+                    {{-- Categorized prompt gallery --}}
+                    <div class="space-y-4">
+                        @foreach($promptGallery as $category => $prompts)
+                            <div>
+                                <p class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">{{ $category }}</p>
+                                <div class="space-y-1.5">
+                                    @foreach($prompts as $prompt)
+                                        <button
+                                            wire:click="usePrompt('{{ addslashes($prompt) }}')"
+                                            class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                                        >
+                                            {{ $prompt }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             @endif
