@@ -30,13 +30,14 @@ class IngestKnowledgeDocumentAction
 
         $contentHash = hash('sha256', mb_strtolower(trim($contentWithTitle)));
 
-        /** @var Memory $memory */
-        $memory = Memory::withoutGlobalScopes()
+        /** @var Memory|null $existing */
+        $existing = Memory::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->where('source_url', $sourceUrl)
             ->first();
 
-        if ($memory) {
+        if ($existing !== null) {
+            $memory = $existing;
             $memory->update([
                 'content' => $contentWithTitle,
                 'content_hash' => $contentHash,

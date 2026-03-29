@@ -12,7 +12,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string|null $credential_id
+ * @property string $name
+ * @property string $url
+ * @property GitProvider $provider
+ * @property GitRepoMode $mode
+ * @property string|null $default_branch
+ * @property array<string, mixed>|null $config
+ * @property GitRepositoryStatus $status
+ * @property Carbon|null $last_ping_at
+ * @property string|null $last_ping_status
+ * @property string|null $indexing_status
+ * @property Carbon|null $last_indexed_at
+ * @property string|null $indexed_commit_sha
+ */
 class GitRepository extends Model
 {
     use BelongsToTeam, HasUuids, SoftDeletes;

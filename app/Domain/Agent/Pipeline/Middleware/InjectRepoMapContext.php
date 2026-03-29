@@ -77,7 +77,7 @@ class InjectRepoMapContext
         }
 
         // Derive the local clone path from the repo config (field: local_path or cloned_path)
-        $config = is_array($repo->config) ? $repo->config : [];
+        $config = $repo->config ?? [];
         $repoPath = $config['local_path'] ?? $config['cloned_path'] ?? null;
 
         if (! $repoPath || ! is_dir((string) $repoPath)) {
@@ -93,7 +93,7 @@ class InjectRepoMapContext
 
         $baseClonesPath = rtrim((string) config('git.clones_base_path', storage_path('app/repos')), '/');
 
-        if (! str_starts_with($repoPath, $baseClonesPath . '/') && $repoPath !== $baseClonesPath) {
+        if (! str_starts_with($repoPath, $baseClonesPath.'/') && $repoPath !== $baseClonesPath) {
             Log::warning('InjectRepoMapContext: repo path outside base clones directory (possible path traversal)', [
                 'resolved_path' => $repoPath,
                 'base_path' => $baseClonesPath,
@@ -104,11 +104,14 @@ class InjectRepoMapContext
         $headSha = $this->resolveHeadSha($repoPath);
         $cacheKey = "repo_map:{$gitRepoId}:".($headSha ?? 'unknown');
 
-        return Cache::remember($cacheKey, 3600, function () use ($repoPath, $repo) {
+        /** @var string $result */
+        $result = Cache::remember($cacheKey, 3600, function () use ($repoPath, $repo) {
             $map = $this->generator->generate($repoPath);
 
             return "## Repository: {$repo->name} ({$repo->url})\n\n{$map}";
         });
+
+        return $result;
     }
 
     private function resolveHeadSha(string $repoPath): ?string

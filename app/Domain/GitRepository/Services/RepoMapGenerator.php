@@ -95,6 +95,7 @@ class RepoMapGenerator
      */
     private function buildFileTree(array $files): string
     {
+        /** @var array<string, mixed> $tree */
         $tree = [];
 
         foreach ($files as $file) {
@@ -104,6 +105,7 @@ class RepoMapGenerator
                 if (! isset($current[$part])) {
                     $current[$part] = [];
                 }
+                /** @var array<string, mixed> $current */
                 $current = &$current[$part];
             }
         }
