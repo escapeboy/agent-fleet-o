@@ -6,6 +6,24 @@
         </div>
     @endif
 
+    {{-- Tool loop warning badge: shown when recent executions average >= warning threshold --}}
+    @if($avgSteps >= config('agent.tool_loop.warning_threshold', 8))
+        <div class="mb-4 flex items-center gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+            <svg class="h-5 w-5 shrink-0 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-yellow-800">Tool Loop Warning</p>
+                <p class="text-xs text-yellow-700">
+                    This agent averaged <strong>{{ number_format($avgSteps, 1) }} LLM steps</strong> over its last 5 executions
+                    (warning threshold: {{ config('agent.tool_loop.warning_threshold', 8) }},
+                    critical: {{ config('agent.tool_loop.critical_threshold', 12) }}).
+                    Consider reviewing the agent's goal and tool configuration.
+                </p>
+            </div>
+        </div>
+    @endif
+
     @if($editing)
         {{-- ====== EDIT MODE ====== --}}
         <div class="rounded-xl border border-primary-200 bg-white p-6">
@@ -329,7 +347,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -739,6 +757,65 @@
         @elseif($activeTab === 'evolution')
             <div class="rounded-xl border border-gray-200 bg-white p-6">
                 <livewire:evolution.evolution-proposal-panel :agent="$agent" />
+            </div>
+
+        @elseif($activeTab === 'heartbeat')
+            {{-- Heartbeat Scheduling --}}
+            <div class="space-y-4">
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Heartbeat Schedule</h3>
+                            <p class="mt-0.5 text-xs text-gray-500">A recurring task the agent runs automatically on a cron schedule. Evaluated every minute by the scheduler.</p>
+                        </div>
+                        @if(!empty($agent->heartbeat_definition))
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs {{ ($agent->heartbeat_definition['enabled'] ?? false) ? 'text-green-700 bg-green-100' : 'text-gray-600 bg-gray-100' }} rounded-full px-2.5 py-1 font-medium">
+                                    {{ ($agent->heartbeat_definition['enabled'] ?? false) ? 'Enabled' : 'Disabled' }}
+                                </span>
+                                <button wire:click="toggleHeartbeat"
+                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                                    {{ ($agent->heartbeat_definition['enabled'] ?? false) ? 'Disable' : 'Enable' }}
+                                </button>
+                                <button wire:click="runHeartbeatNow"
+                                    wire:confirm="Run the heartbeat task immediately?"
+                                    class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
+                                    Run Now
+                                </button>
+                            </div>
+                        @endif
+                    </div>
+
+                    @if(!empty($agent->heartbeat_definition))
+                        <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <dt class="mb-1 text-xs font-medium text-gray-500">Cron Expression</dt>
+                                <dd class="font-mono text-sm text-gray-900">{{ $agent->heartbeat_definition['cron'] ?? '—' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <dt class="mb-1 text-xs font-medium text-gray-500">Next Run At</dt>
+                                <dd class="text-sm text-gray-900">
+                                    @if(!empty($agent->heartbeat_definition['next_run_at']))
+                                        {{ \Illuminate\Support\Carbon::parse($agent->heartbeat_definition['next_run_at'])->diffForHumans() }}
+                                        <span class="text-xs text-gray-400">({{ $agent->heartbeat_definition['next_run_at'] }})</span>
+                                    @else
+                                        <span class="text-gray-400">Pending first run</span>
+                                    @endif
+                                </dd>
+                            </div>
+                            <div class="col-span-full rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <dt class="mb-1 text-xs font-medium text-gray-500">Prompt</dt>
+                                <dd class="whitespace-pre-wrap text-sm text-gray-900">{{ $agent->heartbeat_definition['prompt'] ?? '—' }}</dd>
+                            </div>
+                        </dl>
+                        <p class="mt-4 text-xs text-gray-400">To change the schedule, use the MCP tool <code class="font-mono">agent_heartbeat_update</code> or update the agent's <code class="font-mono">heartbeat_definition</code> JSONB field directly.</p>
+                    @else
+                        <div class="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+                            <p class="text-sm text-gray-500">No heartbeat configured for this agent.</p>
+                            <p class="mt-1 text-xs text-gray-400">Use the MCP tool <code class="font-mono">agent_heartbeat_update</code> to set a schedule.</p>
+                        </div>
+                    @endif
+                </div>
             </div>
         @endif
     @endif

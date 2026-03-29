@@ -58,9 +58,9 @@
              x-intersect.once="shown = true"
              :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
              class="transition duration-500 ease-out">
-            <a href="{{ route('register') }}"
+            <a href="{{ auth()->check() ? route('dashboard') : route('register') }}"
                class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
-                Try It in 5 Minutes
+                {{ auth()->check() ? 'Go to Dashboard' : 'Try It in 5 Minutes' }}
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
             </a>
         </div>

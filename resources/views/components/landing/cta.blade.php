@@ -16,9 +16,21 @@
             {{ $subtext }}
         </p>
         <div class="mt-10 flex items-center justify-center gap-x-6">
+<<<<<<< Updated upstream
             <a href="{{ $ctaHref ?? route('register') }}"
+||||||| constructed merge base
+            <a href="{{ route('register') }}"
+=======
+            <a href="{{ auth()->check() ? route('dashboard') : route('register') }}"
+>>>>>>> Stashed changes
                class="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-primary-600 shadow-sm transition hover:bg-primary-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+<<<<<<< Updated upstream
                 {{ $ctaLabel }}
+||||||| constructed merge base
+                {{ $ctaLabel ?? 'Start Free' }}
+=======
+                {{ auth()->check() ? 'Go to Dashboard' : ($ctaLabel ?? 'Start Free') }}
+>>>>>>> Stashed changes
             </a>
             <a href="{{ $secondaryHref }}"
                class="text-sm font-semibold leading-6 text-white transition hover:text-primary-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"

@@ -15,6 +15,11 @@ use InvalidArgumentException;
 
 class UpdateCrewAction
 {
+    /**
+     * @param  array<string, array{tool_allowlist?: string[]|string, max_steps?: int|string, max_credits?: int|string}>|null  $workerConstraints
+     *                                                                                                                                            Per-worker policy overrides keyed by agent_id. Stored in CrewMember.config JSONB.
+     *                                                                                                                                            Only applied when $workerAgentIds is also provided.
+     */
     public function execute(
         Crew $crew,
         ?string $name = null,
@@ -27,6 +32,7 @@ class UpdateCrewAction
         ?array $workerAgentIds = null,
         ?CrewStatus $status = null,
         ?array $settings = null,
+        ?array $workerConstraints = null,
     ): Crew {
         $effectiveCoordinator = $coordinatorAgentId ?? $crew->coordinator_agent_id;
         $effectiveQa = $qaAgentId ?? $crew->qa_agent_id;
@@ -75,7 +81,7 @@ class UpdateCrewAction
             }
         }
 
-        return DB::transaction(function () use ($crew, $name, $description, $coordinatorAgentId, $qaAgentId, $processType, $maxTaskIterations, $qualityThreshold, $workerAgentIds, $status, $settings, $effectiveCoordinator, $effectiveQa) {
+        return DB::transaction(function () use ($crew, $name, $description, $coordinatorAgentId, $qaAgentId, $processType, $maxTaskIterations, $qualityThreshold, $workerAgentIds, $status, $settings, $effectiveCoordinator, $effectiveQa, $workerConstraints) {
             $changes = [];
 
             if ($name !== null && $name !== $crew->name) {
@@ -133,14 +139,15 @@ class UpdateCrewAction
                 // Delete existing workers
                 $crew->members()->where('role', CrewMemberRole::Worker->value)->delete();
 
-                // Create new workers
+                // Create new workers with optional per-member permission policy
                 foreach ($workerAgentIds as $index => $agentId) {
+                    $config = $this->buildMemberConfig($workerConstraints[$agentId] ?? []);
                     CrewMember::create([
                         'crew_id' => $crew->id,
                         'agent_id' => $agentId,
                         'role' => CrewMemberRole::Worker,
                         'sort_order' => $index,
-                        'config' => [],
+                        'config' => $config,
                     ]);
                 }
 
@@ -156,6 +163,73 @@ class UpdateCrewAction
 
             return $crew->fresh(['members']);
         });
+    }
+
+    /**
+     * Update the permission policy for a single crew member (tool_allowlist, max_steps, max_credits).
+     * Merges into the existing config so other config keys are preserved.
+     *
+     * @param  array{tool_allowlist?: string[]|string, max_steps?: int|string, max_credits?: int|string}  $policy
+     */
+    public function updateMemberPolicy(CrewMember $member, array $policy): CrewMember
+    {
+        $config = (array) ($member->config ?? []);
+        $built = $this->buildMemberConfig($policy);
+
+        // Merge — allow clearing a constraint by passing an explicit null/empty value
+        if (array_key_exists('tool_allowlist', $policy) && empty($policy['tool_allowlist'])) {
+            unset($config['tool_allowlist']);
+        } elseif (isset($built['tool_allowlist'])) {
+            $config['tool_allowlist'] = $built['tool_allowlist'];
+        }
+
+        if (array_key_exists('max_steps', $policy) && ($policy['max_steps'] === '' || $policy['max_steps'] === null)) {
+            unset($config['max_steps']);
+        } elseif (isset($built['max_steps'])) {
+            $config['max_steps'] = $built['max_steps'];
+        }
+
+        if (array_key_exists('max_credits', $policy) && ($policy['max_credits'] === '' || $policy['max_credits'] === null)) {
+            unset($config['max_credits']);
+        } elseif (isset($built['max_credits'])) {
+            $config['max_credits'] = $built['max_credits'];
+        }
+
+        $member->update(['config' => $config]);
+
+        return $member->fresh();
+    }
+
+    /**
+     * Build a sanitised config array from raw constraint input.
+     * Only sets keys that have non-empty values; empty constraints are omitted.
+     *
+     * @param  array{tool_allowlist?: string[]|string, max_steps?: int|string, max_credits?: int|string}  $raw
+     * @return array<string, mixed>
+     */
+    private function buildMemberConfig(array $raw): array
+    {
+        $config = [];
+
+        $toolAllowlist = $raw['tool_allowlist'] ?? null;
+        if (! empty($toolAllowlist)) {
+            if (is_string($toolAllowlist)) {
+                $toolAllowlist = array_values(array_filter(array_map('trim', explode(',', $toolAllowlist))));
+            }
+            if (! empty($toolAllowlist)) {
+                $config['tool_allowlist'] = $toolAllowlist;
+            }
+        }
+
+        if (isset($raw['max_steps']) && $raw['max_steps'] !== '' && $raw['max_steps'] !== null) {
+            $config['max_steps'] = max(1, (int) $raw['max_steps']);
+        }
+
+        if (isset($raw['max_credits']) && $raw['max_credits'] !== '' && $raw['max_credits'] !== null) {
+            $config['max_credits'] = max(1, (int) $raw['max_credits']);
+        }
+
+        return $config;
     }
 
     /**

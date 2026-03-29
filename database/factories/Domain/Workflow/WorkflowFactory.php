@@ -27,6 +27,8 @@ class WorkflowFactory extends Factory
             'version' => 1,
             'max_loop_iterations' => 10,
             'estimated_cost_credits' => 1000,
+            'mcp_exposed' => false,
+            'mcp_execution_mode' => 'async',
             'settings' => [],
         ];
     }

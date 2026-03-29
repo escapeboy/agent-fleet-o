@@ -49,6 +49,9 @@ class CreateAgentForm extends Component
 
     public string $federationGroupId = '';
 
+    /** Raw JSON input for the heartbeat definition (optional). */
+    public string $heartbeatJson = '';
+
     public function mount(): void
     {
         $templateSlug = request('template');
@@ -119,7 +122,19 @@ class CreateAgentForm extends Component
         // Build personality array from form fields
         $personality = $this->buildPersonalityArray();
 
-        app(CreateAgentAction::class)->execute(
+        // Parse optional heartbeat definition JSON
+        $heartbeatDefinition = null;
+        if (trim($this->heartbeatJson) !== '') {
+            $parsed = json_decode($this->heartbeatJson, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->addError('heartbeatJson', 'Heartbeat definition must be valid JSON.');
+
+                return;
+            }
+            $heartbeatDefinition = $parsed;
+        }
+
+        $agent = app(CreateAgentAction::class)->execute(
             name: $this->name,
             provider: $this->provider,
             model: $this->model,
@@ -133,6 +148,10 @@ class CreateAgentForm extends Component
             config: $config,
             personality: $personality,
         );
+
+        if ($heartbeatDefinition !== null) {
+            $agent->update(['heartbeat_definition' => $heartbeatDefinition]);
+        }
 
         session()->flash('message', 'Agent created successfully!');
 

@@ -44,6 +44,7 @@ class BridgeController extends Controller
 
         return $user->current_team_id;
     }
+
     /**
      * Get the current team's bridge connection status.
      *

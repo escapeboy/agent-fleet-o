@@ -206,6 +206,19 @@
                 @endif
             </div>
 
+            {{-- Heartbeat Definition (optional advanced field) --}}
+            <div>
+                <x-form-textarea
+                    wire:model="heartbeatJson"
+                    label="Heartbeat Definition (optional)"
+                    rows="4"
+                    :mono="true"
+                    placeholder='{"enabled":true,"cron":"0 * * * *","prompt":"Perform your scheduled check-in task."}'
+                    hint="JSON defining the agent's recurring autonomous task schedule. Leave blank to configure later."
+                    :error="$errors->first('heartbeatJson')"
+                />
+            </div>
+
             <div class="flex justify-end border-t border-gray-200 pt-4">
                 <button wire:click="save" class="rounded-lg bg-primary-600 px-6 py-2 text-sm font-medium text-white hover:bg-primary-700">
                     Create Agent

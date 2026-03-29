@@ -17,6 +17,7 @@ use Tests\TestCase;
 class ResolveAsEnvMapTest extends TestCase
 {
     use RefreshDatabase;
+
     private ResolveProjectCredentialsAction $action;
 
     protected function setUp(): void

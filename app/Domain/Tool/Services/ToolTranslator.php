@@ -104,7 +104,7 @@ class ToolTranslator
             $configHeaders = $tool->transport_config['headers'] ?? [];
             $mcpHeaders = array_merge(
                 $configHeaders,
-                $authHeader ? ['Authorization' => "Bearer {$authHeader}"] : []
+                $authHeader ? ['Authorization' => "Bearer {$authHeader}"] : [],
             );
             $toolModel = $tool;
             $defName = $name;
@@ -126,7 +126,7 @@ class ToolTranslator
                 });
             }
 
-            $prismTool->using(function (...$namedArgs) use ($isBridge, $isStdio, $serverUrl, $defName, $toolModel, $mcpHeaders, $paramNames, $resultAsAnswer): string {
+            $prismTool->using(function (...$namedArgs) use ($isBridge, $isStdio, $serverUrl, $defName, $toolModel, $mcpHeaders, $resultAsAnswer): string {
                 // PrismPHP passes arguments as named parameters (PHP 8 spread of associative array).
                 // Capture via variadic ...$namedArgs — the array is already keyed by param name.
                 // Filter out nulls to avoid sending empty optional params to MCP server.

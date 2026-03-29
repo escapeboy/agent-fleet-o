@@ -94,11 +94,32 @@ class ExecuteCrewTaskJob implements ShouldQueue
                     .'. Please address the feedback from the previous attempt.';
             }
 
-            // Resolve BroodMind-style worker permission allowlist from this agent's CrewMember config
+            // Resolve BroodMind-style worker permission policy from this agent's CrewMember config.
+            // Reads tool_allowlist, max_steps, and max_credits from the JSONB config column.
             $crewMember = CrewMember::where('crew_id', $execution->crew_id)
                 ->where('agent_id', $agent->id)
                 ->first();
             $allowedToolIds = $crewMember ? $crewMember->allowedToolIds() : null;
+            $maxSteps = $crewMember?->max_steps;
+            $maxCredits = $crewMember?->max_credits;
+
+            // Enforce per-member credit cap before dispatching.
+            // Compare against credits already spent in this execution by this member.
+            if ($maxCredits !== null) {
+                $spentCredits = $execution->taskExecutions()
+                    ->where('agent_id', $agent->id)
+                    ->whereNotNull('cost_credits')
+                    ->sum('cost_credits');
+
+                if ($spentCredits >= $maxCredits) {
+                    $this->failTask(
+                        $taskExecution, $execution,
+                        "Crew member credit limit ({$maxCredits} credits) reached for agent {$agent->name}.",
+                    );
+
+                    return;
+                }
+            }
 
             $result = $executeAgent->execute(
                 agent: $agent,
@@ -106,6 +127,7 @@ class ExecuteCrewTaskJob implements ShouldQueue
                 teamId: $execution->team_id,
                 userId: $execution->crew?->user_id ?? $execution->team_id,
                 allowedToolIds: ! empty($allowedToolIds) ? $allowedToolIds : null,
+                maxStepsOverride: $maxSteps,
             );
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);

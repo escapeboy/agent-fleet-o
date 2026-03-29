@@ -1,10 +1,36 @@
 <div>
-    {{-- Flash message --}}
+    {{-- Flash messages --}}
     @if(session()->has('message'))
         <div class="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
             {{ session('message') }}
         </div>
     @endif
+    @if(session()->has('error'))
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    {{-- Tier filter tabs --}}
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+        <button wire:click="$set('tierFilter', '')"
+            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition
+                {{ $tierFilter === '' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+            All
+        </button>
+        @foreach($tiers as $tier)
+            <button wire:click="$set('tierFilter', '{{ $tier->value }}')"
+                class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition
+                    {{ $tierFilter === $tier->value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                {{ ucfirst($tier->value) }}
+                @if($tier->value === 'proposed' && $proposalCount > 0)
+                    <span class="ml-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white">
+                        {{ $proposalCount }}
+                    </span>
+                @endif
+            </button>
+        @endforeach
+    </div>
 
     {{-- Filters --}}
     <div class="mb-6 flex flex-wrap items-center gap-4">
@@ -56,6 +82,7 @@
                     @endphp
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Agent</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Content</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tier</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Source</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Project</th>
                     <th wire:click="sortBy('created_at')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
@@ -72,6 +99,24 @@
                         </td>
                         <td class="max-w-xs truncate px-6 py-4 text-sm text-gray-500">
                             {{ Str::limit($memory->content, 80) }}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            @php
+                                $tierColors = [
+                                    'working'   => 'bg-gray-100 text-gray-700',
+                                    'proposed'  => 'bg-amber-100 text-amber-800',
+                                    'canonical' => 'bg-green-100 text-green-800',
+                                    'facts'     => 'bg-blue-100 text-blue-800',
+                                    'decisions' => 'bg-purple-100 text-purple-800',
+                                    'failures'  => 'bg-red-100 text-red-800',
+                                    'successes' => 'bg-emerald-100 text-emerald-800',
+                                ];
+                                $tierValue = $memory->tier?->value ?? 'working';
+                                $tierColor = $tierColors[$tierValue] ?? 'bg-gray-100 text-gray-700';
+                            @endphp
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $tierColor }}">
+                                {{ ucfirst($tierValue) }}
+                            </span>
                         </td>
                         <td class="px-6 py-4 text-sm">
                             <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
@@ -91,7 +136,7 @@
 
                     @if($expandedId === $memory->id)
                         <tr>
-                            <td colspan="6" class="bg-gray-50 px-6 py-4">
+                            <td colspan="7" class="bg-gray-50 px-6 py-4">
                                 <div class="space-y-3">
                                     {{-- Full content --}}
                                     <div>
@@ -99,6 +144,14 @@
                                         <div class="mt-1 rounded-lg bg-gray-900 p-4">
                                             <pre class="overflow-auto whitespace-pre-wrap text-xs text-green-400">{{ $memory->content }}</pre>
                                         </div>
+                                    </div>
+
+                                    {{-- Tier + proposed_by info --}}
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs text-gray-500">Tier: <strong>{{ ucfirst($memory->tier?->value ?? 'working') }}</strong></span>
+                                        @if($memory->proposed_by)
+                                            <span class="text-xs text-gray-500">Proposed by: <strong>{{ $memory->proposed_by }}</strong></span>
+                                        @endif
                                     </div>
 
                                     {{-- Metadata --}}
@@ -112,12 +165,22 @@
                                     @endif
 
                                     {{-- Actions --}}
-                                    <div class="flex items-center gap-4 pt-2">
+                                    <div class="flex flex-wrap items-center gap-4 pt-2">
                                         <span class="text-xs text-gray-400">ID: {{ $memory->id }}</span>
                                         @if($memory->source_id)
                                             <span class="text-xs text-gray-400">Source ID: {{ $memory->source_id }}</span>
                                         @endif
                                         <span class="text-xs text-gray-400">{{ $memory->created_at->format('Y-m-d H:i:s') }}</span>
+
+                                        {{-- Promote button for proposed memories --}}
+                                        @if($memory->tier?->value === 'proposed')
+                                            <button wire:click.stop="promoteTier('{{ $memory->id }}', 'canonical')"
+                                                wire:confirm="Promote this memory to Canonical?"
+                                                class="rounded bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700">
+                                                Promote to Canonical
+                                            </button>
+                                        @endif
+
                                         <button wire:click.stop="deleteMemory('{{ $memory->id }}')"
                                             wire:confirm="Are you sure you want to delete this memory?"
                                             class="ml-auto text-sm text-red-600 hover:text-red-800">
@@ -130,7 +193,7 @@
                     @endif
                 @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
+                        <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-400">
                             No memories found. Agents will store memories as they execute tasks.
                         </td>
                     </tr>

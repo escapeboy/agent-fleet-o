@@ -8,6 +8,7 @@ use App\Domain\Crew\Actions\UpdateCrewAction;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewMember;
 use Livewire\Component;
 
 class CrewDetailPage extends Component
@@ -31,9 +32,25 @@ class CrewDetailPage extends Component
 
     public array $editWorkerIds = [];
 
+    /**
+     * Per-worker constraint overrides keyed by agent_id.
+     *
+     * @var array<string, array{tool_allowlist: string, max_steps: string, max_credits: string}>
+     */
+    public array $editWorkerConstraints = [];
+
     public int $editMaxIterations = 3;
 
     public float $editQualityThreshold = 0.70;
+
+    // Inline member policy editing state
+    public ?string $editingMemberId = null;
+
+    public string $editMemberToolAllowlist = '';
+
+    public string $editMemberMaxSteps = '';
+
+    public string $editMemberMaxCredits = '';
 
     public function mount(Crew $crew): void
     {
@@ -64,6 +81,15 @@ class CrewDetailPage extends Component
         $this->editCoordinatorId = $this->crew->coordinator_agent_id;
         $this->editQaId = $this->crew->qa_agent_id;
         $this->editWorkerIds = $this->crew->workerMembers()->pluck('agent_id')->toArray();
+        // Populate existing constraint values for each current worker
+        $this->editWorkerConstraints = [];
+        foreach ($this->crew->workerMembers()->get() as $member) {
+            $this->editWorkerConstraints[$member->agent_id] = [
+                'tool_allowlist' => implode(', ', $member->tool_allowlist ?? []),
+                'max_steps' => $member->max_steps !== null ? (string) $member->max_steps : '',
+                'max_credits' => $member->max_credits !== null ? (string) $member->max_credits : '',
+            ];
+        }
         $this->editMaxIterations = $this->crew->max_task_iterations;
         $this->editQualityThreshold = $this->crew->quality_threshold;
         $this->editing = true;
@@ -79,9 +105,64 @@ class CrewDetailPage extends Component
     {
         if (in_array($agentId, $this->editWorkerIds)) {
             $this->editWorkerIds = array_values(array_diff($this->editWorkerIds, [$agentId]));
+            unset($this->editWorkerConstraints[$agentId]);
         } else {
             $this->editWorkerIds[] = $agentId;
+            $this->editWorkerConstraints[$agentId] ??= ['tool_allowlist' => '', 'max_steps' => '', 'max_credits' => ''];
         }
+    }
+
+    /**
+     * Open inline constraint editor for a specific crew member.
+     */
+    public function startEditMemberPolicy(string $memberId): void
+    {
+        $member = CrewMember::find($memberId);
+        if (! $member || $member->crew_id !== $this->crew->id) {
+            return;
+        }
+
+        $this->editingMemberId = $memberId;
+        $this->editMemberToolAllowlist = implode(', ', $member->tool_allowlist ?? []);
+        $this->editMemberMaxSteps = $member->max_steps !== null ? (string) $member->max_steps : '';
+        $this->editMemberMaxCredits = $member->max_credits !== null ? (string) $member->max_credits : '';
+    }
+
+    /**
+     * Save inline constraint edits for a specific crew member.
+     */
+    public function saveMemberPolicy(UpdateCrewAction $action): void
+    {
+        $this->validate([
+            'editMemberMaxSteps' => 'nullable|integer|min:1|max:100',
+            'editMemberMaxCredits' => 'nullable|integer|min:1|max:1000000',
+        ]);
+
+        $member = CrewMember::find($this->editingMemberId);
+        if (! $member || $member->crew_id !== $this->crew->id) {
+            $this->editingMemberId = null;
+
+            return;
+        }
+
+        $action->updateMemberPolicy($member, [
+            'tool_allowlist' => $this->editMemberToolAllowlist,
+            'max_steps' => $this->editMemberMaxSteps,
+            'max_credits' => $this->editMemberMaxCredits,
+        ]);
+
+        $this->editingMemberId = null;
+        $this->resetValidation();
+        session()->flash('message', "Member policy updated for {$member->agent->name}.");
+    }
+
+    /**
+     * Cancel inline member policy editing.
+     */
+    public function cancelMemberPolicy(): void
+    {
+        $this->editingMemberId = null;
+        $this->resetValidation();
     }
 
     public function save(UpdateCrewAction $action): void
@@ -106,6 +187,7 @@ class CrewDetailPage extends Component
                 maxTaskIterations: $this->editMaxIterations,
                 qualityThreshold: $this->editQualityThreshold,
                 workerAgentIds: $this->editWorkerIds,
+                workerConstraints: $this->editWorkerConstraints,
             );
 
             $this->crew->refresh();

@@ -34,6 +34,9 @@ class Workflow extends Model
         'max_loop_iterations',
         'estimated_cost_credits',
         'budget_cap_credits',
+        'mcp_exposed',
+        'mcp_tool_name',
+        'mcp_execution_mode',
         'settings',
         'meta',
     ];
@@ -47,6 +50,7 @@ class Workflow extends Model
             'max_loop_iterations' => 'integer',
             'estimated_cost_credits' => 'integer',
             'budget_cap_credits' => 'integer',
+            'mcp_exposed' => 'boolean',
             'settings' => 'array',
         ];
     }

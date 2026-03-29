@@ -15,6 +15,10 @@ use InvalidArgumentException;
 
 class CreateCrewAction
 {
+    /**
+     * @param  array<string, array{tool_allowlist?: string[], max_steps?: int, max_credits?: int}>  $workerConstraints
+     *                                                                                                                  Per-worker policy overrides keyed by agent_id. Stored in CrewMember.config JSONB.
+     */
     public function execute(
         string $userId,
         string $name,
@@ -27,6 +31,7 @@ class CreateCrewAction
         array $workerAgentIds = [],
         array $settings = [],
         ?string $teamId = null,
+        array $workerConstraints = [],
     ): Crew {
         if ($coordinatorAgentId === $qaAgentId) {
             throw new InvalidArgumentException('Coordinator and QA agents must be different.');
@@ -53,7 +58,7 @@ class CreateCrewAction
 
         return DB::transaction(function () use (
             $userId, $name, $description, $coordinatorAgentId, $qaAgentId,
-            $processType, $maxTaskIterations, $qualityThreshold, $workerAgentIds, $settings, $teamId
+            $processType, $maxTaskIterations, $qualityThreshold, $workerAgentIds, $settings, $teamId, $workerConstraints
         ) {
             $crew = Crew::create([
                 'team_id' => $teamId,
@@ -70,14 +75,15 @@ class CreateCrewAction
                 'settings' => $settings,
             ]);
 
-            // Add worker members
+            // Add worker members with optional per-member permission policy.
             foreach ($workerAgentIds as $index => $agentId) {
+                $config = $this->buildMemberConfig($workerConstraints[$agentId] ?? []);
                 CrewMember::create([
                     'crew_id' => $crew->id,
                     'agent_id' => $agentId,
                     'role' => CrewMemberRole::Worker,
                     'sort_order' => $index,
-                    'config' => [],
+                    'config' => $config,
                 ]);
             }
 
@@ -93,6 +99,38 @@ class CreateCrewAction
 
             return $crew->load('members');
         });
+    }
+
+    /**
+     * Build the config array for a CrewMember from raw constraint input.
+     * Only sets keys that have non-empty values; empty constraints are omitted entirely.
+     *
+     * @param  array{tool_allowlist?: string[]|string, max_steps?: int|string, max_credits?: int|string}  $raw
+     * @return array<string, mixed>
+     */
+    private function buildMemberConfig(array $raw): array
+    {
+        $config = [];
+
+        $toolAllowlist = $raw['tool_allowlist'] ?? null;
+        if (! empty($toolAllowlist)) {
+            if (is_string($toolAllowlist)) {
+                $toolAllowlist = array_values(array_filter(array_map('trim', explode(',', $toolAllowlist))));
+            }
+            if (! empty($toolAllowlist)) {
+                $config['tool_allowlist'] = $toolAllowlist;
+            }
+        }
+
+        if (isset($raw['max_steps']) && $raw['max_steps'] !== '' && $raw['max_steps'] !== null) {
+            $config['max_steps'] = max(1, (int) $raw['max_steps']);
+        }
+
+        if (isset($raw['max_credits']) && $raw['max_credits'] !== '' && $raw['max_credits'] !== null) {
+            $config['max_credits'] = max(1, (int) $raw['max_credits']);
+        }
+
+        return $config;
     }
 
     /**

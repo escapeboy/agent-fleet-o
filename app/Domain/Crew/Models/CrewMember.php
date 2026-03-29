@@ -54,7 +54,7 @@ class CrewMember extends Model
      */
     public function allowedToolIds(): array
     {
-        return (array) ($this->config['allowed_tools'] ?? []);
+        return (array) ($this->config['tool_allowlist'] ?? []);
     }
 
     /**
@@ -65,5 +65,44 @@ class CrewMember extends Model
     public function constraints(): array
     {
         return (array) ($this->config['constraints'] ?? []);
+    }
+
+    /**
+     * Tool name allowlist for this crew member.
+     * null means unrestricted — all agent tools are available.
+     * Non-empty array restricts execution to only tools whose name is in the list.
+     *
+     * @return string[]|null
+     */
+    public function getToolAllowlistAttribute(): ?array
+    {
+        $list = $this->config['tool_allowlist'] ?? null;
+        if ($list === null || $list === []) {
+            return null;
+        }
+
+        return (array) $list;
+    }
+
+    /**
+     * Maximum number of LLM tool-call steps allowed for this crew member.
+     * null means use the agent's default tier configuration.
+     */
+    public function getMaxStepsAttribute(): ?int
+    {
+        $value = $this->config['max_steps'] ?? null;
+
+        return $value !== null ? (int) $value : null;
+    }
+
+    /**
+     * Maximum credits this crew member may spend per execution.
+     * null means no per-member credit cap (agent budget applies).
+     */
+    public function getMaxCreditsAttribute(): ?int
+    {
+        $value = $this->config['max_credits'] ?? null;
+
+        return $value !== null ? (int) $value : null;
     }
 }

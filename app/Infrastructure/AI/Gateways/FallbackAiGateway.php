@@ -50,6 +50,7 @@ class FallbackAiGateway implements AiGatewayInterface
             if ($this->isBridgeProvider($providerName)) {
                 if (! $this->bridgeGateway) {
                     Log::warning("AI Gateway: bridge provider '{$providerName}' not available, trying next in chain");
+
                     continue;
                 }
 
@@ -76,12 +77,13 @@ class FallbackAiGateway implements AiGatewayInterface
                     );
 
                     return $this->bridgeGateway->complete($adjustedRequest);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $firstException ??= $e;
                     $lastException = $e;
                     Log::warning("AI Gateway: bridge provider '{$providerName}' failed, trying next in chain", [
                         'error' => $e->getMessage(),
                     ]);
+
                     continue;
                 }
             }
@@ -175,6 +177,7 @@ class FallbackAiGateway implements AiGatewayInterface
             if ($this->isBridgeProvider($providerName)) {
                 if (! $this->bridgeGateway) {
                     Log::warning("AI Gateway: bridge provider '{$providerName}' not available, trying next in chain");
+
                     continue;
                 }
 
@@ -201,12 +204,13 @@ class FallbackAiGateway implements AiGatewayInterface
                     );
 
                     return $this->bridgeGateway->stream($adjustedRequest, $onChunk);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $firstException ??= $e;
                     $lastException = $e;
                     Log::warning("AI Gateway: bridge provider '{$providerName}' failed, trying next in chain", [
                         'error' => $e->getMessage(),
                     ]);
+
                     continue;
                 }
             }

@@ -57,6 +57,7 @@ use App\Livewire\Metrics\ModelComparisonPage;
 use App\Livewire\OutboundConnectors\NotificationOutboundPage;
 use App\Livewire\OutboundConnectors\OutboundConnectorsPage;
 use App\Livewire\OutboundConnectors\WebhookOutboundPage;
+use App\Livewire\OutboundConnectors\WhatsAppOutboundPage;
 use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
@@ -289,6 +290,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/outbound/email', OutboundConnectorsPage::class)->name('outbound.email');
     Route::get('/outbound/webhooks', WebhookOutboundPage::class)->name('outbound.webhooks');
     Route::get('/outbound/notifications', NotificationOutboundPage::class)->name('outbound.notifications');
+    Route::get('/outbound/whatsapp', WhatsAppOutboundPage::class)->name('outbound.whatsapp');
 
     // Email themes
     Route::get('/email/themes', EmailThemeListPage::class)->name('email.themes.index');

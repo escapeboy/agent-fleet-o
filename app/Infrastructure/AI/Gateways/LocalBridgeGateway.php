@@ -6,7 +6,6 @@ use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Services\BridgeRouter;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
-use App\Infrastructure\AI\Gateways\HttpBridgeGateway;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;

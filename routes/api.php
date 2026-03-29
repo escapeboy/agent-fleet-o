@@ -20,6 +20,7 @@ use App\Http\Controllers\SlackWebhookController;
 use App\Http\Controllers\SubscriptionWebhookController;
 use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\TrackingController;
+use App\Http\Controllers\WhatsAppOutboundWebhookController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -84,6 +85,18 @@ Route::get('/integrations/webhook/{slug}', [IntegrationWebhookController::class,
 Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'handle'])
     ->name('telegram.webhook')
     ->middleware('throttle:60,1');
+
+// WhatsApp outbound delivery receipt webhooks (per-team).
+// Distinct from /api/signals/whatsapp (signal ingestion).
+// GET verifies ownership; POST receives sent/delivered/read/failed status events.
+Route::get('/whatsapp/webhook/{teamId}', [WhatsAppOutboundWebhookController::class, 'verify'])
+    ->name('whatsapp.outbound.webhook.verify')
+    ->whereUuid('teamId')
+    ->middleware('throttle:30,1');
+Route::post('/whatsapp/webhook/{teamId}', [WhatsAppOutboundWebhookController::class, 'receive'])
+    ->name('whatsapp.outbound.webhook.receive')
+    ->whereUuid('teamId')
+    ->middleware('throttle:120,1');
 
 // Chatbot channel webhooks — identified by chatbot token prefix in the URL
 // Telegram: each chatbot's Telegram bot uses its own webhook path to avoid cross-chatbot routing

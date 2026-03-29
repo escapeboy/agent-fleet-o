@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Servers;
 
+use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Resources\ApprovalsResource;
 use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
@@ -18,6 +19,8 @@ use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
 use App\Mcp\Tools\Agent\AgentFeedbackSubmitTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
+use App\Mcp\Tools\Agent\AgentHeartbeatRunNowTool;
+use App\Mcp\Tools\Agent\AgentHeartbeatUpdateTool;
 use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentResetSessionTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
@@ -94,6 +97,7 @@ use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
 use App\Mcp\Tools\Crew\CrewGetMessagesTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
+use App\Mcp\Tools\Crew\CrewMemberUpdatePolicyTool;
 use App\Mcp\Tools\Crew\CrewSendMessageTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
 use App\Mcp\Tools\Email\EmailTemplateCreateTool;
@@ -114,6 +118,7 @@ use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionApproveTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
 use App\Mcp\Tools\Evolution\EvolutionRejectTool;
+use App\Mcp\Tools\Experiment\ExperimentContextHealthTool;
 use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
 use App\Mcp\Tools\Experiment\ExperimentGetTool;
@@ -167,7 +172,10 @@ use App\Mcp\Tools\Marketplace\MarketplaceQualityReportTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
+use App\Mcp\Tools\Memory\MemoryListProposalsTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
+use App\Mcp\Tools\Memory\MemoryPromoteTool;
+use App\Mcp\Tools\Memory\MemoryProposeTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
 use App\Mcp\Tools\Memory\MemoryUnifiedSearchTool;
@@ -300,21 +308,26 @@ use App\Mcp\Tools\Webhook\WebhookListTool;
 use App\Mcp\Tools\Webhook\WebhookUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
+use App\Mcp\Tools\Workflow\WorkflowDisableGatewayTool;
 use App\Mcp\Tools\Workflow\WorkflowDuplicateTool;
 use App\Mcp\Tools\Workflow\WorkflowEdgeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowEdgeDeleteTool;
+use App\Mcp\Tools\Workflow\WorkflowEnableGatewayTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
 use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
 use App\Mcp\Tools\Workflow\WorkflowExportPolicyTool;
 use App\Mcp\Tools\Workflow\WorkflowExportTool;
+use App\Mcp\Tools\Workflow\WorkflowGatewayTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowImportTool;
+use App\Mcp\Tools\Workflow\WorkflowListGatewayToolsTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeDeleteTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowSaveGraphTool;
+use App\Mcp\Tools\Workflow\WorkflowSetCompensationNodeTool;
 use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
@@ -397,10 +410,25 @@ class AgentFleetServer extends Server
                 $this->tools[] = $toolClass;
             }
         }
+
+        // Dynamically register each MCP-exposed workflow as a named gateway tool.
+        // ServerContext supports both class-string and Tool instances.
+        try {
+            $exposed = Workflow::withoutGlobalScopes()
+                ->where('mcp_exposed', true)
+                ->whereNotNull('mcp_tool_name')
+                ->get();
+
+            foreach ($exposed as $workflow) {
+                $this->tools[] = app(WorkflowGatewayTool::class, ['workflow' => $workflow]);
+            }
+        } catch (\Throwable) {
+            // Silently skip if DB is unavailable (e.g. during migrations or tests)
+        }
     }
 
     protected array $tools = [
-        // Agent (12)
+        // Agent (19)
         AgentListTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
@@ -418,6 +446,8 @@ class AgentFleetServer extends Server
         AgentRuntimeStateTool::class,
         AgentResetSessionTool::class,
         AgentSandboxTool::class,
+        AgentHeartbeatUpdateTool::class,
+        AgentHeartbeatRunNowTool::class,
 
         // Evolution (5)
         EvolutionProposalListTool::class,
@@ -426,7 +456,7 @@ class AgentFleetServer extends Server
         EvolutionApplyTool::class,
         EvolutionRejectTool::class,
 
-        // Crew (9)
+        // Crew (10)
         CrewListTool::class,
         CrewGetTool::class,
         CrewCreateTool::class,
@@ -436,8 +466,9 @@ class AgentFleetServer extends Server
         CrewExecutionsListTool::class,
         CrewSendMessageTool::class,
         CrewGetMessagesTool::class,
+        CrewMemberUpdatePolicyTool::class,
 
-        // Experiment (13)
+        // Experiment (14)
         ExperimentListTool::class,
         ExperimentGetTool::class,
         ExperimentCreateTool::class,
@@ -451,6 +482,7 @@ class AgentFleetServer extends Server
         ExperimentCostTool::class,
         ExperimentStepsTool::class,
         ExperimentShareTool::class,
+        ExperimentContextHealthTool::class,
         WorkflowSnapshotListTool::class,
 
         // Skill (15)
@@ -502,7 +534,7 @@ class AgentFleetServer extends Server
         CredentialOAuthInitiateTool::class,
         CredentialOAuthFinalizeTool::class,
 
-        // Workflow (16)
+        // Workflow (19)
         WorkflowListTool::class,
         WorkflowGetTool::class,
         WorkflowCreateTool::class,
@@ -524,6 +556,10 @@ class AgentFleetServer extends Server
         WorkflowExportTool::class,
         WorkflowImportTool::class,
         WorkflowExportPolicyTool::class,
+        WorkflowEnableGatewayTool::class,
+        WorkflowDisableGatewayTool::class,
+        WorkflowListGatewayToolsTool::class,
+        WorkflowSetCompensationNodeTool::class,
 
         // Project (14)
         ProjectListTool::class,
@@ -622,7 +658,7 @@ class AgentFleetServer extends Server
         RagflowKnowledgeGraphBuildTool::class,
         RagflowRaptorBuildTool::class,
 
-        // Memory (8)
+        // Memory (11)
         MemorySearchTool::class,
         MemoryUnifiedSearchTool::class,
         MemoryListRecentTool::class,
@@ -631,6 +667,9 @@ class AgentFleetServer extends Server
         MemoryUploadKnowledgeTool::class,
         MemoryAddTool::class,
         SupabaseProvisionMemoryTool::class,
+        MemoryProposeTool::class,
+        MemoryPromoteTool::class,
+        MemoryListProposalsTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,

@@ -4,8 +4,8 @@ namespace App\Mcp\Tools\Assistant;
 
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Services\ConversationCompactor;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\Log;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;

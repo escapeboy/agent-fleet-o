@@ -21,9 +21,11 @@
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^4.1",
         "neuron-core/neuron-ai": "^3.2",
+        "nikic/php-parser": "^5.0",
         "phpseclib/phpseclib": "^3.0",
         "predis/predis": "^3.3",
         "prism-php/prism": "^0.99.19",
+        "propaganistas/laravel-disposable-email": "*",
         "sabre/vobject": "^4.5",
         "sentry/sentry-laravel": "^4.21",
         "socialiteproviders/apple": "^5.9",
@@ -33,7 +35,6 @@
         "spatie/laravel-query-builder": "^6.4",
         "spatie/laravel-webhook-server": "^3.9",
         "tpetry/laravel-postgresql-enhanced": "^3.5",
-        "nikic/php-parser": "^5.0",
         "webklex/php-imap": "^6.2"
     },
     "require-dev": {

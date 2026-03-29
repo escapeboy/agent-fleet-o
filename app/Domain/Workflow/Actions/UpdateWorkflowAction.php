@@ -25,8 +25,11 @@ class UpdateWorkflowAction
         ?array $settings = null,
         ?int $budgetCapCredits = null,
         bool $clearBudgetCap = false,
+        ?bool $mcpExposed = null,
+        ?string $mcpToolName = null,
+        ?string $mcpExecutionMode = null,
     ): Workflow {
-        return DB::transaction(function () use ($workflow, $name, $description, $maxLoopIterations, $nodes, $edges, $settings, $budgetCapCredits, $clearBudgetCap) {
+        return DB::transaction(function () use ($workflow, $name, $description, $maxLoopIterations, $nodes, $edges, $settings, $budgetCapCredits, $clearBudgetCap, $mcpExposed, $mcpToolName, $mcpExecutionMode) {
             $changes = [];
 
             if ($name !== null && $name !== $workflow->name) {
@@ -55,6 +58,21 @@ class UpdateWorkflowAction
             } elseif ($budgetCapCredits !== null) {
                 $workflow->budget_cap_credits = $budgetCapCredits;
                 $changes['budget_cap_credits'] = $budgetCapCredits;
+            }
+
+            if ($mcpExposed !== null) {
+                $workflow->mcp_exposed = $mcpExposed;
+                $changes['mcp_exposed'] = $mcpExposed;
+            }
+
+            if ($mcpToolName !== null) {
+                $workflow->mcp_tool_name = $mcpToolName ?: null;
+                $changes['mcp_tool_name'] = $mcpToolName ?: null;
+            }
+
+            if ($mcpExecutionMode !== null) {
+                $workflow->mcp_execution_mode = $mcpExecutionMode;
+                $changes['mcp_execution_mode'] = $mcpExecutionMode;
             }
 
             // If graph is being updated and workflow is active, bump version

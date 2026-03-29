@@ -115,10 +115,10 @@ PROMPT;
                 ],
                 confidence: $confidence,
                 tags: $tags,
-                // Use Proposed tier so system-extracted lessons are retrievable but not
-                // immediately given the curated (+0.10) boost. A separate curation step
-                // can promote them to MemoryTier::Failures once validated.
-                tier: MemoryTier::Proposed,
+                // Store directly in Failures tier so the curated (+0.10) retrieval
+                // boost applies immediately. Lessons are surfaced in MemoryContextInjector
+                // and shown in the ExperimentDetailPage "Lessons Learned" tab.
+                tier: MemoryTier::Failures,
                 proposedBy: 'system:failure_extractor',
             );
 

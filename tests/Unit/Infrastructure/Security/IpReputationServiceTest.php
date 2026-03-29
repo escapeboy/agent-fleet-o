@@ -3,6 +3,7 @@
 namespace Tests\Unit\Infrastructure\Security;
 
 use App\Infrastructure\Security\IpReputationService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -14,7 +15,7 @@ class IpReputationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new IpReputationService();
+        $this->service = new IpReputationService;
     }
 
     public function test_private_ipv4_addresses_bypass_check(): void
@@ -62,7 +63,7 @@ class IpReputationServiceTest extends TestCase
     {
         config(['security.ip_reputation.abuseipdb_key' => 'test-key']);
 
-        Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException('timeout'));
+        Http::fake(fn () => throw new ConnectionException('timeout'));
 
         $result = $this->service->check('45.33.32.156');
 

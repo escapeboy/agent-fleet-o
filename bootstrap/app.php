@@ -15,6 +15,8 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use Laravel\Passport\Http\Middleware\CheckToken;
+use Laravel\Passport\Http\Middleware\CheckTokenForAnyScope;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Sentry\Laravel\Integration;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -54,8 +56,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', SetPostgresRlsContext::class);
         $middleware->statefulApi();
         $middleware->alias([
-            'scope' => \Laravel\Passport\Http\Middleware\CheckToken::class,
-            'scopes' => \Laravel\Passport\Http\Middleware\CheckTokenForAnyScope::class,
+            'scope' => CheckToken::class,
+            'scopes' => CheckTokenForAnyScope::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
