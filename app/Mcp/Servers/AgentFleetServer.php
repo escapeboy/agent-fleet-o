@@ -150,6 +150,7 @@ use App\Mcp\Tools\GitRepository\CodeCallChainTool;
 use App\Mcp\Tools\GitRepository\CodeSearchTool;
 use App\Mcp\Tools\GitRepository\CodeSkimFileTool;
 use App\Mcp\Tools\GitRepository\CodeStructureTool;
+use App\Mcp\Tools\GitRepository\ExperimentRepoMapTool;
 use App\Mcp\Tools\GitRepository\GitBranchCreateTool;
 use App\Mcp\Tools\GitRepository\GitCommitTool;
 use App\Mcp\Tools\GitRepository\GitFileListTool;
@@ -849,6 +850,7 @@ class AgentFleetServer extends Server
         CodeStructureTool::class,
         CodeCallChainTool::class,
         CodeSkimFileTool::class,
+        ExperimentRepoMapTool::class,
 
         // Auth / Social Login (2)
         SocialAccountListTool::class,
