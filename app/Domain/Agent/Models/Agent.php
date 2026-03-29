@@ -46,6 +46,13 @@ class Agent extends Model
 {
     use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids, SoftDeletes;
 
+    /**
+     * Text fields to be scanned for accidentally embedded secrets.
+     *
+     * @var array<int, string>
+     */
+    public array $scannableFields = ['role', 'goal', 'backstory'];
+
     protected $fillable = [
         'team_id',
         'name',

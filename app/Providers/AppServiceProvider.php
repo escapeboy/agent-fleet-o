@@ -9,6 +9,7 @@ use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
+use App\Domain\Credential\Observers\SecretScanObserver;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
 use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
@@ -57,10 +58,12 @@ use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
+use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Tool\Services\McpHandleRegistry;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
+use App\Domain\Workflow\Models\WorkflowNode;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
@@ -243,6 +246,12 @@ class AppServiceProvider extends ServiceProvider
             'user' => User::class,
             'agent' => Agent::class,
         ]);
+
+        // Secret scanner: detect accidentally embedded secrets in free-text fields
+        // on Agent, Skill, and WorkflowNode models. Each model declares $scannableFields.
+        Agent::observe(SecretScanObserver::class);
+        Skill::observe(SecretScanObserver::class);
+        WorkflowNode::observe(SecretScanObserver::class);
 
         // Community edition: all authenticated users have full access
         Gate::define('manage-team', fn ($user) => true);

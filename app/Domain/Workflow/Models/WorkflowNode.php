@@ -26,6 +26,15 @@ class WorkflowNode extends Model
         return WorkflowNodeFactory::new();
     }
 
+    /**
+     * Text fields to be scanned for accidentally embedded secrets.
+     * WorkflowNode stores free-form instructions in the 'expression' field
+     * (used for conditional nodes) and in label (editable display name).
+     *
+     * @var array<int, string>
+     */
+    public array $scannableFields = ['label', 'expression'];
+
     protected $fillable = [
         'workflow_id',
         'agent_id',

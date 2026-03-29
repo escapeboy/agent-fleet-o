@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Credential\Actions\CreateCredentialAction;
 use App\Domain\Credential\Actions\DeleteCredentialAction;
+use App\Domain\Credential\Actions\RollbackCredentialVersionAction;
 use App\Domain\Credential\Actions\RotateCredentialSecretAction;
 use App\Domain\Credential\Actions\UpdateCredentialAction;
 use App\Domain\Credential\Enums\CredentialSource;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Credential\Models\CredentialVersion;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreCredentialRequest;
 use App\Http\Resources\Api\V1\CredentialResource;
@@ -112,9 +114,47 @@ class CredentialController extends Controller
     {
         $request->validate([
             'secret_data' => ['required', 'array'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
-        $action->execute($credential, $request->input('secret_data'));
+        $action->execute(
+            $credential,
+            $request->input('secret_data'),
+            $request->input('note'),
+            $request->user()?->id,
+        );
+
+        return new CredentialResource($credential->refresh());
+    }
+
+    /**
+     * List version history for a credential (secret_data excluded).
+     *
+     * @response 200 array<{id: string, version_number: int, note: string|null, created_at: string}>
+     */
+    public function versions(Credential $credential): JsonResponse
+    {
+        $versions = CredentialVersion::withoutGlobalScopes()
+            ->where('credential_id', $credential->id)
+            ->orderByDesc('version_number')
+            ->get(['id', 'version_number', 'note', 'created_by', 'created_at']);
+
+        return response()->json(['data' => $versions]);
+    }
+
+    /**
+     * Rollback a credential to a previous version's secret_data.
+     */
+    public function rollback(
+        Request $request,
+        Credential $credential,
+        CredentialVersion $version,
+        RollbackCredentialVersionAction $action,
+    ): CredentialResource {
+        // Ensure the version belongs to this credential (scoped within team via global scope).
+        abort_if($version->credential_id !== $credential->id, 404);
+
+        $action->execute($credential, $version, $request->user()?->id);
 
         return new CredentialResource($credential->refresh());
     }

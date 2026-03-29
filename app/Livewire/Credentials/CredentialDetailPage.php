@@ -7,11 +7,13 @@ use App\Domain\Approval\Actions\RejectAction;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Credential\Actions\DeleteCredentialAction;
+use App\Domain\Credential\Actions\RollbackCredentialVersionAction;
 use App\Domain\Credential\Actions\RotateCredentialSecretAction;
 use App\Domain\Credential\Actions\UpdateCredentialAction;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Credential\Models\CredentialVersion;
 use App\Domain\Project\Models\Project;
 use Livewire\Component;
 
@@ -198,7 +200,11 @@ class CredentialDetailPage extends Component
                 ->toArray(),
         };
 
-        app(RotateCredentialSecretAction::class)->execute($this->credential, $newSecretData);
+        app(RotateCredentialSecretAction::class)->execute(
+            $this->credential,
+            $newSecretData,
+            rotatedBy: auth()->id(),
+        );
 
         $this->credential->refresh();
         $this->rotating = false;
@@ -227,6 +233,25 @@ class CredentialDetailPage extends Component
         $this->redirect(route('credentials.index'));
     }
 
+    /**
+     * Rollback the credential's secret_data to a previous version.
+     */
+    public function rollbackToVersion(string $versionId): void
+    {
+        $version = CredentialVersion::withoutGlobalScopes()
+            ->where('credential_id', $this->credential->id)
+            ->findOrFail($versionId);
+
+        app(RollbackCredentialVersionAction::class)->execute(
+            $this->credential,
+            $version,
+            auth()->id(),
+        );
+
+        $this->credential->refresh();
+        session()->flash('message', "Rolled back to version {$version->version_number} successfully.");
+    }
+
     public function render()
     {
         $projects = Project::withoutGlobalScopes()
@@ -241,9 +266,15 @@ class CredentialDetailPage extends Component
                 ->first();
         }
 
+        $versions = CredentialVersion::withoutGlobalScopes()
+            ->where('credential_id', $this->credential->id)
+            ->orderByDesc('version_number')
+            ->get(['id', 'version_number', 'note', 'created_by', 'created_at']);
+
         return view('livewire.credentials.credential-detail-page', [
             'projects' => $projects,
             'pendingApproval' => $pendingApproval,
+            'versions' => $versions,
         ])->layout('layouts.app', ['header' => $this->credential->name]);
     }
 }
