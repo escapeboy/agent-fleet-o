@@ -54,6 +54,15 @@
                     </td>
                 </tr>
                 <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">WhatsApp</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Send messages via the WhatsApp Business API. Supports plain text and
+                        WhatsApp message templates. Requires a
+                        <code class="rounded bg-gray-100 px-1">phone_number_id</code> and a
+                        bearer <code class="rounded bg-gray-100 px-1">token</code> from the Meta Developer Portal.
+                    </td>
+                </tr>
+                <tr>
                     <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Webhook</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">
                         HTTP POST the proposal payload to any URL. Configure custom headers and an
@@ -161,6 +170,15 @@
                     <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Slack</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">
                         Incoming webhook URL <em>or</em> OAuth bot token with a default channel name.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">WhatsApp</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        <code class="rounded bg-gray-100 px-1">phone_number_id</code> (numeric, from Meta Business),
+                        <code class="rounded bg-gray-100 px-1">token</code> (bearer access token).
+                        Set <code class="rounded bg-gray-100 px-1">whatsapp_template</code> in the proposal metadata
+                        to send a pre-approved message template instead of free-form text.
                     </td>
                 </tr>
                 <tr>

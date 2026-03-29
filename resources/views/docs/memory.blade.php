@@ -67,6 +67,67 @@
         </div>
     </div>
 
+    {{-- Memory tiers --}}
+    <h2 class="mt-12 text-xl font-bold text-gray-900">Memory tiers</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Every memory entry carries a <code class="rounded bg-gray-100 px-1 text-xs">tier</code> that signals its
+        provenance and reliability. Curated tiers receive a <strong>+0.10 cosine similarity boost</strong> during
+        retrieval so high-quality knowledge surfaces before raw observations.
+    </p>
+
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Tier</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Meaning</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">proposed</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Raw agent-written observation, not yet reviewed. Default for agent-generated memories.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">canonical</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Curated ground-truth knowledge (+0.10 retrieval boost). Typically promoted by a human or review workflow.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">facts</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Verified factual statements (+0.10 retrieval boost). Suitable for structured data and reference information.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">decisions</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Recorded decisions with rationale (+0.10 retrieval boost). Helps agents avoid re-litigating settled questions.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">failures</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Lessons extracted from failed experiments (+0.10 retrieval boost). Written automatically by the system — see below.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    {{-- Failure lesson extraction --}}
+    <h2 class="mt-12 text-xl font-bold text-gray-900">Automatic failure lesson extraction</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        When an experiment reaches a terminal failure state, FleetQ automatically runs
+        <code class="rounded bg-gray-100 px-1 text-xs">ExtractFailureLessonAction</code>. This action calls
+        <code class="rounded bg-gray-100 px-1 text-xs">claude-haiku-4-5</code> to summarise what went wrong and stores
+        the result as a <code class="rounded bg-gray-100 px-1 text-xs">failures</code>-tier memory attributed to
+        <code class="rounded bg-gray-100 px-1 text-xs">system:failure_extractor</code>.
+    </p>
+    <p class="mt-2 text-sm text-gray-600">
+        On the next run involving the same agent or skill, the lesson is automatically retrieved and injected into
+        the agent's system prompt — the agent learns from past failures without any manual intervention.
+    </p>
+
+    <x-docs.callout type="info">
+        Failure lessons are written with <code>proposed_by = 'system:failure_extractor'</code> and
+        <code>tier = 'failures'</code>. They receive the curated retrieval boost and are never overwritten — each failure
+        produces a new, timestamped memory entry.
+    </x-docs.callout>
+
     {{-- Knowledge Upload --}}
     <h2 class="mt-12 text-xl font-bold text-gray-900">Knowledge Upload</h2>
     <p class="mt-2 text-sm text-gray-600">
