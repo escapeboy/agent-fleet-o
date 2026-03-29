@@ -1,4 +1,25 @@
 <div class="space-y-3">
+    {{-- Context health indicator — shown when any LLM calls have been made --}}
+    @if($contextHealth && $contextHealth->totalInputTokens > 0)
+        @php
+            $healthLevel = $contextHealth->level();
+            $healthColor = match($healthLevel) {
+                'critical' => 'bg-red-100 text-red-700 border-red-200',
+                'warning'  => 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                default    => 'bg-green-100 text-green-700 border-green-200',
+            };
+            $healthIcon = match($healthLevel) {
+                'critical' => '🔴',
+                'warning'  => '🟡',
+                default    => '🟢',
+            };
+        @endphp
+        <div class="rounded-lg border px-4 py-2 text-xs font-medium {{ $healthColor }} flex items-center justify-between">
+            <span>{{ $healthIcon }} Context window: {{ $contextHealth->contextUsedPercent() }}% used</span>
+            <span class="text-gray-500">{{ number_format($contextHealth->totalInputTokens) }} / {{ number_format($contextHealth->contextWindowTokens) }} tokens · {{ $contextHealth->primaryModel }}</span>
+        </div>
+    @endif
+
     @forelse($stages as $stage)
         <div class="rounded-lg border border-gray-200 bg-white">
             <button wire:click="toggleStage('{{ $stage->id }}')"

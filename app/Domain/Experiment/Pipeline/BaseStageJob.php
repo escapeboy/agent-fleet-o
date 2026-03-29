@@ -9,6 +9,7 @@ use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Events\ExperimentContextApproachingLimit;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Experiment\Services\CheckpointManager;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\ContextHealthService;
@@ -337,6 +338,13 @@ abstract class BaseStageJob implements ShouldQueue
                 ]);
 
                 event(new ExperimentContextApproachingLimit($experiment, $health));
+
+                // At critical level (>= 90%), persist a handoff document artifact so a
+                // fresh context can resume the experiment coherently.
+                if ($health->isCritical) {
+                    $handoff = app(ContextHealthService::class)->buildHandoffDocument($experiment);
+                    app(CheckpointManager::class)->saveContextHandoff($experiment, $handoff);
+                }
             }
         } catch (\Throwable $e) {
             Log::debug('BaseStageJob: Context health check failed (non-blocking)', [

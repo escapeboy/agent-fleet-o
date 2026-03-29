@@ -115,6 +115,7 @@ use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionApproveTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
 use App\Mcp\Tools\Evolution\EvolutionRejectTool;
+use App\Mcp\Tools\Experiment\ExperimentContextHealthTool;
 use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
 use App\Mcp\Tools\Experiment\ExperimentGetTool;
@@ -458,7 +459,7 @@ class AgentFleetServer extends Server
         CrewSendMessageTool::class,
         CrewGetMessagesTool::class,
 
-        // Experiment (13)
+        // Experiment (14)
         ExperimentListTool::class,
         ExperimentGetTool::class,
         ExperimentCreateTool::class,
@@ -472,6 +473,7 @@ class AgentFleetServer extends Server
         ExperimentCostTool::class,
         ExperimentStepsTool::class,
         ExperimentShareTool::class,
+        ExperimentContextHealthTool::class,
         WorkflowSnapshotListTool::class,
 
         // Skill (15)

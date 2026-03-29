@@ -4,6 +4,9 @@ namespace App\Domain\Experiment\Services;
 
 use App\Domain\Experiment\Enums\CheckpointMode;
 use App\Domain\Experiment\Jobs\FlushCheckpointJob;
+use App\Domain\Experiment\Models\Experiment;
+use App\Models\Artifact;
+use App\Models\ArtifactVersion;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -203,6 +206,55 @@ class CheckpointManager
             pcntl_alarm(0);
             pcntl_signal(SIGALRM, SIG_DFL);
         };
+    }
+
+    /**
+     * Save a context handoff document as an experiment artifact.
+     *
+     * Called when an experiment's accumulated input tokens reach the critical
+     * context threshold (>= 90%). The handoff captures the current goal, completed
+     * stages, open threads, and constraints so a fresh context can resume coherently.
+     *
+     * @param  array{goal_now: string, done: string[], open_threads: string[], critical_constraints: string[], context_token_summary: array}  $handoff
+     */
+    public function saveContextHandoff(Experiment $experiment, array $handoff): void
+    {
+        try {
+            $content = json_encode($handoff, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+            $artifact = Artifact::withoutGlobalScopes()->create([
+                'team_id' => $experiment->team_id,
+                'experiment_id' => $experiment->id,
+                'type' => 'context_handoff',
+                'name' => 'Context Handoff — '.now()->format('Y-m-d H:i'),
+                'current_version' => 1,
+                'metadata' => [
+                    'source' => 'context_health',
+                    'context_used_pct' => $handoff['context_token_summary']['context_used_pct'] ?? null,
+                    'primary_model' => $handoff['context_token_summary']['primary_model'] ?? null,
+                ],
+            ]);
+
+            ArtifactVersion::withoutGlobalScopes()->create([
+                'team_id' => $experiment->team_id,
+                'artifact_id' => $artifact->id,
+                'version' => 1,
+                'content' => $content,
+                'metadata' => ['generated_at' => now()->toISOString()],
+            ]);
+
+            Log::info('CheckpointManager: Context handoff artifact saved', [
+                'experiment_id' => $experiment->id,
+                'artifact_id' => $artifact->id,
+                'context_used_pct' => $handoff['context_token_summary']['context_used_pct'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            // Non-blocking — a handoff save failure must not interrupt the pipeline.
+            Log::warning('CheckpointManager: Failed to save context handoff artifact', [
+                'experiment_id' => $experiment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

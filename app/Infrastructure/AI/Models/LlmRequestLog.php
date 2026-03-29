@@ -35,6 +35,7 @@ class LlmRequestLog extends Model
         'status',
         'response_body',
         'input_tokens',
+        'context_window_pct',
         'output_tokens',
         'cost_credits',
         'latency_ms',
@@ -47,6 +48,7 @@ class LlmRequestLog extends Model
         return [
             'response_body' => 'array',
             'input_tokens' => 'integer',
+            'context_window_pct' => 'float',
             'output_tokens' => 'integer',
             'cost_credits' => 'integer',
             'latency_ms' => 'integer',
