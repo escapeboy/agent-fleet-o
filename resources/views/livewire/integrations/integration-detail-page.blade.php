@@ -123,4 +123,37 @@
             </div>
         </div>
     @endif
+
+    {{-- Activepieces Sync Panel --}}
+    @if($integration->getAttribute('driver') === 'activepieces')
+        <div class="rounded-lg border border-blue-200 bg-blue-50 p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-blue-900">Pieces Sync</h2>
+                    <p class="mt-1 text-sm text-blue-700">
+                        Activepieces pieces are automatically synced hourly as MCP-HTTP tools.
+                        Each piece becomes available for your agents to use.
+                    </p>
+                    <div class="mt-4 flex gap-6 text-sm">
+                        <div>
+                            <span class="font-medium text-blue-900">Active pieces:</span>
+                            <span class="ml-1 text-blue-800">{{ $activepiecesPieceCount ?? 0 }}</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-blue-900">Last synced:</span>
+                            <span class="ml-1 text-blue-800">
+                                {{ $activepiecesLastSyncedAt ? $activepiecesLastSyncedAt->diffForHumans() : 'Never' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <button wire:click="syncNow"
+                        wire:loading.attr="disabled"
+                        class="ml-4 shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                    <span wire:loading.remove wire:target="syncNow">Sync Now</span>
+                    <span wire:loading wire:target="syncNow">Syncing…</span>
+                </button>
+            </div>
+        </div>
+    @endif
 </div>

@@ -5,8 +5,12 @@ namespace App\Livewire\Integrations;
 use App\Domain\Integration\Actions\DisconnectIntegrationAction;
 use App\Domain\Integration\Actions\OAuthConnectAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
+use App\Domain\Integration\Actions\SyncActivepiecesToolsAction;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
+use App\Domain\Tool\Enums\ToolStatus;
+use App\Domain\Tool\Models\Tool;
+use Carbon\Carbon;
 use Livewire\Component;
 
 class IntegrationDetailPage extends Component
@@ -58,16 +62,62 @@ class IntegrationDetailPage extends Component
         $this->redirect(route('integrations.index'), navigate: true);
     }
 
+    /**
+     * Trigger an on-demand Activepieces piece sync and refresh the UI stats.
+     */
+    public function syncNow(SyncActivepiecesToolsAction $action): void
+    {
+        if ($this->integration->getAttribute('driver') !== 'activepieces') {
+            return;
+        }
+
+        try {
+            $result = $action->execute($this->integration);
+            session()->flash('message', $result->message);
+        } catch (\Throwable $e) {
+            session()->flash('error', 'Sync failed: '.$e->getMessage());
+        }
+    }
+
     public function render()
     {
         $manager = app(IntegrationManager::class);
         $driver = $manager->driver($this->integration->getAttribute('driver'));
+
+        $activepiecesPieceCount = null;
+        $activepiecesLastSyncedAt = null;
+
+        if ($this->integration->getAttribute('driver') === 'activepieces') {
+            $integrationId = (string) $this->integration->getKey();
+            $teamId = (string) $this->integration->getAttribute('team_id');
+
+            $activepiecesPieceCount = Tool::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->whereRaw("settings->>'activepieces_integration_id' = ?", [$integrationId])
+                ->where('status', ToolStatus::Active)
+                ->count();
+
+            /** @var Tool|null $latestTool */
+            $latestTool = Tool::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->whereRaw("settings->>'activepieces_integration_id' = ?", [$integrationId])
+                ->whereNotNull('settings->last_synced_at')
+                ->orderByRaw("settings->>'last_synced_at' DESC")
+                ->first();
+
+            if ($latestTool) {
+                $rawDate = $latestTool->settings['last_synced_at'] ?? null;
+                $activepiecesLastSyncedAt = $rawDate ? Carbon::parse($rawDate) : null;
+            }
+        }
 
         return view('livewire.integrations.integration-detail-page', [
             'driver' => $driver,
             'triggers' => $driver->triggers(),
             'actions' => $driver->actions(),
             'webhookRoutes' => $this->integration->webhookRoutes,
+            'activepiecesPieceCount' => $activepiecesPieceCount,
+            'activepiecesLastSyncedAt' => $activepiecesLastSyncedAt,
         ])->layout('layouts.app', ['header' => 'Integration: '.$this->integration->name]);
     }
 }

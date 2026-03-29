@@ -3,6 +3,7 @@
 namespace App\Domain\Integration\Services;
 
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
+use App\Domain\Integration\Drivers\Activepieces\ActivepiecesIntegrationDriver;
 use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
 use App\Domain\Integration\Drivers\Datadog\DatadogIntegrationDriver;
 use App\Domain\Integration\Drivers\Discord\DiscordIntegrationDriver;
@@ -195,5 +196,10 @@ class IntegrationManager extends Manager
     public function createSshDeployDriver(): IntegrationDriverInterface
     {
         return $this->container->make(SshDeployIntegrationDriver::class);
+    }
+
+    public function createActivepiecesDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(ActivepiecesIntegrationDriver::class);
     }
 }

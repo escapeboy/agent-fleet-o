@@ -267,12 +267,15 @@ use App\Mcp\Tools\Skill\BrowserSkillTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
+use App\Mcp\Tools\Skill\SkillAnnotateTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
 use App\Mcp\Tools\Skill\SkillDegradationReportTool;
 use App\Mcp\Tools\Skill\SkillDeleteTool;
+use App\Mcp\Tools\Skill\SkillGenerateImprovementTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
 use App\Mcp\Tools\Skill\SkillLineageTool;
 use App\Mcp\Tools\Skill\SkillListTool;
+use App\Mcp\Tools\Skill\SkillPlaygroundTestTool;
 use App\Mcp\Tools\Skill\SkillQualityTool;
 use App\Mcp\Tools\Skill\SkillSearchTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
@@ -521,6 +524,9 @@ class AgentFleetServer extends Server
         CodeExecutionTool::class,
         BrowserSkillTool::class,
         SupabaseEdgeFunctionSkillTool::class,
+        SkillPlaygroundTestTool::class,
+        SkillAnnotateTool::class,
+        SkillGenerateImprovementTool::class,
 
         // Tool (19)
         ToolListTool::class,
