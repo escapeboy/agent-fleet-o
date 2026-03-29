@@ -4,31 +4,25 @@ namespace App\Livewire\Experiments;
 
 use App\Domain\Approval\Actions\ApproveAction;
 use App\Domain\Approval\Actions\RejectAction;
-use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Infrastructure\AI\Models\LlmRequestLog;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 use Livewire\Component;
 
 class ExecutionLogPanel extends Component
 {
     public string $experimentId;
 
-    public ?string $expandedEventId = null;
-
     /** ID of the ApprovalRequest currently being rejected (drives modal visibility). */
     public string $rejectingApprovalId = '';
 
     /** Rejection reason text entered by the user in the modal. */
     public string $rejectReason = '';
-
-    public function toggleEvent(string $eventId): void
-    {
-        $this->expandedEventId = $this->expandedEventId === $eventId ? null : $eventId;
-    }
 
     /**
      * Approve the given pending ApprovalRequest inline.
@@ -73,128 +67,189 @@ class ExecutionLogPanel extends Component
         $this->dispatch('notify', type: 'success', message: 'Rejected.');
     }
 
-    public function render()
+    public function render(): View
     {
-        $events = collect();
-
-        // State transitions
-        $transitions = ExperimentStateTransition::withoutGlobalScopes()
-            ->where('experiment_id', $this->experimentId)
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn ($t) => [
-                'id' => 'transition-'.$t->id,
-                'type' => 'transition',
-                'time' => $t->created_at,
-                'summary' => "{$t->from_state} -> {$t->to_state}",
-                'detail' => $t->reason,
-                'metadata' => $t->metadata,
-                'icon' => 'arrow-right',
-                'color' => str_contains($t->to_state, 'failed') ? 'red' : (str_contains($t->to_state, 'completed') ? 'green' : 'blue'),
-            ]);
-        $events = $events->merge($transitions);
-
-        // Experiment stages
+        // Load all stages ordered by start time
         $stages = ExperimentStage::withoutGlobalScopes()
             ->where('experiment_id', $this->experimentId)
+            ->orderBy('started_at')
             ->orderBy('created_at')
-            ->get()
-            ->map(fn (ExperimentStage $s) => [
-                'id' => 'stage-'.$s->id,
-                'type' => 'stage',
-                'time' => $s->started_at ?? $s->created_at,
-                'summary' => "Stage: {$s->stage->value} ({$s->status->value})",
-                'detail' => $s->duration_ms ? round($s->duration_ms / 1000, 1).'s' : null,
-                'metadata' => null,
-                'icon' => 'cog',
-                'color' => match ($s->status->value) {
-                    'completed' => 'green',
-                    'failed' => 'red',
-                    'running' => 'blue',
-                    default => 'gray',
-                },
-            ]);
-        $events = $events->merge($stages);
+            ->get();
 
-        // Playbook steps
-        $steps = PlaybookStep::where('experiment_id', $this->experimentId)
-            ->whereNotNull('started_at')
+        // Load all state transitions
+        $allTransitions = ExperimentStateTransition::withoutGlobalScopes()
+            ->where('experiment_id', $this->experimentId)
+            ->orderBy('created_at')
+            ->get();
+
+        // Load all playbook steps
+        $allSteps = PlaybookStep::where('experiment_id', $this->experimentId)
             ->orderBy('started_at')
             ->with('agent')
             ->limit(200)
-            ->get()
-            ->map(fn (PlaybookStep $s) => [
-                'id' => 'step-'.$s->id,
-                'type' => 'step',
-                'time' => $s->started_at,
-                'summary' => "Step #{$s->order}: ".($s->agent?->name ?? 'Unknown agent')." ({$s->status})",
-                'detail' => $s->error_message ?? ($s->duration_ms ? round($s->duration_ms / 1000, 1).'s, '.($s->cost_credits ?? 0).' credits' : null),
-                'metadata' => null,
-                'icon' => 'play',
-                'color' => match ($s->status) {
-                    'completed' => 'green',
-                    'failed' => 'red',
-                    'running' => 'blue',
-                    default => 'gray',
-                },
-            ]);
-        $events = $events->merge($steps);
+            ->get();
 
-        // LLM calls (cap at 500 to prevent unbounded memory on long-running experiments)
-        $llmLogs = LlmRequestLog::withoutGlobalScopes()
+        // Load LLM calls grouped by stage (they have experiment_stage_id)
+        $allLlmLogs = LlmRequestLog::withoutGlobalScopes()
             ->where('experiment_id', $this->experimentId)
             ->orderBy('created_at')
             ->limit(500)
             ->get()
-            ->map(fn (LlmRequestLog $l) => [
-                'id' => 'llm-'.$l->id,
-                'type' => 'llm_call',
-                'time' => $l->created_at,
-                'summary' => "LLM: {$l->provider}/{$l->model} ({$l->status})",
-                'detail' => collect([
-                    $l->input_tokens ? "{$l->input_tokens} in" : null,
-                    $l->output_tokens ? "{$l->output_tokens} out" : null,
-                    $l->cost_credits ? "{$l->cost_credits} credits" : null,
-                    $l->latency_ms ? round($l->latency_ms / 1000, 1).'s' : null,
-                ])->filter()->implode(', '),
-                'metadata' => $l->error ? ['error' => $l->error] : null,
-                'icon' => 'chip',
-                'color' => match ($l->status) {
-                    'completed', 'success' => 'green',
-                    'failed', 'error' => 'red',
-                    default => 'gray',
-                },
-            ]);
-        $events = $events->merge($llmLogs);
+            ->groupBy('experiment_stage_id');
 
-        // ApprovalRequest events — shown as inline approval cards
-        $approvalEvents = ApprovalRequest::where('experiment_id', $this->experimentId)
+        // Load all approvals
+        $allApprovals = ApprovalRequest::where('experiment_id', $this->experimentId)
             ->with('reviewer')
             ->orderBy('created_at')
-            ->get()
-            ->map(fn (ApprovalRequest $approval) => [
-                'id' => 'approval-'.$approval->id,
-                'approval_id' => $approval->id,
-                'type' => 'approval',
-                'time' => $approval->created_at,
-                'summary' => 'Approval required: '.Str::limit($approval->context['message'] ?? 'Human review needed', 80),
-                'detail' => json_encode($approval->context ?? []),
-                'metadata' => null,
-                'icon' => 'clock',
-                'color' => match ($approval->status) {
-                    ApprovalStatus::Pending => 'amber',
-                    ApprovalStatus::Approved => 'green',
-                    ApprovalStatus::Rejected => 'red',
-                    default => 'gray',
-                },
-                'status' => $approval->status->value,
-                'reviewer' => $approval->reviewer?->name,
-                'reviewed_at' => $approval->reviewed_at,
-            ]);
-        $events = $events->merge($approvalEvents);
+            ->get();
+
+        $blocks = collect();
+
+        if ($stages->isEmpty()) {
+            // No stages yet — single flat block with everything
+            $preBlock = $this->buildPreExecutionBlock(
+                $allTransitions,
+                $allSteps,
+                $allLlmLogs->get(null, collect()),
+                $allApprovals,
+            );
+            if ($preBlock['transitions']->isNotEmpty() || $preBlock['steps']->isNotEmpty() || $preBlock['llmCalls']->isNotEmpty() || $preBlock['approvals']->isNotEmpty()) {
+                $blocks->push($preBlock);
+            }
+        } else {
+            // Pre-execution block: transitions/steps/approvals before the first stage started
+            $firstStageStart = $stages->first()->started_at ?? $stages->first()->created_at;
+
+            $preTransitions = $allTransitions->filter(
+                fn ($t) => $t->created_at < $firstStageStart,
+            )->values();
+
+            $preSteps = $allSteps->filter(
+                fn ($s) => $s->started_at && $s->started_at < $firstStageStart,
+            )->values();
+
+            $preApprovals = $allApprovals->filter(
+                fn ($a) => $a->created_at < $firstStageStart,
+            )->values();
+
+            $preLlmCalls = $allLlmLogs->get(null, collect())
+                ->filter(fn ($l) => $l->created_at < $firstStageStart)
+                ->values();
+
+            if ($preTransitions->isNotEmpty() || $preSteps->isNotEmpty() || $preApprovals->isNotEmpty() || $preLlmCalls->isNotEmpty()) {
+                $blocks->push($this->buildPreExecutionBlock($preTransitions, $preSteps, $preLlmCalls, $preApprovals));
+            }
+
+            // One block per stage
+            foreach ($stages as $stage) {
+                $stageStart = $stage->started_at ?? $stage->created_at;
+                $stageEnd = $stage->completed_at;
+
+                // Transitions within this stage's time window
+                $stageTransitions = $allTransitions->filter(function ($t) use ($stageStart, $stageEnd) {
+                    return $t->created_at >= $stageStart
+                        && ($stageEnd === null || $t->created_at <= $stageEnd);
+                })->values();
+
+                // Steps within this stage's time window
+                $stageSteps = $allSteps->filter(function ($s) use ($stageStart, $stageEnd) {
+                    if (! $s->started_at) {
+                        return false;
+                    }
+
+                    return $s->started_at >= $stageStart
+                        && ($stageEnd === null || $s->started_at <= $stageEnd);
+                })->values();
+
+                // LLM calls linked directly to this stage
+                $stageLlmCalls = $allLlmLogs->get($stage->id, collect())->values();
+
+                // Approvals within this stage's time window
+                $stageApprovals = $allApprovals->filter(function ($a) use ($stageStart, $stageEnd) {
+                    return $a->created_at >= $stageStart
+                        && ($stageEnd === null || $a->created_at <= $stageEnd);
+                })->values();
+
+                $totalTokens = $stageLlmCalls->sum('input_tokens') + $stageLlmCalls->sum('output_tokens');
+                $totalCost = $stageLlmCalls->sum('cost_credits');
+                $durationSeconds = $stage->duration_ms ? round($stage->duration_ms / 1000, 1) : null;
+
+                $blocks->push([
+                    'id' => 'stage-'.$stage->id,
+                    'type' => 'stage',
+                    'stage' => $stage,
+                    'transitions' => $stageTransitions,
+                    'steps' => $stageSteps,
+                    'llmCalls' => $stageLlmCalls,
+                    'approvals' => $stageApprovals,
+                    'summary' => [
+                        'tokens' => $totalTokens,
+                        'cost' => $totalCost,
+                        'duration_seconds' => $durationSeconds,
+                    ],
+                ]);
+            }
+
+            // Trailing block: events after the last completed stage
+            $lastStageEnd = $stages->last()->completed_at;
+            if ($lastStageEnd) {
+                $trailingTransitions = $allTransitions->filter(
+                    fn ($t) => $t->created_at > $lastStageEnd,
+                )->values();
+
+                $trailingSteps = $allSteps->filter(
+                    fn ($s) => $s->started_at && $s->started_at > $lastStageEnd,
+                )->values();
+
+                $trailingApprovals = $allApprovals->filter(
+                    fn ($a) => $a->created_at > $lastStageEnd,
+                )->values();
+
+                $trailingLlmCalls = $allLlmLogs->get(null, collect())
+                    ->filter(fn ($l) => $l->created_at > $lastStageEnd)
+                    ->values();
+
+                if ($trailingTransitions->isNotEmpty() || $trailingSteps->isNotEmpty() || $trailingApprovals->isNotEmpty() || $trailingLlmCalls->isNotEmpty()) {
+                    $blocks->push($this->buildPreExecutionBlock($trailingTransitions, $trailingSteps, $trailingLlmCalls, $trailingApprovals, 'Post-execution'));
+                }
+            }
+        }
+
+        $hasFailedBlock = $blocks->contains(fn ($b) => $b['type'] === 'stage' && $b['stage']->status->value === 'failed');
 
         return view('livewire.experiments.execution-log-panel', [
-            'events' => $events->sortBy('time')->values(),
+            'blocks' => $blocks,
+            'hasFailedBlock' => $hasFailedBlock,
         ]);
+    }
+
+    /**
+     * Build a pre/post execution block for events outside any stage window.
+     */
+    private function buildPreExecutionBlock(
+        Collection $transitions,
+        Collection $steps,
+        Collection $llmCalls,
+        Collection $approvals,
+        string $label = 'Pre-execution',
+    ): array {
+        $totalTokens = $llmCalls->sum('input_tokens') + $llmCalls->sum('output_tokens');
+        $totalCost = $llmCalls->sum('cost_credits');
+
+        return [
+            'id' => 'pre-execution-'.Str::random(6),
+            'type' => 'pre_execution',
+            'label' => $label,
+            'stage' => null,
+            'transitions' => $transitions,
+            'steps' => $steps,
+            'llmCalls' => $llmCalls,
+            'approvals' => $approvals,
+            'summary' => [
+                'tokens' => $totalTokens,
+                'cost' => $totalCost,
+                'duration_seconds' => null,
+            ],
+        ];
     }
 }
