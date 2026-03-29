@@ -19,6 +19,8 @@ use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
 use App\Mcp\Tools\Agent\AgentFeedbackSubmitTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
+use App\Mcp\Tools\Agent\AgentHeartbeatRunNowTool;
+use App\Mcp\Tools\Agent\AgentHeartbeatUpdateTool;
 use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentResetSessionTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
@@ -425,7 +427,7 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
-        // Agent (12)
+        // Agent (19)
         AgentListTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
@@ -443,6 +445,8 @@ class AgentFleetServer extends Server
         AgentRuntimeStateTool::class,
         AgentResetSessionTool::class,
         AgentSandboxTool::class,
+        AgentHeartbeatUpdateTool::class,
+        AgentHeartbeatRunNowTool::class,
 
         // Evolution (5)
         EvolutionProposalListTool::class,

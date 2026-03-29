@@ -347,7 +347,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -757,6 +757,65 @@
         @elseif($activeTab === 'evolution')
             <div class="rounded-xl border border-gray-200 bg-white p-6">
                 <livewire:evolution.evolution-proposal-panel :agent="$agent" />
+            </div>
+
+        @elseif($activeTab === 'heartbeat')
+            {{-- Heartbeat Scheduling --}}
+            <div class="space-y-4">
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Heartbeat Schedule</h3>
+                            <p class="mt-0.5 text-xs text-gray-500">A recurring task the agent runs automatically on a cron schedule. Evaluated every minute by the scheduler.</p>
+                        </div>
+                        @if(!empty($agent->heartbeat_definition))
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs {{ ($agent->heartbeat_definition['enabled'] ?? false) ? 'text-green-700 bg-green-100' : 'text-gray-600 bg-gray-100' }} rounded-full px-2.5 py-1 font-medium">
+                                    {{ ($agent->heartbeat_definition['enabled'] ?? false) ? 'Enabled' : 'Disabled' }}
+                                </span>
+                                <button wire:click="toggleHeartbeat"
+                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                                    {{ ($agent->heartbeat_definition['enabled'] ?? false) ? 'Disable' : 'Enable' }}
+                                </button>
+                                <button wire:click="runHeartbeatNow"
+                                    wire:confirm="Run the heartbeat task immediately?"
+                                    class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
+                                    Run Now
+                                </button>
+                            </div>
+                        @endif
+                    </div>
+
+                    @if(!empty($agent->heartbeat_definition))
+                        <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <dt class="mb-1 text-xs font-medium text-gray-500">Cron Expression</dt>
+                                <dd class="font-mono text-sm text-gray-900">{{ $agent->heartbeat_definition['cron'] ?? '—' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <dt class="mb-1 text-xs font-medium text-gray-500">Next Run At</dt>
+                                <dd class="text-sm text-gray-900">
+                                    @if(!empty($agent->heartbeat_definition['next_run_at']))
+                                        {{ \Illuminate\Support\Carbon::parse($agent->heartbeat_definition['next_run_at'])->diffForHumans() }}
+                                        <span class="text-xs text-gray-400">({{ $agent->heartbeat_definition['next_run_at'] }})</span>
+                                    @else
+                                        <span class="text-gray-400">Pending first run</span>
+                                    @endif
+                                </dd>
+                            </div>
+                            <div class="col-span-full rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <dt class="mb-1 text-xs font-medium text-gray-500">Prompt</dt>
+                                <dd class="whitespace-pre-wrap text-sm text-gray-900">{{ $agent->heartbeat_definition['prompt'] ?? '—' }}</dd>
+                            </div>
+                        </dl>
+                        <p class="mt-4 text-xs text-gray-400">To change the schedule, use the MCP tool <code class="font-mono">agent_heartbeat_update</code> or update the agent's <code class="font-mono">heartbeat_definition</code> JSONB field directly.</p>
+                    @else
+                        <div class="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+                            <p class="text-sm text-gray-500">No heartbeat configured for this agent.</p>
+                            <p class="mt-1 text-xs text-gray-400">Use the MCP tool <code class="font-mono">agent_heartbeat_update</code> to set a schedule.</p>
+                        </div>
+                    @endif
+                </div>
             </div>
         @endif
     @endif

@@ -6,6 +6,7 @@ use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
+use App\Domain\Agent\Jobs\ExecuteAgentHeartbeatJob;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentConfigRevision;
 use App\Domain\Agent\Models\AgentExecution;
@@ -259,6 +260,40 @@ class AgentDetailPage extends Component
 
         session()->flash('message', 'Agent deleted.');
         $this->redirect(route('agents.index'));
+    }
+
+    /**
+     * Toggle the enabled flag of the agent's heartbeat schedule without
+     * changing the cron expression or prompt.
+     */
+    public function toggleHeartbeat(): void
+    {
+        $current = $this->agent->heartbeat_definition ?? [];
+        $current['enabled'] = ! ($current['enabled'] ?? false);
+        $this->agent->update(['heartbeat_definition' => $current]);
+        $this->agent->refresh();
+    }
+
+    /**
+     * Immediately dispatch the agent's heartbeat job outside the normal schedule.
+     */
+    public function runHeartbeatNow(): void
+    {
+        $definition = $this->agent->heartbeat_definition ?? [];
+
+        if (empty($definition['prompt'])) {
+            session()->flash('error', 'No heartbeat prompt configured.');
+
+            return;
+        }
+
+        ExecuteAgentHeartbeatJob::dispatch(
+            $this->agent->id,
+            $this->agent->team_id,
+            $definition['prompt'],
+        );
+
+        session()->flash('message', 'Heartbeat dispatched.');
     }
 
     public function render()
