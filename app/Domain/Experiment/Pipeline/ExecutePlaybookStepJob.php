@@ -29,13 +29,14 @@ class ExecutePlaybookStepJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 2;          // Must match or exceed Horizon supervisor-ai-calls tries
+    public int $tries = 5;          // Must match or exceed Horizon supervisor-ai-calls tries
 
     public int $timeout = 1200;     // 20 min — must be LONGER than HTTP timeout (~960s) but shorter than retry_after (1900s)
 
-    public int $backoff = 10;       // Wait 10s before retry (gives bridge time to finish previous request)
+    public int $maxExceptions = 5;  // Allow up to 5 exceptions before giving up
 
-    public int $maxExceptions = 2;  // Allow up to 2 exceptions before giving up
+    /** @var array<int> */
+    public array $backoff = [10, 30, 60, 120];  // Progressive: 10s, 30s, 1min, 2min
 
     public function __construct(
         public readonly string $stepId,
@@ -395,6 +396,24 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 } catch (\Throwable) {
                     // Non-blocking
                 }
+            }
+
+            // For bridge-not-connected errors, release back to queue WITHOUT marking the step
+            // as failed — the step would skip future retries if it's already in failed state.
+            $isBridgeUnavailable = str_contains($e->getMessage(), 'Bridge is not connected');
+            $hasRetriesLeft = $this->attempts() < $this->tries;
+
+            if ($isBridgeUnavailable && $hasRetriesLeft) {
+                // Reset step to pending so the retry attempt can re-execute it
+                $step->fresh()?->update(['status' => 'pending', 'worker_id' => null]);
+
+                Log::warning('ExecutePlaybookStepJob: bridge unavailable — releasing for retry', [
+                    'step_id' => $this->stepId,
+                    'attempt' => $this->attempts(),
+                    'retry_in' => ($this->backoff[$this->attempts() - 1] ?? 120).'s',
+                ]);
+
+                throw $e; // Let framework handle retry with backoff
             }
 
             // Ensure step is marked as failed (may have already been updated above)
