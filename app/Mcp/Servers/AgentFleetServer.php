@@ -13,6 +13,7 @@ use App\Mcp\Tools\Admin\AdminTeamSuspendTool;
 use App\Mcp\Tools\Admin\AdminUserRevokeSessionsTool;
 use App\Mcp\Tools\Admin\AdminUserSendPasswordResetTool;
 use App\Mcp\Tools\Agent\AgentConfigHistoryTool;
+use App\Mcp\Tools\Agent\AgentConstraintTemplatesTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentFeedbackListTool;
@@ -47,6 +48,7 @@ use App\Mcp\Tools\Assistant\AssistantConversationClearTool;
 use App\Mcp\Tools\Assistant\AssistantConversationCompactTool;
 use App\Mcp\Tools\Assistant\AssistantConversationGetTool;
 use App\Mcp\Tools\Assistant\AssistantConversationListTool;
+use App\Mcp\Tools\Assistant\AssistantReviewConversationTool;
 use App\Mcp\Tools\Assistant\AssistantSendMessageTool;
 use App\Mcp\Tools\Auth\SocialAccountListTool;
 use App\Mcp\Tools\Auth\SocialAccountUnlinkTool;
@@ -94,10 +96,12 @@ use App\Mcp\Tools\Crew\CrewCreateTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
+use App\Mcp\Tools\Crew\CrewGenerateFromPromptTool;
 use App\Mcp\Tools\Crew\CrewGetMessagesTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
 use App\Mcp\Tools\Crew\CrewMemberUpdatePolicyTool;
+use App\Mcp\Tools\Crew\CrewProposeRestructuringTool;
 use App\Mcp\Tools\Crew\CrewSendMessageTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
 use App\Mcp\Tools\Email\EmailTemplateCreateTool;
@@ -132,7 +136,12 @@ use App\Mcp\Tools\Experiment\ExperimentShareTool;
 use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
+use App\Mcp\Tools\Experiment\PlanWithKnowledgeTool;
+use App\Mcp\Tools\Experiment\UncertaintyEmitTool;
+use App\Mcp\Tools\Experiment\UncertaintyResolveTool;
 use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
+use App\Mcp\Tools\Experiment\WorklogAppendTool;
+use App\Mcp\Tools\Experiment\WorklogReadTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
 use App\Mcp\Tools\GitRepository\CodeCallChainTool;
@@ -435,6 +444,7 @@ class AgentFleetServer extends Server
         AgentUpdateTool::class,
         AgentToggleStatusTool::class,
         AgentTemplatesListTool::class,
+        AgentConstraintTemplatesTool::class,
         AgentSkillSyncTool::class,
         AgentToolSyncTool::class,
         AgentFeedbackSubmitTool::class,
@@ -467,6 +477,8 @@ class AgentFleetServer extends Server
         CrewSendMessageTool::class,
         CrewGetMessagesTool::class,
         CrewMemberUpdatePolicyTool::class,
+        CrewGenerateFromPromptTool::class,
+        CrewProposeRestructuringTool::class,
 
         // Experiment (14)
         ExperimentListTool::class,
@@ -484,6 +496,11 @@ class AgentFleetServer extends Server
         ExperimentShareTool::class,
         ExperimentContextHealthTool::class,
         WorkflowSnapshotListTool::class,
+        UncertaintyEmitTool::class,
+        UncertaintyResolveTool::class,
+        WorklogAppendTool::class,
+        WorklogReadTool::class,
+        PlanWithKnowledgeTool::class,
 
         // Skill (15)
         SkillListTool::class,
@@ -785,6 +802,7 @@ class AgentFleetServer extends Server
         AssistantConversationClearTool::class,
         AssistantConversationCompactTool::class,
         AssistantAnnotateMessageTool::class,
+        AssistantReviewConversationTool::class,
 
         // Feedback (2) — super admin only
         FeedbackListTool::class,

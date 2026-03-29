@@ -2,6 +2,7 @@
 
 namespace App\Domain\Assistant\Tools;
 
+use App\Domain\Crew\Actions\GenerateCrewFromPromptAction;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
@@ -18,6 +19,7 @@ class DelegationTools
         return [
             self::delegateAndNotify($conversationId),
             self::getDelegationResults(),
+            self::designCrew(),
         ];
     }
 
@@ -92,6 +94,28 @@ class DelegationTools
                     'error_message' => $run->error_message,
                     'experiment_status' => $run->experiment?->status?->value,
                 ]);
+            });
+    }
+
+    private static function designCrew(): PrismToolObject
+    {
+        return PrismTool::as('design_crew')
+            ->for('Design a crew of AI agents for a given goal. Returns a structured crew definition including coordinator, QA agent, worker roles, skills, and process type. Use create_crew to actually create it after reviewing the design.')
+            ->withStringParameter('goal', 'What should this crew achieve? Describe the goal in plain language.', required: true)
+            ->withStringParameter('team_id', 'Team ID (optional, uses current team if omitted)')
+            ->using(function (string $goal, ?string $team_id = null) {
+                try {
+                    $teamId = $team_id ?? auth()->user()?->current_team_id;
+                    $design = app(GenerateCrewFromPromptAction::class)->execute($goal, $teamId);
+
+                    return json_encode([
+                        'success' => true,
+                        'design' => $design,
+                        'next_step' => 'Review the design above. To create this crew, use the create_crew and create_agent tools with the suggested configuration.',
+                    ]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
             });
     }
 }
