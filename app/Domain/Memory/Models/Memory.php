@@ -36,6 +36,7 @@ class Memory extends Model
         'tier',
         'category',
         'proposed_by',
+        'source_url',
     ];
 
     protected function casts(): array

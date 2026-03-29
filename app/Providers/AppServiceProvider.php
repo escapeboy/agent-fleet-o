@@ -36,16 +36,19 @@ use App\Domain\Shared\Services\PluginRegistry;
 use App\Domain\Signal\Connectors\ApiPollingConnector;
 use App\Domain\Signal\Connectors\CalendarConnector;
 use App\Domain\Signal\Connectors\ClearCueConnector;
+use App\Domain\Signal\Connectors\ConfluenceConnector;
 use App\Domain\Signal\Connectors\DatadogAlertConnector;
 use App\Domain\Signal\Connectors\DiscordWebhookConnector;
 use App\Domain\Signal\Connectors\GitHubIssuesConnector;
 use App\Domain\Signal\Connectors\GitHubWebhookConnector;
+use App\Domain\Signal\Connectors\GitHubWikiConnector;
 use App\Domain\Signal\Connectors\HttpMonitorConnector;
 use App\Domain\Signal\Connectors\ImapConnector;
 use App\Domain\Signal\Connectors\JiraConnector;
 use App\Domain\Signal\Connectors\LinearConnector;
 use App\Domain\Signal\Connectors\ManualSignalConnector;
 use App\Domain\Signal\Connectors\MatrixConnector;
+use App\Domain\Signal\Connectors\NotionConnector;
 use App\Domain\Signal\Connectors\PagerDutyConnector;
 use App\Domain\Signal\Connectors\RssConnector;
 use App\Domain\Signal\Connectors\SearxngConnector;
@@ -151,6 +154,9 @@ class AppServiceProvider extends ServiceProvider
             CalendarConnector::class,
             SupabaseWebhookConnector::class,
             SearxngConnector::class,
+            NotionConnector::class,
+            ConfluenceConnector::class,
+            GitHubWikiConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors

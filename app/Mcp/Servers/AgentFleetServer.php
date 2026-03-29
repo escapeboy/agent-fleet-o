@@ -177,6 +177,8 @@ use App\Mcp\Tools\Knowledge\KnowledgeBaseDeleteTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseIngestTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseListTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseSearchTool;
+use App\Mcp\Tools\Knowledge\KnowledgeListSourcesTool;
+use App\Mcp\Tools\Knowledge\KnowledgeSyncNowTool;
 use App\Mcp\Tools\Marketplace\MarketplaceAnalyticsTool;
 use App\Mcp\Tools\Marketplace\MarketplaceBrowseTool;
 use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
@@ -707,6 +709,10 @@ class AgentFleetServer extends Server
         MemoryProposeTool::class,
         MemoryPromoteTool::class,
         MemoryListProposalsTool::class,
+
+        // Knowledge Ingestion (2)
+        KnowledgeListSourcesTool::class,
+        KnowledgeSyncNowTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,
