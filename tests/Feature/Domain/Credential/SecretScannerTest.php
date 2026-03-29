@@ -34,9 +34,11 @@ class SecretScannerTest extends TestCase
     {
         Queue::fake();
 
+        // Stripe key built at runtime so static secret scanners do not flag test fixtures.
+        $fakeKey = 'sk_live_' . str_repeat('a', 24);
         Agent::factory()->create([
             'team_id' => $this->team->id,
-            'role' => 'You are an assistant. Use sk_live_abcdefghijklmnopqrstuvwx for billing.',
+            'role' => "You are an assistant. Use {$fakeKey} for billing.",
         ]);
 
         Queue::assertPushed(CredentialScanJob::class);
@@ -66,12 +68,13 @@ class SecretScannerTest extends TestCase
         $teamId = $this->team->id;
         $agentId = (string) Str::uuid();
 
+        $fakeKey = 'sk_live_' . str_repeat('b', 24);
         $job = new CredentialScanJob(
             teamId: $teamId,
             subjectType: 'agent',
             subjectId: $agentId,
-            fields: ['role' => 'Use sk_live_abcdefghijklmnopqrstuvwx for payments'],
-            contentHash: sha1('role=sk_live_abcdefghijklmnopqrstuvwx'),
+            fields: ['role' => "Use {$fakeKey} for payments"],
+            contentHash: sha1("role={$fakeKey}"),
         );
 
         $job->handle(new SecretPatternLibrary);
