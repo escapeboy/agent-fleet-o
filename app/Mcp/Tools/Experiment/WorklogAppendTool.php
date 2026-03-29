@@ -72,6 +72,23 @@ class WorklogAppendTool extends Tool
         if (! empty($validated['workloggable_type']) && ! empty($validated['workloggable_id'])) {
             $workloggableType = $morphTypeMap[$validated['workloggable_type']] ?? null;
             $workloggableId = $validated['workloggable_id'];
+
+            // Verify the parent entity belongs to this team to prevent cross-tenant pollution
+            $owned = match ($validated['workloggable_type']) {
+                'experiment_stage' => ExperimentStage::withoutGlobalScopes()
+                    ->where('id', $workloggableId)
+                    ->where('team_id', $teamId)
+                    ->exists(),
+                'crew_task_execution' => CrewTaskExecution::withoutGlobalScopes()
+                    ->whereHas('crewExecution', fn ($q) => $q->withoutGlobalScopes()->where('team_id', $teamId))
+                    ->where('id', $workloggableId)
+                    ->exists(),
+                default => false,
+            };
+
+            if (! $owned) {
+                return Response::error('Parent entity not found or access denied.');
+            }
         }
 
         $entry = WorklogEntry::create([

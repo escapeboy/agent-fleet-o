@@ -44,9 +44,14 @@ class PlanWithKnowledgeTool extends Tool
             /** @var PlanWithKnowledgeAction $action */
             $action = app(PlanWithKnowledgeAction::class);
 
+            $teamId = app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->user()?->current_team_id;
+            if (! $teamId) {
+                return Response::error('No current team.');
+            }
+
             $result = $action->execute(
                 goal: $validated['goal'],
-                teamId: app('mcp.team_id'),
+                teamId: $teamId,
             );
 
             return Response::text(json_encode([

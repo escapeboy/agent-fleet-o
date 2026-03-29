@@ -38,6 +38,11 @@ class WorklogReadTool extends Tool
             'type_filter' => 'nullable|string',
         ]);
 
+        $teamId = app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+
         $morphTypeMap = [
             'experiment_stage' => ExperimentStage::class,
             'crew_task_execution' => CrewTaskExecution::class,
@@ -46,9 +51,11 @@ class WorklogReadTool extends Tool
         $morphType = $morphTypeMap[$validated['workloggable_type']];
 
         $query = WorklogEntry::withoutGlobalScopes()
+            ->where('team_id', $teamId)
             ->where('workloggable_type', $morphType)
             ->where('workloggable_id', $validated['workloggable_id'])
-            ->orderBy('created_at');
+            ->orderBy('created_at')
+            ->orderBy('id');
 
         if (! empty($validated['type_filter'])) {
             if (! in_array($validated['type_filter'], WorklogEntry::validTypes())) {

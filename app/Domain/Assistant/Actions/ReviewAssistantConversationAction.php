@@ -136,7 +136,7 @@ PROMPT;
                     'question_quality' => 0,
                 ],
                 'flags' => ['review_failed'],
-                'summary' => 'Review could not be completed: '.$e->getMessage(),
+                'summary' => 'Review could not be completed. Please try again later.',
             ];
         }
 

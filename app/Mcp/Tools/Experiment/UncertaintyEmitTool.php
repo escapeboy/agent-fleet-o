@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Experiment;
 
+use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\UncertaintySignal;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -51,9 +52,22 @@ class UncertaintyEmitTool extends Tool
             }
         }
 
+        // If a stage ID is provided, verify it belongs to this team
+        $stageId = $validated['experiment_stage_id'] ?? null;
+        if ($stageId !== null) {
+            $stageExists = ExperimentStage::withoutGlobalScopes()
+                ->where('id', $stageId)
+                ->where('team_id', $teamId)
+                ->exists();
+
+            if (! $stageExists) {
+                return Response::error('Experiment stage not found or access denied.');
+            }
+        }
+
         $signal = UncertaintySignal::create([
             'team_id' => $teamId,
-            'experiment_stage_id' => $validated['experiment_stage_id'] ?? null,
+            'experiment_stage_id' => $stageId,
             'signal_text' => $validated['signal_text'],
             'context' => $context,
             'status' => 'pending',
