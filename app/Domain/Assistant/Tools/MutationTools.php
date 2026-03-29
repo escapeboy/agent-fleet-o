@@ -237,7 +237,7 @@ class MutationTools
                 try {
                     // Merge the new agent into the existing worker list (deduplication included)
                     $existingWorkerIds = $crew->members()
-                        ->wherePivot('role', CrewMemberRole::Worker->value)
+                        ->where('role', CrewMemberRole::Worker->value)
                         ->pluck('agent_id')
                         ->toArray();
 
