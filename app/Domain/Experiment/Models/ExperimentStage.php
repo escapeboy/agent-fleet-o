@@ -64,4 +64,11 @@ class ExperimentStage extends Model
     {
         return $this->hasMany(UncertaintySignal::class);
     }
+
+    public function worklogEntries(): HasMany
+    {
+        return $this->hasMany(WorklogEntry::class, 'workloggable_id')
+            ->where('workloggable_type', self::class)
+            ->orderBy('created_at');
+    }
 }
