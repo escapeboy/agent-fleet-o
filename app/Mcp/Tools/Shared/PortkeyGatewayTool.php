@@ -102,6 +102,11 @@ class PortkeyGatewayTool extends Tool
             return Response::error('api_key is required for configure action. Get your key at https://app.portkey.ai/api-keys');
         }
 
+        // Basic format validation — Portkey keys start with "pk-"
+        if (! str_starts_with((string) $apiKey, 'pk-')) {
+            return Response::error('Invalid Portkey API key format. Keys must start with "pk-". Get your key at https://app.portkey.ai/api-keys');
+        }
+
         $virtualKey = $request->get('virtual_key');
         $credentials = ['api_key' => $apiKey];
 

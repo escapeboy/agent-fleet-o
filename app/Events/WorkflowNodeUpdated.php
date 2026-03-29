@@ -43,7 +43,7 @@ class WorkflowNodeUpdated implements ShouldBroadcast
             'durationMs' => $this->durationMs,
             'tokenCount' => $this->tokenCount,
             'cost' => $this->cost,
-            'outputPreview' => $this->outputPreview,
+            'outputPreview' => mb_substr($this->outputPreview, 0, 500),
         ];
     }
 }

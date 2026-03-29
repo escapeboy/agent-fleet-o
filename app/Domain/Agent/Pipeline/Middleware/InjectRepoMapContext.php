@@ -21,6 +21,7 @@ use Symfony\Component\Process\Process;
  */
 class InjectRepoMapContext
 {
+    /** @phpstan-ignore-next-line property.onlyWritten */
     public function __construct(
         private readonly RepoMapGenerator $generator,
     ) {}
@@ -76,15 +77,32 @@ class InjectRepoMapContext
         }
 
         // Derive the local clone path from the repo config (field: local_path or cloned_path)
-        // TODO: When a dedicated local_path column is added to git_repositories, update this.
-        $repoPath = $repo->config['local_path'] ?? $repo->config['cloned_path'] ?? null;
+        $config = is_array($repo->config) ? $repo->config : [];
+        $repoPath = $config['local_path'] ?? $config['cloned_path'] ?? null;
 
-        if (! $repoPath || ! is_dir($repoPath)) {
+        if (! $repoPath || ! is_dir((string) $repoPath)) {
             return null;
         }
 
-        $headSha = $this->getHeadSha($repoPath);
-        $cacheKey = "repo_map:{$gitRepoId}:".(($headSha !== null) ? $headSha : 'unknown');
+        // Resolve canonical path to prevent path traversal via user-controlled JSONB config
+        $repoPath = realpath((string) $repoPath);
+
+        if ($repoPath === false) {
+            return null;
+        }
+
+        $baseClonesPath = rtrim((string) config('git.clones_base_path', storage_path('app/repos')), '/');
+
+        if (! str_starts_with($repoPath, $baseClonesPath . '/') && $repoPath !== $baseClonesPath) {
+            Log::warning('InjectRepoMapContext: repo path outside base clones directory (possible path traversal)', [
+                'resolved_path' => $repoPath,
+                'base_path' => $baseClonesPath,
+            ]);
+
+            return null;
+        }
+        $headSha = $this->resolveHeadSha($repoPath);
+        $cacheKey = "repo_map:{$gitRepoId}:".($headSha ?? 'unknown');
 
         return Cache::remember($cacheKey, 3600, function () use ($repoPath, $repo) {
             $map = $this->generator->generate($repoPath);
@@ -93,7 +111,7 @@ class InjectRepoMapContext
         });
     }
 
-    private function getHeadSha(string $repoPath): ?string
+    private function resolveHeadSha(string $repoPath): ?string
     {
         try {
             $process = new Process(['git', '-C', $repoPath, 'rev-parse', 'HEAD'], timeout: 10);
