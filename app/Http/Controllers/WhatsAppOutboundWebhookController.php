@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
-use App\Domain\Shared\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -35,10 +34,13 @@ class WhatsAppOutboundWebhookController extends Controller
         $token = $request->query('hub_verify_token');
         $challenge = $request->query('hub_challenge');
 
-        // Use team-scoped verify token or fall back to global config
         $verifyToken = config('services.whatsapp.verify_token');
 
-        if ($mode === 'subscribe' && $token === $verifyToken) {
+        if (! $verifyToken) {
+            return response('Forbidden', 403);
+        }
+
+        if ($mode === 'subscribe' && hash_equals($verifyToken, (string) $token)) {
             return response((string) $challenge, 200)->header('Content-Type', 'text/plain');
         }
 
@@ -62,16 +64,20 @@ class WhatsAppOutboundWebhookController extends Controller
     {
         $appSecret = config('services.whatsapp.app_secret');
 
-        // Validate HMAC-SHA256 signature when app secret is configured
-        if ($appSecret) {
-            $signature = $request->header('X-Hub-Signature-256', '');
-            $expected = 'sha256='.hash_hmac('sha256', $request->getContent(), $appSecret);
+        // Reject requests when app secret is not configured — never skip HMAC validation
+        if (! $appSecret) {
+            Log::warning('WhatsAppOutboundWebhookController: app_secret not configured', ['team_id' => $teamId]);
 
-            if (! hash_equals($expected, $signature)) {
-                Log::warning('WhatsAppOutboundWebhookController: Invalid signature', ['team_id' => $teamId]);
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
 
-                return response()->json(['error' => 'Invalid signature'], 403);
-            }
+        $signature = $request->header('X-Hub-Signature-256', '');
+        $expected = 'sha256='.hash_hmac('sha256', $request->getContent(), $appSecret);
+
+        if (! hash_equals($expected, $signature)) {
+            Log::warning('WhatsAppOutboundWebhookController: Invalid signature', ['team_id' => $teamId]);
+
+            return response()->json(['error' => 'Invalid signature'], 403);
         }
 
         $payload = $request->all();

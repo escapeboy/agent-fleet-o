@@ -91,9 +91,11 @@ Route::post('/telegram/webhook/{teamId}', [TelegramWebhookController::class, 'ha
 // GET verifies ownership; POST receives sent/delivered/read/failed status events.
 Route::get('/whatsapp/webhook/{teamId}', [WhatsAppOutboundWebhookController::class, 'verify'])
     ->name('whatsapp.outbound.webhook.verify')
+    ->whereUuid('teamId')
     ->middleware('throttle:30,1');
 Route::post('/whatsapp/webhook/{teamId}', [WhatsAppOutboundWebhookController::class, 'receive'])
     ->name('whatsapp.outbound.webhook.receive')
+    ->whereUuid('teamId')
     ->middleware('throttle:120,1');
 
 // Chatbot channel webhooks — identified by chatbot token prefix in the URL

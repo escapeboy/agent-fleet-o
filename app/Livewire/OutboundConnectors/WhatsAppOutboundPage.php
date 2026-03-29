@@ -60,7 +60,7 @@ class WhatsAppOutboundPage extends Component
     public function save(): void
     {
         $this->validate([
-            'phoneNumberId' => 'required|string|max:64',
+            'phoneNumberId' => 'required|string|max:64|regex:/^\d+$/',
             'businessAccountId' => 'nullable|string|max:64',
             'verifyToken' => 'nullable|string|max:255',
         ]);

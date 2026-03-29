@@ -39,6 +39,8 @@ class MemoryPromoteTool extends Tool
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+
         $validated = $request->validate([
             'memory_id' => 'required|uuid|exists:memories,id',
             'target_tier' => 'required|string|in:canonical,facts,decisions,failures,successes',
@@ -46,7 +48,9 @@ class MemoryPromoteTool extends Tool
 
         $tier = MemoryTier::from($validated['target_tier']);
 
-        $memory = Memory::findOrFail($validated['memory_id']);
+        $memory = Memory::withoutGlobalScopes()
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->findOrFail($validated['memory_id']);
         $previousTier = $memory->tier?->value ?? 'working';
 
         $memory->update(['tier' => $tier->value]);

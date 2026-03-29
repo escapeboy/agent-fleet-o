@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Memory;
 use App\Domain\Memory\Actions\StoreMemoryAction;
 use App\Domain\Memory\Enums\MemoryTier;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -49,17 +50,17 @@ class MemoryProposeTool extends Tool
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+
         $validated = $request->validate([
             'content' => 'required|string',
-            'agent_id' => 'nullable|uuid|exists:agents,id',
-            'project_id' => 'nullable|uuid|exists:projects,id',
+            'agent_id' => ['nullable', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
+            'project_id' => ['nullable', 'uuid', Rule::exists('projects', 'id')->where('team_id', $teamId)],
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:100',
             'confidence' => 'nullable|numeric|min:0|max:1',
             'metadata' => 'nullable|array',
         ]);
-
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         $agentId = $validated['agent_id'] ?? null;
 
         // Identify the proposer from the agent id or the MCP caller

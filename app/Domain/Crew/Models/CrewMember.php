@@ -54,7 +54,7 @@ class CrewMember extends Model
      */
     public function allowedToolIds(): array
     {
-        return (array) ($this->config['allowed_tools'] ?? []);
+        return (array) ($this->config['tool_allowlist'] ?? []);
     }
 
     /**

@@ -64,11 +64,19 @@ class AgentHeartbeatUpdateTool extends Tool
             return Response::error('Agent not found.');
         }
 
-        // Validate the cron expression before persisting
+        // Validate the cron expression and enforce a minimum 5-minute interval
         try {
-            new CronExpression($validated['cron']);
+            $expr = new CronExpression($validated['cron']);
         } catch (\InvalidArgumentException $e) {
             return Response::error('Invalid cron expression: '.$e->getMessage());
+        }
+
+        // Prevent scheduling more frequently than every 5 minutes to protect the queue
+        $now = new \DateTimeImmutable;
+        $next = $expr->getNextRunDate($now);
+        $afterNext = $expr->getNextRunDate($next);
+        if ($afterNext->getTimestamp() - $next->getTimestamp() < 300) {
+            return Response::error('Heartbeat schedule must fire no more than once every 5 minutes.');
         }
 
         $task = new AgentHeartbeatTask(

@@ -38,8 +38,14 @@ class MemoryBrowserPage extends Component
 
     public ?string $expandedId = null;
 
+    private const ALLOWED_SORT_FIELDS = ['created_at', 'updated_at', 'tier', 'confidence', 'importance'];
+
     public function sortBy(string $field): void
     {
+        if (! in_array($field, self::ALLOWED_SORT_FIELDS, true)) {
+            return;
+        }
+
         if ($this->sortField === $field) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
@@ -80,6 +86,8 @@ class MemoryBrowserPage extends Component
 
     public function deleteMemory(string $id): void
     {
+        Gate::authorize('edit-content');
+
         Memory::where('id', $id)->delete();
 
         if ($this->expandedId === $id) {
