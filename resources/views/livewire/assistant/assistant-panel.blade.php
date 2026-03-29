@@ -341,7 +341,7 @@
                                 <div class="space-y-1.5">
                                     @foreach($prompts as $prompt)
                                         <button
-                                            wire:click="usePrompt('{{ addslashes($prompt) }}')"
+                                            @click="$wire.usePrompt({{ json_encode($prompt) }})"
                                             class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                                         >
                                             {{ $prompt }}

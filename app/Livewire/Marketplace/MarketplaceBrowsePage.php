@@ -41,6 +41,10 @@ class MarketplaceBrowsePage extends Component
      */
     public function setTab(string $tab): void
     {
+        if (! in_array($tab, ['all', 'skills', 'connectors', 'channels'], true)) {
+            return;
+        }
+
         $this->activeTab = $tab;
 
         $this->typeFilter = match ($tab) {

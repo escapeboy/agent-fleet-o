@@ -227,6 +227,13 @@ class MutationTools
                     return json_encode(['error' => 'Crew not found']);
                 }
 
+                // Verify agent belongs to the same team (TeamScope already guards crew, but agent_id
+                // is supplied as a raw UUID from LLM output — must be validated explicitly).
+                $agentExists = Agent::where('id', $agent_id)->exists();
+                if (! $agentExists) {
+                    return json_encode(['error' => 'Agent not found']);
+                }
+
                 try {
                     // Merge the new agent into the existing worker list (deduplication included)
                     $existingWorkerIds = $crew->members()

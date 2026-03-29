@@ -35,6 +35,8 @@ class ExecutionLogPanel extends Component
      */
     public function approveInline(string $approvalId): void
     {
+        $this->authorize('edit-content');
+
         $approval = ApprovalRequest::where('experiment_id', $this->experimentId)
             ->findOrFail($approvalId);
 
@@ -57,6 +59,7 @@ class ExecutionLogPanel extends Component
      */
     public function confirmReject(): void
     {
+        $this->authorize('edit-content');
         $this->validate(['rejectReason' => 'required|min:10']);
 
         $approval = ApprovalRequest::where('experiment_id', $this->experimentId)
