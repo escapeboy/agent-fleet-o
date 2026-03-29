@@ -108,17 +108,74 @@
                 @if($members->isNotEmpty())
                     <div class="space-y-3">
                         @foreach($members as $member)
-                            <div class="flex items-center gap-3 rounded-lg border border-gray-100 p-3">
-                                <div class="flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-xs font-medium text-gray-600">
-                                    {{ $member->sort_order + 1 }}
+                            <div class="rounded-lg border border-gray-100 p-3">
+                                {{-- Member header row --}}
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-xs font-medium text-gray-600">
+                                        {{ $member->sort_order + 1 }}
+                                    </div>
+                                    <div class="flex-1">
+                                        <a href="{{ route('agents.show', $member->agent) }}" class="text-sm font-medium text-primary-600 hover:text-primary-800">
+                                            {{ $member->agent->name }}
+                                        </a>
+                                        <span class="ml-2 text-xs text-gray-500">{{ $member->agent->role ?? '' }}</span>
+                                    </div>
+                                    <span class="text-xs text-gray-400">{{ $member->agent->provider }}/{{ $member->agent->model }}</span>
+                                    <button wire:click="startEditMemberPolicy('{{ $member->id }}')"
+                                        class="ml-2 text-xs font-medium text-primary-600 hover:text-primary-800">
+                                        Edit Constraints
+                                    </button>
                                 </div>
-                                <div class="flex-1">
-                                    <a href="{{ route('agents.show', $member->agent) }}" class="text-sm font-medium text-primary-600 hover:text-primary-800">
-                                        {{ $member->agent->name }}
-                                    </a>
-                                    <span class="ml-2 text-xs text-gray-500">{{ $member->agent->role ?? '' }}</span>
-                                </div>
-                                <span class="text-xs text-gray-400">{{ $member->agent->provider }}/{{ $member->agent->model }}</span>
+
+                                {{-- Effective constraints summary --}}
+                                @if($member->tool_allowlist || $member->max_steps !== null || $member->max_credits !== null)
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        @if($member->tool_allowlist)
+                                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                                                Tools: {{ implode(', ', $member->tool_allowlist) }}
+                                            </span>
+                                        @endif
+                                        @if($member->max_steps !== null)
+                                            <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+                                                Max steps: {{ $member->max_steps }}
+                                            </span>
+                                        @endif
+                                        @if($member->max_credits !== null)
+                                            <span class="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs text-purple-700">
+                                                Max credits: {{ $member->max_credits }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                {{-- Inline constraint edit form --}}
+                                @if($editingMemberId === $member->id)
+                                    <div class="mt-3 border-t border-gray-100 pt-3 space-y-3">
+                                        <x-form-input wire:model="editMemberToolAllowlist"
+                                            label="Tool Allowlist"
+                                            hint="Comma-separated tool names. Leave blank for no restriction."
+                                            placeholder="e.g. bash, browser_navigate"
+                                            :error="$errors->first('editMemberToolAllowlist')" />
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <x-form-input wire:model="editMemberMaxSteps"
+                                                type="number" min="1" max="100"
+                                                label="Max Steps"
+                                                hint="Leave blank to use agent default"
+                                                :error="$errors->first('editMemberMaxSteps')" />
+                                            <x-form-input wire:model="editMemberMaxCredits"
+                                                type="number" min="1"
+                                                label="Max Credits"
+                                                hint="Leave blank for no per-member cap"
+                                                :error="$errors->first('editMemberMaxCredits')" />
+                                        </div>
+                                        <div class="flex justify-end gap-2">
+                                            <button type="button" wire:click="cancelMemberPolicy"
+                                                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                                            <button type="button" wire:click="saveMemberPolicy"
+                                                class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">Save</button>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         @endforeach
                     </div>
@@ -263,16 +320,46 @@
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700">Workers</label>
+                        <div class="space-y-2">
                         @foreach($agents as $agent)
                             @if($agent->id !== $editCoordinatorId && $agent->id !== $editQaId)
-                                <label class="flex items-center gap-2 py-1">
-                                    <input type="checkbox" wire:click="toggleWorker('{{ $agent->id }}')"
-                                        {{ in_array($agent->id, $editWorkerIds) ? 'checked' : '' }}
-                                        class="h-4 w-4 rounded border-gray-300 text-primary-600">
-                                    <span class="text-sm text-gray-700">{{ $agent->name }}</span>
-                                </label>
+                                <div class="rounded-lg border transition
+                                    {{ in_array($agent->id, $editWorkerIds) ? 'border-primary-400 bg-primary-50' : 'border-gray-200' }}">
+                                    <label class="flex cursor-pointer items-center gap-2 p-2">
+                                        <input type="checkbox" wire:click="toggleWorker('{{ $agent->id }}')"
+                                            {{ in_array($agent->id, $editWorkerIds) ? 'checked' : '' }}
+                                            class="h-4 w-4 rounded border-gray-300 text-primary-600">
+                                        <span class="text-sm text-gray-700">{{ $agent->name }}</span>
+                                    </label>
+                                    {{-- Constraint fields shown when worker is selected --}}
+                                    @if(in_array($agent->id, $editWorkerIds))
+                                        <div class="border-t border-primary-200 bg-white px-3 pb-2 pt-2 space-y-2">
+                                            <x-form-input
+                                                wire:model="editWorkerConstraints.{{ $agent->id }}.tool_allowlist"
+                                                label="Tool Allowlist"
+                                                placeholder="bash, browser_navigate"
+                                                hint="Comma-separated. Blank = unrestricted."
+                                                :compact="true" />
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <x-form-input
+                                                    wire:model="editWorkerConstraints.{{ $agent->id }}.max_steps"
+                                                    type="number" min="1" max="100"
+                                                    label="Max Steps"
+                                                    hint="Blank = default"
+                                                    :compact="true" />
+                                                <x-form-input
+                                                    wire:model="editWorkerConstraints.{{ $agent->id }}.max_credits"
+                                                    type="number" min="1"
+                                                    label="Max Credits"
+                                                    hint="Blank = no cap"
+                                                    :compact="true" />
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
                             @endif
                         @endforeach
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

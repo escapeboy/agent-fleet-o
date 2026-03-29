@@ -66,22 +66,51 @@
             <div class="space-y-2">
                 @foreach($agents as $agent)
                     @if($agent->id !== $coordinatorAgentId && $agent->id !== $qaAgentId)
-                        <label class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition
-                            {{ in_array($agent->id, $workerAgentIds) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300' }}">
-                            <input type="checkbox" wire:click="toggleWorker('{{ $agent->id }}')"
-                                {{ in_array($agent->id, $workerAgentIds) ? 'checked' : '' }}
-                                class="h-4 w-4 rounded border-gray-300 text-primary-600">
-                            <div class="flex-1">
-                                <span class="text-sm font-medium text-gray-900">{{ $agent->name }}</span>
-                                @if($agent->role)
-                                    <span class="ml-2 text-xs text-gray-500">{{ $agent->role }}</span>
-                                @endif
-                                @if($agent->goal)
-                                    <p class="mt-0.5 text-xs text-gray-400">{{ Str::limit($agent->goal, 80) }}</p>
-                                @endif
-                            </div>
-                            <span class="text-xs text-gray-400">{{ $agent->skills_count ?? $agent->skills()->count() }} skills</span>
-                        </label>
+                        <div class="rounded-lg border transition
+                            {{ in_array($agent->id, $workerAgentIds) ? 'border-primary-500 bg-primary-50' : 'border-gray-200' }}">
+                            <label class="flex cursor-pointer items-center gap-3 p-3">
+                                <input type="checkbox" wire:click="toggleWorker('{{ $agent->id }}')"
+                                    {{ in_array($agent->id, $workerAgentIds) ? 'checked' : '' }}
+                                    class="h-4 w-4 rounded border-gray-300 text-primary-600">
+                                <div class="flex-1">
+                                    <span class="text-sm font-medium text-gray-900">{{ $agent->name }}</span>
+                                    @if($agent->role)
+                                        <span class="ml-2 text-xs text-gray-500">{{ $agent->role }}</span>
+                                    @endif
+                                    @if($agent->goal)
+                                        <p class="mt-0.5 text-xs text-gray-400">{{ Str::limit($agent->goal, 80) }}</p>
+                                    @endif
+                                </div>
+                                <span class="text-xs text-gray-400">{{ $agent->skills_count ?? $agent->skills()->count() }} skills</span>
+                            </label>
+
+                            {{-- Per-worker constraint fields (shown when worker is selected) --}}
+                            @if(in_array($agent->id, $workerAgentIds))
+                                <div class="border-t border-primary-200 bg-white px-3 pb-3 pt-2 space-y-2">
+                                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Permission Policy (optional)</p>
+                                    <x-form-input
+                                        wire:model="workerConstraints.{{ $agent->id }}.tool_allowlist"
+                                        label="Tool Allowlist"
+                                        placeholder="e.g. bash, browser_navigate"
+                                        hint="Comma-separated tool names. Leave blank for no restriction."
+                                        :compact="true" />
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <x-form-input
+                                            wire:model="workerConstraints.{{ $agent->id }}.max_steps"
+                                            type="number" min="1" max="100"
+                                            label="Max Steps"
+                                            hint="Blank = agent default"
+                                            :compact="true" />
+                                        <x-form-input
+                                            wire:model="workerConstraints.{{ $agent->id }}.max_credits"
+                                            type="number" min="1"
+                                            label="Max Credits"
+                                            hint="Blank = no cap"
+                                            :compact="true" />
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
                     @endif
                 @endforeach
             </div>

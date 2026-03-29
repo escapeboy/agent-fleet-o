@@ -22,6 +22,14 @@ class CreateCrewForm extends Component
 
     public array $workerAgentIds = [];
 
+    /**
+     * Per-worker constraint overrides keyed by agent_id.
+     * Each entry may contain: tool_allowlist (comma-separated string), max_steps (int), max_credits (int).
+     *
+     * @var array<string, array{tool_allowlist: string, max_steps: string, max_credits: string}>
+     */
+    public array $workerConstraints = [];
+
     public int $maxTaskIterations = 3;
 
     public float $qualityThreshold = 0.70;
@@ -48,8 +56,11 @@ class CreateCrewForm extends Component
     {
         if (in_array($agentId, $this->workerAgentIds)) {
             $this->workerAgentIds = array_values(array_diff($this->workerAgentIds, [$agentId]));
+            unset($this->workerConstraints[$agentId]);
         } else {
             $this->workerAgentIds[] = $agentId;
+            // Initialise constraint slots so wire:model binds correctly.
+            $this->workerConstraints[$agentId] ??= ['tool_allowlist' => '', 'max_steps' => '', 'max_credits' => ''];
         }
     }
 
@@ -75,6 +86,7 @@ class CreateCrewForm extends Component
                 workerAgentIds: $this->workerAgentIds,
                 settings: $settings,
                 teamId: auth()->user()->currentTeam?->id,
+                workerConstraints: $this->workerConstraints,
             );
 
             session()->flash('message', "Crew '{$crew->name}' created successfully.");

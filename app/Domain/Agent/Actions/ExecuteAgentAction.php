@@ -70,6 +70,7 @@ class ExecuteAgentAction
      */
     /**
      * @param  string[]|null  $allowedToolIds  Crew-member-level tool allowlist; passed from ExecuteCrewTaskJob.
+     * @param  int|null  $maxStepsOverride  Per-member max tool-call steps override from CrewMember config.
      */
     public function execute(
         Agent $agent,
@@ -80,6 +81,7 @@ class ExecuteAgentAction
         ?Project $project = null,
         ?string $stepId = null,
         ?array $allowedToolIds = null,
+        ?int $maxStepsOverride = null,
     ): array {
         // Strip internal underscore-prefixed keys from external input (defense-in-depth).
         // Only trust these keys when injected by buildAgentAsTools (nested calls).
@@ -167,7 +169,7 @@ class ExecuteAgentAction
 
             if (! empty($tools)) {
                 try {
-                    $result = $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project, $ctx->systemPromptParts);
+                    $result = $this->executeWithTools($agent, $input, $tools, $teamId, $userId, $experimentId, $project, $ctx->systemPromptParts, $maxStepsOverride);
                 } finally {
                     // Destroy sidecar session and teardown sandbox regardless of success or failure
                     if ($sidecarSessionId !== null) {
@@ -196,6 +198,9 @@ class ExecuteAgentAction
      * @param  array<string>  $systemPromptParts  Extra sections injected by pipeline middleware
      * @return array{execution: AgentExecution, output: array|null}
      */
+    /**
+     * @param  int|null  $maxStepsOverride  Per-member cap from CrewMember config; overrides tier default when set.
+     */
     private function executeWithTools(
         Agent $agent,
         array $input,
@@ -205,6 +210,7 @@ class ExecuteAgentAction
         ?string $experimentId,
         ?Project $project = null,
         array $systemPromptParts = [],
+        ?int $maxStepsOverride = null,
     ): array {
         $startTime = hrtime(true);
 
@@ -212,7 +218,11 @@ class ExecuteAgentAction
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
             $tierConfig = $this->resolveTierConfig->execute($agent);
-            $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input, $systemPromptParts, $tierConfig);
+
+            // Per-member max_steps takes precedence over tier default when provided.
+            $effectiveMaxSteps = $maxStepsOverride ?? $tierConfig['max_steps'];
+
+            $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input, $systemPromptParts, array_merge($tierConfig, ['max_steps' => $effectiveMaxSteps]));
 
             // Tier preference applies only when agent model is set to 'auto' or not set
             $model = ($agent->model !== null && $agent->model !== 'auto')
@@ -231,7 +241,7 @@ class ExecuteAgentAction
                 purpose: 'agent.execute_with_tools',
                 temperature: $tierConfig['temperature'],
                 tools: $tools,
-                maxSteps: $tierConfig['max_steps'],
+                maxSteps: $effectiveMaxSteps,
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
                 workingDirectory: $agent->config['working_directory'] ?? null,
                 enablePromptCaching: true,
