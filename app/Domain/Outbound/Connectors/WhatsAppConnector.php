@@ -57,17 +57,24 @@ class WhatsAppConnector implements OutboundConnectorInterface
                 throw new \InvalidArgumentException('No phone number in target');
             }
 
-            $text = $content['body'] ?? $content['text'] ?? 'No content generated.';
+            // Use template message type when metadata specifies a WhatsApp template.
+            $template = $proposal->metadata['whatsapp_template'] ?? null;
 
-            $payload = [
-                'messaging_product' => 'whatsapp',
-                'to' => $recipientPhone,
-                'type' => 'text',
-                'text' => [
-                    'body' => $text,
-                    'preview_url' => $content['preview_url'] ?? false,
-                ],
-            ];
+            if ($template) {
+                $payload = $this->buildTemplatePayload($recipientPhone, $template);
+            } else {
+                $text = $content['body'] ?? $content['text'] ?? 'No content generated.';
+
+                $payload = [
+                    'messaging_product' => 'whatsapp',
+                    'to' => $recipientPhone,
+                    'type' => 'text',
+                    'text' => [
+                        'body' => $text,
+                        'preview_url' => $content['preview_url'] ?? false,
+                    ],
+                ];
+            }
 
             $response = Http::timeout(15)
                 ->withToken($accessToken)
@@ -103,5 +110,38 @@ class WhatsAppConnector implements OutboundConnectorInterface
     public function supports(string $channel): bool
     {
         return $channel === 'whatsapp';
+    }
+
+    /**
+     * Build a WhatsApp template message payload.
+     *
+     * The $template array must contain at minimum:
+     *   - name: string  — template name registered in Meta Business Manager
+     *   - language: string — language code, e.g. "en_US"
+     * Optionally:
+     *   - components: array — header/body/button parameter components
+     *
+     * @param  array<string, mixed>  $template
+     * @return array<string, mixed>
+     */
+    private function buildTemplatePayload(string $recipientPhone, array $template): array
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $recipientPhone,
+            'type' => 'template',
+            'template' => [
+                'name' => $template['name'],
+                'language' => [
+                    'code' => $template['language'] ?? 'en_US',
+                ],
+            ],
+        ];
+
+        if (! empty($template['components'])) {
+            $payload['template']['components'] = $template['components'];
+        }
+
+        return $payload;
     }
 }
