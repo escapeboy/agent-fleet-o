@@ -4,7 +4,7 @@ namespace App\Mcp\Tools\Integration;
 
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Tool\Enums\ToolStatus;
-use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Models\Tool as ToolModel;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -56,7 +56,7 @@ class ActivepiecesListPiecesTool extends Tool
             }
         }
 
-        $query = Tool::withoutGlobalScopes()
+        $query = ToolModel::withoutGlobalScopes()
             ->whereNotNull('settings')
             ->whereRaw("settings ? 'activepieces_piece_name'");
 
@@ -82,7 +82,7 @@ class ActivepiecesListPiecesTool extends Tool
             ]));
         }
 
-        $pieces = $tools->map(function (Tool $tool): array {
+        $pieces = $tools->map(function (ToolModel $tool): array {
             $settings = $tool->settings ?? [];
 
             return [

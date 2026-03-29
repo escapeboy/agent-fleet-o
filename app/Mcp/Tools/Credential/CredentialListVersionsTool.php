@@ -61,7 +61,7 @@ class CredentialListVersionsTool extends Tool
                 'version_number' => $v->version_number,
                 'note' => $v->note,
                 'created_by' => $v->created_by,
-                'created_at' => $v->created_at?->toIso8601String(),
+                'created_at' => $v->created_at->toIso8601String(),
             ])->values(),
         ]));
     }

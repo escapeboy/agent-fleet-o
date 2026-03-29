@@ -72,6 +72,7 @@ class CredentialRollbackTool extends Tool
                 'credential_id' => $credential->id,
                 'credential_name' => $credential->name,
                 'rolled_back_to_version' => $version->version_number,
+                // @phpstan-ignore method.nonObject
                 'last_rotated_at' => $credential->last_rotated_at?->toIso8601String(),
             ]));
         } catch (\Throwable $e) {

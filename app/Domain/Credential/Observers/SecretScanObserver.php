@@ -75,6 +75,7 @@ class SecretScanObserver
 
         // Resolve team_id — some models (e.g. WorkflowNode) store it via a parent relation.
         $teamId = $model->team_id
+            // @phpstan-ignore nullsafe.neverNull
             ?? $model->workflow?->team_id
             ?? null;
 

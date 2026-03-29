@@ -46,7 +46,9 @@ class SyncActivepiecesToolsAction
             return $cached;
         }
 
-        $baseUrl = rtrim((string) ($integration->getCredentialSecret('base_url') ?? $integration->config['base_url'] ?? ''), '/');
+        /** @var array<string, mixed> $integrationConfig */
+        $integrationConfig = $integration->config;
+        $baseUrl = rtrim((string) ($integration->getCredentialSecret('base_url') ?? $integrationConfig['base_url'] ?? ''), '/');
         $apiKey = (string) ($integration->getCredentialSecret('api_key') ?? '');
 
         if (! $baseUrl) {

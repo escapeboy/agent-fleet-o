@@ -64,8 +64,12 @@ class GenerateImprovedSkillVersionAction
         }
 
         // 3. Build the meta-prompt
-        $originalTemplate = $version->configuration['prompt_template']
-            ?? $skill->configuration['prompt_template']
+        /** @var array<string, mixed> $versionConfig */
+        $versionConfig = $version->configuration;
+        /** @var array<string, mixed> $skillConfig */
+        $skillConfig = $skill->configuration;
+        $originalTemplate = $versionConfig['prompt_template']
+            ?? $skillConfig['prompt_template']
             ?? '';
 
         $metaPrompt = $this->buildMetaPrompt($originalTemplate, $good->all(), $bad->all());

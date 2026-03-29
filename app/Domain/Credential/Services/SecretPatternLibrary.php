@@ -119,7 +119,7 @@ class SecretPatternLibrary
         $findings = [];
 
         foreach ($fields as $fieldName => $text) {
-            if (! is_string($text) || $text === '') {
+            if ($text === '') {
                 continue;
             }
 

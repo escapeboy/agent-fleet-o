@@ -9,7 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Asynchronous secret scanner.
@@ -50,12 +50,12 @@ class CredentialScanJob implements ShouldQueue
         // within the last 24 hours to avoid flooding the audit log on bulk saves.
         $dedupKey = "secret_scan:{$this->subjectType}:{$this->subjectId}:{$this->contentHash}";
 
-        if (Redis::exists($dedupKey)) {
+        if (Cache::has($dedupKey)) {
             return;
         }
 
         // Mark as scanned for 24 hours.
-        Redis::setex($dedupKey, 86400, '1');
+        Cache::put($dedupKey, '1', 86400);
 
         $findings = $library->scanFields($this->fields);
 

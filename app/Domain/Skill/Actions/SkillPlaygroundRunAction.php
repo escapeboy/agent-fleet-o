@@ -43,7 +43,9 @@ class SkillPlaygroundRunAction
         $runId = Str::uuid()->toString();
 
         // Build the rendered user prompt by substituting {{variable}} placeholders
-        $promptTemplate = $skill->configuration['prompt_template'] ?? '';
+        /** @var array<string, mixed> $configuration */
+        $configuration = $skill->configuration;
+        $promptTemplate = $configuration['prompt_template'] ?? '';
         $userPrompt = $this->renderTemplate($promptTemplate, ['input' => $input]);
         $systemPrompt = $skill->system_prompt ?? '';
 
@@ -70,11 +72,11 @@ class SkillPlaygroundRunAction
                     model: $model,
                     systemPrompt: $systemPrompt,
                     userPrompt: $userPrompt,
-                    maxTokens: $skill->configuration['max_tokens'] ?? 2048,
+                    maxTokens: $configuration['max_tokens'] ?? 2048,
                     userId: $userId,
                     teamId: $teamId,
                     purpose: 'playground',
-                    temperature: (float) ($skill->configuration['temperature'] ?? 0.7),
+                    temperature: (float) ($configuration['temperature'] ?? 0.7),
                 ));
 
                 $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
@@ -83,8 +85,8 @@ class SkillPlaygroundRunAction
                 $actualCost = $this->costCalculator->calculate(
                     $provider,
                     $model,
-                    $response->usage->inputTokens,
-                    $response->usage->outputTokens,
+                    $response->usage->promptTokens,
+                    $response->usage->completionTokens,
                 );
                 $this->settleBudget->execute($reservation, $actualCost);
 

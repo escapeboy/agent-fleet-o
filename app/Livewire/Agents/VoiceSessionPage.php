@@ -54,7 +54,7 @@ class VoiceSessionPage extends Component
      * Create a new voice session and return connection info to the browser.
      * The browser's Alpine.js component will use the returned token to connect to LiveKit.
      *
-     * @return array{token: string, livekit_url: string, room_name: string}
+     * @return array{token: string, livekit_url: string, room_name: string}|array{}
      */
     public function startSession(CreateVoiceSessionAction $action): array
     {

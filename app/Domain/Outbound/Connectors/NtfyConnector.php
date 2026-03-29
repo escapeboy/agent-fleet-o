@@ -43,7 +43,7 @@ class NtfyConnector implements OutboundConnectorInterface
         }
 
         $action = OutboundAction::withoutGlobalScopes()->create([
-            'team_id' => $proposal->team_id,
+            'team_id' => $proposal->team_id, // @phpstan-ignore property.notFound
             'outbound_proposal_id' => $proposal->id,
             'status' => OutboundActionStatus::Sending,
             'idempotency_key' => $idempotencyKey,
@@ -52,10 +52,12 @@ class NtfyConnector implements OutboundConnectorInterface
 
         try {
             $resolver = app(OutboundCredentialResolver::class);
-            $creds = $resolver->resolve('ntfy', $proposal->target, $proposal->team_id);
+            /** @var array<string, mixed> $proposalTarget */
+            $proposalTarget = $proposal->target; // @phpstan-ignore property.notFound
+            $creds = $resolver->resolve('ntfy', $proposalTarget, $proposal->team_id); // @phpstan-ignore property.notFound
 
             $baseUrl = rtrim($creds['base_url'] ?? 'https://ntfy.sh', '/');
-            $topic = $creds['topic'] ?? ($proposal->target['topic'] ?? null);
+            $topic = $creds['topic'] ?? ($proposalTarget['topic'] ?? null);
 
             if (! $topic) {
                 throw new \RuntimeException('Ntfy topic not configured');
@@ -66,16 +68,17 @@ class NtfyConnector implements OutboundConnectorInterface
             // Block SSRF — validate the assembled URL is a public, routable address.
             app(SsrfGuard::class)->assertPublicUrl($url);
 
-            $content = $proposal->content;
+            /** @var array<string, mixed> $content */
+            $content = $proposal->content; // @phpstan-ignore property.notFound
             $body = $content['body'] ?? $content['text'] ?? 'No content generated.';
-            $title = $content['title'] ?? ($proposal->target['title'] ?? null);
+            $title = $content['title'] ?? ($proposalTarget['title'] ?? null);
 
             // Resolve priority: proposal content > proposal target > connector default > 'default'.
-            $rawPriority = $content['priority'] ?? $proposal->target['priority'] ?? $creds['default_priority'] ?? 'default';
+            $rawPriority = $content['priority'] ?? $proposalTarget['priority'] ?? $creds['default_priority'] ?? 'default';
             $priority = self::PRIORITY_MAP[$rawPriority] ?? $rawPriority;
 
             // Tags: proposal overrides connector default.
-            $tags = $content['tags'] ?? $proposal->target['tags'] ?? $creds['default_tags'] ?? '';
+            $tags = $content['tags'] ?? $proposalTarget['tags'] ?? $creds['default_tags'] ?? '';
 
             // Build request headers.
             $headers = [

@@ -10,7 +10,6 @@ use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -67,10 +66,6 @@ class SecretScannerTest extends TestCase
         $teamId = $this->team->id;
         $agentId = (string) Str::uuid();
 
-        // Temporarily stub Redis to avoid connection errors in unit context
-        Redis::shouldReceive('exists')->once()->andReturn(false);
-        Redis::shouldReceive('setex')->once();
-
         $job = new CredentialScanJob(
             teamId: $teamId,
             subjectType: 'agent',
@@ -98,16 +93,10 @@ class SecretScannerTest extends TestCase
         $agentId = (string) Str::uuid();
         $hash = sha1('some-content');
 
-        // First call: not cached
-        Redis::shouldReceive('exists')->once()->andReturn(false);
-        Redis::shouldReceive('setex')->once();
-
         $job = new CredentialScanJob($teamId, 'agent', $agentId, ['role' => 'clean'], $hash);
         $job->handle(new SecretPatternLibrary);
 
         // Second call: cached → no audit entries created
-        Redis::shouldReceive('exists')->once()->andReturn(true);
-
         $job2 = new CredentialScanJob($teamId, 'agent', $agentId, ['role' => 'clean'], $hash);
         $job2->handle(new SecretPatternLibrary);
 
@@ -116,9 +105,6 @@ class SecretScannerTest extends TestCase
 
     public function test_clean_text_produces_no_audit_entries(): void
     {
-        Redis::shouldReceive('exists')->once()->andReturn(false);
-        Redis::shouldReceive('setex')->once();
-
         $job = new CredentialScanJob(
             teamId: $this->team->id,
             subjectType: 'skill',
