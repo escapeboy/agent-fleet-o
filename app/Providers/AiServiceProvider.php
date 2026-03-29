@@ -9,6 +9,7 @@ use App\Infrastructure\AI\Gateways\FallbackAiGateway;
 use App\Infrastructure\AI\Gateways\HttpBridgeGateway;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Infrastructure\AI\Gateways\LocalBridgeGateway;
+use App\Infrastructure\AI\Gateways\PortkeyGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\ContextCompaction;
@@ -36,6 +37,15 @@ class AiServiceProvider extends ServiceProvider
         $this->app->singleton(LocalAgentDiscovery::class);
         $this->app->singleton(LocalLlmDiscovery::class);
         $this->app->singleton(LocalLlmUrlValidator::class);
+
+        // Portkey gateway — instantiated per-team via PortkeyGateway constructor.
+        // Named binding for direct resolution when a Portkey credential is available.
+        $this->app->bind('ai.gateway.portkey', function ($app, array $params = []) {
+            return new PortkeyGateway(
+                apiKey: $params['api_key'] ?? '',
+                virtualKey: $params['virtual_key'] ?? null,
+            );
+        });
 
         $this->app->singleton(LocalAgentGateway::class, function ($app) {
             return new LocalAgentGateway(

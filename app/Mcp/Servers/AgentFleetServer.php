@@ -231,6 +231,7 @@ use App\Mcp\Tools\Shared\CustomEndpointManageTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
 use App\Mcp\Tools\Shared\PluginManageTool;
+use App\Mcp\Tools\Shared\PortkeyGatewayTool;
 use App\Mcp\Tools\Shared\PushSubscriptionManageTool;
 use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
@@ -726,13 +727,14 @@ class AgentFleetServer extends Server
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
 
-        // Shared (12)
+        // Shared (13)
         NotificationTool::class,
         TeamGetTool::class,
         TeamUpdateTool::class,
         TeamMembersTool::class,
         LocalLlmTool::class,
         TeamByokCredentialManageTool::class,
+        PortkeyGatewayTool::class,
         CustomEndpointManageTool::class,
         ApiTokenManageTool::class,
         TermsAcceptanceStatusTool::class,
