@@ -384,7 +384,6 @@ class WorkflowBuilderPage extends Component
         }
 
         $activeExperiment = Experiment::query()
-            ->where('team_id', current_team()->id)
             ->whereJsonContains('constraints->workflow_id', $this->workflowId)
             ->whereIn('status', [
                 ExperimentStatus::Executing,
@@ -398,7 +397,6 @@ class WorkflowBuilderPage extends Component
 
         // Fallback to most recent experiment (for showing last run status)
         $experiment = $activeExperiment ?? Experiment::query()
-            ->where('team_id', current_team()->id)
             ->whereJsonContains('constraints->workflow_id', $this->workflowId)
             ->latest()
             ->first();
