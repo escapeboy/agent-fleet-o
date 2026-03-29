@@ -169,7 +169,10 @@ use App\Mcp\Tools\Marketplace\MarketplaceQualityReportTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
+use App\Mcp\Tools\Memory\MemoryListProposalsTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
+use App\Mcp\Tools\Memory\MemoryPromoteTool;
+use App\Mcp\Tools\Memory\MemoryProposeTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
 use App\Mcp\Tools\Memory\MemoryUnifiedSearchTool;
@@ -649,7 +652,7 @@ class AgentFleetServer extends Server
         RagflowKnowledgeGraphBuildTool::class,
         RagflowRaptorBuildTool::class,
 
-        // Memory (8)
+        // Memory (11)
         MemorySearchTool::class,
         MemoryUnifiedSearchTool::class,
         MemoryListRecentTool::class,
@@ -658,6 +661,9 @@ class AgentFleetServer extends Server
         MemoryUploadKnowledgeTool::class,
         MemoryAddTool::class,
         SupabaseProvisionMemoryTool::class,
+        MemoryProposeTool::class,
+        MemoryPromoteTool::class,
+        MemoryListProposalsTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,
