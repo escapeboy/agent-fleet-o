@@ -357,17 +357,24 @@ class RecoverStuckTasks extends Command
                 ->orderByDesc('iteration')
                 ->first();
 
-            $attempts = $stage ? $stage->recovery_attempts + 1 : 1;
-            $stuckDuration = $fresh->updated_at->diffForHumans(now(), true);
-
-            // Update recovery tracking on the stage
             if ($stage) {
+                $attempts = $stage->recovery_attempts + 1;
                 $stage->update([
                     'recovery_attempts' => $attempts,
                     'last_recovery_at' => now(),
                     'recovery_reason' => 'timeout',
                 ]);
+            } else {
+                // No stage record exists (e.g. executing state where bridge was disconnected
+                // before any stage was created). Track attempts in experiment.meta so the
+                // escalation ladder works correctly across repeated invocations.
+                $attempts = (int) ($fresh->meta['recovery_attempts'] ?? 0) + 1;
+                $fresh->withoutTimestamps(function () use ($fresh, $attempts) {
+                    $fresh->update(['meta->recovery_attempts' => $attempts]);
+                });
             }
+
+            $stuckDuration = $fresh->updated_at->diffForHumans(now(), true);
 
             Log::warning('RecoverStuckTasks: Detected stuck experiment', [
                 'experiment_id' => $fresh->id,
@@ -412,13 +419,19 @@ class RecoverStuckTasks extends Command
                 'experiment_id' => $experiment->id,
             ]);
         } elseif ($state === ExperimentStatus::Executing) {
-            // Executing may use playbooks — handled by recoverStuckPlaybookSteps
+            // Executing may use playbooks — handled by recoverStuckPlaybookSteps.
+            // Do NOT touch() here: without a stage record there is nothing to redispatch,
+            // and touching would reset updated_at → the recovery_attempt counter in meta
+            // would never persist long enough to trigger auto-pause.
             Log::debug('RecoverStuckTasks: Executing state handled by recoverStuckPlaybookSteps', [
                 'experiment_id' => $experiment->id,
             ]);
+
+            return;
         }
 
-        // Touch updated_at to reset the timeout clock
+        // Touch updated_at to reset the timeout clock so the re-dispatched job
+        // has a fresh window before being considered stuck again.
         $experiment->touch();
     }
 

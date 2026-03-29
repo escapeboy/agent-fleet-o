@@ -3,9 +3,9 @@
         <div class="grid grid-cols-2 gap-8 md:grid-cols-4">
             @php
                 $stats = $stats ?? [
-                    ['value' => '5', 'label' => 'AI Providers'],
-                    ['value' => '9', 'label' => 'Workflow Node Types'],
-                    ['value' => '120+', 'label' => 'MCP Tools'],
+                    ['value' => '10+', 'label' => 'AI Providers'],
+                    ['value' => '19', 'label' => 'Workflow Node Types'],
+                    ['value' => '350+', 'label' => 'MCP Tools'],
                     ['value' => '100%', 'label' => 'Open Source'],
                 ];
             @endphp

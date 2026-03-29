@@ -36,21 +36,9 @@
             <div :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
                  class="mt-10 flex items-center gap-x-6 transition duration-600 ease-out"
                  style="transition-delay: 450ms">
-<<<<<<< Updated upstream
                 <a href="{{ $ctaHref ?? route('register') }}"
-||||||| constructed merge base
-                <a href="{{ route('register') }}"
-=======
-                <a href="{{ auth()->check() ? route('dashboard') : route('register') }}"
->>>>>>> Stashed changes
                    class="rounded-lg bg-primary-600 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-primary-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
-<<<<<<< Updated upstream
                     {{ $ctaLabel }}
-||||||| constructed merge base
-                    {{ $ctaLabel ?? 'Start Free' }}
-=======
-                    {{ auth()->check() ? 'Go to Dashboard' : ($ctaLabel ?? 'Start Free') }}
->>>>>>> Stashed changes
                 </a>
                 <a href="#how-it-works" class="group rounded text-sm font-semibold leading-6 text-gray-700 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
                     See How It Works <span aria-hidden="true" class="inline-block transition-transform group-hover:translate-x-1">&rarr;</span>
