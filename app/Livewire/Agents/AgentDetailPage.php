@@ -323,6 +323,13 @@ class AgentDetailPage extends Component
             ->where('agent_id', $this->agent->id)
             ->first();
 
+        // Compute average LLM steps over last 5 executions for tool loop warning badge.
+        $avgSteps = AgentExecution::where('agent_id', $this->agent->id)
+            ->where('status', 'completed')
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->avg('llm_steps_count') ?? 0;
+
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
             'tools' => $tools,
@@ -334,6 +341,7 @@ class AgentDetailPage extends Component
             'revisions' => $revisions,
             'runtimeState' => $runtimeState,
             'resolvedProvider' => $resolvedProvider,
+            'avgSteps' => (float) $avgSteps,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }

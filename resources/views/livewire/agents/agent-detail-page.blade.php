@@ -6,6 +6,24 @@
         </div>
     @endif
 
+    {{-- Tool loop warning badge: shown when recent executions average >= warning threshold --}}
+    @if($avgSteps >= config('agent.tool_loop.warning_threshold', 8))
+        <div class="mb-4 flex items-center gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+            <svg class="h-5 w-5 shrink-0 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-yellow-800">Tool Loop Warning</p>
+                <p class="text-xs text-yellow-700">
+                    This agent averaged <strong>{{ number_format($avgSteps, 1) }} LLM steps</strong> over its last 5 executions
+                    (warning threshold: {{ config('agent.tool_loop.warning_threshold', 8) }},
+                    critical: {{ config('agent.tool_loop.critical_threshold', 12) }}).
+                    Consider reviewing the agent's goal and tool configuration.
+                </p>
+            </div>
+        </div>
+    @endif
+
     @if($editing)
         {{-- ====== EDIT MODE ====== --}}
         <div class="rounded-xl border border-primary-200 bg-white p-6">
