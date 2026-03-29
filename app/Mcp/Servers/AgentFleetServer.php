@@ -319,6 +319,10 @@ use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
 use App\Mcp\Tools\Trigger\TriggerRuleListTool;
 use App\Mcp\Tools\Trigger\TriggerRuleTestTool;
 use App\Mcp\Tools\Trigger\TriggerRuleUpdateTool;
+use App\Mcp\Tools\VoiceSession\VoiceSessionCreateTool;
+use App\Mcp\Tools\VoiceSession\VoiceSessionEndTool;
+use App\Mcp\Tools\VoiceSession\VoiceSessionListTool;
+use App\Mcp\Tools\VoiceSession\VoiceSessionTranscriptTool;
 use App\Mcp\Tools\Webhook\WebhookCreateTool;
 use App\Mcp\Tools\Webhook\WebhookDeleteTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
@@ -394,6 +398,7 @@ class AgentFleetServer extends Server
         git_*         Git repository management for agent codebases
         team_*        Members, BYOK LLM keys, API tokens, team settings
         assistant_*   Conversational AI assistant — send messages, manage conversations
+        voice_session_* LiveKit real-time voice sessions — create/list/end/transcript
 
         SEQUENCING — order matters:
         1. Before executing: call budget_check — experiments and crews consume credits
@@ -870,6 +875,12 @@ class AgentFleetServer extends Server
         AdminSecurityOverviewTool::class,
         AdminUserRevokeSessionsTool::class,
         AdminUserSendPasswordResetTool::class,
+
+        // Voice Sessions (4) — LiveKit real-time voice agent sessions
+        VoiceSessionListTool::class,
+        VoiceSessionCreateTool::class,
+        VoiceSessionEndTool::class,
+        VoiceSessionTranscriptTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */
