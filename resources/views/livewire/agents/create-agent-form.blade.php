@@ -17,6 +17,43 @@
             <x-form-textarea wire:model="backstory" label="Backstory (optional)" rows="3" placeholder="Background context for the agent..."
                 toolparamdescription="Background context that shapes the agent's behavior and expertise" />
 
+            {{-- Behavioral Constraint Rules --}}
+            <div
+                x-data="{
+                    templates: @js(collect(config('agent-constraint-templates', []))->map(fn($t) => ['slug' => $t['slug'], 'name' => $t['name'], 'rules' => $t['rules']])->values()->toArray()),
+                    selectedSlug: '',
+                    applyTemplate() {
+                        if (!this.selectedSlug) return;
+                        const tpl = this.templates.find(t => t.slug === this.selectedSlug);
+                        if (tpl) {
+                            $wire.set('personalityBehavioralRules', tpl.rules.join('\n'));
+                        }
+                    }
+                }"
+            >
+                <div class="mb-2 flex items-center justify-between">
+                    <label class="block text-sm font-medium text-gray-700">Behavioral Rules (optional)</label>
+                    <div class="flex items-center gap-2">
+                        <select
+                            x-model="selectedSlug"
+                            x-on:change="applyTemplate()"
+                            class="rounded-lg border border-gray-300 py-1.5 px-3 text-sm focus:border-primary-500 focus:ring-primary-500"
+                        >
+                            <option value="">Load constraint template…</option>
+                            <template x-for="tpl in templates" :key="tpl.slug">
+                                <option :value="tpl.slug" x-text="tpl.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+                <x-form-textarea
+                    wire:model="personalityBehavioralRules"
+                    rows="4"
+                    placeholder="One rule per line. E.g.: Always cite sources when making factual claims."
+                    hint="Rules injected into the agent's system prompt. Use a template above or write your own."
+                />
+            </div>
+
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <x-form-select wire:model.live="provider" label="Provider" toolparamdescription="LLM provider: anthropic, openai, or google">
                     @foreach($providers as $key => $provider)
