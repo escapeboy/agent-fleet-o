@@ -267,7 +267,7 @@
             </div>
             <div class="flex items-center gap-1">
                 {{-- Review Conversation --}}
-                @if($conversationId && count($messages) > 5 && auth()->user()?->currentTeam?->userRole(auth()->user())?->value !== 'viewer')
+                @if($conversationId && count($messages) > 5 && auth()->user()?->currentTeam?->memberRole(auth()->user())?->value !== 'viewer')
                     <button
                         x-data="{ reviewing: false, reviewResult: null }"
                         x-on:click="
