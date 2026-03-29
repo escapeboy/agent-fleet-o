@@ -3,6 +3,7 @@
 namespace App\Domain\Crew\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
@@ -99,6 +100,13 @@ class Crew extends Model
     public function agentCount(): int
     {
         return 2 + $this->workerMembers()->count(); // coordinator + QA + workers
+    }
+
+    public function restructuringProposals(): HasMany
+    {
+        return $this->hasMany(ApprovalRequest::class, 'team_id', 'team_id')
+            ->whereJsonContains('context->type', 'crew_restructuring')
+            ->whereRaw("context->>'crew_id' = ?", [$this->id ?? '']);
     }
 
     /**
