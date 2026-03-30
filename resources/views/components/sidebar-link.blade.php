@@ -76,7 +76,7 @@
     @elseif($icon === 'play')
         <i class="fas fa-play h-5 w-5"></i>
     @elseif($icon === 'sparkles')
-        <i class="fas fa-sparkles h-5 w-5"></i>
+        <i class="fas fa-wand-magic-sparkles h-5 w-5"></i>
     @elseif($icon === 'share')
         <i class="fas fa-share-nodes h-5 w-5"></i>
     @endif
