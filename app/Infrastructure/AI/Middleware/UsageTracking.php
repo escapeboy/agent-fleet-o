@@ -25,7 +25,7 @@ class UsageTracking implements AiMiddlewareInterface
             'agent_id' => $request->agentId,
             'experiment_id' => $request->experimentId,
             'experiment_stage_id' => $request->experimentStageId,
-            'purpose' => $request->purpose,
+            'purpose' => $request->purpose ?? '',
             'provider' => $response->provider,
             'model' => $response->model,
             'input_schema' => $request->outputSchema ? ['name' => $request->outputSchema->name] : null,
