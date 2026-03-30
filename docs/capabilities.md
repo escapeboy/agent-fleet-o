@@ -1,0 +1,298 @@
+# FleetQ — Platform Capabilities for Coding Agents
+
+**Read this before implementing anything.** Many capabilities already exist — check here first to avoid duplicating features.
+
+---
+
+## Web Search — SearXNG
+
+Self-hosted meta-search engine (Google + Bing + DuckDuckGo + Wikipedia). Zero per-query cost.
+
+**Setup** — add to `.env`:
+```
+SEARXNG_URL=http://searxng:8080
+SEARXNG_SECRET_KEY=<random-secret>
+```
+Start the `searxng` Docker service (already defined in `docker-compose.yml`).
+
+**MCP tool**: `searxng_search`
+- `query` (required)
+- `categories` — `general` | `images` | `news` | `science` | `social_media` | `videos`
+- `max_results` — 1–20 (default: 5)
+
+**Code**: `app/Domain/Signal/Connectors/SearxngConnector.php`, `app/Mcp/Tools/Signal/SearxngSearchTool.php`
+
+---
+
+## Signal Connectors (Inbound)
+
+Receive events from external sources as `Signal` records. `app/Domain/Signal/Connectors/`.
+
+| Driver | Type | Purpose |
+|--------|------|---------|
+| `webhook` | Webhook | Generic HTTP webhook receiver |
+| `rss` | Poll | RSS/Atom feed polling |
+| `imap` | Poll | Email inbox polling via IMAP |
+| `api_polling` | Poll | Generic REST API polling |
+| `searxng` | Poll | Search results as signals |
+| `github` | Webhook | GitHub push/PR events |
+| `github_issues` | Poll | GitHub issues & PRs |
+| `github_wiki` | Poll | GitHub Wiki page changes |
+| `jira` | Poll | Jira issue transitions |
+| `linear` | Poll | Linear issue tracking |
+| `notion` | Poll | Notion database/page changes |
+| `confluence` | Poll | Confluence page changes |
+| `sentry` | Poll | Sentry error alerts |
+| `datadog` | Poll | Datadog alert monitoring |
+| `pagerduty` | Poll | PagerDuty incident monitoring |
+| `http_monitor` | Poll | HTTP endpoint uptime/status |
+| `calendar` | Poll | Google Calendar events |
+| `telegram` | Poll | Telegram bot messages |
+| `slack` | Webhook | Slack message events |
+| `discord` | Webhook | Discord message events |
+| `whatsapp` | Webhook | WhatsApp messages |
+| `matrix` | Webhook | Matrix protocol messages |
+| `signal_protocol` | Webhook | Signal encrypted messages |
+| `supabase_webhook` | Webhook | Supabase Realtime events |
+| `clearcue` | Webhook | ClearCue intent scoring signals |
+| `manual` | Manual | User-triggered (no config needed) |
+
+Polling triggered by scheduler: `php artisan connectors:poll [--driver=rss]` (every 15 min).
+
+**MCP tools**: `signal_ingest`, `connector_binding`, `inbound_connector_manage`
+
+---
+
+## Outbound Connectors (Delivery)
+
+Send messages to external platforms. `app/Domain/Outbound/Connectors/`.
+
+| Channel | Required env vars | Purpose |
+|---------|------------------|---------|
+| `email` | `MAIL_*` | Via platform mail driver |
+| `email` (smtp) | per-connector config | Custom SMTP |
+| `telegram` | `TELEGRAM_BOT_TOKEN` | Telegram bot |
+| `slack` | `SLACK_BOT_USER_OAUTH_TOKEN` or `SLACK_WEBHOOK_URL` | Slack channel |
+| `discord` | `DISCORD_BOT_TOKEN` | Discord channel |
+| `webhook` | — | HTTP POST to any URL |
+| `ntfy` | — | Push via ntfy.sh |
+| `teams` | `TEAMS_WEBHOOK_URL` | Microsoft Teams |
+| `google_chat` | `GOOGLE_CHAT_WEBHOOK_URL` | Google Chat |
+| `whatsapp` | `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN` | WhatsApp |
+| `matrix` | — | Matrix room |
+| `signal_protocol` | — | Signal encrypted |
+| `supabase_realtime` | — | Supabase Realtime broadcast |
+| `notification` | — | In-app only |
+| `dummy` | — | No-op (testing) |
+
+**MCP tools**: `connector_config_list`, `connector_config_save`, `connector_config_test`
+
+---
+
+## AI Agents
+
+Configured with role/goal/backstory. Skills and tools can be attached per agent.
+
+**Env vars** (at least one required):
+```
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+GOOGLE_AI_API_KEY=
+LOCAL_AGENTS_ENABLED=true   # Claude Code, Codex — auto-detected, zero cost
+```
+
+**MCP tools**: `agent_list`, `agent_get`, `agent_create`, `agent_update`, `agent_toggle_status`, `agent_delete`, `agent_skill_sync`, `agent_tool_sync`
+
+---
+
+## Skills
+
+Reusable AI skill definitions. Types: `llm` / `connector` / `rule` / `hybrid` / `guardrail`.
+
+**MCP tools**: `skill_list`, `skill_get`, `skill_create`, `skill_update`, `skill_versions`
+
+---
+
+## Tools (MCP Servers & Built-in)
+
+Attach external MCP servers or built-in capabilities to agents.
+
+- **`mcp_stdio`** — local MCP server process
+- **`mcp_http`** — remote MCP server over HTTP
+- **`built_in`** — `bash` / `filesystem` / `browser`
+
+**MCP tools**: `tool_list`, `tool_create`, `tool_discover_mcp`, `tool_import_mcp`
+
+---
+
+## Credentials
+
+Encrypted storage for API keys, OAuth2 tokens, bearer tokens. Auto-injected into agent executions.
+
+**MCP tools**: `credential_list`, `credential_create`, `credential_rotate`, `credential_oauth_initiate`
+
+---
+
+## Workflows (Visual DAG)
+
+Multi-step pipelines with branching, loops, and human approval gates.
+
+**Node types**: `start`, `end`, `agent`, `conditional`, `human_task`, `switch`, `dynamic_fork`, `do_while`
+
+**MCP tools**: `workflow_list`, `workflow_create`, `workflow_save_graph`, `workflow_validate`, `workflow_generate` (AI from natural language), `workflow_estimate_cost`, `workflow_import`, `workflow_export`
+
+---
+
+## Projects
+
+Scheduled or on-demand execution wrappers with budget caps.
+
+**MCP tools**: `project_list`, `project_create`, `project_activate`, `project_trigger_run`
+
+---
+
+## Experiments
+
+Core pipeline with 20-state machine (Draft → Scoring → Planning → Building → Executing → Completed).
+
+**MCP tools**: `experiment_list`, `experiment_create`, `experiment_start`, `experiment_retry`, `experiment_kill`, `experiment_steps`
+
+---
+
+## Memory
+
+Semantic memory store backed by pgvector (1536d HNSW cosine similarity).
+
+**MCP tools**: `memory_search`, `memory_list_recent`, `memory_stats`, `memory_delete`
+
+---
+
+## Knowledge Graph
+
+Entity-relationship facts with vector embeddings for contextual retrieval.
+
+**MCP tools**: `kg_search`, `kg_entity_facts`, `kg_add_fact`
+
+---
+
+## Approvals / Human Tasks
+
+Human-in-the-loop gates. Embedded in workflow nodes or triggered independently.
+
+**MCP tools**: `approval_list`, `approval_approve`, `approval_reject`, `approval_complete_human_task`
+
+---
+
+## Crews (Multi-agent)
+
+Coordinated execution of multiple agents on a shared goal.
+
+**MCP tools**: `crew_list`, `crew_create`, `crew_execute`, `crew_execution_status`
+
+---
+
+## Integrations
+
+OAuth2 integrations with external platforms (GitHub, Slack, Notion, Linear, etc.).
+
+**MCP tools**: `integration_list`, `integration_connect`, `integration_disconnect`, `integration_ping`, `integration_execute`
+
+---
+
+## Triggers
+
+Event-driven rules that automatically launch experiments when signal conditions are met.
+
+**MCP tools**: `trigger_rule_list`, `trigger_rule_create`, `trigger_rule_test`
+
+---
+
+## Git Repositories
+
+Connect git repos for code-aware agent execution.
+
+**MCP tools**: `git_repo_list`, `git_commit`, `git_diff`, `git_branch_list`, `git_pr_create`
+
+---
+
+## Marketplace
+
+Publish and install skills, agents, and workflows.
+
+**MCP tools**: `marketplace_browse`, `marketplace_install`, `marketplace_publish`
+
+---
+
+## Budget & Cost Tracking
+
+1 credit = $0.001 USD. All LLM calls tracked. Reservations use 1.5× multiplier.
+
+**MCP tools**: `budget_summary`, `budget_check`, `budget_forecast`
+
+---
+
+## Chatbots
+
+Deploy conversational chatbot instances with custom knowledge bases.
+
+**MCP tools**: `chatbot_list`, `chatbot_create`, `chatbot_toggle_status`
+
+---
+
+## Voice Sessions (LiveKit)
+
+Real-time voice agent sessions.
+
+**Env vars**: `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`
+
+**MCP tools**: `voice_session_list`, `voice_session_create`
+
+---
+
+## AI Assistant (Platform Chat)
+
+Context-aware chat embedded in the platform. 28 role-gated tools for querying and mutating platform state via natural language.
+
+**MCP tools**: `assistant_send_message`, `assistant_conversation_list`
+
+---
+
+## Optional Docker Services
+
+| Profile | Service | Purpose | Env vars |
+|---------|---------|---------|---------|
+| *(default)* | `searxng` | Web search | `SEARXNG_URL`, `SEARXNG_SECRET_KEY` |
+| `relay` | `relay` | Bridge relay for remote agents | `RELAY_PORT`, `FLEETQ_API_URL` |
+| `browser` | `browserless` | Headless Chrome for browser skills | `BROWSERLESS_TOKEN` |
+| `sandbox` | `bash_sidecar` | Sandboxed code execution | `BASH_SIDECAR_SECRET` |
+
+---
+
+## Key Artisan Commands
+
+```bash
+php artisan app:install              # First-time setup wizard
+php artisan connectors:poll          # Poll all active signal connectors
+php artisan connectors:poll --driver=rss   # Poll specific driver only
+php artisan agents:health-check      # Check all active agents
+php artisan fleet:doctor [--fix]     # System health diagnostics
+php artisan memories:consolidate     # Merge similar agent memories
+php artisan skills:reindex           # Regenerate pgvector embeddings for skills
+php artisan tools:discover           # Auto-discover local MCP servers
+php artisan workflow:import {file}   # Import workflow from JSON/YAML
+php artisan workflow:export {id}     # Export workflow to JSON/YAML
+php artisan system:check-updates     # Check for newer FleetQ version
+```
+
+---
+
+## MCP Server
+
+All features above are accessible programmatically via the MCP server:
+
+```bash
+php artisan mcp:start agent-fleet   # stdio (for Claude Code, Codex)
+# or POST /mcp with Sanctum bearer token (for Cursor, remote clients)
+```
+
+300+ tools across 30+ domains.
