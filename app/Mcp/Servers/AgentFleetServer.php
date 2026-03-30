@@ -274,6 +274,10 @@ use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
 use App\Mcp\Tools\Skill\SkillAnnotateTool;
+use App\Mcp\Tools\Skill\SkillBenchmarkCancelTool;
+use App\Mcp\Tools\Skill\SkillBenchmarkListTool;
+use App\Mcp\Tools\Skill\SkillBenchmarkStartTool;
+use App\Mcp\Tools\Skill\SkillBenchmarkStatusTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
 use App\Mcp\Tools\Skill\SkillDegradationReportTool;
 use App\Mcp\Tools\Skill\SkillDeleteTool;
@@ -519,7 +523,7 @@ class AgentFleetServer extends Server
         WorklogReadTool::class,
         PlanWithKnowledgeTool::class,
 
-        // Skill (15)
+        // Skill (19)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
@@ -538,6 +542,10 @@ class AgentFleetServer extends Server
         SkillPlaygroundTestTool::class,
         SkillAnnotateTool::class,
         SkillGenerateImprovementTool::class,
+        SkillBenchmarkStartTool::class,
+        SkillBenchmarkStatusTool::class,
+        SkillBenchmarkCancelTool::class,
+        SkillBenchmarkListTool::class,
 
         // Tool (19)
         ToolListTool::class,

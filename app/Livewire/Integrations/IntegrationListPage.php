@@ -29,9 +29,14 @@ class IntegrationListPage extends Component
     /** @var array<string, array{type: string, required: bool, label: string, hint?: string}> */
     public array $credentialSchema = [];
 
+    public string $search = '';
+
     public function mount(): void
     {
-        //
+        $autoConnect = request()->query('connect');
+        if ($autoConnect && array_key_exists($autoConnect, config('integrations.drivers', []))) {
+            $this->openConnectForm($autoConnect);
+        }
     }
 
     public function openConnectForm(string $driver): void
@@ -164,7 +169,13 @@ class IntegrationListPage extends Component
             ? Integration::where('team_id', $team->getKey())->withTrashed(false)->get()
             : collect();
 
-        $availableDrivers = config('integrations.drivers', []);
+        $allDrivers = config('integrations.drivers', []);
+        $availableDrivers = $this->search
+            ? array_filter(
+                $allDrivers,
+                fn ($info) => str_contains(strtolower($info['label']), strtolower($this->search)),
+            )
+            : $allDrivers;
 
         return view('livewire.integrations.integration-list-page', [
             'connectedIntegrations' => $connectedIntegrations,

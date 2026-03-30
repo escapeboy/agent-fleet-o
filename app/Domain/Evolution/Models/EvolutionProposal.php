@@ -47,6 +47,8 @@ class EvolutionProposal extends Model
         'confidence_score',
         'reviewed_by',
         'reviewed_at',
+        'complexity_delta',
+        'complexity_penalty_applied',
     ];
 
     protected function casts(): array
@@ -57,6 +59,8 @@ class EvolutionProposal extends Model
             'confidence_score' => 'float',
             'reviewed_at' => 'datetime',
             'trigger' => 'string',
+            'complexity_delta' => 'integer',
+            'complexity_penalty_applied' => 'float',
         ];
     }
 

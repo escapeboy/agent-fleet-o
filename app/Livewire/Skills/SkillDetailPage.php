@@ -2,11 +2,16 @@
 
 namespace App\Livewire\Skills;
 
+use App\Domain\Skill\Actions\CancelSkillBenchmarkAction;
+use App\Domain\Skill\Actions\StartSkillBenchmarkAction;
 use App\Domain\Skill\Actions\UpdateSkillAction;
+use App\Domain\Skill\Enums\BenchmarkStatus;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Enums\SkillType;
+use App\Domain\Skill\Exceptions\BenchmarkAlreadyRunningException;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Models\SkillBenchmark;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Skill\Models\SkillVersion;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -41,6 +46,21 @@ class SkillDetailPage extends Component
     public float $editTemperature = 0.7;
 
     public string $editPromptTemplate = '';
+
+    // Benchmark tab state
+    public string $benchMetricName = 'latency_ms';
+
+    public string $benchMetricDirection = 'maximize';
+
+    public string $benchTestInputs = '[]';
+
+    public int $benchTimeBudget = 3600;
+
+    public int $benchMaxIterations = 50;
+
+    public float $benchComplexityPenalty = 0.01;
+
+    public float $benchImprovementThreshold = 0.0;
 
     public function mount(Skill $skill): void
     {
@@ -122,6 +142,53 @@ class SkillDetailPage extends Component
         $this->redirect(route('skills.index'));
     }
 
+    public function startBenchmark(): void
+    {
+        $this->validate([
+            'benchMetricName' => 'required|string|max:100',
+            'benchMetricDirection' => 'required|in:maximize,minimize',
+            'benchTestInputs' => 'required|json',
+            'benchTimeBudget' => 'required|integer|min:60',
+            'benchMaxIterations' => 'required|integer|min:1|max:500',
+            'benchComplexityPenalty' => 'required|numeric|min:0',
+            'benchImprovementThreshold' => 'required|numeric',
+        ]);
+
+        $testInputs = json_decode($this->benchTestInputs, true);
+
+        try {
+            app(StartSkillBenchmarkAction::class)->execute(
+                skill: $this->skill,
+                userId: auth()->id(),
+                metricName: $this->benchMetricName,
+                testInputs: $testInputs,
+                metricDirection: $this->benchMetricDirection,
+                timeBudgetSeconds: $this->benchTimeBudget,
+                maxIterations: $this->benchMaxIterations,
+                complexityPenalty: $this->benchComplexityPenalty,
+                improvementThreshold: $this->benchImprovementThreshold,
+            );
+        } catch (BenchmarkAlreadyRunningException $e) {
+            session()->flash('benchmark_error', $e->getMessage());
+
+            return;
+        }
+
+        session()->flash('message', 'Benchmark loop started successfully.');
+    }
+
+    public function cancelBenchmark(): void
+    {
+        $activeBenchmark = SkillBenchmark::where('skill_id', $this->skill->id)
+            ->where('status', BenchmarkStatus::Running)
+            ->first();
+
+        if ($activeBenchmark) {
+            app(CancelSkillBenchmarkAction::class)->execute($activeBenchmark);
+            session()->flash('message', 'Benchmark cancellation requested.');
+        }
+    }
+
     /**
      * Refresh the version selector in the Playground tab when a new version is created.
      */
@@ -167,11 +234,28 @@ class SkillDetailPage extends Component
         }
         unset($providerData);
 
+        $benchmarks = SkillBenchmark::where('skill_id', $this->skill->id)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        $activeBenchmark = $benchmarks->firstWhere('status', BenchmarkStatus::Running)
+            ?? $benchmarks->first();
+
+        if ($activeBenchmark) {
+            $activeBenchmark->load('iterationLogs');
+        }
+
+        $benchmarkRunning = $benchmarks->contains('status', BenchmarkStatus::Running);
+
         return view('livewire.skills.skill-detail-page', [
             'versions' => $versions,
             'executions' => $executions,
             'providers' => $providers,
             'resolvedProvider' => $resolvedProvider,
+            'benchmarks' => $benchmarks,
+            'activeBenchmark' => $activeBenchmark,
+            'benchmarkRunning' => $benchmarkRunning,
         ])->layout('layouts.app', ['header' => $this->skill->name]);
     }
 }

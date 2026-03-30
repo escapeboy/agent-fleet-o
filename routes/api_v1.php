@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProviderConfigController;
 use App\Http\Controllers\Api\V1\SignalController;
+use App\Http\Controllers\Api\V1\SkillBenchmarkController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\SshFingerprintController;
 use App\Http\Controllers\Api\V1\TeamController;
@@ -108,6 +109,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Skills
     Route::apiResource('skills', SkillController::class);
     Route::get('/skills/{skill}/versions', [SkillController::class, 'versions']);
+    Route::get('/skills/{skill}/benchmarks', [SkillBenchmarkController::class, 'index']);
+    Route::post('/skills/{skill}/benchmarks', [SkillBenchmarkController::class, 'store']);
+    Route::get('/skills/{skill}/benchmarks/{benchmark}', [SkillBenchmarkController::class, 'show']);
+    Route::delete('/skills/{skill}/benchmarks/{benchmark}', [SkillBenchmarkController::class, 'destroy']);
 
     // Tools
     Route::apiResource('tools', ToolController::class);

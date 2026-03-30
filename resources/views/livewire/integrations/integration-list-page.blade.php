@@ -49,16 +49,24 @@
 
     {{-- Available Drivers Gallery --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 class="mb-4 text-lg font-semibold text-gray-900">Available Integrations</h2>
+        <div class="mb-4 flex items-center justify-between gap-4">
+            <h2 class="text-lg font-semibold text-gray-900">Available Integrations</h2>
+            <input
+                type="search"
+                wire:model.live.debounce.200ms="search"
+                placeholder="Filter integrations…"
+                class="w-56 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none"
+            />
+        </div>
+        @php
+            $authLabels = [
+                'api_key'      => 'API Key',
+                'oauth2'       => 'OAuth 2.0',
+                'webhook_only' => 'Webhook Only',
+                'basic_auth'   => 'Basic Auth',
+            ];
+        @endphp
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            @php
-                $authLabels = [
-                    'api_key'      => 'API Key',
-                    'oauth2'       => 'OAuth 2.0',
-                    'webhook_only' => 'Webhook Only',
-                    'basic_auth'   => 'Basic Auth',
-                ];
-            @endphp
             @foreach($availableDrivers as $slug => $info)
                 <div class="rounded-lg border border-gray-100 p-4 hover:border-primary-200 hover:bg-primary-50">
                     <div class="mb-2 text-2xl">{{ $info['icon'] ?? '🔌' }}</div>
@@ -70,6 +78,9 @@
                     </button>
                 </div>
             @endforeach
+            @if($availableDrivers->isEmpty() ?? count($availableDrivers) === 0)
+                <div class="col-span-full py-8 text-center text-sm text-gray-400">No integrations match "{{ $search }}".</div>
+            @endif
         </div>
     </div>
 
