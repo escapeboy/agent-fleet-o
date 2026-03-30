@@ -27,6 +27,7 @@ class AnalyzeExecutionForEvolutionAction
             teamId: $agent->team_id,
             maxTokens: 2000,
             temperature: 0.3,
+            purpose: 'agent.evolution_analyze',
         ));
 
         $parsed = $this->parseResponse($response->content);
