@@ -125,6 +125,11 @@ class LiveKitIntegrationDriver implements IntegrationDriverInterface
             return false;
         }
 
+        // SSRF guard — reject private/loopback/cloud-metadata addresses
+        if ($this->isPrivateUrl($url)) {
+            return false;
+        }
+
         // Try listing rooms via LiveKit admin API to verify credentials are valid
         try {
             $httpUrl = $this->toHttpUrl($url);
@@ -153,6 +158,10 @@ class LiveKitIntegrationDriver implements IntegrationDriverInterface
             return HealthResult::fail('LiveKit URL, API key or API secret not configured.');
         }
 
+        if ($this->isPrivateUrl($url)) {
+            return HealthResult::fail('LiveKit URL resolves to a private or restricted address.');
+        }
+
         $start = microtime(true);
 
         try {
@@ -173,8 +182,8 @@ class LiveKitIntegrationDriver implements IntegrationDriverInterface
             }
 
             return HealthResult::fail("LiveKit returned HTTP {$response->status()}");
-        } catch (\Throwable $e) {
-            return HealthResult::fail($e->getMessage());
+        } catch (\Throwable) {
+            return HealthResult::fail('Could not reach LiveKit server. Please verify the URL.');
         }
     }
 
@@ -249,14 +258,48 @@ class LiveKitIntegrationDriver implements IntegrationDriverInterface
         return preg_replace('/^wss?:\/\//', 'https://', $url) ?? $url;
     }
 
-    /** Generate an HS256 JWT with admin grants for health checks. */
+    /** Generate an HS256 JWT with minimal grants for health checks (list rooms only). */
     private function generateAdminToken(string $apiKey, string $apiSecret): string
     {
         return $this->buildJwt($apiKey, $apiSecret, 60, [
-            'roomCreate' => true,
             'roomList' => true,
-            'roomAdmin' => true,
         ]);
+    }
+
+    /**
+     * Reject private/loopback/link-local and cloud metadata service URLs (SSRF guard).
+     *
+     * Blocks: 10.x.x.x, 172.16-31.x.x, 192.168.x.x, 127.x.x.x, ::1,
+     * fc/fd (ULA IPv6), link-local (169.254.x.x / fe80::), and the
+     * AWS/Azure/GCP metadata endpoints (169.254.169.254, metadata.google.internal).
+     */
+    private function isPrivateUrl(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (! $host) {
+            return true;
+        }
+
+        // Strip IPv6 brackets
+        $host = trim($host, '[]');
+
+        // Known metadata service hostnames
+        $blockedHosts = ['metadata.google.internal', 'metadata.goog', 'instance-data'];
+        if (in_array(strtolower($host), $blockedHosts, strict: true)) {
+            return true;
+        }
+
+        // Resolve to IP (or use literal IP directly)
+        $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
+
+        if (! filter_var($ip, FILTER_VALIDATE_IP)) {
+            // Could not resolve — block to be safe
+            return true;
+        }
+
+        // Returns false for private/reserved ranges — those are blocked
+        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
     }
 
     /** Generate an HS256 JWT for a room participant. */

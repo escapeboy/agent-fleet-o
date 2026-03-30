@@ -90,15 +90,11 @@ class VoiceSessionController extends Controller
      */
     public function token(Request $request, VoiceSession $voiceSession, GenerateLiveKitTokenAction $action, LiveKitCredentialResolver $resolver): JsonResponse
     {
-        $request->validate([
-            'participant_identity' => ['sometimes', 'string', 'max:255'],
-        ]);
-
         if (! $voiceSession->isOpen()) {
             return response()->json(['message' => 'Session is not open.'], 422);
         }
 
-        $identity = $request->input('participant_identity', 'user-'.$request->user()->id);
+        $identity = 'user-'.$request->user()->id;
         $credentials = $resolver->resolve($request->user()->currentTeam);
 
         try {
@@ -143,6 +139,12 @@ class VoiceSessionController extends Controller
             'role' => ['required', 'string', 'in:user,agent,system'],
             'content' => ['required', 'string', 'max:10000'],
         ]);
+
+        // Verify the worker token was issued for this specific session.
+        $tokenName = $request->user()->currentAccessToken()?->name ?? '';
+        if (! str_ends_with($tokenName, '-'.$voiceSession->id)) {
+            return response()->json(['message' => 'Token is not authorized for this session.'], 403);
+        }
 
         $session = $action->execute(
             session: $voiceSession,

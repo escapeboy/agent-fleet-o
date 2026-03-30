@@ -41,7 +41,7 @@ class GenerateLiveKitTokenAction
             throw VoiceSessionException::missingConfiguration();
         }
 
-        $ttl = (int) ($credentials['token_ttl'] ?? config('livekit.token_ttl', 3600));
+        $ttl = min((int) ($credentials['token_ttl'] ?? config('livekit.token_ttl', 3600)), 86400);
         $now = time();
 
         $header = $this->base64UrlEncode(json_encode([

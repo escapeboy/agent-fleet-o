@@ -118,7 +118,7 @@ class CreateVoiceSessionAction
             $workerToken = SanctumTokenIssuer::create(
                 $user,
                 'voice-worker-'.$session->id,
-                ['*'],
+                ['voice-session:transcript'],
                 now()->addHours(4),
             )->plainTextToken;
 
