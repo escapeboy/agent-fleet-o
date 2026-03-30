@@ -278,10 +278,8 @@
                 @if($agent->goal)
                     <p class="mt-0.5 text-sm text-gray-500">{{ $agent->goal }}</p>
                 @endif
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <div class="flex items-center gap-1.5">
-                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700"
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600"
                         title="Resolved from: {{ match($resolvedProvider['source']) { 'agent' => 'Agent configuration', 'team' => 'Team default', 'platform' => 'Platform settings', 'config' => 'System default', default => $resolvedProvider['source'] } }}">
                         {{ $resolvedProvider['provider'] }}/{{ $resolvedProvider['model'] }}
                     </span>
@@ -307,11 +305,15 @@
                         </span>
                     @endforeach
                 </div>
-                <a href="{{ route('agents.voice', $agent) }}" class="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50" title="Voice Session">
-                    <i class="fa-solid fa-microphone h-4 w-4"></i>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+                <a href="{{ route('agents.voice', $agent) }}"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                    title="Voice Session">
+                    <i class="fa-solid fa-microphone text-xs"></i>
                     Voice
                 </a>
-                <button wire:click="startEdit" class="ml-1 rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Agent">
+                <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Agent">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                 </button>
                 <button wire:click="toggleStatus"
