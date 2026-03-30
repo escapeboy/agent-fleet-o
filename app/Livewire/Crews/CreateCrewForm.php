@@ -63,6 +63,7 @@ class CreateCrewForm extends Component
     public function generateFromPrompt(GenerateCrewFromPromptAction $action): void
     {
         $this->validate(['generatePrompt' => 'required|string|min:10']);
+
         $this->generating = true;
 
         try {

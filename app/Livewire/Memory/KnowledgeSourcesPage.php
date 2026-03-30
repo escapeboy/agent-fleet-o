@@ -34,14 +34,16 @@ class KnowledgeSourcesPage extends Component
 
     public function create(CreateKnowledgeBaseAction $action): void
     {
+        $teamId = auth()->user()->current_team_id;
+
         $this->validate([
             'createName' => 'required|string|min:2|max:255',
             'createDescription' => 'nullable|string|max:1000',
-            'createAgentId' => 'nullable|uuid',
+            'createAgentId' => ['nullable', 'uuid', "exists:agents,id,team_id,{$teamId}"],
         ]);
 
         $action->execute(
-            teamId: auth()->user()->current_team_id,
+            teamId: $teamId,
             name: $this->createName,
             description: $this->createDescription ?: null,
             agentId: $this->createAgentId ?: null,
@@ -53,13 +55,18 @@ class KnowledgeSourcesPage extends Component
 
     public function delete(string $kbId, DeleteKnowledgeBaseAction $action): void
     {
-        $kb = KnowledgeBase::findOrFail($kbId);
+        $kb = KnowledgeBase::where('team_id', auth()->user()->current_team_id)
+            ->findOrFail($kbId);
         $action->execute($kb);
         session()->flash('message', 'Knowledge base deleted.');
     }
 
     public function openIngest(string $kbId): void
     {
+        // Verify ownership before storing the ID
+        KnowledgeBase::where('team_id', auth()->user()->current_team_id)
+            ->findOrFail($kbId);
+
         $this->ingestKbId = $kbId;
         $this->ingestContent = '';
         $this->ingestSourceName = '';
@@ -72,7 +79,8 @@ class KnowledgeSourcesPage extends Component
             'ingestSourceName' => 'nullable|string|max:255',
         ]);
 
-        $kb = KnowledgeBase::findOrFail($this->ingestKbId);
+        $kb = KnowledgeBase::where('team_id', auth()->user()->current_team_id)
+            ->findOrFail($this->ingestKbId);
 
         $action->execute(
             knowledgeBase: $kb,

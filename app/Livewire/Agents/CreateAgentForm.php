@@ -125,7 +125,12 @@ class CreateAgentForm extends Component
 
         $repoIds = array_values($this->gitRepositoryIds);
         if (! empty($repoIds)) {
-            $config['git_repository_ids'] = $repoIds;
+            // Filter to only repos belonging to the current team to prevent cross-tenant references
+            $validRepoIds = GitRepository::where('team_id', $team->id)
+                ->whereIn('id', $repoIds)
+                ->pluck('id')
+                ->all();
+            $config['git_repository_ids'] = $validRepoIds;
         }
 
         // Build personality array from form fields

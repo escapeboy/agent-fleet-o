@@ -3,7 +3,6 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
-use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
@@ -13,6 +12,7 @@ use App\Domain\Agent\Models\AgentConfigRevision;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Models\AgentRuntimeState;
+use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -189,7 +189,12 @@ class AgentDetailPage extends Component
 
         $repoIds = array_values($this->editGitRepositoryIds);
         if (! empty($repoIds)) {
-            $config['git_repository_ids'] = $repoIds;
+            // Filter to only repos belonging to the agent's team to prevent cross-tenant references
+            $validRepoIds = GitRepository::where('team_id', $this->agent->team_id)
+                ->whereIn('id', $repoIds)
+                ->pluck('id')
+                ->all();
+            $config['git_repository_ids'] = $validRepoIds;
         } else {
             unset($config['git_repository_ids']);
         }
