@@ -86,6 +86,9 @@ return [
 
         // Automation platforms
         'activepieces' => ['label' => 'Activepieces', 'auth' => 'api_key',    'poll_frequency' => 0,    'icon' => '🧩'],
+
+        // Voice & real-time communication
+        'livekit' => ['label' => 'LiveKit',            'auth' => 'api_key',    'poll_frequency' => 0,    'icon' => '🎙️'],
     ],
 
     /*

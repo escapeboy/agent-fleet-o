@@ -31,6 +31,8 @@ class AnalyzeExecutionForEvolutionAction
 
         $parsed = $this->parseResponse($response->content);
 
+        $complexityDelta = $this->computeComplexityDelta($agent, $parsed['changes']);
+
         return EvolutionProposal::create([
             'team_id' => $agent->team_id,
             'agent_id' => $agent->id,
@@ -40,6 +42,7 @@ class AnalyzeExecutionForEvolutionAction
             'proposed_changes' => $parsed['changes'],
             'reasoning' => $parsed['reasoning'],
             'confidence_score' => $parsed['confidence'],
+            'complexity_delta' => $complexityDelta,
         ]);
     }
 
@@ -105,6 +108,29 @@ PROMPT;
         }
 
         return implode("\n", $parts);
+    }
+
+    /**
+     * Compute a token-count delta between the proposed text fields and the agent's current text.
+     * Positive = proposed is more complex, negative = simpler.
+     *
+     * @param  array<string, mixed>  $changes
+     */
+    private function computeComplexityDelta(Agent $agent, array $changes): int
+    {
+        $tokenize = fn (string $text): int => count(
+            preg_split('/\s+/', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: [],
+        );
+
+        $currentTokens = $tokenize((string) ($agent->goal ?? ''))
+            + $tokenize((string) ($agent->backstory ?? ''));
+
+        $proposedGoal = (string) ($changes['goal'] ?? $agent->goal ?? '');
+        $proposedBackstory = (string) ($changes['backstory'] ?? $agent->backstory ?? '');
+
+        $proposedTokens = $tokenize($proposedGoal) + $tokenize($proposedBackstory);
+
+        return $proposedTokens - $currentTokens;
     }
 
     private function parseResponse(string $content): array

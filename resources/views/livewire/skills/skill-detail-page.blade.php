@@ -147,7 +147,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'versions' => 'Versions', 'executions' => 'Executions', 'playground' => 'Playground'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'versions' => 'Versions', 'executions' => 'Executions', 'playground' => 'Playground', 'benchmark' => 'Benchmark'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -312,6 +312,190 @@
                     <p class="text-sm text-gray-500">No versions found. Save the skill configuration first to create a version.</p>
                 </div>
             @endif
+
+        @elseif($activeTab === 'benchmark')
+            {{-- ====== BENCHMARK TAB ====== --}}
+            <div class="space-y-6">
+
+                {{-- Start benchmark form --}}
+                @if(!$benchmarkRunning)
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <h3 class="mb-4 text-sm font-semibold text-gray-700">Start Improvement Loop</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <x-form-input wire:model="benchMetricName" label="Metric Name"
+                                hint='e.g. latency_ms, output_length, json:score, regex:/(\d+\.\d+)/'
+                                :error="$errors->first('benchMetricName')" />
+                            <x-form-select wire:model="benchMetricDirection" label="Direction">
+                                <option value="maximize">Maximize (higher is better)</option>
+                                <option value="minimize">Minimize (lower is better)</option>
+                            </x-form-select>
+                        </div>
+                        <x-form-textarea wire:model="benchTestInputs" label="Test Inputs (JSON array)"
+                            rows="3" mono hint='e.g. [{"text": "hello world"}]'
+                            :error="$errors->first('benchTestInputs')" />
+                        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                            <x-form-input wire:model.number="benchTimeBudget" label="Time Budget (s)" type="number" min="60" />
+                            <x-form-input wire:model.number="benchMaxIterations" label="Max Iterations" type="number" min="1" max="500" />
+                            <x-form-input wire:model.number="benchComplexityPenalty" label="Complexity Penalty" type="number" step="0.001" min="0" />
+                            <x-form-input wire:model.number="benchImprovementThreshold" label="Min Improvement" type="number" step="0.001" />
+                        </div>
+                        <div class="flex justify-end border-t border-gray-100 pt-4">
+                            <button wire:click="startBenchmark" wire:loading.attr="disabled"
+                                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
+                                <span wire:loading.remove wire:target="startBenchmark">Start Loop</span>
+                                <span wire:loading wire:target="startBenchmark">Starting…</span>
+                            </button>
+                        </div>
+                        @if(session()->has('benchmark_error'))
+                            <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('benchmark_error') }}</div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
+                {{-- Active benchmark status --}}
+                @if($activeBenchmark)
+                <div class="rounded-xl border border-primary-200 bg-primary-50 p-5">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-primary-800">
+                                    {{ $activeBenchmark->metric_name }} ({{ $activeBenchmark->metric_direction }})
+                                </span>
+                                <x-status-badge :status="$activeBenchmark->status->value" />
+                            </div>
+                            <div class="mt-1 text-xs text-primary-600">
+                                Iteration {{ $activeBenchmark->iteration_count }} / {{ $activeBenchmark->max_iterations }}
+                                &middot; {{ $activeBenchmark->elapsedSeconds() }}s / {{ $activeBenchmark->time_budget_seconds }}s
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xl font-bold text-primary-900">
+                                @if($activeBenchmark->best_value !== null)
+                                    {{ number_format($activeBenchmark->best_value, 4) }}
+                                    @if($activeBenchmark->improvementPercent() != 0)
+                                        <span class="text-sm font-normal {{ $activeBenchmark->improvementPercent() > 0 ? 'text-green-600' : 'text-red-600' }}">
+                                            ({{ $activeBenchmark->improvementPercent() > 0 ? '+' : '' }}{{ $activeBenchmark->improvementPercent() }}%)
+                                        </span>
+                                    @endif
+                                @else
+                                    —
+                                @endif
+                            </div>
+                            <div class="text-xs text-primary-600">Best value (baseline: {{ number_format((float)$activeBenchmark->baseline_value, 4) }})</div>
+                        </div>
+                    </div>
+                    @if($activeBenchmark->isRunning())
+                    <div class="mt-3 flex justify-end">
+                        <button wire:click="cancelBenchmark" wire:loading.attr="disabled"
+                            class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">
+                            Cancel Loop
+                        </button>
+                    </div>
+                    @endif
+                </div>
+                @endif
+
+                {{-- Benchmark history --}}
+                @if($benchmarks->isNotEmpty())
+                <div class="rounded-xl border border-gray-200 bg-white">
+                    <div class="border-b border-gray-200 px-5 py-3">
+                        <h3 class="text-sm font-semibold text-gray-700">Benchmark History</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-100 bg-gray-50 text-left text-xs font-medium text-gray-500">
+                                <th class="px-4 py-3">Metric</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Iterations</th>
+                                <th class="px-4 py-3">Baseline</th>
+                                <th class="px-4 py-3">Best</th>
+                                <th class="px-4 py-3">Improvement</th>
+                                <th class="px-4 py-3">Started</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($benchmarks as $b)
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $b->metric_name }}</td>
+                                <td class="px-4 py-3"><x-status-badge :status="$b->status->value" /></td>
+                                <td class="px-4 py-3 text-gray-600">{{ $b->iteration_count }} / {{ $b->max_iterations }}</td>
+                                <td class="px-4 py-3 text-gray-600">{{ $b->baseline_value !== null ? number_format($b->baseline_value, 4) : '—' }}</td>
+                                <td class="px-4 py-3 text-gray-600">{{ $b->best_value !== null ? number_format($b->best_value, 4) : '—' }}</td>
+                                <td class="px-4 py-3">
+                                    @if($b->improvementPercent() != 0)
+                                        <span class="{{ $b->improvementPercent() > 0 ? 'text-green-600' : 'text-red-600' }} font-medium">
+                                            {{ $b->improvementPercent() > 0 ? '+' : '' }}{{ $b->improvementPercent() }}%
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400">0%</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-gray-400 text-xs">{{ $b->started_at?->diffForHumans() ?? '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+
+                {{-- Iteration log for active/selected benchmark --}}
+                @if($activeBenchmark && $activeBenchmark->iterationLogs->isNotEmpty())
+                <div class="rounded-xl border border-gray-200 bg-white">
+                    <div class="border-b border-gray-200 px-5 py-3">
+                        <h3 class="text-sm font-semibold text-gray-700">Iteration Log (current benchmark)</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-100 bg-gray-50 text-left text-xs font-medium text-gray-500">
+                                <th class="px-4 py-3">#</th>
+                                <th class="px-4 py-3">Outcome</th>
+                                <th class="px-4 py-3">Metric</th>
+                                <th class="px-4 py-3">Eff. Improvement</th>
+                                <th class="px-4 py-3">Complexity Δ</th>
+                                <th class="px-4 py-3">Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($activeBenchmark->iterationLogs->sortByDesc('iteration_number')->take(20) as $log)
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-gray-500">{{ $log->iteration_number }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                                        {{ match($log->outcome->value) {
+                                            'keep' => 'bg-green-100 text-green-700',
+                                            'discard' => 'bg-yellow-100 text-yellow-700',
+                                            'crash', 'timeout' => 'bg-red-100 text-red-700',
+                                            default => 'bg-gray-100 text-gray-700',
+                                        } }}">
+                                        {{ $log->outcome->label() }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $log->metric_value !== null ? number_format($log->metric_value, 4) : '—' }}</td>
+                                <td class="px-4 py-3 font-mono text-xs {{ ($log->effective_improvement ?? 0) > 0 ? 'text-green-600' : 'text-gray-500' }}">
+                                    {{ $log->effective_improvement !== null ? number_format($log->effective_improvement, 4) : '—' }}
+                                </td>
+                                <td class="px-4 py-3 font-mono text-xs {{ ($log->complexity_delta ?? 0) > 0 ? 'text-orange-500' : 'text-gray-500' }}">
+                                    {{ $log->complexity_delta !== null ? (($log->complexity_delta > 0 ? '+' : '').$log->complexity_delta) : '—' }}
+                                </td>
+                                <td class="px-4 py-3 text-gray-400 text-xs">{{ $log->duration_ms !== null ? $log->duration_ms.'ms' : '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+                @endif
+
+                @else
+                    <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center">
+                        <p class="text-sm text-gray-400">No benchmarks yet. Start a loop above to begin optimising this skill.</p>
+                    </div>
+                @endif
+            </div>
         @endif
     @endif
 

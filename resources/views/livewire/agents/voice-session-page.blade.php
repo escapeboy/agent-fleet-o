@@ -32,7 +32,7 @@
                     </p>
                     <div class="mt-4 flex items-center gap-3">
                         <a
-                            href="{{ route('integrations.index') }}"
+                            href="{{ route('integrations.index', ['connect' => 'livekit']) }}"
                             class="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
                         >
                             Connect LiveKit
@@ -133,7 +133,7 @@
                         The voice worker handles STT → LLM → TTS. If no response is heard,
                         ensure the voice worker is running and connected to this LiveKit server.
                     </p>
-                    <a href="{{ route('integrations.index') }}" class="mt-2 inline-block text-xs text-primary-600 hover:text-primary-700">
+                    <a href="{{ route('integrations.index', ['connect' => 'livekit']) }}" class="mt-2 inline-block text-xs text-primary-600 hover:text-primary-700">
                         Manage LiveKit integration &rarr;
                     </a>
                 </div>
