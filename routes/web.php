@@ -256,6 +256,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
+    Route::get('/knowledge', \App\Livewire\Memory\KnowledgeSourcesPage::class)->name('knowledge.index');
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
 
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');

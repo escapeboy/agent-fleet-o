@@ -3,6 +3,7 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
+use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
@@ -63,6 +64,9 @@ class AgentDetailPage extends Component
 
     public string $editFederationGroupId = '';
 
+    /** @var array<string> */
+    public array $editGitRepositoryIds = [];
+
     public function mount(Agent $agent): void
     {
         $this->agent = $agent;
@@ -100,6 +104,7 @@ class AgentDetailPage extends Component
         $this->editToolIds = $this->agent->tools()->pluck('tools.id')->toArray();
         $this->editUseFederation = (bool) ($this->agent->config['use_tool_federation'] ?? false);
         $this->editFederationGroupId = $this->agent->config['tool_federation_group_id'] ?? '';
+        $this->editGitRepositoryIds = $this->agent->config['git_repository_ids'] ?? [];
         $this->editing = true;
     }
 
@@ -138,6 +143,15 @@ class AgentDetailPage extends Component
         }
     }
 
+    public function toggleGitRepository(string $repoId): void
+    {
+        if (in_array($repoId, $this->editGitRepositoryIds)) {
+            $this->editGitRepositoryIds = array_values(array_diff($this->editGitRepositoryIds, [$repoId]));
+        } else {
+            $this->editGitRepositoryIds[] = $repoId;
+        }
+    }
+
     public function save(): void
     {
         $this->validate([
@@ -171,6 +185,13 @@ class AgentDetailPage extends Component
             }
         } else {
             unset($config['use_tool_federation'], $config['tool_federation_group_id']);
+        }
+
+        $repoIds = array_values($this->editGitRepositoryIds);
+        if (! empty($repoIds)) {
+            $config['git_repository_ids'] = $repoIds;
+        } else {
+            unset($config['git_repository_ids']);
         }
 
         $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");
@@ -365,6 +386,12 @@ class AgentDetailPage extends Component
             ->limit(5)
             ->avg('llm_steps_count') ?? 0;
 
+        $teamId = auth()->user()->current_team_id;
+        $availableGitRepositories = GitRepository::where('team_id', $teamId)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
             'tools' => $tools,
@@ -377,6 +404,7 @@ class AgentDetailPage extends Component
             'runtimeState' => $runtimeState,
             'resolvedProvider' => $resolvedProvider,
             'avgSteps' => (float) $avgSteps,
+            'availableGitRepositories' => $availableGitRepositories,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }
