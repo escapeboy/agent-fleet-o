@@ -1,5 +1,7 @@
 # FleetQ - Community Edition
 
+> **Coding agents**: Before implementing anything, read [`docs/capabilities.md`](docs/capabilities.md) — it lists all existing features (signal connectors, outbound channels, MCP tools, optional Docker services) to prevent duplicating work that already exists.
+
 ## Stack
 
 - **Framework:** Laravel 12 (PHP 8.4)
