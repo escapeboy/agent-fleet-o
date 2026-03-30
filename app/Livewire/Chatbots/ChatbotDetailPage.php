@@ -7,7 +7,9 @@ use App\Domain\Chatbot\Actions\DeleteChatbotAction;
 use App\Domain\Chatbot\Actions\RevokeChatbotTokenAction;
 use App\Domain\Chatbot\Actions\ToggleChatbotStatusAction;
 use App\Domain\Chatbot\Actions\UpdateChatbotAction;
+use App\Domain\Chatbot\Enums\ChannelType;
 use App\Domain\Chatbot\Models\Chatbot;
+use App\Domain\Chatbot\Models\ChatbotChannel;
 use App\Domain\Chatbot\Models\ChatbotToken;
 use App\Domain\Workflow\Models\Workflow;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -48,6 +50,15 @@ class ChatbotDetailPage extends Component
     public string $newTokenName = 'Default';
 
     public string $generatedToken = '';
+
+    // Telegram channel
+    public bool $showTelegramForm = false;
+
+    public string $telegramBotToken = '';
+
+    public string $telegramWebhookSecret = '';
+
+    public ?string $editingChannelId = null;
 
     public function mount(Chatbot $chatbot): void
     {
@@ -141,6 +152,79 @@ class ChatbotDetailPage extends Component
 
         $this->chatbot->refresh();
         session()->flash('message', 'Token revoked.');
+    }
+
+    public function startTelegramEdit(?string $channelId = null): void
+    {
+        if ($channelId) {
+            $channel = ChatbotChannel::where('id', $channelId)
+                ->where('chatbot_id', $this->chatbot->id)
+                ->firstOrFail();
+            $this->telegramBotToken = $channel->config['bot_token'] ?? '';
+            $this->telegramWebhookSecret = $channel->config['webhook_secret'] ?? '';
+            $this->editingChannelId = $channelId;
+        } else {
+            $this->telegramBotToken = '';
+            $this->telegramWebhookSecret = '';
+            $this->editingChannelId = null;
+        }
+        $this->showTelegramForm = true;
+    }
+
+    public function cancelTelegramForm(): void
+    {
+        $this->showTelegramForm = false;
+        $this->telegramBotToken = '';
+        $this->telegramWebhookSecret = '';
+        $this->editingChannelId = null;
+    }
+
+    public function saveTelegramChannel(): void
+    {
+        $this->validate([
+            'telegramBotToken' => 'required|string|min:10',
+            'telegramWebhookSecret' => 'nullable|string|max:256',
+        ]);
+
+        $config = ['bot_token' => trim($this->telegramBotToken)];
+        if ($this->telegramWebhookSecret !== '') {
+            $config['webhook_secret'] = $this->telegramWebhookSecret;
+        }
+
+        if ($this->editingChannelId) {
+            ChatbotChannel::where('id', $this->editingChannelId)
+                ->where('chatbot_id', $this->chatbot->id)
+                ->update(['config' => $config]);
+        } else {
+            ChatbotChannel::create([
+                'chatbot_id' => $this->chatbot->id,
+                'channel_type' => ChannelType::Telegram,
+                'config' => $config,
+                'is_active' => true,
+            ]);
+        }
+
+        $this->chatbot->refresh();
+        $this->cancelTelegramForm();
+        session()->flash('message', 'Telegram channel saved.');
+    }
+
+    public function toggleTelegramChannel(string $channelId): void
+    {
+        $channel = ChatbotChannel::where('id', $channelId)
+            ->where('chatbot_id', $this->chatbot->id)
+            ->firstOrFail();
+        $channel->update(['is_active' => ! $channel->is_active]);
+        $this->chatbot->refresh();
+    }
+
+    public function deleteTelegramChannel(string $channelId): void
+    {
+        ChatbotChannel::where('id', $channelId)
+            ->where('chatbot_id', $this->chatbot->id)
+            ->delete();
+        $this->chatbot->refresh();
+        session()->flash('message', 'Telegram channel removed.');
     }
 
     public function delete(): void

@@ -304,8 +304,129 @@
 
     {{-- Channels Tab --}}
     @elseif($activeTab === 'channels')
-        <div class="rounded-xl border border-gray-200 bg-white p-6">
-            <p class="text-sm text-gray-500">Telegram and Slack channels will be available in Phase 4. Web Widget and REST API are available now — see the Widget tab.</p>
+        @php
+            $telegramChannels = $channels->filter(fn($c) => $c->channel_type->value === 'telegram');
+            $activeToken = $tokens->first(fn($t) => !$t->revoked_at && (!$t->expires_at || $t->expires_at->isFuture()));
+            $webhookBase = url('/api/chatbot/telegram');
+        @endphp
+
+        <div class="space-y-6">
+            {{-- Telegram Section --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900">Telegram</h3>
+                        <p class="mt-0.5 text-xs text-gray-500">Connect a Telegram bot to this chatbot. Each bot token maps to one chatbot.</p>
+                    </div>
+                    @if(!$showTelegramForm)
+                        <button wire:click="startTelegramEdit"
+                                class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                            Add Telegram Bot
+                        </button>
+                    @endif
+                </div>
+
+                {{-- Add / Edit form --}}
+                @if($showTelegramForm)
+                    <div class="rounded-lg border border-primary-200 bg-primary-50 p-4 space-y-3">
+                        <h4 class="text-sm font-semibold text-primary-900">
+                            {{ $editingChannelId ? 'Edit Telegram Bot' : 'Add Telegram Bot' }}
+                        </h4>
+
+                        <x-form-input
+                            wire:model="telegramBotToken"
+                            label="Bot Token"
+                            placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                            hint="From @BotFather → /newbot → token"
+                            :error="$errors->first('telegramBotToken')" />
+
+                        <x-form-input
+                            wire:model="telegramWebhookSecret"
+                            label="Webhook Secret (optional)"
+                            placeholder="Leave blank to skip verification"
+                            hint="A secret string Telegram will send in X-Telegram-Bot-Api-Secret-Token header." />
+
+                        <div class="flex gap-2 pt-1">
+                            <button wire:click="saveTelegramChannel"
+                                    class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                                Save
+                            </button>
+                            <button wire:click="cancelTelegramForm"
+                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Existing Telegram channels --}}
+                @if($telegramChannels->isNotEmpty())
+                    <div class="overflow-hidden rounded-lg border border-gray-200">
+                        <table class="w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Bot Token (masked)</th>
+                                    <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Webhook URL</th>
+                                    <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                                    <th class="px-4 py-2.5"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 bg-white">
+                                @foreach($telegramChannels as $channel)
+                                    @php
+                                        $rawToken = $channel->config['bot_token'] ?? '';
+                                        $maskedToken = strlen($rawToken) > 12
+                                            ? substr($rawToken, 0, 10) . '...' . substr($rawToken, -4)
+                                            : '—';
+                                    @endphp
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 font-mono text-sm text-gray-700">{{ $maskedToken }}</td>
+                                        <td class="px-4 py-3">
+                                            @if($activeToken)
+                                                <code class="break-all rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+                                                    {{ $webhookBase }}/{{ $activeToken->token_prefix }}
+                                                </code>
+                                            @else
+                                                <span class="text-xs text-amber-600">Generate an API token first</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="rounded-full px-2 py-0.5 text-xs font-medium
+                                                {{ $channel->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
+                                                {{ $channel->is_active ? 'Active' : 'Inactive' }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right space-x-3">
+                                            <button wire:click="startTelegramEdit('{{ $channel->id }}')"
+                                                    class="text-xs text-primary-600 hover:text-primary-800">Edit</button>
+                                            <button wire:click="toggleTelegramChannel('{{ $channel->id }}')"
+                                                    class="text-xs text-gray-500 hover:text-gray-700">
+                                                {{ $channel->is_active ? 'Disable' : 'Enable' }}
+                                            </button>
+                                            <button wire:click="deleteTelegramChannel('{{ $channel->id }}')"
+                                                    wire:confirm="Remove this Telegram channel?"
+                                                    class="text-xs text-red-600 hover:text-red-800">Remove</button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @elseif(!$showTelegramForm)
+                    <p class="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-400">No Telegram bots connected yet.</p>
+                @endif
+
+                {{-- Webhook registration instructions --}}
+                @if($activeToken && $telegramChannels->isNotEmpty())
+                    <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-2">
+                        <p class="text-xs font-semibold text-blue-800">Register webhook with Telegram</p>
+                        <p class="text-xs text-blue-700">Run this once after saving your bot token (replace <code class="font-mono">BOT_TOKEN</code>):</p>
+                        <pre class="overflow-x-auto rounded bg-blue-900 px-3 py-2 text-xs text-blue-100 font-mono leading-relaxed">curl -X POST "https://api.telegram.org/botBOT_TOKEN/setWebhook" \
+     -H "Content-Type: application/json" \
+     -d '{"url": "{{ $webhookBase }}/{{ $activeToken->token_prefix }}"}'</pre>
+                    </div>
+                @endif
+            </div>
         </div>
 
     {{-- Widget Tab --}}
