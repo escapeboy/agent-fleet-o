@@ -195,6 +195,18 @@ services:
     profiles:
       - relay
 
+  searxng:
+    image: ghcr.io/searxng/searxng:latest
+    restart: unless-stopped
+    volumes:
+      - ./docker/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - SEARXNG_SECRET=${SEARXNG_SECRET_KEY:-agent-fleet-searxng-dev-key}
+    networks:
+      - agent-fleet-open
+    profiles:
+      - search
+
   browserless:
     image: browserless/chrome:1-chrome-stable
     restart: unless-stopped
