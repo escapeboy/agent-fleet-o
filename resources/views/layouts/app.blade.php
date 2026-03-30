@@ -58,7 +58,7 @@
         </svg>
         You're offline — some features are unavailable. Changes will sync when you reconnect.
     </div>
-    <div class="flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
+    <div class="flex h-screen overflow-hidden" x-data="{ sidebarOpen: false, nav: null }" @keydown.escape.window="sidebarOpen = false; nav = null">
         {{-- Mobile overlay backdrop --}}
         <div x-show="sidebarOpen"
              x-transition:enter="transition-opacity ease-linear duration-200"
