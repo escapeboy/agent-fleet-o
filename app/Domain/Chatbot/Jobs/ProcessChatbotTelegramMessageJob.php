@@ -6,6 +6,7 @@ use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotChannel;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use App\Domain\Chatbot\Services\ChatbotResponseService;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Telegram\Actions\SendTelegramReplyAction;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -75,11 +76,14 @@ class ProcessChatbotTelegramMessageJob implements ShouldQueue
         }
 
         try {
+            $team = Team::find($chatbot->team_id);
+            $actorUserId = $team?->owner_id ?? $chatbot->team_id;
+
             $result = $responseService->handle(
                 chatbot: $chatbot,
                 session: $session,
                 userText: $this->text,
-                actorUserId: $chatbot->team_id, // use team_id as actor for budget tracking
+                actorUserId: $actorUserId,
             );
         } catch (\Throwable $e) {
             Log::error('ProcessChatbotTelegramMessageJob: response error', [
