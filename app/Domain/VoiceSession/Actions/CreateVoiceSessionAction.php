@@ -8,6 +8,8 @@ use App\Domain\VoiceSession\Enums\VoiceSessionStatus;
 use App\Domain\VoiceSession\Exceptions\VoiceSessionException;
 use App\Domain\VoiceSession\Models\VoiceSession;
 use App\Domain\VoiceSession\Services\LiveKitCredentialResolver;
+use App\Infrastructure\Auth\SanctumTokenIssuer;
+use App\Models\User;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 
@@ -71,7 +73,7 @@ class CreateVoiceSessionAction
             credentials: $credentials,
         );
 
-        $this->dispatchWorkerJob($session, $agentId, $credentials, $teamId);
+        $this->dispatchWorkerJob($session, $agentId, $credentials, $createdBy);
 
         return [
             'session' => $session,
@@ -94,22 +96,29 @@ class CreateVoiceSessionAction
         VoiceSession $session,
         string $agentId,
         array $credentials,
-        string $teamId,
+        string $createdBy,
     ): void {
         if (! config('livekit.worker_dispatch_enabled', false)) {
             return;
         }
 
         try {
-            /** @var Agent $agent */
             $agent = Agent::find($agentId);
+            $user = User::find($createdBy);
 
-            // Generate a short-lived Sanctum token for the worker to POST transcripts
-            /** @var Team $team */
-            $team = Team::find($teamId);
-            $workerToken = $team->createToken(
+            if (! $user) {
+                logger()->warning('Voice worker dispatch: user not found.', ['user_id' => $createdBy]);
+
+                return;
+            }
+
+            // Issue a short-lived Sanctum token for the worker to POST transcripts.
+            // The User model uses Passport's HasApiTokens, so we use SanctumTokenIssuer
+            // instead of the standard $user->createToken() which creates Passport tokens.
+            $workerToken = SanctumTokenIssuer::create(
+                $user,
                 'voice-worker-'.$session->id,
-                ['voice-session'],
+                ['*'],
                 now()->addHours(4),
             )->plainTextToken;
 
