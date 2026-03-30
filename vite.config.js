@@ -21,7 +21,7 @@ export default defineConfig({
         }),
     ],
     server: {
-        origin: 'http://localhost:5174',
+        origin: process.env.VITE_DEV_SERVER_URL || 'http://localhost:5174',
         cors: true,
         watch: {
             ignored: ['**/storage/framework/views/**'],

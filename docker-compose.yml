@@ -145,10 +145,7 @@ services:
       - agent-fleet-open
 
   reverb:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-      target: development
+    image: agent-fleet-open-app
     restart: unless-stopped
     working_dir: /var/www
     command: php artisan reverb:start --host=0.0.0.0 --port=8080
