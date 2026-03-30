@@ -634,6 +634,25 @@ class CrewOrchestrator
         };
     }
 
+    /**
+     * Filter shared context down to only the keys permitted for a given crew member.
+     *
+     * When context_scope is null (or empty) the member receives the full context — this
+     * preserves backwards-compatible behaviour for all existing crews.
+     *
+     * @param  array<string, mixed>  $context  Full shared execution context
+     * @param  string[]|null  $contextScope  Allowlisted top-level context keys, or null for unrestricted
+     * @return array<string, mixed>
+     */
+    public function filterContextForMember(array $context, ?array $contextScope): array
+    {
+        if (empty($contextScope)) {
+            return $context; // null = full context (backwards compatible)
+        }
+
+        return array_intersect_key($context, array_flip($contextScope));
+    }
+
     private function failExecution(CrewExecution $execution, string $error): void
     {
         $execution->update([

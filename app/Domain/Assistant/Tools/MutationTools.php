@@ -9,6 +9,8 @@ use App\Domain\Approval\Actions\RejectAction;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Crew\Actions\CreateCrewAction;
 use App\Domain\Crew\Actions\ExecuteCrewAction;
+use App\Domain\Crew\Actions\UpdateCrewAction;
+use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Email\Actions\CreateEmailTemplateAction;
@@ -65,6 +67,7 @@ class MutationTools
             self::createProject(),
             self::createAgent(),
             self::createCrew(),
+            self::addAgentToCrew(),
             self::executeCrew(),
             self::createSkill(),
             self::updateSkill(),
@@ -204,6 +207,52 @@ class MutationTools
                         'crew_id' => $crew->id,
                         'name' => $crew->name,
                         'status' => $crew->status->value,
+                        'url' => route('crews.show', $crew),
+                    ]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
+    }
+
+    private static function addAgentToCrew(): PrismToolObject
+    {
+        return PrismTool::as('add_agent_to_crew')
+            ->for('Add one or more worker agents to an existing crew. Existing workers are preserved unless replaced.')
+            ->withStringParameter('crew_id', 'The crew UUID', required: true)
+            ->withStringParameter('agent_id', 'UUID of the agent to add as a worker', required: true)
+            ->using(function (string $crew_id, string $agent_id) {
+                $crew = Crew::find($crew_id);
+                if (! $crew) {
+                    return json_encode(['error' => 'Crew not found']);
+                }
+
+                // Verify agent belongs to the same team (TeamScope already guards crew, but agent_id
+                // is supplied as a raw UUID from LLM output — must be validated explicitly).
+                $agentExists = Agent::where('id', $agent_id)->exists();
+                if (! $agentExists) {
+                    return json_encode(['error' => 'Agent not found']);
+                }
+
+                try {
+                    // Merge the new agent into the existing worker list (deduplication included)
+                    $existingWorkerIds = $crew->members()
+                        ->where('role', CrewMemberRole::Worker->value)
+                        ->pluck('agent_id')
+                        ->toArray();
+
+                    $workerIds = array_unique(array_merge($existingWorkerIds, [$agent_id]));
+
+                    app(UpdateCrewAction::class)->execute(
+                        crew: $crew,
+                        workerAgentIds: $workerIds,
+                    );
+
+                    return json_encode([
+                        'success' => true,
+                        'crew_id' => $crew->id,
+                        'crew_name' => $crew->name,
+                        'worker_count' => count($workerIds),
                         'url' => route('crews.show', $crew),
                     ]);
                 } catch (\Throwable $e) {

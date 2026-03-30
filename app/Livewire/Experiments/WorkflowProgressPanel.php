@@ -7,6 +7,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class WorkflowProgressPanel extends Component
@@ -14,6 +15,35 @@ class WorkflowProgressPanel extends Component
     public string $experimentId;
 
     public ?string $expandedNodeId = null;
+
+    /**
+     * Real-time node states pushed via WorkflowNodeUpdated broadcast event.
+     * Keyed by workflow_node_id. Each entry: {status, durationMs, cost, outputPreview}.
+     *
+     * @var array<string, array{status: string, durationMs: int, cost: float, outputPreview: string}>
+     */
+    public array $nodeStates = [];
+
+    /**
+     * Listen for WorkflowNodeUpdated broadcast events via Laravel Echo.
+     * Livewire 4 resolves {experimentId} from the component property automatically.
+     */
+    #[On('echo-private:experiment.{experimentId},WorkflowNodeUpdated')]
+    public function handleNodeUpdated(array $data): void
+    {
+        $nodeId = $data['nodeId'] ?? null;
+
+        if (! $nodeId) {
+            return;
+        }
+
+        $this->nodeStates[$nodeId] = [
+            'status' => $data['status'] ?? 'pending',
+            'durationMs' => $data['durationMs'] ?? 0,
+            'cost' => $data['cost'] ?? 0.0,
+            'outputPreview' => $data['outputPreview'] ?? '',
+        ];
+    }
 
     public function toggleNode(string $nodeId): void
     {

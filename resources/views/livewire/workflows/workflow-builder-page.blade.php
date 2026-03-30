@@ -622,7 +622,7 @@
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Prompt</label>
                                     <textarea x-model="selectedNode.prompt" @input="syncToLivewire()" rows="4"
-                                              placeholder="Enter your prompt. Use {{variable}} for interpolation."
+                                              placeholder="Enter your prompt. Use @{{variable}} for interpolation."
                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
                                 </div>
                                 <div>
@@ -672,13 +672,13 @@
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Headers (JSON)</label>
                                     <textarea x-model="selectedNode.headers" @input="syncToLivewire()" rows="2"
-                                              placeholder='{"Authorization": "Bearer {{token}}"}'
+                                              placeholder='{"Authorization": "Bearer @{{token}}"}'
                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Body (JSON)</label>
                                     <textarea x-model="selectedNode.body" @input="syncToLivewire()" rows="3"
-                                              placeholder='{"key": "{{variable}}"}'
+                                              placeholder='{"key": "@{{variable}}"}'
                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
                                 </div>
                                 <div>
@@ -688,7 +688,7 @@
                                            class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
                                 </div>
                                 <div class="rounded-lg bg-teal-50 p-3 text-xs text-teal-700">
-                                    Makes an HTTP request to an external API. Use {{variable}} syntax for dynamic values from prior steps.
+                                    Makes an HTTP request to an external API. Use @{{variable}} syntax for dynamic values from prior steps.
                                 </div>
                             </div>
                         </template>
@@ -754,7 +754,7 @@
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Template</label>
                                     <textarea x-model="selectedNode.template" @input="syncToLivewire()" rows="5"
-                                              placeholder="Use {{variable}} placeholders from prior steps."
+                                              placeholder="Use @{{variable}} placeholders from prior steps."
                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
                                 </div>
                                 <div>
@@ -774,7 +774,7 @@
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Query</label>
                                     <textarea x-model="selectedNode.query" @input="syncToLivewire()" rows="2"
-                                              placeholder="Search query or {{variable}} from prior step"
+                                              placeholder="Search query or @{{variable}} from prior step"
                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"></textarea>
                                 </div>
                                 <div>

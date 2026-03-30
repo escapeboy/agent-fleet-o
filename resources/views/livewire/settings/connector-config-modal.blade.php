@@ -95,6 +95,25 @@
                             hint="Used for HMAC-SHA256 payload signatures (X-Webhook-Signature header)." :error="$errors->first('secret')" />
                     @endif
 
+                    {{-- Ntfy --}}
+                    @if($channel === 'ntfy')
+                        <x-form-input wire:model="ntfyBaseUrl" label="Base URL" type="url" placeholder="https://ntfy.sh"
+                            hint="Your ntfy server URL. Use https://ntfy.sh for the public server." :error="$errors->first('ntfyBaseUrl')" />
+                        <x-form-input wire:model="ntfyTopic" label="Topic" type="text" placeholder="fleetq-alerts"
+                            hint="Topic name to publish notifications to." :error="$errors->first('ntfyTopic')" />
+                        <x-form-select wire:model="ntfyPriority" label="Default Priority">
+                            <option value="min">Min</option>
+                            <option value="low">Low</option>
+                            <option value="default">Default</option>
+                            <option value="high">High</option>
+                            <option value="max">Max</option>
+                        </x-form-select>
+                        <x-form-input wire:model="ntfyTags" label="Default Tags (optional)" type="text" placeholder="rotating_light,warning"
+                            hint="Comma-separated emoji shortcode tags shown in notifications." :error="$errors->first('ntfyTags')" />
+                        <x-form-input wire:model="ntfyToken" label="Access Token (optional)" type="password" placeholder="tk_..."
+                            hint="Bearer token for private topics. Leave empty for public topics." :error="$errors->first('ntfyToken')" />
+                    @endif
+
                     {{-- Validation error --}}
                     @error('credentials')
                         <p class="text-sm text-red-600">{{ $message }}</p>

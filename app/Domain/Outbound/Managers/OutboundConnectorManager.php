@@ -4,6 +4,7 @@ namespace App\Domain\Outbound\Managers;
 
 use App\Domain\Outbound\Connectors\DummyConnector;
 use App\Domain\Outbound\Connectors\NotificationConnector;
+use App\Domain\Outbound\Connectors\NtfyConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
 use App\Domain\Outbound\Connectors\WhatsAppConnector;
@@ -45,6 +46,11 @@ class OutboundConnectorManager extends Manager
     protected function createWhatsappDriver(): OutboundConnectorInterface
     {
         return $this->container->make(WhatsAppConnector::class);
+    }
+
+    protected function createNtfyDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(NtfyConnector::class);
     }
 
     protected function createDummyDriver(): OutboundConnectorInterface

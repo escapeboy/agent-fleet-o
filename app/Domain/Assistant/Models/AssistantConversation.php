@@ -21,12 +21,14 @@ class AssistantConversation extends Model
         'context_id',
         'metadata',
         'last_message_at',
+        'review',
     ];
 
     protected function casts(): array
     {
         return [
             'metadata' => 'array',
+            'review' => 'array',
             'last_message_at' => 'datetime',
         ];
     }

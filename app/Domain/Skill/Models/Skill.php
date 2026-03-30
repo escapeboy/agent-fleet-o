@@ -29,6 +29,13 @@ class Skill extends Model
         return SkillFactory::new();
     }
 
+    /**
+     * Text fields to be scanned for accidentally embedded secrets.
+     *
+     * @var array<int, string>
+     */
+    public array $scannableFields = ['description', 'system_prompt'];
+
     protected $fillable = [
         'team_id',
         'source_listing_id',

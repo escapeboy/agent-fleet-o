@@ -64,9 +64,19 @@
                 @forelse($agents as $agent)
                     <tr class="transition hover:bg-gray-50">
                         <td class="px-3 py-3 md:px-6 md:py-4">
-                            <a href="{{ route('agents.show', $agent) }}" class="font-medium text-primary-600 hover:text-primary-800">
-                                {{ $agent->name }}
-                            </a>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <a href="{{ route('agents.show', $agent) }}" class="font-medium text-primary-600 hover:text-primary-800">
+                                    {{ $agent->name }}
+                                </a>
+                                @if($agent->pending_evolution_proposals_count > 0)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                        </svg>
+                                        Improving
+                                    </span>
+                                @endif
+                            </div>
                             @if($agent->goal)
                                 <p class="mt-0.5 truncate text-xs text-gray-400">{{ $agent->goal }}</p>
                             @endif

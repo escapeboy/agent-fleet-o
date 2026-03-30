@@ -3,8 +3,10 @@
 namespace App\Domain\Crew\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Models\CrewAgentMessage;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewMember;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -95,10 +97,66 @@ class SynthesizeResultAction
         $response = $this->gateway->complete($request);
 
         $result = $this->parseResult($response->content);
+        $totalCost = $response->usage->costCredits;
+
+        // Output reviewer pass: if any crew member has the output_reviewer role, run a review LLM call.
+        $outputReviewerMember = CrewMember::withoutGlobalScopes()
+            ->where('crew_id', $execution->crew_id)
+            ->where('role', CrewMemberRole::OutputReviewer)
+            ->first();
+
+        if ($outputReviewerMember) {
+            $reviewerAgent = Agent::withoutGlobalScopes()->find($outputReviewerMember->agent_id);
+
+            if ($reviewerAgent) {
+                $reviewResolved = $this->providerResolver->resolve(agent: $reviewerAgent);
+
+                $reviewSystem = "You are {$reviewerAgent->role}. Your task is to review the synthesized result for quality, completeness, and accuracy. "
+                    .'Output valid JSON with: "approved" (bool), "score" (0-1), "feedback" (string), '
+                    .'"revised_result" (the improved result if score < 0.7, otherwise null).';
+
+                $reviewUser = "Original goal: {$execution->goal}\n\n"
+                    .'Synthesized result:'."\n".json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    ."\n\nReview this result.";
+
+                $reviewRequest = new AiRequestDTO(
+                    provider: $reviewResolved['provider'],
+                    model: $reviewResolved['model'],
+                    systemPrompt: $reviewSystem,
+                    userPrompt: $reviewUser,
+                    maxTokens: 2048,
+                    teamId: $execution->team_id,
+                    agentId: $reviewerAgent->id,
+                    purpose: 'crew.output_review',
+                    temperature: 0.2,
+                );
+
+                $reviewResponse = $this->gateway->complete($reviewRequest);
+                $totalCost += $reviewResponse->usage->costCredits;
+
+                $review = $this->parseResult($reviewResponse->content);
+
+                $approved = (bool) ($review['approved'] ?? true);
+                $score = (float) ($review['score'] ?? 1.0);
+
+                if (! $approved && $score < 0.7 && isset($review['revised_result'])) {
+                    $result = is_array($review['revised_result'])
+                        ? $review['revised_result']
+                        : ['result' => $review['revised_result'], 'summary' => 'Revised by output reviewer.'];
+                }
+
+                $result['output_review'] = [
+                    'approved' => $approved,
+                    'score' => $score,
+                    'feedback' => $review['feedback'] ?? '',
+                    'reviewer_agent_id' => $reviewerAgent->id,
+                ];
+            }
+        }
 
         return [
             'result' => $result,
-            'cost' => $response->usage->costCredits,
+            'cost' => $totalCost,
         ];
     }
 

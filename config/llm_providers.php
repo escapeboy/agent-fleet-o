@@ -74,6 +74,24 @@ return [
         ],
     ],
 
+    // --- Portkey AI Gateway (team-level passthrough proxy) ---
+    // When a team configures a Portkey API key, ALL their AI requests are routed
+    // through https://api.portkey.ai/v1. The model string is passed through verbatim.
+    // Portkey supports virtual keys, observability, caching, and 250+ providers.
+    // See https://portkey.ai for setup instructions.
+    'portkey' => [
+        'name' => 'Portkey (AI Gateway)',
+        'portkey' => true,  // Marks this as a Portkey passthrough provider
+        'credential_fields' => ['api_key', 'virtual_key'],
+        'models' => [
+            // Portkey routes to the underlying provider — model strings are passed verbatim.
+            // Examples of what you can configure when using Portkey:
+            'anthropic/claude-sonnet-4-5-20250929' => ['label' => 'Anthropic Claude Sonnet 4.5', 'input_cost' => 0, 'output_cost' => 0],
+            'openai/gpt-4o' => ['label' => 'OpenAI GPT-4o', 'input_cost' => 0, 'output_cost' => 0],
+            'google/gemini-2.5-pro' => ['label' => 'Google Gemini 2.5 Pro', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
+
     // --- Tier 2: OpenAI-compatible providers (custom Prism registration) ---
 
     'perplexity' => [

@@ -107,6 +107,103 @@
         </div>
     </div>
 
+    {{-- 3-Phase Pipeline Stepper --}}
+    @php
+        $phase = $this->getPipelinePhase();
+        // Determine if the current phase 2 status is a soft-failure (amber tint).
+        $isPhase2Failure = $phase === 2 && in_array($experiment->status, [
+            \App\Domain\Experiment\Enums\ExperimentStatus::ScoringFailed,
+            \App\Domain\Experiment\Enums\ExperimentStatus::PlanningFailed,
+            \App\Domain\Experiment\Enums\ExperimentStatus::BuildingFailed,
+            \App\Domain\Experiment\Enums\ExperimentStatus::ExecutionFailed,
+            \App\Domain\Experiment\Enums\ExperimentStatus::Rejected,
+            \App\Domain\Experiment\Enums\ExperimentStatus::Expired,
+        ]);
+        // Terminal failure: killed or discarded (phase 3 shows as gray, not green).
+        $isTerminalFailure = in_array($experiment->status, [
+            \App\Domain\Experiment\Enums\ExperimentStatus::Killed,
+            \App\Domain\Experiment\Enums\ExperimentStatus::Discarded,
+        ]);
+        $steps = [
+            1 => 'Define Goal',
+            2 => 'Execute Plan',
+            3 => 'Review Results',
+        ];
+    @endphp
+    <div class="mb-6 flex items-center" aria-label="Experiment pipeline phases">
+        @foreach($steps as $step => $label)
+            @php
+                $isCompleted = $step < $phase || ($step === 3 && $phase === 3 && !$isTerminalFailure);
+                $isActive    = $step === $phase;
+                $isFuture    = $step > $phase;
+                // Phase 3 terminal failure: active but shown as gray.
+                $isGrayTerminal = $step === 3 && $phase === 3 && $isTerminalFailure;
+            @endphp
+
+            {{-- Step circle + label --}}
+            <div class="flex flex-col items-center">
+                @if($isCompleted)
+                    {{-- Completed: filled indigo circle with checkmark --}}
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600">
+                        <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                    </div>
+                @elseif($isActive && $isPhase2Failure)
+                    {{-- Active phase 2 with soft failure: amber tint + pulse --}}
+                    <div class="relative flex h-8 w-8 items-center justify-center">
+                        <span class="absolute inline-flex h-full w-full animate-pulse rounded-full bg-amber-300 opacity-50"></span>
+                        <div class="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-amber-500 bg-amber-50">
+                            <span class="text-xs font-bold text-amber-700">{{ $step }}</span>
+                        </div>
+                    </div>
+                @elseif($isActive && !$isGrayTerminal)
+                    {{-- Active phase: pulsing indigo ring --}}
+                    <div class="relative flex h-8 w-8 items-center justify-center">
+                        <span class="absolute inline-flex h-full w-full animate-pulse rounded-full bg-indigo-400 opacity-40"></span>
+                        <div class="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-indigo-600 bg-indigo-50">
+                            <span class="text-xs font-bold text-indigo-700">{{ $step }}</span>
+                        </div>
+                    </div>
+                @elseif($isGrayTerminal)
+                    {{-- Phase 3 terminal failure: gray circle (ended, not succeeded) --}}
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-400 bg-gray-100">
+                        <span class="text-xs font-medium text-gray-500">{{ $step }}</span>
+                    </div>
+                @else
+                    {{-- Future phase: gray empty circle --}}
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
+                        <span class="text-xs font-medium text-gray-400">{{ $step }}</span>
+                    </div>
+                @endif
+
+                {{-- Label below circle --}}
+                <span class="mt-1.5 whitespace-nowrap text-xs
+                    @if($isActive && !$isGrayTerminal && !$isPhase2Failure) font-semibold text-indigo-700
+                    @elseif($isActive && $isPhase2Failure) font-semibold text-amber-700
+                    @elseif($isGrayTerminal) font-medium text-gray-500
+                    @elseif($isCompleted) font-medium text-indigo-600
+                    @else text-gray-400
+                    @endif">
+                    {{ $label }}
+                </span>
+            </div>
+
+            {{-- Connector line between steps (not after last step) --}}
+            @if($step < count($steps))
+                @php
+                    // Line is solid indigo when the segment is fully completed (next step started).
+                    $lineCompleted = $step < $phase;
+                @endphp
+                <div class="mx-2 mb-5 h-0.5 w-16 flex-shrink-0
+                    @if($lineCompleted) bg-indigo-500
+                    @else border-t-2 border-dashed border-gray-300 bg-transparent
+                    @endif">
+                </div>
+            @endif
+        @endforeach
+    </div>
+
     {{-- Share Modal --}}
     @if($showShareModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

@@ -16,6 +16,9 @@ class MarketplaceBrowsePage extends Component
     use WithPagination;
 
     #[Url]
+    public string $activeTab = 'all';
+
+    #[Url]
     public string $search = '';
 
     #[Url]
@@ -32,6 +35,27 @@ class MarketplaceBrowsePage extends Component
     public string $sortField = 'install_count';
 
     public string $sortDirection = 'desc';
+
+    /**
+     * Switch the active tab and update the typeFilter accordingly.
+     */
+    public function setTab(string $tab): void
+    {
+        if (! in_array($tab, ['all', 'skills', 'connectors', 'channels'], true)) {
+            return;
+        }
+
+        $this->activeTab = $tab;
+
+        $this->typeFilter = match ($tab) {
+            'skills' => 'skill',
+            'connectors' => 'connector',
+            'channels' => 'channel',
+            default => '',
+        };
+
+        $this->resetPage();
+    }
 
     public function sortBy(string $field): void
     {

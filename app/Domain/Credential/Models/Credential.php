@@ -11,6 +11,7 @@ use Database\Factories\Domain\Credential\CredentialFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -59,6 +60,14 @@ class Credential extends Model
     public function creator(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * All historical snapshots of this credential's secret_data, newest first.
+     */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(CredentialVersion::class)->orderByDesc('version_number');
     }
 
     public function isExpired(): bool

@@ -11,6 +11,44 @@
             </div>
 
             <div class="sm:col-span-2">
+                {{-- Example theses accordion (Alpine.js collapsible) --}}
+                <div x-data="{ open: false }" class="mb-2">
+                    <button
+                        type="button"
+                        @click="open = !open"
+                        class="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800"
+                    >
+                        <svg
+                            x-bind:class="open ? 'rotate-90' : ''"
+                            class="h-3 w-3 transition-transform"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2"
+                            stroke="currentColor"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                        Example theses
+                    </button>
+                    <div x-show="open" x-transition class="mt-2 space-y-1">
+                        @foreach([
+                            'Improve email open rates by testing subject line personalization strategies',
+                            'Identify the highest-intent leads in our latest signal batch and prioritize outreach',
+                            'Analyze which agent configurations produce the most successful experiments',
+                            'Test whether automated follow-up sequences increase conversion rate by 20%',
+                        ] as $example)
+                            <button
+                                type="button"
+                                wire:click="$set('thesis', '{{ addslashes($example) }}')"
+                                class="w-full rounded border border-gray-100 bg-gray-50 px-3 py-1.5 text-left text-sm text-gray-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                            >
+                                {{ $example }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
                 <x-form-textarea wire:model="thesis" label="Thesis" id="thesis" rows="3"
                     placeholder="What hypothesis are you testing?"
                     :error="$errors->first('thesis')"

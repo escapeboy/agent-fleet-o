@@ -109,7 +109,7 @@
         {{-- Tabs --}}
         <div class="mb-6 border-b border-gray-200">
             <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'rotate' => 'Rotate Secret', 'projects' => 'Projects'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'rotate' => 'Rotate Secret', 'history' => 'Version History', 'projects' => 'Projects'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition
                             {{ $activeTab === $tab
@@ -287,6 +287,57 @@
                             Start Rotation
                         </button>
                     </div>
+                @endif
+            </div>
+        @endif
+
+        {{-- Tab: Version History --}}
+        @if($activeTab === 'history')
+            <div class="rounded-xl border border-gray-200 bg-white">
+                <div class="border-b border-gray-200 px-6 py-4">
+                    <h3 class="text-sm font-semibold text-gray-900">Version History</h3>
+                    <p class="mt-0.5 text-xs text-gray-500">Each rotation snapshots the previous secret. Rollback restores a prior version and creates a new snapshot of the current state.</p>
+                </div>
+                @if($versions->isEmpty())
+                    <div class="px-6 py-12 text-center text-sm text-gray-400">
+                        No version history yet. Versions are created automatically on each secret rotation.
+                    </div>
+                @else
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Version</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Note</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Created</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @foreach($versions as $version)
+                                <tr class="transition hover:bg-gray-50">
+                                    <td class="px-6 py-4">
+                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                                            v{{ $version->version_number }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        {{ $version->note ?? '—' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">
+                                        {{ $version->created_at->format('M j, Y H:i') }}
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button
+                                            wire:click="rollbackToVersion('{{ $version->id }}')"
+                                            wire:confirm="Rollback to version {{ $version->version_number }}? The current secret will be snapshotted first."
+                                            class="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                            Rollback
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 @endif
             </div>
         @endif

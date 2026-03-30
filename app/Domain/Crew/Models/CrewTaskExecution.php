@@ -4,9 +4,11 @@ namespace App\Domain\Crew\Models;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
+use App\Domain\Experiment\Models\WorklogEntry;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CrewTaskExecution extends Model
 {
@@ -100,5 +102,12 @@ class CrewTaskExecution extends Model
     public function isTerminal(): bool
     {
         return $this->status->isTerminal();
+    }
+
+    public function worklogEntries(): HasMany
+    {
+        return $this->hasMany(WorklogEntry::class, 'workloggable_id')
+            ->where('workloggable_type', self::class)
+            ->orderBy('created_at');
     }
 }

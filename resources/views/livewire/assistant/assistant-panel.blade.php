@@ -34,6 +34,12 @@
                 }
             });
 
+            // Pre-fill textarea with a prompt from the gallery
+            window.addEventListener('use-prompt', (e) => {
+                this.inputText = e.detail.text ?? '';
+                this.$nextTick(() => this.$refs.messageInput?.focus());
+            });
+
             // Keyboard shortcut: Cmd+K / Ctrl+K
             document.addEventListener('keydown', (e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -260,6 +266,41 @@
                 <h2 class="text-sm font-semibold text-gray-900">Assistant</h2>
             </div>
             <div class="flex items-center gap-1">
+                {{-- Review Conversation --}}
+                @if($conversationId && count($messages) > 5 && auth()->user()?->currentTeam?->memberRole(auth()->user())?->value !== 'viewer')
+                    <button
+                        x-data="{ reviewing: false, reviewResult: null }"
+                        x-on:click="
+                            if (reviewing) return;
+                            reviewing = true;
+                            reviewResult = null;
+                            fetch('/api/v1/assistant/conversations/{{ $conversationId }}/review', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                                    'Accept': 'application/json',
+                                }
+                            })
+                            .then(r => r.json())
+                            .then(data => {
+                                reviewing = false;
+                                reviewResult = data.review ?? null;
+                                if (reviewResult) {
+                                    $dispatch('assistant-review-complete', { review: reviewResult });
+                                }
+                            })
+                            .catch(() => { reviewing = false; })
+                        "
+                        :disabled="reviewing"
+                        class="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                        title="Review Conversation Quality"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4" :class="reviewing ? 'animate-spin' : ''">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                        </svg>
+                    </button>
+                @endif
                 {{-- History Toggle --}}
                 <button
                     wire:click="toggleHistory"
@@ -320,22 +361,30 @@
             class="flex-1 space-y-4 overflow-y-auto px-4 py-4"
         >
             @if(empty($messages))
-                <div x-show="!pendingMessage" class="flex h-full flex-col items-center justify-center text-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="mb-3 h-12 w-12 text-gray-300">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
-                    </svg>
-                    <p class="text-sm font-medium text-gray-500">FleetQ Assistant</p>
-                    <p class="mt-1 text-xs text-gray-400">Ask me anything about your projects,<br>experiments, agents, and more.</p>
-                    <div class="mt-4 flex flex-wrap justify-center gap-2">
-                        <button x-on:click="quickSend('List my recent experiments')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
-                            List experiments
-                        </button>
-                        <button x-on:click="quickSend('Show dashboard KPIs')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
-                            Dashboard KPIs
-                        </button>
-                        <button x-on:click="quickSend('What is my budget status?')" class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600">
-                            Budget status
-                        </button>
+                <div x-show="!pendingMessage" class="h-full overflow-y-auto">
+                    {{-- Gallery heading --}}
+                    <div class="mb-4 text-center">
+                        <p class="text-sm font-medium text-gray-600">What would you like to do?</p>
+                        <p class="mt-0.5 text-xs text-gray-400">Click any prompt to get started</p>
+                    </div>
+
+                    {{-- Categorized prompt gallery --}}
+                    <div class="space-y-4">
+                        @foreach($promptGallery as $category => $prompts)
+                            <div>
+                                <p class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">{{ $category }}</p>
+                                <div class="space-y-1.5">
+                                    @foreach($prompts as $prompt)
+                                        <button
+                                            @click="$wire.usePrompt({{ json_encode($prompt) }})"
+                                            class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                                        >
+                                            {{ $prompt }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             @endif

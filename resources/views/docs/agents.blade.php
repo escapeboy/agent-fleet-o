@@ -84,6 +84,62 @@
         health check passes. Healthy agents show no indicator.
     </p>
 
+    {{-- Heartbeat scheduling --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Heartbeat scheduling</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Agents can be configured to run automatically on a cron schedule without being attached to an experiment.
+        This is useful for monitoring tasks, periodic data pulls, and background automation that should run
+        independently of user-triggered workflows.
+    </p>
+    <p class="mt-2 text-sm text-gray-600">
+        Configure a heartbeat via the <code class="rounded bg-gray-100 px-1 text-xs">heartbeat_definition</code> field
+        when creating or updating an agent:
+    </p>
+
+    <x-docs.code lang="json">
+// PUT /api/v1/agents/AGENT_ID
+{
+  "heartbeat_definition": {
+    "enabled": true,
+    "cron": "0 * * * *",
+    "prompt": "Check the latest competitor pricing and store any changes in memory."
+  }
+}</x-docs.code>
+
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Field</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Description</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">enabled</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Boolean. Set to <code class="rounded bg-gray-100 px-1">false</code> to pause the schedule without removing the configuration.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">cron</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Standard 5-field cron expression. Default: <code class="rounded bg-gray-100 px-1">0 * * * *</code> (every hour).</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">prompt</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">The task prompt sent to the agent on each heartbeat tick.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">next_run_at</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Read-only. Timestamp of the next scheduled execution. Computed automatically from the cron expression.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <x-docs.callout type="info">
+        Heartbeat runs are dispatched by <code>ExecuteAgentHeartbeatJob</code> and consume credits from the team budget
+        like any other agent execution. Use <code>max_credits</code> or budget alerts to cap spend.
+    </x-docs.callout>
+
     {{-- Disabling --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Disabling an agent</h2>
     <p class="mt-2 text-sm text-gray-600">

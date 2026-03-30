@@ -49,6 +49,12 @@ return [
             ],
         ],
 
+        // Portkey is a passthrough gateway — actual cost is tracked by Portkey.
+        // We store 0 credits locally to avoid double-billing.
+        'portkey' => [
+            '*' => ['input' => 0, 'output' => 0],
+        ],
+
         'codex' => [
             'gpt-5.3-codex' => ['input' => 0, 'output' => 0],
             'gpt-5.2-codex' => ['input' => 0, 'output' => 0],

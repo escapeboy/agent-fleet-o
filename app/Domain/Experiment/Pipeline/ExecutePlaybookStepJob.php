@@ -8,6 +8,7 @@ use App\Domain\Experiment\Enums\CheckpointMode;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Services\CheckpointManager;
+use App\Domain\Experiment\Services\StepOutputBroadcaster;
 use App\Domain\Experiment\Services\WorkflowSnapshotRecorder;
 use App\Domain\Skill\Actions\ExecuteGuardrailAction;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
@@ -163,6 +164,9 @@ class ExecutePlaybookStepJob implements ShouldQueue
             'idempotency_key' => $idempotencyKey,
         ]);
 
+        // Broadcast real-time node status: running
+        app(StepOutputBroadcaster::class)->broadcastNodeStatus($step, 'running');
+
         // Record time-travel snapshot: step started
         app(WorkflowSnapshotRecorder::class)->record(
             experiment: $experiment,
@@ -310,13 +314,28 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 'duration_ms' => $result['execution']->duration_ms ?? 0,
             ]);
 
+            $stepStatus = $result['output'] !== null ? 'completed' : 'failed';
+
             $step->update([
-                'status' => $result['output'] !== null ? 'completed' : 'failed',
+                'status' => $stepStatus,
                 'output' => $result['output'],
                 'duration_ms' => $result['execution']->duration_ms,
                 'cost_credits' => $result['execution']->cost_credits,
                 'error_message' => $result['execution']->error_message,
                 'completed_at' => now(),
+            ]);
+
+            // Broadcast real-time node status: completed or failed
+            $outputPreview = '';
+            if (is_array($result['output'])) {
+                $outputText = $result['output']['result'] ?? json_encode($result['output']);
+                $outputPreview = mb_substr((string) $outputText, 0, 200);
+            }
+
+            app(StepOutputBroadcaster::class)->broadcastNodeStatus($step, $stepStatus, [
+                'duration_ms' => $result['execution']->duration_ms ?? 0,
+                'cost' => (float) ($result['execution']->cost_credits ?? 0),
+                'output_preview' => $outputPreview,
             ]);
 
             // Record time-travel snapshot: step completed or failed
@@ -424,6 +443,9 @@ class ExecutePlaybookStepJob implements ShouldQueue
                     'completed_at' => now(),
                 ]);
             }
+
+            // Broadcast real-time node status: failed
+            app(StepOutputBroadcaster::class)->broadcastNodeStatus($step, 'failed');
 
             throw $e;
         }

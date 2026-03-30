@@ -10,6 +10,7 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\PlanEnforcer;
 use App\Domain\Skill\Models\Skill;
 use App\Infrastructure\AI\Exceptions\DataClassificationException;
+use App\Infrastructure\AI\Gateways\PortkeyGateway;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Collection;
 
@@ -35,6 +36,37 @@ class ProviderResolver
         $resolved = $this->resolveHierarchy($skill, $agent, $team, $purpose);
 
         return $this->enforceDataClassification($resolved, $agent, $team);
+    }
+
+    /**
+     * Resolve a PortkeyGateway instance for a team if Portkey is configured.
+     *
+     * Returns null when the team has no active Portkey credential.
+     */
+    public function resolvePortkeyGateway(?Team $team): ?PortkeyGateway
+    {
+        if (! $team) {
+            return null;
+        }
+
+        $credential = TeamProviderCredential::where('team_id', $team->id)
+            ->where('provider', 'portkey')
+            ->where('is_active', true)
+            ->first();
+
+        if (! $credential) {
+            return null;
+        }
+
+        $apiKey = $credential->credentials['api_key'] ?? null;
+
+        if (! $apiKey) {
+            return null;
+        }
+
+        $virtualKey = $credential->credentials['virtual_key'] ?? null;
+
+        return new PortkeyGateway(apiKey: $apiKey, virtualKey: $virtualKey);
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Domain\Workflow\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Experiment\Actions\PlanWithKnowledgeAction;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Services\GraphValidator;
@@ -46,11 +47,21 @@ class GenerateWorkflowFromPromptAction
         $resolved = $this->providerResolver->resolve(team: $team);
 
         try {
+            $knowledgeContext = '';
+            try {
+                $enrichment = app(PlanWithKnowledgeAction::class)->execute($prompt, $teamId ?? '');
+                if ($enrichment['enriched_context'] !== '') {
+                    $knowledgeContext = "\n\nRelevant context from past experience and domain knowledge:\n".$enrichment['enriched_context'];
+                }
+            } catch (\Throwable) {
+                // Graceful degradation — enrichment is optional
+            }
+
             $response = $this->gateway->complete(new AiRequestDTO(
                 provider: $resolved['provider'],
                 model: $resolved['model'],
                 systemPrompt: $systemPrompt,
-                userPrompt: $prompt,
+                userPrompt: $prompt.$knowledgeContext,
                 maxTokens: 4096,
                 temperature: 0.3,
                 purpose: 'workflow_generation',

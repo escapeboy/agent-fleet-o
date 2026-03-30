@@ -240,10 +240,55 @@ class AssistantPanel extends Component
             ->toArray();
     }
 
+    /**
+     * Pre-fill the message textarea with the selected prompt and focus the input.
+     */
+    public function usePrompt(string $prompt): void
+    {
+        $this->dispatch('use-prompt', text: $prompt);
+    }
+
+    /**
+     * Returns categorized prompt suggestions for the empty-state gallery.
+     *
+     * @return array<string, list<string>>
+     */
+    protected function getPromptGallery(): array
+    {
+        return [
+            'Experiments' => [
+                'Run a growth experiment to improve email open rates',
+                'Score and rank the latest 50 signals by intent',
+                'Retry the last failed experiment from the planning stage',
+                'Show all experiments paused in the last 24 hours',
+            ],
+            'Agents & Skills' => [
+                'Create an agent that summarizes news from RSS feeds daily',
+                'Show which agents had the highest error rate this week',
+                'List all active skills and their last execution time',
+            ],
+            'Monitoring' => [
+                'What is my current budget spend and forecast?',
+                'List approval requests expiring in the next 2 hours',
+                'Show a summary of agent runs in the last 24 hours',
+            ],
+            'Crews & Workflows' => [
+                'Execute the lead-scoring crew with the latest signal batch',
+                'Show me the last crew execution results',
+                'Build a workflow that scores then sends outbound',
+            ],
+            'Setup' => [
+                'Add my Anthropic API key to this team',
+                'Create a Slack outbound connector for sales alerts',
+            ],
+        ];
+    }
+
     public function render()
     {
         return view('livewire.assistant.assistant-panel', [
             'providers' => $this->resolveProvidersWithCustom(),
+            'promptGallery' => $this->getPromptGallery(),
         ]);
     }
 

@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ToolController;
 use App\Http\Controllers\Api\V1\ToolFederationGroupController;
 use App\Http\Controllers\Api\V1\TriggerController;
+use App\Http\Controllers\Api\V1\VoiceSessionController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
@@ -117,6 +118,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Credentials
     Route::apiResource('credentials', CredentialController::class);
     Route::post('/credentials/{credential}/rotate', [CredentialController::class, 'rotate']);
+    Route::get('/credentials/{credential}/versions', [CredentialController::class, 'versions']);
+    Route::post('/credentials/{credential}/versions/{version}/rollback', [CredentialController::class, 'rollback']);
 
     // Projects
     Route::apiResource('projects', ProjectController::class);
@@ -237,6 +240,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/assistant/conversations/{conversation}', [AssistantController::class, 'show']);
     Route::delete('/assistant/conversations/{conversation}', [AssistantController::class, 'destroy']);
     Route::post('/assistant/conversations/{conversation}/messages', [AssistantController::class, 'send']);
+    Route::post('/assistant/conversations/{conversation}/review', [AssistantController::class, 'reviewConversation']);
     Route::post('/assistant/messages/{message}/annotate', [AssistantController::class, 'annotate']);
 
     // Dashboard
@@ -299,6 +303,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/metrics', [MetricsController::class, 'index']);
     Route::get('/metrics/aggregations', [MetricsController::class, 'aggregations']);
     Route::get('/metrics/model-comparison', [MetricsController::class, 'modelComparison']);
+
+    // Voice Sessions — LiveKit room management, token issuance, and transcript
+    Route::get('/voice-sessions', [VoiceSessionController::class, 'index']);
+    Route::post('/voice-sessions', [VoiceSessionController::class, 'store']);
+    Route::get('/voice-sessions/{voiceSession}', [VoiceSessionController::class, 'show']);
+    Route::post('/voice-sessions/{voiceSession}/token', [VoiceSessionController::class, 'token']);
+    Route::delete('/voice-sessions/{voiceSession}', [VoiceSessionController::class, 'destroy']);
+    Route::post('/voice-sessions/{voiceSession}/transcript', [VoiceSessionController::class, 'appendTranscript']);
 
     // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)

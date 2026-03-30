@@ -30,10 +30,11 @@ Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
 Schedule::command('human-tasks:check-sla')->everyFiveMinutes();
 Schedule::command('workflows:poll-time-gates')->everyMinute()->withoutOverlapping(1);
 
-// Integration health checks, polling, and token refresh
+// Integration health checks, polling, token refresh, and Activepieces piece sync
 Schedule::command('integrations:ping')->everyFifteenMinutes()->withoutOverlapping(10);
 Schedule::command('integrations:poll')->everyFifteenMinutes()->withoutOverlapping(10);
 Schedule::command('integrations:refresh-tokens')->everyFiveMinutes()->withoutOverlapping(3);
+Schedule::command('integrations:sync-activepieces')->hourly()->withoutOverlapping(30);
 
 // Refresh Reddit browser session tokens (token_v2 expires every ~24h)
 Schedule::command('credentials:refresh-reddit')->hourly()->withoutOverlapping(5);

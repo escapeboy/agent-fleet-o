@@ -4,6 +4,7 @@ namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -44,7 +45,9 @@ class AgentListPage extends Component
 
     public function render()
     {
-        $query = Agent::query()->notChatbotAgent()->withCount('skills');
+        $query = Agent::query()->notChatbotAgent()
+            ->withCount('skills')
+            ->withCount(['evolutionProposals as pending_evolution_proposals_count' => fn ($q) => $q->where('status', EvolutionProposalStatus::Pending)]);
 
         if ($this->search) {
             $query->where(function ($q) {

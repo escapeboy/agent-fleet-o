@@ -2,6 +2,9 @@
 
 namespace App\Domain\Experiment\Services;
 
+use App\Domain\Experiment\Models\PlaybookStep;
+use App\Events\WorkflowNodeUpdated;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 
 class StepOutputBroadcaster
@@ -56,5 +59,37 @@ class StepOutputBroadcaster
     public function clear(string $stepId): void
     {
         Redis::del(self::KEY_PREFIX.$stepId);
+    }
+
+    /**
+     * Broadcast a workflow node status update via Reverb.
+     *
+     * @param  array{duration_ms?:int, token_count?:int, cost?:float, output_preview?:string}  $metrics
+     */
+    public function broadcastNodeStatus(PlaybookStep $step, string $status, array $metrics = []): void
+    {
+        if (! $step->workflow_node_id) {
+            return;
+        }
+
+        try {
+            event(new WorkflowNodeUpdated(
+                experimentId: $step->experiment_id,
+                nodeId: $step->workflow_node_id,
+                status: $status,
+                durationMs: $metrics['duration_ms'] ?? 0,
+                tokenCount: $metrics['token_count'] ?? 0,
+                cost: $metrics['cost'] ?? 0.0,
+                outputPreview: $metrics['output_preview'] ?? '',
+            ));
+        } catch (\Throwable $e) {
+            // Broadcast failures must never block execution
+            Log::warning('StepOutputBroadcaster: failed to broadcast node status', [
+                'step_id' => $step->id,
+                'node_id' => $step->workflow_node_id,
+                'status' => $status,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

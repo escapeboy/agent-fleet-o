@@ -81,6 +81,25 @@
                 <div>
                     <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Schedule</h3>
                     <div class="space-y-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                        {{-- Natural language schedule input --}}
+                        <div x-data="nlScheduleParser()" class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Schedule (natural language)
+                                <span class="font-normal text-gray-400 ml-1">optional</span>
+                            </label>
+                            <input
+                                type="text"
+                                x-model="nlInput"
+                                @input.debounce.300ms="parse()"
+                                placeholder='e.g. "every Monday at 9am" or "daily at 6pm"'
+                                class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            />
+                            <p x-show="preview" x-text="'→ ' + preview" class="mt-1 text-xs text-indigo-600"></p>
+                            <p x-show="!preview && nlInput.length > 3" class="mt-1 text-xs text-gray-400">
+                                Try: "daily at 9am", "every Monday at 6pm", "every 30 minutes", "weekdays at 8am"
+                            </p>
+                        </div>
+
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <x-form-select wire:model.live="frequency" label="Frequency">
                                 @foreach($frequencies as $freq)
@@ -282,6 +301,89 @@
 
 @script
 <script>
+/**
+ * Alpine.js component for parsing natural language schedule expressions into cron syntax.
+ * Supports expressions like "every Monday at 9am", "daily at 6pm", "every 30 minutes", etc.
+ * On successful parse, updates the Livewire cronExpression and frequency properties.
+ */
+function nlScheduleParser() {
+    return {
+        nlInput: '',
+        preview: '',
+        parse() {
+            const input = this.nlInput.trim().toLowerCase();
+            if (!input) { this.preview = ''; return; }
+
+            let cron = null;
+            let label = null;
+
+            // "every N minutes"
+            let m = input.match(/every (\d+) minutes?/);
+            if (m) { cron = `*/${m[1]} * * * *`; label = `Every ${m[1]} minutes`; }
+
+            // "every N hours"
+            m = !cron && input.match(/every (\d+) hours?/);
+            if (m) { cron = `0 */${m[1]} * * *`; label = `Every ${m[1]} hours`; }
+
+            // "every half hour"
+            m = !cron && input.match(/every half.?hour/);
+            if (m) { cron = `*/30 * * * *`; label = 'Every 30 minutes'; }
+
+            // "hourly"
+            if (!cron && /\bhourly\b/.test(input)) { cron = '0 * * * *'; label = 'Every hour'; }
+
+            // "daily at HH:MM" or "daily at HH am/pm"
+            m = !cron && input.match(/daily\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+            if (m) {
+                let h = parseInt(m[1]);
+                const mins = m[2] ? parseInt(m[2]) : 0;
+                if (m[3] === 'pm' && h < 12) h += 12;
+                if (m[3] === 'am' && h === 12) h = 0;
+                cron = `${mins} ${h} * * *`;
+                label = `Daily at ${String(h).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+            }
+
+            // "weekdays at HH am/pm"
+            m = !cron && input.match(/weekdays?\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+            if (m) {
+                let h = parseInt(m[1]);
+                const mins = m[2] ? parseInt(m[2]) : 0;
+                if (m[3] === 'pm' && h < 12) h += 12;
+                if (m[3] === 'am' && h === 12) h = 0;
+                cron = `${mins} ${h} * * 1-5`;
+                label = `Weekdays at ${String(h).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+            }
+
+            // "every [weekday] at HH am/pm"
+            const days = { monday:1, tuesday:2, wednesday:3, thursday:4, friday:5, saturday:6, sunday:0 };
+            m = !cron && input.match(/every\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+            if (m) {
+                let h = parseInt(m[2]);
+                const mins = m[3] ? parseInt(m[3]) : 0;
+                if (m[4] === 'pm' && h < 12) h += 12;
+                if (m[4] === 'am' && h === 12) h = 0;
+                const dayNum = days[m[1]];
+                cron = `${mins} ${h} * * ${dayNum}`;
+                label = `Every ${m[1].charAt(0).toUpperCase()+m[1].slice(1)} at ${String(h).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+            }
+
+            // "weekly" — defaults to Monday at 09:00
+            if (!cron && /\bweekly\b/.test(input)) { cron = '0 9 * * 1'; label = 'Every Monday at 09:00'; }
+
+            // "monthly" — defaults to 1st at 09:00
+            if (!cron && /\bmonthly\b/.test(input)) { cron = '0 9 1 * *'; label = 'Monthly on the 1st at 09:00'; }
+
+            if (cron) {
+                this.preview = label;
+                $wire.set('cronExpression', cron);
+                $wire.set('frequency', 'cron');
+            } else {
+                this.preview = '';
+            }
+        }
+    }
+}
+
 if (window.FleetQWebMcp?.isAvailable()) {
     window.FleetQWebMcp.registerTool({
         name: 'create_project',

@@ -83,6 +83,9 @@ return [
         'vercel' => ['label' => 'Vercel',           'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '▲'],
         'netlify' => ['label' => 'Netlify',         'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🌐'],
         'ssh_deploy' => ['label' => 'SSH Deploy',   'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🚀'],
+
+        // Automation platforms
+        'activepieces' => ['label' => 'Activepieces', 'auth' => 'api_key',    'poll_frequency' => 0,    'icon' => '🧩'],
     ],
 
     /*

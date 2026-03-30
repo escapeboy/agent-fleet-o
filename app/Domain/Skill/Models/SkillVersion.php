@@ -60,4 +60,9 @@ class SkillVersion extends Model
     {
         return $this->hasMany(SkillVersion::class, 'parent_version_id');
     }
+
+    public function annotations(): HasMany
+    {
+        return $this->hasMany(SkillAnnotation::class);
+    }
 }

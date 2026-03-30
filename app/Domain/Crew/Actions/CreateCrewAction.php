@@ -10,6 +10,7 @@ use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewMember;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -96,6 +97,14 @@ class CreateCrewAction
                     'process_type' => $processType->value,
                 ])
                 ->log('crew.created');
+
+            $hasProcessReviewer = $crew->members->contains(
+                fn (CrewMember $m) => $m->role === CrewMemberRole::ProcessReviewer,
+            );
+
+            if (! $hasProcessReviewer) {
+                Log::info('Crew created without a process reviewer', ['crew_id' => $crew->id]);
+            }
 
             return $crew->load('members');
         });

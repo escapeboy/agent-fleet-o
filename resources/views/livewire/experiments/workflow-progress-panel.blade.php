@@ -1,4 +1,25 @@
-<div wire:poll.{{ $running > 0 ? '3' : '10' }}s>
+<style>
+    @keyframes flow-pulse {
+        0%   { stroke-dashoffset: 100; }
+        100% { stroke-dashoffset: 0; }
+    }
+    .edge-active {
+        stroke-dasharray: 8 4;
+        animation: flow-pulse 1s linear infinite;
+    }
+</style>
+
+<div wire:poll.30s x-data="{
+    echoConnected: false,
+    init() {
+        if (typeof window.Echo !== 'undefined') {
+            this.echoConnected = true;
+            window.Echo.connector?.pusher?.connection?.bind?.('connected', () => { this.echoConnected = true; });
+            window.Echo.connector?.pusher?.connection?.bind?.('disconnected', () => { this.echoConnected = false; });
+            window.Echo.connector?.pusher?.connection?.bind?.('unavailable', () => { this.echoConnected = false; });
+        }
+    }
+}">
     @if($graph)
         <div class="rounded-lg border border-gray-200 bg-white">
             {{-- Header --}}
@@ -8,6 +29,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     <span class="text-sm font-medium text-gray-700">Workflow Progress</span>
+
+                    {{-- Echo connection status dot --}}
+                    <span
+                        x-show="typeof window.Echo !== 'undefined'"
+                        x-tooltip="echoConnected ? 'Real-time updates active' : 'Polling (real-time unavailable)'"
+                        :class="echoConnected ? 'bg-green-400' : 'bg-gray-300'"
+                        class="inline-block h-2 w-2 rounded-full"
+                        title="Real-time connection status"
+                    ></span>
                 </div>
                 @if($workflowId)
                     <a href="{{ route('workflows.show', $workflowId) }}" class="text-xs text-primary-600 hover:underline">
@@ -54,65 +84,103 @@
                 </div>
             @endif
 
+            {{-- SVG edge connections (animated when source node is running) --}}
+            @if(!empty($graph['edges']))
+                @php
+                    $runningNodeIds = $nodes
+                        ->filter(fn($n) => ($nodeStates[$n['id']]['status'] ?? $n['step_status']) === 'running')
+                        ->pluck('id')
+                        ->flip()
+                        ->toArray();
+                @endphp
+                <svg class="sr-only" aria-hidden="true" style="position:absolute;width:0;height:0">
+                    {{-- Edges rendered visually in the workflow builder; this block provides --}}
+                    {{-- animated CSS classes to any SVG paths with matching data-edge-source --}}
+                </svg>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var activeSourceIds = @json(array_keys($runningNodeIds));
+                        activeSourceIds.forEach(function (srcId) {
+                            document.querySelectorAll('[data-edge-source="' + srcId + '"]').forEach(function (el) {
+                                el.classList.add('edge-active');
+                            });
+                        });
+                    });
+                </script>
+            @endif
+
             {{-- Node List --}}
             <div class="divide-y divide-gray-100">
                 @foreach($nodes as $node)
-                    <div>
+                    @php
+                        // Merge real-time state pushed via Echo with DB state; Echo wins if present
+                        $rtStatus = $nodeStates[$node['id']]['status'] ?? $node['step_status'];
+                    @endphp
+                    <div x-data="{ rtStatus: @js($rtStatus) }"
+                         x-on:workflow-node-updated.window="
+                             if ($event.detail && $event.detail.nodeId === @js($node['id'])) {
+                                 rtStatus = $event.detail.status;
+                             }
+                         ">
                         <button wire:click="toggleNode('{{ $node['id'] }}')"
+                            :class="{
+                                'ring-1 ring-blue-300 bg-blue-50': rtStatus === 'running',
+                                'ring-1 ring-green-200 bg-green-50/40': rtStatus === 'completed',
+                                'ring-1 ring-red-200 bg-red-50/40': rtStatus === 'failed'
+                            }"
                             class="flex w-full items-center justify-between px-4 py-2.5 text-left transition hover:bg-gray-50">
                             <div class="flex items-center gap-3">
-                                {{-- Status Icon --}}
-                                @switch($node['step_status'])
-                                    @case('system')
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
-                                            @if($node['type'] === 'start')
-                                                <svg class="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                                                </svg>
-                                            @else
-                                                <svg class="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                </svg>
-                                            @endif
-                                        </span>
-                                        @break
-                                    @case('pending')
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs text-gray-400">
-                                            {{ $loop->iteration }}
-                                        </span>
-                                        @break
-                                    @case('running')
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
-                                            <svg class="h-4 w-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                {{-- Status Icon (uses rtStatus for real-time updates) --}}
+                                <template x-if="rtStatus === 'system'">
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
+                                        @if($node['type'] === 'start')
+                                            <svg class="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
                                             </svg>
-                                        </span>
-                                        @break
-                                    @case('completed')
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
-                                            <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        @else
+                                            <svg class="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                             </svg>
-                                        </span>
-                                        @break
-                                    @case('failed')
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-red-100">
-                                            <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                            </svg>
-                                        </span>
-                                        @break
-                                    @case('skipped')
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
-                                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
-                                            </svg>
-                                        </span>
-                                        @break
-                                    @default
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs text-gray-400">?</span>
-                                @endswitch
+                                        @endif
+                                    </span>
+                                </template>
+                                <template x-if="rtStatus === 'pending'">
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs text-gray-400">
+                                        {{ $loop->iteration }}
+                                    </span>
+                                </template>
+                                <template x-if="rtStatus === 'running'">
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
+                                        <svg class="h-4 w-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                        </svg>
+                                    </span>
+                                </template>
+                                <template x-if="rtStatus === 'completed'">
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
+                                        <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </span>
+                                </template>
+                                <template x-if="rtStatus === 'failed'">
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-red-100">
+                                        <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </span>
+                                </template>
+                                <template x-if="rtStatus === 'skipped'">
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
+                                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                        </svg>
+                                    </span>
+                                </template>
+                                <template x-if="!['system','pending','running','completed','failed','skipped'].includes(rtStatus)">
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs text-gray-400">?</span>
+                                </template>
 
                                 <div>
                                     <p class="text-sm font-medium text-gray-900">{{ $node['label'] }}</p>

@@ -7,6 +7,7 @@ use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Enums\IntegrationStatus;
+use App\Domain\Integration\Jobs\ActivepiecesSyncJob;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Models\WebhookRoute;
 use App\Domain\Integration\Services\IntegrationManager;
@@ -76,6 +77,12 @@ class ConnectIntegrationAction
                     'signing_secret' => Str::random(40),
                     'is_active' => true,
                 ]);
+            }
+
+            // For Activepieces integrations, immediately queue a piece sync so
+            // MCP-HTTP tools are available without waiting for the hourly schedule.
+            if ($driver === 'activepieces') {
+                ActivepiecesSyncJob::dispatch($integration->id);
             }
 
             return $integration;
