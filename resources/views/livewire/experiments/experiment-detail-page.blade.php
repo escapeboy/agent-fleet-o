@@ -340,8 +340,8 @@
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @php
-                $workflowTabs = ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions'];
-                $standardTabs = ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions'];
+                $workflowTabs = ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
+                $standardTabs = ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
                 if ($experiment->status->isFailed()) {
                     $workflowTabs['lessons'] = 'Lessons Learned';
                     $standardTabs['lessons'] = 'Lessons Learned';
@@ -498,6 +498,95 @@
                                     @endif
                                     <span>extracted: {{ $lesson->created_at?->diffForHumans() }}</span>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            @endif
+        </div>
+
+    @elseif($activeTab === 'worklog')
+        <div class="space-y-3">
+            <div class="mb-2">
+                <h3 class="text-sm font-semibold text-gray-700">Experiment Worklog</h3>
+                <p class="mt-0.5 text-xs text-gray-500">Structured per-step reasoning log written by agents during execution.</p>
+            </div>
+            @if($worklogs->isEmpty())
+                <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center">
+                    <p class="text-sm text-gray-500">No worklog entries yet.</p>
+                </div>
+            @else
+                @foreach($worklogs as $entry)
+                    @php
+                        $pillClass = match($entry->type) {
+                            'decision'    => 'bg-blue-100 text-blue-700',
+                            'finding'     => 'bg-green-100 text-green-700',
+                            'uncertainty' => 'bg-amber-100 text-amber-700',
+                            'output'      => 'bg-purple-100 text-purple-700',
+                            default       => 'bg-gray-100 text-gray-600',
+                        };
+                    @endphp
+                    <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <span class="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $pillClass }}">{{ $entry->type }}</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $entry->content }}</p>
+                                @if(!empty($entry->metadata))
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-xs text-gray-400 hover:text-gray-600">Metadata</summary>
+                                        <pre class="mt-1 overflow-x-auto rounded bg-gray-50 p-2 text-xs text-gray-600">{{ json_encode($entry->metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                                    </details>
+                                @endif
+                                <p class="mt-1.5 text-xs text-gray-400">{{ $entry->created_at?->diffForHumans() }}</p>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            @endif
+        </div>
+
+    @elseif($activeTab === 'uncertainty')
+        <div class="space-y-3">
+            <div class="mb-2">
+                <h3 class="text-sm font-semibold text-gray-700">Uncertainty Signals</h3>
+                <p class="mt-0.5 text-xs text-gray-500">Open questions and uncertainties raised by agents during execution.</p>
+            </div>
+            @if($uncertaintySignals->isEmpty())
+                <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center">
+                    <p class="text-sm text-gray-500">No uncertainty signals recorded.</p>
+                </div>
+            @else
+                @php
+                    $pending  = $uncertaintySignals->where('status', 'pending');
+                    $resolved = $uncertaintySignals->where('status', 'resolved');
+                @endphp
+                @foreach($pending as $signal)
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <div class="flex items-start gap-3">
+                            <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-700 text-xs font-bold">?</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-amber-900">{{ $signal->signal_text }}</p>
+                                @if($signal->context)
+                                    <p class="mt-1 text-xs text-amber-700">{{ is_array($signal->context) ? ($signal->context['description'] ?? '') : $signal->context }}</p>
+                                @endif
+                                @if($signal->ttl_minutes)
+                                    <p class="mt-1 text-xs text-amber-600">TTL: {{ $signal->ttl_minutes }} min · {{ $signal->isExpired() ? 'Expired' : 'Active' }}</p>
+                                @endif
+                                <p class="mt-1 text-xs text-amber-500">Raised {{ $signal->created_at?->diffForHumans() }}</p>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+                @foreach($resolved as $signal)
+                    <div class="rounded-xl border border-green-200 bg-green-50 p-4">
+                        <div class="flex items-start gap-3">
+                            <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-200 text-green-700 text-xs font-bold">✓</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-green-900">{{ $signal->signal_text }}</p>
+                                @if($signal->resolution_note)
+                                    <p class="mt-1 text-xs text-green-700">{{ $signal->resolution_note }}</p>
+                                @endif
+                                <p class="mt-1 text-xs text-green-500">Resolved {{ $signal->resolved_at?->diffForHumans() }}</p>
                             </div>
                         </div>
                     </div>

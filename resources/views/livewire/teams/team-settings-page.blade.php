@@ -382,6 +382,40 @@
         </div>
     </div>
 
+    {{-- Portkey AI Gateway --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Portkey AI Gateway</h2>
+        <p class="mb-5 text-sm text-gray-500">Route all LLM calls through Portkey for observability, caching, and fallbacks.</p>
+
+        @php $portkeyCred = \App\Domain\Shared\Models\TeamProviderCredential::where('team_id', auth()->user()->current_team_id)->where('provider', 'portkey')->first(); @endphp
+
+        @if($portkeyCred)
+            <div class="mb-4 flex items-center justify-between rounded-lg bg-green-50 px-4 py-3">
+                <div>
+                    <p class="text-sm font-medium text-green-800">Portkey gateway configured</p>
+                    <p class="mt-0.5 text-xs text-green-600">API key is set{{ $portkeyCred->credentials['virtual_key'] ? ' · Virtual key configured' : '' }}</p>
+                </div>
+                <button wire:click="removePortkeyConfig" wire:confirm="Remove Portkey configuration?"
+                    class="text-sm text-red-600 hover:text-red-800">Remove</button>
+            </div>
+        @endif
+
+        <div class="space-y-4">
+            <x-form-input wire:model="portkeyApiKey" label="API Key" type="password"
+                placeholder="pk-..." :error="$errors->first('portkeyApiKey')" />
+            <x-form-input wire:model="portkeyVirtualKey" label="Virtual Key (optional)" type="password"
+                placeholder="Leave empty to use direct routing"
+                hint="Virtual keys let you swap underlying LLM providers without changing agent config."
+                :error="$errors->first('portkeyVirtualKey')" />
+            <div>
+                <button wire:click="savePortkeyConfig"
+                    class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+
     {{-- Credential Security (cloud only, Pro+ feature) --}}
     @if(isset($showKmsSecurity) && $showKmsSecurity)
     <div class="rounded-lg border border-gray-200 bg-white p-6">

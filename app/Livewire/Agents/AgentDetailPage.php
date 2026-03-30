@@ -12,6 +12,7 @@ use App\Domain\Agent\Models\AgentConfigRevision;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Models\AgentRuntimeState;
+use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -63,6 +64,9 @@ class AgentDetailPage extends Component
 
     public string $editFederationGroupId = '';
 
+    /** @var array<string> */
+    public array $editGitRepositoryIds = [];
+
     public function mount(Agent $agent): void
     {
         $this->agent = $agent;
@@ -100,6 +104,7 @@ class AgentDetailPage extends Component
         $this->editToolIds = $this->agent->tools()->pluck('tools.id')->toArray();
         $this->editUseFederation = (bool) ($this->agent->config['use_tool_federation'] ?? false);
         $this->editFederationGroupId = $this->agent->config['tool_federation_group_id'] ?? '';
+        $this->editGitRepositoryIds = $this->agent->config['git_repository_ids'] ?? [];
         $this->editing = true;
     }
 
@@ -138,6 +143,15 @@ class AgentDetailPage extends Component
         }
     }
 
+    public function toggleGitRepository(string $repoId): void
+    {
+        if (in_array($repoId, $this->editGitRepositoryIds)) {
+            $this->editGitRepositoryIds = array_values(array_diff($this->editGitRepositoryIds, [$repoId]));
+        } else {
+            $this->editGitRepositoryIds[] = $repoId;
+        }
+    }
+
     public function save(): void
     {
         $this->validate([
@@ -171,6 +185,18 @@ class AgentDetailPage extends Component
             }
         } else {
             unset($config['use_tool_federation'], $config['tool_federation_group_id']);
+        }
+
+        $repoIds = array_values($this->editGitRepositoryIds);
+        if (! empty($repoIds)) {
+            // Filter to only repos belonging to the agent's team to prevent cross-tenant references
+            $validRepoIds = GitRepository::where('team_id', $this->agent->team_id)
+                ->whereIn('id', $repoIds)
+                ->pluck('id')
+                ->all();
+            $config['git_repository_ids'] = $validRepoIds;
+        } else {
+            unset($config['git_repository_ids']);
         }
 
         $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");
@@ -365,6 +391,12 @@ class AgentDetailPage extends Component
             ->limit(5)
             ->avg('llm_steps_count') ?? 0;
 
+        $teamId = auth()->user()->current_team_id;
+        $availableGitRepositories = GitRepository::where('team_id', $teamId)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
             'tools' => $tools,
@@ -377,6 +409,7 @@ class AgentDetailPage extends Component
             'runtimeState' => $runtimeState,
             'resolvedProvider' => $resolvedProvider,
             'avgSteps' => (float) $avgSteps,
+            'availableGitRepositories' => $availableGitRepositories,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }

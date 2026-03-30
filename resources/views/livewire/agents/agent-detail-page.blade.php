@@ -240,6 +240,28 @@
                     @endif
                 </div>
 
+                {{-- Linked Git Repositories --}}
+                @if($availableGitRepositories->isNotEmpty())
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700">Linked Git Repositories</label>
+                    <p class="mb-3 text-xs text-gray-500">Linked repos inject a repo map into the agent's context at execution time.</p>
+                    <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                        @foreach($availableGitRepositories as $repo)
+                            <button type="button" wire:click="toggleGitRepository('{{ $repo->id }}')"
+                                class="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors
+                                    {{ in_array($repo->id, $editGitRepositoryIds) ? 'border-primary-300 bg-primary-50 text-primary-800' : 'border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:bg-primary-50/40' }}">
+                                <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border {{ in_array($repo->id, $editGitRepositoryIds) ? 'border-primary-500 bg-primary-500' : 'border-gray-300' }}">
+                                    @if(in_array($repo->id, $editGitRepositoryIds))
+                                        <svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                    @endif
+                                </span>
+                                <span class="min-w-0 truncate">{{ $repo->name }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 {{-- Actions --}}
                 <div class="flex items-center justify-between border-t border-gray-200 pt-4">
                     <button wire:click="deleteAgent" wire:confirm="Are you sure you want to delete this agent? This cannot be undone."

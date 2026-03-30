@@ -2,6 +2,17 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.15.0] - 2026-03-30
+
+### Added
+
+- **Knowledge Sources Page** — New `/knowledge` route with `KnowledgeSourcesPage` Livewire component and sidebar entry under the Build section. Exposes the existing `Knowledge` domain to the UI: create named knowledge bases, assign them to a specific agent or make them team-wide, ingest documents as plain text (chunked and vector-embedded via `KnowledgeUploadPanel`), and delete knowledge bases. Cards display status, chunk count, linked agent, and last-ingested timestamp.
+- **Experiment Worklog Tab** — New Worklog tab on `ExperimentDetailPage` surfaces `WorklogEntry` records created during experiment execution. Five entry types: `reference`, `finding`, `decision`, `uncertainty`, `output`. Each entry renders a type badge, content preview, and timestamp.
+- **Experiment Uncertainty Signals Tab** — New Uncertainty Signals tab on `ExperimentDetailPage` surfaces `UncertaintySignal` records across all experiment stages. Each signal displays signal type, severity, description, and the affected stage.
+- **AI Generate Crew from Prompt** — "AI Generate" button on `CreateCrewForm` opens a modal that calls `GenerateCrewFromPromptAction` to pre-fill crew name, description, process type, and quality threshold from a natural-language goal description.
+- **Repository Map Multi-Select in Agent Forms** — `CreateAgentForm` and `AgentDetailPage` now include a multi-select for linked Git repositories (`git_repository_ids` in agent config). Selected repositories inject a repository map into the agent's context at execution time. Repository IDs are validated server-side against the team's own `GitRepository` records to prevent cross-tenant references.
+- **Portkey AI Gateway Integration** — `TeamSettingsPage` now includes a Portkey AI Gateway configuration card. Teams can set a Portkey API key and optional virtual key, stored as a `TeamProviderCredential` with `provider='portkey'`. When configured, `PortkeyGateway` routes LLM calls through `api.portkey.ai/v1` for observability, caching, and cost tracking.
+
 ## [1.14.0] - 2026-03-26
 
 ### Added

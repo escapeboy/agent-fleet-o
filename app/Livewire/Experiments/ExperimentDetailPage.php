@@ -4,6 +4,8 @@ namespace App\Livewire\Experiments;
 
 use App\Domain\Agent\Models\AiRun;
 use App\Domain\Experiment\Actions\KillExperimentAction;
+use App\Domain\Experiment\Models\UncertaintySignal;
+use App\Domain\Experiment\Models\WorklogEntry;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
 use App\Domain\Experiment\Actions\RetryExperimentAction;
@@ -236,11 +238,38 @@ class ExperimentDetailPage extends Component
         // the "lessons" tab is active (or the experiment is a known terminal failure).
         $failureLessons = $this->loadFailureLessons();
 
+        $worklogs = $this->activeTab === 'worklog'
+            ? WorklogEntry::where('workloggable_type', \App\Domain\Experiment\Models\Experiment::class)
+                ->where('workloggable_id', $this->experiment->id)
+                ->latest('created_at')
+                ->get()
+            : collect();
+
+        $worklogCount = WorklogEntry::where('workloggable_type', \App\Domain\Experiment\Models\Experiment::class)
+            ->where('workloggable_id', $this->experiment->id)
+            ->count();
+
+        $uncertaintySignals = $this->activeTab === 'uncertainty'
+            ? UncertaintySignal::whereHas(
+                'experimentStage',
+                fn ($q) => $q->where('experiment_id', $this->experiment->id),
+            )->latest()->get()
+            : collect();
+
+        $uncertaintyCount = UncertaintySignal::whereHas(
+            'experimentStage',
+            fn ($q) => $q->where('experiment_id', $this->experiment->id),
+        )->count();
+
         return view('livewire.experiments.experiment-detail-page', [
             'hasOrchestration' => $hasOrchestration,
             'reasoningRuns' => $reasoningRuns,
             'reasoningCount' => $reasoningCount,
             'failureLessons' => $failureLessons,
+            'worklogs' => $worklogs,
+            'worklogCount' => $worklogCount,
+            'uncertaintySignals' => $uncertaintySignals,
+            'uncertaintyCount' => $uncertaintyCount,
         ])->layout('layouts.app', ['header' => $this->experiment->title]);
     }
 

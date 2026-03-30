@@ -3,6 +3,7 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
+use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -48,6 +49,9 @@ class CreateAgentForm extends Component
     public bool $useFederation = false;
 
     public string $federationGroupId = '';
+
+    /** @var array<string> */
+    public array $gitRepositoryIds = [];
 
     /** Raw JSON input for the heartbeat definition (optional). */
     public string $heartbeatJson = '';
@@ -119,6 +123,16 @@ class CreateAgentForm extends Component
             }
         }
 
+        $repoIds = array_values($this->gitRepositoryIds);
+        if (! empty($repoIds)) {
+            // Filter to only repos belonging to the current team to prevent cross-tenant references
+            $validRepoIds = GitRepository::where('team_id', $team->id)
+                ->whereIn('id', $repoIds)
+                ->pluck('id')
+                ->all();
+            $config['git_repository_ids'] = $validRepoIds;
+        }
+
         // Build personality array from form fields
         $personality = $this->buildPersonalityArray();
 
@@ -176,6 +190,15 @@ class CreateAgentForm extends Component
         }
     }
 
+    public function toggleGitRepository(string $repoId): void
+    {
+        if (in_array($repoId, $this->gitRepositoryIds)) {
+            $this->gitRepositoryIds = array_values(array_diff($this->gitRepositoryIds, [$repoId]));
+        } else {
+            $this->gitRepositoryIds[] = $repoId;
+        }
+    }
+
     private function buildPersonalityArray(): ?array
     {
         $personality = array_filter([
@@ -230,11 +253,18 @@ class CreateAgentForm extends Component
         }
         unset($providerData);
 
+        $teamId = auth()->user()->current_team_id;
+        $availableGitRepositories = GitRepository::where('team_id', $teamId)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
         return view('livewire.agents.create-agent-form', [
             'availableSkills' => $availableSkills,
             'availableTools' => $availableTools,
             'providers' => $providers,
             'canCreate' => true,
+            'availableGitRepositories' => $availableGitRepositories,
         ])->layout('layouts.app', ['header' => 'Create Agent']);
     }
 }

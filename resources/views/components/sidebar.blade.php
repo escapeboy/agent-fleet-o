@@ -73,8 +73,12 @@
             Plugins
         </x-sidebar-link>
 
-        <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*')" icon="circle-stack">
+        <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*') && !request()->routeIs('knowledge.*')" icon="circle-stack">
             Memory
+        </x-sidebar-link>
+
+        <x-sidebar-link href="{{ route('knowledge.index') }}" :active="request()->routeIs('knowledge.*')" icon="book-open">
+            Knowledge
         </x-sidebar-link>
 
         <x-sidebar-link href="{{ route('knowledge-graph.index') }}" :active="request()->routeIs('knowledge-graph.*')" icon="share">

@@ -5,6 +5,7 @@ namespace App\Livewire\Crews;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Actions\CreateCrewAction;
+use App\Domain\Crew\Actions\GenerateCrewFromPromptAction;
 use App\Domain\Crew\Enums\CrewProcessType;
 use Livewire\Component;
 
@@ -38,6 +39,13 @@ class CreateCrewForm extends Component
 
     public float $minValidatedRatio = 1.0;
 
+    // AI Generate from prompt
+    public bool $showGenerateModal = false;
+
+    public string $generatePrompt = '';
+
+    public bool $generating = false;
+
     protected function rules(): array
     {
         return [
@@ -50,6 +58,30 @@ class CreateCrewForm extends Component
             'convergenceMode' => 'required|in:any_validated,all_validated,threshold_ratio,quality_gate',
             'minValidatedRatio' => 'required_if:convergenceMode,threshold_ratio|numeric|min:0|max:1',
         ];
+    }
+
+    public function generateFromPrompt(GenerateCrewFromPromptAction $action): void
+    {
+        $this->validate(['generatePrompt' => 'required|string|min:10']);
+
+        $this->generating = true;
+
+        try {
+            $result = $action->execute(
+                goal: $this->generatePrompt,
+                teamId: auth()->user()->current_team_id,
+            );
+
+            $this->name = $result['crew_name'] ?? '';
+            $this->description = $result['description'] ?? '';
+            $this->processType = $result['process_type'] ?? 'hierarchical';
+            $this->qualityThreshold = (float) ($result['suggested_quality_threshold'] ?? 0.70);
+            $this->showGenerateModal = false;
+
+            session()->flash('message', 'Crew structure generated. Review the form and add your agents.');
+        } finally {
+            $this->generating = false;
+        }
     }
 
     public function toggleWorker(string $agentId): void

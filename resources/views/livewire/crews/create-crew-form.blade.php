@@ -1,8 +1,46 @@
 <div class="mx-auto max-w-3xl">
+    {{-- AI Generate Modal --}}
+    @if($showGenerateModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        x-data x-on:keydown.escape.window="$wire.set('showGenerateModal', false)">
+        <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <h3 class="mb-1 text-lg font-semibold text-gray-900">Generate Crew from Prompt</h3>
+            <p class="mb-4 text-sm text-gray-500">Describe your goal and AI will suggest a crew structure including coordinator, QA, and worker agents.</p>
+
+            <x-form-textarea
+                wire:model="generatePrompt"
+                label="Goal"
+                rows="4"
+                placeholder="e.g. Research the latest AI news and produce a weekly digest email with key highlights and analysis."
+                :error="$errors->first('generatePrompt')" />
+
+            <div class="mt-4 flex items-center justify-end gap-3">
+                <button type="button" wire:click="$set('showGenerateModal', false)"
+                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="button" wire:click="generateFromPrompt"
+                    wire:loading.attr="disabled"
+                    class="rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
+                    <span wire:loading.remove wire:target="generateFromPrompt">Generate</span>
+                    <span wire:loading wire:target="generateFromPrompt">Generating…</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <form wire:submit="save" class="space-y-6" toolname="create_crew" tooldescription="Create a multi-agent crew with coordinator, QA agent, and workers">
         {{-- Basic Info --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6">
-            <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Basic Information</h3>
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500">Basic Information</h3>
+                <button type="button" wire:click="$set('showGenerateModal', true)"
+                    class="flex items-center gap-1.5 rounded-lg border border-primary-300 bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    AI Generate
+                </button>
+            </div>
 
             <div class="space-y-4">
                 <x-form-input wire:model="name" label="Crew Name" placeholder="e.g. Research & Content Team" :error="$errors->first('name')"

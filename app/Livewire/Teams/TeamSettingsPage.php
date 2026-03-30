@@ -117,6 +117,10 @@ class TeamSettingsPage extends Component
         $this->preferredBridgeId = $bridgeSettings['preferred_bridge_id'] ?? null;
         $this->agentRouting = $bridgeSettings['agent_routing'] ?? [];
 
+        $portkey = TeamProviderCredential::where('team_id', $team->id)->where('provider', 'portkey')->first();
+        $this->portkeyApiKey = $portkey?->credentials['api_key'] ?? '';
+        $this->portkeyVirtualKey = $portkey?->credentials['virtual_key'] ?? '';
+
         // MCP tool preferences
         $mcpTools = $settings['mcp_tools'] ?? null;
 
@@ -313,6 +317,11 @@ class TeamSettingsPage extends Component
 
     public string $vastApiKey = '';
 
+    // Portkey AI Gateway
+    public string $portkeyApiKey = '';
+
+    public string $portkeyVirtualKey = '';
+
     public function saveRunPodCredential(): void
     {
         $this->validate(['runpodApiKey' => 'required|string|min:20']);
@@ -367,6 +376,35 @@ class TeamSettingsPage extends Component
     {
         $this->removeComputeCredential('vast');
         session()->flash('message', 'Vast.ai API key removed.');
+    }
+
+    public function savePortkeyConfig(): void
+    {
+        $this->validate([
+            'portkeyApiKey' => 'required|string',
+            'portkeyVirtualKey' => 'nullable|string',
+        ]);
+
+        TeamProviderCredential::updateOrCreate(
+            ['team_id' => auth()->user()->current_team_id, 'provider' => 'portkey'],
+            ['credentials' => [
+                'api_key' => $this->portkeyApiKey,
+                'virtual_key' => $this->portkeyVirtualKey ?: null,
+            ], 'is_active' => true],
+        );
+
+        session()->flash('message', 'Portkey gateway configured.');
+    }
+
+    public function removePortkeyConfig(): void
+    {
+        TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
+            ->where('provider', 'portkey')
+            ->delete();
+
+        $this->portkeyApiKey = '';
+        $this->portkeyVirtualKey = '';
+        session()->flash('message', 'Portkey gateway removed.');
     }
 
     private function saveComputeCredential(string $provider, string $apiKey): void
