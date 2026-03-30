@@ -1,0 +1,45 @@
+use_default_settings: true
+
+general:
+  debug: false
+  default_lang: "bg"
+  instance_name: "Agent Fleet SearXNG"
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json
+
+server:
+  limiter: false
+  image_proxy: false
+  secret_key: "${SEARXNG_SECRET_KEY:-agent-fleet-searxng-dev-key}"
+
+ui:
+  default_locale: "en"
+
+engines:
+  - name: bing news
+    engine: bing_news
+    shortcut: bn
+    weight: 2
+    categories: [news]
+
+  - name: google news
+    engine: google_news
+    shortcut: gn
+    weight: 2
+    categories: [news]
+
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    weight: 1
+    categories: [general, news]
+
+  - name: bing
+    engine: bing
+    shortcut: b
+    weight: 1
+    categories: [general]
