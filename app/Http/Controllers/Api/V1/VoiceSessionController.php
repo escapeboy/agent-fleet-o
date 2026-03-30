@@ -9,6 +9,7 @@ use App\Domain\VoiceSession\Actions\GenerateLiveKitTokenAction;
 use App\Domain\VoiceSession\Enums\VoiceSessionStatus;
 use App\Domain\VoiceSession\Exceptions\VoiceSessionException;
 use App\Domain\VoiceSession\Models\VoiceSession;
+use App\Domain\VoiceSession\Services\LiveKitCredentialResolver;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,7 +42,7 @@ class VoiceSessionController extends Controller
     /**
      * Create a new voice session and return the LiveKit room token.
      */
-    public function store(Request $request, CreateVoiceSessionAction $action): JsonResponse
+    public function store(Request $request, CreateVoiceSessionAction $action, LiveKitCredentialResolver $resolver): JsonResponse
     {
         $request->validate([
             'agent_id' => ['required', 'uuid', 'exists:agents,id'],
@@ -49,18 +50,28 @@ class VoiceSessionController extends Controller
             'settings' => ['sometimes', 'array'],
         ]);
 
-        $result = $action->execute(
-            teamId: $request->user()->current_team_id,
-            agentId: $request->input('agent_id'),
-            createdBy: $request->user()->id,
-            settings: $request->input('settings', []),
-            approvalRequestId: $request->input('approval_request_id'),
-        );
+        if (! $resolver->hasCredentials($request->user()->currentTeam)) {
+            return response()->json([
+                'message' => 'LiveKit is not configured for your team. Connect a LiveKit integration in the Integrations page.',
+            ], 422);
+        }
+
+        try {
+            $result = $action->execute(
+                teamId: $request->user()->current_team_id,
+                agentId: $request->input('agent_id'),
+                createdBy: $request->user()->id,
+                settings: $request->input('settings', []),
+                approvalRequestId: $request->input('approval_request_id'),
+            );
+        } catch (VoiceSessionException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'session' => $result['session'],
             'token' => $result['token'],
-            'livekit_url' => config('livekit.url'),
+            'livekit_url' => $result['livekit_url'],
         ], 201);
     }
 
@@ -77,7 +88,7 @@ class VoiceSessionController extends Controller
      *
      * Useful for re-joining after a network interruption or when the original token expires.
      */
-    public function token(Request $request, VoiceSession $voiceSession, GenerateLiveKitTokenAction $action): JsonResponse
+    public function token(Request $request, VoiceSession $voiceSession, GenerateLiveKitTokenAction $action, LiveKitCredentialResolver $resolver): JsonResponse
     {
         $request->validate([
             'participant_identity' => ['sometimes', 'string', 'max:255'],
@@ -88,6 +99,7 @@ class VoiceSessionController extends Controller
         }
 
         $identity = $request->input('participant_identity', 'user-'.$request->user()->id);
+        $credentials = $resolver->resolve($request->user()->currentTeam);
 
         try {
             $token = $action->execute(
@@ -95,6 +107,7 @@ class VoiceSessionController extends Controller
                 participantIdentity: $identity,
                 canPublish: true,
                 canSubscribe: true,
+                credentials: $credentials,
             );
         } catch (VoiceSessionException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -102,7 +115,7 @@ class VoiceSessionController extends Controller
 
         return response()->json([
             'token' => $token,
-            'livekit_url' => config('livekit.url'),
+            'livekit_url' => $credentials['url'],
             'room_name' => $voiceSession->room_name,
         ]);
     }

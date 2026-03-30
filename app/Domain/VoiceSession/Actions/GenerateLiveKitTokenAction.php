@@ -22,6 +22,7 @@ class GenerateLiveKitTokenAction
      * @param  string  $participantIdentity  Unique identity for this participant (e.g. "user-{id}")
      * @param  bool  $canPublish  Whether the participant can publish audio/video tracks
      * @param  bool  $canSubscribe  Whether the participant can subscribe to other tracks
+     * @param  array{api_key?: string, api_secret?: string, token_ttl?: int}|null  $credentials  Per-team credentials; falls back to config('livekit.*') when null
      * @return string Signed JWT token
      *
      * @throws VoiceSessionException
@@ -31,15 +32,16 @@ class GenerateLiveKitTokenAction
         string $participantIdentity,
         bool $canPublish = true,
         bool $canSubscribe = true,
+        ?array $credentials = null,
     ): string {
-        $apiKey = config('livekit.api_key');
-        $apiSecret = config('livekit.api_secret');
+        $apiKey = $credentials['api_key'] ?? config('livekit.api_key');
+        $apiSecret = $credentials['api_secret'] ?? config('livekit.api_secret');
 
         if (empty($apiKey) || empty($apiSecret)) {
             throw VoiceSessionException::missingConfiguration();
         }
 
-        $ttl = (int) config('livekit.token_ttl', 3600);
+        $ttl = (int) ($credentials['token_ttl'] ?? config('livekit.token_ttl', 3600));
         $now = time();
 
         $header = $this->base64UrlEncode(json_encode([

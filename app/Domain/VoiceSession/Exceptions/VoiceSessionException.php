@@ -18,7 +18,12 @@ class VoiceSessionException extends RuntimeException
 
     public static function missingConfiguration(): self
     {
-        return new self('LiveKit is not configured. Set LIVEKIT_API_KEY and LIVEKIT_API_SECRET in your environment.');
+        return new self('LiveKit is not configured. Connect a LiveKit integration in the Integrations page, or set LIVEKIT_API_KEY and LIVEKIT_API_SECRET in your environment.');
+    }
+
+    public static function noIntegration(): self
+    {
+        return new self('No LiveKit credentials found. Please connect a LiveKit integration in the Integrations page.');
     }
 
     public static function sessionNotActive(string $sessionId): self

@@ -16,6 +16,7 @@ use App\Domain\Integration\Drivers\Jira\JiraIntegrationDriver;
 use App\Domain\Integration\Drivers\Klaviyo\KlaviyoIntegrationDriver;
 use App\Domain\Integration\Drivers\Linear\LinearIntegrationDriver;
 use App\Domain\Integration\Drivers\LinkedIn\LinkedInIntegrationDriver;
+use App\Domain\Integration\Drivers\LiveKit\LiveKitIntegrationDriver;
 use App\Domain\Integration\Drivers\Mailchimp\MailchimpIntegrationDriver;
 use App\Domain\Integration\Drivers\Make\MakeIntegrationDriver;
 use App\Domain\Integration\Drivers\Netlify\NetlifyIntegrationDriver;
@@ -201,5 +202,10 @@ class IntegrationManager extends Manager
     public function createActivepiecesDriver(): IntegrationDriverInterface
     {
         return $this->container->make(ActivepiecesIntegrationDriver::class);
+    }
+
+    public function createLivekitDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(LiveKitIntegrationDriver::class);
     }
 }

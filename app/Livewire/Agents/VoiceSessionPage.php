@@ -3,11 +3,13 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Shared\Models\Team;
 use App\Domain\VoiceSession\Actions\CreateVoiceSessionAction;
 use App\Domain\VoiceSession\Actions\EndVoiceSessionAction;
 use App\Domain\VoiceSession\Enums\VoiceSessionStatus;
 use App\Domain\VoiceSession\Exceptions\VoiceSessionException;
 use App\Domain\VoiceSession\Models\VoiceSession;
+use App\Domain\VoiceSession\Services\LiveKitCredentialResolver;
 use Illuminate\View\View;
 use Livewire\Component;
 
@@ -29,12 +31,28 @@ class VoiceSessionPage extends Component
 
     public string $error = '';
 
+    /** Whether the team has LiveKit credentials configured (integration or env). */
+    public bool $needsIntegration = false;
+
+    /** LiveKit server URL resolved for this team. */
+    public string $livekitUrl = '';
+
     /** @var array<int, array{role: string, content: string, timestamp: string}> */
     public array $transcript = [];
 
-    public function mount(Agent $agent): void
+    public function mount(Agent $agent, LiveKitCredentialResolver $resolver): void
     {
         $this->agent = $agent;
+
+        /** @var Team $team */
+        $team = auth()->user()->currentTeam;
+
+        $this->needsIntegration = ! $resolver->hasCredentials($team);
+
+        if (! $this->needsIntegration) {
+            $credentials = $resolver->resolve($team);
+            $this->livekitUrl = $credentials['url'];
+        }
 
         // Resume any open session for this agent
         $this->session = VoiceSession::withoutGlobalScopes()
@@ -60,6 +78,12 @@ class VoiceSessionPage extends Component
     {
         $this->error = '';
 
+        if ($this->needsIntegration) {
+            $this->error = 'Please connect a LiveKit integration before starting a voice session.';
+
+            return [];
+        }
+
         try {
             $result = $action->execute(
                 teamId: auth()->user()->current_team_id,
@@ -73,11 +97,12 @@ class VoiceSessionPage extends Component
         }
 
         $this->session = $result['session'];
+        $this->livekitUrl = $result['livekit_url'];
         $this->statusMessage = 'Connecting to room...';
 
         return [
             'token' => $result['token'],
-            'livekit_url' => config('livekit.url'),
+            'livekit_url' => $result['livekit_url'],
             'room_name' => $this->session->room_name,
         ];
     }

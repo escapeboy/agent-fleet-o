@@ -32,6 +32,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Voice Worker Redis Dispatch
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, CreateVoiceSessionAction pushes a job to the Redis
+    | 'voice_worker_dispatch' list with per-team credentials. The Python voice
+    | worker listens on this list and spawns a room agent for each job.
+    |
+    | Set to true when running the managed voice worker (cloud deployments).
+    | Leave false if you manage the Python worker externally via env vars.
+    |
+    */
+
+    'worker_dispatch_enabled' => (bool) env('LIVEKIT_WORKER_DISPATCH', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Speech-to-Text Provider
     |--------------------------------------------------------------------------
     */
