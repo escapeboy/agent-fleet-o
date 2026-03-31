@@ -90,19 +90,20 @@ class ChatbotResponseService
         );
 
         $latencyMs = (int) ((microtime(true) - $startedAt) * 1000);
-        $rawReply = $result['output']['content'] ?? ($result['output']['result'] ?? '');
+        $rawReply = $result['output']['content'] ?? $result['output']['result'] ?? $result['output']['text'] ?? '';
 
         // Composite confidence: LLM execution success + RAG best similarity score
         $confidence = $this->estimateConfidence($result, $bestRagScore);
 
-        // help_bot: append fallback message when low confidence and escalation is disabled
+        // Append fallback message when low confidence and escalation is disabled
         if (
-            $chatbot->type === ChatbotType::HelpBot
-            && ! $chatbot->human_escalation_enabled
+            ! $chatbot->human_escalation_enabled
             && $confidence < (float) $chatbot->confidence_threshold
             && $chatbot->fallback_message
         ) {
-            $rawReply = $rawReply."\n\n".$chatbot->fallback_message;
+            $rawReply = $rawReply
+                ? $rawReply."\n\n".$chatbot->fallback_message
+                : $chatbot->fallback_message;
         }
 
         $needsEscalation = $chatbot->human_escalation_enabled
