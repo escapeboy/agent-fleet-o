@@ -67,9 +67,23 @@ class TeamAiFeaturesUpdateTool extends Tool
             'experiment_ttl_minutes',
         ];
 
+        $validTierValues = ['cheap', 'standard', 'expensive', null];
+        $validStageKeys = ['scoring', 'planning', 'building', 'executing', 'collecting_metrics', 'evaluating'];
+
         foreach ($allowedKeys as $key) {
             $value = $request->get($key);
             if ($value !== null) {
+                // Validate stage_model_tiers structure
+                if ($key === 'stage_model_tiers' && is_array($value)) {
+                    $sanitized = [];
+                    foreach ($value as $stageKey => $tierValue) {
+                        if (in_array($stageKey, $validStageKeys, true) && in_array($tierValue, $validTierValues, true)) {
+                            $sanitized[$stageKey] = $tierValue;
+                        }
+                    }
+                    $value = $sanitized;
+                }
+
                 $settings[$key] = $value;
                 $updated[] = $key;
             }

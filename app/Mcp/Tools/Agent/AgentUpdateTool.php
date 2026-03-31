@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Knowledge\Models\KnowledgeBase;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -87,6 +88,18 @@ class AgentUpdateTool extends Tool
 
         if (! $agent) {
             return Response::error('Agent not found.');
+        }
+
+        // IDOR guard: verify knowledge_base_id belongs to the team
+        $kbId = $validated['knowledge_base_id'] ?? null;
+        if ($kbId && $kbId !== '') {
+            $kbExists = KnowledgeBase::withoutGlobalScopes()
+                ->where('id', $kbId)
+                ->where('team_id', $teamId)
+                ->exists();
+            if (! $kbExists) {
+                return Response::error('Knowledge base not found or does not belong to this team.');
+            }
         }
 
         $data = array_filter([

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
+use App\Domain\Knowledge\Models\KnowledgeBase;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -74,6 +75,17 @@ class AgentCreateTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return Response::error('No current team.');
+        }
+
+        // IDOR guard: verify knowledge_base_id belongs to the team
+        if (! empty($validated['knowledge_base_id'])) {
+            $kbExists = KnowledgeBase::withoutGlobalScopes()
+                ->where('id', $validated['knowledge_base_id'])
+                ->where('team_id', $teamId)
+                ->exists();
+            if (! $kbExists) {
+                return Response::error('Knowledge base not found or does not belong to this team.');
+            }
         }
 
         // Parse optional sandbox_profile JSON string into an array
