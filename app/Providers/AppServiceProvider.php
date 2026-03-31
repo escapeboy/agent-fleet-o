@@ -9,6 +9,7 @@ use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
+use App\Domain\Chatbot\Listeners\DeliverChatbotWorkflowResultListener;
 use App\Domain\Credential\Observers\SecretScanObserver;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
@@ -335,6 +336,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Memory: extract success pattern when experiment reaches Completed
         Event::listen(ExperimentTransitioned::class, ExtractSuccessPatternListener::class);
+
+        // Chatbot: deliver workflow result to chatbot message on experiment completion
+        Event::listen(ExperimentTransitioned::class, DeliverChatbotWorkflowResultListener::class);
 
         // Chatbot: capture operator corrections as learning entries
         Event::listen(ChatbotResponseApprovedEvent::class, CaptureResponseCorrectionListener::class);
