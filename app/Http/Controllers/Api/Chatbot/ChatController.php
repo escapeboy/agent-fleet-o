@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Chatbot;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use App\Domain\Chatbot\Services\ChatbotResponseService;
+use App\Domain\Shared\Models\Team;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -93,7 +94,9 @@ class ChatController extends Controller
             chatbot: $chatbot,
             session: $session,
             userText: $request->input('message'),
-            actorUserId: $chatbot->agent?->team_id ?? $chatbot->team_id,
+            actorUserId: $chatbot->agent?->user_id
+                ?? Team::where('id', $chatbot->team_id)->value('owner_id')
+                ?? $chatbot->team_id,
         );
 
         if ($result['escalated']) {

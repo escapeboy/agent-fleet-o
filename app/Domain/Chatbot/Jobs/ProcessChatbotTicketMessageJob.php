@@ -6,6 +6,7 @@ use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotChannel;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use App\Domain\Chatbot\Services\ChatbotResponseService;
+use App\Domain\Shared\Models\Team;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -70,7 +71,9 @@ class ProcessChatbotTicketMessageJob implements ShouldQueue
                 chatbot: $chatbot,
                 session: $session,
                 userText: $this->text,
-                actorUserId: $chatbot->team_id,
+                actorUserId: $chatbot->agent?->user_id
+                    ?? Team::where('id', $chatbot->team_id)->value('owner_id')
+                    ?? $chatbot->team_id,
             );
         } catch (\Throwable $e) {
             Log::error('ProcessChatbotTicketMessageJob: response service failed', [
