@@ -46,6 +46,14 @@ class AgentUpdateTool extends Tool
                 ->description('Tool profile restricting tool access. Options: researcher, executor, communicator, analyst, admin, minimal. Pass empty string to remove.'),
             'thinking_budget' => $schema->integer()
                 ->description('Anthropic extended thinking budget in tokens (e.g. 1024, 4096, 8192). Only applies when agent provider is "anthropic". Set to 0 to disable. Enables chain-of-thought reasoning visible in experiment steps.'),
+            'knowledge_base_id' => $schema->string()
+                ->description('UUID of a knowledge base to link. Pass empty string to unlink.'),
+            'evaluation_enabled' => $schema->boolean()
+                ->description('Enable or disable A/B evaluation for this agent'),
+            'evaluation_sample_rate' => $schema->number()
+                ->description('Fraction of requests to include in evaluation (0.0 to 1.0)'),
+            'heartbeat_definition' => $schema->object()
+                ->description('Agent health check config: {enabled: bool, cron: string, prompt: string}. Pass null to clear.'),
         ];
     }
 
@@ -65,6 +73,10 @@ class AgentUpdateTool extends Tool
             'tool_profile' => 'nullable|string',
             'sandbox_profile' => 'nullable|string',
             'thinking_budget' => 'nullable|integer|min:0|max:100000',
+            'knowledge_base_id' => 'nullable|string',
+            'evaluation_enabled' => 'nullable|boolean',
+            'evaluation_sample_rate' => 'nullable|numeric|min:0|max:1',
+            'heartbeat_definition' => 'nullable|array',
         ]);
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
@@ -122,8 +134,26 @@ class AgentUpdateTool extends Tool
             $data['config'] = $currentConfig;
         }
 
+        // knowledge_base_id: allow empty string to unlink
+        if (array_key_exists('knowledge_base_id', $validated) && $validated['knowledge_base_id'] !== null) {
+            $data['knowledge_base_id'] = $validated['knowledge_base_id'] === '' ? null : $validated['knowledge_base_id'];
+        }
+
+        // evaluation fields
+        if (array_key_exists('evaluation_enabled', $validated) && $validated['evaluation_enabled'] !== null) {
+            $data['evaluation_enabled'] = $validated['evaluation_enabled'];
+        }
+        if (array_key_exists('evaluation_sample_rate', $validated) && $validated['evaluation_sample_rate'] !== null) {
+            $data['evaluation_sample_rate'] = $validated['evaluation_sample_rate'];
+        }
+
+        // heartbeat_definition
+        if (array_key_exists('heartbeat_definition', $validated)) {
+            $data['heartbeat_definition'] = $validated['heartbeat_definition'];
+        }
+
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, sandbox_profile, thinking_budget.');
+            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
         }
 
         app(RecordAgentConfigRevisionAction::class)->execute(

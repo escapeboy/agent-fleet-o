@@ -41,6 +41,15 @@ class AgentCreateTool extends Tool
                 ->description('Tool profile restricting tool access. Options: researcher, executor, communicator, analyst, admin, minimal'),
             'sandbox_profile' => $schema->string()
                 ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
+            'knowledge_base_id' => $schema->string()
+                ->description('UUID of a knowledge base to link to this agent for RAG-powered context'),
+            'evaluation_enabled' => $schema->boolean()
+                ->description('Enable A/B evaluation for this agent')
+                ->default(false),
+            'evaluation_sample_rate' => $schema->number()
+                ->description('Fraction of requests to include in evaluation (0.0 to 1.0). Only used when evaluation_enabled is true.'),
+            'heartbeat_definition' => $schema->object()
+                ->description('Agent health check config: {enabled: bool, cron: string, prompt: string}'),
         ];
     }
 
@@ -57,6 +66,10 @@ class AgentCreateTool extends Tool
             'tool_profile' => 'nullable|string',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'sandbox_profile' => 'nullable|string',
+            'knowledge_base_id' => 'nullable|uuid',
+            'evaluation_enabled' => 'nullable|boolean',
+            'evaluation_sample_rate' => 'nullable|numeric|min:0|max:1',
+            'heartbeat_definition' => 'nullable|array',
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
@@ -91,6 +104,17 @@ class AgentCreateTool extends Tool
 
             if ($sandboxProfile !== null) {
                 $agent->update(['sandbox_profile' => $sandboxProfile]);
+            }
+
+            $extraFields = array_filter([
+                'knowledge_base_id' => $validated['knowledge_base_id'] ?? null,
+                'evaluation_enabled' => $validated['evaluation_enabled'] ?? null,
+                'evaluation_sample_rate' => $validated['evaluation_sample_rate'] ?? null,
+                'heartbeat_definition' => $validated['heartbeat_definition'] ?? null,
+            ], fn ($v) => $v !== null);
+
+            if (! empty($extraFields)) {
+                $agent->update($extraFields);
             }
 
             return Response::text(json_encode([

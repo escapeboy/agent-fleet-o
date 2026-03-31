@@ -2,6 +2,7 @@
 
 namespace App\Domain\Skill\Actions;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Models\Skill;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,11 @@ class ResolveAgentSkillsAction
      */
     public function execute(string $teamId, string $taskDescription): Collection
     {
-        if (! config('skills.hybrid_retrieval.enabled', true)) {
+        $team = Team::withoutGlobalScopes()->find($teamId);
+        $enabled = $team?->settings['hybrid_retrieval_enabled']
+            ?? config('skills.hybrid_retrieval.enabled', true);
+
+        if (! $enabled) {
             return collect();
         }
 

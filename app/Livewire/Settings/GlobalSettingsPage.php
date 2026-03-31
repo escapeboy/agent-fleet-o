@@ -70,6 +70,16 @@ class GlobalSettingsPage extends Component
     // Approval settings
     public int $approvalTimeoutHours = 48;
 
+    // Experiment defaults
+    public int $defaultExperimentTtl = 120;
+
+    // Skill degradation thresholds
+    public float $skillReliabilityThreshold = 0.6;
+
+    public float $skillQualityThreshold = 0.5;
+
+    public int $skillMinSampleSize = 10;
+
     // Blacklist form
     public string $blacklistType = 'email';
 
@@ -120,6 +130,11 @@ class GlobalSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) GlobalSetting::get('media_analysis_enabled', false);
         $this->updateCheckEnabled = (bool) GlobalSetting::get('update_check_enabled', true);
         $this->approvalTimeoutHours = GlobalSetting::get('approval_timeout_hours', 48);
+
+        $this->defaultExperimentTtl = (int) GlobalSetting::get('default_experiment_ttl', config('experiments.default_ttl_minutes', 120));
+        $this->skillReliabilityThreshold = (float) GlobalSetting::get('skill_reliability_threshold', config('skills.degradation.reliability_threshold', 0.6));
+        $this->skillQualityThreshold = (float) GlobalSetting::get('skill_quality_threshold', config('skills.degradation.quality_threshold', 0.5));
+        $this->skillMinSampleSize = (int) GlobalSetting::get('skill_min_sample_size', config('skills.degradation.min_sample_size', 10));
 
         $this->defaultLlmProvider = GlobalSetting::get('default_llm_provider', 'anthropic') ?? 'anthropic';
         $this->defaultLlmModel = GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
@@ -181,6 +196,23 @@ class GlobalSettingsPage extends Component
         GlobalSetting::set('approval_timeout_hours', $this->approvalTimeoutHours);
 
         session()->flash('message', 'Approval settings saved.');
+    }
+
+    public function savePlatformAiDefaults(): void
+    {
+        $this->validate([
+            'defaultExperimentTtl' => 'required|integer|min:5|max:1440',
+            'skillReliabilityThreshold' => 'required|numeric|min:0|max:1',
+            'skillQualityThreshold' => 'required|numeric|min:0|max:1',
+            'skillMinSampleSize' => 'required|integer|min:1|max:1000',
+        ]);
+
+        GlobalSetting::set('default_experiment_ttl', $this->defaultExperimentTtl);
+        GlobalSetting::set('skill_reliability_threshold', $this->skillReliabilityThreshold);
+        GlobalSetting::set('skill_quality_threshold', $this->skillQualityThreshold);
+        GlobalSetting::set('skill_min_sample_size', $this->skillMinSampleSize);
+
+        session()->flash('message', 'Platform AI defaults saved.');
     }
 
     public function saveMediaAnalysisSettings(): void

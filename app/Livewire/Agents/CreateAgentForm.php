@@ -4,6 +4,7 @@ namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -54,6 +55,12 @@ class CreateAgentForm extends Component
     public array $gitRepositoryIds = [];
 
     public string $toolProfile = '';
+
+    public ?string $knowledgeBaseId = null;
+
+    public bool $evaluationEnabled = false;
+
+    public ?float $evaluationSampleRate = null;
 
     /** Raw JSON input for the heartbeat definition (optional). */
     public string $heartbeatJson = '';
@@ -169,6 +176,17 @@ class CreateAgentForm extends Component
             $agent->update(['tool_profile' => $this->toolProfile]);
         }
 
+        if ($this->knowledgeBaseId) {
+            $agent->update(['knowledge_base_id' => $this->knowledgeBaseId]);
+        }
+
+        if ($this->evaluationEnabled) {
+            $agent->update([
+                'evaluation_enabled' => true,
+                'evaluation_sample_rate' => $this->evaluationSampleRate,
+            ]);
+        }
+
         if ($heartbeatDefinition !== null) {
             $agent->update(['heartbeat_definition' => $heartbeatDefinition]);
         }
@@ -265,12 +283,17 @@ class CreateAgentForm extends Component
             ->orderBy('name')
             ->get();
 
+        $availableKnowledgeBases = KnowledgeBase::where('team_id', $teamId)
+            ->orderBy('name')
+            ->get();
+
         return view('livewire.agents.create-agent-form', [
             'availableSkills' => $availableSkills,
             'availableTools' => $availableTools,
             'providers' => $providers,
             'canCreate' => true,
             'availableGitRepositories' => $availableGitRepositories,
+            'availableKnowledgeBases' => $availableKnowledgeBases,
         ])->layout('layouts.app', ['header' => 'Create Agent']);
     }
 }

@@ -272,6 +272,35 @@
             </div>
             @endif
 
+            {{-- Knowledge Base --}}
+            @if($availableKnowledgeBases->isNotEmpty())
+            <div>
+                <x-form-select wire:model="knowledgeBaseId" label="Knowledge Base" hint="Link this agent to a knowledge base for RAG-powered context">
+                    <option value="">None</option>
+                    @foreach($availableKnowledgeBases as $kb)
+                        <option value="{{ $kb->id }}">{{ $kb->name }}</option>
+                    @endforeach
+                </x-form-select>
+            </div>
+            @endif
+
+            {{-- A/B Evaluation --}}
+            <div class="rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">A/B Evaluation</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Enable A/B testing to compare this agent's performance against variants</p>
+                    </div>
+                    <x-form-checkbox name="evaluationEnabled" wire:model.live="evaluationEnabled" />
+                </div>
+                @if($evaluationEnabled)
+                    <div class="mt-3">
+                        <x-form-input wire:model.number="evaluationSampleRate" label="Sample Rate" type="number" min="0" max="1" step="0.01"
+                            placeholder="0.0 - 1.0" hint="Fraction of requests to include in the evaluation (e.g. 0.1 = 10%)" />
+                    </div>
+                @endif
+            </div>
+
             {{-- Heartbeat Definition (optional advanced field) --}}
             <div>
                 <x-form-textarea

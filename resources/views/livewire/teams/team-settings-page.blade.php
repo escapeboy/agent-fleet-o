@@ -996,6 +996,36 @@
                 <p class="text-xs text-gray-500 mb-2">Automatically analyze agent executions and propose skill improvements.</p>
                 <x-form-checkbox wire:model="autonomousEvolutionEnabled" label="Enable autonomous evolution" />
             </div>
+
+            {{-- Hybrid Skill Retrieval --}}
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Hybrid Skill Retrieval</h3>
+                <p class="text-xs text-gray-500 mb-2">Use BM25 + semantic vector search to find the most relevant skills for agent tasks.</p>
+                <x-form-checkbox wire:model="hybridRetrievalEnabled" label="Enable hybrid retrieval" />
+            </div>
+
+            {{-- Scout Phase --}}
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Pre-Execution Scout Phase</h3>
+                <p class="text-xs text-gray-500 mb-2">Run a lightweight LLM call before execution to identify what context the agent needs. Uses a cheap model (Haiku/mini/Flash).</p>
+                <x-form-checkbox wire:model="scoutPhaseEnabled" label="Enable scout phase" />
+            </div>
+
+            {{-- Context Compaction --}}
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Conversation Context Compaction</h3>
+                <p class="text-xs text-gray-500 mb-2">Automatically compress agent conversation context when approaching the model's token limit.</p>
+                <x-form-checkbox wire:model="contextCompactionEnabled" label="Enable context compaction" />
+            </div>
+
+            {{-- Experiment TTL --}}
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Experiment Time Limit</h3>
+                <p class="text-xs text-gray-500 mb-2">Maximum wall-clock minutes an experiment may run before being killed.</p>
+                <div class="max-w-xs">
+                    <x-form-input wire:model="experimentTtlMinutes" type="number" label="TTL (minutes)" hint="5–1440 (24h)" compact />
+                </div>
+            </div>
         </div>
 
         <button wire:click="saveAiFeatures" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">

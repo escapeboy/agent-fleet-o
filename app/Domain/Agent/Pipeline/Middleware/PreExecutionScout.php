@@ -154,6 +154,12 @@ class PreExecutionScout
             return (bool) $ctx->agent->config['enable_scout_phase'];
         }
 
+        // Per-team override
+        $team = Team::withoutGlobalScopes()->find($ctx->agent->team_id);
+        if ($team && isset($team->settings['scout_phase_enabled'])) {
+            return (bool) $team->settings['scout_phase_enabled'];
+        }
+
         return (bool) config('agent.scout_phase.enabled', false);
     }
 }

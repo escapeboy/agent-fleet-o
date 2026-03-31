@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\AI\Middleware;
 
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -19,7 +20,15 @@ class ContextCompaction implements AiMiddlewareInterface
 
     public function handle(AiRequestDTO $request, Closure $next): AiResponseDTO
     {
-        if (! config('context_compaction.enabled', true)) {
+        // Per-team override, then config fallback
+        try {
+            $team = $request->teamId ? Team::withoutGlobalScopes()->find($request->teamId) : null;
+        } catch (\Throwable) {
+            $team = null; // Unit tests may not have teams table
+        }
+        $enabled = $team?->settings['context_compaction_enabled'] ?? config('context_compaction.enabled', true);
+
+        if (! $enabled) {
             return $next($request);
         }
 
