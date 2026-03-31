@@ -429,7 +429,7 @@ abstract class BaseStageJob implements ShouldQueue
         try {
             $parts = [
                 $experiment->title,
-                $experiment->goal ?? '',
+                $experiment->thesis ?? '',
                 $stage->stage instanceof \BackedEnum ? $stage->stage->value : (string) $stage->stage,
             ];
 

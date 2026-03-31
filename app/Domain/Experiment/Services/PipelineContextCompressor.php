@@ -84,7 +84,7 @@ class PipelineContextCompressor
 
         return implode("\n\n", [
             "## Experiment: {$experiment->title}",
-            "### Goal\n{$experiment->goal}",
+            "### Goal\n{$experiment->thesis}",
             '### Completed Stages (compressed)',
             "**First stage (full):**\n".$this->serializeStages($head),
             "**Middle stages (summary — {$middle->count()} stages compressed):**\n{$middleText}",

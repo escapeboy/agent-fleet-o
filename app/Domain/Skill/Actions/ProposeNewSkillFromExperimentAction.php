@@ -161,7 +161,7 @@ class ProposeNewSkillFromExperimentAction
                 provider: 'anthropic',
                 model: 'claude-haiku-4-5',
                 systemPrompt: 'You are a skill template generator. Given an experiment procedure, create a reusable skill prompt. Focus on the generalizable steps, not specific data. Output ONLY the skill prompt text, no explanation.',
-                userMessage: "Experiment: {$experiment->title}\nGoal: {$experiment->goal}\n\nCompleted Procedure:\n{$procedure}\n\nGenerate a reusable skill prompt that can replicate this procedure for similar goals.",
+                userMessage: "Experiment: {$experiment->title}\nThesis: {$experiment->thesis}\n\nCompleted Procedure:\n{$procedure}\n\nGenerate a reusable skill prompt that can replicate this procedure for similar goals.",
                 teamId: $experiment->team_id,
                 purpose: 'skill_generation',
                 maxTokens: 2048,
