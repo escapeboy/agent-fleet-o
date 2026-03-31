@@ -20,12 +20,12 @@ class BackfillExperimentSearchTextCommand extends Command
         ExperimentStage::withoutGlobalScopes()
             ->whereNull('searchable_text')
             ->whereNotNull('output_snapshot')
-            ->with('experiment:id,title,goal')
+            ->with('experiment:id,title,thesis')
             ->chunkById($chunkSize, function ($stages) use (&$updated) {
                 foreach ($stages as $stage) {
                     $parts = [
                         $stage->experiment?->title ?? '',
-                        $stage->experiment?->goal ?? '',
+                        $stage->experiment?->thesis ?? '',
                         $stage->stage instanceof \BackedEnum ? $stage->stage->value : (string) $stage->stage,
                     ];
 
