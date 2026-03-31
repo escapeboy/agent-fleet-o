@@ -3,6 +3,7 @@
 namespace App\Domain\Chatbot\Services;
 
 use App\Domain\Agent\Actions\ExecuteAgentAction;
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Chatbot\Enums\ChatbotType;
@@ -11,6 +12,8 @@ use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Chatbot\Models\ChatbotSession;
+use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Barsy\Services\EmbeddingServiceInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -175,6 +178,119 @@ class ChatbotResponseService
             'escalated' => false,
             'reply' => $rawReply,
         ];
+    }
+
+    /**
+     * Stream a chatbot response via SSE (token-by-token).
+     *
+     * Calls $onChunk(string $text) for each LLM token.
+     * Returns the final ChatbotMessage after streaming completes.
+     */
+    public function handleStream(
+        Chatbot $chatbot,
+        ChatbotSession $session,
+        string $userText,
+        string $actorUserId,
+        callable $onChunk,
+    ): ChatbotMessage {
+        $startedAt = microtime(true);
+
+        ChatbotMessage::create([
+            'session_id' => $session->id,
+            'chatbot_id' => $chatbot->id,
+            'team_id' => $chatbot->team_id,
+            'role' => 'user',
+            'content' => $userText,
+        ]);
+
+        $contextMessages = $this->loadContext($session, $chatbot);
+
+        $ragChunks = [];
+        $bestRagScore = 0.0;
+        if ($chatbot->knowledgeSources()->where('status', 'ready')->where('is_enabled', true)->exists()) {
+            $ragChunks = $this->retrieveRelevantChunks($chatbot, $userText);
+            $bestRagScore = ! empty($ragChunks) ? (float) ($ragChunks[0]['similarity'] ?? 0.0) : 0.0;
+        }
+
+        $context = $this->formatContextForAgent($chatbot, $contextMessages, $userText, $ragChunks);
+        $systemPrompt = $this->buildChatbotSystemPrompt($chatbot);
+
+        $gateway = app(AiGatewayInterface::class);
+
+        $request = new AiRequestDTO(
+            provider: $chatbot->agent?->provider?->value ?? 'openai',
+            model: $chatbot->agent?->model ?? 'gpt-4o-mini',
+            systemPrompt: $systemPrompt,
+            userPrompt: $context,
+            maxTokens: 2048,
+            userId: $actorUserId,
+            teamId: $chatbot->team_id,
+            purpose: 'chatbot_stream',
+            temperature: 0.7,
+        );
+
+        $response = $gateway->stream($request, $onChunk);
+
+        $rawReply = $response->content ?? '';
+        $latencyMs = (int) ((microtime(true) - $startedAt) * 1000);
+        $confidence = $bestRagScore > 0.0
+            ? round((0.85 * 0.6) + ($bestRagScore * 0.4), 4)
+            : ($rawReply ? 0.85 : 0.30);
+
+        // Append fallback if low confidence
+        if (
+            ! $chatbot->human_escalation_enabled
+            && $confidence < (float) $chatbot->confidence_threshold
+            && $chatbot->fallback_message
+        ) {
+            $suffix = "\n\n".$chatbot->fallback_message;
+            $rawReply .= $suffix;
+            $onChunk($suffix);
+        }
+
+        $ragSourceMeta = $this->buildRagSourceMeta($chatbot, $ragChunks);
+
+        $assistantMsg = ChatbotMessage::create([
+            'session_id' => $session->id,
+            'chatbot_id' => $chatbot->id,
+            'team_id' => $chatbot->team_id,
+            'role' => 'assistant',
+            'content' => $rawReply,
+            'confidence' => $confidence,
+            'latency_ms' => $latencyMs,
+            'metadata' => $ragSourceMeta ? ['sources' => $ragSourceMeta] : [],
+        ]);
+
+        $this->updateContextCache($session, $chatbot, $userText, $rawReply);
+        $session->increment('message_count', 2);
+        $session->update(['last_activity_at' => now()]);
+
+        return $assistantMsg;
+    }
+
+    /**
+     * Build system prompt from agent role/goal/backstory.
+     */
+    private function buildChatbotSystemPrompt(Chatbot $chatbot): string
+    {
+        $agent = $chatbot->agent;
+        if (! $agent) {
+            return 'You are a helpful assistant.';
+        }
+
+        $parts = ["You are an AI assistant named \"{$agent->name}\"."];
+
+        if ($agent->role) {
+            $parts[] = "Your role: {$agent->role}";
+        }
+        if ($agent->goal) {
+            $parts[] = "Your goal: {$agent->goal}";
+        }
+        if ($agent->backstory) {
+            $parts[] = $agent->backstory;
+        }
+
+        return implode("\n\n", $parts);
     }
 
     /**
