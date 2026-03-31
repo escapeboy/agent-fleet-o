@@ -78,6 +78,13 @@
                         <option value="{{ $tier->value }}">{{ $tier->label() }}</option>
                     @endforeach
                 </x-form-select>
+
+                <x-form-select wire:model="toolProfile" label="Tool Profile" hint="Restricts which tools this agent can access">
+                    <option value="">No restriction (all tools)</option>
+                    @foreach(config('tool_profiles.profiles', []) as $key => $profile)
+                        <option value="{{ $key }}">{{ $profile['label'] }} — {{ $profile['description'] }}</option>
+                    @endforeach
+                </x-form-select>
             </div>
 
             @if(!empty($providers[$this->provider]['local']))

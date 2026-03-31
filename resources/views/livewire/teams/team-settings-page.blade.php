@@ -958,4 +958,48 @@
             Save
         </button>
     </div>
+
+    {{-- AI Features --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">AI Features</h2>
+        <p class="mb-4 text-sm text-gray-500">Configure AI-powered automation features for your team.</p>
+
+        <div class="space-y-4">
+            {{-- Auto-Skill Proposals --}}
+            <div>
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Auto-Skill Proposals</h3>
+                <p class="text-xs text-gray-500 mb-2">Automatically propose new skills from successful experiments with 5+ stages.</p>
+                <x-form-checkbox wire:model="autoSkillProposeEnabled" label="Enable auto-skill proposals" />
+                @if($autoSkillProposeEnabled)
+                    <div class="mt-2 grid grid-cols-2 gap-4">
+                        <x-form-input wire:model="autoSkillProposeMinStages" type="number" label="Min stages" hint="Minimum completed stages to trigger" compact />
+                        <x-form-input wire:model="autoSkillProposeDailyCap" type="number" label="Daily cap" hint="Max proposals per day" compact />
+                    </div>
+                @endif
+            </div>
+
+            {{-- Context Compression --}}
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Pipeline Context Compression</h3>
+                <p class="text-xs text-gray-500 mb-2">Compress preceding stage outputs when they exceed the token threshold.</p>
+                <x-form-checkbox wire:model="contextCompressionEnabled" label="Enable context compression" />
+                @if($contextCompressionEnabled)
+                    <div class="mt-2 max-w-xs">
+                        <x-form-input wire:model="contextCompressionThreshold" type="number" label="Threshold (tokens)" hint="Compress when preceding context exceeds this" compact />
+                    </div>
+                @endif
+            </div>
+
+            {{-- Autonomous Evolution --}}
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Autonomous Skill Evolution</h3>
+                <p class="text-xs text-gray-500 mb-2">Automatically analyze agent executions and propose skill improvements.</p>
+                <x-form-checkbox wire:model="autonomousEvolutionEnabled" label="Enable autonomous evolution" />
+            </div>
+        </div>
+
+        <button wire:click="saveAiFeatures" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            Save AI Features
+        </button>
+    </div>
 </div>

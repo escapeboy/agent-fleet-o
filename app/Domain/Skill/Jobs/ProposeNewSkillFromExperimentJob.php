@@ -3,6 +3,7 @@
 namespace App\Domain\Skill\Jobs;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ProposeNewSkillFromExperimentAction;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,12 +28,15 @@ class ProposeNewSkillFromExperimentJob implements ShouldQueue
 
     public function handle(): void
     {
-        if (! config('skills.auto_propose.enabled', true)) {
+        $experiment = Experiment::withoutGlobalScopes()->find($this->experimentId);
+        if (! $experiment) {
             return;
         }
 
-        $experiment = Experiment::withoutGlobalScopes()->find($this->experimentId);
-        if (! $experiment) {
+        $team = Team::withoutGlobalScopes()->find($experiment->team_id);
+        $enabled = $team?->settings['auto_skill_propose_enabled']
+            ?? config('skills.auto_propose.enabled', true);
+        if (! $enabled) {
             return;
         }
 

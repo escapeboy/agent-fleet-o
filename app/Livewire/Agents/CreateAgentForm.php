@@ -53,6 +53,8 @@ class CreateAgentForm extends Component
     /** @var array<string> */
     public array $gitRepositoryIds = [];
 
+    public string $toolProfile = '';
+
     /** Raw JSON input for the heartbeat definition (optional). */
     public string $heartbeatJson = '';
 
@@ -162,6 +164,10 @@ class CreateAgentForm extends Component
             config: $config,
             personality: $personality,
         );
+
+        if ($this->toolProfile !== '') {
+            $agent->update(['tool_profile' => $this->toolProfile]);
+        }
 
         if ($heartbeatDefinition !== null) {
             $agent->update(['heartbeat_definition' => $heartbeatDefinition]);

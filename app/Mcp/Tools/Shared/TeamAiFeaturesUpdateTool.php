@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Mcp\Tools\Shared;
+
+use App\Domain\Shared\Models\Team;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
+
+class TeamAiFeaturesUpdateTool extends Tool
+{
+    protected string $name = 'team_ai_features_update';
+
+    protected string $description = 'Update AI feature settings for the team. Accepts partial updates — only provided fields are changed. Controls auto-skill proposals, context compression, stage model routing, and autonomous evolution.';
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'auto_skill_propose_enabled' => $schema->boolean()
+                ->description('Enable/disable auto-proposing skills from successful experiments'),
+            'auto_skill_propose_min_stages' => $schema->integer()
+                ->description('Minimum completed stages to trigger auto-proposal (default 5)'),
+            'auto_skill_propose_daily_cap' => $schema->integer()
+                ->description('Max auto-proposals per day per team (default 5)'),
+            'context_compression_enabled' => $schema->boolean()
+                ->description('Enable/disable pipeline context compression'),
+            'context_compression_threshold' => $schema->integer()
+                ->description('Token threshold for compression (default 30000)'),
+            'autonomous_evolution_enabled' => $schema->boolean()
+                ->description('Enable/disable autonomous skill evolution from agent executions'),
+            'stage_model_tiers' => $schema->object()
+                ->description('Per-stage model tier overrides. Keys: scoring, planning, building, executing, collecting_metrics, evaluating. Values: cheap, standard, expensive, or null for default'),
+        ];
+    }
+
+    public function handle(Request $request): Response
+    {
+        $team = Team::first();
+
+        if (! $team) {
+            return Response::text(json_encode(['error' => 'No team found.']));
+        }
+
+        $settings = $team->settings ?? [];
+        $updated = [];
+
+        $allowedKeys = [
+            'auto_skill_propose_enabled',
+            'auto_skill_propose_min_stages',
+            'auto_skill_propose_daily_cap',
+            'context_compression_enabled',
+            'context_compression_threshold',
+            'autonomous_evolution_enabled',
+            'stage_model_tiers',
+        ];
+
+        foreach ($allowedKeys as $key) {
+            $value = $request->get($key);
+            if ($value !== null) {
+                $settings[$key] = $value;
+                $updated[] = $key;
+            }
+        }
+
+        if (empty($updated)) {
+            return Response::text(json_encode(['message' => 'No settings provided to update.']));
+        }
+
+        $team->update(['settings' => $settings]);
+
+        return Response::text(json_encode([
+            'message' => 'AI feature settings updated.',
+            'updated_keys' => $updated,
+        ]));
+    }
+}

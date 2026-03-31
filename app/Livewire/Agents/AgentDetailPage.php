@@ -64,6 +64,8 @@ class AgentDetailPage extends Component
 
     public string $editFederationGroupId = '';
 
+    public string $editToolProfile = '';
+
     /** @var array<string> */
     public array $editGitRepositoryIds = [];
 
@@ -105,6 +107,7 @@ class AgentDetailPage extends Component
         $this->editUseFederation = (bool) ($this->agent->config['use_tool_federation'] ?? false);
         $this->editFederationGroupId = $this->agent->config['tool_federation_group_id'] ?? '';
         $this->editGitRepositoryIds = $this->agent->config['git_repository_ids'] ?? [];
+        $this->editToolProfile = $this->agent->tool_profile ?? '';
         $this->editing = true;
     }
 
@@ -223,6 +226,7 @@ class AgentDetailPage extends Component
             'provider' => $this->editProvider,
             'model' => $this->editModel,
             'budget_cap_credits' => $this->editBudgetCap,
+            'tool_profile' => $this->editToolProfile ?: null,
             'config' => $config,
             'cost_per_1k_input' => $pricing['input'] ?? 0,
             'cost_per_1k_output' => $pricing['output'] ?? 0,

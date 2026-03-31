@@ -366,7 +366,9 @@ abstract class BaseStageJob implements ShouldQueue
     protected function resolveStageModelTier(?Team $team): ?array
     {
         $stageKey = $this->stageType()->value;
-        $tier = config("experiments.stage_model_tiers.{$stageKey}");
+        $teamTiers = $team?->settings['stage_model_tiers'] ?? null;
+        $tier = (is_array($teamTiers) ? ($teamTiers[$stageKey] ?? null) : null)
+            ?? config("experiments.stage_model_tiers.{$stageKey}");
 
         if (! $tier || $tier === 'standard') {
             return null;

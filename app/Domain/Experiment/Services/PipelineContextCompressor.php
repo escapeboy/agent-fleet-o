@@ -5,6 +5,7 @@ namespace App\Domain\Experiment\Services;
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Illuminate\Support\Collection;
@@ -18,11 +19,15 @@ class PipelineContextCompressor
 
     public function shouldCompress(Experiment $experiment, ExperimentStage $currentStage): bool
     {
-        if (! config('experiments.context_compression.enabled', true)) {
+        $team = Team::withoutGlobalScopes()->find($experiment->team_id);
+        $enabled = $team?->settings['context_compression_enabled']
+            ?? config('experiments.context_compression.enabled', true);
+        if (! $enabled) {
             return false;
         }
 
-        $threshold = config('experiments.context_compression.threshold_tokens', 30000);
+        $threshold = $team?->settings['context_compression_threshold']
+            ?? config('experiments.context_compression.threshold_tokens', 30000);
         $precedingContext = $this->getPrecedingContextLength($experiment, $currentStage);
         $estimatedTokens = $precedingContext / self::CHARS_PER_TOKEN;
 

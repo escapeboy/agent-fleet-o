@@ -79,6 +79,19 @@ class TeamSettingsPage extends Component
 
     public bool $showConnectForm = false;
 
+    // AI Features
+    public bool $autoSkillProposeEnabled = true;
+
+    public int $autoSkillProposeMinStages = 5;
+
+    public int $autoSkillProposeDailyCap = 5;
+
+    public bool $contextCompressionEnabled = true;
+
+    public int $contextCompressionThreshold = 30000;
+
+    public bool $autonomousEvolutionEnabled = true;
+
     // MCP tool preferences
     public string $mcpToolProfile = 'full';
 
@@ -110,6 +123,14 @@ class TeamSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+
+        // AI Features
+        $this->autoSkillProposeEnabled = (bool) ($settings['auto_skill_propose_enabled'] ?? config('skills.auto_propose.enabled', true));
+        $this->autoSkillProposeMinStages = (int) ($settings['auto_skill_propose_min_stages'] ?? config('skills.auto_propose.min_stages', 5));
+        $this->autoSkillProposeDailyCap = (int) ($settings['auto_skill_propose_daily_cap'] ?? config('skills.auto_propose.daily_cap', 5));
+        $this->contextCompressionEnabled = (bool) ($settings['context_compression_enabled'] ?? config('experiments.context_compression.enabled', true));
+        $this->contextCompressionThreshold = (int) ($settings['context_compression_threshold'] ?? config('experiments.context_compression.threshold_tokens', 30000));
+        $this->autonomousEvolutionEnabled = (bool) ($settings['autonomous_evolution_enabled'] ?? config('skills.autonomous_evolution.enabled', true));
 
         // Bridge routing preferences
         $bridgeSettings = $settings['bridge'] ?? [];
@@ -200,6 +221,29 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Chatbot settings saved.');
+    }
+
+    public function saveAiFeatures(): void
+    {
+        $this->validate([
+            'autoSkillProposeMinStages' => 'integer|min:1|max:50',
+            'autoSkillProposeDailyCap' => 'integer|min:0|max:100',
+            'contextCompressionThreshold' => 'integer|min:5000|max:200000',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+
+        $settings['auto_skill_propose_enabled'] = $this->autoSkillProposeEnabled;
+        $settings['auto_skill_propose_min_stages'] = $this->autoSkillProposeMinStages;
+        $settings['auto_skill_propose_daily_cap'] = $this->autoSkillProposeDailyCap;
+        $settings['context_compression_enabled'] = $this->contextCompressionEnabled;
+        $settings['context_compression_threshold'] = $this->contextCompressionThreshold;
+        $settings['autonomous_evolution_enabled'] = $this->autonomousEvolutionEnabled;
+
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'AI features saved.');
     }
 
     public function saveApprovalSettings(): void

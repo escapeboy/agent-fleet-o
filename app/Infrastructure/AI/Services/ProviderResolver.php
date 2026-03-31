@@ -129,7 +129,9 @@ class ProviderResolver
         // 3.5. Stage-level model tier routing (after team, before platform default)
         if ($purpose && str_starts_with($purpose, 'stage:')) {
             $stageType = Str::after($purpose, 'stage:');
-            $tier = config("experiments.stage_model_tiers.{$stageType}");
+            $teamTiers = $team?->settings['stage_model_tiers'] ?? null;
+            $tier = (is_array($teamTiers) ? ($teamTiers[$stageType] ?? null) : null)
+                ?? config("experiments.stage_model_tiers.{$stageType}");
 
             if ($tier && $tier !== 'standard') {
                 $tierModels = config("experiments.model_tiers.{$tier}");
@@ -226,7 +228,9 @@ class ProviderResolver
         // 3.5. Stage-level model tier routing
         if ($purpose && str_starts_with($purpose, 'stage:')) {
             $stageType = Str::after($purpose, 'stage:');
-            $tier = config("experiments.stage_model_tiers.{$stageType}");
+            $teamTiers = $team?->settings['stage_model_tiers'] ?? null;
+            $tier = (is_array($teamTiers) ? ($teamTiers[$stageType] ?? null) : null)
+                ?? config("experiments.stage_model_tiers.{$stageType}");
 
             if ($tier && $tier !== 'standard') {
                 $tierModels = config("experiments.model_tiers.{$tier}");

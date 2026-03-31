@@ -32,6 +32,7 @@ class StoreAgentRequest extends FormRequest
             'budget_cap_credits' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'skill_ids' => ['sometimes', 'array'],
             'skill_ids.*' => ['uuid', Rule::exists('skills', 'id')->where('team_id', $teamId)],
+            'tool_profile' => ['nullable', 'string', Rule::in(array_keys(config('tool_profiles.profiles', [])))],
         ];
     }
 

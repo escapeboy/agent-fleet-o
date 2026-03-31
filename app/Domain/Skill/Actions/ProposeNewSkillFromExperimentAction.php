@@ -4,6 +4,7 @@ namespace App\Domain\Skill\Actions;
 
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Services\NotificationService;
 use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Enums\SkillType;
@@ -18,7 +19,9 @@ class ProposeNewSkillFromExperimentAction
 {
     public function execute(Experiment $experiment): ?Skill
     {
-        $minStages = config('skills.auto_propose.min_stages', 5);
+        $team = Team::withoutGlobalScopes()->find($experiment->team_id);
+        $minStages = $team?->settings['auto_skill_propose_min_stages']
+            ?? config('skills.auto_propose.min_stages', 5);
 
         $stages = $experiment->stages()
             ->where('status', StageStatus::Completed->value)
@@ -30,7 +33,8 @@ class ProposeNewSkillFromExperimentAction
         }
 
         // Daily cap per team to prevent cost abuse
-        $dailyCap = config('skills.auto_propose.daily_cap', 5);
+        $dailyCap = $team?->settings['auto_skill_propose_daily_cap']
+            ?? config('skills.auto_propose.daily_cap', 5);
         $todayCount = Skill::withoutGlobalScopes()
             ->where('team_id', $experiment->team_id)
             ->whereJsonContains('configuration->auto_generated', true)
