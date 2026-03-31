@@ -73,11 +73,31 @@ class ExtractEntitiesAction
 
     private function resolveLlm(string $teamId): array
     {
-        // Use a cost-effective model for entity extraction
-        return [
-            'provider' => config('llm_providers.default_provider', 'anthropic'),
-            'model' => config('llm_providers.default_model', 'claude-haiku-4-5-20251001'),
+        // Use a cost-effective model for entity extraction, preferring whatever provider has a key configured
+        $provider = config('llm_providers.default_provider', 'anthropic');
+        $model = config('llm_providers.default_model', 'claude-haiku-4-5-20251001');
+
+        // Fallback: if the default provider has no API key, try alternatives
+        $providerKeyMap = [
+            'anthropic' => config('prism.providers.anthropic.api_key'),
+            'openai' => config('prism.providers.openai.api_key'),
+            'google' => config('prism.providers.google.api_key'),
         ];
+
+        if (empty($providerKeyMap[$provider] ?? null)) {
+            if (! empty($providerKeyMap['openai'])) {
+                $provider = 'openai';
+                $model = 'gpt-4o-mini';
+            } elseif (! empty($providerKeyMap['anthropic'])) {
+                $provider = 'anthropic';
+                $model = 'claude-haiku-4-5-20251001';
+            } elseif (! empty($providerKeyMap['google'])) {
+                $provider = 'google';
+                $model = 'gemini-2.5-flash';
+            }
+        }
+
+        return ['provider' => $provider, 'model' => $model];
     }
 
     private function parseEntities(string $content): array

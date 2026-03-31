@@ -67,7 +67,8 @@ class AgentDetailPage extends Component
 
     public string $editToolProfile = '';
 
-    public ?string $editKnowledgeBaseId = null;
+    /** @var array<string> */
+    public array $editKnowledgeBaseIds = [];
 
     public bool $editEvaluationEnabled = false;
 
@@ -115,7 +116,7 @@ class AgentDetailPage extends Component
         $this->editFederationGroupId = $this->agent->config['tool_federation_group_id'] ?? '';
         $this->editGitRepositoryIds = $this->agent->config['git_repository_ids'] ?? [];
         $this->editToolProfile = $this->agent->tool_profile ?? '';
-        $this->editKnowledgeBaseId = $this->agent->knowledge_base_id;
+        $this->editKnowledgeBaseIds = $this->agent->knowledgeBases()->pluck('knowledge_bases.id')->map(fn ($id) => (string) $id)->toArray();
         $this->editEvaluationEnabled = (bool) $this->agent->evaluation_enabled;
         $this->editEvaluationSampleRate = $this->agent->evaluation_sample_rate;
         $this->editing = true;
@@ -238,9 +239,8 @@ class AgentDetailPage extends Component
             'model' => $this->editModel,
             'budget_cap_credits' => $this->editBudgetCap,
             'tool_profile' => $this->editToolProfile ?: null,
-            'knowledge_base_id' => $this->editKnowledgeBaseId ?: null,
             'evaluation_enabled' => $this->editEvaluationEnabled,
-            'evaluation_sample_rate' => $this->editEvaluationEnabled ? $this->editEvaluationSampleRate : null,
+            'evaluation_sample_rate' => $this->editEvaluationEnabled ? ($this->editEvaluationSampleRate ?? 0.2) : 0.0,
             'config' => $config,
             'cost_per_1k_input' => $pricing['input'] ?? 0,
             'cost_per_1k_output' => $pricing['output'] ?? 0,
@@ -264,6 +264,9 @@ class AgentDetailPage extends Component
             $toolSyncData[$toolId] = ['priority' => $index];
         }
         $this->agent->tools()->sync($toolSyncData);
+
+        // Sync knowledge bases
+        $this->agent->knowledgeBases()->sync($this->editKnowledgeBaseIds);
 
         $this->agent->refresh();
         $this->editing = false;
@@ -416,6 +419,7 @@ class AgentDetailPage extends Component
             ->get();
 
         $availableKnowledgeBases = KnowledgeBase::where('team_id', $teamId)
+            ->withCount('chunks')
             ->orderBy('name')
             ->get();
 

@@ -417,25 +417,27 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 }
             }
 
-            // For bridge-not-connected errors, release back to queue WITHOUT marking the step
-            // as failed — the step would skip future retries if it's already in failed state.
-            $isBridgeUnavailable = str_contains($e->getMessage(), 'Bridge is not connected');
+            // If retries remain, reset step to pending and let the framework retry.
+            // Without this, the step would be marked 'failed' and the early guard
+            // at the top of handle() would skip all subsequent retry attempts.
             $hasRetriesLeft = $this->attempts() < $this->tries;
 
-            if ($isBridgeUnavailable && $hasRetriesLeft) {
+            if ($hasRetriesLeft) {
                 // Reset step to pending so the retry attempt can re-execute it
                 $step->fresh()?->update(['status' => 'pending', 'worker_id' => null]);
 
-                Log::warning('ExecutePlaybookStepJob: bridge unavailable — releasing for retry', [
+                Log::warning('ExecutePlaybookStepJob: execution failed — releasing for retry', [
                     'step_id' => $this->stepId,
                     'attempt' => $this->attempts(),
+                    'max_tries' => $this->tries,
+                    'error' => $e->getMessage(),
                     'retry_in' => ($this->backoff[$this->attempts() - 1] ?? 120).'s',
                 ]);
 
                 throw $e; // Let framework handle retry with backoff
             }
 
-            // Ensure step is marked as failed (may have already been updated above)
+            // Final attempt exhausted — mark step as permanently failed
             if ($step->fresh()?->isRunning()) {
                 $step->update([
                     'status' => 'failed',

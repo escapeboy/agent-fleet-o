@@ -5,6 +5,7 @@ namespace App\Domain\Knowledge\Jobs;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Knowledge\Services\PgVectorKnowledgeStore;
 use App\Domain\Knowledge\Services\PrismEmbeddingsProvider;
+use App\Domain\Shared\Models\TeamProviderCredential;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -35,6 +36,8 @@ class IngestDocumentJob implements ShouldQueue
         if (! $kb) {
             return;
         }
+
+        $this->resolveTeamApiKey($kb->team_id);
 
         $kb->markIngesting();
 
@@ -82,6 +85,21 @@ class IngestDocumentJob implements ShouldQueue
             ]);
 
             throw $e;
+        }
+    }
+
+    /**
+     * Set the team's BYOK OpenAI key in config so Prism uses it for embeddings.
+     */
+    private function resolveTeamApiKey(string $teamId): void
+    {
+        $credential = TeamProviderCredential::where('team_id', $teamId)
+            ->where('provider', 'openai')
+            ->where('is_active', true)
+            ->first();
+
+        if ($credential && isset($credential->credentials['api_key'])) {
+            config(['prism.providers.openai.api_key' => $credential->credentials['api_key']]);
         }
     }
 }

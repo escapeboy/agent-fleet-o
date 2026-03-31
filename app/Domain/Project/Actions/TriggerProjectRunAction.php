@@ -58,12 +58,17 @@ class TriggerProjectRunAction
             $agentConfig = $project->agent_config;
             $leadAgentId = $agentConfig['lead_agent_id'] ?? null;
 
+            // Signal-triggered runs: 1 iteration (process and respond).
+            // Scheduled/manual runs: use project default or 3 iterations.
+            $maxIterations = $trigger === 'signal' ? 1 : ($project->budget_config['max_iterations'] ?? 3);
+
             $experiment = $this->createExperiment->execute(
                 userId: $project->user_id,
                 title: $project->title.' — Run #'.$runNumber,
                 thesis: $project->goal ?? $project->description ?? $project->title,
                 track: 'growth',
                 budgetCapCredits: $budgetCap,
+                maxIterations: $maxIterations,
                 teamId: $project->team_id,
                 workflowId: $project->workflow_id,
                 agentId: $leadAgentId,

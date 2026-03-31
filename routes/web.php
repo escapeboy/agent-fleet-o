@@ -53,6 +53,7 @@ use App\Livewire\KnowledgeGraph\KnowledgeGraphBrowserPage;
 use App\Livewire\Marketplace\MarketplaceBrowsePage;
 use App\Livewire\Marketplace\MarketplaceDetailPage;
 use App\Livewire\Marketplace\PublishForm;
+use App\Livewire\Memory\KnowledgeSourcesPage;
 use App\Livewire\Memory\MemoryBrowserPage;
 use App\Livewire\Metrics\ModelComparisonPage;
 use App\Livewire\OutboundConnectors\NotificationOutboundPage;
@@ -75,6 +76,7 @@ use App\Livewire\Signals\ConnectorSubscriptionsPage;
 use App\Livewire\Signals\ContactDetailPage;
 use App\Livewire\Signals\ContactsPage;
 use App\Livewire\Signals\EntityBrowserPage;
+use App\Livewire\Signals\SignalBrowserPage;
 use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
@@ -256,9 +258,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
-    Route::get('/knowledge', \App\Livewire\Memory\KnowledgeSourcesPage::class)->name('knowledge.index');
+    Route::get('/knowledge', KnowledgeSourcesPage::class)->name('knowledge.index');
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
 
+    Route::get('/signals', SignalBrowserPage::class)->name('signals.index');
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
     Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
     Route::get('/signals/subscriptions', ConnectorSubscriptionsPage::class)->name('signals.subscriptions');

@@ -84,6 +84,7 @@ class PollInputConnectors extends Command
 
                 try {
                     $config = $connector->config ?? [];
+                    $config['_team_id'] = $connector->team_id;
                     $signals = $connectorInstance->poll($config);
 
                     $count = count($signals);
@@ -102,7 +103,7 @@ class PollInputConnectors extends Command
                 } catch (\Throwable $e) {
                     $connector->update([
                         'last_error_at' => now(),
-                        'last_error_message' => mb_substr($e->getMessage(), 0, 500),
+                        'last_error_message' => mb_substr($e->getMessage(), 0, 250),
                     ]);
 
                     Log::error('PollInputConnectors: Error polling connector', [

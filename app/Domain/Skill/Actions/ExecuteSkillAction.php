@@ -232,7 +232,8 @@ class ExecuteSkillAction
             // Record failed execution
             $skill->recordExecution(false, $durationMs);
 
-            $failResult = $this->failExecution($skill, $teamId, $agentId, $experimentId, $input, $e->getMessage(), $durationMs);
+            $errorMessage = $e->getMessage() ?: 'Unknown error during skill execution ('.get_class($e).')';
+            $failResult = $this->failExecution($skill, $teamId, $agentId, $experimentId, $input, $errorMessage, $durationMs);
 
             // Plugin hook: notify plugins of failed skill execution
             event(new SkillExecuted($skill, $failResult['execution'], false));

@@ -48,6 +48,13 @@ class EditProjectForm extends Component
 
     public string $deliveryFormat = 'summary';
 
+    // Outbound channel constraints
+    public array $allowedOutboundChannels = ['email'];
+
+    public bool $notifyOnSuccess = false;
+
+    public bool $notifyOnFailure = true;
+
     // Budget
     public ?int $perRunCap = null;
 
@@ -91,6 +98,9 @@ class EditProjectForm extends Component
             $this->deliveryChannel = $delivery['channel'] ?? 'none';
             $this->deliveryTarget = $delivery['target'] ?? '';
             $this->deliveryFormat = $delivery['format'] ?? 'summary';
+            $this->allowedOutboundChannels = $delivery['allowed_outbound_channels'] ?? ['email'];
+            $this->notifyOnSuccess = $delivery['notify_on_success'] ?? false;
+            $this->notifyOnFailure = $delivery['notify_on_failure'] ?? true;
         }
 
         // Budget
@@ -129,6 +139,9 @@ class EditProjectForm extends Component
             $rules['deliveryTarget'] = 'required|max:500';
         }
 
+        $rules['allowedOutboundChannels'] = 'array';
+        $rules['allowedOutboundChannels.*'] = 'string|in:email,slack,telegram,webhook';
+
         return $rules;
     }
 
@@ -143,13 +156,15 @@ class EditProjectForm extends Component
             'monthly_cap' => $this->monthlyCap,
         ]);
 
-        $deliveryConfig = null;
+        $deliveryConfig = [
+            'allowed_outbound_channels' => array_values($this->allowedOutboundChannels),
+            'notify_on_success' => $this->notifyOnSuccess,
+            'notify_on_failure' => $this->notifyOnFailure,
+        ];
         if ($this->deliveryChannel !== 'none') {
-            $deliveryConfig = [
-                'channel' => $this->deliveryChannel,
-                'target' => $this->deliveryTarget,
-                'format' => $this->deliveryFormat,
-            ];
+            $deliveryConfig['channel'] = $this->deliveryChannel;
+            $deliveryConfig['target'] = $this->deliveryTarget;
+            $deliveryConfig['format'] = $this->deliveryFormat;
         }
 
         $data = [
