@@ -75,6 +75,7 @@ class DeliverChatbotWorkflowResultListener implements ShouldQueue
 
         return $step->output['content']
             ?? $step->output['result']
+            ?? $step->output['text']
             ?? $step->output['response']
             ?? (is_string($step->output['output'] ?? null) ? $step->output['output'] : null);
     }
