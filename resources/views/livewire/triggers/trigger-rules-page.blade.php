@@ -1,4 +1,12 @@
 <div>
+    {{-- Flash messages --}}
+    @if(session()->has('message'))
+        <div class="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">{{ session('message') }}</div>
+    @endif
+    @if(session()->has('error'))
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
+    @endif
+
     {{-- Toolbar --}}
     <div class="mb-6 flex flex-wrap items-center gap-4">
         <div class="relative flex-1">
@@ -14,6 +22,49 @@
             New Rule
         </a>
     </div>
+
+    {{-- Edit Modal --}}
+    @if($editingRuleId)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        x-data x-on:keydown.escape.window="$wire.cancelEdit()">
+        <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900">Edit Trigger Rule</h3>
+
+            <div class="space-y-4">
+                <x-form-input wire:model="editName" label="Name" :error="$errors->first('editName')" />
+
+                <x-form-select wire:model="editSourceType" label="Source Type">
+                    @foreach($availableSourceTypes as $type)
+                        <option value="{{ $type }}">{{ $type === '*' ? 'Any source' : ucfirst(str_replace('_', ' ', $type)) }}</option>
+                    @endforeach
+                </x-form-select>
+
+                <x-form-select wire:model="editProjectId" label="Project">
+                    <option value="">No project</option>
+                    @foreach($projects as $project)
+                        <option value="{{ $project->id }}">{{ $project->title }}</option>
+                    @endforeach
+                </x-form-select>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <x-form-input wire:model="editCooldownSeconds" label="Cooldown (seconds)" type="number" min="0" />
+                    <x-form-input wire:model="editMaxConcurrent" label="Max Concurrent" type="number" min="-1" max="10" />
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" wire:click="cancelEdit"
+                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="button" wire:click="saveEdit"
+                    class="rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Empty state --}}
     @if($rules->isEmpty())
@@ -73,6 +124,16 @@
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex justify-end gap-2">
+                                    <button wire:click="testTrigger('{{ $rule->id }}')"
+                                        wire:confirm="Fire this trigger with the latest matching signal?"
+                                        class="rounded px-2.5 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
+                                        title="Test with latest signal">
+                                        Test
+                                    </button>
+                                    <button wire:click="startEdit('{{ $rule->id }}')"
+                                        class="rounded px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100">
+                                        Edit
+                                    </button>
                                     <button wire:click="toggleStatus('{{ $rule->id }}')"
                                         class="rounded px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100">
                                         {{ $rule->status->isActive() ? 'Pause' : 'Activate' }}

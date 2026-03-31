@@ -247,15 +247,26 @@
                     @endif
                 </div>
 
-                {{-- Knowledge Base --}}
+                {{-- Knowledge Bases --}}
                 @if($availableKnowledgeBases->isNotEmpty())
                 <div>
-                    <x-form-select wire:model="editKnowledgeBaseId" label="Knowledge Base" hint="Link this agent to a knowledge base for RAG-powered context">
-                        <option value="">None</option>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Knowledge Bases</label>
+                    <p class="text-xs text-gray-500 mb-3">Select knowledge bases to provide RAG context during agent execution.</p>
+                    <div class="space-y-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 p-3">
                         @foreach($availableKnowledgeBases as $kb)
-                            <option value="{{ $kb->id }}">{{ $kb->name }}</option>
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <input type="checkbox" wire:model="editKnowledgeBaseIds" value="{{ $kb->id }}"
+                                    class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                <div class="min-w-0 flex-1">
+                                    <span class="text-sm text-gray-900 group-hover:text-primary-700">{{ $kb->name }}</span>
+                                    <span class="ml-1 text-xs text-gray-400">({{ number_format($kb->chunks_count) }} chunks)</span>
+                                </div>
+                                <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium {{ $kb->status->color() === 'green' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
+                                    {{ $kb->status->label() }}
+                                </span>
+                            </label>
                         @endforeach
-                    </x-form-select>
+                    </div>
                 </div>
                 @endif
 
@@ -411,7 +422,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -448,6 +459,62 @@
                         @endif
                     </div>
                 </div>
+            </div>
+
+        @elseif($activeTab === 'knowledge')
+            <div class="space-y-4">
+                @php
+                    $linkedKbs = $agent->knowledgeBases()->withCount('chunks')->get();
+                @endphp
+
+                @if($linkedKbs->isEmpty())
+                    <div class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
+                        <i class="fas fa-book-open mb-2 text-2xl text-gray-300"></i>
+                        <p class="text-sm text-gray-500">No knowledge bases linked to this agent.</p>
+                        <p class="mt-1 text-xs text-gray-400">Click "Edit" above to assign knowledge bases, or <a href="{{ route('knowledge.index') }}" class="text-primary-600 hover:underline">create one</a>.</p>
+                    </div>
+                @else
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach($linkedKbs as $kb)
+                            @php
+                                $statusColor = match($kb->status->color()) {
+                                    'green' => 'bg-green-100 text-green-700',
+                                    'blue' => 'bg-blue-100 text-blue-700',
+                                    'red' => 'bg-red-100 text-red-700',
+                                    default => 'bg-gray-100 text-gray-600',
+                                };
+                            @endphp
+                            <div class="rounded-xl border border-gray-200 bg-white p-4">
+                                <div class="mb-2 flex items-start justify-between">
+                                    <h4 class="text-sm font-semibold text-gray-900">{{ $kb->name }}</h4>
+                                    <span class="ml-2 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium {{ $statusColor }}">
+                                        {{ $kb->status->label() }}
+                                    </span>
+                                </div>
+                                @if($kb->description)
+                                    <p class="mb-3 text-xs text-gray-500">{{ Str::limit($kb->description, 100) }}</p>
+                                @endif
+                                <dl class="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <dt class="text-gray-400">Chunks</dt>
+                                        <dd class="font-medium text-gray-700">{{ number_format($kb->chunks_count) }}</dd>
+                                    </div>
+                                    @if($kb->last_ingested_at)
+                                    <div>
+                                        <dt class="text-gray-400">Last ingested</dt>
+                                        <dd class="font-medium text-gray-700">{{ $kb->last_ingested_at->diffForHumans() }}</dd>
+                                    </div>
+                                    @endif
+                                </dl>
+                                <div class="mt-3 border-t border-gray-100 pt-2">
+                                    <a href="{{ route('knowledge.index') }}" class="text-xs font-medium text-primary-600 hover:text-primary-800">
+                                        Manage documents &rarr;
+                                    </a>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
         @elseif($activeTab === 'skills')

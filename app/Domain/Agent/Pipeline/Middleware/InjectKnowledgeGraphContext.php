@@ -55,33 +55,41 @@ class InjectKnowledgeGraphContext
             ]);
         }
 
-        // 2. RAG knowledge base context (only if agent has a bound knowledge base)
-        $knowledgeBaseId = $ctx->agent->knowledge_base_id ?? null;
+        // 2. RAG knowledge base context (from all linked knowledge bases)
+        $knowledgeBases = $ctx->agent->knowledgeBases()->get();
 
-        if ($knowledgeBaseId) {
+        // Backward compat: include legacy single FK if not already in the pivot
+        $legacyKbId = $ctx->agent->knowledge_base_id;
+        if ($legacyKbId && ! $knowledgeBases->contains('id', $legacyKbId)) {
+            $legacyKb = KnowledgeBase::find($legacyKbId);
+            if ($legacyKb) {
+                $knowledgeBases->push($legacyKb);
+            }
+        }
+
+        foreach ($knowledgeBases as $kb) {
+            if (! $kb->isReady()) {
+                continue;
+            }
+
             try {
-                $kb = KnowledgeBase::find($knowledgeBaseId);
+                $chunks = $this->ragFactory->search(
+                    knowledgeBaseId: $kb->id,
+                    query: $inputText,
+                    topK: 5,
+                );
 
-                if ($kb && $kb->isReady()) {
-                    $chunks = $this->ragFactory->search(
-                        knowledgeBaseId: $knowledgeBaseId,
-                        query: $inputText,
-                        topK: 5,
+                if (! empty($chunks)) {
+                    $parts = array_map(
+                        fn ($c) => "Source: {$c['source']}\n{$c['content']}",
+                        $chunks,
                     );
-
-                    if (! empty($chunks)) {
-                        $parts = array_map(
-                            fn ($c) => "Source: {$c['source']}\n{$c['content']}",
-                            $chunks,
-                        );
-                        $ctx->systemPromptParts[] = "## Knowledge Base Context\n\n".implode("\n\n---\n\n", $parts);
-                    }
+                    $ctx->systemPromptParts[] = "## Knowledge: {$kb->name}\n\n".implode("\n\n---\n\n", $parts);
                 }
             } catch (\Throwable $e) {
-                // Graceful degradation — KB context is additive, never blocking
                 Log::warning('InjectKnowledgeGraphContext: RAG context failed', [
                     'agent_id' => $ctx->agent->id,
-                    'knowledge_base_id' => $knowledgeBaseId,
+                    'knowledge_base_id' => $kb->id,
                     'error' => $e->getMessage(),
                 ]);
             }

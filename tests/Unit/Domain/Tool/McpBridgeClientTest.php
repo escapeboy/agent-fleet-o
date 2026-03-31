@@ -131,7 +131,10 @@ class McpBridgeClientTest extends TestCase
 
     public function test_call_tool_throws_when_no_bridge_connected(): void
     {
-        $this->bridge->update(['status' => BridgeConnectionStatus::Disconnected]);
+        $this->bridge->update([
+            'status' => BridgeConnectionStatus::Disconnected,
+            'last_seen_at' => now()->subMinutes(5),
+        ]);
 
         $client = $this->buildClient();
 

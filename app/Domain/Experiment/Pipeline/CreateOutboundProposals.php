@@ -12,6 +12,9 @@ use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Outbound\Enums\OutboundChannel;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Signal\Models\Signal;
 use Illuminate\Support\Str;
 
 class CreateOutboundProposals extends BaseStageJob
@@ -48,6 +51,9 @@ class CreateOutboundProposals extends BaseStageJob
             ['channel' => 'email', 'target_description' => 'test@example.com'],
         ];
 
+        // Filter channels through project's allowed outbound channels
+        $channels = $this->filterAllowedChannels($channels, $experiment);
+
         $artifacts = $experiment->artifacts()
             ->where('metadata->iteration', $experiment->current_iteration)
             ->orWhere(function ($q) use ($experiment) {
@@ -55,18 +61,22 @@ class CreateOutboundProposals extends BaseStageJob
             })
             ->get();
 
+        // Resolve signal contact data from the triggering signal (if any)
+        $signalContact = $this->resolveSignalContact($experiment);
+
         $batchId = (string) Str::uuid();
         $proposals = [];
 
         foreach ($channels as $index => $channelSpec) {
             $channel = OutboundChannel::tryFrom($channelSpec['channel'] ?? 'email') ?? OutboundChannel::Email;
-            $artifact = $artifacts->first();
+
+            $target = $this->buildTarget($channel, $channelSpec, $signalContact);
 
             $proposal = OutboundProposal::withoutGlobalScopes()->create([
                 'experiment_id' => $experiment->id,
                 'team_id' => $experiment->team_id,
                 'channel' => $channel,
-                'target' => ['description' => $channelSpec['target_description'] ?? 'unknown'],
+                'target' => $target,
                 'content' => [
                     'type' => 'experiment_summary',
                     'subject' => "Experiment Complete: {$experiment->title}",
@@ -131,5 +141,95 @@ class CreateOutboundProposals extends BaseStageJob
         }
 
         // When not auto-approved, no transition — awaiting_approval is a human gate
+    }
+
+    /**
+     * Resolve contact data from the signal that triggered this experiment.
+     * Chain: Experiment → ProjectRun.signal_id → Signal.payload
+     *
+     * @return array{email?: string, name?: string, subject?: string, message_id?: string, source_type?: string}
+     */
+    private function resolveSignalContact(Experiment $experiment): array
+    {
+        $run = ProjectRun::withoutGlobalScopes()
+            ->where('experiment_id', $experiment->id)
+            ->whereNotNull('signal_id')
+            ->first();
+
+        if (! $run?->signal_id) {
+            return [];
+        }
+
+        $signal = Signal::withoutGlobalScopes()
+            ->where('id', $run->signal_id)
+            ->where('team_id', $experiment->team_id)
+            ->first();
+        if (! $signal) {
+            return [];
+        }
+
+        $payload = $signal->payload ?? [];
+
+        return array_filter([
+            'email' => $payload['from'] ?? $signal->source_identifier ?? null,
+            'name' => $payload['from_name'] ?? null,
+            'subject' => $payload['subject'] ?? $payload['title'] ?? null,
+            'message_id' => $payload['message_id'] ?? null,
+            'source_type' => $signal->source_type,
+            'signal_id' => $signal->id,
+        ]);
+    }
+
+    /**
+     * Build the outbound target with real contact data when available.
+     */
+    private function buildTarget(OutboundChannel $channel, array $channelSpec, array $signalContact): array
+    {
+        $target = ['description' => $channelSpec['target_description'] ?? 'unknown'];
+
+        if ($channel === OutboundChannel::Email && ! empty($signalContact['email'])) {
+            $target['email'] = $signalContact['email'];
+            if (! empty($signalContact['name'])) {
+                $target['name'] = $signalContact['name'];
+            }
+            // Threading headers for proper reply chains
+            if (! empty($signalContact['message_id'])) {
+                $target['in_reply_to'] = $signalContact['message_id'];
+                $target['references'] = $signalContact['message_id'];
+            }
+            if (! empty($signalContact['subject'])) {
+                $target['reply_subject'] = $signalContact['subject'];
+            }
+        }
+
+        return $target;
+    }
+
+    /**
+     * Filter AI-proposed channels through the project's allowed outbound channels.
+     */
+    private function filterAllowedChannels(array $channels, Experiment $experiment): array
+    {
+        $run = ProjectRun::withoutGlobalScopes()
+            ->where('experiment_id', $experiment->id)
+            ->first();
+
+        if (! $run?->project_id) {
+            return $channels;
+        }
+
+        $project = Project::withoutGlobalScopes()->find($run->project_id);
+        $deliveryConfig = $project?->delivery_config ?? [];
+        $allowed = $deliveryConfig['allowed_outbound_channels'] ?? null;
+
+        // No config = allow all (backward compat)
+        if ($allowed === null || $allowed === []) {
+            return $channels;
+        }
+
+        return array_values(array_filter(
+            $channels,
+            fn (array $ch) => in_array($ch['channel'] ?? '', $allowed, true),
+        ));
     }
 }

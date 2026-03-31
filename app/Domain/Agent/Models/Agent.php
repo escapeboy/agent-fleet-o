@@ -118,6 +118,12 @@ class Agent extends Model
         return $this->belongsTo(KnowledgeBase::class);
     }
 
+    public function knowledgeBases(): BelongsToMany
+    {
+        return $this->belongsToMany(KnowledgeBase::class, 'agent_knowledge_base')
+            ->withTimestamps();
+    }
+
     public function aiRuns(): HasMany
     {
         return $this->hasMany(AiRun::class);

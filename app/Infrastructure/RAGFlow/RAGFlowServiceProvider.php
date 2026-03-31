@@ -16,7 +16,7 @@ class RAGFlowServiceProvider extends ServiceProvider
         $this->app->singleton(RAGFlowClient::class, function (): RAGFlowClient {
             return new RAGFlowClient(
                 baseUrl: config('ragflow.url'),
-                apiKey: config('ragflow.api_key', ''),
+                apiKey: config('ragflow.api_key') ?? '',
                 timeout: config('ragflow.timeout', 30),
                 circuitBreakerTtl: config('ragflow.circuit_breaker_ttl', 60),
                 circuitBreakerThreshold: config('ragflow.circuit_breaker_threshold', 5),

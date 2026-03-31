@@ -8,6 +8,7 @@ use App\Domain\Signal\Actions\RefreshOAuthTokenAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Support\Facades\Log;
+use Webklex\PHPIMAP\Attribute;
 use Webklex\PHPIMAP\ClientManager;
 
 class ImapConnector implements InputConnectorInterface
@@ -34,6 +35,7 @@ class ImapConnector implements InputConnectorInterface
         $lastUid = $config['last_uid'] ?? 0;
         $credentialId = $config['credential_id'] ?? null;
         $experimentId = $config['experiment_id'] ?? null;
+        $teamId = $config['_team_id'] ?? null;
         $tags = $config['tags'] ?? ['email'];
 
         if (! $host) {
@@ -44,9 +46,17 @@ class ImapConnector implements InputConnectorInterface
 
         $credentials = $this->resolveCredentials($credentialId);
         if (! $credentials) {
-            Log::warning('ImapConnector: No credentials found', ['credential_id' => $credentialId]);
+            // Fallback: credentials stored inline in connector config (from UI form)
+            if (! empty($config['username'])) {
+                $credentials = [
+                    'username' => $config['username'],
+                    'password' => $config['password'] ?? '',
+                ];
+            } else {
+                Log::warning('ImapConnector: No credentials found', ['credential_id' => $credentialId]);
 
-            return [];
+                return [];
+            }
         }
 
         try {
@@ -94,6 +104,9 @@ class ImapConnector implements InputConnectorInterface
             if ($lastUid > 0) {
                 $query->setFetchFlags(false);
                 $query->whereUid((string) ($lastUid + 1).':*');
+            } else {
+                // First poll: fetch all messages (ALL criteria required by some IMAP servers)
+                $query->all();
             }
             $messages = $query->limit($maxPerPoll)->get();
 
@@ -111,7 +124,7 @@ class ImapConnector implements InputConnectorInterface
                     'from' => $this->formatAddress($message->getFrom()),
                     'to' => $this->formatAddresses($message->getTo()),
                     'cc' => $this->formatAddresses($message->getCc()),
-                    'date' => $message->getDate()?->format('c'),
+                    'date' => $this->formatDate($message->getDate()),
                     'body' => $this->extractBody($message),
                     'message_id' => (string) $message->getMessageId(),
                     'uid' => $uid,
@@ -123,6 +136,7 @@ class ImapConnector implements InputConnectorInterface
                     payload: $payload,
                     tags: $tags,
                     experimentId: $experimentId,
+                    teamId: $teamId,
                 );
 
                 if ($signal) {
@@ -190,6 +204,24 @@ class ImapConnector implements InputConnectorInterface
         }
 
         return $credential->credentials;
+    }
+
+    private function formatDate($date): ?string
+    {
+        if (! $date) {
+            return null;
+        }
+
+        // webklex/php-imap may return an Attribute wrapping a Carbon/DateTime
+        if ($date instanceof Attribute) {
+            $date = $date->first();
+        }
+
+        if ($date instanceof \DateTimeInterface) {
+            return $date->format('c');
+        }
+
+        return (string) $date;
     }
 
     private function formatAddress($address): string
