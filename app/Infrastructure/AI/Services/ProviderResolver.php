@@ -13,6 +13,7 @@ use App\Infrastructure\AI\Exceptions\DataClassificationException;
 use App\Infrastructure\AI\Gateways\PortkeyGateway;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class ProviderResolver
 {
@@ -125,6 +126,24 @@ class ProviderResolver
             }
         }
 
+        // 3.5. Stage-level model tier routing (after team, before platform default)
+        if ($purpose && str_starts_with($purpose, 'stage:')) {
+            $stageType = Str::after($purpose, 'stage:');
+            $tier = config("experiments.stage_model_tiers.{$stageType}");
+
+            if ($tier && $tier !== 'standard') {
+                $tierModels = config("experiments.model_tiers.{$tier}");
+
+                if ($tierModels && is_array($tierModels)) {
+                    foreach ($tierModels as $provider => $model) {
+                        if ($this->teamHasProvider($team, $provider)) {
+                            return ['provider' => $provider, 'model' => $model];
+                        }
+                    }
+                }
+            }
+        }
+
         // 4. GlobalSetting (configured via Settings page)
         $globalProvider = GlobalSetting::get('default_llm_provider');
         $globalModel = GlobalSetting::get('default_llm_model');
@@ -201,6 +220,24 @@ class ProviderResolver
                     'model' => $settings['default_llm_model'],
                     'source' => 'team',
                 ];
+            }
+        }
+
+        // 3.5. Stage-level model tier routing
+        if ($purpose && str_starts_with($purpose, 'stage:')) {
+            $stageType = Str::after($purpose, 'stage:');
+            $tier = config("experiments.stage_model_tiers.{$stageType}");
+
+            if ($tier && $tier !== 'standard') {
+                $tierModels = config("experiments.model_tiers.{$tier}");
+
+                if ($tierModels && is_array($tierModels)) {
+                    foreach ($tierModels as $provider => $model) {
+                        if ($this->teamHasProvider($team, $provider)) {
+                            return ['provider' => $provider, 'model' => $model, 'source' => 'stage_tier'];
+                        }
+                    }
+                }
             }
         }
 
@@ -545,6 +582,29 @@ class ProviderResolver
         }
 
         throw new DataClassificationException($agent->id, $classification->value);
+    }
+
+    /**
+     * Check whether a team has an active credential for a specific cloud provider.
+     *
+     * Also returns true when the platform has a global API key for the provider,
+     * since the team can use it as a fallback.
+     */
+    private function teamHasProvider(?Team $team, string $provider): bool
+    {
+        // Platform-level API key (available to all teams)
+        if (config("services.platform_api_keys.{$provider}")) {
+            return true;
+        }
+
+        if (! $team) {
+            return false;
+        }
+
+        return TeamProviderCredential::where('team_id', $team->id)
+            ->where('provider', $provider)
+            ->where('is_active', true)
+            ->exists();
     }
 
     /**

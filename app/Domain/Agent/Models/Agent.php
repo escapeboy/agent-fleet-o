@@ -84,6 +84,7 @@ class Agent extends Model
         'heartbeat_definition',
         'data_classification',
         'sandbox_profile',
+        'tool_profile',
     ];
 
     protected function casts(): array

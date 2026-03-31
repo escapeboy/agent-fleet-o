@@ -2,6 +2,23 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.16.0] - 2026-03-31
+
+### Added
+
+- **Tool Profiles** — Predefined toolset profiles (researcher, executor, communicator, analyst, admin, minimal) that restrict which MCP tool groups an agent can access. Configured via `config/tool_profiles.php`. Agents select a profile via the new `tool_profile` column; `ResolveAgentToolsAction` filters tools by group prefix and enforces `max_tools` cap. `tool_profile_list` MCP tool for discovery.
+- **Per-Step Smart Model Routing** — Pipeline stages now route to cost-appropriate models automatically. Scoring and metrics collection use cheap models (Haiku/GPT-4o-mini/Flash), planning and building use expensive models (Sonnet/GPT-4o/Pro). Configured in `config/experiments.php` (`stage_model_tiers` + `model_tiers`). `ProviderResolver` extended with stage-tier resolution. ~47% cost reduction per experiment pipeline run.
+- **Experiment Transcript Search** — Full-text search across experiment stage outputs. `searchable_text` column (PostgreSQL `tsvector` with GIN index) populated on stage completion. `search_experiment_history` Assistant tool with optional LLM summarization. `experiment_search_history` MCP tool. `experiments:backfill-search-text` artisan command for existing data. SQLite ILIKE fallback for tests.
+- **Auto-Skill Creation from Experiments** — When an experiment completes with 5+ stages and no similar skill exists, a draft skill is auto-proposed encoding the procedure. `ProposeNewSkillFromExperimentAction` synthesizes a reusable skill prompt via Haiku. Daily cap per team (default 5) prevents cost abuse. Configurable via `config/skills.php` (`auto_propose`). Team notification on proposal.
+- **Pipeline Context Compression** — Compresses preceding stage outputs when exceeding 30K tokens. Preserves head (first stage) and tail (last 2 stages) in full; middle stages are pruned to 500 chars then optionally LLM-summarized. Cached to avoid redundant LLM calls. `BaseStageJob::getPrecedingContext()` helper for stage jobs. Configurable via `config/experiments.php` (`context_compression`).
+
+### Security
+
+- Tenant isolation hardened in experiment search tools — join enforces `team_id` match between `experiment_stages` and `experiments` tables (defense in depth on top of `TeamScope`).
+- LIKE wildcard injection prevented in SQLite search fallback.
+- Daily cap on auto-skill proposals prevents LLM cost abuse.
+- Context compression results cached (1h TTL) to prevent redundant LLM calls.
+
 ## [1.15.0] - 2026-03-30
 
 ### Added

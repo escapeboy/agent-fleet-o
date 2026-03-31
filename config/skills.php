@@ -45,4 +45,19 @@ return [
         'embedding_model' => env('SKILLS_EMBEDDING_MODEL', 'text-embedding-3-small'),
         'embedding_provider' => env('SKILLS_EMBEDDING_PROVIDER', 'openai'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auto-Propose Skills from Experiments
+    |--------------------------------------------------------------------------
+    | When an experiment completes successfully with enough stages, the platform
+    | auto-proposes a new draft skill encoding the procedure. Inspired by
+    | Hermes Agent's auto-skill creation after complex tasks.
+    */
+    'auto_propose' => [
+        'enabled' => (bool) env('SKILLS_AUTO_PROPOSE', true),
+        'min_stages' => (int) env('SKILLS_AUTO_PROPOSE_MIN_STAGES', 5),
+        'similarity_threshold' => (float) env('SKILLS_AUTO_PROPOSE_SIMILARITY', 0.85),
+        'daily_cap' => (int) env('SKILLS_AUTO_PROPOSE_DAILY_CAP', 5),
+    ],
 ];

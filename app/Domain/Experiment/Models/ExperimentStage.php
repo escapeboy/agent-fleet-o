@@ -31,6 +31,7 @@ class ExperimentStage extends Model
         'duration_ms',
         'started_at',
         'completed_at',
+        'searchable_text',
     ];
 
     protected function casts(): array
