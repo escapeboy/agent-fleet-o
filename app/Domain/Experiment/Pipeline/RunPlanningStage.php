@@ -9,7 +9,9 @@ use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Memory\Services\MemoryContextInjector;
+use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 
@@ -94,16 +96,35 @@ class RunPlanningStage extends BaseStageJob
             }
         }
 
+        // Inject signal context so AI knows who to respond to
+        $run = ProjectRun::where('experiment_id', $experiment->id)->first();
+        if ($run?->signal_id) {
+            $signal = Signal::withoutGlobalScopes()->find($run->signal_id);
+            if ($signal) {
+                $payload = $signal->payload ?? [];
+                $contextParts[] = "--- Triggering Signal ---\nSource: {$signal->source_type}\nFrom: ".($payload['from'] ?? $signal->source_identifier)."\nSubject: ".($payload['subject'] ?? $payload['title'] ?? 'N/A')."\nBody: ".mb_substr($payload['body'] ?? $payload['content'] ?? '', 0, 1000);
+            }
+        }
+
+        // Inject allowed outbound channels from project config
+        $project = $run?->project_id ? Project::withoutGlobalScopes()->find($run->project_id) : null;
+        $deliveryConfig = $project?->delivery_config ?? [];
+        $allowedChannels = $deliveryConfig['allowed_outbound_channels'] ?? null;
+        $channelConstraint = '';
+        if ($allowedChannels && count($allowedChannels) > 0) {
+            $channelConstraint = ' IMPORTANT: Only use these outbound channels: '.implode(', ', $allowedChannels).'. Do NOT propose channels outside this list.';
+        }
+
         $request = new AiRequestDTO(
             provider: $llm['provider'],
             model: $llm['model'],
-            systemPrompt: 'You are an experiment planning agent. Create an execution plan. If context from predecessor projects is provided, incorporate their findings and artifacts into your plan. Return ONLY a valid JSON object (no markdown, no code fences) with: plan_summary (string, max 3 sentences), artifacts_to_build (array of {type, name, description}), outbound_channels (array of {channel, target_description}), success_metrics (array of max 5 strings), estimated_timeline_hours (int). Keep compact.',
+            systemPrompt: 'You are an experiment planning agent. Create an execution plan. If context from predecessor projects is provided, incorporate their findings and artifacts into your plan. If a triggering signal is provided, the plan should process and respond to it. Return ONLY a valid JSON object (no markdown, no code fences) with: plan_summary (string, max 3 sentences), artifacts_to_build (array of {type, name, description}), outbound_channels (array of {channel, target_description}), success_metrics (array of max 5 strings), estimated_timeline_hours (int). Keep compact.'.$channelConstraint,
             userPrompt: implode("\n\n", $contextParts),
             maxTokens: 2048,
             userId: $experiment->user_id,
             experimentId: $experiment->id,
             experimentStageId: $stage->id,
-            purpose: 'stage:planning',
+            purpose: 'planning',
             temperature: 0.5,
             teamId: $experiment->team_id,
         );

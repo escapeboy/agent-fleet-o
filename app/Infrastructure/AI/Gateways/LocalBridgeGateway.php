@@ -64,6 +64,14 @@ class LocalBridgeGateway implements AiGatewayInterface
      * the team's routing preferences (auto/prefer/per_agent).
      * For bridge_llm requests, picks the best connection with matching LLM endpoints.
      */
+    /**
+     * Max retries when a bridge is recently-disconnected (within grace period).
+     * Each retry waits 5 seconds, giving the bridge time to reconnect.
+     */
+    private const RECONNECT_RETRIES = 6;
+
+    private const RECONNECT_WAIT_SECONDS = 5;
+
     private function requireActiveConnection(?string $teamId, ?AiRequestDTO $request = null): BridgeConnection
     {
         if (! $teamId) {
@@ -78,17 +86,20 @@ class LocalBridgeGateway implements AiGatewayInterface
             $connection = $this->router->resolveForAgent($teamId, $agentKey);
 
             if ($connection) {
-                return $connection;
+                // If the best match is disconnected (within grace period), wait for reconnect
+                if (! $connection->isActive()) {
+                    $connection = $this->waitForReconnect($teamId, $agentKey);
+                }
+
+                if ($connection) {
+                    return $connection;
+                }
             }
         }
 
-        // Fallback: pick the best active connection (highest priority, most recent)
-        $connection = BridgeConnection::withoutGlobalScopes()
-            ->where('team_id', $teamId)
-            ->active()
-            ->orderByDesc('priority')
-            ->orderByDesc('connected_at')
-            ->first();
+        // Fallback: pick the best connection from the router (includes grace period)
+        $connections = $this->router->activeConnections($teamId);
+        $connection = $connections->first();
 
         if (! $connection) {
             throw new RuntimeException(
@@ -97,7 +108,72 @@ class LocalBridgeGateway implements AiGatewayInterface
             );
         }
 
+        // If best connection is recently-disconnected, wait for reconnect
+        if (! $connection->isActive()) {
+            Log::info('LocalBridgeGateway: bridge recently disconnected, waiting for reconnect', [
+                'team_id' => $teamId,
+                'bridge_id' => $connection->id,
+                'last_seen_at' => $connection->last_seen_at?->toISOString(),
+            ]);
+
+            for ($i = 0; $i < self::RECONNECT_RETRIES; $i++) {
+                sleep(self::RECONNECT_WAIT_SECONDS);
+
+                $fresh = BridgeConnection::withoutGlobalScopes()
+                    ->where('team_id', $teamId)
+                    ->active()
+                    ->orderByDesc('priority')
+                    ->orderByDesc('connected_at')
+                    ->first();
+
+                if ($fresh) {
+                    Log::info('LocalBridgeGateway: bridge reconnected after wait', [
+                        'team_id' => $teamId,
+                        'bridge_id' => $fresh->id,
+                        'waited_seconds' => ($i + 1) * self::RECONNECT_WAIT_SECONDS,
+                    ]);
+
+                    return $fresh;
+                }
+            }
+
+            throw new RuntimeException(
+                'FleetQ Bridge disconnected and did not reconnect within '
+                .(self::RECONNECT_RETRIES * self::RECONNECT_WAIT_SECONDS).'s. '
+                .'Check your bridge daemon and network connectivity.',
+            );
+        }
+
         return $connection;
+    }
+
+    /**
+     * Wait for a specific agent's bridge to reconnect.
+     * Returns the first connected bridge with the agent, or null if timeout.
+     */
+    private function waitForReconnect(string $teamId, string $agentKey): ?BridgeConnection
+    {
+        Log::info('LocalBridgeGateway: agent bridge disconnected, waiting for reconnect', [
+            'team_id' => $teamId,
+            'agent_key' => $agentKey,
+        ]);
+
+        for ($i = 0; $i < self::RECONNECT_RETRIES; $i++) {
+            sleep(self::RECONNECT_WAIT_SECONDS);
+
+            $connection = $this->router->resolveForAgent($teamId, $agentKey);
+            if ($connection && $connection->isActive()) {
+                Log::info('LocalBridgeGateway: agent bridge reconnected', [
+                    'team_id' => $teamId,
+                    'agent_key' => $agentKey,
+                    'waited_seconds' => ($i + 1) * self::RECONNECT_WAIT_SECONDS,
+                ]);
+
+                return $connection;
+            }
+        }
+
+        return null;
     }
 
     private function routeRequest(BridgeConnection $connection, AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO

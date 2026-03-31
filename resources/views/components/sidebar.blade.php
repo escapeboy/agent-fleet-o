@@ -154,6 +154,7 @@
         <div x-show="nav === 'monitor'" class="flex h-full flex-col py-3" style="display: none;">
             <p class="mb-1 px-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Monitor</p>
             <nav class="flex-1 overflow-y-auto px-2">
+                <x-sidebar-link href="{{ route('signals.index') }}" :active="request()->routeIs('signals.index')" icon="bolt">Signals</x-sidebar-link>
                 <x-sidebar-link href="{{ route('signals.connectors') }}" :active="request()->routeIs('signals.connectors')" icon="plug">Signal Sources</x-sidebar-link>
                 <x-sidebar-link href="{{ route('signals.subscriptions') }}" :active="request()->routeIs('signals.subscriptions')" icon="bell">Subscriptions</x-sidebar-link>
                 <x-sidebar-link href="{{ route('signals.entities') }}" :active="request()->routeIs('signals.entities')" icon="squares-2x2">Entities</x-sidebar-link>

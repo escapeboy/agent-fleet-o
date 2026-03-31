@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\Redis;
  */
 class BridgeRequestRegistry
 {
-    private const PENDING_TTL = 90;
+    private const PENDING_TTL = 600;
 
-    private const STREAM_TTL = 120;
+    private const STREAM_TTL = 600;
 
     public function register(string $requestId, string $teamId): void
     {

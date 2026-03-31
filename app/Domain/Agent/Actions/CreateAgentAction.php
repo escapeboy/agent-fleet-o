@@ -29,10 +29,18 @@ class CreateAgentAction
     ): Agent {
         $pricing = config("llm_pricing.providers.{$provider}.{$model}");
 
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug;
+        $suffix = 1;
+        while (Agent::withoutGlobalScopes()->where('team_id', $teamId)->where('slug', $slug)->exists()) {
+            $slug = $baseSlug.'-'.$suffix;
+            $suffix++;
+        }
+
         $agent = Agent::create([
             'team_id' => $teamId,
             'name' => $name,
-            'slug' => Str::slug($name),
+            'slug' => $slug,
             'role' => $role,
             'goal' => $goal,
             'backstory' => $backstory,

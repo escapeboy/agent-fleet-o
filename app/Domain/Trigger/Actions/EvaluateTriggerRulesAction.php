@@ -25,8 +25,13 @@ class EvaluateTriggerRulesAction
             ->where('team_id', $signal->team_id)
             ->where('status', 'active')
             ->where(function ($query) use ($signal) {
+                // Match wildcard, exact source_type, or driver alias (e.g. imap → email)
+                $sourceAliases = match ($signal->source_type) {
+                    'email' => ['email', 'imap'],
+                    default => [$signal->source_type],
+                };
                 $query->where('source_type', '*')
-                    ->orWhere('source_type', $signal->source_type);
+                    ->orWhereIn('source_type', $sourceAliases);
             })
             ->get();
 

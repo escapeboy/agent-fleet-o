@@ -133,7 +133,37 @@
                 </div>
             @endif
 
-            {{-- Delivery --}}
+            {{-- Outbound Channels --}}
+            <div>
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Outbound Channels</h3>
+                <div class="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                    <p class="text-xs text-gray-500">Which channels can the AI use when sending results from this project?</p>
+                    <div class="flex flex-wrap gap-4">
+                        @foreach(['email' => 'Email', 'slack' => 'Slack', 'telegram' => 'Telegram', 'webhook' => 'Webhook'] as $ch => $label)
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" wire:model="allowedOutboundChannels" value="{{ $ch }}"
+                                    class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                {{ $label }}
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div class="flex flex-wrap gap-6 border-t border-gray-200 pt-3">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" wire:model="notifyOnSuccess"
+                                class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                            Notify on success
+                        </label>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" wire:model="notifyOnFailure"
+                                class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                            Notify on failure
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Result Delivery --}}
             <div>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Result Delivery (optional)</h3>
                 <div class="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">

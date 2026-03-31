@@ -26,7 +26,7 @@ class CreateTriggerRuleForm extends Component
 
     /** @var list<string> */
     public array $availableSourceTypes = [
-        '*', 'rss', 'imap', 'api_polling', 'calendar', 'github_issues',
+        '*', 'email', 'rss', 'api_polling', 'calendar', 'github_issues',
         'jira', 'linear', 'sentry', 'datadog', 'pagerduty', 'telegram', 'webhook',
     ];
 
