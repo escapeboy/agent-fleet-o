@@ -2,6 +2,7 @@
 
 namespace App\Domain\Bridge\Services;
 
+use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\Team;
 use Illuminate\Support\Collection;
@@ -72,13 +73,28 @@ class BridgeRouter
     /**
      * Get all active bridge connections for a team.
      *
+     * Includes bridges that disconnected within the grace period (60s) so that
+     * brief network blips don't make agents invisible. Connected bridges are
+     * always preferred over recently-disconnected ones.
+     *
      * @return Collection<int, BridgeConnection>
      */
     public function activeConnections(string $teamId): Collection
     {
         return BridgeConnection::withoutGlobalScopes()
             ->where('team_id', $teamId)
-            ->active()
+            ->where(function ($q) {
+                $q->where('status', BridgeConnectionStatus::Connected->value)
+                    ->orWhere(function ($q2) {
+                        // Include recently-disconnected bridges as fallback
+                        $q2->whereIn('status', [
+                            BridgeConnectionStatus::Disconnected->value,
+                            BridgeConnectionStatus::Reconnecting->value,
+                        ])->where('last_seen_at', '>=', now()->subSeconds(60));
+                    });
+            })
+            // Connected first, then by priority, then most recent
+            ->orderByRaw("CASE WHEN status = ? THEN 0 ELSE 1 END", [BridgeConnectionStatus::Connected->value])
             ->orderByDesc('priority')
             ->orderByDesc('connected_at')
             ->get();

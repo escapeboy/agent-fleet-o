@@ -16,6 +16,7 @@ Schedule::command('approvals:expire-stale')->hourly();
 Schedule::command('tools:health-check')->everyFiveMinutes()->withoutOverlapping(4);
 Schedule::command('tools:refresh-definitions --stale-minutes=60')->hourly();
 Schedule::command('bridge:health-check')->everyFiveMinutes()->withoutOverlapping(4);
+Schedule::command('bridge:detect-stale')->everyTwoMinutes()->withoutOverlapping(2);
 Schedule::command('metrics:aggregate --period=hourly')->hourly();
 Schedule::command('metrics:aggregate --period=daily')->dailyAt('01:00');
 Schedule::command('connectors:poll')->everyFifteenMinutes();
