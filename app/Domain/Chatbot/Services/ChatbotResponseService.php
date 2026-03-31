@@ -349,7 +349,7 @@ class ChatbotResponseService
      *
      * @return array<array{id: string, content: string, similarity: float, access_level: string, source_id: string}>
      */
-    private function retrieveRelevantChunks(Chatbot $chatbot, string $query, float $threshold = 0.72, int $topK = 5): array
+    private function retrieveRelevantChunks(Chatbot $chatbot, string $query, float $threshold = 0.5, int $topK = 5): array
     {
         try {
             $vector = $this->embedding->generate($query);
