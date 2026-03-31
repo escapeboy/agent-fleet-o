@@ -42,6 +42,8 @@ class AgentUpdateTool extends Tool
                 ->enum(['public', 'internal', 'confidential', 'restricted']),
             'sandbox_profile' => $schema->string()
                 ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Pass "null" to remove. Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
+            'tool_profile' => $schema->string()
+                ->description('Tool profile restricting tool access. Options: researcher, executor, communicator, analyst, admin, minimal. Pass empty string to remove.'),
             'thinking_budget' => $schema->integer()
                 ->description('Anthropic extended thinking budget in tokens (e.g. 1024, 4096, 8192). Only applies when agent provider is "anthropic". Set to 0 to disable. Enables chain-of-thought reasoning visible in experiment steps.'),
         ];
@@ -60,6 +62,7 @@ class AgentUpdateTool extends Tool
             'model' => 'nullable|string',
             'budget_cap_credits' => 'nullable|integer|min:0',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
+            'tool_profile' => 'nullable|string',
             'sandbox_profile' => 'nullable|string',
             'thinking_budget' => 'nullable|integer|min:0|max:100000',
         ]);
@@ -84,6 +87,11 @@ class AgentUpdateTool extends Tool
             'model' => $validated['model'] ?? null,
             'data_classification' => $validated['data_classification'] ?? null,
         ], fn ($v) => $v !== null);
+
+        // tool_profile: allow empty string to clear, so handle separately from the array_filter above
+        if (array_key_exists('tool_profile', $validated) && $validated['tool_profile'] !== null) {
+            $data['tool_profile'] = $validated['tool_profile'] === '' ? null : $validated['tool_profile'];
+        }
 
         // budget_cap_credits: allow explicit 0 (removes cap) so we handle separately
         if (array_key_exists('budget_cap_credits', $validated) && $validated['budget_cap_credits'] !== null) {
@@ -115,7 +123,7 @@ class AgentUpdateTool extends Tool
         }
 
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, sandbox_profile, thinking_budget.');
+            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, sandbox_profile, thinking_budget.');
         }
 
         app(RecordAgentConfigRevisionAction::class)->execute(

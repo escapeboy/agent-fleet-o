@@ -37,6 +37,8 @@ class AgentCreateTool extends Tool
             'data_classification' => $schema->string()
                 ->description('Data classification level: public, internal, confidential, restricted. Confidential and restricted agents are routed to local-only providers.')
                 ->enum(['public', 'internal', 'confidential', 'restricted']),
+            'tool_profile' => $schema->string()
+                ->description('Tool profile restricting tool access. Options: researcher, executor, communicator, analyst, admin, minimal'),
             'sandbox_profile' => $schema->string()
                 ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
         ];
@@ -52,6 +54,7 @@ class AgentCreateTool extends Tool
             'provider' => 'nullable|string|in:anthropic,openai,google',
             'model' => 'nullable|string|max:100',
             'personality' => 'nullable|array',
+            'tool_profile' => 'nullable|string',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'sandbox_profile' => 'nullable|string',
         ]);
@@ -81,6 +84,10 @@ class AgentCreateTool extends Tool
                 personality: $validated['personality'] ?? null,
                 dataClassification: $validated['data_classification'] ?? null,
             );
+
+            if (! empty($validated['tool_profile'])) {
+                $agent->update(['tool_profile' => $validated['tool_profile']]);
+            }
 
             if ($sandboxProfile !== null) {
                 $agent->update(['sandbox_profile' => $sandboxProfile]);

@@ -5,6 +5,7 @@ namespace App\Domain\Skill\Jobs;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Models\Skill;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -36,12 +37,15 @@ class AnalyzeExecutionForEvolutionJob implements ShouldQueue
 
     public function handle(): void
     {
-        if (! config('skills.autonomous_evolution.enabled', true)) {
+        $execution = AgentExecution::with('agent')->find($this->executionId);
+        if (! $execution) {
             return;
         }
 
-        $execution = AgentExecution::with('agent')->find($this->executionId);
-        if (! $execution) {
+        $team = Team::withoutGlobalScopes()->find($execution->agent?->team_id);
+        $enabled = $team?->settings['autonomous_evolution_enabled']
+            ?? config('skills.autonomous_evolution.enabled', true);
+        if (! $enabled) {
             return;
         }
 

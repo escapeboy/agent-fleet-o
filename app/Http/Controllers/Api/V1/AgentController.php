@@ -67,6 +67,10 @@ class AgentController extends Controller
             skillIds: $request->input('skill_ids', []),
         );
 
+        if ($request->filled('tool_profile')) {
+            $agent->update(['tool_profile' => $request->tool_profile]);
+        }
+
         return (new AgentResource($agent->load(['skills', 'runtimeState'])))
             ->response()
             ->setStatusCode(201);
