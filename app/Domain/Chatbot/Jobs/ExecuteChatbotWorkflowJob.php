@@ -59,10 +59,11 @@ class ExecuteChatbotWorkflowJob implements ShouldQueue
                 ],
             );
 
+            // Skip scoring/planning — chatbot workflows execute immediately
             $transition->execute(
                 experiment: $experiment,
-                toState: ExperimentStatus::Scoring,
-                reason: 'Chatbot workflow delegation',
+                toState: ExperimentStatus::Executing,
+                reason: 'Chatbot workflow — skip scoring, execute immediately',
             );
 
             $message->update([
