@@ -173,6 +173,7 @@ class AgentDetailPage extends Component
             'editGoal' => 'required|max:1000',
             'editProvider' => 'required|string|max:255',
             'editModel' => 'required|max:255',
+            'editEvaluationSampleRate' => 'nullable|numeric|min:0|max:1',
         ]);
 
         $config = $this->agent->config ?? [];

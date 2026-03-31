@@ -237,6 +237,8 @@ class TeamSettingsPage extends Component
 
     public function saveAiFeatures(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'autoSkillProposeMinStages' => 'integer|min:1|max:50',
             'autoSkillProposeDailyCap' => 'integer|min:0|max:100',
