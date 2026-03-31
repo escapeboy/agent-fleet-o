@@ -31,6 +31,14 @@ class TeamAiFeaturesUpdateTool extends Tool
                 ->description('Enable/disable autonomous skill evolution from agent executions'),
             'stage_model_tiers' => $schema->object()
                 ->description('Per-stage model tier overrides. Keys: scoring, planning, building, executing, collecting_metrics, evaluating. Values: cheap, standard, expensive, or null for default'),
+            'hybrid_retrieval_enabled' => $schema->boolean()
+                ->description('Enable/disable hybrid BM25 + semantic skill retrieval'),
+            'scout_phase_enabled' => $schema->boolean()
+                ->description('Enable/disable pre-execution scout phase (lightweight LLM pre-call)'),
+            'context_compaction_enabled' => $schema->boolean()
+                ->description('Enable/disable conversation context compaction in AI gateway'),
+            'experiment_ttl_minutes' => $schema->integer()
+                ->description('Max wall-clock minutes for experiment execution (default 120)'),
         ];
     }
 
@@ -53,6 +61,10 @@ class TeamAiFeaturesUpdateTool extends Tool
             'context_compression_threshold',
             'autonomous_evolution_enabled',
             'stage_model_tiers',
+            'hybrid_retrieval_enabled',
+            'scout_phase_enabled',
+            'context_compaction_enabled',
+            'experiment_ttl_minutes',
         ];
 
         foreach ($allowedKeys as $key) {

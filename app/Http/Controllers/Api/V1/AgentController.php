@@ -67,8 +67,16 @@ class AgentController extends Controller
             skillIds: $request->input('skill_ids', []),
         );
 
-        if ($request->filled('tool_profile')) {
-            $agent->update(['tool_profile' => $request->tool_profile]);
+        $extraFields = array_filter([
+            'tool_profile' => $request->input('tool_profile'),
+            'knowledge_base_id' => $request->input('knowledge_base_id'),
+            'evaluation_enabled' => $request->input('evaluation_enabled'),
+            'evaluation_sample_rate' => $request->input('evaluation_sample_rate'),
+            'heartbeat_definition' => $request->input('heartbeat_definition'),
+        ], fn ($v) => $v !== null);
+
+        if (! empty($extraFields)) {
+            $agent->update($extraFields);
         }
 
         return (new AgentResource($agent->load(['skills', 'runtimeState'])))

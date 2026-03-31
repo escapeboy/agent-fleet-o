@@ -92,6 +92,14 @@ class TeamSettingsPage extends Component
 
     public bool $autonomousEvolutionEnabled = true;
 
+    public bool $hybridRetrievalEnabled = true;
+
+    public bool $scoutPhaseEnabled = false;
+
+    public bool $contextCompactionEnabled = true;
+
+    public int $experimentTtlMinutes = 120;
+
     // MCP tool preferences
     public string $mcpToolProfile = 'full';
 
@@ -131,6 +139,10 @@ class TeamSettingsPage extends Component
         $this->contextCompressionEnabled = (bool) ($settings['context_compression_enabled'] ?? config('experiments.context_compression.enabled', true));
         $this->contextCompressionThreshold = (int) ($settings['context_compression_threshold'] ?? config('experiments.context_compression.threshold_tokens', 30000));
         $this->autonomousEvolutionEnabled = (bool) ($settings['autonomous_evolution_enabled'] ?? config('skills.autonomous_evolution.enabled', true));
+        $this->hybridRetrievalEnabled = (bool) ($settings['hybrid_retrieval_enabled'] ?? config('skills.hybrid_retrieval.enabled', true));
+        $this->scoutPhaseEnabled = (bool) ($settings['scout_phase_enabled'] ?? config('agent.scout_phase.enabled', false));
+        $this->contextCompactionEnabled = (bool) ($settings['context_compaction_enabled'] ?? config('context_compaction.enabled', true));
+        $this->experimentTtlMinutes = (int) ($settings['experiment_ttl_minutes'] ?? config('experiments.default_ttl_minutes', 120));
 
         // Bridge routing preferences
         $bridgeSettings = $settings['bridge'] ?? [];
@@ -229,6 +241,7 @@ class TeamSettingsPage extends Component
             'autoSkillProposeMinStages' => 'integer|min:1|max:50',
             'autoSkillProposeDailyCap' => 'integer|min:0|max:100',
             'contextCompressionThreshold' => 'integer|min:5000|max:200000',
+            'experimentTtlMinutes' => 'integer|min:5|max:1440',
         ]);
 
         $team = auth()->user()->currentTeam;
@@ -240,6 +253,10 @@ class TeamSettingsPage extends Component
         $settings['context_compression_enabled'] = $this->contextCompressionEnabled;
         $settings['context_compression_threshold'] = $this->contextCompressionThreshold;
         $settings['autonomous_evolution_enabled'] = $this->autonomousEvolutionEnabled;
+        $settings['hybrid_retrieval_enabled'] = $this->hybridRetrievalEnabled;
+        $settings['scout_phase_enabled'] = $this->scoutPhaseEnabled;
+        $settings['context_compaction_enabled'] = $this->contextCompactionEnabled;
+        $settings['experiment_ttl_minutes'] = $this->experimentTtlMinutes;
 
         $team->update(['settings' => $settings]);
 

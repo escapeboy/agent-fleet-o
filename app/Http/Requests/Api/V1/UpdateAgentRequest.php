@@ -33,6 +33,10 @@ class UpdateAgentRequest extends FormRequest
             'skill_ids' => ['sometimes', 'array'],
             'skill_ids.*' => ['uuid', Rule::exists('skills', 'id')->where('team_id', $teamId)],
             'tool_profile' => ['nullable', 'string', Rule::in(array_keys(config('tool_profiles.profiles', [])))],
+            'knowledge_base_id' => ['nullable', 'uuid', Rule::exists('knowledge_bases', 'id')->where('team_id', $teamId)],
+            'evaluation_enabled' => ['nullable', 'boolean'],
+            'evaluation_sample_rate' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'heartbeat_definition' => ['nullable', 'array'],
         ];
     }
 

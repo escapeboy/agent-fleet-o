@@ -109,6 +109,33 @@
                 </form>
             </div>
 
+            {{-- Platform AI Defaults --}}
+            <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+                <h3 class="text-sm font-medium text-(--color-on-surface-muted)">Platform AI Defaults</h3>
+                <p class="mt-1 text-xs text-(--color-on-surface-muted)">Default values used when teams have not set their own overrides.</p>
+                <form wire:submit="savePlatformAiDefaults" class="mt-4 space-y-4">
+                    <x-form-input wire:model="defaultExperimentTtl" label="Experiment TTL (minutes)" type="number" min="5" max="1440"
+                        hint="Maximum wall-clock time for experiment execution"
+                        :error="$errors->first('defaultExperimentTtl')" />
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <x-form-input wire:model="skillReliabilityThreshold" label="Skill Reliability Threshold" type="number" step="0.05" min="0" max="1"
+                            hint="Min reliability rate before degradation alert"
+                            :error="$errors->first('skillReliabilityThreshold')" />
+                        <x-form-input wire:model="skillQualityThreshold" label="Skill Quality Threshold" type="number" step="0.05" min="0" max="1"
+                            hint="Min quality score before degradation alert"
+                            :error="$errors->first('skillQualityThreshold')" />
+                        <x-form-input wire:model="skillMinSampleSize" label="Min Sample Size" type="number" min="1" max="1000"
+                            hint="Executions required before degradation check"
+                            :error="$errors->first('skillMinSampleSize')" />
+                    </div>
+
+                    <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                        Save Platform AI Defaults
+                    </button>
+                </form>
+            </div>
+
             {{-- Media Analysis --}}
             <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
                 <h3 class="text-sm font-medium text-(--color-on-surface-muted)">Media Analysis</h3>

@@ -47,6 +47,16 @@ class TeamAiFeaturesGetTool extends Tool
                 'enabled' => (bool) ($settings['autonomous_evolution_enabled'] ?? config('skills.autonomous_evolution.enabled', true)),
             ],
             'stage_model_tiers' => $settings['stage_model_tiers'] ?? config('experiments.stage_model_tiers'),
+            'hybrid_retrieval' => [
+                'enabled' => (bool) ($settings['hybrid_retrieval_enabled'] ?? config('skills.hybrid_retrieval.enabled', true)),
+            ],
+            'scout_phase' => [
+                'enabled' => (bool) ($settings['scout_phase_enabled'] ?? config('agent.scout_phase.enabled', false)),
+            ],
+            'context_compaction' => [
+                'enabled' => (bool) ($settings['context_compaction_enabled'] ?? config('context_compaction.enabled', true)),
+            ],
+            'experiment_ttl_minutes' => (int) ($settings['experiment_ttl_minutes'] ?? config('experiments.default_ttl_minutes', 120)),
             'source' => 'team.settings with config fallback',
         ]));
     }

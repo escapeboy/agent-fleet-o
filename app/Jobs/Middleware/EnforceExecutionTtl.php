@@ -4,6 +4,7 @@ namespace App\Jobs\Middleware;
 
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use Closure;
 use Illuminate\Support\Facades\Log;
 
@@ -27,7 +28,9 @@ class EnforceExecutionTtl
 
         /** @var array|null $constraints */
         $constraints = $experiment->constraints;
+        $team = Team::withoutGlobalScopes()->find($experiment->team_id);
         $maxTtlMinutes = $constraints['max_ttl_minutes']
+            ?? $team?->settings['experiment_ttl_minutes']
             ?? config('experiments.default_ttl_minutes', 120);
 
         // Find the earliest running stage start time, or fall back to experiment updated_at

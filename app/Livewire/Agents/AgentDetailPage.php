@@ -13,6 +13,7 @@ use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -66,6 +67,12 @@ class AgentDetailPage extends Component
 
     public string $editToolProfile = '';
 
+    public ?string $editKnowledgeBaseId = null;
+
+    public bool $editEvaluationEnabled = false;
+
+    public ?float $editEvaluationSampleRate = null;
+
     /** @var array<string> */
     public array $editGitRepositoryIds = [];
 
@@ -108,6 +115,9 @@ class AgentDetailPage extends Component
         $this->editFederationGroupId = $this->agent->config['tool_federation_group_id'] ?? '';
         $this->editGitRepositoryIds = $this->agent->config['git_repository_ids'] ?? [];
         $this->editToolProfile = $this->agent->tool_profile ?? '';
+        $this->editKnowledgeBaseId = $this->agent->knowledge_base_id;
+        $this->editEvaluationEnabled = (bool) $this->agent->evaluation_enabled;
+        $this->editEvaluationSampleRate = $this->agent->evaluation_sample_rate;
         $this->editing = true;
     }
 
@@ -227,6 +237,9 @@ class AgentDetailPage extends Component
             'model' => $this->editModel,
             'budget_cap_credits' => $this->editBudgetCap,
             'tool_profile' => $this->editToolProfile ?: null,
+            'knowledge_base_id' => $this->editKnowledgeBaseId ?: null,
+            'evaluation_enabled' => $this->editEvaluationEnabled,
+            'evaluation_sample_rate' => $this->editEvaluationEnabled ? $this->editEvaluationSampleRate : null,
             'config' => $config,
             'cost_per_1k_input' => $pricing['input'] ?? 0,
             'cost_per_1k_output' => $pricing['output'] ?? 0,
@@ -401,6 +414,10 @@ class AgentDetailPage extends Component
             ->orderBy('name')
             ->get();
 
+        $availableKnowledgeBases = KnowledgeBase::where('team_id', $teamId)
+            ->orderBy('name')
+            ->get();
+
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
             'tools' => $tools,
@@ -414,6 +431,7 @@ class AgentDetailPage extends Component
             'resolvedProvider' => $resolvedProvider,
             'avgSteps' => (float) $avgSteps,
             'availableGitRepositories' => $availableGitRepositories,
+            'availableKnowledgeBases' => $availableKnowledgeBases,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }
