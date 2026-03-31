@@ -79,4 +79,55 @@ return [
         'budget_allocation_strategy' => env('EXPERIMENT_BUDGET_STRATEGY', 'on_demand'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Stage Model Tiers (Smart Model Routing)
+    |--------------------------------------------------------------------------
+    |
+    | Maps each pipeline stage to a cost tier. Stages mapped to 'cheap' use
+    | smaller/faster models, 'expensive' uses top-tier models, 'standard'
+    | (or null) falls through to the team/platform default.
+    |
+    */
+    'stage_model_tiers' => [
+        'scoring' => 'cheap',
+        'planning' => 'expensive',
+        'building' => 'expensive',
+        'awaiting_approval' => null,
+        'executing' => 'standard',
+        'collecting_metrics' => 'cheap',
+        'evaluating' => 'standard',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Model Tiers
+    |--------------------------------------------------------------------------
+    |
+    | Concrete provider/model pairs for each tier. 'standard' (null) means
+    | use the team default resolved by ProviderResolver. The first provider
+    | the team has credentials for wins.
+    |
+    */
+    'model_tiers' => [
+        'cheap' => ['anthropic' => 'claude-haiku-4-5', 'openai' => 'gpt-4o-mini', 'google' => 'gemini-2.5-flash'],
+        'standard' => null,
+        'expensive' => ['anthropic' => 'claude-sonnet-4-5', 'openai' => 'gpt-4o', 'google' => 'gemini-2.5-pro'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pipeline Context Compression
+    |--------------------------------------------------------------------------
+    | Compresses preceding stage outputs when they exceed the token threshold.
+    | Head stages and tail stages are preserved in full; middle stages are
+    | pruned and optionally LLM-summarized. Inspired by Hermes Agent.
+    */
+    'context_compression' => [
+        'enabled' => (bool) env('EXPERIMENT_CONTEXT_COMPRESSION', true),
+        'threshold_tokens' => (int) env('EXPERIMENT_COMPRESSION_THRESHOLD', 30000),
+        'head_stages' => 1,
+        'tail_stages' => 2,
+    ],
+
 ];

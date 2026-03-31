@@ -134,6 +134,7 @@ use App\Mcp\Tools\Experiment\ExperimentPauseTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
+use App\Mcp\Tools\Experiment\ExperimentSearchHistoryTool;
 use App\Mcp\Tools\Experiment\ExperimentShareTool;
 use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
@@ -319,6 +320,7 @@ use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolPoolListTool;
 use App\Mcp\Tools\Tool\ToolProbeRemoteMcpTool;
+use App\Mcp\Tools\Tool\ToolProfileListTool;
 use App\Mcp\Tools\Tool\ToolSearchTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
@@ -515,6 +517,7 @@ class AgentFleetServer extends Server
         ExperimentCostTool::class,
         ExperimentStepsTool::class,
         ExperimentShareTool::class,
+        ExperimentSearchHistoryTool::class,
         ExperimentContextHealthTool::class,
         WorkflowSnapshotListTool::class,
         UncertaintyEmitTool::class,
@@ -567,6 +570,7 @@ class AgentFleetServer extends Server
         ToolFederationEnableTool::class,
         ToolFederationGroupListTool::class,
         ToolFederationGroupCreateTool::class,
+        ToolProfileListTool::class,
         ToolSearchTool::class,
 
         // Credential (10)

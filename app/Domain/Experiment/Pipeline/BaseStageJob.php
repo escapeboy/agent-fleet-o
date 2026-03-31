@@ -10,7 +10,9 @@ use App\Domain\Experiment\Events\ExperimentContextApproachingLimit;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Services\CheckpointManager;
+use App\Domain\Experiment\Services\PipelineContextCompressor;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\ContextHealthService;
 use App\Jobs\Middleware\CheckBudgetAvailable;
@@ -29,6 +31,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 abstract class BaseStageJob implements ShouldQueue
 {
@@ -50,6 +53,32 @@ abstract class BaseStageJob implements ShouldQueue
     abstract protected function stageType(): StageType;
 
     abstract protected function process(Experiment $experiment, ExperimentStage $stage): void;
+
+    /**
+     * Get compressed preceding stage context for use in LLM requests.
+     * Compresses when preceding context exceeds the configured token threshold.
+     * Individual stage jobs should call this instead of manually gathering stage outputs.
+     */
+    protected function getPrecedingContext(Experiment $experiment, ExperimentStage $currentStage): string
+    {
+        $compressor = app(PipelineContextCompressor::class);
+
+        if ($compressor->shouldCompress($experiment, $currentStage)) {
+            return $compressor->compress($experiment, $currentStage);
+        }
+
+        // No compression needed — return raw stage outputs
+        $stages = $experiment->stages()
+            ->where('status', StageStatus::Completed->value)
+            ->where('started_at', '<', $currentStage->started_at ?? now())
+            ->orderBy('started_at')
+            ->get();
+
+        return $stages->map(fn ($s) => '**['.
+            ($s->stage instanceof \BackedEnum ? $s->stage->value : $s->stage).
+            "]**\n".json_encode($s->output_snapshot),
+        )->implode("\n\n");
+    }
 
     public function middleware(): array
     {
@@ -103,9 +132,15 @@ abstract class BaseStageJob implements ShouldQueue
 
         $stage = $this->findOrCreateStage($experiment);
 
+        // Record the model tier for this stage in the output snapshot for observability
+        $modelTier = config("experiments.stage_model_tiers.{$this->stageType()->value}") ?? 'standard';
+
         $stage->update([
             'status' => StageStatus::Running,
             'started_at' => now(),
+            'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
+                'model_tier' => $modelTier,
+            ]),
         ]);
 
         $startTime = hrtime(true);
@@ -128,6 +163,9 @@ abstract class BaseStageJob implements ShouldQueue
             } elseif (! $freshStage->duration_ms) {
                 $stage->update(['duration_ms' => $durationMs]);
             }
+
+            // Populate searchable_text for FTS after successful completion
+            $this->populateSearchableText($experiment, $stage->fresh());
 
             Log::info('BaseStageJob: Completed', [
                 'experiment_id' => $this->experimentId,
@@ -264,7 +302,11 @@ abstract class BaseStageJob implements ShouldQueue
 
     /**
      * Resolve the LLM provider/model for pipeline stages.
-     * Priority: experiment config → team settings → platform default.
+     * Priority: experiment config → team settings → stage model tier → platform default.
+     *
+     * Stage model tiers route cheap stages (scoring, collecting_metrics) to smaller
+     * models and expensive stages (planning, building) to top-tier models, reducing
+     * cost while preserving quality where it matters.
      *
      * @return array{provider: string, model: string}
      */
@@ -297,7 +339,13 @@ abstract class BaseStageJob implements ShouldQueue
             ];
         }
 
-        // 3. Platform default (GlobalSetting → config fallback)
+        // 3. Stage model tier routing — use cheaper/expensive models per stage
+        $tierResolved = $this->resolveStageModelTier($team);
+        if ($tierResolved) {
+            return $tierResolved;
+        }
+
+        // 4. Platform default (GlobalSetting → config fallback)
         $platformProvider = GlobalSetting::get('default_llm_provider') ?? config('llm_pricing.default_provider', 'anthropic');
         $platformModel = GlobalSetting::get('default_llm_model') ?? config('llm_pricing.default_model', 'claude-sonnet-4-5');
 
@@ -308,12 +356,99 @@ abstract class BaseStageJob implements ShouldQueue
     }
 
     /**
+     * Resolve a tier-specific model for the current stage.
+     *
+     * Returns null when the stage maps to 'standard' tier (use default)
+     * or when no configured provider is available for the team.
+     *
+     * @return array{provider: string, model: string}|null
+     */
+    protected function resolveStageModelTier(?Team $team): ?array
+    {
+        $stageKey = $this->stageType()->value;
+        $tier = config("experiments.stage_model_tiers.{$stageKey}");
+
+        if (! $tier || $tier === 'standard') {
+            return null;
+        }
+
+        $tierModels = config("experiments.model_tiers.{$tier}");
+        if (! $tierModels || ! is_array($tierModels)) {
+            return null;
+        }
+
+        // Pick the first provider the team (or platform) has credentials for
+        foreach ($tierModels as $provider => $model) {
+            if ($this->teamOrPlatformHasProvider($team, $provider)) {
+                Log::debug('BaseStageJob: Stage model tier resolved', [
+                    'experiment_id' => $this->experimentId,
+                    'stage' => $stageKey,
+                    'tier' => $tier,
+                    'provider' => $provider,
+                    'model' => $model,
+                ]);
+
+                return ['provider' => $provider, 'model' => $model];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if a provider is available via platform API key or team BYOK credential.
+     */
+    private function teamOrPlatformHasProvider(?Team $team, string $provider): bool
+    {
+        // Platform-level API key
+        if (config("services.platform_api_keys.{$provider}")) {
+            return true;
+        }
+
+        if (! $team) {
+            return false;
+        }
+
+        return TeamProviderCredential::where('team_id', $team->id)
+            ->where('provider', $provider)
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    /**
      * Check if this stage should be skipped due to YOLO mode.
      * Testing and validation stages use this to skip when YOLO is active.
      */
     protected function shouldSkipForYolo(Experiment $experiment): bool
     {
         return $experiment->isYoloMode();
+    }
+
+    protected function populateSearchableText(Experiment $experiment, ExperimentStage $stage): void
+    {
+        try {
+            $parts = [
+                $experiment->title,
+                $experiment->goal ?? '',
+                $stage->stage instanceof \BackedEnum ? $stage->stage->value : (string) $stage->stage,
+            ];
+
+            $outputText = is_array($stage->output_snapshot)
+                ? json_encode($stage->output_snapshot)
+                : (string) ($stage->output_snapshot ?? '');
+
+            $parts[] = Str::limit($outputText, 5000, '');
+
+            $stage->update([
+                'searchable_text' => implode(' ', array_filter($parts)),
+            ]);
+        } catch (\Throwable $e) {
+            Log::debug('BaseStageJob: Failed to populate searchable_text', [
+                'experiment_id' => $experiment->id,
+                'stage_id' => $stage->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

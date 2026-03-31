@@ -5,6 +5,7 @@ namespace App\Domain\Experiment\Listeners;
 use App\Domain\Experiment\Actions\CollectWorkflowArtifactsAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
+use App\Domain\Skill\Jobs\ProposeNewSkillFromExperimentJob;
 use Illuminate\Support\Facades\Log;
 
 class CollectWorkflowArtifactsOnCompletion
@@ -39,6 +40,11 @@ class CollectWorkflowArtifactsOnCompletion
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
             ]);
+        }
+
+        // Auto-propose skill from successful experiment (async)
+        if ($event->toState === ExperimentStatus::Completed && config('skills.auto_propose.enabled', true)) {
+            ProposeNewSkillFromExperimentJob::dispatch($experiment->id);
         }
     }
 }

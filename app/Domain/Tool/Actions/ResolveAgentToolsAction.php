@@ -223,6 +223,28 @@ class ResolveAgentToolsAction
         // Inject workflow-as-tool wrappers for callable workflows (if within depth limit)
         $prismTools = array_merge($prismTools, $this->buildWorkflowAsTools($agent, $agentToolDepth, $userId));
 
+        // Apply tool profile filtering — restrict tools to groups defined in the agent's profile
+        $profile = $agent->tool_profile;
+        if ($profile) {
+            $profileConfig = config("tool_profiles.profiles.{$profile}");
+            if ($profileConfig && ($profileConfig['tool_groups'] ?? []) !== ['*']) {
+                $allowedGroups = $profileConfig['tool_groups'];
+                $prismTools = array_values(array_filter($prismTools, function ($tool) use ($allowedGroups) {
+                    $toolName = method_exists($tool, 'name') ? $tool->name() : ($tool->name ?? '');
+                    foreach ($allowedGroups as $group) {
+                        if (str_starts_with($toolName, $group.'_')) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }));
+                if ($profileConfig['max_tools'] ?? null) {
+                    $prismTools = array_slice($prismTools, 0, $profileConfig['max_tools']);
+                }
+            }
+        }
+
         return $prismTools;
     }
 

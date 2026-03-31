@@ -103,7 +103,7 @@ class RunPlanningStage extends BaseStageJob
             userId: $experiment->user_id,
             experimentId: $experiment->id,
             experimentStageId: $stage->id,
-            purpose: 'planning',
+            purpose: 'stage:planning',
             temperature: 0.5,
             teamId: $experiment->team_id,
         );

@@ -160,7 +160,7 @@ class BuildArtifactJob implements ShouldQueue
                 teamId: $experiment->team_id,
                 experimentId: $experiment->id,
                 agentId: $agent?->id,
-                purpose: 'building',
+                purpose: 'stage:building',
                 temperature: 0.7,
                 tools: $prismTools ?: null,
                 maxSteps: $prismTools ? 10 : 1,
