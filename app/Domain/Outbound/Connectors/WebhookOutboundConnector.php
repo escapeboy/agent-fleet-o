@@ -42,20 +42,9 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
 
             $url = $target['url'] ?? null;
             if (! $url) {
-                // No actionable URL — simulate the send (dry-run)
-                Log::info('WebhookOutboundConnector: No URL in target, simulating send', [
-                    'proposal_id' => $proposal->id,
-                    'target' => app(ShellChainDecomposer::class)->sanitizeForLog((string) json_encode($target)),
-                ]);
-
-                $action->update([
-                    'status' => OutboundActionStatus::Sent,
-                    'external_id' => 'webhook-simulated-'.now()->timestamp,
-                    'response' => ['simulated' => true, 'reason' => 'No URL in webhook target'],
-                    'sent_at' => now(),
-                ]);
-
-                return $action;
+                throw new \RuntimeException(
+                    'No URL in webhook target. Configure a webhook URL in the outbound proposal target.',
+                );
             }
 
             // Reject shell chain operators in URL to prevent SSRF guard bypass.

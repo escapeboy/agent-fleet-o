@@ -78,9 +78,6 @@
                                     @if($lastAction->retry_count > 0)
                                         <span class="rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700">{{ $lastAction->retry_count }}×</span>
                                     @endif
-                                    @if(isset($lastAction->response['simulated']) && $lastAction->response['simulated'])
-                                        <span class="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700">DRY RUN</span>
-                                    @endif
                                 </div>
                             @else
                                 <span class="text-xs text-gray-400">—</span>
@@ -239,9 +236,6 @@
                                                                         <span class="rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700">
                                                                             {{ $action->retry_count }} retr{{ $action->retry_count === 1 ? 'y' : 'ies' }}
                                                                         </span>
-                                                                    @endif
-                                                                    @if(isset($action->response['simulated']) && $action->response['simulated'])
-                                                                        <span class="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700">DRY RUN</span>
                                                                     @endif
                                                                 </div>
 

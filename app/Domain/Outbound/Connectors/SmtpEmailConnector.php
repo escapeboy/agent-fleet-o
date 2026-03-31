@@ -13,7 +13,6 @@ use App\Domain\Outbound\Mail\ExperimentSummaryMail;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\Mailer\Mailer as SymfonyMailer;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Symfony\Component\Mime\Address;
@@ -68,20 +67,10 @@ class SmtpEmailConnector implements OutboundConnectorInterface
             }
 
             if (! $to || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
-                // No actionable email address — simulate the send (dry-run)
-                Log::info('SmtpEmailConnector: No valid email in target or default_recipient, simulating send', [
-                    'proposal_id' => $proposal->id,
-                    'target' => $target,
-                ]);
-
-                $action->update([
-                    'status' => OutboundActionStatus::Sent,
-                    'external_id' => 'smtp-simulated-'.now()->timestamp,
-                    'response' => ['simulated' => true, 'reason' => 'No valid email address in target or connector default_recipient'],
-                    'sent_at' => now(),
-                ]);
-
-                return $action;
+                throw new \RuntimeException(
+                    'No valid email address in target or connector default_recipient. '
+                    .'Configure a default_recipient in Settings → Connectors, or ensure the signal provides an email address.',
+                );
             }
 
             $transport = $this->buildTransport($creds);
@@ -151,8 +140,9 @@ class SmtpEmailConnector implements OutboundConnectorInterface
 
             // Thread headers for in-reply-to context (RFC 2822 §3.6.4)
             if (! empty($target['in_reply_to'])) {
-                $email->getHeaders()->addTextHeader('In-Reply-To', $target['in_reply_to']);
-                $references = $target['references'] ?? $target['in_reply_to'];
+                $inReplyTo = preg_replace('/[\r\n]/', '', $target['in_reply_to']);
+                $references = preg_replace('/[\r\n]/', '', $target['references'] ?? $inReplyTo);
+                $email->getHeaders()->addTextHeader('In-Reply-To', $inReplyTo);
                 $email->getHeaders()->addTextHeader('References', $references);
             }
 

@@ -142,6 +142,28 @@ class TriggerRulesTest extends TestCase
         $this->assertCount(1, $matches);
     }
 
+    public function test_imap_source_type_matches_email_signals(): void
+    {
+        $project = $this->makeProject();
+        $signal = $this->makeSignal(['subject' => 'Help needed'], 'email');
+        $this->makeRule($project, ['source_type' => 'imap']);
+
+        $matches = $this->evaluator->execute($signal);
+
+        $this->assertCount(1, $matches);
+    }
+
+    public function test_email_source_type_matches_email_signals(): void
+    {
+        $project = $this->makeProject();
+        $signal = $this->makeSignal(['subject' => 'Help needed'], 'email');
+        $this->makeRule($project, ['source_type' => 'email']);
+
+        $matches = $this->evaluator->execute($signal);
+
+        $this->assertCount(1, $matches);
+    }
+
     public function test_rules_from_other_team_are_not_matched(): void
     {
         $otherUser = User::factory()->create();

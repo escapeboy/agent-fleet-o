@@ -122,6 +122,7 @@ class ImapConnector implements InputConnectorInterface
                 $payload = [
                     'subject' => (string) $message->getSubject(),
                     'from' => $this->formatAddress($message->getFrom()),
+                    'from_name' => $this->formatAddressName($message->getFrom()),
                     'to' => $this->formatAddresses($message->getTo()),
                     'cc' => $this->formatAddresses($message->getCc()),
                     'date' => $this->formatDate($message->getDate()),
@@ -233,6 +234,17 @@ class ImapConnector implements InputConnectorInterface
         $first = $address->first();
 
         return $first->mail ?? (string) $first;
+    }
+
+    private function formatAddressName($address): string
+    {
+        if (! $address || $address->count() === 0) {
+            return '';
+        }
+
+        $first = $address->first();
+
+        return $first->personal ?? '';
     }
 
     private function formatAddresses($addresses): array

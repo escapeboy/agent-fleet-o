@@ -177,6 +177,7 @@ class NtfyConnectorTest extends TestCase
 
     public function test_send_rejects_ssrf_url(): void
     {
+        config()->set('services.ssrf.validate_host', true);
         Http::fake();
 
         $this->createConnectorConfig([

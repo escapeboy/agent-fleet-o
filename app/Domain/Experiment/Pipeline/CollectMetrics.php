@@ -60,25 +60,6 @@ class CollectMetrics extends BaseStageJob
                 'recorded_at' => now(),
             ]);
 
-            // Record dummy engagement metric (simulated for Phase 3)
-            if ($delivered) {
-                $engagement = mt_rand(0, 100) / 100;
-
-                Metric::withoutGlobalScopes()->create([
-                    'experiment_id' => $experiment->id,
-                    'team_id' => $experiment->team_id,
-                    'outbound_action_id' => $action->id,
-                    'type' => 'engagement',
-                    'value' => $engagement,
-                    'source' => 'simulated',
-                    'metadata' => ['simulated' => true],
-                    'occurred_at' => now(),
-                    'recorded_at' => now(),
-                ]);
-
-                $metrics[] = ['type' => 'engagement', 'value' => $engagement];
-            }
-
             $metrics[] = ['type' => 'delivery', 'value' => $delivered ? 1.0 : 0.0];
         }
 
