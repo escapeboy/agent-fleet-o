@@ -14,9 +14,13 @@ use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Email\Actions\CreateEmailTemplateAction;
+use App\Domain\Email\Actions\CreateEmailThemeAction;
 use App\Domain\Email\Actions\DeleteEmailTemplateAction;
+use App\Domain\Email\Actions\DeleteEmailThemeAction;
 use App\Domain\Email\Actions\UpdateEmailTemplateAction;
+use App\Domain\Email\Actions\UpdateEmailThemeAction;
 use App\Domain\Email\Models\EmailTemplate;
+use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Email\Services\MjmlRenderer;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
@@ -94,6 +98,8 @@ class MutationTools
             self::uploadMemoryKnowledge(),
             self::createEmailTemplate(),
             self::updateEmailTemplate(),
+            self::createEmailTheme(),
+            self::updateEmailTheme(),
         ];
     }
 
@@ -111,6 +117,7 @@ class MutationTools
             self::manageByokCredential(),
             self::manageApiToken(),
             self::deleteEmailTemplate(),
+            self::deleteEmailTheme(),
         ];
     }
 
@@ -1433,6 +1440,170 @@ class MutationTools
                     app(DeleteEmailTemplateAction::class)->execute($template);
 
                     return json_encode(['success' => true, 'message' => "Email template '{$name}' deleted."]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
+    }
+
+    private static function createEmailTheme(): PrismToolObject
+    {
+        return PrismTool::as('create_email_theme')
+            ->for('Create a new email theme with brand colors, fonts, and footer info. All color/layout fields are optional with sensible defaults (blue primary, Inter font, 600px width).')
+            ->withStringParameter('name', 'Theme name', required: true)
+            ->withStringParameter('primary_color', 'Primary/CTA color as hex (e.g. #2563eb). Default: #2563eb')
+            ->withStringParameter('background_color', 'Email background color as hex. Default: #f4f4f4')
+            ->withStringParameter('canvas_color', 'Content area background color as hex. Default: #ffffff')
+            ->withStringParameter('text_color', 'Body text color as hex. Default: #1f2937')
+            ->withStringParameter('heading_color', 'Heading text color as hex. Default: #111827')
+            ->withStringParameter('font_name', 'Font display name (e.g. Inter, Georgia). Default: Inter')
+            ->withStringParameter('font_url', 'Google Fonts or web font URL for @import')
+            ->withStringParameter('font_family', 'Full CSS font-family stack. Default: Inter, Arial, sans-serif')
+            ->withStringParameter('logo_url', 'Absolute URL to the team logo image')
+            ->withStringParameter('company_name', 'Company name shown in email footer')
+            ->withStringParameter('company_address', 'Company address shown in email footer')
+            ->withStringParameter('footer_text', 'Footer text or HTML (e.g. unsubscribe line)')
+            ->using(function (
+                string $name,
+                ?string $primary_color = null,
+                ?string $background_color = null,
+                ?string $canvas_color = null,
+                ?string $text_color = null,
+                ?string $heading_color = null,
+                ?string $font_name = null,
+                ?string $font_url = null,
+                ?string $font_family = null,
+                ?string $logo_url = null,
+                ?string $company_name = null,
+                ?string $company_address = null,
+                ?string $footer_text = null,
+            ) {
+                try {
+                    $team = auth()->user()->currentTeam;
+
+                    $data = array_filter([
+                        'name' => $name,
+                        'primary_color' => $primary_color,
+                        'background_color' => $background_color,
+                        'canvas_color' => $canvas_color,
+                        'text_color' => $text_color,
+                        'heading_color' => $heading_color,
+                        'font_name' => $font_name,
+                        'font_url' => $font_url,
+                        'font_family' => $font_family,
+                        'logo_url' => $logo_url,
+                        'company_name' => $company_name,
+                        'company_address' => $company_address,
+                        'footer_text' => $footer_text,
+                    ], fn ($v) => $v !== null);
+
+                    $theme = app(CreateEmailThemeAction::class)->execute($team, $data);
+
+                    return json_encode([
+                        'success' => true,
+                        'theme_id' => $theme->id,
+                        'name' => $theme->name,
+                        'status' => $theme->status->value,
+                        'primary_color' => $theme->primary_color,
+                        'font_name' => $theme->font_name,
+                    ]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
+    }
+
+    private static function updateEmailTheme(): PrismToolObject
+    {
+        return PrismTool::as('update_email_theme')
+            ->for('Update an existing email theme. Only supply fields you want to change — omitted fields are preserved.')
+            ->withStringParameter('theme_id', 'Email theme UUID', required: true)
+            ->withStringParameter('name', 'Theme name')
+            ->withStringParameter('status', 'Status: draft, active, archived')
+            ->withStringParameter('primary_color', 'Primary/CTA color as hex (e.g. #2563eb)')
+            ->withStringParameter('background_color', 'Email background color as hex')
+            ->withStringParameter('canvas_color', 'Content area background color as hex')
+            ->withStringParameter('text_color', 'Body text color as hex')
+            ->withStringParameter('heading_color', 'Heading text color as hex')
+            ->withStringParameter('font_name', 'Font display name (e.g. Inter, Georgia)')
+            ->withStringParameter('font_url', 'Google Fonts or web font URL for @import')
+            ->withStringParameter('font_family', 'Full CSS font-family stack')
+            ->withStringParameter('logo_url', 'Absolute URL to the team logo image')
+            ->withStringParameter('company_name', 'Company name shown in email footer')
+            ->withStringParameter('company_address', 'Company address shown in email footer')
+            ->withStringParameter('footer_text', 'Footer text or HTML')
+            ->using(function (
+                string $theme_id,
+                ?string $name = null,
+                ?string $status = null,
+                ?string $primary_color = null,
+                ?string $background_color = null,
+                ?string $canvas_color = null,
+                ?string $text_color = null,
+                ?string $heading_color = null,
+                ?string $font_name = null,
+                ?string $font_url = null,
+                ?string $font_family = null,
+                ?string $logo_url = null,
+                ?string $company_name = null,
+                ?string $company_address = null,
+                ?string $footer_text = null,
+            ) {
+                $theme = EmailTheme::find($theme_id);
+                if (! $theme) {
+                    return json_encode(['error' => 'Email theme not found']);
+                }
+
+                try {
+                    $data = array_filter([
+                        'name' => $name,
+                        'status' => $status,
+                        'primary_color' => $primary_color,
+                        'background_color' => $background_color,
+                        'canvas_color' => $canvas_color,
+                        'text_color' => $text_color,
+                        'heading_color' => $heading_color,
+                        'font_name' => $font_name,
+                        'font_url' => $font_url,
+                        'font_family' => $font_family,
+                        'logo_url' => $logo_url,
+                        'company_name' => $company_name,
+                        'company_address' => $company_address,
+                        'footer_text' => $footer_text,
+                    ], fn ($v) => $v !== null);
+
+                    $theme = app(UpdateEmailThemeAction::class)->execute($theme, $data);
+
+                    return json_encode([
+                        'success' => true,
+                        'theme_id' => $theme->id,
+                        'name' => $theme->name,
+                        'status' => $theme->status->value,
+                        'primary_color' => $theme->primary_color,
+                        'font_name' => $theme->font_name,
+                    ]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
+    }
+
+    private static function deleteEmailTheme(): PrismToolObject
+    {
+        return PrismTool::as('delete_email_theme')
+            ->for('Delete an email theme (soft delete). This is a destructive action.')
+            ->withStringParameter('theme_id', 'Email theme UUID', required: true)
+            ->using(function (string $theme_id) {
+                $theme = EmailTheme::find($theme_id);
+                if (! $theme) {
+                    return json_encode(['error' => 'Email theme not found']);
+                }
+
+                try {
+                    $name = $theme->name;
+                    app(DeleteEmailThemeAction::class)->execute($theme);
+
+                    return json_encode(['success' => true, 'message' => "Email theme '{$name}' deleted."]);
                 } catch (\Throwable $e) {
                     return json_encode(['error' => $e->getMessage()]);
                 }

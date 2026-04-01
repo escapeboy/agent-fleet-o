@@ -790,6 +790,8 @@ class SendAssistantMessageAction
             - `get_delegation_results` — Check results of a previously delegated task
             - `create_email_template` — Create a new email template (name, subject, html_body or mjml_body, visibility)
             - `update_email_template` — Update an existing email template
+            - `create_email_theme` — Create a new email theme (name, colors, fonts, logo, footer)
+            - `update_email_theme` — Update an existing email theme
             - `update_global_settings` — Update platform-wide settings (super admin only)
             WRITE;
         }
@@ -806,6 +808,7 @@ class SendAssistantMessageAction
             - `manage_byok_credential` — Add, update, or remove a team BYOK provider credential
             - `manage_api_token` — Create or revoke a team API token
             - `delete_email_template` — Permanently delete an email template
+            - `delete_email_theme` — Permanently delete an email theme
             DESTRUCTIVE;
         }
 

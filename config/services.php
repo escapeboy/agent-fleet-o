@@ -91,6 +91,10 @@ return [
         'fireworks' => env('FIREWORKS_API_KEY'),
     ],
 
+    'mjml' => [
+        'url' => env('MJML_SERVER_URL'),
+    ],
+
     'clearcue' => [
         'webhook_secret' => env('CLEARCUE_WEBHOOK_SECRET'),
     ],
