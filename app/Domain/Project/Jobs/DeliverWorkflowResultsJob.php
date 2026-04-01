@@ -58,7 +58,6 @@ class DeliverWorkflowResultsJob implements ShouldQueue
         if (! $run->output_summary) {
             $run->update(['output_summary' => $summary]);
         }
-
         // For signal-triggered email workflows, reply to the original sender
         if ($channel === 'email' && empty($deliveryConfig['target'])) {
             $signalFrom = $experiment->meta['signal_payload']['from'] ?? null;

@@ -216,6 +216,14 @@ services:
     profiles:
       - browser
 
+  mjml:
+    build:
+      context: ./docker/mjml
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - agent-fleet-open
+
   bash_sidecar:
     build:
       context: ../../sidecar
