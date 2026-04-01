@@ -38,7 +38,7 @@ PROMPT;
      */
     public function execute(
         string $teamId,
-        string $agentId,
+        ?string $agentId,
         string $content,
         string $sourceType,
         ?string $projectId = null,

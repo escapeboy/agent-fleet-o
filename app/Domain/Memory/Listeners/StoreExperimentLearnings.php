@@ -54,7 +54,7 @@ class StoreExperimentLearnings
 
                 $this->storeMemory->execute(
                     teamId: $experiment->team_id,
-                    agentId: $experiment->agent_id ?? 'team-knowledge',
+                    agentId: $experiment->agent_id,
                     content: $content,
                     sourceType: 'experiment',
                     projectId: $projectId,

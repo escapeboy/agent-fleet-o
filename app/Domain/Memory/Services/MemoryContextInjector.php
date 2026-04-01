@@ -27,7 +27,7 @@ class MemoryContextInjector
      * Returns null if memory is disabled, input is empty, or no relevant memories found.
      */
     public function buildContext(
-        string $agentId,
+        ?string $agentId,
         mixed $input,
         ?string $projectId = null,
         ?string $teamId = null,
@@ -101,7 +101,7 @@ class MemoryContextInjector
     private function buildUnifiedContext(
         string $teamId,
         string $query,
-        string $agentId,
+        ?string $agentId,
         ?string $projectId,
     ): ?string {
         $results = $this->unifiedSearch->execute(
@@ -165,7 +165,7 @@ class MemoryContextInjector
      * Build context using vector-only search (legacy fallback).
      */
     private function buildVectorOnlyContext(
-        string $agentId,
+        ?string $agentId,
         string $query,
         ?string $projectId,
         ?string $teamId,

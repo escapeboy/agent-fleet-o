@@ -35,7 +35,7 @@ class UploadKnowledgeDocumentAction
 
         return $this->storeMemory->execute(
             teamId: $teamId,
-            agentId: $agentId ?? 'team-knowledge',
+            agentId: $agentId,
             content: $text,
             sourceType: 'document',
             projectId: $projectId,

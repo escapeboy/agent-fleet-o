@@ -23,7 +23,7 @@ class RetrieveRelevantMemoriesAction
      * @param  string[]|null  $tags  When provided, only return memories containing ANY of these tags (JSONB ?| operator on PostgreSQL).
      */
     public function execute(
-        string $agentId,
+        ?string $agentId,
         string $query,
         ?string $projectId = null,
         ?int $topK = null,
@@ -124,7 +124,7 @@ class RetrieveRelevantMemoriesAction
     private function applyScope(
         Builder $builder,
         string $scope,
-        string $agentId,
+        ?string $agentId,
         ?string $projectId,
         ?string $teamId,
     ): void {
