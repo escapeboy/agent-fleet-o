@@ -45,7 +45,7 @@ class RunScoringStage extends BaseStageJob
         if ($projectId) {
             $injector = app(MemoryContextInjector::class);
             $memory = $injector->buildContext(
-                agentId: $experiment->agent_id ?? 'team-knowledge',
+                agentId: $experiment->agent_id,
                 input: $experiment->thesis ?? $experiment->title,
                 projectId: $projectId,
                 teamId: $experiment->team_id,
