@@ -8,13 +8,14 @@ class ArtifactContentResolver
 {
     private const HTML_TYPES = [
         'code', 'frontend', 'backend', 'frontend_landing_page', 'backend_tracking',
-        'landing_page', 'email_template', 'html', 'webpage',
+        'landing_page', 'email_template', 'html', 'webpage', 'website',
     ];
 
     private const MARKDOWN_TYPES = [
         'seo', 'plan', 'strategy', 'research', 'seo_keyword_pack', 'task_breakdown_plan',
         'sales_strategy_doc', 'product_niche_analysis', 'analysis', 'prompt_snapshot',
         'design', 'documentation', 'report', 'markdown', 'copy', 'document', 'seo_plan',
+        'research_document', 'marketing_copy',
     ];
 
     private const JSON_TYPES = [
