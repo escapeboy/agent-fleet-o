@@ -31,9 +31,9 @@ class SchemaValidator
         $properties = $schema['properties'] ?? [];
         $requiredFields = $schema['required'] ?? [];
 
-        // Also support per-property "required" flag
+        // Also support per-property "required" flag (must be boolean true, not a nested schema array)
         foreach ($properties as $field => $definition) {
-            if (($definition['required'] ?? false) && ! in_array($field, $requiredFields)) {
+            if (($definition['required'] ?? false) === true && ! in_array($field, $requiredFields)) {
                 $requiredFields[] = $field;
             }
         }

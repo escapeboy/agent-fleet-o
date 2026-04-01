@@ -83,7 +83,7 @@ class ListEntitiesTools
                     'projects' => $projects->map(fn ($p) => [
                         'id' => $p->id,
                         'title' => $p->title,
-                        'type' => $p->type,
+                        'type' => $p->type->value,
                         'status' => $p->status->value,
                         'created' => $p->created_at->diffForHumans(),
                     ])->toArray(),

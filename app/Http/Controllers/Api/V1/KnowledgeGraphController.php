@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\KnowledgeGraph\Actions\AddKnowledgeFactAction;
 use App\Domain\KnowledgeGraph\Actions\InvalidateKgFactAction;
 use App\Domain\KnowledgeGraph\Actions\SearchKgFactsAction;
+use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Signal\Models\Entity;
 use App\Http\Controllers\Controller;
@@ -29,7 +30,7 @@ class KnowledgeGraphController extends Controller
         $request->validate([
             'query' => ['required', 'string', 'min:1', 'max:500'],
             'relation_type' => ['sometimes', 'string', 'max:80'],
-            'entity_type' => ['sometimes', 'in:person,company,location,date,product,topic'],
+            'entity_type' => ['sometimes', EntityType::validationRule()],
             'include_history' => ['sometimes', 'boolean'],
             'threshold' => ['sometimes', 'numeric', 'min:0', 'max:1'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:100'],
@@ -59,7 +60,7 @@ class KnowledgeGraphController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['sometimes', 'in:person,company,location,date,product,topic'],
+            'type' => ['sometimes', EntityType::validationRule()],
             'include_history' => ['sometimes', 'boolean'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
@@ -101,10 +102,10 @@ class KnowledgeGraphController extends Controller
     {
         $request->validate([
             'source_name' => ['required', 'string', 'max:255'],
-            'source_type' => ['required', 'in:person,company,location,date,product,topic'],
+            'source_type' => ['required', EntityType::validationRule()],
             'relation_type' => ['required', 'string', 'max:80'],
             'target_name' => ['required', 'string', 'max:255'],
-            'target_type' => ['required', 'in:person,company,location,date,product,topic'],
+            'target_type' => ['required', EntityType::validationRule()],
             'fact' => ['required', 'string', 'min:1', 'max:2000'],
             'attributes' => ['sometimes', 'array'],
         ]);
@@ -154,7 +155,7 @@ class KnowledgeGraphController extends Controller
     public function entities(Request $request): AnonymousResourceCollection
     {
         $request->validate([
-            'type' => ['sometimes', 'in:person,company,location,date,product,topic'],
+            'type' => ['sometimes', EntityType::validationRule()],
             'search' => ['sometimes', 'string', 'max:255'],
         ]);
 

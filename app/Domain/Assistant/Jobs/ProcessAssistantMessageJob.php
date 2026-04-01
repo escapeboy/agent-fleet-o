@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Sentry\Severity;
 use Sentry\State\Scope;
@@ -59,7 +60,51 @@ class ProcessAssistantMessageJob implements ShouldQueue
         }
         $user->load('currentTeam');
 
+        // Login user into Auth guard so tool closures can resolve via auth()->user()
+        // IMPORTANT: Must forgetUser in finally{} — Horizon workers are long-lived,
+        // auth state would leak to the next job on the same worker.
+        Auth::login($user);
+
         try {
+            // Progressive streaming: update placeholder as chunks arrive.
+            // Throttle DB writes to max once per 300ms to avoid excessive queries.
+            $streamedContent = '';
+            $toolCalls = [];
+            $lastFlush = 0.0;
+            $flushInterval = 0.3; // seconds
+
+            $onChunk = function (?string $textDelta, string $type = 'text_delta', ?string $toolName = null) use ($placeholder, &$streamedContent, &$toolCalls, &$lastFlush, $flushInterval): void {
+                if ($type === 'tool_call' && $toolName) {
+                    $toolCalls[] = $toolName;
+                    $placeholder->update([
+                        'content' => $streamedContent,
+                        'metadata' => json_encode([
+                            'status' => 'streaming',
+                            'tool_calls_in_progress' => $toolCalls,
+                        ]),
+                    ]);
+                    $lastFlush = microtime(true);
+
+                    return;
+                }
+
+                if ($textDelta !== null) {
+                    $streamedContent .= $textDelta;
+                }
+
+                $now = microtime(true);
+                if (($now - $lastFlush) >= $flushInterval) {
+                    $placeholder->update([
+                        'content' => $streamedContent,
+                        'metadata' => json_encode([
+                            'status' => 'streaming',
+                            'tool_calls_in_progress' => $toolCalls,
+                        ]),
+                    ]);
+                    $lastFlush = $now;
+                }
+            };
+
             $action->execute(
                 conversation: $conversation,
                 userMessage: $this->userMessage,
@@ -68,6 +113,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
                 contextId: $this->contextId,
                 provider: $this->provider,
                 model: $this->model,
+                onChunk: $onChunk,
                 placeholderMessageId: $this->placeholderMessageId,
             );
 
@@ -133,6 +179,10 @@ class ProcessAssistantMessageJob implements ShouldQueue
                 'content' => 'Sorry, an error occurred: '.$e->getMessage(),
                 'metadata' => ['status' => 'failed', 'error' => $e->getMessage()],
             ]);
+        } finally {
+            // Clean up auth state to prevent leaking to next job on same Horizon worker
+            Auth::forgetUser();
+            Auth::guard()->forgetUser();
         }
     }
 

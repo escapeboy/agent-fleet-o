@@ -5,6 +5,9 @@ namespace App\Mcp\Servers;
 use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Resources\ApprovalsResource;
+use App\Mcp\Tools\A2ui\A2uiComponentCatalogTool;
+use App\Mcp\Tools\A2ui\A2uiRenderSurfaceTool;
+use App\Mcp\Tools\A2ui\A2uiValidateSurfaceTool;
 use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
 use App\Mcp\Tools\Admin\AdminBillingRefundTool;
 use App\Mcp\Tools\Admin\AdminSecurityOverviewTool;
@@ -907,6 +910,11 @@ class AgentFleetServer extends Server
         VoiceSessionCreateTool::class,
         VoiceSessionEndTool::class,
         VoiceSessionTranscriptTool::class,
+
+        // A2UI (3) — Agent-to-UI protocol rendering
+        A2uiComponentCatalogTool::class,
+        A2uiRenderSurfaceTool::class,
+        A2uiValidateSurfaceTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */

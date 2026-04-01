@@ -24,16 +24,20 @@ class UnifiedMemorySearchAction
     /**
      * @return Collection<int, array{type: string, content: string, score: float, metadata: array}>
      */
+    /**
+     * @param  string[]|null  $tags  When provided, only return memories containing ANY of these tags.
+     */
     public function execute(
         string $teamId,
         string $query,
         ?string $agentId = null,
         ?string $projectId = null,
         int $topK = 10,
+        ?array $tags = null,
     ): Collection {
         if (! config('memory.unified_search.enabled', true)) {
             // Fall back to vector-only search
-            return $this->vectorOnlyFallback($agentId, $query, $projectId, $topK, $teamId);
+            return $this->vectorOnlyFallback($agentId, $query, $projectId, $topK, $teamId, $tags);
         }
 
         $vectorWeight = config('memory.unified_search.vector_weight', 1.0);
@@ -44,7 +48,7 @@ class UnifiedMemorySearchAction
         $queryEmbedding = $this->generateEmbedding($query);
 
         // System 1: Vector search
-        $vectorResults = $this->getVectorResults($agentId, $query, $projectId, $teamId);
+        $vectorResults = $this->getVectorResults($agentId, $query, $projectId, $teamId, $tags);
 
         // System 2: Knowledge Graph search
         $kgResults = $this->getKgResults($teamId, $queryEmbedding);
@@ -135,7 +139,7 @@ class UnifiedMemorySearchAction
             ->values();
     }
 
-    private function getVectorResults(?string $agentId, string $query, ?string $projectId, ?string $teamId): Collection
+    private function getVectorResults(?string $agentId, string $query, ?string $projectId, ?string $teamId, ?array $tags = null): Collection
     {
         if (! $agentId) {
             return collect();
@@ -149,6 +153,7 @@ class UnifiedMemorySearchAction
                 topK: 20,
                 scope: $projectId ? 'project' : 'agent',
                 teamId: $teamId,
+                tags: $tags,
             );
         } catch (\Throwable $e) {
             Log::debug('UnifiedSearch: vector search failed', ['error' => $e->getMessage()]);
@@ -238,7 +243,7 @@ class UnifiedMemorySearchAction
         return $builder->get();
     }
 
-    private function vectorOnlyFallback(?string $agentId, string $query, ?string $projectId, int $topK, ?string $teamId): Collection
+    private function vectorOnlyFallback(?string $agentId, string $query, ?string $projectId, int $topK, ?string $teamId, ?array $tags = null): Collection
     {
         if (! $agentId) {
             return collect();
@@ -251,6 +256,7 @@ class UnifiedMemorySearchAction
             topK: $topK,
             scope: $projectId ? 'project' : 'agent',
             teamId: $teamId,
+            tags: $tags,
         );
 
         return $memories->map(fn ($m) => [

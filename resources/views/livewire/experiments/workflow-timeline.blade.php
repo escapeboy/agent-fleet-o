@@ -75,6 +75,18 @@
                             @if($selectedSnapshot['step_output'])
                                 <div class="px-4 py-3">
                                     <h5 class="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">Step Output</h5>
+                                    @php
+                                        $timelineOutput = $selectedSnapshot['step_output'];
+                                        $timelineA2ui = is_array($timelineOutput) && isset($timelineOutput['a2ui_surface']['components'])
+                                            ? $timelineOutput['a2ui_surface'] : null;
+                                    @endphp
+                                    @if($timelineA2ui)
+                                        <x-a2ui.surface
+                                            :components="$timelineA2ui['components']"
+                                            :data-model="$timelineA2ui['dataModel'] ?? $timelineA2ui['data_model'] ?? []"
+                                            class="mb-2"
+                                        />
+                                    @endif
                                     <pre class="max-h-32 overflow-auto rounded bg-gray-50 p-2 text-xs text-gray-700">{{ json_encode($selectedSnapshot['step_output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                                 </div>
                             @endif

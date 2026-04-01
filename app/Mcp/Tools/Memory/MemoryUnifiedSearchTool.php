@@ -31,6 +31,8 @@ class MemoryUnifiedSearchTool extends Tool
             'top_k' => $schema->integer()
                 ->description('Max results to return (default 10, max 50)')
                 ->default(10),
+            'tags' => $schema->array()
+                ->description('Filter by tags — only return memories containing ANY of these tags. E.g. ["barsy:client", "barsy:shared"]. Omit to return all.'),
         ];
     }
 
@@ -47,12 +49,16 @@ class MemoryUnifiedSearchTool extends Tool
 
         $topK = min((int) ($request->get('top_k', 10)), 50);
 
+        $tags = $request->get('tags');
+        $tags = is_array($tags) && ! empty($tags) ? $tags : null;
+
         $results = $action->execute(
             teamId: $teamId,
             query: $validated['query'],
             agentId: $request->get('agent_id'),
             projectId: $request->get('project_id'),
             topK: $topK,
+            tags: $tags,
         );
 
         return Response::text(json_encode([

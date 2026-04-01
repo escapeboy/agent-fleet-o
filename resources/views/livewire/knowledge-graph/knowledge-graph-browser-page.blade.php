@@ -44,12 +44,9 @@
             <select wire:model.live="entityTypeFilter"
                     class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500">
                 <option value="">All entity types</option>
-                <option value="person">person</option>
-                <option value="company">company</option>
-                <option value="location">location</option>
-                <option value="date">date</option>
-                <option value="product">product</option>
-                <option value="topic">topic</option>
+                @foreach($entityTypes as $et)
+                    <option value="{{ $et->value }}">{{ $et->label() }}</option>
+                @endforeach
             </select>
         </div>
         <div class="flex items-center gap-2">
@@ -80,12 +77,9 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1">Source entity type</label>
                     <select wire:model="sourceType"
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500">
-                        <option value="person">person</option>
-                        <option value="company">company</option>
-                        <option value="location">location</option>
-                        <option value="date">date</option>
-                        <option value="product">product</option>
-                        <option value="topic">topic</option>
+                        @foreach($entityTypes as $et)
+                            <option value="{{ $et->value }}">{{ $et->label() }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>
@@ -104,12 +98,9 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1">Target entity type</label>
                     <select wire:model="targetType"
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500">
-                        <option value="person">person</option>
-                        <option value="company">company</option>
-                        <option value="location">location</option>
-                        <option value="date">date</option>
-                        <option value="product">product</option>
-                        <option value="topic">topic</option>
+                        @foreach($entityTypes as $et)
+                            <option value="{{ $et->value }}">{{ $et->label() }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="sm:col-span-2">

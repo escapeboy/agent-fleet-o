@@ -180,26 +180,29 @@ class SendAssistantMessageAction
                 $toolChoice = ($needsTool && $supportsAnyToolChoice) ? 'any' : null;
             }
 
+            // Wrap tool closures to emit progress events when PrismPHP calls them.
+            $wrappedTools = $tools;
+            if ($onChunk && ! empty($tools)) {
+                $wrappedTools = $this->wrapToolsWithProgress($tools, $onChunk);
+            }
+
             $request = new AiRequestDTO(
                 provider: $provider,
                 model: $model,
                 systemPrompt: $systemPrompt,
                 userPrompt: $userPrompt,
-                maxTokens: 4096,
+                maxTokens: 8192,
                 userId: $user->id,
                 teamId: $user->current_team_id,
                 purpose: 'platform_assistant',
-                tools: $tools ?: null,
-                maxSteps: 5,
+                tools: $wrappedTools ?: null,
+                maxSteps: 15,
                 temperature: 0.3,
                 toolChoice: $toolChoice,
             );
 
-            $response = $this->gateway->complete($request);
-
-            if ($onChunk !== null && $response->content !== null) {
-                $onChunk($response->content);
-            }
+            // Use stream() for progressive updates — gateway handles tool+stream hybrid
+            $response = $this->gateway->stream($request, $onChunk);
         }
 
         // Log tool executions for audit and track usage for throttling
@@ -239,6 +242,13 @@ class SendAssistantMessageAction
             });
         }
 
+        // Extract A2UI surfaces from tool results and content
+        $a2uiSurfaces = $this->extractA2uiSurfaces($response->toolResults ?? [], $finalContent);
+        $metadata = ['status' => $finalStatus];
+        if (! empty($a2uiSurfaces)) {
+            $metadata['a2ui_surfaces'] = $a2uiSurfaces;
+        }
+
         // Save assistant response — update existing placeholder (async mode) or create new message
         if ($placeholderMessageId !== null) {
             AssistantMessage::where('id', $placeholderMessageId)->update([
@@ -249,7 +259,7 @@ class SendAssistantMessageAction
                     'completion_tokens' => $response->usage->completionTokens,
                     'cost_credits' => $response->usage->costCredits,
                 ]),
-                'metadata' => json_encode(['status' => $finalStatus]),
+                'metadata' => json_encode($metadata),
             ]);
         } else {
             $this->conversationManager->addMessage(
@@ -262,6 +272,7 @@ class SendAssistantMessageAction
                     'completion_tokens' => $response->usage->completionTokens,
                     'cost_credits' => $response->usage->costCredits,
                 ],
+                metadata: $metadata,
             );
         }
 
@@ -586,6 +597,31 @@ class SendAssistantMessageAction
     }
 
     /**
+     * Wrap tool closures to emit progress events when PrismPHP invokes them.
+     *
+     * @param  array<PrismToolObject>  $tools
+     * @return array<PrismToolObject>
+     */
+    private function wrapToolsWithProgress(array $tools, callable $onChunk): array
+    {
+        $fnProperty = new \ReflectionProperty(PrismToolObject::class, 'fn');
+
+        return array_map(function (PrismToolObject $tool) use ($onChunk, $fnProperty) {
+            $toolName = $tool->name();
+            $originalFn = $fnProperty->getValue($tool);
+
+            $clone = clone $tool;
+            $clone->using(function () use ($onChunk, $toolName, $originalFn) {
+                $onChunk(null, 'tool_call', $toolName);
+
+                return $originalFn(...func_get_args());
+            });
+
+            return $clone;
+        }, $tools);
+    }
+
+    /**
      * @param  array<PrismToolObject>  $tools
      */
     private function buildSystemPrompt(string $context, User $user, bool $includeToolCallFormat, bool $canExecuteTools, array $tools = [], bool $supportsMcpNatively = false): string
@@ -620,8 +656,23 @@ class SendAssistantMessageAction
             - If the user asks about something on the current page, use the context above to answer.
             - You can chain multiple tool calls in a single response to answer complex questions.
             - You can also help with general tasks (writing, brainstorming, content creation, code, etc.) — you are not limited to platform management.
-            - **Agent creation intent**: When a user describes a task, capability, or automation they need (e.g. "I need something that monitors X", "can you create an agent that does Y", "I want to automate Z"), proactively offer to create a new agent using the `create_agent` tool. After creating the agent, ask if they would like to add it to an existing crew using `add_agent_to_crew`.
             - **CRITICAL: Always respond in the exact same language the user writes in. Bulgarian and Russian are different languages — if the user writes in Bulgarian, respond in Bulgarian (not Russian or a mix of the two). Mirror the user's language precisely.**
+
+            ## Autonomous Execution (CRITICAL)
+            You are an **autonomous agent**, not a step-by-step assistant. When a user describes a goal or task:
+
+            1. **Plan silently** — determine ALL the steps needed to accomplish the goal.
+            2. **Execute the full plan** — call tools one after another without stopping to ask the user for confirmation between steps. Do NOT ask "shall I proceed?" or "would you like me to create X next?".
+            3. **Report the result** — after completing ALL steps, give a concise summary of everything you created/configured.
+
+            Examples of autonomous behavior:
+            - "Create a research crew" → Create 3 agents (coordinator, researcher, reviewer) → Create the crew → Add all agents as members → Report the complete crew.
+            - "Set up a project that monitors competitors" → Create the monitoring agent → Create a skill for web scraping → Create the project with a schedule → Report the full setup.
+            - "I need an affiliate landing page project" → Create all needed agents → Create the crew → Create a workflow → Create the project with the workflow → Start the project → Report everything.
+
+            **NEVER** stop after creating just one entity and ask the user what to do next. Always think about what the user ultimately wants and execute the complete chain of actions.
+
+            If you are genuinely unsure about a critical choice (e.g. which LLM provider to use, what budget to set), pick a sensible default and mention it in your summary. The user can adjust later.
             GUIDE
             : <<<'GUIDE'
             ## Guidelines
@@ -940,5 +991,57 @@ class SendAssistantMessageAction
                 $this->toolUsageTracker->increment($conversationId, $toolName);
             }
         }
+    }
+
+    /**
+     * Extract A2UI surfaces from tool results and content.
+     *
+     * Surfaces can appear in two ways:
+     * 1. Tool results containing an 'a2ui_surface' key in their JSON output
+     * 2. Content containing ```a2ui fenced code blocks
+     *
+     * @return list<array{components: array, dataModel?: array}>
+     */
+    private function extractA2uiSurfaces(?array $toolResults, string $content): array
+    {
+        $surfaces = [];
+
+        // Extract from tool results
+        if ($toolResults) {
+            foreach ($toolResults as $toolResult) {
+                $result = $toolResult['result'] ?? null;
+                if (! is_string($result)) {
+                    continue;
+                }
+                $decoded = json_decode($result, true);
+                if (! is_array($decoded)) {
+                    continue;
+                }
+                if (isset($decoded['a2ui_surface']['components'])) {
+                    $surfaces[] = $decoded['a2ui_surface'];
+                } elseif (isset($decoded['a2ui_surfaces']) && is_array($decoded['a2ui_surfaces'])) {
+                    foreach ($decoded['a2ui_surfaces'] as $surface) {
+                        if (isset($surface['components'])) {
+                            $surfaces[] = $surface;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Extract from ```a2ui fenced code blocks in content
+        if (preg_match_all('/```a2ui\s*\n(.*?)\n```/s', $content, $matches)) {
+            foreach ($matches[1] as $block) {
+                $decoded = json_decode($block, true);
+                if (is_array($decoded) && isset($decoded['components'])) {
+                    $surfaces[] = $decoded;
+                } elseif (is_array($decoded) && isset($decoded[0]['id'])) {
+                    // Direct component array
+                    $surfaces[] = ['components' => $decoded];
+                }
+            }
+        }
+
+        return $surfaces;
     }
 }

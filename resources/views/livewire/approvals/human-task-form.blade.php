@@ -29,7 +29,25 @@
     {{-- Dynamic Form --}}
     @if($task->status === \App\Domain\Approval\Enums\ApprovalStatus::Pending)
         <form wire:submit="submit" class="space-y-4">
-            @php $fields = $task->form_schema['fields'] ?? []; @endphp
+            @php
+                $schema = $task->form_schema ?? [];
+                // Support JSON Schema format (properties/required) from workflow nodes
+                if (isset($schema['properties'])) {
+                    $requiredKeys = $schema['required'] ?? [];
+                    $fields = [];
+                    foreach ($schema['properties'] as $propName => $def) {
+                        $fields[] = [
+                            'name' => $propName,
+                            'type' => isset($def['enum']) ? 'select' : ($def['type'] ?? 'string'),
+                            'label' => $def['description'] ?? ucfirst(str_replace('_', ' ', $propName)),
+                            'required' => in_array($propName, $requiredKeys),
+                            'options' => isset($def['enum']) ? array_map(fn($v) => ['value' => $v, 'label' => ucfirst(str_replace('_', ' ', $v))], $def['enum']) : [],
+                        ];
+                    }
+                } else {
+                    $fields = $schema['fields'] ?? [];
+                }
+            @endphp
 
             @foreach($fields as $field)
                 @php
@@ -59,7 +77,7 @@
                             <option value="{{ $option['value'] }}">{{ $option['label'] }}</option>
                         @endforeach
                     </x-form-select>
-                @elseif($type === 'checkbox')
+                @elseif($type === 'checkbox' || $type === 'boolean')
                     <x-form-checkbox
                         wire:model="formData.{{ $name }}"
                         :label="$label"
@@ -67,7 +85,7 @@
                 @else
                     <x-form-input
                         wire:model="formData.{{ $name }}"
-                        :type="$type"
+                        :type="$type === 'string' ? 'text' : $type"
                         :label="$label"
                         :hint="$hint"
                         :required="$required"

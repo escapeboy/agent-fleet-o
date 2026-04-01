@@ -4,6 +4,8 @@ namespace Tests\Feature\Domain\KnowledgeGraph;
 
 use App\Domain\KnowledgeGraph\Actions\AddKnowledgeFactAction;
 use App\Domain\KnowledgeGraph\Actions\DetectContradictionAction;
+use App\Domain\KnowledgeGraph\Actions\NormalizeKnowledgeInputAction;
+use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
 use App\Domain\Shared\Models\Team;
@@ -88,6 +90,7 @@ class KnowledgeGraphTest extends TestCase
             targetName: 'Acme Corp',
             targetType: 'company',
             fact: 'Alice Chen is VP Engineering at Acme Corp',
+            skipNormalization: true,
         );
 
         $this->assertDatabaseHas('kg_edges', [
@@ -126,6 +129,7 @@ class KnowledgeGraphTest extends TestCase
             targetName: 'Acme Corp',
             targetType: 'company',
             fact: 'Alice Chen works at Acme Corp',
+            skipNormalization: true,
         );
 
         $this->fakeEmbedding();
@@ -138,6 +142,7 @@ class KnowledgeGraphTest extends TestCase
             targetName: 'VP Engineering',
             targetType: 'topic',
             fact: 'Alice Chen holds the title VP Engineering',
+            skipNormalization: true,
         );
 
         // Alice Chen entity should only exist once
@@ -160,6 +165,7 @@ class KnowledgeGraphTest extends TestCase
             targetName: '$99/month',
             targetType: 'topic',
             fact: 'Alice Chen has_price $99/month',
+            skipNormalization: true,
         );
 
         $this->assertEquals('has_price', $edge->relation_type);
@@ -180,6 +186,7 @@ class KnowledgeGraphTest extends TestCase
             targetName: 'Beta Corp',
             targetType: 'company',
             fact: 'Bob works at Beta Corp',
+            skipNormalization: true,
         );
 
         // Edge is still created, just without an embedding
@@ -392,5 +399,262 @@ class KnowledgeGraphTest extends TestCase
         );
 
         $this->assertEmpty($invalidated);
+    }
+
+    // ─── EntityType Enum ──────────────────────────────────────────────────────
+
+    public function test_entity_type_enum_includes_expanded_types(): void
+    {
+        $values = EntityType::values();
+        $this->assertContains('person', $values);
+        $this->assertContains('company', $values);
+        $this->assertContains('technology', $values);
+        $this->assertContains('event', $values);
+        $this->assertContains('concept', $values);
+        $this->assertContains('process', $values);
+        $this->assertContains('organization', $values);
+    }
+
+    public function test_entity_type_defaults_to_topic_for_unknown_values(): void
+    {
+        $this->assertEquals(EntityType::Topic, EntityType::fromStringOrDefault('unknown_type'));
+        $this->assertEquals(EntityType::Topic, EntityType::fromStringOrDefault(''));
+    }
+
+    public function test_expanded_entity_types_accepted_by_add_fact(): void
+    {
+        $this->fakeEmbedding();
+        $action = app(AddKnowledgeFactAction::class);
+
+        $edge = $action->execute(
+            teamId: $this->team->id,
+            sourceName: 'Laravel',
+            sourceType: 'technology',
+            relationType: 'supports',
+            targetName: 'PHP 8.4',
+            targetType: 'technology',
+            fact: 'Laravel supports PHP 8.4',
+            skipNormalization: true,
+        );
+
+        $this->assertDatabaseHas('entities', [
+            'team_id' => $this->team->id,
+            'canonical_name' => 'laravel',
+            'type' => 'technology',
+        ]);
+
+        $this->assertNotNull($edge->id);
+    }
+
+    // ─── NormalizeKnowledgeInputAction ─────────────────────────────────────────
+
+    public function test_normalize_uses_fallback_when_llm_unavailable(): void
+    {
+        // Mock gateway to throw — simulates LLM unavailability
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andThrow(new \RuntimeException('No API key'));
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $action = app(NormalizeKnowledgeInputAction::class);
+
+        $result = $action->execute(
+            teamId: $this->team->id,
+            sourceName: ' Alice Chen ',
+            sourceType: 'person',
+            relationType: 'Works At',
+            targetName: ' Acme Corp ',
+            targetType: 'company',
+            fact: 'Alice works at Acme',
+        );
+
+        $this->assertEquals('Alice Chen', $result['source_name']);
+        $this->assertEquals('person', $result['source_type']);
+        $this->assertEquals('works_at', $result['relation_type']);
+        $this->assertEquals('Acme Corp', $result['target_name']);
+        $this->assertTrue($result['validation']['valid']);
+    }
+
+    public function test_normalize_resolves_entity_to_existing_match(): void
+    {
+        // Create an existing entity
+        $existing = Entity::factory()->create([
+            'team_id' => $this->team->id,
+            'name' => 'Acme Corporation',
+            'canonical_name' => 'acme corporation',
+            'type' => 'company',
+            'mention_count' => 5,
+        ]);
+
+        // Mock gateway to return normalization suggesting the existing entity
+        $normalizedJson = json_encode([
+            'source_name' => 'Alice Chen',
+            'source_type' => 'person',
+            'source_matched_entity_id' => null,
+            'target_name' => 'Acme Corporation',
+            'target_type' => 'company',
+            'target_matched_entity_id' => $existing->id,
+            'relation_type' => 'works_at',
+            'fact' => 'Alice Chen works at Acme Corporation',
+            'valid' => true,
+            'validation_reason' => null,
+        ]);
+
+        $responseMock = new AiResponseDTO(
+            content: $normalizedJson,
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 100, completionTokens: 50, costCredits: 1),
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5-20251001',
+            latencyMs: 100,
+        );
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturn($responseMock);
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $action = app(NormalizeKnowledgeInputAction::class);
+
+        $result = $action->execute(
+            teamId: $this->team->id,
+            sourceName: 'Alice Chen',
+            sourceType: 'person',
+            relationType: 'works at',
+            targetName: 'Acme Corp',
+            targetType: 'company',
+            fact: 'Alice works at Acme',
+        );
+
+        $this->assertEquals('Acme Corporation', $result['target_name']);
+        $this->assertEquals($existing->id, $result['target_matched_entity_id']);
+    }
+
+    public function test_normalize_suggests_better_entity_type(): void
+    {
+        $responseMock = new AiResponseDTO(
+            content: json_encode([
+                'source_name' => 'Laravel',
+                'source_type' => 'technology',
+                'source_matched_entity_id' => null,
+                'target_name' => 'PHP 8.4',
+                'target_type' => 'technology',
+                'target_matched_entity_id' => null,
+                'relation_type' => 'supports',
+                'fact' => 'Laravel supports PHP 8.4',
+                'valid' => true,
+                'validation_reason' => null,
+            ]),
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 100, completionTokens: 50, costCredits: 1),
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5-20251001',
+            latencyMs: 100,
+        );
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturn($responseMock);
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $action = app(NormalizeKnowledgeInputAction::class);
+
+        $result = $action->execute(
+            teamId: $this->team->id,
+            sourceName: 'Laravel',
+            sourceType: 'topic',
+            relationType: 'supports',
+            targetName: 'PHP 8.4',
+            targetType: 'topic',
+            fact: 'Laravel supports PHP 8.4',
+        );
+
+        // LLM should suggest 'technology' instead of 'topic'
+        $this->assertEquals('technology', $result['source_type']);
+        $this->assertEquals('technology', $result['target_type']);
+    }
+
+    public function test_normalize_flags_invalid_fact(): void
+    {
+        $responseMock = new AiResponseDTO(
+            content: json_encode([
+                'source_name' => 'Alice',
+                'source_type' => 'person',
+                'source_matched_entity_id' => null,
+                'target_name' => 'Purple',
+                'target_type' => 'topic',
+                'target_matched_entity_id' => null,
+                'relation_type' => 'works_at',
+                'fact' => 'Alice works at Purple',
+                'valid' => false,
+                'validation_reason' => 'Fact does not match the relation structure: "works_at" expects an organization target',
+            ]),
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 100, completionTokens: 50, costCredits: 1),
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5-20251001',
+            latencyMs: 100,
+        );
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturn($responseMock);
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $action = app(NormalizeKnowledgeInputAction::class);
+
+        $result = $action->execute(
+            teamId: $this->team->id,
+            sourceName: 'Alice',
+            sourceType: 'person',
+            relationType: 'works_at',
+            targetName: 'Purple',
+            targetType: 'topic',
+            fact: 'sdkjfhskdjf nonsense text',
+        );
+
+        $this->assertFalse($result['validation']['valid']);
+        $this->assertNotNull($result['validation']['reason']);
+    }
+
+    // ─── Integration: Normalization + AddFact ─────────────────────────────────
+
+    public function test_add_fact_with_normalization_stores_validation_warning(): void
+    {
+        // Mock normalization to flag as invalid
+        $normalizeGateway = Mockery::mock(AiGatewayInterface::class);
+        $normalizeGateway->shouldReceive('complete')->andReturn(new AiResponseDTO(
+            content: json_encode([
+                'source_name' => 'Alice',
+                'source_type' => 'person',
+                'source_matched_entity_id' => null,
+                'target_name' => 'Gibberish',
+                'target_type' => 'topic',
+                'target_matched_entity_id' => null,
+                'relation_type' => 'works_at',
+                'fact' => 'Alice works at Gibberish',
+                'valid' => false,
+                'validation_reason' => 'Incoherent fact',
+            ]),
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 0, completionTokens: 0, costCredits: 0),
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5-20251001',
+            latencyMs: 10,
+        ));
+        $this->app->instance(AiGatewayInterface::class, $normalizeGateway);
+
+        $this->fakeEmbedding();
+
+        $action = app(AddKnowledgeFactAction::class);
+        $edge = $action->execute(
+            teamId: $this->team->id,
+            sourceName: 'Alice',
+            sourceType: 'person',
+            relationType: 'works_at',
+            targetName: 'Gibberish',
+            targetType: 'topic',
+            fact: 'sdkjfhskdjf nonsense',
+        );
+
+        // Fact is still stored (we don't reject), but with a warning
+        $this->assertNotNull($edge->id);
+        $this->assertEquals('Incoherent fact', $edge->attributes['validation_warning'] ?? null);
     }
 }

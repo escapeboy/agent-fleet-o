@@ -112,6 +112,9 @@
         <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
             @php
                 $tabs = ['overview' => 'Overview', 'configuration' => 'Configuration', 'reviews' => 'Reviews'];
+                if (!empty($listing->demo_surface['components'])) {
+                    $tabs = array_merge(['preview' => 'Live Preview'], $tabs);
+                }
                 if ($isPublisher) {
                     $tabs['analytics'] = 'Analytics';
                 }
@@ -129,7 +132,15 @@
     </div>
 
     {{-- Tab Content --}}
-    @if($activeTab === 'overview')
+    @if($activeTab === 'preview' && !empty($listing->demo_surface['components']))
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 class="mb-4 text-sm font-semibold text-gray-700">Interactive Preview</h3>
+            <x-a2ui.surface
+                :components="$listing->demo_surface['components']"
+                :data-model="$listing->demo_surface['dataModel'] ?? $listing->demo_surface['data_model'] ?? []"
+            />
+        </div>
+    @elseif($activeTab === 'overview')
         @php $snapshot = $listing->configuration_snapshot ?? []; @endphp
         <div class="space-y-4">
 

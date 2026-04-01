@@ -74,13 +74,21 @@ class PrismAiGateway implements AiGatewayInterface
     {
         $request = $this->normalizeCustomEndpoint($request);
 
-        // Structured output and tool calling don't support streaming — fall back
-        if ($request->isStructured() || $request->hasTools()) {
+        // Structured output doesn't support streaming — fall back
+        if ($request->isStructured()) {
             return $this->complete($request);
         }
 
         if ($request->teamId) {
             app()->instance('ai.current_team_id', $request->teamId);
+        }
+
+        // Tool calling: run tool loop via complete(), then stream the final text.
+        // This gives progressive visibility into tool calls while streaming the answer.
+        if ($request->hasTools()) {
+            $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeToolThenStreamRequest($req, $onChunk));
+
+            return $pipeline($request);
         }
 
         $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeStreamRequest($req, $onChunk));
@@ -153,6 +161,130 @@ class PrismAiGateway implements AiGatewayInterface
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
+        );
+    }
+
+    /**
+     * Hybrid tool+stream: PrismPHP's internal multi-step loop runs tools,
+     * then final text is chunked to onChunk for progressive display.
+     *
+     * Tool progress is emitted via wrapped tool closures in SendAssistantMessageAction
+     * (not here) — wrapping happens before tools reach the DTO.
+     */
+    private function executeToolThenStreamRequest(AiRequestDTO $request, ?callable $onChunk): AiResponseDTO
+    {
+        $provider = $this->resolveProvider($request->provider);
+        $this->applyTeamCredentials($request);
+        $localConfig = $this->getPerRequestProviderConfig($request);
+        $startTime = hrtime(true);
+
+        $systemPromptArg = ($request->enablePromptCaching && $request->provider === 'anthropic')
+            ? (new SystemMessage($request->systemPrompt))->withProviderOptions(['cacheType' => 'ephemeral'])
+            : $request->systemPrompt;
+
+        $tools = $request->tools;
+        if ($request->enablePromptCaching && $request->provider === 'anthropic' && count($tools) > 0) {
+            $lastIndex = count($tools) - 1;
+            $tools[$lastIndex] = (clone $tools[$lastIndex])->withProviderOptions(['cacheType' => 'ephemeral']);
+        }
+
+        $builder = Prism::text()
+            ->using($provider, $request->model, $localConfig)
+            ->withSystemPrompt($systemPromptArg)
+            ->withPrompt($request->userPrompt)
+            ->withMaxTokens($request->maxTokens)
+            ->usingTemperature($request->temperature)
+            ->withClientOptions(['timeout' => 120])
+            ->withClientRetry(2, 500)
+            ->withTools($tools)
+            ->withMaxSteps($request->maxSteps);
+
+        if ($request->toolChoice !== null) {
+            $toolChoice = match ($request->toolChoice) {
+                'any' => ToolChoice::Any,
+                'auto' => ToolChoice::Auto,
+                'none' => ToolChoice::None,
+                default => $request->toolChoice,
+            };
+            $builder->withToolChoice($toolChoice);
+        }
+
+        $response = $builder->asText();
+
+        // Extract tool results from completed steps
+        $toolResults = null;
+        $toolCallsCount = 0;
+        $stepsCount = 0;
+        $reasoningChain = null;
+
+        if ($response->steps->isNotEmpty()) {
+            $stepsCount = $response->steps->count();
+            $toolResultsList = [];
+            $reasoningSteps = [];
+
+            foreach ($response->steps as $stepIndex => $step) {
+                foreach ($step->toolCalls as $toolCall) {
+                    $toolResultsList[] = [
+                        'toolName' => $toolCall->name,
+                        'args' => $toolCall->arguments(),
+                    ];
+                    $reasoningSteps[] = [
+                        'step' => $stepIndex + 1,
+                        'thought' => "Calling tool: {$toolCall->name}",
+                        'action' => $toolCall->name,
+                        'result' => $toolCall->arguments(),
+                    ];
+                }
+            }
+
+            $toolCallsCount = count($toolResultsList);
+            $toolResults = $toolCallsCount > 0 ? $toolResultsList : null;
+
+            if (! empty($reasoningSteps)) {
+                $reasoningChain = $reasoningSteps;
+            }
+        }
+
+        $text = $response->text;
+
+        // Unwrap OpenRouter/OpenAI JSON wrapping
+        if ($text !== '' && str_starts_with(ltrim($text), '{')) {
+            $decoded = json_decode($text, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded) && isset($decoded['text']) && count($decoded) === 1) {
+                $text = $decoded['text'];
+            }
+        }
+
+        // Emit the final text via onChunk in chunks for progressive display
+        if ($onChunk && $text !== '') {
+            $chunks = str_split($text, 80);
+            foreach ($chunks as $chunk) {
+                $onChunk($chunk, 'text_delta');
+            }
+        }
+
+        $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+        return new AiResponseDTO(
+            content: $text,
+            parsedOutput: null,
+            usage: new AiUsageDTO(
+                promptTokens: $response->usage->promptTokens,
+                completionTokens: $response->usage->completionTokens,
+                costCredits: $this->costCalculator->calculateCost(
+                    provider: $request->provider,
+                    model: $request->model,
+                    inputTokens: $response->usage->promptTokens,
+                    outputTokens: $response->usage->completionTokens,
+                ),
+            ),
+            provider: $request->provider,
+            model: $request->model,
+            latencyMs: $latencyMs,
+            toolResults: $toolResults,
+            toolCallsCount: $toolCallsCount,
+            stepsCount: $stepsCount,
+            reasoningChain: $reasoningChain,
         );
     }
 

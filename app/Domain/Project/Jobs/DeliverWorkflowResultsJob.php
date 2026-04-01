@@ -45,7 +45,9 @@ class DeliverWorkflowResultsJob implements ShouldQueue
         $experiment = $run->experiment;
         $deliveryConfig = $project->delivery_config;
 
-        if (empty($deliveryConfig) || ($deliveryConfig['channel'] ?? 'none') === 'none') {
+        $channel = $deliveryConfig['channel'] ?? $deliveryConfig['outbound_channel'] ?? 'none';
+
+        if (empty($deliveryConfig) || $channel === 'none') {
             return;
         }
 
@@ -57,10 +59,23 @@ class DeliverWorkflowResultsJob implements ShouldQueue
             $run->update(['output_summary' => $summary]);
         }
 
-        // Build and send via outbound connector
-        $channel = $deliveryConfig['channel'];
+        // For signal-triggered email workflows, reply to the original sender
+        if ($channel === 'email' && empty($deliveryConfig['target'])) {
+            $signalFrom = $experiment->meta['signal_payload']['from'] ?? null;
+            if ($signalFrom) {
+                $deliveryConfig['target'] = $signalFrom;
+            }
+        }
+
         $target = $this->buildTarget($channel, $deliveryConfig);
-        $content = $this->buildContent($project, $run, $summary, $deliveryConfig);
+
+        // For signal-triggered email replies, use the reply draft as body (not the full output dump)
+        $signalPayload = $experiment->meta['signal_payload'] ?? null;
+        if ($channel === 'email' && $signalPayload) {
+            $content = $this->buildEmailReplyContent($experiment, $signalPayload);
+        } else {
+            $content = $this->buildContent($project, $run, $summary, $deliveryConfig);
+        }
 
         try {
             $proposal = OutboundProposal::withoutGlobalScopes()->create([
@@ -178,6 +193,38 @@ class DeliverWorkflowResultsJob implements ShouldQueue
         }
 
         return implode("\n", $lines);
+    }
+
+    private function buildEmailReplyContent($experiment, array $signalPayload): array
+    {
+        $originalSubject = $signalPayload['subject'] ?? 'Your inquiry';
+        $subject = str_starts_with($originalSubject, 'Re:') ? $originalSubject : "Re: {$originalSubject}";
+
+        // Find the last agent step with a text result (the reply draft)
+        $steps = PlaybookStep::where('experiment_id', $experiment->id)
+            ->where('status', 'completed')
+            ->orderByDesc('order')
+            ->get();
+
+        $replyBody = null;
+        foreach ($steps as $step) {
+            $output = $step->output;
+            if (is_array($output) && ! empty($output['result']) && is_string($output['result'])) {
+                $text = $output['result'];
+                // Skip JSON-only outputs (classification results)
+                if (! str_starts_with(trim($text), '```json') && ! str_starts_with(trim($text), '{')) {
+                    $replyBody = $text;
+                    break;
+                }
+            }
+        }
+
+        return [
+            'subject' => $subject,
+            'body' => $replyBody ?? 'Thank you for your inquiry. We will get back to you shortly.',
+            'text' => $replyBody ?? 'Thank you for your inquiry. We will get back to you shortly.',
+            'in_reply_to' => $signalPayload['message_id'] ?? null,
+        ];
     }
 
     private function truncateSummary(string $text, int $maxLength): string

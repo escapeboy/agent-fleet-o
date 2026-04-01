@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Experiment\Services\ArtifactContentResolver;
+use App\Infrastructure\A2ui\A2uiRenderer;
 use App\Models\Artifact;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
@@ -21,6 +22,14 @@ class ArtifactPreviewController extends Controller
 
         $category = ArtifactContentResolver::category($artifact->type, $content);
 
+        // Check if JSON content is an A2UI surface
+        if ($category === 'json') {
+            $decoded = json_decode($content, true);
+            if (is_array($decoded) && $this->isA2uiSurface($decoded)) {
+                return $this->renderA2ui($decoded, $artifact->name);
+            }
+        }
+
         return match ($category) {
             'html' => $this->renderHtml($content),
             'markdown' => $this->renderMarkdown($content, $artifact->name),
@@ -34,6 +43,7 @@ class ArtifactPreviewController extends Controller
         return response($content, 200)
             ->header('Content-Type', 'text/html; charset=utf-8')
             ->header('X-Frame-Options', 'SAMEORIGIN')
+            ->header('Content-Security-Policy', "script-src 'none'; object-src 'none'")
             ->header('Cache-Control', 'private, max-age=3600');
     }
 
@@ -73,6 +83,41 @@ class ArtifactPreviewController extends Controller
         return response($this->wrapInShell($html, $title), 200)
             ->header('Content-Type', 'text/html; charset=utf-8')
             ->header('X-Frame-Options', 'SAMEORIGIN')
+            ->header('Cache-Control', 'private, max-age=3600');
+    }
+
+    private function isA2uiSurface(array $data): bool
+    {
+        // Direct component array: [{id, component}, ...]
+        if (isset($data[0]['id'], $data[0]['component'])) {
+            return true;
+        }
+        // Wrapped: {components: [...]}
+        if (isset($data['components'][0]['id'])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function renderA2ui(array $data, string $title): Response
+    {
+        $components = $data['components'] ?? $data;
+        $dataModel = $data['dataModel'] ?? $data['data_model'] ?? [];
+
+        $renderer = app(A2uiRenderer::class);
+        $html = $renderer->render($components, $dataModel)->toHtml();
+
+        // A2UI surfaces are declarative — no scripts needed in preview
+        $body = <<<HTML
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tailwindcss/cdn@4" crossorigin="anonymous">
+        <div class="max-w-3xl mx-auto py-6">{$html}</div>
+        HTML;
+
+        return response($this->wrapInShell($body, $title), 200)
+            ->header('Content-Type', 'text/html; charset=utf-8')
+            ->header('X-Frame-Options', 'SAMEORIGIN')
+            ->header('Content-Security-Policy', "script-src 'none'; object-src 'none'")
             ->header('Cache-Control', 'private, max-age=3600');
     }
 
