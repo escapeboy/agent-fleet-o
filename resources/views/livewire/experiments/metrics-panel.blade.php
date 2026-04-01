@@ -114,7 +114,7 @@
                                 'click', 'open' => $metric->value >= 1 ? 'Yes' : 'No',
                                 default => number_format($metric->value, 2),
                             };
-                            $channel = $metric->metadata['channel'] ?? ($metric->metadata['simulated'] ?? false ? 'simulated' : '-');
+                            $channel = $metric->metadata['channel'] ?? '-';
                         @endphp
                         <tr>
                             <td class="px-4 py-2.5">

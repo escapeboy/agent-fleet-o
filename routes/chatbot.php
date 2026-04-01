@@ -20,5 +20,6 @@ Route::prefix('chatbot')
     ->group(function () {
         Route::post('/sessions', [ChatController::class, 'createSession']);
         Route::post('/sessions/{session}/messages', [ChatController::class, 'sendMessage']);
+        Route::post('/sessions/{session}/messages/stream', [ChatController::class, 'sendMessageStream']);
         Route::get('/sessions/{session}/events', [ChatController::class, 'events']);
     });

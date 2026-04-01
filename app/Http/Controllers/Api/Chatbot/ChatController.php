@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Chatbot;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use App\Domain\Chatbot\Services\ChatbotResponseService;
+use App\Domain\Shared\Models\Team;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -93,7 +94,9 @@ class ChatController extends Controller
             chatbot: $chatbot,
             session: $session,
             userText: $request->input('message'),
-            actorUserId: $chatbot->agent?->team_id ?? $chatbot->team_id,
+            actorUserId: $chatbot->agent?->user_id
+                ?? Team::where('id', $chatbot->team_id)->value('owner_id')
+                ?? $chatbot->team_id,
         );
 
         if ($result['escalated']) {
@@ -114,6 +117,81 @@ class ChatController extends Controller
             'escalated' => false,
             'confidence' => $result['message']->confidence,
         ]);
+    }
+
+    /**
+     * Send a message and stream the response via SSE.
+     * POST /chatbot/sessions/{session}/messages/stream
+     */
+    public function sendMessageStream(Request $request, string $sessionId): StreamedResponse
+    {
+        /** @var Chatbot $chatbot */
+        $chatbot = $request->attributes->get('chatbot');
+
+        if (! $chatbot->isActive()) {
+            abort(503, 'Chatbot is not active.');
+        }
+
+        if (! $chatbot->hasBudgetRemaining()) {
+            abort(429, 'Budget exhausted.');
+        }
+
+        $session = ChatbotSession::where('id', $sessionId)
+            ->where('chatbot_id', $chatbot->id)
+            ->first();
+
+        if (! $session) {
+            abort(404, 'Session not found.');
+        }
+
+        $request->validate(['message' => 'required|string|max:4000']);
+
+        $userText = $request->input('message');
+        $actorUserId = $chatbot->agent?->user_id
+            ?? Team::where('id', $chatbot->team_id)->value('owner_id')
+            ?? $chatbot->team_id;
+
+        $headers = [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'X-Accel-Buffering' => 'no',
+            'Connection' => 'keep-alive',
+        ];
+
+        return response()->stream(function () use ($chatbot, $session, $userText, $actorUserId) {
+            $sendEvent = function (string $type, array $data = []) {
+                echo 'data: '.json_encode(['type' => $type, ...$data])."\n\n";
+                if (ob_get_level()) {
+                    ob_flush();
+                }
+                flush();
+            };
+
+            $sendEvent('start', ['session_id' => $session->id]);
+
+            try {
+                $message = $this->responseService->handleStream(
+                    chatbot: $chatbot,
+                    session: $session,
+                    userText: $userText,
+                    actorUserId: $actorUserId,
+                    onChunk: function (string $chunk) {
+                        echo 'data: '.json_encode(['type' => 'chunk', 'text' => $chunk])."\n\n";
+                        if (ob_get_level()) {
+                            ob_flush();
+                        }
+                        flush();
+                    },
+                );
+
+                $sendEvent('done', [
+                    'id' => $message->id,
+                    'confidence' => $message->confidence,
+                ]);
+            } catch (\Throwable $e) {
+                $sendEvent('error', ['message' => 'An error occurred. Please try again.']);
+            }
+        }, 200, $headers);
     }
 
     /**

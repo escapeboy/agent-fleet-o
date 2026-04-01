@@ -70,7 +70,7 @@ class CreateOutboundProposals extends BaseStageJob
         foreach ($channels as $index => $channelSpec) {
             $channel = OutboundChannel::tryFrom($channelSpec['channel'] ?? 'email') ?? OutboundChannel::Email;
 
-            $target = $this->buildTarget($channel, $channelSpec, $signalContact);
+            $target = $this->buildTarget($channel, $channelSpec, $signalContact, $experiment);
 
             $proposal = OutboundProposal::withoutGlobalScopes()->create([
                 'experiment_id' => $experiment->id,
@@ -182,13 +182,28 @@ class CreateOutboundProposals extends BaseStageJob
 
     /**
      * Build the outbound target with real contact data when available.
+     *
+     * Email resolution priority:
+     * 1. Signal contact email (from triggering signal's payload)
+     * 2. Explicit email in channelSpec (from AI planning)
+     * 3. Email extracted from target_description (if it contains @)
+     * 4. Project delivery_config default_recipient
      */
-    private function buildTarget(OutboundChannel $channel, array $channelSpec, array $signalContact): array
+    private function buildTarget(OutboundChannel $channel, array $channelSpec, array $signalContact, ?Experiment $experiment = null): array
     {
         $target = ['description' => $channelSpec['target_description'] ?? 'unknown'];
 
-        if ($channel === OutboundChannel::Email && ! empty($signalContact['email'])) {
-            $target['email'] = $signalContact['email'];
+        if ($channel === OutboundChannel::Email) {
+            $email = $signalContact['email']
+                ?? $channelSpec['email']
+                ?? $this->extractEmailFromDescription($channelSpec['target_description'] ?? '')
+                ?? $this->resolveProjectDefaultRecipient($experiment)
+                ?? null;
+
+            if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $target['email'] = $email;
+            }
+
             if (! empty($signalContact['name'])) {
                 $target['name'] = $signalContact['name'];
             }
@@ -206,6 +221,43 @@ class CreateOutboundProposals extends BaseStageJob
     }
 
     /**
+     * Extract an email address from a freetext description string.
+     */
+    private function extractEmailFromDescription(string $description): ?string
+    {
+        if (preg_match('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/', $description, $matches)) {
+            return $matches[0];
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve default recipient from the project's delivery_config.
+     */
+    private function resolveProjectDefaultRecipient(?Experiment $experiment): ?string
+    {
+        if (! $experiment) {
+            return null;
+        }
+
+        $run = ProjectRun::withoutGlobalScopes()
+            ->where('experiment_id', $experiment->id)
+            ->first();
+
+        if (! $run?->project_id) {
+            return null;
+        }
+
+        $project = Project::withoutGlobalScopes()
+            ->where('id', $run->project_id)
+            ->where('team_id', $experiment->team_id)
+            ->first();
+
+        return $project?->delivery_config['default_recipient'] ?? null;
+    }
+
+    /**
      * Filter AI-proposed channels through the project's allowed outbound channels.
      */
     private function filterAllowedChannels(array $channels, Experiment $experiment): array
@@ -218,7 +270,10 @@ class CreateOutboundProposals extends BaseStageJob
             return $channels;
         }
 
-        $project = Project::withoutGlobalScopes()->find($run->project_id);
+        $project = Project::withoutGlobalScopes()
+            ->where('id', $run->project_id)
+            ->where('team_id', $experiment->team_id)
+            ->first();
         $deliveryConfig = $project?->delivery_config ?? [];
         $allowed = $deliveryConfig['allowed_outbound_channels'] ?? null;
 

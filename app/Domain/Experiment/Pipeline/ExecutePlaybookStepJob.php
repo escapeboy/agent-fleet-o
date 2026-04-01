@@ -485,7 +485,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
     {
         $mapping = $step->input_mapping;
 
-        if (empty($mapping)) {
+        if (empty($mapping) || is_string($mapping)) {
             // For workflow-driven steps, build input from experiment thesis + node prompt + previous outputs
             if ($step->workflow_node_id) {
                 return array_merge($this->buildWorkflowStepInput($step, $experiment), $this->inputOverrides);
