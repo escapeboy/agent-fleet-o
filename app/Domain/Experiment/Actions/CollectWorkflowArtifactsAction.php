@@ -96,17 +96,25 @@ class CollectWorkflowArtifactsAction
     private function extractContent(mixed $output): ?string
     {
         if (is_string($output)) {
-            return $output;
+            return $this->resolveFileReference($output);
         }
 
         if (! is_array($output)) {
             return null;
         }
 
+        // Check for file_path key — agent may have written content to disk
+        if (isset($output['file_path']) && is_string($output['file_path'])) {
+            $fileContent = $this->readArtifactFile($output['file_path']);
+            if ($fileContent !== null) {
+                return $fileContent;
+            }
+        }
+
         // Try known keys in priority order
         foreach (['result', 'content', 'text', 'body', 'output'] as $key) {
             if (isset($output[$key]) && is_string($output[$key]) && trim($output[$key]) !== '') {
-                return $output[$key];
+                return $this->resolveFileReference($output[$key]);
             }
         }
 
@@ -116,6 +124,44 @@ class CollectWorkflowArtifactsAction
         }
 
         return null;
+    }
+
+    /**
+     * If content is a short stub referencing a file path, read the actual file.
+     */
+    private function resolveFileReference(string $content): string
+    {
+        // If content is substantial (>500 chars), it's real content, not a reference
+        if (mb_strlen($content) > 500) {
+            return $content;
+        }
+
+        // Look for storage/app/artifacts/ path references in the text
+        if (preg_match('#(storage/app/artifacts/[^\s"\'<>]+)#', $content, $matches)) {
+            $fileContent = $this->readArtifactFile($matches[1]);
+            if ($fileContent !== null) {
+                return $fileContent;
+            }
+        }
+
+        return $content;
+    }
+
+    /**
+     * Read an artifact file from disk given a relative or absolute path.
+     */
+    private function readArtifactFile(string $path): ?string
+    {
+        // Normalize to absolute path
+        $fullPath = str_starts_with($path, '/') ? $path : base_path($path);
+
+        if (! file_exists($fullPath) || ! is_readable($fullPath)) {
+            return null;
+        }
+
+        $content = file_get_contents($fullPath);
+
+        return ($content !== false && trim($content) !== '') ? $content : null;
     }
 
     /**
