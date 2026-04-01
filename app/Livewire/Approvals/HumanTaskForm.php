@@ -67,9 +67,22 @@ class HumanTaskForm extends Component
     private function initFormData(): void
     {
         $schema = $this->task->form_schema ?? [];
-        $fields = $schema['fields'] ?? [];
 
-        foreach ($fields as $field) {
+        // Support JSON Schema format (properties/required) used by workflow nodes
+        if (isset($schema['properties'])) {
+            foreach ($schema['properties'] as $key => $def) {
+                $this->formData[$key] = match ($def['type'] ?? 'string') {
+                    'boolean' => false,
+                    'integer', 'number' => null,
+                    default => '',
+                };
+            }
+
+            return;
+        }
+
+        // Legacy flat fields format
+        foreach ($schema['fields'] ?? [] as $field) {
             $key = $field['name'] ?? '';
             if (! $key) {
                 continue;
@@ -87,9 +100,32 @@ class HumanTaskForm extends Component
     {
         $rules = [];
         $schema = $this->task->form_schema ?? [];
-        $fields = $schema['fields'] ?? [];
 
-        foreach ($fields as $field) {
+        // Support JSON Schema format (properties/required) used by workflow nodes
+        if (isset($schema['properties'])) {
+            $required = $schema['required'] ?? [];
+
+            foreach ($schema['properties'] as $key => $def) {
+                $fieldRules = in_array($key, $required) ? ['required'] : ['nullable'];
+
+                if (isset($def['enum'])) {
+                    $fieldRules[] = 'in:'.implode(',', $def['enum']);
+                } else {
+                    match ($def['type'] ?? 'string') {
+                        'integer', 'number' => $fieldRules[] = 'numeric',
+                        'boolean' => $fieldRules[] = 'boolean',
+                        default => $fieldRules[] = 'string',
+                    };
+                }
+
+                $rules["formData.{$key}"] = $fieldRules;
+            }
+
+            return $rules;
+        }
+
+        // Legacy flat fields format
+        foreach ($schema['fields'] ?? [] as $field) {
             $key = $field['name'] ?? '';
             if (! $key) {
                 continue;

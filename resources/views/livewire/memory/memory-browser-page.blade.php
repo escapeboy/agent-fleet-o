@@ -62,6 +62,15 @@
                 <option value="{{ $type }}">{{ ucfirst($type) }}</option>
             @endforeach
         </x-form-select>
+
+        @if($availableTags->isNotEmpty())
+            <x-form-select wire:model.live="tagFilter">
+                <option value="">All Tags</option>
+                @foreach($availableTags as $tag)
+                    <option value="{{ $tag }}">{{ $tag }}</option>
+                @endforeach
+            </x-form-select>
+        @endif
     </div>
 
     {{-- Knowledge Upload --}}
@@ -152,6 +161,31 @@
                                         @if($memory->proposed_by)
                                             <span class="text-xs text-gray-500">Proposed by: <strong>{{ $memory->proposed_by }}</strong></span>
                                         @endif
+                                    </div>
+
+                                    {{-- Tags editor --}}
+                                    <div x-data="{ editing: false, tagInput: '{{ implode(', ', $memory->tags ?? []) }}' }" class="flex flex-wrap items-center gap-2">
+                                        <span class="text-xs font-medium uppercase text-gray-500">Tags:</span>
+                                        @if(!empty($memory->tags))
+                                            @foreach($memory->tags as $tag)
+                                                <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">{{ $tag }}</span>
+                                            @endforeach
+                                        @else
+                                            <span class="text-xs text-gray-400 italic">none</span>
+                                        @endif
+
+                                        <template x-if="!editing">
+                                            <button @click.stop="editing = true" class="text-xs text-primary-600 hover:text-primary-800">Edit</button>
+                                        </template>
+                                        <template x-if="editing">
+                                            <div class="flex items-center gap-2" @click.stop>
+                                                <input x-model="tagInput" type="text" placeholder="barsy:client, barsy:shared"
+                                                    class="rounded border border-gray-300 px-2 py-1 text-xs focus:border-primary-500 focus:ring-primary-500" />
+                                                <button @click="$wire.updateTags('{{ $memory->id }}', tagInput); editing = false"
+                                                    class="rounded bg-primary-600 px-2 py-1 text-xs text-white hover:bg-primary-700">Save</button>
+                                                <button @click="editing = false" class="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                                            </div>
+                                        </template>
                                     </div>
 
                                     {{-- Metadata --}}

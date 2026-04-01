@@ -251,11 +251,21 @@
                                         {{-- Formatted markdown view --}}
                                         <div x-show="!showRaw" class="prose prose-sm mt-1 max-h-64 overflow-auto">
                                             @php
-                                                $outputText = is_array($node['step_output'])
-                                                    ? ($node['step_output']['result'] ?? json_encode($node['step_output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
-                                                    : $node['step_output'];
+                                                $stepOutput = $node['step_output'];
+                                                $a2uiComponents = null;
+                                                $a2uiDataModel = [];
+                                                if (is_array($stepOutput) && isset($stepOutput['a2ui_surface']['components'])) {
+                                                    $a2uiComponents = $stepOutput['a2ui_surface']['components'];
+                                                    $a2uiDataModel = $stepOutput['a2ui_surface']['dataModel'] ?? $stepOutput['a2ui_surface']['data_model'] ?? [];
+                                                }
+                                                $outputText = is_array($stepOutput)
+                                                    ? ($stepOutput['result'] ?? json_encode($stepOutput, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
+                                                    : $stepOutput;
                                             @endphp
                                             {!! \Illuminate\Support\Str::markdown($outputText) !!}
+                                            @if($a2uiComponents)
+                                                <x-a2ui.surface :components="$a2uiComponents" :data-model="$a2uiDataModel" class="mt-3" />
+                                            @endif
                                         </div>
 
                                         {{-- Raw JSON view --}}

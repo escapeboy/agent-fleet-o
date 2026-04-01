@@ -107,11 +107,15 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                     $payload = array_merge($content, $target ?? []);
                     $html = app(EmailTemplateInterpolator::class)->interpolate($template->html_cache, $payload);
                     $subject = $template->subject ?: $subject;
+                } else {
+                    // No template — strip markdown and send as plain text
+                    $html = null;
+                    $plainText = $this->markdownToPlainText($content['body'] ?? $content['text'] ?? '');
                 }
 
-                // Append tracking pixel if tracking base URL is configured
+                // Append tracking pixel if tracking base URL is configured (HTML mode only)
                 $trackingBaseUrl = config('services.tracking.base_url');
-                if ($trackingBaseUrl) {
+                if ($trackingBaseUrl && $html) {
                     $sig = app(TrackingUrlSigner::class)->sign('pixel', $proposal->experiment_id, $action->id);
                     $pixelUrl = "{$trackingBaseUrl}/api/track/pixel?".http_build_query([
                         'oa' => $action->id,
@@ -135,8 +139,13 @@ class SmtpEmailConnector implements OutboundConnectorInterface
             $email = (new Email)
                 ->from(new Address($fromAddress, $fromName))
                 ->to($to)
-                ->subject($subject)
-                ->html($html);
+                ->subject($subject);
+
+            if ($html) {
+                $email->html($html);
+            } else {
+                $email->text($plainText ?? $content['text'] ?? $content['body'] ?? '');
+            }
 
             // Thread headers for in-reply-to context (RFC 2822 §3.6.4)
             if (! empty($target['in_reply_to'])) {
@@ -209,6 +218,21 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 }
             }
         }
+    }
+
+    private function markdownToPlainText(string $markdown): string
+    {
+        $text = $markdown;
+        $text = preg_replace('/\*\*(.+?)\*\*/', '$1', $text);
+        $text = preg_replace('/__(.+?)__/', '$1', $text);
+        $text = preg_replace('/\*(.+?)\*/', '$1', $text);
+        $text = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '$1 ($2)', $text);
+        $text = preg_replace('/^#{1,6}\s+/m', '', $text);
+        $text = preg_replace('/```\w*\n?/', '', $text);
+        $text = preg_replace('/`([^`]+)`/', '$1', $text);
+        $text = preg_replace('/^---+$/m', '', $text);
+
+        return trim($text);
     }
 
     private function buildTransport(array $creds): EsmtpTransport

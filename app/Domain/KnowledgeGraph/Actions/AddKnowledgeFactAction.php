@@ -2,6 +2,7 @@
 
 namespace App\Domain\KnowledgeGraph\Actions;
 
+use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Signal\Models\Entity;
 use Illuminate\Support\Carbon;
@@ -14,11 +15,12 @@ class AddKnowledgeFactAction
 {
     public function __construct(
         private readonly DetectContradictionAction $detectContradiction,
+        private readonly NormalizeKnowledgeInputAction $normalize,
     ) {}
 
     /**
      * Directly add a structured knowledge fact (no LLM extraction needed).
-     * Used for project/task state changes, experiment completions, etc.
+     * Input is normalized via LLM to prevent entity duplication and relation inconsistency.
      */
     public function execute(
         string $teamId,
@@ -31,10 +33,43 @@ class AddKnowledgeFactAction
         ?Carbon $validAt = null,
         ?string $episodeId = null,
         array $attributes = [],
+        bool $skipNormalization = false,
     ): KgEdge {
         $validAt ??= now();
+
+        // LLM-assisted normalization: dedup entities, canonicalize relations, validate fact
+        if (! $skipNormalization) {
+            $normalized = $this->normalize->execute(
+                teamId: $teamId,
+                sourceName: $sourceName,
+                sourceType: $sourceType,
+                relationType: $relationType,
+                targetName: $targetName,
+                targetType: $targetType,
+                fact: $fact,
+            );
+
+            $sourceName = $normalized['source_name'];
+            $sourceType = $normalized['source_type'];
+            $targetName = $normalized['target_name'];
+            $targetType = $normalized['target_type'];
+            $relationType = $normalized['relation_type'];
+            $fact = $normalized['fact'];
+
+            // If normalization flagged the fact as invalid, log it but still store
+            // (we don't reject — the user's intent matters more)
+            if (! ($normalized['validation']['valid'] ?? true)) {
+                Log::info('AddKnowledgeFactAction: Fact flagged by validation', [
+                    'reason' => $normalized['validation']['reason'],
+                    'fact' => $fact,
+                ]);
+                $attributes['validation_warning'] = $normalized['validation']['reason'];
+            }
+        }
+
         $relationType = mb_substr(Str::snake(strtolower(trim($relationType))), 0, 80);
 
+        // Resolve entities using normalized names (never trust LLM-returned IDs directly)
         $sourceEntity = $this->resolveEntity($teamId, $sourceName, $sourceType);
         $targetEntity = $this->resolveEntity($teamId, $targetName, $targetType);
 
@@ -71,6 +106,12 @@ class AddKnowledgeFactAction
 
         $edge = KgEdge::create($data);
 
+        // Update mention counts on matched entities
+        $sourceEntity->increment('mention_count');
+        $sourceEntity->update(['last_seen_at' => now()]);
+        $targetEntity->increment('mention_count');
+        $targetEntity->update(['last_seen_at' => now()]);
+
         Log::info('AddKnowledgeFactAction: Fact added', [
             'team_id' => $teamId,
             'relation_type' => $relationType,
@@ -82,8 +123,7 @@ class AddKnowledgeFactAction
 
     private function resolveEntity(string $teamId, string $name, string $type): Entity
     {
-        $validTypes = ['person', 'company', 'location', 'date', 'product', 'topic'];
-        $type = in_array($type, $validTypes, true) ? $type : 'topic';
+        $type = EntityType::fromStringOrDefault($type)->value;
         $canonicalName = Str::lower(Str::ascii(trim($name)));
 
         return Entity::withoutGlobalScopes()

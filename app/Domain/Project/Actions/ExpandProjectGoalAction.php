@@ -35,7 +35,7 @@ For each feature, provide:
 - dependencies: Array of 0-based indices of features this depends on
 - suggested_agent_role: What type of agent should handle this
 
-Output valid JSON with a "features" key containing an array of feature objects.
+IMPORTANT: Output ONLY valid JSON (no markdown, no explanation, no preamble). The JSON must have a "features" key containing an array of feature objects.
 Ensure the dependency graph has NO cycles.
 Order features so dependencies come before dependents.
 PROMPT;
@@ -76,9 +76,21 @@ PROMPT;
     private function parseFeatures(string $content): array
     {
         $content = trim($content);
-        if (str_starts_with($content, '```')) {
-            $content = preg_replace('/^```(?:json)?\s*\n?/', '', $content);
-            $content = preg_replace('/\n?```\s*$/', '', $content);
+
+        // Strip thinking tags
+        $content = preg_replace('/<thinking>.*?<\/thinking>/s', '', $content);
+
+        // Strip markdown code fences (```json ... ```)
+        if (preg_match('/```(?:json)?\s*\n(.*?)\n```/s', $content, $m)) {
+            $content = trim($m[1]);
+        }
+
+        // If content doesn't start with { or [, try to extract JSON from surrounding text
+        $content = trim($content);
+        if (! str_starts_with($content, '{') && ! str_starts_with($content, '[')) {
+            if (preg_match('/(\{[\s\S]*\})\s*$/', $content, $m)) {
+                $content = $m[1];
+            }
         }
 
         $parsed = json_decode($content, true, 512, JSON_UNESCAPED_UNICODE);

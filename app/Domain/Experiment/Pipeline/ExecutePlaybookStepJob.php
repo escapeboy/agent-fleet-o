@@ -576,6 +576,16 @@ class ExecutePlaybookStepJob implements ShouldQueue
             }
         }
 
+        // Inject signal payload fields (subject, body, from, etc.) for signal-triggered workflows
+        $signalPayload = $experiment->meta['signal_payload'] ?? null;
+        if (is_array($signalPayload)) {
+            foreach ($signalPayload as $key => $value) {
+                if (is_string($value) && ! isset($input[$key])) {
+                    $input[$key] = $value;
+                }
+            }
+        }
+
         // Collect outputs from completed predecessor steps
         $completedSteps = PlaybookStep::where('experiment_id', $experiment->id)
             ->where('status', 'completed')
@@ -588,6 +598,13 @@ class ExecutePlaybookStepJob implements ShouldQueue
             foreach ($completedSteps as $prev) {
                 if (is_array($prev->output)) {
                     $context[] = $prev->output;
+
+                    // Merge predecessor output fields into input (don't overwrite existing keys)
+                    foreach ($prev->output as $k => $v) {
+                        if (! isset($input[$k])) {
+                            $input[$k] = $v;
+                        }
+                    }
                 }
             }
 

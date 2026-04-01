@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\KnowledgeGraph\Actions\AddKnowledgeFactAction;
+use App\Domain\KnowledgeGraph\Enums\EntityType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
@@ -29,8 +30,8 @@ class KgAddFactTool extends Tool
                 ->description('Name of the source entity, e.g. "Alice Chen" or "Acme Corp"')
                 ->required(),
             'source_type' => $schema->string()
-                ->description('Type of the source entity: person | company | location | product | topic')
-                ->enum(['person', 'company', 'location', 'product', 'topic'])
+                ->description('Type of the source entity: '.implode(' | ', EntityType::values()))
+                ->enum(EntityType::values())
                 ->required(),
             'relation_type' => $schema->string()
                 ->description('Relationship type in snake_case, e.g. works_at, has_price, has_status, acquired_by, founded_by')
@@ -39,8 +40,8 @@ class KgAddFactTool extends Tool
                 ->description('Name of the target entity, e.g. "Beta Corp" or "$79/month"')
                 ->required(),
             'target_type' => $schema->string()
-                ->description('Type of the target entity: person | company | location | product | topic')
-                ->enum(['person', 'company', 'location', 'product', 'topic'])
+                ->description('Type of the target entity: '.implode(' | ', EntityType::values()))
+                ->enum(EntityType::values())
                 ->required(),
             'fact' => $schema->string()
                 ->description('Human-readable fact statement, e.g. "Alice Chen is VP Engineering at Beta Corp"')
@@ -54,10 +55,10 @@ class KgAddFactTool extends Tool
     {
         $validated = $request->validate([
             'source_entity' => 'required|string|max:255',
-            'source_type' => 'required|string|in:person,company,location,product,topic',
+            'source_type' => 'required|string|'.EntityType::validationRule(),
             'relation_type' => 'required|string|max:80',
             'target_entity' => 'required|string|max:255',
-            'target_type' => 'required|string|in:person,company,location,product,topic',
+            'target_type' => 'required|string|'.EntityType::validationRule(),
             'fact' => 'required|string|max:1000',
             'valid_at' => 'nullable|string',
         ]);

@@ -7,6 +7,7 @@ use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Project\Models\Project;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -31,6 +32,10 @@ class MemoryBrowserPage extends Component
     /** Filter by memory tier. Empty string means all tiers. */
     #[Url]
     public string $tierFilter = '';
+
+    /** Filter by tag. Empty string means all tags. */
+    #[Url]
+    public string $tagFilter = '';
 
     public string $sortField = 'created_at';
 
@@ -77,6 +82,36 @@ class MemoryBrowserPage extends Component
     public function updatedTierFilter(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedTagFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Replace all tags on a memory. Accepts a comma-separated string.
+     */
+    public function updateTags(string $memoryId, string $tagsString): void
+    {
+        Gate::authorize('edit-content');
+
+        $tags = array_values(array_unique(array_filter(
+            array_map('trim', explode(',', $tagsString)),
+        )));
+
+        // Validate tag format: only lowercase alphanumeric, colons, hyphens, underscores
+        foreach ($tags as $tag) {
+            if (! preg_match('/^[a-z0-9:_-]{1,50}$/', $tag)) {
+                session()->flash('error', "Invalid tag format: \"{$tag}\". Use lowercase letters, numbers, colons, hyphens, underscores (max 50 chars).");
+
+                return;
+            }
+        }
+
+        Memory::where('id', $memoryId)->update(['tags' => $tags]);
+
+        session()->flash('message', 'Tags updated.');
     }
 
     public function toggleExpand(string $id): void
@@ -141,12 +176,31 @@ class MemoryBrowserPage extends Component
             $query->where('tier', $this->tierFilter);
         }
 
+        if ($this->tagFilter) {
+            if (config('database.default') === 'pgsql') {
+                $query->whereRaw('tags @> ?', [json_encode([$this->tagFilter])]);
+            } else {
+                $query->whereRaw(
+                    'EXISTS (SELECT 1 FROM json_each(tags) WHERE json_each.value = ?)',
+                    [$this->tagFilter],
+                );
+            }
+        }
+
         $query->orderBy($this->sortField, $this->sortDirection);
 
         // Count unreviewed proposed memories for the badge
         $proposalCount = Memory::query()
             ->where('tier', MemoryTier::Proposed->value)
             ->count();
+
+        // Collect distinct tags across all memories for the filter dropdown
+        $availableTags = collect();
+        if (config('database.default') === 'pgsql') {
+            $availableTags = collect(DB::select(
+                "SELECT DISTINCT jsonb_array_elements_text(tags) AS tag FROM memories WHERE tags IS NOT NULL AND tags != '[]'::jsonb ORDER BY tag",
+            ))->pluck('tag');
+        }
 
         return view('livewire.memory.memory-browser-page', [
             'memories' => $query->paginate(30),
@@ -155,6 +209,7 @@ class MemoryBrowserPage extends Component
             'sourceTypes' => Memory::distinct()->pluck('source_type')->sort()->values(),
             'tiers' => MemoryTier::cases(),
             'proposalCount' => $proposalCount,
+            'availableTags' => $availableTags,
         ])->layout('layouts.app', ['header' => 'Memory Browser']);
     }
 }

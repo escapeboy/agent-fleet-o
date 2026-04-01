@@ -54,8 +54,8 @@ class SecurityTools
     {
         return PrismTool::as('list_high_risk_contacts')
             ->for('List contact identities whose risk score is at or above a threshold, ordered by highest score first')
-            ->withIntegerParameter('threshold', 'Minimum risk score to include (default: 30)')
-            ->withIntegerParameter('limit', 'Maximum number of results to return (default: 25, max: 100)')
+            ->withNumberParameter('threshold', 'Minimum risk score to include (default: 30)')
+            ->withNumberParameter('limit', 'Maximum number of results to return (default: 25, max: 100)')
             ->using(function (int $threshold = 30, int $limit = 25) {
                 $teamId = Auth::user()?->current_team_id;
 

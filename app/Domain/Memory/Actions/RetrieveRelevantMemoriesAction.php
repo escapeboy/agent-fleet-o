@@ -19,6 +19,9 @@ class RetrieveRelevantMemoriesAction
      * @param  string  $scope  'agent' (default), 'team', or 'project'
      * @return Collection<int, Memory>
      */
+    /**
+     * @param  string[]|null  $tags  When provided, only return memories containing ANY of these tags (JSONB ?| operator on PostgreSQL).
+     */
     public function execute(
         string $agentId,
         string $query,
@@ -28,6 +31,7 @@ class RetrieveRelevantMemoriesAction
         string $scope = 'agent',
         ?string $teamId = null,
         float $minConfidence = 0.3,
+        ?array $tags = null,
     ): Collection {
         if (! config('memory.enabled', true)) {
             return collect();
@@ -65,6 +69,11 @@ class RetrieveRelevantMemoriesAction
                 ->whereRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
                 ->where('confidence', '>=', $minConfidence)
                 ->orderByDesc('composite_score');
+
+            // Tag-based filtering (opt-in: only applied when tags are passed)
+            if (! empty($tags)) {
+                $this->applyTagFilter($builder, $tags);
+            }
 
             // Apply scope filtering with visibility awareness
             $this->applyScope($builder, $scope, $agentId, $projectId, $teamId);
@@ -171,6 +180,28 @@ class RetrieveRelevantMemoriesAction
                 ->where('agent_id', $agentId)
                 ->where('visibility', MemoryVisibility::Private)
                 ->update(['visibility' => MemoryVisibility::Project]);
+        }
+    }
+
+    /**
+     * Filter memories that contain ANY of the given tags.
+     * PostgreSQL: uses JSONB ?| (overlap) operator for GIN-indexed performance.
+     * SQLite (tests): falls back to JSON_EACH + IN subquery.
+     *
+     * @param  string[]  $tags
+     */
+    private function applyTagFilter(Builder $builder, array $tags): void
+    {
+        if (config('database.default') === 'pgsql') {
+            // ?| checks if the JSONB array contains ANY of the given text values
+            $builder->whereRaw('tags ?| ?', ['{'.implode(',', $tags).'}']);
+        } else {
+            // SQLite fallback: unnest the JSON array and check membership
+            $placeholders = implode(',', array_fill(0, count($tags), '?'));
+            $builder->whereRaw(
+                "EXISTS (SELECT 1 FROM json_each(tags) WHERE json_each.value IN ({$placeholders}))",
+                $tags,
+            );
         }
     }
 

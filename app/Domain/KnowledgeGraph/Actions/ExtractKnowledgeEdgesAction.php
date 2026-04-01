@@ -2,6 +2,7 @@
 
 namespace App\Domain\KnowledgeGraph\Actions;
 
+use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Signal\Models\Entity;
 use App\Domain\Signal\Models\Signal;
@@ -69,10 +70,12 @@ class ExtractKnowledgeEdgesAction
     {
         $entityJson = json_encode($entities, JSON_UNESCAPED_UNICODE);
 
+        $entityTypes = implode(', ', EntityType::values());
+
         $request = new AiRequestDTO(
             provider: config('llm_providers.default_provider', 'anthropic'),
             model: config('llm_providers.default_model', 'claude-haiku-4-5-20251001'),
-            systemPrompt: 'Extract relationships between named entities from the text. Return ONLY a valid JSON array (no markdown) of objects with: source_entity (string), source_type (one of: person, company, location, date, product, topic), relation (snake_case verb like works_at, has_price, has_status, acquired_by, founded_by, located_in, has_title, has_funding), target_entity (string), target_type (same enum), fact (human-readable sentence describing the relationship), valid_at (ISO date if explicitly stated in the text, else null), confidence (0.0–1.0). Only extract relationships that are clearly stated. Maximum 10 edges.',
+            systemPrompt: "Extract relationships between named entities from the text. Return ONLY a valid JSON array (no markdown) of objects with: source_entity (string), source_type (one of: {$entityTypes}), relation (snake_case verb like works_at, has_price, has_status, acquired_by, founded_by, located_in, has_title, has_funding, supports, uses, depends_on), target_entity (string), target_type (same enum), fact (human-readable sentence describing the relationship), valid_at (ISO date if explicitly stated in the text, else null), confidence (0.0–1.0). Choose specific entity types over 'topic' when possible (e.g. use 'technology' for frameworks/languages, 'event' for conferences/releases, 'organization' for non-profit entities). Only extract relationships that are clearly stated. Maximum 10 edges.",
             userPrompt: "Entities found: {$entityJson}\n\nText:\n".mb_substr($text, 0, 6000),
             maxTokens: 1024,
             teamId: $teamId,
@@ -115,10 +118,8 @@ class ExtractKnowledgeEdgesAction
 
     private function storeEdge(string $teamId, array $edge, Signal $signal): void
     {
-        $validTypes = ['person', 'company', 'location', 'date', 'product', 'topic'];
-
-        $sourceType = in_array($edge['source_type'] ?? '', $validTypes, true) ? $edge['source_type'] : 'topic';
-        $targetType = in_array($edge['target_type'] ?? '', $validTypes, true) ? $edge['target_type'] : 'topic';
+        $sourceType = EntityType::fromStringOrDefault($edge['source_type'] ?? 'topic')->value;
+        $targetType = EntityType::fromStringOrDefault($edge['target_type'] ?? 'topic')->value;
 
         // Resolve or create entity nodes
         $sourceEntity = $this->resolveEntity($teamId, $edge['source_entity'], $sourceType);

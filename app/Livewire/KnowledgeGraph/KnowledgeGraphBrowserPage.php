@@ -4,6 +4,7 @@ namespace App\Livewire\KnowledgeGraph;
 
 use App\Domain\KnowledgeGraph\Actions\AddKnowledgeFactAction;
 use App\Domain\KnowledgeGraph\Actions\InvalidateKgFactAction;
+use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -93,10 +94,10 @@ class KnowledgeGraphBrowserPage extends Component
     {
         $this->validate([
             'sourceName' => ['required', 'string', 'max:255'],
-            'sourceType' => ['required', 'in:person,company,location,date,product,topic'],
+            'sourceType' => ['required', EntityType::validationRule()],
             'relationType' => ['required', 'string', 'max:80'],
             'targetName' => ['required', 'string', 'max:255'],
-            'targetType' => ['required', 'in:person,company,location,date,product,topic'],
+            'targetType' => ['required', EntityType::validationRule()],
             'fact' => ['required', 'string', 'max:2000'],
         ]);
 
@@ -170,6 +171,7 @@ class KnowledgeGraphBrowserPage extends Component
             'facts' => $facts,
             'stats' => $stats,
             'relationTypes' => $relationTypes,
+            'entityTypes' => EntityType::cases(),
         ])->layout('layouts.app', ['header' => 'Knowledge Graph']);
     }
 }

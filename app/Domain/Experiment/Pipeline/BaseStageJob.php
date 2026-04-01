@@ -293,8 +293,20 @@ abstract class BaseStageJob implements ShouldQueue
 
     protected function stripMarkdownCodeFences(string $content): string
     {
+        // Strip thinking tags
+        $content = preg_replace('/<thinking>.*?<\/thinking>/s', '', $content);
+
+        // Extract from markdown code fences
         if (preg_match('/```(?:json)?\s*\n?(.*?)```/s', $content, $matches)) {
             return trim($matches[1]);
+        }
+
+        // If content doesn't start with { or [, try to extract JSON from surrounding text
+        $content = trim($content);
+        if (! str_starts_with($content, '{') && ! str_starts_with($content, '[')) {
+            if (preg_match('/(\{[\s\S]*\})\s*$/', $content, $matches)) {
+                return $matches[1];
+            }
         }
 
         return $content;

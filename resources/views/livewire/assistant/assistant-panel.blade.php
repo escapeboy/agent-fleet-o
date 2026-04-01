@@ -389,9 +389,9 @@
                 </div>
             @endif
 
-            {{-- Poll for async job completion every 3s when a message is pending --}}
+            {{-- Poll for streaming updates every 1.5s when a message is pending --}}
             @if($pendingMessageId)
-                <div wire:poll.3000ms="pollPendingMessage" class="hidden"></div>
+                <div wire:poll.1500ms="pollPendingMessage" class="hidden"></div>
             @endif
 
             {{-- Server-side messages --}}
@@ -416,17 +416,37 @@
 
             @foreach($messages as $msg)
                 @if($msg['role'] === 'assistant' && ($msg['pending'] ?? false))
-                    {{-- Thinking bubble — replaced by pollPendingMessage when job completes --}}
+                    {{-- Streaming / thinking bubble --}}
                     <div class="flex justify-start">
                         <div class="max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3">
-                            <div class="flex items-center gap-2">
-                                <div class="flex gap-1">
-                                    <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 0ms"></span>
-                                    <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 150ms"></span>
-                                    <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 300ms"></span>
+                            @if(!empty($msg['tool_calls_in_progress']))
+                                <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                                    @foreach($msg['tool_calls_in_progress'] as $toolName)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-600">
+                                            <svg class="h-3 w-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                            {{ $toolName }}
+                                        </span>
+                                    @endforeach
                                 </div>
-                                <span class="text-xs text-gray-500">Thinking...</span>
-                            </div>
+                            @endif
+                            @if(!empty($msg['content']) && ($msg['streaming'] ?? false))
+                                <div class="assistant-response prose prose-sm max-w-none">
+                                    {!! \Illuminate\Support\Str::markdown($msg['content']) !!}
+                                </div>
+                                <div class="mt-1 flex items-center gap-1">
+                                    <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400"></span>
+                                    <span class="text-[10px] text-gray-400">Generating...</span>
+                                </div>
+                            @else
+                                <div class="flex items-center gap-2">
+                                    <div class="flex gap-1">
+                                        <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 0ms"></span>
+                                        <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 150ms"></span>
+                                        <span class="h-2 w-2 animate-bounce rounded-full bg-gray-400" style="animation-delay: 300ms"></span>
+                                    </div>
+                                    <span class="text-xs text-gray-500">Thinking...</span>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @else
@@ -442,6 +462,16 @@
                                         {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '') !!}
                                     @endif
                                 </div>
+                                @if(!empty($msg['a2ui_surfaces']))
+                                    @foreach($msg['a2ui_surfaces'] as $surface)
+                                        <div class="mt-3 -mx-1">
+                                            <x-a2ui.surface
+                                                :components="$surface['components'] ?? []"
+                                                :data-model="$surface['dataModel'] ?? $surface['data_model'] ?? []"
+                                            />
+                                        </div>
+                                    @endforeach
+                                @endif
                                 @if(!empty($msg['tool_calls_count']))
                                     <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-3 w-3">

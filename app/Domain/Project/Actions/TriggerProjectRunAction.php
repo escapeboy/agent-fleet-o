@@ -74,6 +74,16 @@ class TriggerProjectRunAction
                 agentId: $leadAgentId,
             );
 
+            // Store signal payload in experiment meta so workflow steps can access it
+            if ($trigger === 'signal' && ! empty($inputData['signal_payload'])) {
+                $experiment->update([
+                    'meta' => array_merge($experiment->meta ?? [], [
+                        'signal_id' => $inputData['signal_id'] ?? null,
+                        'signal_payload' => $inputData['signal_payload'],
+                    ]),
+                ]);
+            }
+
             // Inject project execution mode + overrides + dependencies into experiment constraints
             $extraConstraints = [];
 

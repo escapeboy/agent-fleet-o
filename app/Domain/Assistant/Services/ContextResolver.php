@@ -57,7 +57,7 @@ class ContextResolver
 
         $parts = [
             "The user is viewing Project '{$project->title}' (ID: {$project->id}).",
-            "Type: {$project->type}.",
+            "Type: {$project->type->value}.",
             "Status: {$project->status->value}.",
             "Created: {$project->created_at->diffForHumans()}.",
         ];

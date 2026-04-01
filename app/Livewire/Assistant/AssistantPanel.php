@@ -142,6 +142,7 @@ class AssistantPanel extends Component
 
     /**
      * Called by wire:poll — checks if the pending placeholder has been filled.
+     * Handles three states: pending (thinking), streaming (partial content), completed/failed.
      */
     public function pollPendingMessage(): void
     {
@@ -157,16 +158,36 @@ class AssistantPanel extends Component
             return;
         }
 
-        $status = $msg->metadata['status'] ?? 'pending';
+        $metadata = $msg->metadata ?? [];
+        $status = $metadata['status'] ?? 'pending';
+
+        if ($status === 'streaming') {
+            // Show partial content as it arrives
+            $lastIndex = array_key_last($this->messages);
+            if ($lastIndex !== null) {
+                $toolCalls = $metadata['tool_calls_in_progress'] ?? [];
+                $this->messages[$lastIndex] = [
+                    'role' => 'assistant',
+                    'content' => $msg->content ?: null,
+                    'pending' => true,
+                    'streaming' => true,
+                    'tool_calls_in_progress' => $toolCalls,
+                ];
+            }
+
+            return;
+        }
+
         if ($status === 'completed' || $status === 'failed') {
             // Job is done — replace the pending bubble with the real content
             $lastIndex = array_key_last($this->messages);
             if ($lastIndex !== null && ($this->messages[$lastIndex]['pending'] ?? false)) {
                 $this->messages[$lastIndex] = [
                     'role' => 'assistant',
-                    'content' => $msg->content ?? ('Sorry, an error occurred: '.($msg->metadata['error'] ?? 'Unknown error')),
+                    'content' => $msg->content ?? ('Sorry, an error occurred: '.($metadata['error'] ?? 'Unknown error')),
                     'tool_calls_count' => count($msg->tool_calls ?? []),
                     'cost_credits' => $msg->token_usage['cost_credits'] ?? 0,
+                    'a2ui_surfaces' => $metadata['a2ui_surfaces'] ?? [],
                 ];
             }
 
@@ -207,6 +228,7 @@ class AssistantPanel extends Component
                 'content' => $m->content,
                 'tool_calls_count' => $m->tool_calls ? count($m->tool_calls) : 0,
                 'cost_credits' => $m->token_usage['cost_credits'] ?? 0,
+                'a2ui_surfaces' => $m->metadata['a2ui_surfaces'] ?? [],
             ])
             ->toArray();
 

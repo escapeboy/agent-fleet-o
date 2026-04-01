@@ -48,8 +48,8 @@ class GetEntityTools
                     'max_iterations' => $exp->max_iterations,
                     'current_iteration' => $exp->current_iteration,
                     'stages' => $exp->stages->map(fn ($s) => [
-                        'type' => $s->type,
-                        'status' => $s->status,
+                        'type' => $s->type->value,
+                        'status' => $s->status->value,
                         'output_preview' => mb_substr($s->output ?? '', 0, 200),
                     ])->toArray(),
                     'created' => $exp->created_at->toIso8601String(),
@@ -72,7 +72,7 @@ class GetEntityTools
                 return json_encode([
                     'id' => $project->id,
                     'title' => $project->title,
-                    'type' => $project->type,
+                    'type' => $project->type->value,
                     'status' => $project->status->value,
                     'description' => $project->description,
                     'goal' => $project->goal,

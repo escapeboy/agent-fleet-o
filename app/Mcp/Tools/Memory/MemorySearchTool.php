@@ -42,6 +42,8 @@ class MemorySearchTool extends Tool
                 ->description('Retrieval mode: semantic=flat keyword search, local=1-hop graph traversal from matched entities, global=high-centrality entities, hybrid=semantic+local merged, mix=semantic+global merged')
                 ->enum(['semantic', 'local', 'global', 'hybrid', 'mix'])
                 ->default('semantic'),
+            'tags' => $schema->array()
+                ->description('Filter by tags — only return memories containing ANY of these tags. E.g. ["barsy:client", "barsy:shared"]. Omit to return all memories regardless of tags.'),
         ];
     }
 
@@ -115,6 +117,12 @@ class MemorySearchTool extends Tool
             if ($category !== null) {
                 $query->where('category', $category->value);
             }
+        }
+
+        $tags = $request->get('tags');
+        if (is_array($tags) && ! empty($tags)) {
+            // PostgreSQL JSONB ?| operator: matches memories containing ANY of the given tags
+            $query->whereRaw('tags ?| ?', ['{'.implode(',', $tags).'}']);
         }
 
         return $query->limit(100)->get();
