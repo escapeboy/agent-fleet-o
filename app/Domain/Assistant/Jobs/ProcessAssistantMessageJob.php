@@ -3,8 +3,10 @@
 namespace App\Domain\Assistant\Jobs;
 
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
+use App\Domain\Assistant\Agents\FleetQAssistant;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
+use App\Domain\Assistant\Services\ConversationManager;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,6 +15,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Laravel\Ai\Streaming\Events\TextDelta;
+use Laravel\Ai\Streaming\Events\ToolCall;
 use Sentry\Severity;
 use Sentry\State\Scope;
 
@@ -66,60 +70,18 @@ class ProcessAssistantMessageJob implements ShouldQueue
         Auth::login($user);
 
         try {
-            // Progressive streaming: update placeholder as chunks arrive.
-            // Throttle DB writes to max once per 300ms to avoid excessive queries.
-            $streamedContent = '';
-            $toolCalls = [];
-            $lastFlush = 0.0;
-            $flushInterval = 0.3; // seconds
+            // Route: cloud providers use laravel/ai Agent (native streaming + tool events),
+            // local/bridge providers use legacy SendAssistantMessageAction path.
+            $isLocal = $this->provider === 'local' || (bool) config("llm_providers.{$this->provider}.local");
+            $isBridge = $this->provider === 'bridge_agent';
 
-            $onChunk = function (?string $textDelta, string $type = 'text_delta', ?string $toolName = null) use ($placeholder, &$streamedContent, &$toolCalls, &$lastFlush, $flushInterval): void {
-                if ($type === 'tool_call' && $toolName) {
-                    $toolCalls[] = $toolName;
-                    $placeholder->update([
-                        'content' => $streamedContent,
-                        'metadata' => json_encode([
-                            'status' => 'streaming',
-                            'tool_calls_in_progress' => $toolCalls,
-                        ]),
-                    ]);
-                    $lastFlush = microtime(true);
+            if (! $isLocal && ! $isBridge) {
+                $this->handleWithLaravelAiAgent($conversation, $user, $placeholder);
+            } else {
+                $this->handleWithLegacyAction($action, $conversation, $user, $placeholder);
+            }
 
-                    return;
-                }
-
-                if ($textDelta !== null) {
-                    $streamedContent .= $textDelta;
-                }
-
-                $now = microtime(true);
-                if (($now - $lastFlush) >= $flushInterval) {
-                    $placeholder->update([
-                        'content' => $streamedContent,
-                        'metadata' => json_encode([
-                            'status' => 'streaming',
-                            'tool_calls_in_progress' => $toolCalls,
-                        ]),
-                    ]);
-                    $lastFlush = $now;
-                }
-            };
-
-            $action->execute(
-                conversation: $conversation,
-                userMessage: $this->userMessage,
-                user: $user,
-                contextType: $this->contextType,
-                contextId: $this->contextId,
-                provider: $this->provider,
-                model: $this->model,
-                onChunk: $onChunk,
-                placeholderMessageId: $this->placeholderMessageId,
-            );
-
-            // Detect empty bridge response: agent ran but produced no output.
-            // This happens when the agent CLI exits non-zero or produces no text,
-            // but the bridge does not propagate an explicit error frame.
+            // Detect empty bridge response
             $placeholder->refresh();
             if (($placeholder->content ?? '') === '' && str_contains($this->provider ?? '', 'bridge')) {
                 \Sentry\withScope(function (Scope $scope): void {
@@ -184,6 +146,160 @@ class ProcessAssistantMessageJob implements ShouldQueue
             Auth::forgetUser();
             Auth::guard()->forgetUser();
         }
+    }
+
+    /**
+     * Handle with laravel/ai Agent — native streaming + tool events.
+     */
+    private function handleWithLaravelAiAgent(
+        AssistantConversation $conversation,
+        User $user,
+        AssistantMessage $placeholder,
+    ): void {
+        $manager = app(ConversationManager::class);
+
+        // Resolve provider/model from team settings
+        $teamSettings = $user->currentTeam?->settings ?? [];
+        $provider = $this->provider
+            ?? ($teamSettings['assistant_llm_provider'] ?? null)
+            ?? config('ai.default_provider', 'anthropic');
+        $model = $this->model
+            ?? ($teamSettings['assistant_llm_model'] ?? null)
+            ?? config('ai.default_model');
+
+        $agent = (new FleetQAssistant)
+            ->forUser($user)
+            ->withContext($this->contextType, $this->contextId);
+
+        // Build conversation history for context
+        $history = $manager->buildMessageHistory($conversation);
+        $prompt = ! empty($history)
+            ? "Previous conversation:\n".implode("\n", array_map(fn ($m) => "[{$m['role']}] {$m['content']}", $history))."\n\nUser: {$this->userMessage}"
+            : $this->userMessage;
+
+        // Stream the response — iterate events for real-time progress
+        $streamResponse = $agent->stream(
+            prompt: $prompt,
+            provider: $provider,
+            model: $model,
+        );
+
+        $streamedContent = '';
+        $toolCallNames = [];
+        $lastFlush = 0.0;
+        $flushInterval = 0.3;
+        $toolCallsCount = 0;
+
+        foreach ($streamResponse as $event) {
+            if ($event instanceof TextDelta) {
+                $streamedContent .= $event->delta;
+
+                $now = microtime(true);
+                if (($now - $lastFlush) >= $flushInterval) {
+                    $placeholder->update([
+                        'content' => $streamedContent,
+                        'metadata' => json_encode([
+                            'status' => 'streaming',
+                            'tool_calls_in_progress' => $toolCallNames,
+                        ]),
+                    ]);
+                    $lastFlush = $now;
+                }
+            } elseif ($event instanceof ToolCall) {
+                $toolCallNames[] = $event->toolCall->name;
+                $toolCallsCount++;
+                $placeholder->update([
+                    'content' => $streamedContent,
+                    'metadata' => json_encode([
+                        'status' => 'streaming',
+                        'tool_calls_in_progress' => $toolCallNames,
+                    ]),
+                ]);
+                $lastFlush = microtime(true);
+            }
+        }
+
+        // Final content from stream
+        $finalContent = $streamResponse->text ?? $streamedContent;
+
+        // Save completed message
+        $placeholder->update([
+            'content' => $finalContent,
+            'tool_calls' => $toolCallsCount > 0 ? json_encode(array_map(fn ($n) => ['toolName' => $n], $toolCallNames)) : null,
+            'token_usage' => $streamResponse->usage ? json_encode([
+                'prompt_tokens' => $streamResponse->usage->inputTokens ?? 0,
+                'completion_tokens' => $streamResponse->usage->outputTokens ?? 0,
+                'cost_credits' => 0, // TODO: calculate from usage
+            ]) : null,
+            'metadata' => json_encode(['status' => 'completed']),
+        ]);
+
+        // Save to conversation manager
+        $manager->addMessage(
+            conversation: $conversation,
+            role: 'assistant',
+            content: $finalContent,
+        );
+        $manager->generateTitle($conversation);
+    }
+
+    /**
+     * Handle with legacy SendAssistantMessageAction — for local/bridge providers.
+     */
+    private function handleWithLegacyAction(
+        SendAssistantMessageAction $action,
+        AssistantConversation $conversation,
+        User $user,
+        AssistantMessage $placeholder,
+    ): void {
+        $streamedContent = '';
+        $toolCalls = [];
+        $lastFlush = 0.0;
+        $flushInterval = 0.3;
+
+        $onChunk = function (?string $textDelta, string $type = 'text_delta', ?string $toolName = null) use ($placeholder, &$streamedContent, &$toolCalls, &$lastFlush, $flushInterval): void {
+            if ($type === 'tool_call' && $toolName) {
+                $toolCalls[] = $toolName;
+                $placeholder->update([
+                    'content' => $streamedContent,
+                    'metadata' => json_encode([
+                        'status' => 'streaming',
+                        'tool_calls_in_progress' => $toolCalls,
+                    ]),
+                ]);
+                $lastFlush = microtime(true);
+
+                return;
+            }
+
+            if ($textDelta !== null) {
+                $streamedContent .= $textDelta;
+            }
+
+            $now = microtime(true);
+            if (($now - $lastFlush) >= $flushInterval) {
+                $placeholder->update([
+                    'content' => $streamedContent,
+                    'metadata' => json_encode([
+                        'status' => 'streaming',
+                        'tool_calls_in_progress' => $toolCalls,
+                    ]),
+                ]);
+                $lastFlush = $now;
+            }
+        };
+
+        $action->execute(
+            conversation: $conversation,
+            userMessage: $this->userMessage,
+            user: $user,
+            contextType: $this->contextType,
+            contextId: $this->contextId,
+            provider: $this->provider,
+            model: $this->model,
+            onChunk: $onChunk,
+            placeholderMessageId: $this->placeholderMessageId,
+        );
     }
 
     public function failed(?\Throwable $e): void

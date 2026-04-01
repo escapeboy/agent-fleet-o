@@ -108,7 +108,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                     $html = app(EmailTemplateInterpolator::class)->interpolate($template->html_cache, $payload);
                     $subject = $template->subject ?: $subject;
                 } else {
-                    // No template — strip markdown and send as plain text
+                    // No template — strip markdown and send as plain text wrapped in basic HTML
                     $html = null;
                     $plainText = $this->markdownToPlainText($content['body'] ?? $content['text'] ?? '');
                 }
@@ -223,13 +223,20 @@ class SmtpEmailConnector implements OutboundConnectorInterface
     private function markdownToPlainText(string $markdown): string
     {
         $text = $markdown;
+        // Bold: **text** or __text__
         $text = preg_replace('/\*\*(.+?)\*\*/', '$1', $text);
         $text = preg_replace('/__(.+?)__/', '$1', $text);
+        // Italic: *text* or _text_
         $text = preg_replace('/\*(.+?)\*/', '$1', $text);
+        // Links: [text](url) → text (url)
         $text = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '$1 ($2)', $text);
+        // Headers: ## text → text
         $text = preg_replace('/^#{1,6}\s+/m', '', $text);
+        // Code blocks
         $text = preg_replace('/```\w*\n?/', '', $text);
+        // Inline code
         $text = preg_replace('/`([^`]+)`/', '$1', $text);
+        // Horizontal rules
         $text = preg_replace('/^---+$/m', '', $text);
 
         return trim($text);

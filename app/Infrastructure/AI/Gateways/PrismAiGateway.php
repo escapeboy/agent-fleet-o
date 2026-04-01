@@ -165,11 +165,13 @@ class PrismAiGateway implements AiGatewayInterface
     }
 
     /**
-     * Hybrid tool+stream: PrismPHP's internal multi-step loop runs tools,
-     * then final text is chunked to onChunk for progressive display.
+     * Hybrid tool+stream: wraps tool closures to emit progress on each tool call,
+     * then uses PrismPHP's internal multi-step loop. Final text is chunked to onChunk.
      *
-     * Tool progress is emitted via wrapped tool closures in SendAssistantMessageAction
-     * (not here) — wrapping happens before tools reach the DTO.
+     * PrismPHP handles multi-step tool calling internally (recursive handle() calls).
+     * We can't hook between steps, but we CAN wrap each tool's callable to emit
+     * a progress event the moment PrismPHP invokes the tool — giving real-time
+     * visibility into which tools are being called.
      */
     private function executeToolThenStreamRequest(AiRequestDTO $request, ?callable $onChunk): AiResponseDTO
     {
