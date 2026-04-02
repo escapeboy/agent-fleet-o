@@ -10,6 +10,7 @@ use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Domain\Chatbot\Listeners\DeliverChatbotWorkflowResultListener;
+use App\Domain\Chatbot\Listeners\ExtractChatMemoriesListener;
 use App\Domain\Credential\Observers\SecretScanObserver;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
@@ -81,6 +82,7 @@ use App\Infrastructure\Mail\TeamAwareMailChannel;
 use App\Livewire\Hooks\PluginDispatchHook;
 use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Models\User;
+use Barsy\Events\ChatMessageCompleted;
 use Carbon\CarbonInterval;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
@@ -342,6 +344,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Chatbot: capture operator corrections as learning entries
         Event::listen(ChatbotResponseApprovedEvent::class, CaptureResponseCorrectionListener::class);
+
+        // Barsy chatbot: extract durable facts from chat exchanges into proposed memories
+        Event::listen(ChatMessageCompleted::class, ExtractChatMemoriesListener::class);
 
         // Skill evolution: analyze completed executions and auto-propose improvements
         Event::listen(AgentExecuted::class, DispatchEvolutionAnalysisListener::class);
