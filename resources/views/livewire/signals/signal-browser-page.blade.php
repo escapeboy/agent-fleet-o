@@ -4,7 +4,7 @@
         <div class="flex-1">
             <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search signals by sender, payload...">
                 <x-slot:leadingIcon>
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
@@ -21,9 +21,7 @@
         <div class="rounded-xl border border-gray-200 bg-white">
             @if($signals->isEmpty())
                 <div class="flex flex-col items-center justify-center py-16">
-                    <svg class="mb-4 h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
+                    <i class="fa-solid fa-bolt mb-4 text-4xl text-gray-400"></i>
                     <p class="mb-1 text-sm font-medium text-gray-900">No signals yet</p>
                     <p class="text-sm text-gray-500">Signals arrive from connectors (email, RSS, webhooks, etc.)</p>
                 </div>
@@ -103,7 +101,7 @@
                     <div class="mb-3 flex items-center justify-between">
                         <h3 class="text-sm font-semibold text-gray-900">Signal Detail</h3>
                         <button wire:click="selectSignal(null)" class="text-gray-400 hover:text-gray-600">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <i class="fa-solid fa-xmark text-base"></i>
                         </button>
                     </div>
 

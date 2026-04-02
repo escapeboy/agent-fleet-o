@@ -3,9 +3,7 @@
     <div class="mb-6 flex items-center justify-between">
         <div class="flex items-center gap-3">
             <a href="{{ route('projects.show', $project) }}" class="text-sm text-gray-500 hover:text-gray-700">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
+                <i class="fa-solid fa-chevron-left text-base"></i>
             </a>
             <h2 class="text-lg font-semibold">{{ $project->name }}</h2>
             <x-status-badge :status="$project->status->value" />

@@ -29,9 +29,7 @@
             <button @click="open = false"
                     class="ml-4 shrink-0 rounded-md p-1 text-(--color-on-surface-muted) hover:text-(--color-on-surface)"
                     aria-label="Close help">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
+                <i class="fa-solid fa-xmark text-base"></i>
             </button>
         </div>
 
@@ -73,9 +71,7 @@
                 <ul class="space-y-1.5 text-sm text-(--color-on-surface-muted)">
                     @foreach($help['prerequisites'] as $prereq)
                         <li class="flex gap-2">
-                            <svg class="mt-0.5 h-4 w-4 shrink-0 text-(--color-theme-warning)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-                            </svg>
+                            <i class="fa-solid fa-circle-exclamation mt-0.5 text-base shrink-0 text-(--color-theme-warning)"></i>
                             @if(is_array($prereq))
                                 <a href="{{ route($prereq['route']) }}" class="text-(--color-theme-primary) underline hover:text-(--color-theme-primary-hover)" wire:navigate>{{ $prereq['label'] }}</a>
                             @else

@@ -57,7 +57,7 @@
         </div>
         <button wire:click="$toggle('showAddForm')"
                 class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <i class="fa-solid fa-plus text-base"></i>
             Add Fact
         </button>
     </div>
@@ -208,7 +208,7 @@
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-base font-semibold text-gray-900">Fact Details</h3>
                     <button wire:click="closeView" class="text-gray-400 hover:text-gray-600">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
                 <dl class="space-y-3 text-sm">
@@ -283,7 +283,7 @@
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-base font-semibold text-gray-900">Edit Fact</h3>
                     <button wire:click="cancelEdit" class="text-gray-400 hover:text-gray-600">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
                 <div class="space-y-4">

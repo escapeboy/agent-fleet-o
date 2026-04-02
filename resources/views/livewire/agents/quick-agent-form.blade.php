@@ -15,7 +15,7 @@
         <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4" x-data="{ open: false }">
             <button @click="open = !open" class="flex w-full items-center justify-between text-sm font-medium text-gray-700">
                 <span>Example: pipe.md format</span>
-                <svg class="h-4 w-4 transition" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                <i class="fa-solid fa-chevron-down text-base transition" :class="{ 'rotate-180': open }"></i>
             </button>
             <pre x-show="open" x-cloak class="mt-3 overflow-x-auto rounded bg-white p-3 text-xs text-gray-600 border border-gray-200">---
 role: Research Analyst

@@ -35,10 +35,7 @@
                         <span class="text-xs text-gray-400">{{ number_format($stage->duration_ms) }}ms</span>
                     @endif
                     <span class="text-xs text-gray-400">{{ $stage->created_at->diffForHumans() }}</span>
-                    <svg class="h-4 w-4 text-gray-400 transition {{ $expandedStageId === $stage->id ? 'rotate-180' : '' }}"
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                    </svg>
+                    <i class="fa-solid fa-chevron-down text-base text-gray-400 transition {{ $expandedStageId === $stage->id ? 'rotate-180' : '' }}"></i>
                 </div>
             </button>
 
@@ -86,7 +83,7 @@
             {{-- Verification errors from output_snapshot --}}
             @if($verificationErrors)
                 <div class="flex items-center gap-1.5 border-t border-yellow-100 bg-yellow-50 px-4 py-1.5 text-xs text-yellow-700">
-                    <svg class="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                    <i class="fa-solid fa-triangle-exclamation text-xs shrink-0"></i>
                     <span>Verification failed ({{ is_array($verificationErrors) ? count($verificationErrors) : 1 }} {{ is_array($verificationErrors) && count($verificationErrors) !== 1 ? 'errors' : 'error' }})</span>
                 </div>
             @endif
@@ -131,7 +128,7 @@
                 <div class="mt-2 space-y-1.5">
                     @foreach($stuckWithPattern as $transition)
                         <div class="flex items-center gap-2 text-xs text-amber-700">
-                            <svg class="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                            <i class="fa-solid fa-triangle-exclamation text-xs shrink-0"></i>
                             <span>
                                 {{ $transition->metadata['stuck_pattern'] }}
                                 @if($transition->reason)

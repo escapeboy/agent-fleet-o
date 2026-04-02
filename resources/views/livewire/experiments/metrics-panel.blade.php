@@ -136,9 +136,7 @@
     {{-- Empty State --}}
     @if($pipelineTimings->isEmpty() && !$hasOutboundMetrics && $recentActivity->isEmpty())
         <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-            <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-            </svg>
+            <i class="fa-solid fa-chart-bar mx-auto text-3xl text-gray-300"></i>
             <p class="mt-3 text-sm text-gray-400">No metrics collected yet.</p>
             <p class="text-xs text-gray-400">Metrics will appear once the experiment starts processing.</p>
         </div>

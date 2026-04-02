@@ -12,7 +12,7 @@
         <div class="relative flex-1">
             <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search trigger rules...">
                 <x-slot:leadingIcon>
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 text-base -translate-y-1/2 text-gray-400"></i>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
@@ -69,9 +69,7 @@
     {{-- Empty state --}}
     @if($rules->isEmpty())
         <div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-16">
-            <svg class="mb-4 h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
+            <i class="fa-solid fa-bolt mb-4 text-5xl text-gray-400"></i>
             <p class="mb-1 text-sm font-medium text-gray-900">No trigger rules yet</p>
             <p class="mb-4 text-sm text-gray-500">Automatically run projects when signals arrive from external sources.</p>
             <a href="{{ route('triggers.create') }}" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">

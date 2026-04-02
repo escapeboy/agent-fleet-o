@@ -25,9 +25,7 @@
             {{-- Header --}}
             <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
                 <div class="flex items-center gap-2">
-                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <i class="fa-solid fa-rotate text-lg text-gray-400"></i>
                     <span class="text-sm font-medium text-gray-700">Workflow Progress</span>
 
                     {{-- Echo connection status dot --}}
@@ -134,13 +132,9 @@
                                 <template x-if="rtStatus === 'system'">
                                     <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
                                         @if($node['type'] === 'start')
-                                            <svg class="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                                            </svg>
+                                            <i class="fa-solid fa-play text-sm text-gray-500"></i>
                                         @else
-                                            <svg class="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                            </svg>
+                                            <i class="fa-solid fa-stop text-sm text-gray-500"></i>
                                         @endif
                                     </span>
                                 </template>
@@ -151,31 +145,22 @@
                                 </template>
                                 <template x-if="rtStatus === 'running'">
                                     <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
-                                        <svg class="h-4 w-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                        </svg>
+                                        <i class="fa-solid fa-spinner fa-spin text-base text-blue-600"></i>
                                     </span>
                                 </template>
                                 <template x-if="rtStatus === 'completed'">
                                     <span class="flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
-                                        <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                        </svg>
+                                        <i class="fa-solid fa-check text-base text-green-600"></i>
                                     </span>
                                 </template>
                                 <template x-if="rtStatus === 'failed'">
                                     <span class="flex h-6 w-6 items-center justify-center rounded-full bg-red-100">
-                                        <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
+                                        <i class="fa-solid fa-xmark text-base text-red-600"></i>
                                     </span>
                                 </template>
                                 <template x-if="rtStatus === 'skipped'">
                                     <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
-                                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
-                                        </svg>
+                                        <i class="fa-solid fa-minus text-base text-gray-400"></i>
                                     </span>
                                 </template>
                                 <template x-if="!['system','pending','running','completed','failed','skipped'].includes(rtStatus)">
@@ -210,10 +195,7 @@
                                 @endif
 
                                 @if($node['type'] !== 'start' && $node['type'] !== 'end')
-                                    <svg class="h-4 w-4 text-gray-400 transition {{ $expandedNodeId === $node['id'] ? 'rotate-180' : '' }}"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                    </svg>
+                                    <i class="fa-solid fa-chevron-down text-base text-gray-400 transition {{ $expandedNodeId === $node['id'] ? 'rotate-180' : '' }}"></i>
                                 @endif
                             </div>
                         </button>
@@ -232,9 +214,7 @@
                                     <button wire:click="retryStep('{{ $node['step_id'] }}')"
                                         wire:confirm="Retry from this step? This will reset this step and all subsequent steps."
                                         class="mb-2 inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition">
-                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                        </svg>
+                                        <i class="fa-solid fa-rotate text-sm"></i>
                                         Retry from this step
                                     </button>
                                 @endif

@@ -4,7 +4,7 @@
         <div class="relative flex-1">
             <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search tools..." class="pl-10" toolparamdescription="Free-text search across tool names and descriptions">
                 <x-slot:leadingIcon>
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
@@ -25,13 +25,13 @@
 
         <a href="{{ route('tools.marketplace') }}"
             class="inline-flex items-center gap-1.5 rounded-lg border border-purple-300 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            <i class="fa-solid fa-box text-base"></i>
             MCP Marketplace
         </a>
 
         <a href="{{ route('tools.templates') }}"
             class="inline-flex items-center gap-1.5 rounded-lg border border-primary-300 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <i class="fa-solid fa-bolt text-base"></i>
             GPU Templates
         </a>
 
@@ -53,9 +53,7 @@
             @if($search || $typeFilter || $statusFilter)
                 <p class="text-sm text-gray-400">No tools match your filters.</p>
             @else
-                <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.21-3.01a.88.88 0 010-1.52l10.32-5.96a.88.88 0 011.32.76v11.12a.88.88 0 01-1.32.76l-5.11-2.95" />
-                </svg>
+                <i class="fa-solid fa-plug mx-auto mb-3 text-4xl text-gray-300"></i>
                 <p class="text-sm font-medium text-gray-600">No tools yet</p>
                 <p class="mt-1 text-xs text-gray-400">
                     Pre-built tools (GitHub, Slack, Notion, Linear...) are added during platform setup.

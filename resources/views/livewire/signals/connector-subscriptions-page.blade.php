@@ -9,9 +9,7 @@
         @if($integrations->isNotEmpty())
             <button wire:click="$set('showForm', true)"
                 class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
+                <i class="fa-solid fa-plus text-base"></i>
                 Add Subscription
             </button>
         @endif
@@ -20,10 +18,7 @@
     {{-- No integrations callout --}}
     @if($integrations->isEmpty() && $subscriptions->isEmpty())
         <div class="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
-            <svg class="mx-auto mb-4 h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-            </svg>
+            <i class="fa-solid fa-link mx-auto mb-4 text-4xl text-gray-400"></i>
             <p class="mb-1 text-sm font-medium text-gray-900">No supported integrations found</p>
             <p class="mb-4 text-sm text-gray-500">Connect a GitHub integration first, then come back to create subscriptions.</p>
             <a href="{{ route('integrations.index') }}"
@@ -206,13 +201,8 @@
                                         "
                                         class="rounded p-1 text-gray-400 hover:text-gray-700"
                                         title="Copy webhook URL">
-                                        <svg x-show="!copied" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                        </svg>
-                                        <svg x-show="copied" class="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                        </svg>
+                                        <i x-show="!copied" class="fa-regular fa-clipboard text-base"></i>
+                                        <i x-show="copied" class="fa-solid fa-check text-base text-green-500"></i>
                                     </button>
 
                                     {{-- Toggle active --}}
@@ -220,14 +210,9 @@
                                         class="rounded p-1 text-gray-400 hover:text-gray-700"
                                         title="{{ $sub->is_active ? 'Disable' : 'Enable' }}">
                                         @if($sub->is_active)
-                                            <svg class="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                            </svg>
+                                            <i class="fa-solid fa-circle-pause text-base text-green-500"></i>
                                         @else
-                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                            </svg>
+                                            <i class="fa-solid fa-circle-play text-base"></i>
                                         @endif
                                     </button>
 
@@ -236,10 +221,7 @@
                                         wire:confirm="Delete this subscription? The webhook will be deregistered at the provider."
                                         class="rounded p-1 text-gray-400 hover:text-red-600"
                                         title="Delete">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
+                                        <i class="fa-solid fa-trash text-base"></i>
                                     </button>
                                 </div>
                             </td>
@@ -250,10 +232,7 @@
         </div>
     @elseif(!$showForm && $integrations->isNotEmpty())
         <div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-16">
-            <svg class="mb-4 h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-            </svg>
+            <i class="fa-solid fa-link mb-4 text-4xl text-gray-400"></i>
             <p class="mb-1 text-sm font-medium text-gray-900">No subscriptions yet</p>
             <p class="mb-4 text-sm text-gray-500">Add a subscription to start receiving GitHub events for a specific repository.</p>
             <button wire:click="$set('showForm', true)"

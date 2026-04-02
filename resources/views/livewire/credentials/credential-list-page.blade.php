@@ -4,7 +4,7 @@
         <div class="relative flex-1">
             <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search credentials..." class="pl-10">
                 <x-slot:leadingIcon>
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
@@ -47,7 +47,7 @@
         <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4">
             <div class="flex items-start gap-3">
                 <div class="mt-0.5 flex-shrink-0">
-                    <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    <i class="fa-solid fa-shield text-lg text-green-600"></i>
                 </div>
                 <div class="flex-1">
                     <h4 class="text-sm font-semibold text-gray-900">Encryption</h4>
@@ -64,7 +64,7 @@
                         <x-plan-gate feature="customer_managed_keys" required-plan="Pro" mode="inline"
                             upgrade-message="Bring your own encryption keys (AWS KMS, GCP Cloud KMS, or Azure Key Vault).">
                             <p class="mt-1.5 text-sm text-gray-600">
-                                <svg class="mr-1 inline h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                <i class="fa-solid fa-shield mr-1 inline text-base text-green-500"></i>
                                 Connect your own KMS provider to wrap your team's data encryption key.
                             </p>
                         </x-plan-gate>

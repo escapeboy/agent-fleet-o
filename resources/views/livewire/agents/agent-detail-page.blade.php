@@ -9,9 +9,7 @@
     {{-- Tool loop warning badge: shown when recent executions average >= warning threshold --}}
     @if($avgSteps >= config('agent.tool_loop.warning_threshold', 8))
         <div class="mb-4 flex items-center gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-            <svg class="h-5 w-5 shrink-0 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
+            <i class="fa-solid fa-triangle-exclamation text-lg shrink-0 text-yellow-600"></i>
             <div class="flex-1">
                 <p class="text-sm font-medium text-yellow-800">Tool Loop Warning</p>
                 <p class="text-xs text-yellow-700">
@@ -108,7 +106,7 @@
                             </select>
                             <button wire:click="removeFallback({{ $index }})" type="button"
                                 class="rounded p-1 text-red-500 hover:bg-red-50">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <i class="fa-solid fa-xmark text-base"></i>
                             </button>
                         </div>
                     @endforeach
@@ -155,7 +153,7 @@
                                         <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                                             :class="isSelected(skill.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
                                             <template x-if="isSelected(skill.id)">
-                                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                                <i class="fa-solid fa-check text-xs"></i>
                                             </template>
                                         </div>
                                         <div>
@@ -230,7 +228,7 @@
                                         <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                                             :class="isSelected(tool.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
                                             <template x-if="isSelected(tool.id)">
-                                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                                <i class="fa-solid fa-check text-xs"></i>
                                             </template>
                                         </div>
                                         <div>
@@ -299,7 +297,7 @@
                                     {{ in_array($repo->id, $editGitRepositoryIds) ? 'border-primary-300 bg-primary-50 text-primary-800' : 'border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:bg-primary-50/40' }}">
                                 <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border {{ in_array($repo->id, $editGitRepositoryIds) ? 'border-primary-500 bg-primary-500' : 'border-gray-300' }}">
                                     @if(in_array($repo->id, $editGitRepositoryIds))
-                                        <svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                        <i class="fa-solid fa-check text-xs text-white"></i>
                                     @endif
                                 </span>
                                 <span class="min-w-0 truncate">{{ $repo->name }}</span>
@@ -383,7 +381,7 @@
                     Voice
                 </a>
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Agent">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    <i class="fa-solid fa-pen text-base"></i>
                 </button>
                 <button wire:click="toggleStatus"
                     class="rounded-lg border px-3 py-1.5 text-sm font-medium {{ $agent->status === \App\Domain\Agent\Enums\AgentStatus::Active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-green-300 text-green-700 hover:bg-green-50' }}">
@@ -648,16 +646,16 @@
                                             <div class="flex items-center justify-end gap-1">
                                                 <button wire:click="toggleHook('{{ $hook->id }}')" class="rounded p-1 text-gray-400 hover:text-gray-600" title="{{ $hook->enabled ? 'Disable' : 'Enable' }}">
                                                     @if($hook->enabled)
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-green-500"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                                                        <i class="fa-solid fa-circle-check text-base text-green-500"></i>
                                                     @else
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                                        <i class="fa-solid fa-ban text-base"></i>
                                                     @endif
                                                 </button>
                                                 <button wire:click="editHook('{{ $hook->id }}')" class="rounded p-1 text-gray-400 hover:text-blue-600">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
+                                                    <i class="fa-solid fa-pen text-base"></i>
                                                 </button>
                                                 <button wire:click="deleteHook('{{ $hook->id }}')" wire:confirm="Delete this hook?" class="rounded p-1 text-gray-400 hover:text-red-600">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                                                    <i class="fa-solid fa-trash text-base"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -711,9 +709,7 @@
                                                 class="rounded p-1 transition-colors {{ $existingFeedback && $existingFeedback->score === 1 ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50' }}"
                                                 title="Good output"
                                             >
-                                                <svg class="h-4 w-4" fill="{{ $existingFeedback && $existingFeedback->score === 1 ? 'currentColor' : 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                                </svg>
+                                                <i class="{{ $existingFeedback && $existingFeedback->score === 1 ? 'fa-solid' : 'fa-regular' }} fa-thumbs-up text-base"></i>
                                             </button>
                                             {{-- Thumbs down (opens comment box) --}}
                                             <button
@@ -721,9 +717,7 @@
                                                 class="rounded p-1 transition-colors {{ $existingFeedback && $existingFeedback->score === -1 ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-600 hover:bg-red-50' }}"
                                                 title="Bad output — add correction"
                                             >
-                                                <svg class="h-4 w-4" fill="{{ $existingFeedback && $existingFeedback->score === -1 ? 'currentColor' : 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-                                                </svg>
+                                                <i class="{{ $existingFeedback && $existingFeedback->score === -1 ? 'fa-solid' : 'fa-regular' }} fa-thumbs-down text-base"></i>
                                             </button>
                                         </div>
                                         {{-- Inline correction form --}}
@@ -897,9 +891,7 @@
                                     ];
                                 @endphp
                                 <li class="flex items-center gap-2 text-sm text-red-700">
-                                    <svg class="h-4 w-4 flex-shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                    </svg>
+                                    <i class="fa-solid fa-triangle-exclamation text-base flex-shrink-0 text-red-500"></i>
                                     {{ $factorLabels[$factor] ?? ucwords(str_replace('_', ' ', $factor)) }}
                                 </li>
                             @endforeach

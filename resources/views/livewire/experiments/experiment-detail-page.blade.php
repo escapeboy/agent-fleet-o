@@ -145,9 +145,7 @@
                 @if($isCompleted)
                     {{-- Completed: filled indigo circle with checkmark --}}
                     <div class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600">
-                        <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
+                        <i class="fa-solid fa-check text-base text-white"></i>
                     </div>
                 @elseif($isActive && $isPhase2Failure)
                     {{-- Active phase 2 with soft failure: amber tint + pulse --}}
@@ -417,9 +415,7 @@
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="text-xs text-gray-400">{{ $run->created_at->diffForHumans() }}</span>
-                            <svg class="h-4 w-4 text-gray-400 transition" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
+                            <i class="fa-solid fa-chevron-down text-base text-gray-400 transition" :class="open ? 'rotate-180' : ''"></i>
                         </div>
                     </button>
 
@@ -450,9 +446,7 @@
                 </div>
             @empty
                 <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center">
-                    <svg class="mx-auto h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a3.001 3.001 0 01-4.243 0l-.346-.346a5 5 0 010-7.072z"/>
-                    </svg>
+                    <i class="fa-solid fa-lightbulb text-2xl text-gray-300"></i>
                     <p class="mt-2 text-sm text-gray-500">No reasoning data captured yet.</p>
                     <p class="mt-1 text-xs text-gray-400">Reasoning chains are captured from Anthropic extended thinking and tool-augmented AI runs.</p>
                 </div>
@@ -472,9 +466,7 @@
 
             @if($failureLessons->isEmpty())
                 <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center">
-                    <svg class="mx-auto h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                    <i class="fa-solid fa-circle-info text-2xl text-gray-300"></i>
                     <p class="mt-2 text-sm text-gray-500">Extracting lesson…</p>
                     <p class="mt-1 text-xs text-gray-400">A background job analyses this failure and stores a lesson. Refresh in a few seconds.</p>
                 </div>
@@ -483,9 +475,7 @@
                     <div class="rounded-xl border border-red-100 bg-red-50 p-5">
                         <div class="flex items-start gap-3">
                             <div class="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
-                                <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                </svg>
+                                <i class="fa-solid fa-triangle-exclamation text-base text-red-600"></i>
                             </div>
                             <div class="flex-1">
                                 <p class="text-sm text-gray-800">{{ $lesson->content }}</p>
@@ -604,13 +594,8 @@
                 </div>
                 <button wire:click="analyzeSuggestions" wire:loading.attr="disabled"
                     class="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60">
-                    <svg wire:loading wire:target="analyzeSuggestions" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    <svg wire:loading.remove wire:target="analyzeSuggestions" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a3.001 3.001 0 01-4.243 0l-.346-.346a5 5 0 010-7.072z"/>
-                    </svg>
+                    <i wire:loading wire:target="analyzeSuggestions" class="fa-solid fa-spinner fa-spin text-base"></i>
+                    <i wire:loading.remove wire:target="analyzeSuggestions" class="fa-solid fa-lightbulb text-base"></i>
                     <span wire:loading.remove wire:target="analyzeSuggestions">Analyze Workflow</span>
                     <span wire:loading wire:target="analyzeSuggestions">Analyzing...</span>
                 </button>
@@ -622,9 +607,7 @@
 
             @if(empty($workflowSuggestions) && !$loadingSuggestions)
                 <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center">
-                    <svg class="mx-auto h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
+                    <i class="fa-solid fa-bolt text-2xl text-gray-300"></i>
                     <p class="mt-2 text-sm text-gray-500">Click "Analyze Workflow" to get AI-powered optimization suggestions.</p>
                 </div>
             @else
@@ -659,7 +642,7 @@
                                 @if(!empty($suggestion['current_value']) || !empty($suggestion['suggested_value']))
                                     <div class="mt-2 flex items-center gap-2 text-xs">
                                         <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-gray-600">{{ $suggestion['current_value'] ?? '—' }}</span>
-                                        <svg class="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                                        <i class="fa-solid fa-arrow-right text-xs text-gray-400"></i>
                                         <span class="rounded bg-green-100 px-2 py-0.5 font-mono text-green-700">{{ $suggestion['suggested_value'] ?? '—' }}</span>
                                     </div>
                                 @endif
@@ -671,7 +654,7 @@
                                 </button>
                                 <button wire:click="dismissSuggestion({{ $index }})"
                                     class="rounded p-1 text-gray-400 hover:text-gray-600">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    <i class="fa-solid fa-xmark text-base"></i>
                                 </button>
                             </div>
                         </div>

@@ -156,7 +156,7 @@
                                 <a href="{{ route('projects.show', $dep->dependsOn) }}"
                                     class="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
                                     <div class="flex items-center gap-2">
-                                        <svg class="h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                                        <i class="fa-solid fa-arrow-left text-base text-blue-400"></i>
                                         <span class="text-sm font-medium text-gray-900">{{ $dep->dependsOn->title }}</span>
                                         <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{{ $dep->alias }}</span>
                                     </div>
@@ -174,7 +174,7 @@
                                 <a href="{{ route('projects.show', $dep->project) }}"
                                     class="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
                                     <div class="flex items-center gap-2">
-                                        <svg class="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                                        <i class="fa-solid fa-arrow-right text-base text-green-400"></i>
                                         <span class="text-sm font-medium text-gray-900">{{ $dep->project->title }}</span>
                                         <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{{ $dep->alias }}</span>
                                     </div>
@@ -259,7 +259,7 @@
                     <div class="flex h-8 w-8 items-center justify-center rounded-full
                         {{ $milestone->status === \App\Domain\Project\Enums\MilestoneStatus::Completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400' }}">
                         @if($milestone->status === \App\Domain\Project\Enums\MilestoneStatus::Completed)
-                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                            <i class="fa-solid fa-check text-lg"></i>
                         @else
                             <span class="text-sm font-medium">{{ $milestone->sort_order }}</span>
                         @endif

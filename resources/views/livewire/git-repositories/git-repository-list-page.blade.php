@@ -4,7 +4,7 @@
         <div class="relative flex-1">
             <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search repositories..." class="pl-10">
                 <x-slot:leadingIcon>
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
@@ -33,9 +33,7 @@
     <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
         @if($repositories->isEmpty())
             <div class="flex flex-col items-center justify-center py-16 text-center">
-                <svg class="mb-4 h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-                </svg>
+                <i class="fa-solid fa-code mb-4 text-4xl text-gray-300"></i>
                 <p class="text-gray-500">No git repositories connected yet.</p>
                 <a href="{{ route('git-repositories.create') }}" class="mt-3 text-sm font-medium text-primary-600 hover:text-primary-700">
                     Connect your first repository →

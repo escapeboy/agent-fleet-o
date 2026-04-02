@@ -3,7 +3,7 @@
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div class="flex min-w-0 flex-1 items-center gap-3">
             <a href="{{ route('workflows.index') }}" class="shrink-0 text-gray-500 hover:text-gray-700">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <i class="fa-solid fa-arrow-left text-lg"></i>
             </a>
 
             <div class="min-w-0 flex-1">
@@ -169,14 +169,14 @@
                         {{-- Zoom controls --}}
                         <div class="absolute bottom-2 right-2 flex items-center gap-0.5 rounded-lg bg-white border border-gray-200 shadow-sm px-0.5">
                             <button @click="zoom = Math.max(0.3, zoom - 0.15)" class="p-1 text-gray-500 hover:text-gray-700">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                                <i class="fa-solid fa-minus text-sm"></i>
                             </button>
                             <span class="text-[10px] text-gray-500 w-8 text-center" x-text="Math.round(zoom*100)+'%'"></span>
                             <button @click="zoom = Math.min(1.5, zoom + 0.15)" class="p-1 text-gray-500 hover:text-gray-700">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                <i class="fa-solid fa-plus text-sm"></i>
                             </button>
                             <button @click="fitView()" class="p-1 text-gray-500 hover:text-gray-700 border-l border-gray-200 ml-0.5">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                                <i class="fa-solid fa-expand text-sm"></i>
                             </button>
                         </div>
                     </div>

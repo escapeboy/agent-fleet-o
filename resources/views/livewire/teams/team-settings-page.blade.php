@@ -661,7 +661,7 @@
                                 @endif
                                 <button x-on:click="editing = true; $nextTick(() => $refs.nameInput.focus())"
                                     class="text-gray-400 hover:text-gray-600" title="Rename">
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                    <i class="fa-solid fa-pen text-sm"></i>
                                 </button>
                             </div>
                             <div x-show="editing" x-cloak class="flex items-center gap-2">
@@ -788,7 +788,7 @@
             @if(!$showConnectForm)
                 <button wire:click="$set('showConnectForm', true)"
                     class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>
+                    <i class="fa-solid fa-link text-base"></i>
                     Connect via URL
                 </button>
             @else

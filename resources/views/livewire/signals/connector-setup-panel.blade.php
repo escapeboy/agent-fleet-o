@@ -39,9 +39,7 @@
                 </div>
                 <button wire:click="close"
                     class="rounded-lg p-1.5 text-(--color-on-surface-muted) hover:bg-(--color-surface-alt)">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
@@ -78,12 +76,8 @@
                                 ? 'border-green-300 bg-green-50 text-green-700'
                                 : 'border-(--color-theme-border-strong) text-(--color-on-surface) hover:bg-(--color-surface-alt)'"
                         >
-                            <svg x-show="!copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9 3.75H18" />
-                            </svg>
-                            <svg x-show="copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                            </svg>
+                            <i x-show="!copied" class="fa-regular fa-clipboard text-base"></i>
+                            <i x-show="copied" class="fa-solid fa-check text-base"></i>
                             <span x-text="copied ? 'Copied!' : 'Copy'" aria-live="polite"></span>
                         </button>
                     </div>
@@ -108,9 +102,7 @@
                         {{-- One-time reveal: show full secret after generation or rotation --}}
                         <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
                             <div class="flex items-start gap-2">
-                                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                                </svg>
+                                <i class="fa-solid fa-triangle-exclamation mt-0.5 text-base shrink-0 text-amber-600"></i>
                                 <p class="text-xs font-medium text-amber-800">Copy this secret now — it won't be shown again.</p>
                             </div>
                             <div
@@ -140,12 +132,8 @@
                                         ? 'border-green-300 bg-green-50 text-green-700'
                                         : 'border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200'"
                                 >
-                                    <svg x-show="!copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9 3.75H18" />
-                                    </svg>
-                                    <svg x-show="copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                    </svg>
+                                    <i x-show="!copied" class="fa-regular fa-clipboard text-base"></i>
+                                    <i x-show="copied" class="fa-solid fa-check text-base"></i>
                                     <span x-text="copied ? 'Copied!' : 'Copy'" aria-live="polite"></span>
                                 </button>
                             </div>
@@ -160,9 +148,7 @@
                         @if($secretHint)
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center gap-2 text-green-700">
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
+                                    <i class="fa-solid fa-circle-check text-base"></i>
                                     <span class="text-sm font-medium">Configured</span>
                                 </div>
                                 <code class="rounded bg-(--color-surface-alt) px-2 py-0.5 font-mono text-xs text-(--color-on-surface-muted)">{{ $secretHint }}</code>
@@ -170,9 +156,7 @@
                             <p class="text-xs text-(--color-on-surface-muted)">{!! $secretHintText !!}</p>
                         @else
                             <div class="flex items-center gap-2 text-amber-600">
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                                </svg>
+                                <i class="fa-solid fa-triangle-exclamation text-base"></i>
                                 <span class="text-sm font-medium">Not yet generated</span>
                             </div>
                         @endif
@@ -204,9 +188,7 @@
                         {{-- Paste-mode: user enters the service-provided signing key --}}
                         @if($secretHint)
                             <div class="flex items-center gap-2 text-green-700">
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                                <i class="fa-solid fa-circle-check text-base"></i>
                                 <span class="text-sm font-medium">Configured</span>
                                 <code class="rounded bg-(--color-surface-alt) px-2 py-0.5 font-mono text-xs text-(--color-on-surface-muted)">{{ $secretHint }}</code>
                             </div>
@@ -248,9 +230,7 @@
                         class="flex w-full items-center justify-between text-sm font-semibold text-(--color-on-surface)"
                     >
                         <span>Setup Guide</span>
-                        <svg class="h-4 w-4 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                        </svg>
+                        <i class="fa-solid fa-chevron-down text-base transition-transform" :class="open && 'rotate-180'"></i>
                     </button>
 
                     <div x-show="open" x-transition class="space-y-4">
@@ -367,9 +347,7 @@
                 {{-- Self-hosted / .env info (collapsible, for developers) --}}
                 <details class="group">
                     <summary class="flex cursor-pointer list-none items-center gap-2 text-xs text-(--color-on-surface-muted) hover:text-(--color-on-surface)">
-                        <svg class="h-3.5 w-3.5 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
+                        <i class="fa-solid fa-chevron-right text-sm transition-transform group-open:rotate-90"></i>
                         Self-hosted / environment variable configuration
                     </summary>
                     <div class="mt-3 rounded-lg border border-(--color-theme-border) bg-(--color-surface-alt) p-3 text-xs text-(--color-on-surface-muted) space-y-1">

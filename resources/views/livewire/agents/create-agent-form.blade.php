@@ -112,7 +112,7 @@
                             @endforeach
                         </select>
                         <button wire:click="removeFallback({{ $index }})" type="button" class="rounded p-1 text-red-500 hover:bg-red-50">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <i class="fa-solid fa-xmark text-base"></i>
                         </button>
                     </div>
                 @endforeach
@@ -158,7 +158,7 @@
                                     <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                                         :class="isSelected(skill.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
                                         <template x-if="isSelected(skill.id)">
-                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                            <i class="fa-solid fa-check text-xs"></i>
                                         </template>
                                     </div>
                                     <div>
@@ -233,7 +233,7 @@
                                     <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                                         :class="isSelected(tool.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
                                         <template x-if="isSelected(tool.id)">
-                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                            <i class="fa-solid fa-check text-xs"></i>
                                         </template>
                                     </div>
                                     <div>
@@ -262,7 +262,7 @@
                                 {{ in_array($repo->id, $gitRepositoryIds) ? 'border-primary-300 bg-primary-50 text-primary-800' : 'border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:bg-primary-50/40' }}">
                             <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border {{ in_array($repo->id, $gitRepositoryIds) ? 'border-primary-500 bg-primary-500' : 'border-gray-300' }}">
                                 @if(in_array($repo->id, $gitRepositoryIds))
-                                    <svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                    <i class="fa-solid fa-check text-xs text-white"></i>
                                 @endif
                             </span>
                             <span class="min-w-0 truncate">{{ $repo->name }}</span>

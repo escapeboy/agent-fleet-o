@@ -39,12 +39,8 @@
         <button @click="mobileNav = !mobileNav"
                 class="fixed bottom-6 left-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-gray-900 text-white shadow-lg lg:hidden"
                 aria-label="Toggle docs navigation">
-            <svg x-show="!mobileNav" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-            <svg x-show="mobileNav" x-cloak class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
+            <i x-show="!mobileNav" class="fa-solid fa-bars text-lg" aria-hidden="true"></i>
+            <i x-show="mobileNav" x-cloak class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
         </button>
 
         {{-- Main content --}}

@@ -34,7 +34,7 @@
                 <form method="GET" action="{{ route('marketplace.index') }}" class="flex flex-wrap items-center gap-4">
                     {{-- Search --}}
                     <div class="relative flex-1 min-w-[200px]">
-                        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
                         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search marketplace..."
                             class="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-primary-500 focus:ring-primary-500">
                     </div>
@@ -111,12 +111,12 @@
                         <div class="flex items-center justify-between border-t border-gray-100 pt-3">
                             <div class="flex items-center gap-4 text-sm text-gray-500">
                                 <span class="flex items-center gap-1">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    <i class="fa-solid fa-download text-base"></i>
                                     {{ number_format($listing->install_count) }}
                                 </span>
                                 @if($listing->review_count > 0)
                                     <span class="flex items-center gap-1">
-                                        <svg class="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                        <i class="fa-solid fa-star text-base text-yellow-400"></i>
                                         {{ number_format($listing->avg_rating, 1) }}
                                     </span>
                                 @endif
@@ -126,7 +126,7 @@
                     </a>
                 @empty
                     <div class="col-span-full py-16 text-center">
-                        <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        <i class="fa-solid fa-box-open mx-auto text-4xl text-gray-300"></i>
                         <p class="mt-4 text-gray-500">No listings found.</p>
                         <p class="mt-1 text-sm text-gray-400">Check back soon or try a different search.</p>
                     </div>

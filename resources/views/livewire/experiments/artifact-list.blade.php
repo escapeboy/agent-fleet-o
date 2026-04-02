@@ -2,9 +2,7 @@
     @if($artifacts->isEmpty() && $failedTasks->isEmpty())
         {{-- Empty State --}}
         <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-            <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
-            </svg>
+            <i class="fa-regular fa-file text-3xl text-gray-300"></i>
             <p class="mt-3 text-sm text-gray-400">No artifacts built yet.</p>
             <p class="text-xs text-gray-400">Artifacts will appear once the building stage completes.</p>
         </div>
@@ -109,9 +107,7 @@
                                 <button wire:click="downloadAllAsZip"
                                     class="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
                                     title="Download all as ZIP">
-                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                                    </svg>
+                                    <i class="fa-solid fa-download text-sm"></i>
                                     ZIP
                                 </button>
                             @endif
@@ -119,27 +115,19 @@
                                 <button wire:click="toggleFullscreen"
                                     class="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
                                     title="Full-screen preview">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
-                                    </svg>
+                                    <i class="fa-solid fa-expand text-base"></i>
                                 </button>
                             @endif
                             <button wire:click="downloadArtifact"
                                 class="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
                                 title="Download">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                                </svg>
+                                <i class="fa-solid fa-download text-base"></i>
                             </button>
                             <button @click="copyToClipboard()"
                                 class="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
                                 title="Copy to clipboard">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="!copied">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
-                                </svg>
-                                <svg class="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="copied" x-cloak>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
+                                <i class="fa-regular fa-clipboard text-base" x-show="!copied"></i>
+                                <i class="fa-solid fa-check text-base text-green-500" x-show="copied" x-cloak></i>
                             </button>
                         </div>
                     </div>
@@ -203,9 +191,7 @@
                     {{-- No artifact selected --}}
                     <div class="flex flex-1 items-center justify-center p-8">
                         <div class="text-center">
-                            <svg class="mx-auto h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
-                            </svg>
+                            <i class="fa-solid fa-eye text-2xl text-gray-300"></i>
                             <p class="mt-2 text-sm text-gray-400">Select an artifact to preview</p>
                         </div>
                     </div>
@@ -234,30 +220,22 @@
                         <button @click="previewWidth = '375px'"
                             :class="previewWidth === '375px' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
                             class="rounded px-2.5 py-1 text-xs font-medium transition" title="Mobile (375px)">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                            </svg>
+                            <i class="fa-solid fa-mobile-screen text-sm"></i>
                         </button>
                         <button @click="previewWidth = '768px'"
                             :class="previewWidth === '768px' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
                             class="rounded px-2.5 py-1 text-xs font-medium transition" title="Tablet (768px)">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                            </svg>
+                            <i class="fa-solid fa-tablet-screen-button text-sm"></i>
                         </button>
                         <button @click="previewWidth = '1280px'"
                             :class="previewWidth === '1280px' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
                             class="rounded px-2.5 py-1 text-xs font-medium transition" title="Desktop (1280px)">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                            </svg>
+                            <i class="fa-solid fa-desktop text-sm"></i>
                         </button>
                         <button @click="previewWidth = '100%'"
                             :class="previewWidth === '100%' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
                             class="rounded px-2.5 py-1 text-xs font-medium transition" title="Full width">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
-                            </svg>
+                            <i class="fa-solid fa-expand text-sm"></i>
                         </button>
                     </div>
 
