@@ -45,6 +45,7 @@ class ConnectorBindingGate
         'http_monitor',
         'clearcue',
         'intent_score',
+        'screenpipe',
     ];
 
     /**

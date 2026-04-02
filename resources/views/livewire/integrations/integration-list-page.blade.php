@@ -1,45 +1,52 @@
 <div class="space-y-6">
     {{-- Flash Messages --}}
     @if(session()->has('message'))
-        <div class="rounded-lg bg-green-50 p-3 text-sm text-green-700">{{ session('message') }}</div>
+        <div class="rounded-lg bg-green-50 p-3 text-sm text-green-700" x-data x-init="setTimeout(() => $el.remove(), 5000)">{{ session('message') }}</div>
     @endif
     @if(session()->has('error'))
-        <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
+        <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700" x-data x-init="setTimeout(() => $el.remove(), 5000)">{{ session('error') }}</div>
     @endif
 
     {{-- Page Header --}}
-    <div class="flex items-center justify-between">
-        <div>
-            <p class="mt-1 text-sm text-gray-500">Connect external services to receive signals and execute actions.</p>
-        </div>
+    <div>
+        <p class="text-sm text-gray-500">Connect external services to receive signals and execute actions. {{ count(config('integrations.drivers', [])) }} integrations available.</p>
     </div>
 
     {{-- Connected Integrations --}}
     @if($connectedIntegrations->isNotEmpty())
-        <div class="rounded-lg border border-gray-200 bg-white p-6">
-            <h2 class="mb-4 text-lg font-semibold text-gray-900">Connected</h2>
-            <div class="space-y-3">
+        <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="border-b border-gray-100 px-6 py-4">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Connected ({{ $connectedIntegrations->count() }})</h2>
+            </div>
+            <div class="divide-y divide-gray-100">
                 @foreach($connectedIntegrations as $integration)
-                    <div class="flex items-center justify-between rounded-lg border border-gray-100 p-4">
-                        <div>
-                            <span class="font-medium text-gray-900">{{ $integration->name }}</span>
-                            <span class="ml-2 text-xs text-gray-500">{{ ucfirst($integration->driver) }}</span>
-                            @php $status = $integration->status; @endphp
-                            <span class="ml-2 inline-flex rounded-full px-2 py-0.5 text-xs {{ $status->color() }}">
-                                {{ $status->label() }}
-                            </span>
-                            @if($integration->last_pinged_at)
-                                <span class="ml-2 text-xs text-gray-400">Pinged {{ $integration->last_pinged_at->diffForHumans() }}</span>
-                            @endif
+                    @php
+                        $driverInfo = config("integrations.drivers.{$integration->driver}", []);
+                        $status = $integration->status;
+                    @endphp
+                    <div class="flex items-center justify-between px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">{{ $driverInfo['icon'] ?? '🔌' }}</span>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-medium text-gray-900">{{ $integration->name }}</span>
+                                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs {{ $status->color() }}">{{ $status->label() }}</span>
+                                </div>
+                                <span class="text-xs text-gray-500">{{ $driverInfo['label'] ?? ucfirst($integration->driver) }}
+                                    @if($integration->last_pinged_at)
+                                        &middot; Pinged {{ $integration->last_pinged_at->diffForHumans() }}
+                                    @endif
+                                </span>
+                            </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <a href="{{ route('integrations.show', $integration) }}"
-                               class="text-sm text-primary-600 hover:text-primary-800">Details</a>
+                               class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Details</a>
                             <button wire:click="ping('{{ $integration->id }}')"
-                                    class="text-sm text-gray-500 hover:text-gray-700">Ping</button>
+                                    class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Ping</button>
                             <button wire:click="disconnect('{{ $integration->id }}')"
                                     wire:confirm="Disconnect this integration?"
-                                    class="text-sm text-red-600 hover:text-red-800">Disconnect</button>
+                                    class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">Disconnect</button>
                         </div>
                     </div>
                 @endforeach
@@ -47,58 +54,124 @@
         </div>
     @endif
 
-    {{-- Available Drivers Gallery --}}
-    <div class="rounded-lg border border-gray-200 bg-white p-6">
-        <div class="mb-4 flex items-center justify-between gap-4">
-            <h2 class="text-lg font-semibold text-gray-900">Available Integrations</h2>
-            <input
-                type="search"
-                wire:model.live.debounce.200ms="search"
-                placeholder="Filter integrations…"
-                class="w-56 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500 focus:outline-none"
-            />
-        </div>
-        @php
-            $authLabels = [
-                'api_key'      => 'API Key',
-                'oauth2'       => 'OAuth 2.0',
-                'webhook_only' => 'Webhook Only',
-                'basic_auth'   => 'Basic Auth',
-            ];
-        @endphp
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            @foreach($availableDrivers as $slug => $info)
-                <div class="rounded-lg border border-gray-100 p-4 hover:border-primary-200 hover:bg-primary-50">
-                    <div class="mb-2 text-2xl">{{ $info['icon'] ?? '🔌' }}</div>
-                    <p class="font-medium text-gray-900">{{ $info['label'] }}</p>
-                    <p class="mt-0.5 text-xs text-gray-500">{{ $authLabels[$info['auth']] ?? ucfirst($info['auth']) }}</p>
-                    <button wire:click="openConnectForm('{{ $slug }}')"
-                            class="mt-3 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
-                        Connect
+    {{-- Available Drivers --}}
+    <div class="rounded-xl border border-gray-200 bg-white">
+        <div class="border-b border-gray-100 px-6 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Available Integrations</h2>
+                <input type="search" wire:model.live.debounce.200ms="search" placeholder="Search integrations..."
+                    class="w-64 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+            </div>
+
+            {{-- Category Tabs --}}
+            @php
+                $categoryLabels = [
+                    'generic' => 'Generic',
+                    'developer' => 'Developer Tools',
+                    'communication' => 'Communication',
+                    'project' => 'Project Management',
+                    'crm' => 'CRM & Sales',
+                    'support' => 'Customer Support',
+                    'marketing' => 'Marketing & Email',
+                    'payments' => 'Payments & E-commerce',
+                    'productivity' => 'Productivity',
+                    'social' => 'Social Media',
+                    'automation' => 'Automation',
+                    'alerting' => 'Incident & Alerting',
+                    'realtime' => 'Real-time',
+                    'ai' => 'AI & ML',
+                ];
+                $authLabels = [
+                    'api_key'      => 'API Key',
+                    'oauth2'       => 'OAuth 2.0',
+                    'webhook_only' => 'Webhook',
+                    'basic_auth'   => 'Basic Auth',
+                ];
+            @endphp
+            <div class="mt-3 flex flex-wrap gap-2">
+                <button wire:click="$set('categoryFilter', '')"
+                    class="rounded-full px-3 py-1 text-xs font-medium transition {{ !$categoryFilter ? 'bg-primary-100 text-primary-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                    All ({{ count(config('integrations.drivers', [])) }})
+                </button>
+                @foreach($categories as $cat)
+                    @php
+                        $catCount = collect(config('integrations.drivers', []))->where('category', $cat)->count();
+                    @endphp
+                    <button wire:click="$set('categoryFilter', '{{ $cat }}')"
+                        class="rounded-full px-3 py-1 text-xs font-medium transition {{ $categoryFilter === $cat ? 'bg-primary-100 text-primary-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                        {{ $categoryLabels[$cat] ?? ucfirst($cat) }} ({{ $catCount }})
                     </button>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Grid --}}
+        <div class="p-6">
+            @if(empty($availableDrivers))
+                <div class="py-12 text-center text-sm text-gray-400">
+                    No integrations match{{ $search ? " \"{$search}\"" : '' }}{{ $categoryFilter ? " in ".($categoryLabels[$categoryFilter] ?? $categoryFilter) : '' }}.
                 </div>
-            @endforeach
-            @if($availableDrivers->isEmpty() ?? count($availableDrivers) === 0)
-                <div class="col-span-full py-8 text-center text-sm text-gray-400">No integrations match "{{ $search }}".</div>
+            @else
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach($availableDrivers as $slug => $info)
+                        <div class="group flex flex-col rounded-lg border border-gray-150 p-4 transition hover:border-primary-300 hover:shadow-sm">
+                            <div class="mb-2 flex items-start justify-between">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-xl">{{ $info['icon'] ?? '🔌' }}</span>
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ $info['label'] }}</p>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="inline-flex rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">{{ $authLabels[$info['auth']] ?? ucfirst($info['auth']) }}</span>
+                                            @if(($info['poll_frequency'] ?? 0) > 0)
+                                                <span class="inline-flex rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">Polling</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if(!empty($info['description']))
+                                <p class="mb-3 flex-1 text-xs leading-relaxed text-gray-500">{{ $info['description'] }}</p>
+                            @else
+                                <div class="mb-3 flex-1"></div>
+                            @endif
+
+                            <button wire:click="openConnectForm('{{ $slug }}')"
+                                    class="w-full rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 transition hover:bg-primary-100">
+                                Connect
+                            </button>
+                        </div>
+                    @endforeach
+                </div>
             @endif
         </div>
     </div>
 
     {{-- Connect Form Modal --}}
     @if($showConnectForm)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-            <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50" wire:click.self="closeConnectForm">
+            <div class="mx-4 w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900">Connect {{ ucfirst($connectDriver) }}</h3>
-                    <button wire:click="closeConnectForm" class="text-gray-400 hover:text-gray-600">&times;</button>
+                    @php $modalDriver = config("integrations.drivers.{$connectDriver}", []); @endphp
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">{{ $modalDriver['icon'] ?? '🔌' }}</span>
+                        <h3 class="text-lg font-semibold text-gray-900">Connect {{ $modalDriver['label'] ?? ucfirst($connectDriver) }}</h3>
+                    </div>
+                    <button wire:click="closeConnectForm" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
+
+                @if(!empty($modalDriver['description']))
+                    <p class="mb-4 text-sm text-gray-500">{{ $modalDriver['description'] }}</p>
+                @endif
 
                 <div class="space-y-4">
                     <x-form-input wire:model="connectName" label="Integration Name" type="text"
-                        placeholder="e.g. Production GitHub" :error="$errors->first('connectName')" />
+                        placeholder="e.g. Production {{ $modalDriver['label'] ?? ucfirst($connectDriver) }}" :error="$errors->first('connectName')" />
 
                     @php
-                        $driverConfig = $availableDrivers[$connectDriver] ?? [];
+                        $driverConfig = $availableDrivers[$connectDriver] ?? $modalDriver;
                     @endphp
 
                     @if(($driverConfig['auth'] ?? '') === 'oauth2')
@@ -114,12 +187,12 @@
                         @endif
                         <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
                             <p class="font-medium">OAuth2 Authorization Required</p>
-                            <p class="mt-1 text-blue-600">You'll be redirected to {{ ucfirst($connectDriver) }} to authorize access. Make sure to return here after authorizing.</p>
+                            <p class="mt-1 text-blue-600">You'll be redirected to {{ $modalDriver['label'] ?? ucfirst($connectDriver) }} to authorize access.</p>
                         </div>
                     @elseif(($driverConfig['auth'] ?? '') === 'webhook_only')
                         <div class="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
                             <p class="font-medium text-gray-700">No credentials required</p>
-                            <p class="mt-1">This integration receives data via webhook. After connecting, you'll get a unique URL to paste into {{ ucfirst($connectDriver) }}.</p>
+                            <p class="mt-1">This integration receives data via webhook. After connecting, you'll get a unique URL.</p>
                         </div>
                     @elseif(!empty($credentialSchema))
                         <div class="space-y-3">
@@ -176,7 +249,7 @@
                     @if(($driverConfig['auth'] ?? '') === 'oauth2')
                         <button wire:click="connectOAuth"
                                 class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                            Continue with {{ ucfirst($connectDriver) }} →
+                            Continue with {{ $modalDriver['label'] ?? ucfirst($connectDriver) }} →
                         </button>
                     @else
                         <button wire:click="connect"

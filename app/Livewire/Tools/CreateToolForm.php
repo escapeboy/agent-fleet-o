@@ -82,7 +82,7 @@ class CreateToolForm extends Component
             $this->validate([
                 'name' => 'required|min:2|max:255',
                 'description' => 'max:1000',
-                'type' => 'required|in:mcp_stdio,mcp_http,mcp_bridge,built_in',
+                'type' => 'required|in:mcp_stdio,mcp_http,mcp_bridge,built_in,compute_endpoint',
             ]);
         }
 
@@ -179,6 +179,7 @@ class CreateToolForm extends Component
                 'bridge_server_name' => $this->bridgeServerName,
             ],
             ToolType::BuiltIn => $this->buildBuiltInConfig(),
+            ToolType::ComputeEndpoint => [],
         };
     }
 

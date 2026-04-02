@@ -5,6 +5,7 @@ namespace App\Domain\Integration\Services;
 use App\Domain\Integration\Contracts\IntegrationDriverInterface;
 use App\Domain\Integration\Drivers\Activepieces\ActivepiecesIntegrationDriver;
 use App\Domain\Integration\Drivers\Airtable\AirtableIntegrationDriver;
+use App\Domain\Integration\Drivers\Apify\ApifyIntegrationDriver;
 use App\Domain\Integration\Drivers\Datadog\DatadogIntegrationDriver;
 use App\Domain\Integration\Drivers\Discord\DiscordIntegrationDriver;
 use App\Domain\Integration\Drivers\Generic\ApiPollingDriver;
@@ -207,5 +208,10 @@ class IntegrationManager extends Manager
     public function createLivekitDriver(): IntegrationDriverInterface
     {
         return $this->container->make(LiveKitIntegrationDriver::class);
+    }
+
+    public function createApifyDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(ApifyIntegrationDriver::class);
     }
 }

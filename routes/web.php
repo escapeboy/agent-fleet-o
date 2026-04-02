@@ -17,6 +17,7 @@ use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
 use App\Livewire\Agents\CreateAgentForm;
+use App\Livewire\Agents\QuickAgentForm;
 use App\Livewire\Agents\VoiceSessionPage;
 use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Livewire\Audit\AuditLogPage;
@@ -87,8 +88,10 @@ use App\Livewire\Teams\TeamSettingsPage;
 use App\Livewire\Telegram\TelegramBotsPage;
 use App\Livewire\Tools\CreateToolForm;
 use App\Livewire\Tools\FederationGroupsPage;
+use App\Livewire\Tools\McpMarketplacePage;
 use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
+use App\Livewire\Tools\ToolTemplateCatalogPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
@@ -198,18 +201,20 @@ Route::controller(MarketplacePageController::class)->prefix('marketplace')->name
     Route::get('/{listing:slug}', 'show')->name('show');
 });
 
-// In-app marketplace (Livewire, auth required)
-Route::middleware(['auth', 'verified'])->prefix('app/marketplace')->name('app.marketplace.')->group(function () {
-    Route::get('/', MarketplaceBrowsePage::class)->name('index');
-    Route::get('/publish', PublishForm::class)->name('publish');
-    Route::get('/{listing:slug}', MarketplaceDetailPage::class)->name('show');
-});
+// In-app marketplace routes are inside the main auth group below (requires team context)
 
 // Terms acceptance gate (auth required, but NOT verified — social users may not have verified email)
 Route::middleware(['auth'])->get('/terms/accept', AcceptTermsPage::class)->name('terms.accept');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardPage::class)->name('dashboard');
+
+    // In-app marketplace (requires team context — NOT under /app/ to avoid Reverb WebSocket proxy)
+    Route::prefix('hub')->name('app.marketplace.')->group(function () {
+        Route::get('/', MarketplaceBrowsePage::class)->name('index');
+        Route::get('/publish', PublishForm::class)->name('publish');
+        Route::get('/{listing:slug}', MarketplaceDetailPage::class)->name('show');
+    });
 
     Route::get('/experiments', ExperimentListPage::class)->name('experiments.index');
     Route::get('/experiments/{experiment}', ExperimentDetailPage::class)->name('experiments.show');
@@ -221,6 +226,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
+    Route::get('/agents/quick', QuickAgentForm::class)->name('agents.quick');
     Route::get('/agents/{agent}/voice', VoiceSessionPage::class)->name('agents.voice');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
 
@@ -233,6 +239,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/tools', ToolListPage::class)->name('tools.index');
     Route::get('/tools/create', CreateToolForm::class)->name('tools.create');
+    Route::get('/tools/templates', ToolTemplateCatalogPage::class)->name('tools.templates');
+    Route::get('/tools/marketplace', McpMarketplacePage::class)->name('tools.marketplace');
     Route::get('/tools/federation-groups', FederationGroupsPage::class)->name('tools.federation-groups');
     Route::get('/tools/{tool}', ToolDetailPage::class)->name('tools.show');
 
