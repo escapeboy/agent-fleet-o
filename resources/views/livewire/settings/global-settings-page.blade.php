@@ -22,6 +22,7 @@
                     'agents'     => 'Agents',
                     'tools'      => 'Tools',
                     'connectors' => 'Connectors',
+                    'ai_routing' => 'AI Routing',
                     'security'   => 'Security',
                 ]);
             @endphp
@@ -599,6 +600,91 @@ fleetq-bridge install</pre>
 
         {{-- Connector Config Modal --}}
         @livewire('settings.connector-config-modal')
+    @endif
+
+    {{-- ═══ AI Routing Tab ═══ --}}
+    @if($activeTab === 'ai_routing')
+        <form wire:submit="saveAiRoutingSettings">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {{-- Budget Pressure Routing --}}
+                <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+                    <h3 class="text-sm font-medium text-(--color-on-surface)">Budget Pressure Routing</h3>
+                    <p class="mt-1 text-xs text-(--color-on-surface-muted)">Automatically downgrade model tiers as monthly budget consumption increases. At each threshold, requests shift to cheaper models.</p>
+                    <div class="mt-4 space-y-4">
+                        <label class="relative inline-flex cursor-pointer items-center gap-3">
+                            <input type="checkbox" wire:model="budgetPressureEnabled" class="peer sr-only" />
+                            <div class="peer h-6 w-11 shrink-0 rounded-full bg-(--color-surface-alt) after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-(--color-theme-border-strong) after:bg-(--color-surface-raised) after:transition-all peer-checked:bg-primary-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300"></div>
+                            <span class="text-sm font-medium text-(--color-on-surface)">Enable budget pressure routing</span>
+                        </label>
+
+                        <div class="grid grid-cols-3 gap-4">
+                            <x-form-input wire:model="budgetPressureLow" label="Low %" type="number" min="0" max="100"
+                                hint="Heavy → standard"
+                                :error="$errors->first('budgetPressureLow')" />
+                            <x-form-input wire:model="budgetPressureMedium" label="Medium %" type="number" min="0" max="100"
+                                hint="Standard → light"
+                                :error="$errors->first('budgetPressureMedium')" />
+                            <x-form-input wire:model="budgetPressureHigh" label="High %" type="number" min="0" max="100"
+                                hint="All → cheapest"
+                                :error="$errors->first('budgetPressureHigh')" />
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Model Escalation --}}
+                <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+                    <h3 class="text-sm font-medium text-(--color-on-surface)">Model Escalation</h3>
+                    <p class="mt-1 text-xs text-(--color-on-surface-muted)">When an AI call fails due to quality issues, retry with a stronger model before falling back to another provider.</p>
+                    <div class="mt-4 space-y-4">
+                        <label class="relative inline-flex cursor-pointer items-center gap-3">
+                            <input type="checkbox" wire:model="escalationEnabled" class="peer sr-only" />
+                            <div class="peer h-6 w-11 shrink-0 rounded-full bg-(--color-surface-alt) after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-(--color-theme-border-strong) after:bg-(--color-surface-raised) after:transition-all peer-checked:bg-primary-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300"></div>
+                            <span class="text-sm font-medium text-(--color-on-surface)">Enable model escalation</span>
+                        </label>
+
+                        <x-form-input wire:model="escalationMaxAttempts" label="Max Escalation Attempts" type="number" min="1" max="5"
+                            hint="How many tiers up to try (light → standard → heavy)"
+                            :error="$errors->first('escalationMaxAttempts')" />
+                    </div>
+                </div>
+
+                {{-- Verification Gate --}}
+                <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+                    <h3 class="text-sm font-medium text-(--color-on-surface)">Verification Gate</h3>
+                    <p class="mt-1 text-xs text-(--color-on-surface-muted)">Run mechanical verification on pipeline stage output. On failure, inject error context and retry within the same job.</p>
+                    <div class="mt-4 space-y-4">
+                        <label class="relative inline-flex cursor-pointer items-center gap-3">
+                            <input type="checkbox" wire:model="verificationEnabled" class="peer sr-only" />
+                            <div class="peer h-6 w-11 shrink-0 rounded-full bg-(--color-surface-alt) after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-(--color-theme-border-strong) after:bg-(--color-surface-raised) after:transition-all peer-checked:bg-primary-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300"></div>
+                            <span class="text-sm font-medium text-(--color-on-surface)">Enable verification gate</span>
+                        </label>
+
+                        <x-form-input wire:model="verificationMaxRetries" label="Max Retries" type="number" min="1" max="5"
+                            hint="Retry attempts before marking stage as failed"
+                            :error="$errors->first('verificationMaxRetries')" />
+                    </div>
+                </div>
+
+                {{-- Stuck Detection --}}
+                <div class="rounded-xl border border-(--color-theme-border) bg-(--color-surface-raised) p-6">
+                    <h3 class="text-sm font-medium text-(--color-on-surface)">Stuck Detection</h3>
+                    <p class="mt-1 text-xs text-(--color-on-surface-muted)">Sliding-window pattern analysis over recent state transitions to detect loops, oscillations, and stalls.</p>
+                    <div class="mt-4 space-y-4">
+                        <label class="relative inline-flex cursor-pointer items-center gap-3">
+                            <input type="checkbox" wire:model="stuckDetectionEnabled" class="peer sr-only" />
+                            <div class="peer h-6 w-11 shrink-0 rounded-full bg-(--color-surface-alt) after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-(--color-theme-border-strong) after:bg-(--color-surface-raised) after:transition-all peer-checked:bg-primary-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300"></div>
+                            <span class="text-sm font-medium text-(--color-on-surface)">Enable stuck detection</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    Save AI Routing Settings
+                </button>
+            </div>
+        </form>
     @endif
 
     {{-- ═══ Security Tab ═══ --}}

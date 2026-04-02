@@ -43,6 +43,9 @@ class UsageTracking implements AiMiddlewareInterface
             'status' => 'completed',
             'reasoning_chain' => $response->reasoningChain,
             'has_reasoning' => $hasReasoning,
+            'classified_complexity' => $request->classifiedComplexity?->value,
+            'budget_pressure_level' => $request->budgetPressureLevel?->value,
+            'escalation_attempts' => $request->escalationAttempts,
         ]);
 
         return $response;

@@ -4,6 +4,7 @@ namespace App\Livewire\Dashboard;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Agent\Models\AiRun;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Budget\Services\SpendForecaster;
@@ -97,12 +98,26 @@ class DashboardPage extends Component
             });
         }
 
+        $aiRoutingStats = Cache::remember("dashboard.ai_routing:{$teamId}", 30, function () {
+            $since = now()->subDay();
+
+            return [
+                'total' => AiRun::where('created_at', '>=', $since)->count(),
+                'light' => AiRun::where('created_at', '>=', $since)->where('classified_complexity', 'light')->count(),
+                'standard' => AiRun::where('created_at', '>=', $since)->where('classified_complexity', 'standard')->count(),
+                'heavy' => AiRun::where('created_at', '>=', $since)->where('classified_complexity', 'heavy')->count(),
+                'escalated' => AiRun::where('created_at', '>=', $since)->where('escalation_attempts', '>', 0)->count(),
+                'verification_failed' => AiRun::where('created_at', '>=', $since)->where('verification_passed', false)->count(),
+            ];
+        });
+
         return view('livewire.dashboard.dashboard-page', array_merge($kpis, [
             'activeExperiments' => $activeExperiments,
             'alerts' => $alerts,
             'hasProviderKeys' => $hasProviderKeys,
             'chatbotKpis' => $chatbotKpis,
             'chatbotEnabled' => $chatbotEnabled,
+            'aiRoutingStats' => $aiRoutingStats,
         ]))->layout('layouts.app', ['header' => 'Dashboard']);
     }
 

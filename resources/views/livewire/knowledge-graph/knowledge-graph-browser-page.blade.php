@@ -174,7 +174,13 @@
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
+                                    <button wire:click="viewFact('{{ $fact->id }}')"
+                                            class="text-xs text-blue-600 hover:text-blue-800"
+                                            title="View details">View</button>
                                     @if(! $fact->invalid_at)
+                                        <button wire:click="editFact('{{ $fact->id }}')"
+                                                class="text-xs text-indigo-600 hover:text-indigo-800"
+                                                title="Edit fact">Edit</button>
                                         <button wire:click="invalidateFact('{{ $fact->id }}')"
                                                 class="text-xs text-amber-600 hover:text-amber-800"
                                                 title="Invalidate fact">Invalidate</button>
@@ -194,4 +200,147 @@
             </div>
         @endif
     </div>
+
+    {{-- View Fact Modal --}}
+    @if($viewingFact)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click.self="closeView">
+            <div class="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-semibold text-gray-900">Fact Details</h3>
+                    <button wire:click="closeView" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <dl class="space-y-3 text-sm">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Source</dt>
+                            <dd class="text-gray-900">{{ $viewingFact['source_name'] }}</dd>
+                            <dd class="text-xs text-gray-500">{{ $viewingFact['source_type'] }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Target</dt>
+                            <dd class="text-gray-900">{{ $viewingFact['target_name'] }}</dd>
+                            <dd class="text-xs text-gray-500">{{ $viewingFact['target_type'] }}</dd>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Relation Type</dt>
+                            <dd><span class="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ $viewingFact['relation_type'] }}</span></dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Edge Type</dt>
+                            <dd class="text-gray-900">{{ $viewingFact['edge_type'] }}</dd>
+                        </div>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500">Fact</dt>
+                        <dd class="text-gray-900 whitespace-pre-wrap">{{ $viewingFact['fact'] }}</dd>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Valid at</dt>
+                            <dd class="text-gray-700">{{ $viewingFact['valid_at'] ?? '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Invalid at</dt>
+                            <dd class="text-gray-700">{{ $viewingFact['invalid_at'] ?? '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Expired at</dt>
+                            <dd class="text-gray-700">{{ $viewingFact['expired_at'] ?? '—' }}</dd>
+                        </div>
+                    </div>
+                    @if(!empty($viewingFact['attributes']))
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Attributes</dt>
+                            <dd class="mt-1 rounded-lg bg-gray-50 p-2 text-xs font-mono text-gray-700">{{ json_encode($viewingFact['attributes'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</dd>
+                        </div>
+                    @endif
+                    <div class="grid grid-cols-2 gap-4 border-t border-gray-100 pt-3">
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Created</dt>
+                            <dd class="text-gray-700">{{ $viewingFact['created_at'] ?? '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-gray-500">Updated</dt>
+                            <dd class="text-gray-700">{{ $viewingFact['updated_at'] ?? '—' }}</dd>
+                        </div>
+                    </div>
+                </dl>
+                <div class="mt-5 flex justify-end">
+                    <button wire:click="closeView" class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Close</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Edit Fact Modal --}}
+    @if($editingFactId)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click.self="cancelEdit">
+            <div class="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-semibold text-gray-900">Edit Fact</h3>
+                    <button wire:click="cancelEdit" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Source entity name</label>
+                            <input wire:model="editSourceName" type="text"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                            @error('editSourceName') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Source entity type</label>
+                            <select wire:model="editSourceType"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                @foreach($entityTypes as $et)
+                                    <option value="{{ $et->value }}">{{ $et->label() }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Relation type</label>
+                        <input wire:model="editRelationType" type="text"
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                        @error('editRelationType') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Target entity name</label>
+                            <input wire:model="editTargetName" type="text"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                            @error('editTargetName') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Target entity type</label>
+                            <select wire:model="editTargetType"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                @foreach($entityTypes as $et)
+                                    <option value="{{ $et->value }}">{{ $et->label() }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Fact statement</label>
+                        <textarea wire:model="editFact" rows="3"
+                                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"></textarea>
+                        @error('editFact') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end gap-2">
+                    <button wire:click="cancelEdit"
+                            class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button wire:click="updateFact"
+                            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

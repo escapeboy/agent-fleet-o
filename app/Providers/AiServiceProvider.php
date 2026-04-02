@@ -12,6 +12,7 @@ use App\Infrastructure\AI\Gateways\LocalBridgeGateway;
 use App\Infrastructure\AI\Gateways\PortkeyGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
+use App\Infrastructure\AI\Middleware\BudgetPressureRouting;
 use App\Infrastructure\AI\Middleware\ContextCompaction;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\LangfuseExportMiddleware;
@@ -20,6 +21,7 @@ use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\AI\Services\CircuitBreaker;
+use App\Infrastructure\AI\Services\EscalationStrategy;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
@@ -34,6 +36,7 @@ class AiServiceProvider extends ServiceProvider
     {
         $this->app->singleton(CostCalculator::class);
         $this->app->singleton(CircuitBreaker::class);
+        $this->app->singleton(EscalationStrategy::class);
         $this->app->singleton(LocalAgentDiscovery::class);
         $this->app->singleton(LocalLlmDiscovery::class);
         $this->app->singleton(LocalLlmUrlValidator::class);
@@ -60,6 +63,7 @@ class AiServiceProvider extends ServiceProvider
 
             $middleware = [
                 $app->make(RateLimiting::class),
+                $app->make(BudgetPressureRouting::class),
                 $app->make(BudgetEnforcement::class),
                 $app->make(IdempotencyCheck::class),
                 $app->make(SemanticCache::class),
@@ -119,6 +123,7 @@ class AiServiceProvider extends ServiceProvider
                     ? $app->make(LocalAgentGateway::class)
                     : null,
                 bridgeGateway: $app->make(LocalBridgeGateway::class),
+                escalationStrategy: $app->make(EscalationStrategy::class),
             );
         });
     }

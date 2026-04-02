@@ -6,6 +6,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\CircuitBreaker;
+use App\Infrastructure\AI\Services\EscalationStrategy;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Exceptions\PrismRateLimitedException;
 use Throwable;
@@ -21,6 +22,7 @@ class FallbackAiGateway implements AiGatewayInterface
         private readonly array $fallbackChains = [],
         private readonly ?LocalAgentGateway $localGateway = null,
         private readonly ?LocalBridgeGateway $bridgeGateway = null,
+        private readonly ?EscalationStrategy $escalationStrategy = null,
     ) {}
 
     public function complete(AiRequestDTO $request): AiResponseDTO
@@ -143,6 +145,12 @@ class FallbackAiGateway implements AiGatewayInterface
                 Log::warning("AI Gateway fallback: {$providerName}/{$modelName} failed", [
                     'error' => $e->getMessage(),
                 ]);
+
+                // Try model-tier escalation for quality failures before moving to next provider
+                $escalatedResponse = $this->attemptEscalation($request, $e, $providerName, $modelName);
+                if ($escalatedResponse !== null) {
+                    return $escalatedResponse;
+                }
             }
         }
 
@@ -255,6 +263,12 @@ class FallbackAiGateway implements AiGatewayInterface
                 $firstException ??= $e;
                 $lastException = $e;
                 $this->circuitBreaker->recordFailure($providerName);
+
+                // Try model-tier escalation for quality failures before moving to next provider
+                $escalatedResponse = $this->attemptStreamEscalation($request, $e, $providerName, $modelName, $onChunk);
+                if ($escalatedResponse !== null) {
+                    return $escalatedResponse;
+                }
             }
         }
 
@@ -304,5 +318,121 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         return (bool) config("llm_providers.{$provider}.local");
+    }
+
+    /**
+     * Attempt model-tier escalation for quality failures (complete path).
+     */
+    private function attemptEscalation(
+        AiRequestDTO $request,
+        Throwable $exception,
+        string $providerName,
+        string $modelName,
+    ): ?AiResponseDTO {
+        if (! $this->escalationStrategy) {
+            return null;
+        }
+
+        $failureType = $this->escalationStrategy->classifyFailure($exception);
+
+        if (! $failureType->shouldEscalateModel()) {
+            return null;
+        }
+
+        $escalated = $this->escalationStrategy->getEscalatedModel($request, $providerName, $modelName);
+
+        if ($escalated === null) {
+            return null;
+        }
+
+        try {
+            $escalatedRequest = $this->buildEscalatedRequest($request, $escalated['provider'], $escalated['model']);
+            $response = $this->gateway->complete($escalatedRequest);
+            $this->circuitBreaker->recordSuccess($escalated['provider']);
+
+            return $response;
+        } catch (Throwable $e) {
+            Log::warning("AI Gateway: escalation to {$escalated['provider']}/{$escalated['model']} failed", [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Attempt model-tier escalation for quality failures (stream path).
+     */
+    private function attemptStreamEscalation(
+        AiRequestDTO $request,
+        Throwable $exception,
+        string $providerName,
+        string $modelName,
+        ?callable $onChunk,
+    ): ?AiResponseDTO {
+        if (! $this->escalationStrategy) {
+            return null;
+        }
+
+        $failureType = $this->escalationStrategy->classifyFailure($exception);
+
+        if (! $failureType->shouldEscalateModel()) {
+            return null;
+        }
+
+        $escalated = $this->escalationStrategy->getEscalatedModel($request, $providerName, $modelName);
+
+        if ($escalated === null) {
+            return null;
+        }
+
+        try {
+            $escalatedRequest = $this->buildEscalatedRequest($request, $escalated['provider'], $escalated['model']);
+            $response = $this->gateway->stream($escalatedRequest, $onChunk);
+            $this->circuitBreaker->recordSuccess($escalated['provider']);
+
+            return $response;
+        } catch (Throwable $e) {
+            Log::warning("AI Gateway: stream escalation to {$escalated['provider']}/{$escalated['model']} failed", [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Build a new AiRequestDTO with escalated provider/model and incremented attempts.
+     */
+    private function buildEscalatedRequest(AiRequestDTO $request, string $provider, string $model): AiRequestDTO
+    {
+        return new AiRequestDTO(
+            provider: $provider,
+            model: $model,
+            systemPrompt: $request->systemPrompt,
+            userPrompt: $request->userPrompt,
+            maxTokens: $request->maxTokens,
+            outputSchema: $request->outputSchema,
+            userId: $request->userId,
+            teamId: $request->teamId,
+            experimentId: $request->experimentId,
+            experimentStageId: $request->experimentStageId,
+            agentId: $request->agentId,
+            purpose: $request->purpose,
+            idempotencyKey: $request->idempotencyKey,
+            temperature: $request->temperature,
+            fallbackChain: $request->fallbackChain,
+            tools: $request->tools,
+            maxSteps: $request->maxSteps,
+            toolChoice: $request->toolChoice,
+            providerName: $request->providerName,
+            thinkingBudget: $request->thinkingBudget,
+            workingDirectory: $request->workingDirectory,
+            enablePromptCaching: $request->enablePromptCaching,
+            complexity: $request->complexity,
+            classifiedComplexity: $request->classifiedComplexity,
+            budgetPressureLevel: $request->budgetPressureLevel,
+            escalationAttempts: $request->escalationAttempts + 1,
+        );
     }
 }

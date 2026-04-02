@@ -7,6 +7,7 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTaskStatus;
 use App\Domain\Experiment\Enums\StageStatus;
+use App\Domain\Experiment\Events\StuckPatternDetected;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentTask;
@@ -18,10 +19,12 @@ use App\Domain\Experiment\Pipeline\RunEvaluationStage;
 use App\Domain\Experiment\Pipeline\RunPlanningStage;
 use App\Domain\Experiment\Pipeline\RunScoringStage;
 use App\Domain\Experiment\Services\CheckpointManager;
+use App\Domain\Experiment\Services\StuckDetector;
 use App\Domain\Project\Enums\ProjectRunStatus;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
+use App\Models\GlobalSetting;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
@@ -53,9 +56,10 @@ class RecoverStuckTasks extends Command
         $resolved = $this->resolveStuckStages();
         $steps = $this->recoverStuckPlaybookSteps();
         $experiments = $this->recoverStuckExperiments();
+        $patterns = $this->detectStuckPatterns();
         $runs = $this->syncStaleProjectRuns();
 
-        $this->info("Recovered {$recovered} stuck task(s), resolved {$resolved} stuck stage(s), {$steps} stuck step(s), {$experiments} stuck experiment(s), {$runs} stale project run(s).");
+        $this->info("Recovered {$recovered} stuck task(s), resolved {$resolved} stuck stage(s), {$steps} stuck step(s), {$experiments} stuck experiment(s), {$patterns} stuck pattern(s), {$runs} stale project run(s).");
 
         return self::SUCCESS;
     }
@@ -534,6 +538,57 @@ class RecoverStuckTasks extends Command
         }
 
         return $synced;
+    }
+
+    /**
+     * Run sliding-window pattern analysis on active experiments to detect
+     * stuck patterns that simple timeouts miss (oscillations, loops, stalls, budget drain).
+     */
+    private function detectStuckPatterns(): int
+    {
+        $stuckEnabled = GlobalSetting::get('ai_routing.stuck_detection_enabled') ?? config('ai_routing.stuck_detection.enabled', true);
+        if (! $stuckEnabled) {
+            return 0;
+        }
+
+        $detector = app(StuckDetector::class);
+
+        $activeExperiments = Experiment::withoutGlobalScopes()
+            ->whereNotIn('status', array_map(
+                fn (ExperimentStatus $s) => $s->value,
+                [...ExperimentStatus::terminalStates(), ExperimentStatus::Paused],
+            ))
+            ->get();
+
+        $detected = 0;
+
+        foreach ($activeExperiments as $experiment) {
+            $pattern = $detector->analyze($experiment);
+
+            if ($pattern === null) {
+                continue;
+            }
+
+            $details = $detector->getDetails($experiment, $pattern);
+
+            Log::warning('StuckDetector: pattern detected', [
+                'experiment_id' => $experiment->id,
+                'pattern' => $pattern->value,
+                'severity' => $pattern->severity(),
+                'action' => $pattern->defaultAction(),
+            ]);
+
+            event(new StuckPatternDetected(
+                experimentId: $experiment->id,
+                pattern: $pattern,
+                severity: $pattern->severity(),
+                details: $details,
+            ));
+
+            $detected++;
+        }
+
+        return $detected;
     }
 
     private function transitionExperiment(string $experimentId, ExperimentStatus $expectedState, ExperimentStatus $toState, string $reason): void

@@ -9,6 +9,13 @@ use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Events\ExperimentContextApproachingLimit;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Experiment\Pipeline\Contracts\StageVerifier;
+use App\Domain\Experiment\Pipeline\Verification\BuildingVerifier;
+use App\Domain\Experiment\Pipeline\Verification\EvaluatingVerifier;
+use App\Domain\Experiment\Pipeline\Verification\ExecutingVerifier;
+use App\Domain\Experiment\Pipeline\Verification\MetricsVerifier;
+use App\Domain\Experiment\Pipeline\Verification\PlanningVerifier;
+use App\Domain\Experiment\Pipeline\Verification\ScoringVerifier;
 use App\Domain\Experiment\Services\CheckpointManager;
 use App\Domain\Experiment\Services\PipelineContextCompressor;
 use App\Domain\Shared\Models\Team;
@@ -146,7 +153,70 @@ abstract class BaseStageJob implements ShouldQueue
         $startTime = hrtime(true);
 
         try {
-            $this->process($experiment, $stage);
+            $verificationEnabled = GlobalSetting::get('ai_routing.verification_enabled') ?? config('ai_routing.verification.enabled', true);
+            $maxVerificationRetries = (int) (GlobalSetting::get('ai_routing.verification_max_retries') ?? config('ai_routing.verification.max_retries', 2));
+            $timeoutWarning = (int) config('ai_routing.verification.timeout_warning_seconds', 200);
+            $verificationAttempt = 0;
+
+            do {
+                $this->process($experiment, $stage);
+
+                // Run verification gate if enabled
+                if ($verificationEnabled) {
+                    $freshStage = $stage->fresh();
+                    $verification = $this->verifyStageOutput($experiment, $freshStage);
+
+                    if (! $verification['passed']) {
+                        $verificationAttempt++;
+
+                        if ($verificationAttempt <= $maxVerificationRetries) {
+                            $elapsedSeconds = (int) ((hrtime(true) - $startTime) / 1_000_000_000);
+
+                            Log::warning('BaseStageJob: Verification failed, retrying within job', [
+                                'experiment_id' => $this->experimentId,
+                                'stage' => $this->stageType()->value,
+                                'attempt' => $verificationAttempt,
+                                'max_retries' => $maxVerificationRetries,
+                                'elapsed_seconds' => $elapsedSeconds,
+                                'errors' => $verification['errors'],
+                            ]);
+
+                            if ($elapsedSeconds >= $timeoutWarning) {
+                                Log::warning('BaseStageJob: Verification retry approaching timeout', [
+                                    'experiment_id' => $this->experimentId,
+                                    'stage' => $this->stageType()->value,
+                                    'elapsed_seconds' => $elapsedSeconds,
+                                    'timeout_warning' => $timeoutWarning,
+                                ]);
+                            }
+
+                            // Inject verification errors into output so the next AI call can see them
+                            $stage->update([
+                                'retry_count' => $freshStage->retry_count + 1,
+                                'output_snapshot' => array_merge($freshStage->output_snapshot ?? [], [
+                                    '_verification_errors' => $verification['errors'],
+                                    '_verification_attempt' => $verificationAttempt,
+                                ]),
+                            ]);
+
+                            // Refresh stage for the next process() iteration
+                            $stage = $stage->fresh();
+
+                            continue;
+                        }
+
+                        // No retries left — log and let existing completion logic proceed
+                        Log::error('BaseStageJob: Verification failed after all retries', [
+                            'experiment_id' => $this->experimentId,
+                            'stage' => $this->stageType()->value,
+                            'attempts' => $verificationAttempt,
+                            'errors' => $verification['errors'],
+                        ]);
+                    }
+                }
+
+                break;
+            } while (true);
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
@@ -171,6 +241,7 @@ abstract class BaseStageJob implements ShouldQueue
                 'experiment_id' => $this->experimentId,
                 'stage' => $this->stageType()->value,
                 'duration_ms' => $durationMs,
+                'verification_attempts' => $verificationAttempt,
             ]);
 
             $this->checkContextHealth($experiment);
@@ -501,6 +572,32 @@ abstract class BaseStageJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    protected function resolveVerifier(): ?StageVerifier
+    {
+        return match ($this->stageType()) {
+            StageType::Scoring => new ScoringVerifier,
+            StageType::Planning => new PlanningVerifier,
+            StageType::Building => new BuildingVerifier,
+            StageType::Executing => new ExecutingVerifier,
+            StageType::CollectingMetrics => new MetricsVerifier,
+            StageType::Evaluating => new EvaluatingVerifier,
+        };
+    }
+
+    /**
+     * @return array{passed: bool, errors: array<string>}
+     */
+    protected function verifyStageOutput(Experiment $experiment, ExperimentStage $stage): array
+    {
+        $verifier = $this->resolveVerifier();
+
+        if (! $verifier) {
+            return ['passed' => true, 'errors' => []];
+        }
+
+        return $verifier->verify($experiment, $stage);
     }
 
     protected function generateIdempotencyKey(string $suffix = ''): string

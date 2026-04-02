@@ -31,7 +31,7 @@ class SearchKgFactsAction
                 ->selectRaw('1 - (fact_embedding <=> ?) AS similarity', [$queryEmbedding])
                 ->where('team_id', $teamId)
                 ->whereNotNull('fact_embedding')
-                ->havingRaw('1 - (fact_embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
+                ->whereRaw('1 - (fact_embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
                 ->with(['sourceEntity', 'targetEntity'])
                 ->orderByDesc('similarity');
 

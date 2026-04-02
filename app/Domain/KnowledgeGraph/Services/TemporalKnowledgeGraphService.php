@@ -76,7 +76,7 @@ class TemporalKnowledgeGraphService
                 ->select('kg_edges.*')
                 ->selectRaw('1 - (fact_embedding <=> ?) AS similarity', [$queryEmbedding])
                 ->where('team_id', $teamId)
-                ->havingRaw('1 - (fact_embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
+                ->whereRaw('1 - (fact_embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
                 ->with(['sourceEntity', 'targetEntity'])
                 ->orderByDesc('similarity');
 

@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Experiments;
 
+use App\Domain\Agent\Models\AiRun;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Infrastructure\AI\DTOs\ContextHealthDTO;
 use App\Infrastructure\AI\Services\ContextHealthService;
 use Livewire\Component;
@@ -34,9 +36,23 @@ class ExperimentTimeline extends Component
             // Non-critical display feature — silently skip if unavailable.
         }
 
+        $stageRuns = AiRun::withoutGlobalScopes()
+            ->where('experiment_id', $this->experiment->id)
+            ->whereNotNull('experiment_stage_id')
+            ->get()
+            ->groupBy('experiment_stage_id');
+
+        $stuckTransitions = ExperimentStateTransition::withoutGlobalScopes()
+            ->where('experiment_id', $this->experiment->id)
+            ->where('to_state', 'paused')
+            ->whereNotNull('metadata')
+            ->get();
+
         return view('livewire.experiments.experiment-timeline', [
             'stages' => $stages,
             'contextHealth' => $contextHealth,
+            'stageRuns' => $stageRuns,
+            'stuckTransitions' => $stuckTransitions,
         ]);
     }
 }

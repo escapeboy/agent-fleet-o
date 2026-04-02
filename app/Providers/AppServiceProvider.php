@@ -10,11 +10,14 @@ use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Domain\Chatbot\Listeners\DeliverChatbotWorkflowResultListener;
+use App\Domain\Chatbot\Listeners\ExtractChatMemoriesListener;
 use App\Domain\Credential\Observers\SecretScanObserver;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
+use App\Domain\Experiment\Events\StuckPatternDetected;
 use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
 use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
+use App\Domain\Experiment\Listeners\HandleStuckPattern;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
@@ -81,6 +84,7 @@ use App\Infrastructure\Mail\TeamAwareMailChannel;
 use App\Livewire\Hooks\PluginDispatchHook;
 use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Models\User;
+use Barsy\Events\ChatMessageCompleted;
 use Carbon\CarbonInterval;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
@@ -337,11 +341,17 @@ class AppServiceProvider extends ServiceProvider
         // Memory: extract success pattern when experiment reaches Completed
         Event::listen(ExperimentTransitioned::class, ExtractSuccessPatternListener::class);
 
+        // Stuck pattern detection: handle detected stuck patterns (notify/pause/kill)
+        Event::listen(StuckPatternDetected::class, HandleStuckPattern::class);
+
         // Chatbot: deliver workflow result to chatbot message on experiment completion
         Event::listen(ExperimentTransitioned::class, DeliverChatbotWorkflowResultListener::class);
 
         // Chatbot: capture operator corrections as learning entries
         Event::listen(ChatbotResponseApprovedEvent::class, CaptureResponseCorrectionListener::class);
+
+        // Barsy chatbot: extract durable facts from chat exchanges into proposed memories
+        Event::listen(ChatMessageCompleted::class, ExtractChatMemoriesListener::class);
 
         // Skill evolution: analyze completed executions and auto-propose improvements
         Event::listen(AgentExecuted::class, DispatchEvolutionAnalysisListener::class);
