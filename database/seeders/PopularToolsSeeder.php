@@ -3031,6 +3031,81 @@ class PopularToolsSeeder extends Seeder
                 ],
                 'settings' => ['timeout' => 30],
             ],
+
+            // --- Secret & Password Management ---
+            [
+                'name' => '1Password',
+                'slug' => '1password',
+                'description' => 'Access 1Password vaults — list vaults, search items, read/create/update/delete passwords, generate secure passwords. Requires a 1Password Service Account token.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@takescake/1password-mcp'],
+                    'env' => ['OP_SERVICE_ACCOUNT_TOKEN' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'vault_list',
+                        'description' => 'List all vaults accessible to the service account',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [],
+                            'required' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'item_lookup',
+                        'description' => 'Look up a specific item by name or ID in a vault',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'vault' => ['type' => 'string', 'description' => 'Vault name or ID'],
+                                'item' => ['type' => 'string', 'description' => 'Item name or ID'],
+                            ],
+                            'required' => ['vault', 'item'],
+                        ],
+                    ],
+                    [
+                        'name' => 'password_read',
+                        'description' => 'Read a specific field from a 1Password item (e.g. op://vault/item/field)',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'reference' => ['type' => 'string', 'description' => 'Secret reference (e.g. op://vault/item/password)'],
+                            ],
+                            'required' => ['reference'],
+                        ],
+                    ],
+                    [
+                        'name' => 'password_create',
+                        'description' => 'Create a new login or password item in a vault',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'vault' => ['type' => 'string', 'description' => 'Vault name or ID'],
+                                'title' => ['type' => 'string', 'description' => 'Item title'],
+                                'username' => ['type' => 'string', 'description' => 'Username (optional)'],
+                                'password' => ['type' => 'string', 'description' => 'Password (auto-generated if omitted)'],
+                                'url' => ['type' => 'string', 'description' => 'Website URL (optional)'],
+                            ],
+                            'required' => ['vault', 'title'],
+                        ],
+                    ],
+                    [
+                        'name' => 'password_generate',
+                        'description' => 'Generate a secure random password with configurable length and character types',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'length' => ['type' => 'integer', 'description' => 'Password length (default 32)'],
+                            ],
+                            'required' => [],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
         ];
     }
 }

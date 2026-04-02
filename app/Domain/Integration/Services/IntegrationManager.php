@@ -22,6 +22,7 @@ use App\Domain\Integration\Drivers\Mailchimp\MailchimpIntegrationDriver;
 use App\Domain\Integration\Drivers\Make\MakeIntegrationDriver;
 use App\Domain\Integration\Drivers\Netlify\NetlifyIntegrationDriver;
 use App\Domain\Integration\Drivers\Notion\NotionIntegrationDriver;
+use App\Domain\Integration\Drivers\OnePassword\OnePasswordIntegrationDriver;
 use App\Domain\Integration\Drivers\PagerDuty\PagerDutyIntegrationDriver;
 use App\Domain\Integration\Drivers\Salesforce\SalesforceIntegrationDriver;
 use App\Domain\Integration\Drivers\Sentry\SentryIntegrationDriver;
@@ -213,5 +214,10 @@ class IntegrationManager extends Manager
     public function createApifyDriver(): IntegrationDriverInterface
     {
         return $this->container->make(ApifyIntegrationDriver::class);
+    }
+
+    public function create1passwordDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(OnePasswordIntegrationDriver::class);
     }
 }
