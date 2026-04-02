@@ -34,6 +34,10 @@ class AiRun extends Model
         'status',
         'reasoning_chain',
         'has_reasoning',
+        'classified_complexity',
+        'budget_pressure_level',
+        'escalation_attempts',
+        'verification_passed',
     ];
 
     protected function casts(): array

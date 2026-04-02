@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\AI\DTOs;
 
+use App\Infrastructure\AI\Enums\BudgetPressureLevel;
+use App\Infrastructure\AI\Enums\RequestComplexity;
 use Prism\Prism\Schema\ObjectSchema;
 use Prism\Prism\Tool;
 
@@ -35,6 +37,14 @@ final readonly class AiRequestDTO
         public ?string $workingDirectory = null,
         /** Enable Anthropic prompt caching — marks system prompt and tool definitions with cache_control: ephemeral */
         public bool $enablePromptCaching = false,
+        /** Explicit complexity hint — overrides heuristic classification when set */
+        public ?RequestComplexity $complexity = null,
+        /** Computed complexity after classification (set by BudgetPressureRouting middleware) */
+        public ?RequestComplexity $classifiedComplexity = null,
+        /** Budget pressure level at time of request (set by BudgetPressureRouting middleware) */
+        public ?BudgetPressureLevel $budgetPressureLevel = null,
+        /** Number of model-tier escalation attempts made (set by FallbackAiGateway) */
+        public int $escalationAttempts = 0,
     ) {}
 
     public function isStructured(): bool

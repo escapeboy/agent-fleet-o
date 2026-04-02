@@ -87,6 +87,40 @@
             <x-stat-card label="Skill Executions (24h)" :value="number_format($skillExecutions24h)" />
         </div>
 
+        {{-- AI Routing (24h) --}}
+        @if(($aiRoutingStats['total'] ?? 0) > 0)
+            <div class="col-span-12 sm:col-span-4 rounded-xl border border-gray-200 bg-white p-5">
+                <p class="text-xs font-medium uppercase tracking-wider text-gray-400">AI Routing (24h)</p>
+                <div class="mt-3 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Light</span>
+                        <span class="font-medium text-gray-900">{{ $aiRoutingStats['light'] }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Standard</span>
+                        <span class="font-medium text-gray-900">{{ $aiRoutingStats['standard'] }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Heavy</span>
+                        <span class="font-medium text-gray-900">{{ $aiRoutingStats['heavy'] }}</span>
+                    </div>
+                    @if(($aiRoutingStats['escalated'] ?? 0) > 0)
+                        <div class="flex justify-between text-sm">
+                            <span class="text-amber-600">Escalated</span>
+                            <span class="font-medium text-amber-700">{{ $aiRoutingStats['escalated'] }}</span>
+                        </div>
+                    @endif
+                    @if(($aiRoutingStats['verification_failed'] ?? 0) > 0)
+                        <div class="flex justify-between text-sm">
+                            <span class="text-red-600">Verification Failed</span>
+                            <span class="font-medium text-red-700">{{ $aiRoutingStats['verification_failed'] }}</span>
+                        </div>
+                    @endif
+                </div>
+                <a href="{{ route('metrics.ai-routing') }}" class="mt-3 block text-xs text-primary-600 hover:text-primary-800">View details &rarr;</a>
+            </div>
+        @endif
+
     </div>
 
     {{-- Usage Progress Bar --}}

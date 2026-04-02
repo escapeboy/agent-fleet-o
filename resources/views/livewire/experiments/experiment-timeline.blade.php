@@ -42,6 +42,55 @@
                 </div>
             </button>
 
+            {{-- Routing metadata badges (shown inline on collapsed stage) --}}
+            @php
+                $latestRun = ($stageRuns[$stage->id] ?? collect())->sortByDesc('created_at')->first();
+                $verificationErrors = is_array($stage->output_snapshot) ? ($stage->output_snapshot['_verification_errors'] ?? null) : null;
+            @endphp
+            @if($latestRun && ($latestRun->classified_complexity || $latestRun->budget_pressure_level || $latestRun->escalation_attempts > 0 || $latestRun->verification_passed !== null))
+                <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 px-4 py-2 text-xs">
+                    @if($latestRun->classified_complexity)
+                        @php
+                            $complexityColor = match($latestRun->classified_complexity) {
+                                'light' => 'bg-green-100 text-green-700',
+                                'heavy' => 'bg-purple-100 text-purple-700',
+                                default => 'bg-blue-100 text-blue-700',
+                            };
+                        @endphp
+                        <span class="rounded px-1.5 py-0.5 {{ $complexityColor }}">{{ $latestRun->classified_complexity }}</span>
+                    @endif
+                    @if($latestRun->budget_pressure_level)
+                        @php
+                            $pressureColor = match($latestRun->budget_pressure_level) {
+                                'high' => 'bg-red-100 text-red-700',
+                                'medium' => 'bg-orange-100 text-orange-700',
+                                'low' => 'bg-yellow-100 text-yellow-700',
+                                default => 'bg-gray-100 text-gray-500',
+                            };
+                        @endphp
+                        <span class="rounded px-1.5 py-0.5 {{ $pressureColor }}">{{ $latestRun->budget_pressure_level }} pressure</span>
+                    @endif
+                    @if($latestRun->escalation_attempts > 0)
+                        <span class="text-amber-600">&uarr; Escalated {{ $latestRun->escalation_attempts }}x</span>
+                    @endif
+                    @if($latestRun->verification_passed !== null)
+                        @if($latestRun->verification_passed)
+                            <span class="text-green-600">&#10003; Verified</span>
+                        @else
+                            <span class="text-red-600">&#10007; Verification failed</span>
+                        @endif
+                    @endif
+                </div>
+            @endif
+
+            {{-- Verification errors from output_snapshot --}}
+            @if($verificationErrors)
+                <div class="flex items-center gap-1.5 border-t border-yellow-100 bg-yellow-50 px-4 py-1.5 text-xs text-yellow-700">
+                    <svg class="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                    <span>Verification failed ({{ is_array($verificationErrors) ? count($verificationErrors) : 1 }} {{ is_array($verificationErrors) && count($verificationErrors) !== 1 ? 'errors' : 'error' }})</span>
+                </div>
+            @endif
+
             @if($expandedStageId === $stage->id && $stage->output_snapshot)
                 <div x-data="{ showRaw: false }" class="border-t border-gray-200 bg-gray-50 px-4 py-3">
                     <div class="mb-2 flex items-center justify-end">
@@ -70,4 +119,30 @@
             <p class="text-sm text-gray-400">No stages yet. Start the experiment to begin the pipeline.</p>
         </div>
     @endforelse
+
+    {{-- Stuck pattern events --}}
+    @if($stuckTransitions->isNotEmpty())
+        @php
+            $stuckWithPattern = $stuckTransitions->filter(fn ($t) => !empty($t->metadata['stuck_pattern']));
+        @endphp
+        @if($stuckWithPattern->isNotEmpty())
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <p class="text-xs font-medium uppercase tracking-wider text-amber-600">Stuck Patterns Detected</p>
+                <div class="mt-2 space-y-1.5">
+                    @foreach($stuckWithPattern as $transition)
+                        <div class="flex items-center gap-2 text-xs text-amber-700">
+                            <svg class="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                            <span>
+                                {{ $transition->metadata['stuck_pattern'] }}
+                                @if($transition->reason)
+                                    &mdash; {{ $transition->reason }}
+                                @endif
+                                <span class="text-amber-500">({{ $transition->created_at->diffForHumans() }})</span>
+                            </span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+    @endif
 </div>

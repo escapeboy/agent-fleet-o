@@ -90,6 +90,25 @@ class GlobalSettingsPage extends Component
     // Update check settings
     public bool $updateCheckEnabled = true;
 
+    // AI Routing
+    public bool $budgetPressureEnabled = true;
+
+    public int $budgetPressureLow = 50;
+
+    public int $budgetPressureMedium = 75;
+
+    public int $budgetPressureHigh = 90;
+
+    public bool $escalationEnabled = true;
+
+    public int $escalationMaxAttempts = 2;
+
+    public bool $verificationEnabled = true;
+
+    public int $verificationMaxRetries = 2;
+
+    public bool $stuckDetectionEnabled = true;
+
     // MCP Import
     public string $mcpJsonInput = '';
 
@@ -141,6 +160,17 @@ class GlobalSettingsPage extends Component
 
         $this->assistantProvider = GlobalSetting::get('assistant_llm_provider', 'anthropic') ?? 'anthropic';
         $this->assistantModel = GlobalSetting::get('assistant_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
+
+        // AI Routing
+        $this->budgetPressureEnabled = (bool) GlobalSetting::get('ai_routing.budget_pressure_enabled', config('ai_routing.budget_pressure.enabled', true));
+        $this->budgetPressureLow = (int) GlobalSetting::get('ai_routing.budget_pressure_low', config('ai_routing.budget_pressure.thresholds.low', 50));
+        $this->budgetPressureMedium = (int) GlobalSetting::get('ai_routing.budget_pressure_medium', config('ai_routing.budget_pressure.thresholds.medium', 75));
+        $this->budgetPressureHigh = (int) GlobalSetting::get('ai_routing.budget_pressure_high', config('ai_routing.budget_pressure.thresholds.high', 90));
+        $this->escalationEnabled = (bool) GlobalSetting::get('ai_routing.escalation_enabled', config('ai_routing.escalation.enabled', true));
+        $this->escalationMaxAttempts = (int) GlobalSetting::get('ai_routing.escalation_max_attempts', config('ai_routing.escalation.max_attempts', 2));
+        $this->verificationEnabled = (bool) GlobalSetting::get('ai_routing.verification_enabled', config('ai_routing.verification.enabled', true));
+        $this->verificationMaxRetries = (int) GlobalSetting::get('ai_routing.verification_max_retries', config('ai_routing.verification.max_retries', 2));
+        $this->stuckDetectionEnabled = (bool) GlobalSetting::get('ai_routing.stuck_detection_enabled', config('ai_routing.stuck_detection.enabled', true));
     }
 
     public function saveBudgetSettings(): void
@@ -285,6 +315,29 @@ class GlobalSettingsPage extends Component
         Blacklist::where('id', $id)->delete();
 
         session()->flash('message', 'Blacklist entry removed.');
+    }
+
+    public function saveAiRoutingSettings(): void
+    {
+        $this->validate([
+            'budgetPressureLow' => 'required|integer|min:0|max:100',
+            'budgetPressureMedium' => 'required|integer|min:0|max:100',
+            'budgetPressureHigh' => 'required|integer|min:0|max:100',
+            'escalationMaxAttempts' => 'required|integer|min:1|max:5',
+            'verificationMaxRetries' => 'required|integer|min:1|max:5',
+        ]);
+
+        GlobalSetting::set('ai_routing.budget_pressure_enabled', $this->budgetPressureEnabled);
+        GlobalSetting::set('ai_routing.budget_pressure_low', $this->budgetPressureLow);
+        GlobalSetting::set('ai_routing.budget_pressure_medium', $this->budgetPressureMedium);
+        GlobalSetting::set('ai_routing.budget_pressure_high', $this->budgetPressureHigh);
+        GlobalSetting::set('ai_routing.escalation_enabled', $this->escalationEnabled);
+        GlobalSetting::set('ai_routing.escalation_max_attempts', $this->escalationMaxAttempts);
+        GlobalSetting::set('ai_routing.verification_enabled', $this->verificationEnabled);
+        GlobalSetting::set('ai_routing.verification_max_retries', $this->verificationMaxRetries);
+        GlobalSetting::set('ai_routing.stuck_detection_enabled', $this->stuckDetectionEnabled);
+
+        session()->flash('message', 'AI routing settings saved.');
     }
 
     public function saveDefaultLlm(): void
