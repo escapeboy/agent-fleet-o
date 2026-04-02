@@ -66,6 +66,11 @@ class CrewExecution extends Model
         return $this->hasMany(CrewTaskExecution::class)->orderBy('sort_order');
     }
 
+    public function chatMessages(): HasMany
+    {
+        return $this->hasMany(CrewChatMessage::class)->orderBy('round')->orderBy('created_at');
+    }
+
     public function artifacts(): HasMany
     {
         return $this->hasMany(Artifact::class);

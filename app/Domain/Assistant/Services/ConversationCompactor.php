@@ -2,6 +2,7 @@
 
 namespace App\Domain\Assistant\Services;
 
+use App\Domain\Assistant\DTOs\MemorySummarySchema;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use Illuminate\Support\Collection;
@@ -9,17 +10,16 @@ use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Prism;
 
 /**
- * Produces a compact priority-tiered XML snapshot of a long assistant conversation.
+ * Compresses long conversations into structured memory snapshots.
  *
- * When a conversation exceeds the compaction threshold, this service synthesises
- * a 2 KB "resume" message using a cheap model. The snapshot is persisted as a
- * pinned system message; covered messages are marked archived so future context
- * builds exclude them.
+ * Uses AgentScope-inspired SummarySchema pattern: the LLM outputs a structured
+ * JSON object with constrained fields instead of free-form text. This produces
+ * more consistent, parseable, and token-efficient snapshots.
  *
- * Priority tiers (budget fractions from context-mode pattern):
- *   P1 (50%): active entity context, last 3 user questions, last 5 tool outcomes
- *   P2 (35%): errors encountered, key decisions, pending actions
- *   P3 (15%): conversation intent, tool usage summary
+ * Priority tiers (budget fractions):
+ *   P1 (50%): task overview + current state + last tool outcomes
+ *   P2 (35%): key discoveries, errors, decisions
+ *   P3 (15%): next steps + context to preserve
  */
 class ConversationCompactor
 {
@@ -43,61 +43,68 @@ class ConversationCompactor
             throw new \RuntimeException('No messages to compact.');
         }
 
-        $snapshot = $this->synthesiseSnapshot($conversation, $messages);
+        $schema = $this->synthesiseStructuredSnapshot($conversation, $messages);
+        $snapshotContent = $schema->toContextString();
         $coveredIds = $messages->pluck('id')->all();
 
-        // Create the pinned snapshot system message
         $snapshotMessage = AssistantMessage::create([
             'conversation_id' => $conversation->id,
             'role' => 'system',
-            'content' => $snapshot,
+            'content' => $snapshotContent,
             'metadata' => [
                 'pinned' => true,
                 'is_snapshot' => true,
                 'snapshot_covers_message_ids' => $coveredIds,
                 'compacted_at' => now()->toIso8601String(),
                 'covered_count' => count($coveredIds),
+                'compression_schema' => $schema->toArray(),
+                'estimated_tokens' => $schema->estimateTokens(),
             ],
             'created_at' => now(),
         ]);
 
-        // Mark covered messages as archived (kept in DB, excluded from context builds)
+        // Archive covered messages
         AssistantMessage::whereIn('id', $coveredIds)->update([
             'metadata' => \DB::raw(
                 "jsonb_set(coalesce(metadata, '{}'), '{archived}', 'true')",
             ),
         ]);
 
-        Log::info('ConversationCompactor: compacted conversation', [
+        // Track compression stats on conversation
+        $this->updateCompressionStats($conversation, count($coveredIds), $schema->estimateTokens());
+
+        Log::info('ConversationCompactor: structured compression complete', [
             'conversation_id' => $conversation->id,
             'covered_messages' => count($coveredIds),
             'snapshot_id' => $snapshotMessage->id,
+            'estimated_tokens' => $schema->estimateTokens(),
         ]);
 
         return $snapshotMessage;
     }
 
-    /**
-     * Build the prompt context and call the summariser model.
-     */
-    private function synthesiseSnapshot(AssistantConversation $conversation, Collection $messages): string
+    private function synthesiseStructuredSnapshot(AssistantConversation $conversation, Collection $messages): MemorySummarySchema
     {
         $userMessages = $messages->where('role', 'user')->values();
         $assistantMessages = $messages->where('role', 'assistant')->values();
 
-        // Extract signals for each priority tier (escaped to prevent prompt injection)
-        $lastUserQuestions = $userMessages->slice(-3)->pluck('content')->map(fn ($c) => htmlspecialchars(mb_substr($c, 0, 200), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'))->implode("\n- ");
-        $lastToolOutcomes = $assistantMessages->filter(fn ($m) => ! empty($m->tool_calls))->slice(-5)->map(function ($m) {
-            $calls = is_array($m->tool_calls) ? $m->tool_calls : [];
+        $lastUserQuestions = $userMessages->slice(-3)->pluck('content')
+            ->map(fn ($c) => htmlspecialchars(mb_substr($c, 0, 200), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'))
+            ->implode("\n- ");
 
-            return collect($calls)->map(fn ($c) => ($c['name'] ?? 'tool').' → '.mb_substr((string) ($c['result'] ?? ''), 0, 100))->implode(', ');
-        })->filter()->implode("\n- ");
+        $lastToolOutcomes = $assistantMessages->filter(fn ($m) => ! empty($m->tool_calls))
+            ->slice(-5)->map(function ($m) {
+                $calls = is_array($m->tool_calls) ? $m->tool_calls : [];
 
-        // Errors: assistant messages containing error keywords
-        $errors = $assistantMessages->filter(fn ($m) => preg_match('/error|fail|exception|cannot|unable/i', $m->content ?? ''))->slice(-3)->pluck('content')->map(fn ($c) => mb_substr($c, 0, 150))->implode("\n- ");
+                return collect($calls)->map(fn ($c) => ($c['name'] ?? 'tool').' → '.mb_substr((string) ($c['result'] ?? ''), 0, 100))->implode(', ');
+            })->filter()->implode("\n- ");
 
-        // Escape message content so user-supplied text cannot break out of the XML structure
-        // in the LLM prompt and cause prompt injection into the produced snapshot.
+        $errors = $assistantMessages
+            ->filter(fn ($m) => preg_match('/error|fail|exception|cannot|unable/i', $m->content ?? ''))
+            ->slice(-3)->pluck('content')
+            ->map(fn ($c) => mb_substr($c, 0, 150))
+            ->implode("\n- ");
+
         $rawHistory = $messages->map(function ($m) {
             $role = htmlspecialchars($m->role, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $body = htmlspecialchars(mb_substr($m->content ?? '', 0, 300), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -108,18 +115,19 @@ class ConversationCompactor
         $model = config('context_compaction.summarizer_model', 'anthropic/claude-haiku-4-5');
         [$modelProvider, $modelName] = array_pad(explode('/', $model, 2), 2, 'claude-haiku-4-5');
 
+        $schemaJson = json_encode(MemorySummarySchema::jsonSchema(), JSON_PRETTY_PRINT);
+
         $systemPrompt = <<<'SYSTEM'
-You are a conversation summariser. Produce a compact XML context snapshot under 2000 characters.
-Focus on what the user is trying to accomplish and what has been done so far.
+You are a conversation memory compressor. Extract the essential information from a conversation into a structured JSON object. Be specific and preserve entity names, IDs, and technical details.
 SYSTEM;
 
         $userPrompt = <<<PROMPT
-Summarise this assistant conversation into a <context_snapshot> XML block with these sections:
-- <p1_active>: The main task/goal, last 3 user questions, last 5 tool outcomes</p1_active>
-- <p2_decisions>: Errors encountered, key decisions made, pending actions</p2_decisions>
-- <p3_intent>: Overall conversation intent in 1-2 sentences</p3_intent>
+Compress this assistant conversation ({$messages->count()} messages) into structured memory.
 
-Conversation history ({$messages->count()} messages):
+Output a JSON object matching this schema exactly:
+{$schemaJson}
+
+Conversation history:
 {$rawHistory}
 
 Recent user questions:
@@ -131,7 +139,7 @@ Recent tool outcomes:
 Errors seen:
 - {$errors}
 
-Produce only the <context_snapshot> XML block, nothing else.
+Output ONLY valid JSON, no markdown fences or commentary.
 PROMPT;
 
         try {
@@ -139,46 +147,60 @@ PROMPT;
                 ->using($modelProvider, $modelName)
                 ->withSystemPrompt($systemPrompt)
                 ->withPrompt($userPrompt)
-                ->withMaxTokens(600)
+                ->withMaxTokens(800)
                 ->generate();
 
-            $text = $response->text;
+            $text = trim($response->text);
 
-            // Reject responses that don't conform to the expected XML structure
-            // to prevent a prompt-injected snapshot from persisting.
-            if (! str_contains($text, '<context_snapshot>') || ! str_contains($text, '</context_snapshot>')) {
-                Log::warning('ConversationCompactor: LLM returned malformed snapshot, using fallback');
-
-                return $this->fallbackSnapshot($conversation, $messages, $lastUserQuestions);
+            // Strip markdown fences if present
+            if (str_starts_with($text, '```')) {
+                $text = preg_replace('/^```(?:json)?\s*/', '', $text);
+                $text = preg_replace('/\s*```$/', '', $text);
             }
 
-            return $text;
+            $data = json_decode($text, true);
+
+            if (! is_array($data) || ! isset($data['task_overview'])) {
+                Log::warning('ConversationCompactor: LLM returned invalid JSON, using fallback');
+
+                return $this->fallbackSchema($conversation, $messages, $lastUserQuestions);
+            }
+
+            return MemorySummarySchema::fromArray($data);
         } catch (\Throwable $e) {
             Log::warning('ConversationCompactor: LLM synthesis failed, using fallback', [
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->fallbackSnapshot($conversation, $messages, $lastUserQuestions);
+            return $this->fallbackSchema($conversation, $messages, $lastUserQuestions);
         }
     }
 
-    /**
-     * Deterministic fallback snapshot when the LLM call fails.
-     */
-    private function fallbackSnapshot(AssistantConversation $conversation, Collection $messages, string $lastUserQuestions): string
+    private function fallbackSchema(AssistantConversation $conversation, Collection $messages, string $lastUserQuestions): MemorySummarySchema
     {
         $count = $messages->count();
         $since = $messages->first()?->created_at?->diffForHumans() ?? 'recently';
 
-        return <<<XML
-<context_snapshot>
-  <p1_active>
-    Conversation with {$count} messages starting {$since}.
-    Recent questions: {$lastUserQuestions}
-  </p1_active>
-  <p2_decisions>Context compacted — older messages archived.</p2_decisions>
-  <p3_intent>AI assistant session for team operations.</p3_intent>
-</context_snapshot>
-XML;
+        return new MemorySummarySchema(
+            taskOverview: "Conversation with {$count} messages starting {$since}. Recent questions: {$lastUserQuestions}",
+            currentState: 'Context compacted — older messages archived.',
+            keyDiscoveries: [],
+            nextSteps: [],
+            contextToPreserve: '',
+        );
+    }
+
+    private function updateCompressionStats(AssistantConversation $conversation, int $coveredCount, int $estimatedTokens): void
+    {
+        $metadata = $conversation->metadata ?? [];
+        $stats = $metadata['compression_stats'] ?? ['total_compressions' => 0, 'total_messages_compressed' => 0];
+
+        $stats['total_compressions'] = ($stats['total_compressions'] ?? 0) + 1;
+        $stats['total_messages_compressed'] = ($stats['total_messages_compressed'] ?? 0) + $coveredCount;
+        $stats['last_compressed_at'] = now()->toIso8601String();
+        $stats['last_snapshot_tokens'] = $estimatedTokens;
+
+        $metadata['compression_stats'] = $stats;
+        $conversation->update(['metadata' => $metadata]);
     }
 }

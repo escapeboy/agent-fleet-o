@@ -9,6 +9,8 @@ enum CrewProcessType: string
     case Hierarchical = 'hierarchical';
     case SelfClaim = 'self_claim';
     case Adversarial = 'adversarial';
+    case Fanout = 'fanout';
+    case ChatRoom = 'chat_room';
 
     public function label(): string
     {
@@ -18,6 +20,8 @@ enum CrewProcessType: string
             self::Hierarchical => 'Hierarchical',
             self::SelfClaim => 'Self-Claim Pool',
             self::Adversarial => 'Adversarial Debate',
+            self::Fanout => 'Fan-out / Gather',
+            self::ChatRoom => 'Chat Room',
         };
     }
 
@@ -29,6 +33,8 @@ enum CrewProcessType: string
             self::Hierarchical => 'Coordinator dynamically decides what to do next at each iteration',
             self::SelfClaim => 'Agents autonomously pull tasks from a shared pool — maximises utilisation when task durations vary',
             self::Adversarial => 'Agents are assigned competing hypotheses and actively challenge each other — ideal for debugging and root cause analysis',
+            self::Fanout => 'Same input broadcast to ALL agents simultaneously — results gathered and synthesized. Ideal for getting diverse perspectives.',
+            self::ChatRoom => 'Agents share a message bus and discuss collaboratively in rounds — dynamic participant management with convergence detection.',
         };
     }
 }

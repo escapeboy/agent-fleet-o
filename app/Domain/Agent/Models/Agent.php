@@ -157,6 +157,11 @@ class Agent extends Model
             ->orderByPivot('priority');
     }
 
+    public function hooks(): HasMany
+    {
+        return $this->hasMany(AgentHook::class)->orderBy('priority');
+    }
+
     public function executions(): HasMany
     {
         return $this->hasMany(AgentExecution::class)->orderByDesc('created_at');

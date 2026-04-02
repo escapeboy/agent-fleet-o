@@ -97,6 +97,11 @@ class PipelineLlmResolutionTest extends TestCase
         GlobalSetting::set('default_llm_provider', 'google');
         GlobalSetting::set('default_llm_model', 'gemini-2.5-flash');
 
+        // Clear all platform API keys so stage model tier routing falls through
+        config(['services.platform_api_keys' => []]);
+        // Disable stage model tiers so we hit the platform default directly
+        config(['experiments.stage_model_tiers.scoring' => null]);
+
         $job = new RunScoringStage($experiment->id);
         $method = new \ReflectionMethod($job, 'resolvePipelineLlm');
 

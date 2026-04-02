@@ -49,7 +49,7 @@ class CostCalculator
             return BudgetPressureLevel::None;
         }
 
-        return Cache::store('redis')->remember(
+        return Cache::remember(
             "budget_pressure:{$teamId}",
             60,
             fn () => $this->calculateBudgetPressure($teamId),

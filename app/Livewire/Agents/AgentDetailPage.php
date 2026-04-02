@@ -11,6 +11,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentConfigRevision;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AgentFeedback;
+use App\Domain\Agent\Models\AgentHook;
 use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
@@ -76,6 +77,21 @@ class AgentDetailPage extends Component
 
     /** @var array<string> */
     public array $editGitRepositoryIds = [];
+
+    // Hook management
+    public bool $showHookForm = false;
+
+    public string $hookName = '';
+
+    public string $hookPosition = 'pre_execute';
+
+    public string $hookType = 'prompt_injection';
+
+    public string $hookConfigJson = '{}';
+
+    public int $hookPriority = 100;
+
+    public ?string $editingHookId = null;
 
     public function mount(Agent $agent): void
     {
@@ -343,6 +359,71 @@ class AgentDetailPage extends Component
         session()->flash('message', 'Heartbeat dispatched.');
     }
 
+    public function saveHook(): void
+    {
+        $this->validate([
+            'hookName' => 'required|string|max:255',
+            'hookPosition' => 'required|string',
+            'hookType' => 'required|string',
+            'hookPriority' => 'required|integer|min:0|max:999',
+        ]);
+
+        $config = json_decode($this->hookConfigJson, true) ?? [];
+
+        $data = [
+            'team_id' => auth()->user()->current_team_id,
+            'agent_id' => $this->agent->id,
+            'name' => $this->hookName,
+            'position' => $this->hookPosition,
+            'type' => $this->hookType,
+            'config' => $config,
+            'priority' => $this->hookPriority,
+            'enabled' => true,
+        ];
+
+        if ($this->editingHookId) {
+            AgentHook::where('id', $this->editingHookId)->update($data);
+        } else {
+            AgentHook::create($data);
+        }
+
+        $this->resetHookForm();
+    }
+
+    public function editHook(string $hookId): void
+    {
+        $hook = AgentHook::findOrFail($hookId);
+        $this->editingHookId = $hook->id;
+        $this->hookName = $hook->name;
+        $this->hookPosition = $hook->position->value;
+        $this->hookType = $hook->type->value;
+        $this->hookConfigJson = json_encode($hook->config, JSON_PRETTY_PRINT);
+        $this->hookPriority = $hook->priority;
+        $this->showHookForm = true;
+    }
+
+    public function toggleHook(string $hookId): void
+    {
+        $hook = AgentHook::findOrFail($hookId);
+        $hook->update(['enabled' => ! $hook->enabled]);
+    }
+
+    public function deleteHook(string $hookId): void
+    {
+        AgentHook::where('id', $hookId)->delete();
+    }
+
+    private function resetHookForm(): void
+    {
+        $this->showHookForm = false;
+        $this->editingHookId = null;
+        $this->hookName = '';
+        $this->hookPosition = 'pre_execute';
+        $this->hookType = 'prompt_injection';
+        $this->hookConfigJson = '{}';
+        $this->hookPriority = 100;
+    }
+
     public function render()
     {
         $skills = $this->agent->skills()->get();
@@ -423,6 +504,15 @@ class AgentDetailPage extends Component
             ->orderBy('name')
             ->get();
 
+        $hooks = AgentHook::where('agent_id', $this->agent->id)
+            ->orWhere(function ($q) {
+                $q->whereNull('agent_id')
+                    ->where('team_id', auth()->user()->current_team_id);
+            })
+            ->orderBy('position')
+            ->orderBy('priority')
+            ->get();
+
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
             'tools' => $tools,
@@ -437,6 +527,7 @@ class AgentDetailPage extends Component
             'avgSteps' => (float) $avgSteps,
             'availableGitRepositories' => $availableGitRepositories,
             'availableKnowledgeBases' => $availableKnowledgeBases,
+            'hooks' => $hooks,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }

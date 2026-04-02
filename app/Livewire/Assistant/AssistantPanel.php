@@ -30,6 +30,8 @@ class AssistantPanel extends Component
     /** ID of the pending placeholder assistant message (empty when idle). */
     public string $pendingMessageId = '';
 
+    public array $compressionStats = [];
+
     public function mount(): void
     {
         $team = auth()->user()?->currentTeam;
@@ -232,6 +234,7 @@ class AssistantPanel extends Component
             ])
             ->toArray();
 
+        $this->compressionStats = $conversation->metadata['compression_stats'] ?? [];
         $this->showHistory = false;
         $this->dispatch('assistant-message-sent');
     }

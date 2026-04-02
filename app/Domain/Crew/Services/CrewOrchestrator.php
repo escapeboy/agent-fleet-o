@@ -43,20 +43,24 @@ class CrewOrchestrator
     public function run(CrewExecution $execution): void
     {
         try {
-            // Phase 1: Decompose goal
-            $taskExecutions = $this->decomposeGoal->execute($execution);
-
-            if (empty($taskExecutions)) {
-                $this->failExecution($execution, 'Coordinator produced an empty task plan.');
-
-                return;
-            }
-
-            // Phase 2: Transition to executing
-            $execution->update(['status' => CrewExecutionStatus::Executing]);
-
-            // Phase 3: Dispatch tasks based on process type
             $processType = CrewProcessType::from($execution->config_snapshot['process_type']);
+
+            // Fanout and ChatRoom manage their own task creation — skip decomposition
+            if (in_array($processType, [CrewProcessType::Fanout, CrewProcessType::ChatRoom])) {
+                $execution->update(['status' => CrewExecutionStatus::Executing]);
+            } else {
+                // Phase 1: Decompose goal
+                $taskExecutions = $this->decomposeGoal->execute($execution);
+
+                if (empty($taskExecutions)) {
+                    $this->failExecution($execution, 'Coordinator produced an empty task plan.');
+
+                    return;
+                }
+
+                // Phase 2: Transition to executing
+                $execution->update(['status' => CrewExecutionStatus::Executing]);
+            }
 
             match ($processType) {
                 CrewProcessType::Sequential => $this->dispatchSequential($execution),
@@ -64,6 +68,8 @@ class CrewOrchestrator
                 CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution),
                 CrewProcessType::SelfClaim => $this->dispatchSelfClaim($execution),
                 CrewProcessType::Adversarial => $this->dispatchAdversarial($execution),
+                CrewProcessType::Fanout => $this->dispatchFanout($execution),
+                CrewProcessType::ChatRoom => $this->dispatchChatRoom($execution),
             };
         } catch (\Throwable $e) {
             Log::error('Crew orchestration failed', [
@@ -213,6 +219,76 @@ class CrewOrchestrator
     }
 
     /**
+     * Fanout: broadcast the same input to ALL crew members simultaneously.
+     *
+     * Skips goal decomposition — each agent receives the crew's original goal
+     * and works on it independently. Results are gathered and synthesized.
+     * Ideal for getting diverse perspectives on the same problem.
+     */
+    public function dispatchFanout(CrewExecution $execution): void
+    {
+        $crew = $execution->crew;
+        $members = $crew->workerMembers()->with('agent')->get();
+
+        if ($members->isEmpty()) {
+            $this->failExecution($execution, 'No worker members in crew for fanout.');
+
+            return;
+        }
+
+        // Create one task per member, all with the same goal as input
+        $taskExecutions = [];
+        foreach ($members as $index => $member) {
+            $taskExecutions[] = CrewTaskExecution::create([
+                'crew_execution_id' => $execution->id,
+                'agent_id' => $member->agent_id,
+                'title' => "Fanout: {$member->agent->name}",
+                'description' => $execution->goal,
+                'status' => CrewTaskStatus::Pending,
+                'input_context' => [
+                    'fanout_mode' => true,
+                    'original_goal' => $execution->goal,
+                    'expected_output' => 'Provide your independent analysis or solution.',
+                    'assigned_to' => $member->agent->name,
+                ],
+                'depends_on' => [],
+                'attempt_number' => 1,
+                'max_attempts' => $execution->config_snapshot['max_task_iterations'] ?? 3,
+                'sort_order' => $index,
+            ]);
+        }
+
+        $execution->update([
+            'task_plan' => collect($taskExecutions)->map(fn ($t) => [
+                'id' => $t->id,
+                'title' => $t->title,
+                'agent' => $t->agent?->name,
+            ])->toArray(),
+        ]);
+
+        // Dispatch all in parallel
+        $jobs = collect($taskExecutions)->map(fn (CrewTaskExecution $task) => new ExecuteCrewTaskJob(
+            crewExecutionId: $execution->id,
+            taskExecutionId: $task->id,
+            teamId: $execution->team_id,
+        ))->toArray();
+
+        Bus::batch($jobs)
+            ->name("crew-fanout:{$execution->id}")
+            ->onQueue('ai-calls')
+            ->dispatch();
+    }
+
+    /**
+     * ChatRoom: agents discuss collaboratively in rounds on a shared message bus.
+     */
+    public function dispatchChatRoom(CrewExecution $execution): void
+    {
+        $orchestrator = app(CrewChatRoomOrchestrator::class);
+        $orchestrator->start($execution);
+    }
+
+    /**
      * Called after a task is validated — unblock any dependent tasks then continue the flow.
      */
     public function onTaskValidated(CrewExecution $execution, CrewTaskExecution $task): void
@@ -230,6 +306,8 @@ class CrewOrchestrator
             CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution),
             CrewProcessType::SelfClaim => $this->continueSelfClaim($execution, $task),
             CrewProcessType::Adversarial => $this->advanceAdversarialRound($execution),
+            CrewProcessType::Fanout => $this->checkParallelProgress($execution),
+            CrewProcessType::ChatRoom => null, // ChatRoom handles its own flow
         };
     }
 

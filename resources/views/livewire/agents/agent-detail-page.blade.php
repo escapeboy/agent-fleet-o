@@ -422,7 +422,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'hooks' => 'Hooks', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -581,6 +581,96 @@
                     </tbody>
                 </table>
                 </div>
+            </div>
+
+        @elseif($activeTab === 'hooks')
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-500">Lifecycle hooks run at specific points during agent execution. Class-level hooks (no agent) apply to all agents.</p>
+                    <button wire:click="$set('showHookForm', true)" class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                        Add Hook
+                    </button>
+                </div>
+
+                @if($showHookForm)
+                    <div class="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+                        <h3 class="text-sm font-semibold text-gray-900">{{ $editingHookId ? 'Edit' : 'New' }} Hook</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <x-form-input wire:model="hookName" label="Name" placeholder="e.g. Always translate to German" />
+                            <x-form-select wire:model="hookPosition" label="Position">
+                                @foreach(\App\Domain\Agent\Enums\AgentHookPosition::cases() as $pos)
+                                    <option value="{{ $pos->value }}">{{ $pos->label() }}</option>
+                                @endforeach
+                            </x-form-select>
+                            <x-form-select wire:model="hookType" label="Type">
+                                @foreach(\App\Domain\Agent\Enums\AgentHookType::cases() as $type)
+                                    <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                                @endforeach
+                            </x-form-select>
+                            <x-form-input wire:model.number="hookPriority" label="Priority" type="number" hint="Lower runs first" />
+                        </div>
+                        <x-form-textarea wire:model="hookConfigJson" label="Config (JSON)" mono="true" hint="Hook-specific configuration" />
+                        <div class="flex justify-end gap-2">
+                            <button wire:click="$call('resetHookForm')" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+                            <button wire:click="saveHook" class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">Save</button>
+                        </div>
+                    </div>
+                @endif
+
+                @if($hooks->isNotEmpty())
+                    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Position</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Type</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Scope</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Priority</th>
+                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @foreach($hooks as $hook)
+                                    <tr class="{{ $hook->enabled ? '' : 'opacity-50' }}">
+                                        <td class="px-4 py-2.5 text-sm font-medium text-gray-900">{{ $hook->name }}</td>
+                                        <td class="px-4 py-2.5">
+                                            <span class="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{{ $hook->position->label() }}</span>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-sm text-gray-600">{{ $hook->type->label() }}</td>
+                                        <td class="px-4 py-2.5">
+                                            <span class="inline-flex rounded-full {{ $hook->isClassLevel() ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700' }} px-2 py-0.5 text-xs font-medium">
+                                                {{ $hook->isClassLevel() ? 'All Agents' : 'This Agent' }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-sm text-gray-500">{{ $hook->priority }}</td>
+                                        <td class="px-4 py-2.5 text-right">
+                                            <div class="flex items-center justify-end gap-1">
+                                                <button wire:click="toggleHook('{{ $hook->id }}')" class="rounded p-1 text-gray-400 hover:text-gray-600" title="{{ $hook->enabled ? 'Disable' : 'Enable' }}">
+                                                    @if($hook->enabled)
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-green-500"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                                                    @else
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                                    @endif
+                                                </button>
+                                                <button wire:click="editHook('{{ $hook->id }}')" class="rounded p-1 text-gray-400 hover:text-blue-600">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
+                                                </button>
+                                                <button wire:click="deleteHook('{{ $hook->id }}')" wire:confirm="Delete this hook?" class="rounded p-1 text-gray-400 hover:text-red-600">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                        No hooks configured. Add hooks to customize this agent's behavior at key lifecycle points.
+                    </div>
+                @endif
             </div>
 
         @elseif($activeTab === 'executions')

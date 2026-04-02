@@ -100,7 +100,7 @@
 
         {{-- Tabs --}}
         @php
-            $tabs = ['overview' => 'Overview', 'config' => 'Configuration', 'agents' => 'Agents'];
+            $tabs = ['overview' => 'Overview', 'config' => 'Configuration', 'agents' => 'Agents', 'middleware' => 'Middleware'];
             if ($tool->isPlatformTool()) {
                 $tabs['activation'] = 'Team Setup';
             }
@@ -259,6 +259,51 @@
                         </tbody>
                     </table>
                 @endif
+            </div>
+        @endif
+
+        {{-- Tab: Middleware --}}
+        @if($activeTab === 'middleware')
+            <div class="space-y-4">
+                <div class="rounded-xl border border-gray-200 bg-white p-5">
+                    <h4 class="mb-3 text-sm font-semibold text-gray-900">Execution Middleware Pipeline</h4>
+                    <p class="mb-4 text-sm text-gray-500">Middleware runs on every tool invocation. Built-in middleware is always active. Add custom middleware for additional controls.</p>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                            <span class="inline-flex rounded bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Built-in</span>
+                            <span class="font-medium text-gray-700">Rate Limit</span>
+                            <span class="text-gray-400">- Throttles calls per team (configurable via tool config)</span>
+                        </div>
+                        <div class="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                            <span class="inline-flex rounded bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Built-in</span>
+                            <span class="font-medium text-gray-700">Input Validation</span>
+                            <span class="text-gray-400">- Validates input size and blocked patterns</span>
+                        </div>
+                        <div class="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                            <span class="inline-flex rounded bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Built-in</span>
+                            <span class="font-medium text-gray-700">Audit Log</span>
+                            <span class="text-gray-400">- Logs all tool invocations with timing</span>
+                        </div>
+
+                        @foreach($middlewareConfigs as $mw)
+                            <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm {{ $mw->enabled ? '' : 'opacity-50' }}">
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex rounded bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Custom</span>
+                                    <span class="font-medium text-gray-700">{{ $mw->label }}</span>
+                                    <span class="text-xs text-gray-400">Priority: {{ $mw->priority }}</span>
+                                </div>
+                                <span class="text-xs {{ $mw->enabled ? 'text-green-600' : 'text-gray-400' }}">
+                                    {{ $mw->enabled ? 'Active' : 'Disabled' }}
+                                </span>
+                            </div>
+                        @endforeach
+
+                        @if($middlewareConfigs->isEmpty())
+                            <p class="mt-2 text-center text-xs text-gray-400">No custom middleware configured. Use MCP tools to add middleware.</p>
+                        @endif
+                    </div>
+                </div>
             </div>
         @endif
 

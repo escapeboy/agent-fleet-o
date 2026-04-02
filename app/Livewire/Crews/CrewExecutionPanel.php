@@ -30,7 +30,7 @@ class CrewExecutionPanel extends Component
     {
         $execution = CrewExecution::withoutGlobalScopes()
             ->withCount('artifacts')
-            ->with(['taskExecutions' => fn ($q) => $q->orderBy('sort_order'), 'taskExecutions.agent'])
+            ->with(['taskExecutions' => fn ($q) => $q->orderBy('sort_order'), 'taskExecutions.agent', 'chatMessages'])
             ->find($this->executionId);
 
         if (! $execution) {
@@ -46,6 +46,9 @@ class CrewExecutionPanel extends Component
         $validated = $tasks->filter(fn ($t) => $t->isValidated())->count();
         $progress = $total > 0 ? round(($validated / $total) * 100) : 0;
 
+        $chatMessages = $execution->chatMessages ?? collect();
+        $isChatRoom = ($execution->config_snapshot['process_type'] ?? '') === 'chat_room';
+
         return view('livewire.crews.crew-execution-panel', [
             'execution' => $execution,
             'tasks' => $tasks,
@@ -53,6 +56,8 @@ class CrewExecutionPanel extends Component
             'validatedCount' => $validated,
             'runningCount' => $tasks->filter(fn ($t) => $t->status->isActive())->count(),
             'failedCount' => $tasks->filter(fn ($t) => $t->status === CrewTaskStatus::QaFailed || $t->status === CrewTaskStatus::Failed)->count(),
+            'chatMessages' => $chatMessages,
+            'isChatRoom' => $isChatRoom,
         ]);
     }
 }
