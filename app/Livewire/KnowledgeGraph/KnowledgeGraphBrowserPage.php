@@ -4,6 +4,7 @@ namespace App\Livewire\KnowledgeGraph;
 
 use App\Domain\KnowledgeGraph\Actions\AddKnowledgeFactAction;
 use App\Domain\KnowledgeGraph\Actions\InvalidateKgFactAction;
+use App\Domain\KnowledgeGraph\Actions\UpdateKnowledgeFactAction;
 use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use Livewire\Attributes\Url;
@@ -46,6 +47,23 @@ class KnowledgeGraphBrowserPage extends Component
     public ?string $error = null;
 
     public ?string $success = null;
+
+    // View/Edit modal state
+    public ?array $viewingFact = null;
+
+    public ?string $editingFactId = null;
+
+    public string $editSourceName = '';
+
+    public string $editSourceType = 'topic';
+
+    public string $editRelationType = '';
+
+    public string $editTargetName = '';
+
+    public string $editTargetType = 'topic';
+
+    public string $editFact = '';
 
     public function updatedSearch(): void
     {
@@ -120,6 +138,90 @@ class KnowledgeGraphBrowserPage extends Component
         } catch (\Throwable $e) {
             $this->error = $e->getMessage();
         }
+    }
+
+    public function viewFact(string $id): void
+    {
+        $edge = KgEdge::with(['sourceEntity', 'targetEntity'])->findOrFail($id);
+        abort_unless($edge->team_id === auth()->user()->current_team_id, 403);
+
+        $this->viewingFact = [
+            'id' => $edge->id,
+            'source_name' => $edge->sourceEntity?->name ?? '—',
+            'source_type' => $edge->sourceEntity?->type ?? '',
+            'relation_type' => $edge->relation_type,
+            'edge_type' => $edge->edge_type ?? '—',
+            'target_name' => $edge->targetEntity?->name ?? '—',
+            'target_type' => $edge->targetEntity?->type ?? '',
+            'fact' => $edge->fact,
+            'valid_at' => $edge->valid_at?->toDateTimeString(),
+            'invalid_at' => $edge->invalid_at?->toDateTimeString(),
+            'expired_at' => $edge->expired_at?->toDateTimeString(),
+            'attributes' => $edge->attributes ?? [],
+            'created_at' => $edge->created_at?->toDateTimeString(),
+            'updated_at' => $edge->updated_at?->toDateTimeString(),
+        ];
+        $this->editingFactId = null;
+    }
+
+    public function closeView(): void
+    {
+        $this->viewingFact = null;
+    }
+
+    public function editFact(string $id): void
+    {
+        $edge = KgEdge::with(['sourceEntity', 'targetEntity'])->findOrFail($id);
+        abort_unless($edge->team_id === auth()->user()->current_team_id, 403);
+
+        $this->editingFactId = $edge->id;
+        $this->editSourceName = $edge->sourceEntity?->name ?? '';
+        $this->editSourceType = $edge->sourceEntity?->type ?? 'topic';
+        $this->editRelationType = $edge->relation_type ?? '';
+        $this->editTargetName = $edge->targetEntity?->name ?? '';
+        $this->editTargetType = $edge->targetEntity?->type ?? 'topic';
+        $this->editFact = $edge->fact ?? '';
+        $this->viewingFact = null;
+    }
+
+    public function updateFact(): void
+    {
+        $this->validate([
+            'editSourceName' => ['required', 'string', 'max:255'],
+            'editSourceType' => ['required', EntityType::validationRule()],
+            'editRelationType' => ['required', 'string', 'max:80'],
+            'editTargetName' => ['required', 'string', 'max:255'],
+            'editTargetType' => ['required', EntityType::validationRule()],
+            'editFact' => ['required', 'string', 'max:2000'],
+        ]);
+
+        try {
+            $edge = KgEdge::findOrFail($this->editingFactId);
+            abort_unless($edge->team_id === auth()->user()->current_team_id, 403);
+
+            app(UpdateKnowledgeFactAction::class)->execute(
+                edge: $edge,
+                sourceName: $this->editSourceName,
+                sourceType: $this->editSourceType,
+                relationType: $this->editRelationType,
+                targetName: $this->editTargetName,
+                targetType: $this->editTargetType,
+                fact: $this->editFact,
+            );
+
+            $this->cancelEdit();
+            $this->success = 'Fact updated.';
+        } catch (\Throwable $e) {
+            $this->error = $e->getMessage();
+        }
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->editingFactId = null;
+        $this->reset(['editSourceName', 'editSourceType', 'editRelationType', 'editTargetName', 'editTargetType', 'editFact']);
+        $this->editSourceType = 'topic';
+        $this->editTargetType = 'topic';
     }
 
     public function render()
