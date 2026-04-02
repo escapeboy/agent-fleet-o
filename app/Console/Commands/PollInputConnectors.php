@@ -16,6 +16,7 @@ use App\Domain\Signal\Connectors\MatrixConnector;
 use App\Domain\Signal\Connectors\NotionConnector;
 use App\Domain\Signal\Connectors\PagerDutyConnector;
 use App\Domain\Signal\Connectors\RssConnector;
+use App\Domain\Signal\Connectors\ScreenpipeConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
 use App\Domain\Signal\Connectors\SignalProtocolConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
@@ -26,7 +27,7 @@ use Illuminate\Support\Facades\Log;
 
 class PollInputConnectors extends Command
 {
-    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor, signal_protocol, matrix, notion, confluence, github_wiki). Polls all if omitted.}';
+    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor, signal_protocol, matrix, notion, confluence, github_wiki, screenpipe). Polls all if omitted.}';
 
     protected $description = 'Poll active input connectors for new signals';
 
@@ -49,6 +50,7 @@ class PollInputConnectors extends Command
         'notion' => NotionConnector::class,
         'confluence' => ConfluenceConnector::class,
         'github_wiki' => GitHubWikiConnector::class,
+        'screenpipe' => ScreenpipeConnector::class,
     ];
 
     public function handle(): int

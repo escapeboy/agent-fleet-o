@@ -2833,6 +2833,204 @@ class PopularToolsSeeder extends Seeder
                 ],
                 'settings' => ['timeout' => 60],
             ],
+
+            // ─── Git & Version Control ───────────────────────────────────
+
+            [
+                'name' => 'GitLab',
+                'slug' => 'gitlab',
+                'description' => 'GitLab API integration — manage repositories, merge requests, issues, pipelines, and CI/CD. Supports both gitlab.com and self-hosted instances.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@modelcontextprotocol/server-gitlab'],
+                    'env' => [
+                        'GITLAB_PERSONAL_ACCESS_TOKEN' => '',
+                        'GITLAB_API_URL' => 'https://gitlab.com/api/v4',
+                    ],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'gitlab_list_projects',
+                        'description' => 'List GitLab projects accessible to the authenticated user',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'search' => ['type' => 'string', 'description' => 'Search projects by name'],
+                                'per_page' => ['type' => 'integer', 'description' => 'Results per page (default: 20)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'gitlab_create_issue',
+                        'description' => 'Create a new issue in a GitLab project',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_id' => ['type' => 'string', 'description' => 'Project ID or path (e.g. "group/project")'],
+                                'title' => ['type' => 'string', 'description' => 'Issue title'],
+                                'description' => ['type' => 'string', 'description' => 'Issue description (markdown)'],
+                                'labels' => ['type' => 'string', 'description' => 'Comma-separated labels'],
+                            ],
+                            'required' => ['project_id', 'title'],
+                        ],
+                    ],
+                    [
+                        'name' => 'gitlab_list_merge_requests',
+                        'description' => 'List merge requests for a project',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'project_id' => ['type' => 'string', 'description' => 'Project ID or path'],
+                                'state' => ['type' => 'string', 'description' => 'State filter: opened, closed, merged, all (default: opened)'],
+                            ],
+                            'required' => ['project_id'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 30],
+            ],
+
+            [
+                'name' => 'Git',
+                'slug' => 'git',
+                'description' => 'Native Git repository operations — read file history, search commits, view diffs, create branches, and make commits. Works with any local Git repo.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'uvx',
+                    'args' => ['mcp-server-git', '--repository', '/path/to/repo'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'git_log',
+                        'description' => 'View commit history with messages, authors, and dates',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'max_count' => ['type' => 'integer', 'description' => 'Max commits to return (default: 10)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'git_diff',
+                        'description' => 'View changes between commits or working tree',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'target' => ['type' => 'string', 'description' => 'Commit hash, branch, or HEAD (default: HEAD)'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'git_status',
+                        'description' => 'Show working tree status — modified, staged, and untracked files',
+                        'input_schema' => ['type' => 'object', 'properties' => []],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            [
+                'name' => 'Redis',
+                'slug' => 'redis',
+                'description' => 'Redis key-value store operations — get, set, delete keys, list keys by pattern, pub/sub messaging. Connect to any Redis instance.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', '@modelcontextprotocol/server-redis'],
+                    'env' => [
+                        'REDIS_URL' => 'redis://localhost:6379',
+                    ],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'redis_get',
+                        'description' => 'Get the value of a Redis key',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'key' => ['type' => 'string', 'description' => 'Redis key'],
+                            ],
+                            'required' => ['key'],
+                        ],
+                    ],
+                    [
+                        'name' => 'redis_set',
+                        'description' => 'Set a Redis key to a value with optional expiry',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'key' => ['type' => 'string', 'description' => 'Redis key'],
+                                'value' => ['type' => 'string', 'description' => 'Value to set'],
+                                'ttl' => ['type' => 'integer', 'description' => 'Time-to-live in seconds (optional)'],
+                            ],
+                            'required' => ['key', 'value'],
+                        ],
+                    ],
+                    [
+                        'name' => 'redis_keys',
+                        'description' => 'List Redis keys matching a pattern',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'pattern' => ['type' => 'string', 'description' => 'Key pattern (e.g. "user:*")'],
+                            ],
+                            'required' => ['pattern'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 15],
+            ],
+
+            // --- Screen & Activity Capture ---
+            [
+                'name' => 'Screenpipe',
+                'slug' => 'screenpipe',
+                'description' => 'Local screen & audio capture with full-text search — query what was on your screen, transcribe meetings, extract text from any app. Runs locally via screenpipe desktop app.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Read,
+                'transport_config' => [
+                    'command' => 'npx',
+                    'args' => ['-y', 'screenpipe-mcp'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'search_content',
+                        'description' => 'Search captured screen and audio content with filters for app name, window title, time range, content type, and full-text query',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => ['type' => 'string', 'description' => 'Full-text search query'],
+                                'content_type' => ['type' => 'string', 'description' => 'Filter by type: ocr, audio, all', 'enum' => ['ocr', 'audio', 'all']],
+                                'app_name' => ['type' => 'string', 'description' => 'Filter by application name (e.g. Chrome, VS Code)'],
+                                'window_name' => ['type' => 'string', 'description' => 'Filter by window title'],
+                                'start_time' => ['type' => 'string', 'description' => 'Start of time range (ISO 8601)'],
+                                'end_time' => ['type' => 'string', 'description' => 'End of time range (ISO 8601)'],
+                                'limit' => ['type' => 'integer', 'description' => 'Max results to return (default 20)'],
+                            ],
+                            'required' => [],
+                        ],
+                    ],
+                    [
+                        'name' => 'export_video',
+                        'description' => 'Export a video segment of captured screen activity for a given time range',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'start_time' => ['type' => 'string', 'description' => 'Start time (ISO 8601)'],
+                                'end_time' => ['type' => 'string', 'description' => 'End time (ISO 8601)'],
+                            ],
+                            'required' => ['start_time', 'end_time'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 30],
+            ],
         ];
     }
 }

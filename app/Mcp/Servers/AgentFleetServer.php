@@ -334,6 +334,7 @@ use App\Mcp\Tools\Tool\ToolProbeRemoteMcpTool;
 use App\Mcp\Tools\Tool\ToolProfileListTool;
 use App\Mcp\Tools\Tool\ToolSearchTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
+use App\Mcp\Tools\Tool\ToolTemplateManageTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
@@ -589,6 +590,7 @@ class AgentFleetServer extends Server
         ToolSearchTool::class,
         ToolMiddlewareListTool::class,
         ToolMiddlewareConfigTool::class,
+        ToolTemplateManageTool::class,
 
         // Credential (10)
         CredentialListTool::class,

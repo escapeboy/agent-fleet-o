@@ -31,6 +31,8 @@ class IntegrationListPage extends Component
 
     public string $search = '';
 
+    public string $categoryFilter = '';
+
     public function mount(): void
     {
         $autoConnect = request()->query('connect');
@@ -50,15 +52,20 @@ class IntegrationListPage extends Component
         try {
             $schema = app(IntegrationManager::class)->driver($driver)->credentialSchema();
             $this->credentialSchema = $schema;
-            // Pre-populate keys with defaults so wire:model bindings exist
-            $this->connectCredentials = array_map(
-                fn ($field) => $field['default'] ?? '',
-                $schema,
-            );
         } catch (\Throwable) {
-            $this->credentialSchema = [];
-            $this->connectCredentials = [];
+            // Fallback: use credential_fields from config if no driver class exists
+            $configFields = config("integrations.drivers.{$driver}.credential_fields", []);
+            $this->credentialSchema = array_map(fn ($f) => array_merge(
+                ['type' => 'string', 'required' => true],
+                $f,
+            ), $configFields);
         }
+
+        // Pre-populate keys with defaults so wire:model bindings exist
+        $this->connectCredentials = array_map(
+            fn ($field) => $field['default'] ?? '',
+            $this->credentialSchema,
+        );
 
         $this->showConnectForm = true;
     }
@@ -133,8 +140,9 @@ class IntegrationListPage extends Component
                 config: $this->connectConfig,
             );
 
+            $driverLabel = config("integrations.drivers.{$this->connectDriver}.label", ucfirst($this->connectDriver));
             $this->closeConnectForm();
-            session()->flash('message', ucfirst($this->connectDriver).' integration connected.');
+            session()->flash('message', "{$driverLabel} integration connected.");
         } catch (\Throwable $e) {
             session()->flash('error', 'Connection failed: '.$e->getMessage());
         }
@@ -170,16 +178,34 @@ class IntegrationListPage extends Component
             : collect();
 
         $allDrivers = config('integrations.drivers', []);
-        $availableDrivers = $this->search
-            ? array_filter(
-                $allDrivers,
-                fn ($info) => str_contains(strtolower($info['label']), strtolower($this->search)),
-            )
-            : $allDrivers;
+
+        $availableDrivers = array_filter($allDrivers, function ($info) {
+            if ($this->categoryFilter && ($info['category'] ?? '') !== $this->categoryFilter) {
+                return false;
+            }
+            if ($this->search) {
+                $needle = strtolower($this->search);
+
+                return str_contains(strtolower($info['label']), $needle)
+                    || str_contains(strtolower($info['description'] ?? ''), $needle);
+            }
+
+            return true;
+        });
+
+        // Extract unique categories for filter tabs
+        $categories = collect($allDrivers)
+            ->pluck('category')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
 
         return view('livewire.integrations.integration-list-page', [
             'connectedIntegrations' => $connectedIntegrations,
             'availableDrivers' => $availableDrivers,
+            'categories' => $categories,
         ])->layout('layouts.app', ['header' => 'Integrations']);
     }
 }

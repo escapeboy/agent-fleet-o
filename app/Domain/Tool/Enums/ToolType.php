@@ -9,6 +9,7 @@ enum ToolType: string
     case McpBridge = 'mcp_bridge';
     case BuiltIn = 'built_in';
     case Workflow = 'workflow';
+    case ComputeEndpoint = 'compute_endpoint';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum ToolType: string
             self::McpBridge => 'MCP Server (Bridge)',
             self::BuiltIn => 'Built-in Host Tool',
             self::Workflow => 'Workflow',
+            self::ComputeEndpoint => 'GPU Compute Endpoint',
         };
     }
 
@@ -29,7 +31,13 @@ enum ToolType: string
             self::McpBridge => 'bg-purple-100 text-purple-800',
             self::BuiltIn => 'bg-amber-100 text-amber-800',
             self::Workflow => 'bg-emerald-100 text-emerald-800',
+            self::ComputeEndpoint => 'bg-rose-100 text-rose-800',
         };
+    }
+
+    public function isCompute(): bool
+    {
+        return $this === self::ComputeEndpoint;
     }
 
     public function isMcp(): bool

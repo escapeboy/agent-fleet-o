@@ -55,6 +55,7 @@ use App\Domain\Signal\Connectors\MatrixConnector;
 use App\Domain\Signal\Connectors\NotionConnector;
 use App\Domain\Signal\Connectors\PagerDutyConnector;
 use App\Domain\Signal\Connectors\RssConnector;
+use App\Domain\Signal\Connectors\ScreenpipeConnector;
 use App\Domain\Signal\Connectors\SearxngConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
 use App\Domain\Signal\Connectors\SignalProtocolConnector;
@@ -159,6 +160,7 @@ class AppServiceProvider extends ServiceProvider
             CalendarConnector::class,
             SupabaseWebhookConnector::class,
             SearxngConnector::class,
+            ScreenpipeConnector::class,
             NotionConnector::class,
             ConfluenceConnector::class,
             GitHubWikiConnector::class,
