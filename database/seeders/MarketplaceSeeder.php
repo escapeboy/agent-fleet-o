@@ -58,9 +58,9 @@ class MarketplaceSeeder extends Seeder
                 'visibility' => ListingVisibility::Public,
                 'version' => $def['version'] ?? '1.0.0',
                 'configuration_snapshot' => $def['configuration_snapshot'] ?? [],
-                'install_count' => $def['install_count'] ?? 0,
-                'avg_rating' => $def['avg_rating'] ?? 0,
-                'review_count' => $def['review_count'] ?? 0,
+                'install_count' => 0,
+                'avg_rating' => 0,
+                'review_count' => 0,
                 'is_official' => true,
                 'monetization_enabled' => false,
                 'price_per_run_credits' => 0,
@@ -89,9 +89,6 @@ class MarketplaceSeeder extends Seeder
                 'tags' => ['code-review', 'security', 'quality', 'engineering'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
                 'execution_profile' => ['avg_tokens' => 4000, 'avg_duration_ms' => 8000],
-                'install_count' => 342,
-                'avg_rating' => 4.7,
-                'review_count' => 28,
             ],
             [
                 'type' => 'skill',
@@ -102,9 +99,6 @@ class MarketplaceSeeder extends Seeder
                 'tags' => ['debugging', 'errors', 'troubleshooting', 'engineering'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
                 'execution_profile' => ['avg_tokens' => 3500, 'avg_duration_ms' => 7000],
-                'install_count' => 289,
-                'avg_rating' => 4.6,
-                'review_count' => 19,
             ],
             [
                 'type' => 'skill',
@@ -115,9 +109,6 @@ class MarketplaceSeeder extends Seeder
                 'tags' => ['testing', 'tdd', 'automation', 'engineering'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
                 'execution_profile' => ['avg_tokens' => 5000, 'avg_duration_ms' => 10000],
-                'install_count' => 256,
-                'avg_rating' => 4.5,
-                'review_count' => 15,
             ],
             [
                 'type' => 'skill',
@@ -127,9 +118,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['refactoring', 'clean-code', 'patterns', 'engineering'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 198,
-                'avg_rating' => 4.4,
-                'review_count' => 12,
             ],
             [
                 'type' => 'skill',
@@ -139,9 +127,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['performance', 'optimization', 'database', 'engineering'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 178,
-                'avg_rating' => 4.5,
-                'review_count' => 11,
             ],
             [
                 'type' => 'skill',
@@ -151,9 +136,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['security', 'owasp', 'audit', 'compliance'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 312,
-                'avg_rating' => 4.8,
-                'review_count' => 24,
             ],
             [
                 'type' => 'skill',
@@ -163,9 +145,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['api', 'rest', 'openapi', 'architecture'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 167,
-                'avg_rating' => 4.3,
-                'review_count' => 9,
             ],
             [
                 'type' => 'skill',
@@ -175,9 +154,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['database', 'schema', 'sql', 'architecture'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 145,
-                'avg_rating' => 4.4,
-                'review_count' => 8,
             ],
             [
                 'type' => 'skill',
@@ -187,9 +163,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['sql', 'performance', 'database', 'optimization'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 134,
-                'avg_rating' => 4.6,
-                'review_count' => 10,
             ],
             [
                 'type' => 'skill',
@@ -199,9 +172,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['architecture', 'scalability', 'patterns', 'engineering'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 156,
-                'avg_rating' => 4.5,
-                'review_count' => 11,
             ],
 
             // ─── Skills: Content & Marketing ──────────────────────────────
@@ -213,9 +183,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'content',
                 'tags' => ['writing', 'blog', 'seo', 'content'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 421,
-                'avg_rating' => 4.6,
-                'review_count' => 35,
             ],
             [
                 'type' => 'skill',
@@ -225,9 +192,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'content',
                 'tags' => ['email', 'copywriting', 'marketing', 'conversion'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 287,
-                'avg_rating' => 4.5,
-                'review_count' => 22,
             ],
             [
                 'type' => 'skill',
@@ -237,9 +201,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'content',
                 'tags' => ['social-media', 'marketing', 'engagement', 'content'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 356,
-                'avg_rating' => 4.4,
-                'review_count' => 27,
             ],
             [
                 'type' => 'skill',
@@ -249,9 +210,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'content',
                 'tags' => ['seo', 'audit', 'marketing', 'optimization'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 203,
-                'avg_rating' => 4.3,
-                'review_count' => 14,
             ],
 
             // ─── Skills: Research & Analysis ──────────────────────────────
@@ -263,9 +221,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'research',
                 'tags' => ['research', 'analysis', 'summarization', 'knowledge'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 478,
-                'avg_rating' => 4.7,
-                'review_count' => 41,
             ],
             [
                 'type' => 'skill',
@@ -275,9 +230,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'research',
                 'tags' => ['data', 'analytics', 'visualization', 'reporting'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 312,
-                'avg_rating' => 4.5,
-                'review_count' => 23,
             ],
             [
                 'type' => 'skill',
@@ -287,9 +239,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'research',
                 'tags' => ['market', 'competitive', 'strategy', 'business'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 234,
-                'avg_rating' => 4.4,
-                'review_count' => 17,
             ],
             [
                 'type' => 'skill',
@@ -299,9 +248,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'content',
                 'tags' => ['translation', 'i18n', 'localization', 'multilingual'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 267,
-                'avg_rating' => 4.3,
-                'review_count' => 18,
             ],
 
             // ─── Skills: Operations ───────────────────────────────────────
@@ -313,9 +259,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['qa', 'testing', 'quality', 'automation'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 189,
-                'avg_rating' => 4.4,
-                'review_count' => 13,
             ],
             [
                 'type' => 'skill',
@@ -325,9 +268,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'operations',
                 'tags' => ['incident', 'sre', 'monitoring', 'devops'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 145,
-                'avg_rating' => 4.6,
-                'review_count' => 9,
             ],
             [
                 'type' => 'skill',
@@ -337,9 +277,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'operations',
                 'tags' => ['deployment', 'ci-cd', 'devops', 'release'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 123,
-                'avg_rating' => 4.3,
-                'review_count' => 7,
             ],
             [
                 'type' => 'skill',
@@ -349,9 +286,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'operations',
                 'tags' => ['planning', 'project-management', 'agile', 'tasks'],
                 'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
-                'install_count' => 298,
-                'avg_rating' => 4.5,
-                'review_count' => 21,
             ],
 
             // ─── Agents ───────────────────────────────────────────────────
@@ -363,9 +297,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['developer', 'fullstack', 'engineering', 'coding'],
                 'configuration_snapshot' => ['role' => 'Senior Full-Stack Developer', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 534,
-                'avg_rating' => 4.7,
-                'review_count' => 45,
             ],
             [
                 'type' => 'agent',
@@ -375,9 +306,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['qa', 'testing', 'quality', 'automation'],
                 'configuration_snapshot' => ['role' => 'QA Engineer', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 287,
-                'avg_rating' => 4.5,
-                'review_count' => 22,
             ],
             [
                 'type' => 'agent',
@@ -387,9 +315,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'operations',
                 'tags' => ['devops', 'infrastructure', 'ci-cd', 'deployment'],
                 'configuration_snapshot' => ['role' => 'DevOps Engineer', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 234,
-                'avg_rating' => 4.4,
-                'review_count' => 16,
             ],
             [
                 'type' => 'agent',
@@ -399,9 +324,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'content',
                 'tags' => ['content', 'writing', 'marketing', 'social-media'],
                 'configuration_snapshot' => ['role' => 'Content Creator', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 456,
-                'avg_rating' => 4.6,
-                'review_count' => 38,
             ],
             [
                 'type' => 'agent',
@@ -411,9 +333,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'content',
                 'tags' => ['marketing', 'campaigns', 'analytics', 'growth'],
                 'configuration_snapshot' => ['role' => 'Marketing Specialist', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 312,
-                'avg_rating' => 4.4,
-                'review_count' => 24,
             ],
             [
                 'type' => 'agent',
@@ -423,9 +342,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'research',
                 'tags' => ['research', 'analysis', 'intelligence', 'reports'],
                 'configuration_snapshot' => ['role' => 'Research Analyst', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 389,
-                'avg_rating' => 4.7,
-                'review_count' => 31,
             ],
             [
                 'type' => 'agent',
@@ -435,9 +351,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'sales',
                 'tags' => ['sales', 'leads', 'outreach', 'strategy'],
                 'configuration_snapshot' => ['role' => 'Sales Strategist', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 198,
-                'avg_rating' => 4.3,
-                'review_count' => 14,
             ],
             [
                 'type' => 'agent',
@@ -447,9 +360,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['security', 'pentest', 'compliance', 'engineering'],
                 'configuration_snapshot' => ['role' => 'Security Engineer', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 267,
-                'avg_rating' => 4.6,
-                'review_count' => 19,
             ],
             [
                 'type' => 'agent',
@@ -459,9 +369,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['architecture', 'design', 'scalability', 'systems'],
                 'configuration_snapshot' => ['role' => 'Solutions Architect', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 178,
-                'avg_rating' => 4.5,
-                'review_count' => 12,
             ],
             [
                 'type' => 'agent',
@@ -471,9 +378,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'operations',
                 'tags' => ['project-management', 'planning', 'agile', 'tasks'],
                 'configuration_snapshot' => ['role' => 'Project Planner', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 245,
-                'avg_rating' => 4.4,
-                'review_count' => 18,
             ],
             [
                 'type' => 'agent',
@@ -483,9 +387,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'design',
                 'tags' => ['design', 'ui', 'ux', 'accessibility'],
                 'configuration_snapshot' => ['role' => 'UI/UX Designer', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 201,
-                'avg_rating' => 4.3,
-                'review_count' => 15,
             ],
             [
                 'type' => 'agent',
@@ -495,9 +396,6 @@ class MarketplaceSeeder extends Seeder
                 'category' => 'development',
                 'tags' => ['database', 'sql', 'architecture', 'optimization'],
                 'configuration_snapshot' => ['role' => 'Database Architect', 'provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
-                'install_count' => 156,
-                'avg_rating' => 4.5,
-                'review_count' => 10,
             ],
         ];
     }
