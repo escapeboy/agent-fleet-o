@@ -54,6 +54,7 @@ Receive events from external sources as `Signal` records. `app/Domain/Signal/Con
 | `matrix` | Webhook | Matrix protocol messages |
 | `signal_protocol` | Webhook | Signal encrypted messages |
 | `supabase_webhook` | Webhook | Supabase Realtime events |
+| `screenpipe` | Poll | Local screen & audio capture (OCR + transcription) |
 | `clearcue` | Webhook | ClearCue intent scoring signals |
 | `manual` | Manual | User-triggered (no config needed) |
 
@@ -120,8 +121,22 @@ Attach external MCP servers or built-in capabilities to agents.
 - **`mcp_stdio`** — local MCP server process
 - **`mcp_http`** — remote MCP server over HTTP
 - **`built_in`** — `bash` / `filesystem` / `browser`
+- **`compute_endpoint`** — GPU compute endpoint (RunPod, etc.)
 
 **MCP tools**: `tool_list`, `tool_create`, `tool_discover_mcp`, `tool_import_mcp`
+
+### GPU Tool Templates
+
+Pre-configured GPU tool templates with 1-click deploy. 16 templates: GLM-OCR, Whisper, SDXL Turbo, FLUX.1, BGE-M3, XTTS v2, Qwen2.5 Coder, Mistral 7B, Wan2.1, Florence-2, SAM 2, Table Transformer, Kokoro TTS, NLLB-200, MusicGen, F5-TTS.
+
+**UI**: `/tools/templates` | **API**: `GET /api/v1/tool-templates`, `POST /api/v1/tool-templates/{id}/deploy`
+**MCP tools**: `tool_template_manage`
+
+### MCP Marketplace
+
+Browse and install MCP servers from the Smithery registry (300+ servers).
+
+**UI**: `/tools/marketplace` | **Code**: `McpRegistryClient`, `McpMarketplacePage`
 
 ---
 
@@ -193,7 +208,9 @@ Coordinated execution of multiple agents on a shared goal.
 
 ## Integrations
 
-OAuth2 integrations with external platforms (GitHub, Slack, Notion, Linear, etc.).
+55+ integrations with external platforms across 14 categories. OAuth2, API key, and webhook-based auth.
+
+Key integrations: GitHub, Slack, Notion, Linear, Jira, HubSpot, Stripe, Apify, 1Password, Screenpipe, and more.
 
 **MCP tools**: `integration_list`, `integration_connect`, `integration_disconnect`, `integration_ping`, `integration_execute`
 
@@ -295,4 +312,4 @@ php artisan mcp:start agent-fleet   # stdio (for Claude Code, Codex)
 # or POST /mcp with Sanctum bearer token (for Cursor, remote clients)
 ```
 
-300+ tools across 30+ domains.
+345+ tools across 33+ domains.
