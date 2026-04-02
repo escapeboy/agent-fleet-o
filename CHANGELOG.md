@@ -2,6 +2,35 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.17.0] - 2026-04-02
+
+### Added
+
+- **GPU Tool Templates** — Pre-configured GPU tool templates with 1-click deploy to compute providers (RunPod, etc.). 16 templates across 8 categories: OCR (GLM-OCR), STT (Whisper), TTS (XTTS, Kokoro, F5-TTS), Image Gen (SDXL, FLUX.1), Video Gen (Wan2.1), Embedding (BGE-M3), Code Execution (Qwen2.5 Coder, Mistral 7B), and more. New `ToolTemplate` model, `DeployToolTemplateAction`, `ToolTemplateCatalogPage` UI at `/tools/templates`, `ToolTemplateManageTool` MCP tool, and `ToolTemplateController` REST API (`GET /api/v1/tool-templates`, `POST /api/v1/tool-templates/{id}/deploy`).
+- **MCP Marketplace** — Browse, search, and install MCP servers from the Smithery registry (300+ servers). `McpRegistryClient` queries `registry.smithery.ai` with caching. `McpMarketplacePage` UI at `/tools/marketplace` with server cards, verified badges, and install modal. SSRF protection via `isPrivateHost()`, command whitelist for install safety, URL sanitization at data layer.
+- **Apify Integration** — Full native connector with 6 actions: `run_actor` (with memory/wait caps), `get_run`, `get_dataset`, `search_store`, `list_actors`, `get_actor_info`. Webhook verification via `x-apify-webhook-secret` header. URL parameters use `urlencode()` to prevent path injection.
+- **1Password Integration** — Two integration paths: (1) MCP Tool — `@takescake/1password-mcp` added to PopularToolsSeeder with vault_list, item_lookup, password_read/create, password_generate. (2) Native Driver — `OnePasswordIntegrationDriver` with list_vaults, search_items, get_item (redacted fields), resolve_secret (masked output only). SCIM filter injection prevention, alphanumeric ID validation.
+- **Screenpipe Integration** — Local screen & audio capture connector. MCP Tool (`npx screenpipe-mcp`) with search_content and export_video. Signal Connector (`ScreenpipeConnector`) polls screenpipe REST API for OCR + audio content with time-based cursor dedup. Loopback-only SSRF protection.
+- **Quick Agent** — Markdown-based agent creation inspired by screenpipe's pipe.md pattern. Write a prompt with optional YAML frontmatter (role, goal, tone, style) and the body becomes the agent's backstory. Optional schedule creates a continuous Project automatically. UI at `/agents/quick`.
+- **Integrations UX Overhaul** — Category tabs with counts, descriptions for all 55+ integrations, auth type badges, `credential_fields` config for drivers without full driver classes. 11 new integrations added (Resend, SendGrid, OpenAI, Anthropic, Replicate, Pinecone, Firebase, AWS, Cloudflare, n8n, GitHub Actions).
+- **Tools Card Grid** — `/tools` page converted from table to responsive card grid (4 columns on xl screens). Cards show name, toggle, type/platform/risk badges, description, function count, agent count.
+- **Marketplace Seeder** — 34 official marketplace listings (22 skills + 12 agents) across 6 categories. All free, public, `is_official`. Usage stats start at 0 (no hardcoded fake data).
+
+### Fixed
+
+- `/app/marketplace` 502 Bad Gateway — nginx `location /app/` was catching all `/app/*` paths for Reverb WebSocket proxy. Fixed by changing marketplace URL prefix to `/hub`.
+- Flash message showing stale variable after modal close in integrations and tool template pages.
+- LIKE wildcard injection in template search (`%` and `_` now escaped).
+- `isEmpty()` called on array instead of collection in integration list page.
+
+### Security
+
+- Screenpipe connector restricted to loopback URLs only (localhost/127.0.0.1/::1) — prevents SSRF.
+- MCP Marketplace: SSRF protection via `isPrivateHost()`, command whitelist (`npx`, `uvx`, `node`, `python3`, `docker`, `bunx`), shell metacharacter rejection, `sanitizeUrl()` strips non-HTTPS URLs from external data.
+- Apify: `urlencode()` on URL parameters, `min()` caps on memory/wait, fail-closed webhook verification, account info redacted from ping response.
+- 1Password: Secret values never returned raw (masked preview only), SCIM filter injection prevented (quote/backslash rejection), path traversal prevented (alphanumeric ID validation).
+- Provider field in QuickAgentForm restricted to allowlist validation.
+
 ## [1.16.0] - 2026-03-31
 
 ### Added

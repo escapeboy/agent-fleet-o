@@ -89,7 +89,7 @@ app/
       Services/                  # SchemaValidator, SkillCostCalculator
     Tool/                        # LLM tool management (MCP servers, built-in tools)
       Actions/                   # CreateTool, UpdateTool, DeleteTool, ResolveAgentTools
-      Enums/                     # ToolType (mcp_stdio/mcp_http/built_in), ToolStatus (active/disabled), BuiltInToolKind (bash/filesystem/browser)
+      Enums/                     # ToolType (mcp_stdio/mcp_http/built_in/compute_endpoint), ToolStatus (active/disabled), BuiltInToolKind (bash/filesystem/browser)
       Models/                    # Tool (SoftDeletes, encrypted credentials, agent_tool pivot)
       Services/                  # ToolTranslator (converts Tool models to PrismPHP Tool objects)
     Credential/                  # External service credential management
@@ -222,8 +222,11 @@ app/
 | `GET /agents` | AgentListPage | agents.index |
 | `GET /agents/create` | CreateAgentForm | agents.create |
 | `GET /agents/{agent}` | AgentDetailPage | agents.show |
+| `GET /agents/quick` | QuickAgentForm | agents.quick |
 | `GET /tools` | ToolListPage | tools.index |
 | `GET /tools/create` | CreateToolForm | tools.create |
+| `GET /tools/templates` | ToolTemplateCatalogPage | tools.templates |
+| `GET /tools/marketplace` | McpMarketplacePage | tools.marketplace |
 | `GET /tools/{tool}` | ToolDetailPage | tools.show |
 | `GET /credentials` | CredentialListPage | credentials.index |
 | `GET /credentials/create` | CreateCredentialForm | credentials.create |
@@ -429,7 +432,7 @@ Reusable form components in `resources/views/components/`:
 - Tools are team-scoped, linked to agents via `agent_tool` pivot table with priority and overrides.
 - `ToolTranslator` converts Tool models to PrismPHP Tool objects at inference time.
 - `ResolveAgentToolsAction` resolves tools at execution time, filtering by project `allowed_tool_ids`.
-- 16 popular tools seeded by `PopularToolsSeeder` (all disabled by default).
+- 55+ popular tools seeded by `PopularToolsSeeder` (all disabled by default). Includes GitHub, Slack, Notion, 1Password, Screenpipe, and more.
 - Tools requiring API keys have empty placeholders in transport_config.
 
 ### Credential System
