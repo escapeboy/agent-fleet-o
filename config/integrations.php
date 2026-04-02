@@ -86,6 +86,9 @@ return [
         'linkedin' => ['label' => 'LinkedIn',             'auth' => 'oauth2',       'poll_frequency' => 0,    'icon' => '💼', 'category' => 'social',       'description' => 'Professional network. Post updates, manage company pages, and access profile data.'],
         'twitter' => ['label' => 'X (Twitter)',          'auth' => 'api_key',      'poll_frequency' => 300,  'icon' => '𝕏',  'category' => 'social',       'description' => 'Social platform. Post tweets, search mentions, and monitor hashtags and trends.'],
 
+        // Secret & Password Management
+        '1password' => ['label' => '1Password',            'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🔐', 'category' => 'developer',    'description' => 'Access 1Password vaults via Service Account. List vaults, search items, and resolve secrets. Agents can read credentials securely.', 'credential_fields' => ['service_account_token' => ['label' => 'Service Account Token', 'hint' => '1password.com → Developer → Service Accounts → Create (starts with ops_)']]],
+
         // Desktop & Activity Capture
         'screenpipe' => ['label' => 'Screenpipe',           'auth' => 'none',         'poll_frequency' => 900,  'icon' => '🖥️', 'category' => 'developer',    'description' => 'Local screen & audio capture. Full-text search over everything on your screen, audio transcriptions, and app activity. Runs via screenpipe desktop app.', 'credential_fields' => ['base_url' => ['label' => 'Screenpipe API URL', 'hint' => 'Default: http://localhost:3030']]],
 
