@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\V1\SshFingerprintController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ToolController;
 use App\Http\Controllers\Api\V1\ToolFederationGroupController;
+use App\Http\Controllers\Api\V1\ToolTemplateController;
 use App\Http\Controllers\Api\V1\TriggerController;
 use App\Http\Controllers\Api\V1\VoiceSessionController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
@@ -118,6 +119,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::apiResource('tools', ToolController::class);
     Route::apiResource('tool-federation-groups', ToolFederationGroupController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('/ssh-fingerprints', [SshFingerprintController::class, 'index']);
+
+    // Tool Templates
+    Route::get('/tool-templates', [ToolTemplateController::class, 'index']);
+    Route::get('/tool-templates/{toolTemplate}', [ToolTemplateController::class, 'show']);
+    Route::post('/tool-templates/{toolTemplate}/deploy', [ToolTemplateController::class, 'deploy']);
     Route::delete('/ssh-fingerprints/{sshFingerprint}', [SshFingerprintController::class, 'destroy']);
 
     // Credentials
