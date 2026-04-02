@@ -89,6 +89,11 @@ class Tool extends Model
         return $this->hasMany(TeamToolActivation::class);
     }
 
+    public function middlewareConfigs(): HasMany
+    {
+        return $this->hasMany(ToolMiddlewareConfig::class)->orderBy('priority');
+    }
+
     public function activationFor(string $teamId): ?TeamToolActivation
     {
         /** @var TeamToolActivation|null */

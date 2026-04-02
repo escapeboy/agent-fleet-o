@@ -27,6 +27,7 @@ class McpOAuthFlowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->generatePassportKeys();
         $this->withoutMiddleware([ThrottleRequests::class, ThrottleRequestsWithRedis::class]);
 
         $this->user = User::factory()->create();
@@ -42,7 +43,29 @@ class McpOAuthFlowTest extends TestCase
 
     protected function tearDown(): void
     {
+        // Clean up test keys
+        @unlink(storage_path('oauth-private.key'));
+        @unlink(storage_path('oauth-public.key'));
         parent::tearDown();
+    }
+
+    private function generatePassportKeys(): void
+    {
+        $privateKeyPath = storage_path('oauth-private.key');
+        $publicKeyPath = storage_path('oauth-public.key');
+
+        if (file_exists($privateKeyPath) && file_exists($publicKeyPath)) {
+            return;
+        }
+
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        openssl_pkey_export($key, $privateKey);
+        $publicKey = openssl_pkey_get_details($key)['key'];
+
+        file_put_contents($privateKeyPath, $privateKey);
+        file_put_contents($publicKeyPath, $publicKey);
+        chmod($privateKeyPath, 0600);
+        chmod($publicKeyPath, 0660);
     }
 
     // ── RFC 9728 — Protected Resource Metadata ───────────────────────────────

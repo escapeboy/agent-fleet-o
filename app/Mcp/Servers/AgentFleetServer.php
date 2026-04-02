@@ -25,6 +25,10 @@ use App\Mcp\Tools\Agent\AgentFeedbackSubmitTool;
 use App\Mcp\Tools\Agent\AgentGetTool;
 use App\Mcp\Tools\Agent\AgentHeartbeatRunNowTool;
 use App\Mcp\Tools\Agent\AgentHeartbeatUpdateTool;
+use App\Mcp\Tools\Agent\AgentHookCreateTool;
+use App\Mcp\Tools\Agent\AgentHookDeleteTool;
+use App\Mcp\Tools\Agent\AgentHookListTool;
+use App\Mcp\Tools\Agent\AgentHookToggleTool;
 use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentResetSessionTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
@@ -323,6 +327,8 @@ use App\Mcp\Tools\Tool\ToolFederationStatusTool;
 use App\Mcp\Tools\Tool\ToolGetTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
+use App\Mcp\Tools\Tool\ToolMiddlewareConfigTool;
+use App\Mcp\Tools\Tool\ToolMiddlewareListTool;
 use App\Mcp\Tools\Tool\ToolPoolListTool;
 use App\Mcp\Tools\Tool\ToolProbeRemoteMcpTool;
 use App\Mcp\Tools\Tool\ToolProfileListTool;
@@ -486,6 +492,10 @@ class AgentFleetServer extends Server
         AgentSandboxTool::class,
         AgentHeartbeatUpdateTool::class,
         AgentHeartbeatRunNowTool::class,
+        AgentHookListTool::class,
+        AgentHookCreateTool::class,
+        AgentHookToggleTool::class,
+        AgentHookDeleteTool::class,
 
         // Evolution (5)
         EvolutionProposalListTool::class,
@@ -577,6 +587,8 @@ class AgentFleetServer extends Server
         ToolFederationGroupCreateTool::class,
         ToolProfileListTool::class,
         ToolSearchTool::class,
+        ToolMiddlewareListTool::class,
+        ToolMiddlewareConfigTool::class,
 
         // Credential (10)
         CredentialListTool::class,

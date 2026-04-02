@@ -159,10 +159,13 @@ class ToolDetailPage extends Component
             ? $this->tool->credential()->first(['id', 'name', 'credential_type', 'status'])
             : null;
 
+        $middlewareConfigs = $this->tool->middlewareConfigs()->get();
+
         return view('livewire.tools.tool-detail-page', [
             'agents' => $agents,
             'riskLevels' => ToolRiskLevel::cases(),
             'linkedCredential' => $linkedCredential,
+            'middlewareConfigs' => $middlewareConfigs,
         ])->layout('layouts.app', ['header' => $this->tool->name]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Actions;
 
+use App\Domain\Agent\Enums\AgentHookPosition;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Events\AgentExecuted;
@@ -18,6 +19,7 @@ use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
 use App\Domain\Agent\Pipeline\Middleware\PreExecutionScout;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
+use App\Domain\Agent\Services\AgentHookExecutor;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Approval\Enums\ApprovalStatus;
@@ -61,6 +63,7 @@ class ExecuteAgentAction
         private readonly DetectClarificationNeeded $detectClarification,
         private readonly ResolveTierConfigAction $resolveTierConfig,
         private readonly AgentRuntimeStateService $runtimeStateService,
+        private readonly AgentHookExecutor $hookExecutor,
     ) {}
 
     /**
@@ -113,6 +116,16 @@ class ExecuteAgentAction
             return $this->failExecution($agent, $teamId, $experimentId, $input, $executing->cancelReason ?? 'Cancelled by plugin');
         }
         $input = $executing->context;
+
+        // Run user-configured pre-execution hooks (AOP pattern)
+        $hookContext = $this->hookExecutor->run(AgentHookPosition::PreExecute, $agent, [
+            'input' => $input,
+            'system_prompt' => '',
+        ]);
+        if (! empty($hookContext['cancel'])) {
+            return $this->failExecution($agent, $teamId, $experimentId, $input, $hookContext['cancel_reason'] ?? 'Blocked by agent hook');
+        }
+        $input = $hookContext['input'] ?? $input;
 
         // Run the semantic middleware pipeline to enrich / gate the execution context.
         // Each middleware may add system prompt parts, summarize input, or request clarification.
@@ -186,6 +199,16 @@ class ExecuteAgentAction
                 // Fallback: existing skill-chain execution
                 $result = $this->executeSkillChain($agent, $input, $teamId, $userId, $experimentId);
             }
+        }
+
+        // Run user-configured post-execution hooks (AOP pattern)
+        $postHookContext = $this->hookExecutor->run(AgentHookPosition::PostExecute, $agent, [
+            'output' => is_array($result['output']) ? ($result['output']['response'] ?? json_encode($result['output'])) : '',
+            'execution' => $result['execution'],
+        ]);
+        // Apply output transform if hook modified the output
+        if (isset($postHookContext['output']) && $postHookContext['output'] !== '' && is_array($result['output'])) {
+            $result['output']['response'] = $postHookContext['output'];
         }
 
         // Plugin hook: notify plugins of execution result

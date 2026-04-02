@@ -133,6 +133,41 @@
             @endforeach
         </div>
 
+        {{-- Chat Room Messages --}}
+        @if($isChatRoom && $chatMessages->isNotEmpty())
+            <div class="mt-4 border-t border-gray-200 pt-4">
+                <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Chat Room Discussion</h4>
+                <div class="max-h-[32rem] space-y-2 overflow-y-auto">
+                    @php $currentRound = 0; @endphp
+                    @foreach($chatMessages as $msg)
+                        @if($msg->round !== $currentRound)
+                            @php $currentRound = $msg->round; @endphp
+                            @if($currentRound > 0)
+                                <div class="my-2 flex items-center gap-2">
+                                    <div class="h-px flex-1 bg-gray-200"></div>
+                                    <span class="text-[10px] font-medium text-gray-400">Round {{ $currentRound }}</span>
+                                    <div class="h-px flex-1 bg-gray-200"></div>
+                                </div>
+                            @endif
+                        @endif
+                        <div class="flex gap-2 {{ $msg->role === 'system' ? 'justify-center' : '' }}">
+                            @if($msg->role === 'system')
+                                <div class="rounded-lg bg-gray-100 px-3 py-1.5 text-xs text-gray-500 italic">{{ $msg->content }}</div>
+                            @else
+                                <div class="flex-1 rounded-lg border border-gray-100 bg-white p-2.5">
+                                    <div class="mb-1 flex items-center gap-1.5">
+                                        <span class="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">{{ $msg->agent_name }}</span>
+                                        <span class="text-[10px] text-gray-400">{{ $msg->created_at?->diffForHumans() }}</span>
+                                    </div>
+                                    <div class="text-sm text-gray-700 whitespace-pre-wrap">{{ Str::limit($msg->content, 2000) }}</div>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         {{-- Final Output --}}
         @if($execution->final_output && $execution->status->value === 'completed')
             <div class="mt-4 border-t border-gray-200 pt-4">

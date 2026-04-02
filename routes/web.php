@@ -10,6 +10,7 @@ use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Middleware\BypassAuth;
+use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use App\Livewire\Agents\AgentDetailPage;
@@ -101,6 +102,7 @@ use Illuminate\Support\Facades\Route;
 // A2A Agent Card — public discovery endpoint (RFC 8615 well-known URI, no auth required)
 Route::get('/.well-known/agent.json', AgentCardController::class)
     ->name('a2a.agent-card')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
 
 // Public experiment share (no auth)
@@ -108,26 +110,30 @@ Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->
 
 // ── Social Login (OAuth) ──────────────────────────────────────────────────────
 // Guest-only initiation + callback routes (rate limited)
-Route::middleware(['guest', 'throttle:10,1'])->group(function () {
-    Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
-        ->where('provider', '[a-z0-9\-]+')
-        ->name('auth.social.redirect');
+Route::middleware(['guest', 'throttle:10,1'])
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->group(function () {
+        Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
+            ->where('provider', '[a-z0-9\-]+')
+            ->name('auth.social.redirect');
 
-    Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
-        ->where('provider', '[a-z0-9\-]+')
-        ->name('auth.social.callback');
+        Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+            ->where('provider', '[a-z0-9\-]+')
+            ->name('auth.social.callback');
 
-    // Apple sends callback as POST (response_mode=form_post); must bypass CSRF
-    Route::post('/auth/apple/callback', [SocialAuthController::class, 'appleCallback'])
-        ->name('auth.apple.callback')
-        ->withoutMiddleware([VerifyCsrfToken::class]);
-});
+        // Apple sends callback as POST (response_mode=form_post); must bypass CSRF
+        Route::post('/auth/apple/callback', [SocialAuthController::class, 'appleCallback'])
+            ->name('auth.apple.callback')
+            ->withoutMiddleware([VerifyCsrfToken::class]);
+    });
 
 // Email collection when provider returns no email (e.g. X/Twitter)
 Route::get('/auth/social/collect-email', fn () => view('auth.social-collect-email'))
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->name('auth.social.collect-email');
 Route::post('/auth/social/store-email', [SocialAuthController::class, 'storeEmail'])
     ->middleware('throttle:10,1')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->name('auth.social.store-email');
 
 // Account linking / unlinking (authenticated users)
