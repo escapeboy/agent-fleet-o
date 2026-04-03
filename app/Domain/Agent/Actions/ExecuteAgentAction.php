@@ -20,6 +20,7 @@ use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
 use App\Domain\Agent\Pipeline\Middleware\PreExecutionScout;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
 use App\Domain\Agent\Services\AgentHookExecutor;
+use App\Domain\Agent\Services\AgentPromptCompiler;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Approval\Enums\ApprovalStatus;
@@ -64,6 +65,7 @@ class ExecuteAgentAction
         private readonly ResolveTierConfigAction $resolveTierConfig,
         private readonly AgentRuntimeStateService $runtimeStateService,
         private readonly AgentHookExecutor $hookExecutor,
+        private readonly AgentPromptCompiler $promptCompiler,
     ) {}
 
     /**
@@ -529,7 +531,10 @@ class ExecuteAgentAction
             $parts[] = "Your goal: {$agent->goal}";
         }
 
-        if ($agent->backstory) {
+        $compiledIdentity = $this->promptCompiler->compile($agent);
+        if ($compiledIdentity !== '' && ! empty($agent->system_prompt_template)) {
+            $parts[] = $compiledIdentity;
+        } elseif ($agent->backstory) {
             $parts[] = "Background: {$agent->backstory}";
         }
 

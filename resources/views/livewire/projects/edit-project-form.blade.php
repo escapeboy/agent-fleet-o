@@ -133,6 +133,52 @@
                 </div>
             @endif
 
+            {{-- Heartbeat Monitoring --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Heartbeat Monitoring</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Enable proactive monitoring — the agent periodically reviews system state and acts if something needs attention.</p>
+                    </div>
+                    <label class="relative inline-flex cursor-pointer items-center">
+                        <input type="checkbox" wire:model.live="heartbeatEnabled" class="peer sr-only">
+                        <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4 peer-focus:ring-primary-300 dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-primary-800"></div>
+                    </label>
+                </div>
+
+                @if($heartbeatEnabled)
+                <div class="space-y-4 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-form-select wire:model="heartbeatIntervalMinutes" label="Check Interval" :error="$errors->first('heartbeatIntervalMinutes')">
+                            <option value="15">Every 15 minutes</option>
+                            <option value="30">Every 30 minutes</option>
+                            <option value="60">Every hour</option>
+                            <option value="120">Every 2 hours</option>
+                            <option value="240">Every 4 hours</option>
+                        </x-form-select>
+
+                        <x-form-input wire:model="heartbeatBudgetCap" label="Budget Cap per Check (credits)" type="number"
+                            :hint="'Optional — limits cost per heartbeat turn'"
+                            :error="$errors->first('heartbeatBudgetCap')" placeholder="No limit" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Context Sources</label>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Select what data the agent reviews during each heartbeat check.</p>
+                        <div class="flex flex-wrap gap-3">
+                            @foreach(['signals' => 'Recent Signals', 'metrics' => 'Metrics', 'audit' => 'Audit Log', 'experiments' => 'Active Experiments'] as $key => $label)
+                            <label class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm cursor-pointer transition-colors
+                                {{ in_array($key, $heartbeatContextSources) ? 'bg-primary-50 border-primary-300 text-primary-700 dark:bg-primary-900/20 dark:border-primary-700 dark:text-primary-300' : 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' }}">
+                                <input type="checkbox" wire:model.live="heartbeatContextSources" value="{{ $key }}" class="sr-only">
+                                <span>{{ $label }}</span>
+                            </label>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                @endif
+            </div>
+
             {{-- Outbound Channels --}}
             <div>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Outbound Channels</h3>

@@ -23,6 +23,7 @@ use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
 use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
+use App\Domain\Memory\Listeners\FlushAgentMemoryOnCompletion;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
@@ -342,6 +343,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Memory: extract success pattern when experiment reaches Completed
         Event::listen(ExperimentTransitioned::class, ExtractSuccessPatternListener::class);
+
+        // Memory: flush agent memory on workflow experiment completion
+        Event::listen(ExperimentTransitioned::class, FlushAgentMemoryOnCompletion::class);
 
         // Stuck pattern detection: handle detected stuck patterns (notify/pause/kill)
         Event::listen(StuckPatternDetected::class, HandleStuckPattern::class);

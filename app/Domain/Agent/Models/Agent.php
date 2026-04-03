@@ -85,6 +85,7 @@ class Agent extends Model
         'data_classification',
         'sandbox_profile',
         'tool_profile',
+        'system_prompt_template',
     ];
 
     protected function casts(): array
@@ -110,6 +111,7 @@ class Agent extends Model
             'heartbeat_definition' => 'array',
             'data_classification' => DataClassification::class,
             'sandbox_profile' => 'array',
+            'system_prompt_template' => 'array',
         ];
     }
 
@@ -152,7 +154,7 @@ class Agent extends Model
     {
         return $this->belongsToMany(Tool::class, 'agent_tool')
             ->using(AgentToolPivot::class)
-            ->withPivot('priority', 'overrides')
+            ->withPivot('priority', 'overrides', 'approval_mode', 'approval_timeout_minutes', 'approval_timeout_action')
             ->withTimestamps()
             ->orderByPivot('priority');
     }

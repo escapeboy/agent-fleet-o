@@ -37,8 +37,12 @@ use App\Mcp\Tools\Agent\AgentSandboxTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
+use App\Mcp\Tools\Agent\AgentToolApprovalConfigureTool;
 use App\Mcp\Tools\Agent\AgentToolSyncTool;
+use App\Mcp\Tools\Agent\AgentUpdateIdentityTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
+use App\Mcp\Tools\Agent\AgentWorkspaceExportTool;
+use App\Mcp\Tools\Agent\AgentWorkspaceImportTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
@@ -219,6 +223,7 @@ use App\Mcp\Tools\Project\ProjectActivateTool;
 use App\Mcp\Tools\Project\ProjectArchiveTool;
 use App\Mcp\Tools\Project\ProjectCreateTool;
 use App\Mcp\Tools\Project\ProjectGetTool;
+use App\Mcp\Tools\Project\ProjectHeartbeatConfigureTool;
 use App\Mcp\Tools\Project\ProjectListTool;
 use App\Mcp\Tools\Project\ProjectPauseTool;
 use App\Mcp\Tools\Project\ProjectRestartTool;
@@ -497,6 +502,10 @@ class AgentFleetServer extends Server
         AgentHookCreateTool::class,
         AgentHookToggleTool::class,
         AgentHookDeleteTool::class,
+        AgentUpdateIdentityTool::class,
+        AgentToolApprovalConfigureTool::class,
+        AgentWorkspaceExportTool::class,
+        AgentWorkspaceImportTool::class,
 
         // Evolution (5)
         EvolutionProposalListTool::class,
@@ -644,6 +653,7 @@ class AgentFleetServer extends Server
         ProjectArchiveTool::class,
         ProjectScheduleManageTool::class,
         ProjectScheduleNlpTool::class,
+        ProjectHeartbeatConfigureTool::class,
         ProjectRunListTool::class,
         ProjectRunGetTool::class,
 

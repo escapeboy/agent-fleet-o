@@ -3,6 +3,7 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
+use App\Domain\Agent\Actions\ExportAgentWorkspaceAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
@@ -15,10 +16,15 @@ use App\Domain\Agent\Models\AgentHook;
 use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
+use App\Domain\Memory\Models\Memory;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Tool\Enums\ApprovalTimeoutAction;
+use App\Domain\Tool\Enums\ToolApprovalMode;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Database\Eloquent\Collection;
 use Livewire\Component;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgentDetailPage extends Component
 {
@@ -93,9 +99,37 @@ class AgentDetailPage extends Component
 
     public ?string $editingHookId = null;
 
+    // System Prompt Template (Identity)
+    public bool $useStructuredTemplate = false;
+
+    public ?string $templatePersonality = '';
+
+    /** @var array<string> */
+    public array $templateRules = [];
+
+    public ?string $templateContextInjection = '';
+
+    public ?string $templateOutputFormat = '';
+
+    public string $newRule = '';
+
+    // Export
+    public string $exportFormat = 'zip';
+
+    public bool $exportIncludeMemories = true;
+
     public function mount(Agent $agent): void
     {
         $this->agent = $agent;
+
+        $template = $this->agent->system_prompt_template;
+        if ($template) {
+            $this->useStructuredTemplate = true;
+            $this->templatePersonality = $template['personality'] ?? '';
+            $this->templateRules = $template['rules'] ?? [];
+            $this->templateContextInjection = $template['context_injection'] ?? '';
+            $this->templateOutputFormat = $template['output_format'] ?? '';
+        }
     }
 
     public function toggleStatus(): void
@@ -422,6 +456,81 @@ class AgentDetailPage extends Component
         $this->hookType = 'prompt_injection';
         $this->hookConfigJson = '{}';
         $this->hookPriority = 100;
+    }
+
+    // ── System Prompt Template ──
+
+    public function addRule(): void
+    {
+        if (trim($this->newRule) !== '') {
+            $this->templateRules[] = trim($this->newRule);
+            $this->newRule = '';
+        }
+    }
+
+    public function removeRule(int $index): void
+    {
+        unset($this->templateRules[$index]);
+        $this->templateRules = array_values($this->templateRules);
+    }
+
+    public function saveIdentityTemplate(): void
+    {
+        if (! $this->useStructuredTemplate) {
+            $this->agent->update(['system_prompt_template' => null]);
+            $this->dispatch('notify', message: 'Switched to classic mode', type: 'success');
+
+            return;
+        }
+
+        $this->agent->update([
+            'system_prompt_template' => [
+                'personality' => $this->templatePersonality,
+                'rules' => $this->templateRules,
+                'context_injection' => $this->templateContextInjection,
+                'output_format' => $this->templateOutputFormat,
+            ],
+        ]);
+        $this->dispatch('notify', message: 'Identity template saved', type: 'success');
+    }
+
+    // ── Agent Memories ──
+
+    /** @return Collection<int, Memory> */
+    public function getAgentMemoriesProperty(): Collection
+    {
+        return Memory::withoutGlobalScopes()
+            ->where('agent_id', $this->agent->id)
+            ->where('team_id', $this->agent->team_id)
+            ->latest()
+            ->take(50)
+            ->get();
+    }
+
+    // ── Tool Approval ──
+
+    public function updateToolApproval(string $toolId, string $mode, int $timeout = 30, string $timeoutAction = 'deny'): void
+    {
+        if (! $this->agent->tools()->where('tools.id', $toolId)->exists()) {
+            return;
+        }
+
+        $this->agent->tools()->updateExistingPivot($toolId, [
+            'approval_mode' => ToolApprovalMode::from($mode),
+            'approval_timeout_minutes' => $timeout,
+            'approval_timeout_action' => ApprovalTimeoutAction::from($timeoutAction),
+        ]);
+        $this->dispatch('notify', message: 'Tool approval settings updated', type: 'success');
+    }
+
+    // ── Export ──
+
+    public function exportWorkspace(): StreamedResponse
+    {
+        $action = app(ExportAgentWorkspaceAction::class);
+        $path = $action->execute($this->agent, $this->exportFormat, $this->exportIncludeMemories);
+
+        return response()->download($path)->deleteFileAfterSend();
     }
 
     public function render()

@@ -70,5 +70,8 @@ Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
 // Agent heartbeats — evaluate scheduled autonomous tasks every minute
 Schedule::command('agents:heartbeats')->everyMinute()->withoutOverlapping(1);
 
+// Clean stale per-agent serial execution locks
+Schedule::command('agents:clean-locks')->everyFiveMinutes()->withoutOverlapping();
+
 // Refresh webhooks with expiring TTLs (e.g. Jira Cloud 30-day webhook expiry)
 Schedule::job(new RefreshExpiringWebhooksJob)->weekly();

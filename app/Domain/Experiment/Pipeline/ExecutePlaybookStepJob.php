@@ -17,6 +17,7 @@ use App\Domain\Workflow\Models\WorkflowNodeEvent;
 use App\Domain\Workflow\Services\WorkflowEventRecorder;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
+use App\Jobs\Middleware\PerAgentSerialExecution;
 use App\Jobs\Middleware\TenantRateLimit;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -55,7 +56,13 @@ class ExecutePlaybookStepJob implements ShouldQueue
             new CheckKillSwitch,
             new CheckBudgetAvailable,
             new TenantRateLimit('experiments', 30),
+            new PerAgentSerialExecution,
         ];
+    }
+
+    public function getAgentId(): ?string
+    {
+        return PlaybookStep::find($this->stepId)?->agent_id;
     }
 
     public function handle(ExecuteAgentAction $executeAgent, ExecuteSkillAction $executeSkill): void

@@ -382,6 +382,26 @@
                     <i class="fa-solid fa-microphone text-xs"></i>
                     Voice
                 </a>
+                <div x-data="{ showExport: false }" class="relative">
+                    <button @click="showExport = !showExport" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Export Agent">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </button>
+                    <div x-show="showExport" @click.away="showExport = false" x-transition
+                        class="absolute right-0 z-10 mt-2 w-64 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+                        <h4 class="mb-3 text-sm font-semibold text-gray-900">Export Workspace</h4>
+                        <x-form-select wire:model="exportFormat" label="Format" compact>
+                            <option value="zip">ZIP archive</option>
+                            <option value="yaml">YAML file</option>
+                        </x-form-select>
+                        <div class="mt-2">
+                            <x-form-checkbox wire:model="exportIncludeMemories" label="Include memories" />
+                        </div>
+                        <button wire:click="exportWorkspace" @click="showExport = false"
+                            class="mt-3 w-full rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                            Download
+                        </button>
+                    </div>
+                </div>
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Agent">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                 </button>
@@ -422,7 +442,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'hooks' => 'Hooks', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'identity' => 'System Prompt', 'memory' => 'Memory', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'hooks' => 'Hooks', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -459,6 +479,148 @@
                         @endif
                     </div>
                 </div>
+            </div>
+
+        @elseif($activeTab === 'identity')
+            <div class="space-y-6">
+                <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Prompt Mode</h3>
+                            <p class="mt-0.5 text-xs text-gray-500">Choose between a structured identity template or the classic backstory field.</p>
+                        </div>
+                        <x-form-checkbox wire:model.live="useStructuredTemplate" label="Use structured template" />
+                    </div>
+
+                    @if($useStructuredTemplate)
+                        <div class="space-y-4">
+                            <x-form-textarea wire:model="templatePersonality" label="Personality" rows="3"
+                                hint="Describe the agent's persona, tone, and communication style." />
+
+                            {{-- Rules --}}
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Rules</label>
+                                <p class="mb-2 text-xs text-gray-500">Explicit behavioral constraints the agent must follow.</p>
+                                @if(!empty($templateRules))
+                                    <ul class="mb-2 space-y-1">
+                                        @foreach($templateRules as $index => $rule)
+                                            <li class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" wire:key="rule-{{ $index }}">
+                                                <span class="flex-1 text-gray-700">{{ $rule }}</span>
+                                                <button wire:click="removeRule({{ $index }})" type="button"
+                                                    class="shrink-0 rounded p-1 text-red-400 hover:bg-red-50 hover:text-red-600">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                </button>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                                <div class="flex gap-2">
+                                    <x-form-input wire:model="newRule" type="text" placeholder="Add a rule..." class="flex-1" compact
+                                        wire:keydown.enter.prevent="addRule" />
+                                    <button wire:click="addRule" type="button"
+                                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+
+                            <x-form-textarea wire:model="templateContextInjection" label="Context Injection" rows="3" mono
+                                hint="Template for injecting dynamic context. Variables: @{{agent.name}}, @{{agent.role}}, @{{recent_memories}}, @{{knowledge_context}}" />
+
+                            <x-form-textarea wire:model="templateOutputFormat" label="Output Format" rows="2"
+                                hint="Desired output structure or formatting instructions." />
+
+                            <div class="flex justify-end">
+                                <button wire:click="saveIdentityTemplate"
+                                    class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                                    Save Template
+                                </button>
+                            </div>
+
+                            {{-- Preview --}}
+                            @if($templatePersonality || !empty($templateRules))
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                    <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Compiled Preview</h4>
+                                    <div class="whitespace-pre-wrap font-mono text-xs text-gray-700">@if($templatePersonality)<span class="text-gray-400">[Personality]</span>
+{{ $templatePersonality }}
+@endif
+@if(!empty($templateRules))<span class="text-gray-400">[Rules]</span>
+@foreach($templateRules as $r)- {{ $r }}
+@endforeach
+@endif
+@if($templateContextInjection)<span class="text-gray-400">[Context]</span>
+{{ $templateContextInjection }}
+@endif
+@if($templateOutputFormat)<span class="text-gray-400">[Output Format]</span>
+{{ $templateOutputFormat }}
+@endif</div>
+                                </div>
+                            @endif
+                        </div>
+                    @else
+                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <h4 class="mb-2 text-sm font-semibold text-gray-700">Classic Backstory</h4>
+                            @if($agent->backstory)
+                                <p class="whitespace-pre-wrap text-sm text-gray-600">{{ $agent->backstory }}</p>
+                            @else
+                                <p class="text-sm italic text-gray-400">No backstory defined. Click "Edit" above to add one.</p>
+                            @endif
+                        </div>
+                        @if($agent->system_prompt_template)
+                            <button wire:click="saveIdentityTemplate"
+                                class="mt-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                Clear structured template
+                            </button>
+                        @endif
+                    @endif
+                </div>
+            </div>
+
+        @elseif($activeTab === 'memory')
+            <div class="space-y-4">
+                @php $memories = $this->agentMemories; @endphp
+
+                @if($memories->isEmpty())
+                    <div class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
+                        <svg class="mx-auto mb-2 h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                        <p class="text-sm text-gray-500">No memories stored for this agent.</p>
+                        <p class="mt-1 text-xs text-gray-400">Memories are created automatically during execution or via the Memory API.</p>
+                    </div>
+                @else
+                    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                        <div class="border-b border-gray-200 px-6 py-3">
+                            <p class="text-sm text-gray-500">{{ $memories->count() }} most recent memories</p>
+                        </div>
+                        <ul class="divide-y divide-gray-100">
+                            @foreach($memories as $memory)
+                                <li class="px-6 py-4">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm text-gray-800">{{ \Illuminate\Support\Str::limit($memory->content, 200) }}</p>
+                                            <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                                @if($memory->source_type === 'auto-flush')
+                                                    <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">Auto</span>
+                                                @endif
+                                                @if($memory->importance)
+                                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                                                        {{ $memory->importance >= 0.7 ? 'bg-amber-100 text-amber-700' : ($memory->importance >= 0.4 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600') }}">
+                                                        {{ number_format($memory->importance, 1) }}
+                                                    </span>
+                                                @endif
+                                                @foreach($memory->tags ?? [] as $tag)
+                                                    @if($tag !== 'auto-flush')
+                                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $tag }}</span>
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                        <span class="shrink-0 text-xs text-gray-400" title="{{ $memory->created_at }}">{{ $memory->created_at->diffForHumans() }}</span>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
             </div>
 
         @elseif($activeTab === 'knowledge')
@@ -559,23 +721,76 @@
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Functions</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Priority</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Approval</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($tools as $tool)
-                            <tr>
+                            @php
+                                $approvalMode = $tool->pivot->approval_mode?->value ?? 'auto';
+                                $approvalTimeout = $tool->pivot->approval_timeout_minutes ?? 30;
+                                $timeoutAction = $tool->pivot->approval_timeout_action?->value ?? 'deny';
+                            @endphp
+                            <tr x-data="{ expanded: false }">
                                 <td class="px-6 py-4">
                                     <a href="{{ route('tools.show', $tool) }}" class="font-medium text-primary-600 hover:text-primary-800">{{ $tool->name }}</a>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $tool->type->label() }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $tool->functionCount() }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $tool->pivot->priority }}</td>
+                                <td class="px-6 py-4">
+                                    <button @click="expanded = !expanded"
+                                        class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium
+                                            {{ $approvalMode === 'ask' ? 'bg-amber-100 text-amber-700' : ($approvalMode === 'deny' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700') }}">
+                                        {{ \App\Domain\Tool\Enums\ToolApprovalMode::from($approvalMode)->label() }}
+                                        <svg class="h-3 w-3 transition-transform" :class="expanded && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                    </button>
+                                </td>
                                 <td class="px-6 py-4"><x-status-badge :status="$tool->status->value" /></td>
+                            </tr>
+                            <tr x-show="expanded" x-transition>
+                                <td colspan="6" class="border-t border-gray-100 bg-gray-50 px-6 py-3">
+                                    <div class="flex flex-wrap items-end gap-4"
+                                        x-data="{
+                                            mode: '{{ $approvalMode }}',
+                                            timeout: {{ $approvalTimeout }},
+                                            timeoutAction: '{{ $timeoutAction }}'
+                                        }">
+                                        <div>
+                                            <label class="mb-1 block text-xs font-medium text-gray-600">Approval Mode</label>
+                                            <select x-model="mode"
+                                                class="rounded-lg border border-gray-300 py-1.5 px-3 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                                @foreach(\App\Domain\Tool\Enums\ToolApprovalMode::cases() as $m)
+                                                    <option value="{{ $m->value }}">{{ $m->label() }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div x-show="mode === 'ask'">
+                                            <label class="mb-1 block text-xs font-medium text-gray-600">Timeout (minutes)</label>
+                                            <input x-model.number="timeout" type="number" min="1" max="1440"
+                                                class="w-24 rounded-lg border border-gray-300 py-1.5 px-3 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                        </div>
+                                        <div x-show="mode === 'ask'">
+                                            <label class="mb-1 block text-xs font-medium text-gray-600">On Timeout</label>
+                                            <select x-model="timeoutAction"
+                                                class="rounded-lg border border-gray-300 py-1.5 px-3 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                                @foreach(\App\Domain\Tool\Enums\ApprovalTimeoutAction::cases() as $a)
+                                                    <option value="{{ $a->value }}">{{ $a->label() }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <button
+                                            @click="$wire.updateToolApproval('{{ $tool->id }}', mode, timeout, timeoutAction); expanded = false"
+                                            class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                                            Save
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-400">No tools assigned. Tools enable the agent to take real-world actions.</td>
+                                <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-400">No tools assigned. Tools enable the agent to take real-world actions.</td>
                             </tr>
                         @endforelse
                     </tbody>
