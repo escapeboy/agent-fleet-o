@@ -4,14 +4,14 @@ namespace App\Livewire\Experiments;
 
 use App\Domain\Agent\Models\AiRun;
 use App\Domain\Experiment\Actions\KillExperimentAction;
-use App\Domain\Experiment\Models\UncertaintySignal;
-use App\Domain\Experiment\Models\WorklogEntry;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
 use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\UncertaintySignal;
+use App\Domain\Experiment\Models\WorklogEntry;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Workflow\Actions\SuggestWorkflowAction;
@@ -239,13 +239,13 @@ class ExperimentDetailPage extends Component
         $failureLessons = $this->loadFailureLessons();
 
         $worklogs = $this->activeTab === 'worklog'
-            ? WorklogEntry::where('workloggable_type', \App\Domain\Experiment\Models\Experiment::class)
+            ? WorklogEntry::where('workloggable_type', Experiment::class)
                 ->where('workloggable_id', $this->experiment->id)
                 ->latest('created_at')
                 ->get()
             : collect();
 
-        $worklogCount = WorklogEntry::where('workloggable_type', \App\Domain\Experiment\Models\Experiment::class)
+        $worklogCount = WorklogEntry::where('workloggable_type', Experiment::class)
             ->where('workloggable_id', $this->experiment->id)
             ->count();
 

@@ -94,7 +94,7 @@ class BridgeRouter
                     });
             })
             // Connected first, then by priority, then most recent
-            ->orderByRaw("CASE WHEN status = ? THEN 0 ELSE 1 END", [BridgeConnectionStatus::Connected->value])
+            ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [BridgeConnectionStatus::Connected->value])
             ->orderByDesc('priority')
             ->orderByDesc('connected_at')
             ->get();
