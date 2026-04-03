@@ -19,6 +19,7 @@ use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\HandleStuckPattern;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
+use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
@@ -337,6 +338,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Memory: extract learnings from completed experiments
         Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);
+
+        // ReasoningBank: record strategy embeddings from completed experiments
+        Event::listen(ExperimentTransitioned::class, RecordReasoningBankEntry::class);
 
         // Memory: extract failure lesson when experiment enters a failed state
         Event::listen(ExperimentTransitioned::class, ExtractFailureLessonListener::class);

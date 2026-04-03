@@ -44,6 +44,12 @@ Schedule::command('credentials:refresh-reddit')->hourly()->withoutOverlapping(5)
 // Project scheduling & budget enforcement
 Schedule::command('projects:check-budgets')->hourly();
 
+// Relationship health scoring (daily)
+Schedule::command('contacts:score-health')->dailyAt('03:30')->withoutOverlapping(60);
+
+// Auto-skill generation from recurring experiment patterns (weekly)
+Schedule::command('skills:auto-generate')->weeklyOn(0, '02:00')->withoutOverlapping(120);
+
 // Agent memory consolidation & pruning (consolidate BEFORE prune)
 Schedule::command('memories:consolidate')->dailyAt('02:30')->withoutOverlapping(90)->onOneServer();
 Schedule::command('memories:prune')->dailyAt('03:00');

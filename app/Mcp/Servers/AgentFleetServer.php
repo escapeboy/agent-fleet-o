@@ -154,6 +154,7 @@ use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Experiment\PlanWithKnowledgeTool;
+use App\Mcp\Tools\Experiment\ReasoningBankSearchTool;
 use App\Mcp\Tools\Experiment\UncertaintyEmitTool;
 use App\Mcp\Tools\Experiment\UncertaintyResolveTool;
 use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
@@ -246,6 +247,7 @@ use App\Mcp\Tools\RAGFlow\RagflowRaptorBuildTool;
 use App\Mcp\Tools\RAGFlow\RagflowSearchTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
+use App\Mcp\Tools\Shared\ContactHealthScoreTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
@@ -292,6 +294,7 @@ use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
 use App\Mcp\Tools\Skill\SkillAnnotateTool;
+use App\Mcp\Tools\Skill\SkillAutoGenerateRunTool;
 use App\Mcp\Tools\Skill\SkillBenchmarkCancelTool;
 use App\Mcp\Tools\Skill\SkillBenchmarkListTool;
 use App\Mcp\Tools\Skill\SkillBenchmarkStartTool;
@@ -556,6 +559,7 @@ class AgentFleetServer extends Server
         WorklogAppendTool::class,
         WorklogReadTool::class,
         PlanWithKnowledgeTool::class,
+        ReasoningBankSearchTool::class,
 
         // Skill (19)
         SkillListTool::class,
@@ -580,6 +584,7 @@ class AgentFleetServer extends Server
         SkillBenchmarkStatusTool::class,
         SkillBenchmarkCancelTool::class,
         SkillBenchmarkListTool::class,
+        SkillAutoGenerateRunTool::class,
 
         // Tool (19)
         ToolListTool::class,
@@ -781,7 +786,8 @@ class AgentFleetServer extends Server
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
 
-        // Shared (15)
+        // Shared (16)
+        ContactHealthScoreTool::class,
         NotificationTool::class,
         TeamGetTool::class,
         TeamUpdateTool::class,

@@ -8,6 +8,7 @@ use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Experiment\Services\ReasoningBankService;
 use App\Domain\Memory\Services\MemoryContextInjector;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
@@ -75,6 +76,23 @@ class RunPlanningStage extends BaseStageJob
             if ($memory) {
                 $contextParts[] = "--- Past Learnings ---\n{$memory}";
             }
+        }
+
+        // Inject ReasoningBank hints: top-3 similar past strategies
+        try {
+            $hints = app(ReasoningBankService::class)->fetchHints(
+                goalText: $experiment->thesis ?? $experiment->title,
+                teamId: $experiment->team_id,
+                k: 3,
+            );
+            if ($hints->isNotEmpty()) {
+                $hintText = $hints->map(fn ($h, $i) => 'Strategy '.($i + 1).': '.$h->outcome_summary."\nTools: ".
+                    collect($h->tool_sequence)->pluck('tool_name')->filter()->implode(' → '),
+                )->implode("\n\n");
+                $contextParts[] = "--- Past Strategy Hints (similar goals) ---\n{$hintText}";
+            }
+        } catch (\Throwable) {
+            // Non-fatal: skip hints if reasoning bank is unavailable
         }
 
         if ($rejectionFeedback) {

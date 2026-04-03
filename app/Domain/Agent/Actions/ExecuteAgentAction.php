@@ -24,6 +24,7 @@ use App\Domain\Agent\Services\AgentHookExecutor;
 use App\Domain\Agent\Services\AgentPromptCompiler;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Agent\Services\SandboxedWorkspace;
+use App\Domain\Agent\Services\ToolRecoveryOrchestrator;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
@@ -67,6 +68,7 @@ class ExecuteAgentAction
         private readonly AgentRuntimeStateService $runtimeStateService,
         private readonly AgentHookExecutor $hookExecutor,
         private readonly AgentPromptCompiler $promptCompiler,
+        private readonly ToolRecoveryOrchestrator $toolRecovery,
     ) {}
 
     /**
@@ -276,7 +278,19 @@ class ExecuteAgentAction
                 enablePromptCaching: true,
             );
 
-            $response = $this->gateway->complete($request);
+            [$response, $recoveryTier, $isPartial] = $this->toolRecovery->attempt(
+                request: $request,
+                agent: $agent,
+                team: $team,
+                experimentId: $experimentId,
+            );
+
+            if ($isPartial) {
+                Log::warning('Agent execution degraded — tool recovery reached tier 6', [
+                    'agent_id' => $agent->id,
+                    'experiment_id' => $experimentId,
+                ]);
+            }
 
             // Tool loop circuit breakers (BroodMind-inspired).
             // Warning threshold: log but continue. Critical threshold: fail fast.
