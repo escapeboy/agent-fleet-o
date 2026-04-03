@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
  */
 class DetectStaleBridgeConnections extends Command
 {
-    protected $signature = 'bridge:detect-stale {--threshold=120 : Seconds since last heartbeat to consider stale}';
+    protected $signature = 'bridge:detect-stale {--threshold=600 : Seconds since last heartbeat to consider stale}';
 
     protected $description = 'Mark bridge connections as disconnected if no heartbeat received within threshold';
 
