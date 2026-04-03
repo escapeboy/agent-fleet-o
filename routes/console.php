@@ -11,6 +11,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('approvals:expire-stale')->hourly();
+Schedule::command('approvals:auto-approve-on-loop')->everyMinute()->withoutOverlapping(1);
 // Temporarily disabled to avoid rate-limiting Google Gemini during experiment runs
 // Schedule::command('agents:health-check')->everyFiveMinutes();
 Schedule::command('tools:health-check')->everyFiveMinutes()->withoutOverlapping(4);

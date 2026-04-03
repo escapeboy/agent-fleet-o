@@ -92,6 +92,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/experiments/{experiment}/retry', [ExperimentController::class, 'retry']);
     Route::post('/experiments/{experiment}/kill', [ExperimentController::class, 'kill']);
     Route::post('/experiments/{experiment}/retry-from-step', [ExperimentController::class, 'retryFromStep']);
+    Route::post('/experiments/{experiment}/resume-from-checkpoint', [ExperimentController::class, 'resumeFromCheckpoint']);
     Route::get('/experiments/{experiment}/steps', [ExperimentController::class, 'steps']);
     Route::get('/experiments/{experiment}/snapshots', [ExperimentController::class, 'snapshots']);
     Route::get('/experiments/{experiment}/cost', [ExperimentController::class, 'cost']);

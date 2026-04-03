@@ -3,6 +3,7 @@
 namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Enums\AgentHookPosition;
+use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Events\AgentExecuted;
@@ -588,6 +589,12 @@ class ExecuteAgentAction
                 'If you approach the limit with work still remaining: prioritise the most important items,',
                 'then deliver a partial result with clear notes on what was not completed.',
             ]);
+        }
+
+        // Reasoning strategy — shapes how the agent thinks and plans before acting
+        $strategySection = ($agent->reasoning_strategy ?? AgentReasoningStrategy::FunctionCalling)->systemPromptSection();
+        if ($strategySection !== '') {
+            $parts[] = $strategySection;
         }
 
         // Explicit tool-selection chain-of-thought — improves traceability and reduces incorrect selections

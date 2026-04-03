@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\AiRun;
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
+use App\Domain\Experiment\Actions\ResumeFromCheckpointAction;
 use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
@@ -28,6 +29,8 @@ class ExperimentDetailPage extends Component
     public bool $showKillConfirm = false;
 
     public bool $showRetryConfirm = false;
+
+    public bool $showResumeCheckpointConfirm = false;
 
     public bool $showShareModal = false;
 
@@ -107,6 +110,17 @@ class ExperimentDetailPage extends Component
         $action->execute($this->experiment, auth()->id(), 'Killed from admin panel');
         $this->experiment = $this->experiment->fresh();
         $this->showKillConfirm = false;
+    }
+
+    public function resumeFromCheckpoint(): void
+    {
+        $result = app(ResumeFromCheckpointAction::class)->execute($this->experiment);
+        $this->experiment = $this->experiment->fresh();
+        $this->showResumeCheckpointConfirm = false;
+
+        if (! $result['resumed']) {
+            session()->flash('error', $result['message']);
+        }
     }
 
     public function openShareModal(): void

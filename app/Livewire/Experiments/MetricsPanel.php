@@ -62,6 +62,12 @@ class MetricsPanel extends Component
         // Recent non-duration activity
         $recentActivity = $metrics->where('type', '!=', 'state_duration')->take(20);
 
+        $stageTelemetry = $this->experiment->stages()
+            ->whereNotNull('telemetry')
+            ->orderBy('iteration')
+            ->orderBy('started_at')
+            ->get(['stage', 'status', 'iteration', 'telemetry', 'duration_ms']);
+
         return view('livewire.experiments.metrics-panel', [
             'pipelineTimings' => $orderedTimings,
             'totalPipelineSeconds' => $totalPipelineSeconds,
@@ -76,6 +82,7 @@ class MetricsPanel extends Component
             'paymentCount' => $paymentCount,
             'hasOutboundMetrics' => $hasOutboundMetrics,
             'recentActivity' => $recentActivity,
+            'stageTelemetry' => $stageTelemetry,
         ]);
     }
 

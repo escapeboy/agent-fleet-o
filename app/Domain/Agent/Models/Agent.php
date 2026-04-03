@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Models;
 
+use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Knowledge\Models\KnowledgeBase;
@@ -86,12 +87,14 @@ class Agent extends Model
         'sandbox_profile',
         'tool_profile',
         'system_prompt_template',
+        'reasoning_strategy',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => AgentStatus::class,
+            'reasoning_strategy' => AgentReasoningStrategy::class,
             'meta' => 'array',
             'personality' => 'array',
             'config' => 'array',

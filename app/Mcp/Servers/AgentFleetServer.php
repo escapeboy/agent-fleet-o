@@ -34,6 +34,7 @@ use App\Mcp\Tools\Agent\AgentResetSessionTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
 use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
 use App\Mcp\Tools\Agent\AgentSandboxTool;
+use App\Mcp\Tools\Agent\AgentSetReasoningStrategyTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
@@ -142,11 +143,13 @@ use App\Mcp\Tools\Experiment\ExperimentGetTool;
 use App\Mcp\Tools\Experiment\ExperimentKillTool;
 use App\Mcp\Tools\Experiment\ExperimentListTool;
 use App\Mcp\Tools\Experiment\ExperimentPauseTool;
+use App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
 use App\Mcp\Tools\Experiment\ExperimentSearchHistoryTool;
 use App\Mcp\Tools\Experiment\ExperimentShareTool;
+use App\Mcp\Tools\Experiment\ExperimentStageTelemetryTool;
 use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
@@ -477,12 +480,13 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
-        // Agent (19)
+        // Agent (20)
         AgentListTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
         AgentUpdateTool::class,
         AgentToggleStatusTool::class,
+        AgentSetReasoningStrategyTool::class,
         AgentTemplatesListTool::class,
         AgentConstraintTemplatesTool::class,
         AgentSkillSyncTool::class,
@@ -537,6 +541,8 @@ class AgentFleetServer extends Server
         ExperimentResumeTool::class,
         ExperimentRetryTool::class,
         ExperimentRetryFromStepTool::class,
+        ExperimentResumeFromCheckpointTool::class,
+        ExperimentStageTelemetryTool::class,
         ExperimentKillTool::class,
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
