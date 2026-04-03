@@ -29,6 +29,10 @@ class ProjectSchedule extends Model
         'last_run_at',
         'next_run_at',
         'queued_run_at',
+        'heartbeat_enabled',
+        'heartbeat_interval_minutes',
+        'heartbeat_budget_cap',
+        'heartbeat_context_sources',
     ];
 
     protected function casts(): array
@@ -45,6 +49,10 @@ class ProjectSchedule extends Model
             'last_run_at' => 'datetime',
             'next_run_at' => 'datetime',
             'queued_run_at' => 'datetime',
+            'heartbeat_enabled' => 'boolean',
+            'heartbeat_interval_minutes' => 'integer',
+            'heartbeat_budget_cap' => 'integer',
+            'heartbeat_context_sources' => 'array',
         ];
     }
 

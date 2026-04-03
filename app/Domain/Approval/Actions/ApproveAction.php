@@ -22,7 +22,7 @@ class ApproveAction
         private readonly TransitionExperimentAction $transition,
     ) {}
 
-    public function execute(ApprovalRequest $approvalRequest, string $reviewerId, ?string $notes = null): void
+    public function execute(ApprovalRequest $approvalRequest, ?string $reviewerId, ?string $notes = null): void
     {
         if ($approvalRequest->status !== ApprovalStatus::Pending) {
             throw new InvalidArgumentException(

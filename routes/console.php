@@ -11,6 +11,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('approvals:expire-stale')->hourly();
+Schedule::command('approvals:auto-approve-on-loop')->everyMinute()->withoutOverlapping(1);
 // Temporarily disabled to avoid rate-limiting Google Gemini during experiment runs
 // Schedule::command('agents:health-check')->everyFiveMinutes();
 Schedule::command('tools:health-check')->everyFiveMinutes()->withoutOverlapping(4);
@@ -69,6 +70,9 @@ Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
 
 // Agent heartbeats — evaluate scheduled autonomous tasks every minute
 Schedule::command('agents:heartbeats')->everyMinute()->withoutOverlapping(1);
+
+// Clean stale per-agent serial execution locks
+Schedule::command('agents:clean-locks')->everyFiveMinutes()->withoutOverlapping();
 
 // Refresh webhooks with expiring TTLs (e.g. Jira Cloud 30-day webhook expiry)
 Schedule::job(new RefreshExpiringWebhooksJob)->weekly();

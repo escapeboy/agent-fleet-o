@@ -3,6 +3,7 @@
 namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Enums\AgentHookPosition;
+use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Events\AgentExecuted;
@@ -20,6 +21,7 @@ use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
 use App\Domain\Agent\Pipeline\Middleware\PreExecutionScout;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
 use App\Domain\Agent\Services\AgentHookExecutor;
+use App\Domain\Agent\Services\AgentPromptCompiler;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Approval\Enums\ApprovalStatus;
@@ -64,6 +66,7 @@ class ExecuteAgentAction
         private readonly ResolveTierConfigAction $resolveTierConfig,
         private readonly AgentRuntimeStateService $runtimeStateService,
         private readonly AgentHookExecutor $hookExecutor,
+        private readonly AgentPromptCompiler $promptCompiler,
     ) {}
 
     /**
@@ -529,7 +532,10 @@ class ExecuteAgentAction
             $parts[] = "Your goal: {$agent->goal}";
         }
 
-        if ($agent->backstory) {
+        $compiledIdentity = $this->promptCompiler->compile($agent);
+        if ($compiledIdentity !== '' && ! empty($agent->system_prompt_template)) {
+            $parts[] = $compiledIdentity;
+        } elseif ($agent->backstory) {
             $parts[] = "Background: {$agent->backstory}";
         }
 
@@ -583,6 +589,12 @@ class ExecuteAgentAction
                 'If you approach the limit with work still remaining: prioritise the most important items,',
                 'then deliver a partial result with clear notes on what was not completed.',
             ]);
+        }
+
+        // Reasoning strategy — shapes how the agent thinks and plans before acting
+        $strategySection = ($agent->reasoning_strategy ?? AgentReasoningStrategy::FunctionCalling)->systemPromptSection();
+        if ($strategySection !== '') {
+            $parts[] = $strategySection;
         }
 
         // Explicit tool-selection chain-of-thought — improves traceability and reduces incorrect selections

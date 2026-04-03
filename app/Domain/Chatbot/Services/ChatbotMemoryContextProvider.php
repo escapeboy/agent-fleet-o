@@ -4,7 +4,6 @@ namespace App\Domain\Chatbot\Services;
 
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Memory\Actions\RetrieveRelevantMemoriesAction;
-use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Shared\Models\Team;
 use Barsy\Contracts\MemoryContextProviderInterface;
 use Illuminate\Support\Facades\Log;

@@ -14,6 +14,7 @@ enum ScheduleFrequency: string
     case Weekly = 'weekly';
     case Monthly = 'monthly';
     case Cron = 'cron';
+    case Heartbeat = 'heartbeat';
 
     public function label(): string
     {
@@ -28,6 +29,7 @@ enum ScheduleFrequency: string
             self::Weekly => 'Weekly',
             self::Monthly => 'Monthly',
             self::Cron => 'Custom (Cron)',
+            self::Heartbeat => 'Heartbeat',
         };
     }
 

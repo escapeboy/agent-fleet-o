@@ -78,6 +78,8 @@ return [
     */
     'enabled' => (bool) env('MEMORY_ENABLED', true),
 
+    'auto_flush_enabled' => (bool) env('MEMORY_AUTO_FLUSH_ENABLED', true),
+
     /*
     |--------------------------------------------------------------------------
     | Composite Scoring Weights

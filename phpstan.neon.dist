@@ -14,12 +14,16 @@ parameters:
 
     excludePaths:
         - app/Console/Commands/InstallCommand.php
+        - app/Domain/Chatbot/Services/ChatbotKnowledgeGraphContextProvider.php
+        - app/Domain/Chatbot/Services/ChatbotMemoryContextProvider.php
 
     ignoreErrors:
         # Feedback MCP tools reference Cloud-namespace classes not present in the base repo
         - '#Cloud\\Domain\\Feedback\\#'
         # Admin billing tool references Stripe SDK which is a cloud-only dependency
         - '#Stripe\\#'
+        # Barsy chatbot SDK — optional dependency not in base repo
+        - '#Barsy\\#'
 
 services:
     -

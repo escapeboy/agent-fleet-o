@@ -5,7 +5,6 @@ namespace App\Domain\Chatbot\Services;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Shared\Models\Team;
 use Barsy\Contracts\KnowledgeGraphContextProviderInterface;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Prism;
 
@@ -75,7 +74,7 @@ class ChatbotKnowledgeGraphContextProvider implements KnowledgeGraphContextProvi
 
             $vector = $response->embeddings[0]->embedding;
 
-            return '[' . implode(',', $vector) . ']';
+            return '['.implode(',', $vector).']';
         } catch (\Throwable) {
             return null;
         }

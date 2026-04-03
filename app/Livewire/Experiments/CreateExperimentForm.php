@@ -26,6 +26,10 @@ class CreateExperimentForm extends Component
 
     public bool $autoApprove = true;
 
+    public string $approvalMode = 'in_loop';
+
+    public int $interventionWindowHours = 1;
+
     public string $successCriteria = '';
 
     protected function rules(): array
@@ -49,6 +53,14 @@ class CreateExperimentForm extends Component
         $team = auth()->user()->currentTeam;
 
         $action = app(CreateExperimentAction::class);
+        $constraints = ['auto_approve' => $this->autoApprove];
+        if (! $this->autoApprove) {
+            $constraints['approval_mode'] = $this->approvalMode;
+            if ($this->approvalMode === 'on_loop') {
+                $constraints['intervention_window_seconds'] = $this->interventionWindowHours * 3600;
+            }
+        }
+
         $experiment = $action->execute(
             userId: auth()->id(),
             title: $this->title,
@@ -57,7 +69,7 @@ class CreateExperimentForm extends Component
             budgetCapCredits: $this->budgetCapCredits,
             maxIterations: $this->maxIterations,
             maxOutboundCount: $this->maxOutboundCount,
-            constraints: ['auto_approve' => $this->autoApprove],
+            constraints: $constraints,
             successCriteria: $this->parseSuccessCriteria(),
             teamId: $team?->id,
             workflowId: $this->workflowId ?: null,

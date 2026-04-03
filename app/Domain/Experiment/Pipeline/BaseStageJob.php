@@ -21,6 +21,7 @@ use App\Domain\Experiment\Services\PipelineContextCompressor;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\ContextHealthService;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
@@ -220,6 +221,22 @@ abstract class BaseStageJob implements ShouldQueue
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
+            // Collect per-node telemetry from LLM request logs written during this stage
+            $stageStarted = $stage->started_at ?? now()->subMilliseconds($durationMs);
+            $tokenUsage = LlmRequestLog::where('experiment_id', $this->experimentId)
+                ->where('created_at', '>=', $stageStarted)
+                ->selectRaw('COALESCE(SUM((usage->>\'input_tokens\')::int), 0) as input_tokens, COALESCE(SUM((usage->>\'output_tokens\')::int), 0) as output_tokens, COUNT(*) as llm_calls')
+                ->first();
+
+            $telemetry = [
+                'stage_latency_ms' => $durationMs,
+                'retry_round' => $verificationAttempt,
+                'job_attempts' => $this->attempts(),
+                'token_input' => (int) ($tokenUsage?->input_tokens ?? 0),
+                'token_output' => (int) ($tokenUsage?->output_tokens ?? 0),
+                'llm_calls' => (int) ($tokenUsage?->llm_calls ?? 0),
+            ];
+
             // Only update if not already completed by process() — some stages
             // (e.g. RunPlanningStage) mark themselves Completed before calling
             // transitions to satisfy prerequisite validators.
@@ -229,9 +246,13 @@ abstract class BaseStageJob implements ShouldQueue
                     'status' => StageStatus::Completed,
                     'duration_ms' => $durationMs,
                     'completed_at' => now(),
+                    'telemetry' => array_merge($freshStage->telemetry ?? [], $telemetry),
                 ]);
             } elseif (! $freshStage->duration_ms) {
-                $stage->update(['duration_ms' => $durationMs]);
+                $stage->update([
+                    'duration_ms' => $durationMs,
+                    'telemetry' => array_merge($freshStage->telemetry ?? [], $telemetry),
+                ]);
             }
 
             // Populate searchable_text for FTS after successful completion
