@@ -157,12 +157,27 @@ class BridgeController extends Controller
             $connection = $query->orderByDesc('connected_at')->first();
         }
 
-        // Fallback: check the most-recent connection within the last 30 seconds regardless of status.
+        // Fallback: check any recent connection regardless of status.
+        // The relay calling /endpoints proves the bridge is alive — if detect-stale
+        // marked it disconnected due to a brief heartbeat gap, re-activate it.
         if (! $connection) {
-            $connection = BridgeConnection::where('team_id', $teamId)
-                ->where('connected_at', '>=', now()->subSeconds(30))
-                ->orderByDesc('connected_at')
-                ->first();
+            $fallbackQuery = BridgeConnection::where('team_id', $teamId)
+                ->orderByDesc('connected_at');
+
+            if (! empty($validated['session_id'])) {
+                $connection = (clone $fallbackQuery)->where('session_id', $validated['session_id'])->first()
+                    ?? $fallbackQuery->first();
+            } else {
+                $connection = $fallbackQuery->first();
+            }
+
+            // Re-activate: the bridge is clearly alive if it's sending endpoints
+            if ($connection && $connection->status !== BridgeConnectionStatus::Connected) {
+                $connection->update([
+                    'status' => BridgeConnectionStatus::Connected,
+                    'disconnected_at' => null,
+                ]);
+            }
         }
 
         if ($connection) {
@@ -193,14 +208,21 @@ class BridgeController extends Controller
 
         $connection = BridgeConnection::where('team_id', $teamId)
             ->where('session_id', $validated['session_id'])
-            ->active()
             ->first();
 
         if (! $connection) {
             return response()->json(['error' => 'Session not found.'], 404);
         }
 
-        $connection->update(['last_seen_at' => now()]);
+        $updates = ['last_seen_at' => now()];
+
+        // Re-activate if detect-stale marked it disconnected but bridge is clearly alive
+        if ($connection->status !== BridgeConnectionStatus::Connected) {
+            $updates['status'] = BridgeConnectionStatus::Connected;
+            $updates['disconnected_at'] = null;
+        }
+
+        $connection->update($updates);
 
         return response()->json(['data' => ['alive' => true]]);
     }
