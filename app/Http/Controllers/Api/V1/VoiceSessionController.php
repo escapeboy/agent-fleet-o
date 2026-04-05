@@ -50,6 +50,16 @@ class VoiceSessionController extends Controller
             'settings' => ['sometimes', 'array'],
         ]);
 
+        if (app()->bound(\App\Domain\Shared\Services\PlanEnforcer::class)) {
+            $enforcer = app(\App\Domain\Shared\Services\PlanEnforcer::class);
+            if (! $enforcer->hasFeature($request->user()->currentTeam, 'voice_agent')) {
+                return response()->json([
+                    'message' => 'Voice Agent is available on the Enterprise plan.',
+                    'upgrade_required' => true,
+                ], 403);
+            }
+        }
+
         if (! $resolver->hasCredentials($request->user()->currentTeam)) {
             return response()->json([
                 'message' => 'LiveKit is not configured for your team. Connect a LiveKit integration in the Integrations page.',
