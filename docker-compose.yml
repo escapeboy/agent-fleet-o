@@ -11,6 +11,12 @@ services:
     volumes:
       - .:/var/www
       - vendor_data:/var/www/vendor
+      - /Users/katsarov/htdocs/fleetq-plugin-sdk:/Users/katsarov/htdocs/fleetq-plugin-sdk
+      - /Users/katsarov/htdocs/fleetq-website-plugin-core:/Users/katsarov/htdocs/fleetq-website-plugin-core
+      - /Users/katsarov/htdocs/fleetq-website-plugin-blog:/Users/katsarov/htdocs/fleetq-website-plugin-blog
+      - /Users/katsarov/htdocs/fleetq-website-plugin-forms:/Users/katsarov/htdocs/fleetq-website-plugin-forms
+      - /Users/katsarov/htdocs/fleetq-website-plugin-chatbot:/Users/katsarov/htdocs/fleetq-website-plugin-chatbot
+      - /Users/katsarov/htdocs/fleetq-website-plugin-ecommerce:/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -84,6 +90,12 @@ services:
       - .:/var/www
       - vendor_data:/var/www/vendor
       - ./docker/php/conf.d/horizon.ini:/usr/local/etc/php/conf.d/zz-horizon.ini
+      - /Users/katsarov/htdocs/fleetq-plugin-sdk:/Users/katsarov/htdocs/fleetq-plugin-sdk
+      - /Users/katsarov/htdocs/fleetq-website-plugin-core:/Users/katsarov/htdocs/fleetq-website-plugin-core
+      - /Users/katsarov/htdocs/fleetq-website-plugin-blog:/Users/katsarov/htdocs/fleetq-website-plugin-blog
+      - /Users/katsarov/htdocs/fleetq-website-plugin-forms:/Users/katsarov/htdocs/fleetq-website-plugin-forms
+      - /Users/katsarov/htdocs/fleetq-website-plugin-chatbot:/Users/katsarov/htdocs/fleetq-website-plugin-chatbot
+      - /Users/katsarov/htdocs/fleetq-website-plugin-ecommerce:/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -112,6 +124,12 @@ services:
       - .:/var/www
       - vendor_data:/var/www/vendor
       - ./docker/php/conf.d/horizon.ini:/usr/local/etc/php/conf.d/zz-horizon.ini
+      - /Users/katsarov/htdocs/fleetq-plugin-sdk:/Users/katsarov/htdocs/fleetq-plugin-sdk
+      - /Users/katsarov/htdocs/fleetq-website-plugin-core:/Users/katsarov/htdocs/fleetq-website-plugin-core
+      - /Users/katsarov/htdocs/fleetq-website-plugin-blog:/Users/katsarov/htdocs/fleetq-website-plugin-blog
+      - /Users/katsarov/htdocs/fleetq-website-plugin-forms:/Users/katsarov/htdocs/fleetq-website-plugin-forms
+      - /Users/katsarov/htdocs/fleetq-website-plugin-chatbot:/Users/katsarov/htdocs/fleetq-website-plugin-chatbot
+      - /Users/katsarov/htdocs/fleetq-website-plugin-ecommerce:/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:

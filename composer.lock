@@ -1510,7 +1510,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce",
-                "reference": "fdac94734256eff882455c16cbb41d3f25c595f5"
+                "reference": "a48d3017d2febfade4c879752782ca82b5b54745"
             },
             "require": {
                 "fleetq/plugin-sdk": "^1.0",
