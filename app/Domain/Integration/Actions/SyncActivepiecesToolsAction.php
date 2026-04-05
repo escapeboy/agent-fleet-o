@@ -77,6 +77,16 @@ class SyncActivepiecesToolsAction
             return ActivepiecesSyncResult::empty();
         }
 
+        // Apply optional piece_filter from integration config (allowlist by piece name).
+        /** @var array<int, string>|null $pieceFilter */
+        $pieceFilter = $integrationConfig['piece_filter'] ?? null;
+        if (! empty($pieceFilter) && is_array($pieceFilter)) {
+            $pieces = array_filter(
+                $pieces,
+                static fn (array $piece): bool => in_array($piece['name'] ?? '', $pieceFilter, true),
+            );
+        }
+
         $upsertedCount = 0;
         $syncedSlugs = [];
 
