@@ -23,6 +23,8 @@ class Workflow extends Model
         return WorkflowFactory::new();
     }
 
+    protected $hidden = ['observability_config'];
+
     protected $fillable = [
         'team_id',
         'user_id',

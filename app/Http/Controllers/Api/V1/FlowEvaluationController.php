@@ -10,6 +10,7 @@ use App\Domain\Evaluation\Models\EvaluationRunResult;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\QueryBuilder\QueryBuilder;
 
 /**
@@ -28,8 +29,9 @@ class FlowEvaluationController extends Controller
         return response()->json($datasets);
     }
 
-    public function show(EvaluationDataset $dataset): JsonResponse
+    public function show(Request $request, EvaluationDataset $dataset): JsonResponse
     {
+        abort_unless($dataset->team_id === $request->user()->current_team_id, 403);
         $dataset->load(['workflow', 'runs' => fn ($q) => $q->latest()->limit(5)]);
 
         return response()->json($dataset);
@@ -40,7 +42,7 @@ class FlowEvaluationController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
-            'workflow_id' => ['sometimes', 'nullable', 'uuid', 'exists:workflows,id'],
+            'workflow_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('workflows', 'id')->where('team_id', $request->user()->current_team_id)],
             'rows' => ['sometimes', 'array', 'max:500'],
             'rows.*.input' => ['required_with:rows', 'array'],
             'rows.*.expected_output' => ['sometimes', 'nullable', 'string'],
@@ -63,10 +65,11 @@ class FlowEvaluationController extends Controller
      */
     public function run(Request $request, EvaluationDataset $dataset, RunFlowEvaluationAction $action): JsonResponse
     {
+        abort_unless($dataset->team_id === $request->user()->current_team_id, 403);
         $request->validate([
-            'workflow_id' => ['required', 'uuid', 'exists:workflows,id'],
+            'workflow_id' => ['required', 'uuid', Rule::exists('workflows', 'id')->where('team_id', $request->user()->current_team_id)],
             'judge_model' => ['sometimes', 'nullable', 'string', 'max:128'],
-            'judge_prompt' => ['sometimes', 'nullable', 'string'],
+            'judge_prompt' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
 
         $run = $action->execute(
@@ -79,8 +82,9 @@ class FlowEvaluationController extends Controller
         return response()->json($run, 201);
     }
 
-    public function runs(EvaluationDataset $dataset): JsonResponse
+    public function runs(Request $request, EvaluationDataset $dataset): JsonResponse
     {
+        abort_unless($dataset->team_id === $request->user()->current_team_id, 403);
         $runs = EvaluationRun::where('dataset_id', $dataset->id)
             ->with('workflow')
             ->latest()
@@ -89,15 +93,17 @@ class FlowEvaluationController extends Controller
         return response()->json($runs);
     }
 
-    public function runShow(EvaluationRun $run): JsonResponse
+    public function runShow(Request $request, EvaluationRun $run): JsonResponse
     {
+        abort_unless($run->team_id === $request->user()->current_team_id, 403);
         $run->load(['dataset', 'workflow']);
 
         return response()->json($run);
     }
 
-    public function runResults(EvaluationRun $run): JsonResponse
+    public function runResults(Request $request, EvaluationRun $run): JsonResponse
     {
+        abort_unless($run->team_id === $request->user()->current_team_id, 403);
         $results = EvaluationRunResult::where('run_id', $run->id)
             ->with('row')
             ->latest('created_at')

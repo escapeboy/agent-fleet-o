@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Evaluation;
 
 use App\Domain\Evaluation\Actions\RunFlowEvaluationAction;
 use App\Domain\Evaluation\Models\EvaluationDataset;
+use App\Domain\Workflow\Models\Workflow;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -45,10 +46,19 @@ class FlowEvaluationRunStartTool extends Tool
             return Response::error("Dataset not found: {$datasetId}");
         }
 
+        $workflowId = $request->get('workflow_id');
+        $workflow = Workflow::withoutGlobalScopes()
+            ->where('id', $workflowId)
+            ->where('team_id', $teamId)
+            ->first();
+        if (! $workflow) {
+            return Response::error("Workflow not found: {$workflowId}");
+        }
+
         try {
             $run = app(RunFlowEvaluationAction::class)->execute(
                 dataset: $dataset,
-                workflowId: $request->get('workflow_id'),
+                workflowId: $workflowId,
                 judgeModel: $request->get('judge_model'),
                 judgePrompt: $request->get('judge_prompt'),
             );

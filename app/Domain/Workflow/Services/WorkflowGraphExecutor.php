@@ -301,10 +301,8 @@ class WorkflowGraphExecutor
                 $subInput[$targetKey] = data_get($context, $sourcePath);
             }
 
-            $depth = $config['_depth'] ?? 0;
-
             try {
-                $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $subInput, $depth);
+                $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $subInput, 0);
                 $outputKey = $config['output_key'] ?? 'sub_workflow_output';
 
                 // Store result so downstream nodes can reference it
@@ -1138,7 +1136,7 @@ class WorkflowGraphExecutor
         unset($node);
 
         $visited = [];
-        $this->walkInline($startNode['id'], $nodeMap, $adjacency, $edgeList, $input, $outputs, $visited, $depth);
+        $this->walkInline($startNode['id'], $nodeMap, $adjacency, $edgeList, $input, $outputs, $visited, $depth, $workflow->team_id);
 
         return $outputs;
     }
@@ -1161,6 +1159,7 @@ class WorkflowGraphExecutor
         array &$outputs,
         array &$visited,
         int $depth,
+        string $teamId = '',
     ): void {
         if (isset($visited[$nodeId])) {
             return;
@@ -1177,7 +1176,7 @@ class WorkflowGraphExecutor
         // Skip structural nodes
         if (in_array($type, ['start', 'end', 'annotation'], true)) {
             foreach ($adjacency[$nodeId] ?? [] as $next) {
-                $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth);
+                $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth, $teamId);
             }
 
             return;
@@ -1187,8 +1186,11 @@ class WorkflowGraphExecutor
         if ($type === 'workflow_ref') {
             $config = $node['config'] ?? [];
             $refWorkflowId = $config['ref_workflow_id'] ?? null;
-            if ($refWorkflowId) {
-                $refWorkflow = Workflow::withoutGlobalScopes()->find($refWorkflowId);
+            if ($refWorkflowId && $teamId) {
+                $refWorkflow = Workflow::withoutGlobalScopes()
+                    ->where('id', $refWorkflowId)
+                    ->where('team_id', $teamId)
+                    ->first();
                 if ($refWorkflow) {
                     try {
                         $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $context, $depth);
@@ -1203,7 +1205,7 @@ class WorkflowGraphExecutor
                 }
             }
             foreach ($adjacency[$nodeId] ?? [] as $next) {
-                $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth);
+                $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth, $teamId);
             }
 
             return;
@@ -1216,7 +1218,7 @@ class WorkflowGraphExecutor
         $outputs[$nodeId] = ['_node_type' => $type, '_skipped_async' => true];
 
         foreach ($adjacency[$nodeId] ?? [] as $next) {
-            $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth);
+            $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth, $teamId);
         }
     }
 
@@ -1243,11 +1245,13 @@ class WorkflowGraphExecutor
         try {
             if ($provider === 'langfuse') {
                 $host = rtrim($providerConfig['host'] ?? 'https://cloud.langfuse.com', '/');
+                if (! $this->isSafeObservabilityUrl($host)) {
+                    return null;
+                }
                 $publicKey = $providerConfig['public_key'] ?? '';
                 $secretKey = $providerConfig['secret_key'] ?? '';
 
-                Http::withoutVerifying()
-                    ->withBasicAuth($publicKey, $secretKey)
+                Http::withBasicAuth($publicKey, $secretKey)
                     ->asJson()
                     ->timeout(3)
                     ->post("{$host}/api/public/ingestion", [
@@ -1266,10 +1270,12 @@ class WorkflowGraphExecutor
                     ]);
             } elseif ($provider === 'langsmith') {
                 $host = rtrim($providerConfig['host'] ?? 'https://api.smith.langchain.com', '/');
+                if (! $this->isSafeObservabilityUrl($host)) {
+                    return null;
+                }
                 $apiKey = $providerConfig['api_key'] ?? '';
 
-                Http::withoutVerifying()
-                    ->withHeaders(['x-api-key' => $apiKey])
+                Http::withHeaders(['x-api-key' => $apiKey])
                     ->asJson()
                     ->timeout(3)
                     ->post("{$host}/runs", [
@@ -1286,5 +1292,36 @@ class WorkflowGraphExecutor
         }
 
         return $traceId;
+    }
+
+    /**
+     * Guard against SSRF: only allow HTTPS URLs pointing to public (non-RFC-1918) hosts.
+     */
+    private function isSafeObservabilityUrl(string $url): bool
+    {
+        $parsed = parse_url($url);
+        if (($parsed['scheme'] ?? '') !== 'https') {
+            return false;
+        }
+        $host = $parsed['host'] ?? '';
+        if (! $host) {
+            return false;
+        }
+        // Block loopback and link-local
+        if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+            return false;
+        }
+        // Resolve and block RFC-1918 / loopback / link-local ranges
+        $ip = gethostbyname($host);
+        if ($ip === $host && ! filter_var($ip, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+        foreach (['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.', '127.', '169.254.'] as $prefix) {
+            if (str_starts_with($ip, $prefix)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

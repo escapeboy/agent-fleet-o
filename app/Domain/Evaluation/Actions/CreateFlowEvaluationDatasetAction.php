@@ -29,17 +29,23 @@ class CreateFlowEvaluationDatasetAction
                 'row_count' => 0,
             ]);
 
-            foreach ($rows as $rowData) {
-                EvaluationDatasetRow::create([
-                    'dataset_id' => $dataset->id,
-                    'input' => $rowData['input'] ?? [],
-                    'expected_output' => $rowData['expected_output'] ?? null,
-                    'metadata' => $rowData['metadata'] ?? null,
-                ]);
-            }
-
             if (! empty($rows)) {
-                $dataset->update(['row_count' => count($rows)]);
+                $now = now()->toDateTimeString();
+                $inserts = array_map(fn ($rowData) => [
+                    'id' => (string) \Illuminate\Support\Str::uuid(),
+                    'dataset_id' => $dataset->id,
+                    'input' => json_encode($rowData['input'] ?? []),
+                    'expected_output' => $rowData['expected_output'] ?? null,
+                    'metadata' => isset($rowData['metadata']) ? json_encode($rowData['metadata']) : null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $rows);
+
+                foreach (array_chunk($inserts, 100) as $chunk) {
+                    EvaluationDatasetRow::insert($chunk);
+                }
+
+                $dataset->update(['row_count' => $dataset->rows()->count()]);
             }
 
             return $dataset;
