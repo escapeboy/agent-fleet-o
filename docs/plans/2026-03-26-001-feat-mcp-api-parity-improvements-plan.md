@@ -1,7 +1,7 @@
 ---
 title: "feat: MCP/API Parity Improvements — Metrics Tools, Agent Reset, KB Update, KG Fact Delete, Experiment Cost"
 type: feat
-status: active
+status: completed
 date: 2026-03-26
 ---
 

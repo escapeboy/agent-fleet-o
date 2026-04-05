@@ -1,7 +1,7 @@
 ---
 title: "feat: Searxng Installation, Agent Memory Improvements & Paid-User Gating"
 type: feat
-status: active
+status: completed
 date: 2026-03-26
 ---
 
