@@ -210,6 +210,32 @@ services:
     profiles:
       - relay
 
+  voice-worker:
+    build:
+      context: .
+      dockerfile: docker/voice-worker/Dockerfile
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - LIVEKIT_URL=${LIVEKIT_URL:-}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
+      - VOICE_STT_PROVIDER=${VOICE_STT_PROVIDER:-deepgram}
+      - VOICE_TTS_PROVIDER=${VOICE_TTS_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - VOICE_TTS_VOICE_ID=${VOICE_TTS_VOICE_ID:-}
+      - APP_URL=http://nginx:80
+    networks:
+      - agent-fleet-open
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - voice
+
   searxng:
     image: ghcr.io/searxng/searxng:latest
     restart: unless-stopped
