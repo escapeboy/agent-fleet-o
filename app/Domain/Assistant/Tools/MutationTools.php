@@ -70,6 +70,7 @@ class MutationTools
         return [
             self::createProject(),
             self::createAgent(),
+            self::updateAgent(),
             self::createCrew(),
             self::addAgentToCrew(),
             self::executeCrew(),
@@ -179,6 +180,57 @@ class MutationTools
                         'name' => $agent->name,
                         'status' => $agent->status->value,
                         'url' => route('agents.show', $agent),
+                    ]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
+    }
+
+    private static function updateAgent(): PrismToolObject
+    {
+        return PrismTool::as('update_agent')
+            ->for('Update an existing AI agent. Only provided fields will be changed. Use this to change the LLM provider, model, role, goal, backstory, or budget.')
+            ->withStringParameter('agent_id', 'The agent UUID', required: true)
+            ->withStringParameter('name', 'New agent name')
+            ->withStringParameter('role', 'New role description')
+            ->withStringParameter('goal', 'New goal')
+            ->withStringParameter('backstory', 'New backstory')
+            ->withStringParameter('provider', 'LLM provider to switch to (anthropic, openai, google, claude-code, codex)')
+            ->withStringParameter('model', 'LLM model name (e.g. claude-sonnet-4-5, claude-opus-4-6, gpt-4o, gemini-2.5-pro)')
+            ->withNumberParameter('budget_cap_credits', 'Per-agent budget cap in credits. Set to 0 to remove cap.')
+            ->using(function (string $agent_id, ?string $name = null, ?string $role = null, ?string $goal = null, ?string $backstory = null, ?string $provider = null, ?string $model = null, ?float $budget_cap_credits = null) {
+                $agent = Agent::find($agent_id);
+                if (! $agent) {
+                    return json_encode(['error' => 'Agent not found.']);
+                }
+
+                $data = array_filter([
+                    'name' => $name,
+                    'role' => $role,
+                    'goal' => $goal,
+                    'backstory' => $backstory,
+                    'provider' => $provider,
+                    'model' => $model,
+                ], fn ($v) => $v !== null);
+
+                if ($budget_cap_credits !== null) {
+                    $data['budget_cap_credits'] = (int) $budget_cap_credits === 0 ? null : (int) $budget_cap_credits;
+                }
+
+                if (empty($data)) {
+                    return json_encode(['error' => 'No fields to update. Provide at least one of: name, role, goal, backstory, provider, model, budget_cap_credits.']);
+                }
+
+                try {
+                    $agent->update($data);
+
+                    return json_encode([
+                        'success' => true,
+                        'agent_id' => $agent->id,
+                        'updated_fields' => array_keys($data),
+                        'provider' => $agent->fresh()->provider,
+                        'model' => $agent->fresh()->model,
                     ]);
                 } catch (\Throwable $e) {
                     return json_encode(['error' => $e->getMessage()]);
