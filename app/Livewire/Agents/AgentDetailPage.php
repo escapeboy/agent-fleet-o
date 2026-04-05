@@ -66,6 +66,10 @@ class AgentDetailPage extends Component
 
     public string $editFederationGroupId = '';
 
+    public bool $editUseMemory = false;
+
+    public bool $editEnableScoutPhase = false;
+
     public string $editToolProfile = '';
 
     /** @var array<string> */
@@ -130,6 +134,8 @@ class AgentDetailPage extends Component
         $this->editToolIds = $this->agent->tools()->pluck('tools.id')->toArray();
         $this->editUseFederation = (bool) ($this->agent->config['use_tool_federation'] ?? false);
         $this->editFederationGroupId = $this->agent->config['tool_federation_group_id'] ?? '';
+        $this->editUseMemory = (bool) ($this->agent->config['use_memory'] ?? false);
+        $this->editEnableScoutPhase = (bool) ($this->agent->config['enable_scout_phase'] ?? false);
         $this->editGitRepositoryIds = $this->agent->config['git_repository_ids'] ?? [];
         $this->editToolProfile = $this->agent->tool_profile ?? '';
         $this->editKnowledgeBaseIds = $this->agent->knowledgeBases()->pluck('knowledge_bases.id')->map(fn ($id) => (string) $id)->toArray();
@@ -216,6 +222,18 @@ class AgentDetailPage extends Component
             }
         } else {
             unset($config['use_tool_federation'], $config['tool_federation_group_id']);
+        }
+
+        if ($this->editUseMemory) {
+            $config['use_memory'] = true;
+        } else {
+            unset($config['use_memory']);
+        }
+
+        if ($this->editEnableScoutPhase) {
+            $config['enable_scout_phase'] = true;
+        } else {
+            unset($config['enable_scout_phase']);
         }
 
         $repoIds = array_values($this->editGitRepositoryIds);

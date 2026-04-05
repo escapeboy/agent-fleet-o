@@ -51,6 +51,10 @@ class CreateAgentForm extends Component
 
     public string $federationGroupId = '';
 
+    public bool $useMemory = false;
+
+    public bool $enableScoutPhase = false;
+
     /** @var array<string> */
     public array $gitRepositoryIds = [];
 
@@ -130,6 +134,14 @@ class CreateAgentForm extends Component
             if ($this->federationGroupId !== '') {
                 $config['tool_federation_group_id'] = $this->federationGroupId;
             }
+        }
+
+        if ($this->useMemory) {
+            $config['use_memory'] = true;
+        }
+
+        if ($this->enableScoutPhase) {
+            $config['enable_scout_phase'] = true;
         }
 
         $repoIds = array_values($this->gitRepositoryIds);

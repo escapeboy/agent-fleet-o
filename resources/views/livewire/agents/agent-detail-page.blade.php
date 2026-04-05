@@ -191,6 +191,24 @@
                     @endif
                 </div>
 
+                {{-- Memory & Scout Phase --}}
+                <div class="rounded-lg border border-gray-200 p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Use Memory</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Inject relevant memories from the team memory store into each execution</p>
+                        </div>
+                        <x-form-checkbox name="editUseMemory" wire:model.live="editUseMemory" />
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Enable Scout Phase</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Run a cheap pre-execution LLM call to generate targeted memory retrieval queries before the main execution</p>
+                        </div>
+                        <x-form-checkbox name="editEnableScoutPhase" wire:model.live="editEnableScoutPhase" />
+                    </div>
+                </div>
+
                 {{-- Tool Assignment --}}
                 <div>
                     <label class="mb-2 block text-sm font-medium text-gray-700">Assign Tools</label>

@@ -47,6 +47,19 @@ class SearxngSearchTool extends Tool
 
     public function handle(Request $request): Response
     {
+        // Gate to paid plans (starter/pro/enterprise) when PlanEnforcer is available (cloud edition).
+        // Community edition has no PlanEnforcer — the check is silently skipped.
+        if (app()->bound('App\Domain\Shared\Services\PlanEnforcer')) {
+            try {
+                $planEnforcer = app('App\Domain\Shared\Services\PlanEnforcer');
+                if (! $planEnforcer->hasFeature('searxng_access')) {
+                    return Response::error('Searxng search requires a paid plan. Upgrade at /billing.');
+                }
+            } catch (\Throwable) {
+                // Silently allow if enforcer fails — base/community edition has no PlanEnforcer
+            }
+        }
+
         $query = $request->get('query');
 
         if (empty($query)) {
