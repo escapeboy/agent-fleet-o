@@ -53,6 +53,7 @@ Schedule::command('skills:auto-generate')->weeklyOn(0, '02:00')->withoutOverlapp
 // Agent memory consolidation & pruning (consolidate BEFORE prune)
 Schedule::command('memories:consolidate')->dailyAt('02:30')->withoutOverlapping(90)->onOneServer();
 Schedule::command('memories:prune')->dailyAt('03:00');
+Schedule::command('memory:prune')->dailyAt('03:15')->withoutOverlapping(30);
 
 // Agent feedback analysis — weekly batch generates EvolutionProposals for underperforming agents
 Schedule::command('agents:analyze-feedback')->weeklyOn(1, '06:00');

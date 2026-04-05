@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Notifications\WelcomeNotification;
+use App\Domain\Shared\Services\DisposableEmailGuard;
 use App\Domain\Shared\Services\TermsAcceptanceService;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class CreateNewUser implements CreatesNewUsers
     public function __construct(
         private readonly TermsAcceptanceService $terms,
         private readonly Request $request,
+        private readonly DisposableEmailGuard $disposableEmailGuard,
     ) {}
 
     public function create(array $input): User
@@ -43,6 +45,8 @@ class CreateNewUser implements CreatesNewUsers
         ], [
             'terms.accepted' => 'You must agree to the Terms of Service and Privacy Policy.',
         ])->validate();
+
+        $this->disposableEmailGuard->assertNotDisposable($input['email']);
 
         return DB::transaction(function () use ($input) {
             $user = User::create([
