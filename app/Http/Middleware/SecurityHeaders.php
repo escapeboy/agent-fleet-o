@@ -27,13 +27,13 @@ class SecurityHeaders
             // 'unsafe-eval' required for Alpine.js v3 / Livewire 4 expression evaluation.
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://plausible.io https://unpkg.com",
             // Inline styles are required for Tailwind JIT utilities applied via Alpine.
-            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://unpkg.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net",
             // Restrict images to known origins; drop the open https: wildcard.
             "img-src 'self' data: blob: https://avatars.githubusercontent.com https://secure.gravatar.com",
-            // Fonts: self + Bunny CDN
-            "font-src 'self' https://fonts.bunny.net",
-            // XHR/fetch/WS: self + Stripe API + Plausible analytics
-            "connect-src 'self' wss: https://api.stripe.com https://plausible.io",
+            // Fonts: self + Bunny CDN + Cloudflare CDN (Font Awesome bundled by GrapesJS)
+            "font-src 'self' https://fonts.bunny.net https://cdnjs.cloudflare.com",
+            // XHR/fetch/WS: self + Stripe API + Plausible analytics + unpkg (GrapesJS source maps)
+            "connect-src 'self' wss: https://api.stripe.com https://plausible.io https://unpkg.com",
             // Stripe payment iframes
             "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
             // CRITICAL for PWA: allow service workers from same origin

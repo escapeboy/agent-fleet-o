@@ -155,11 +155,28 @@ class GlobalSettingsPage extends Component
         $this->skillQualityThreshold = (float) GlobalSetting::get('skill_quality_threshold', config('skills.degradation.quality_threshold', 0.5));
         $this->skillMinSampleSize = (int) GlobalSetting::get('skill_min_sample_size', config('skills.degradation.min_sample_size', 10));
 
-        $this->defaultLlmProvider = GlobalSetting::get('default_llm_provider', 'anthropic') ?? 'anthropic';
-        $this->defaultLlmModel = GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
+        $availableProviders = app(ProviderResolver::class)->availableProviders(auth()->user()?->currentTeam);
+        $firstProvider = array_key_first($availableProviders) ?? 'anthropic';
 
-        $this->assistantProvider = GlobalSetting::get('assistant_llm_provider', 'anthropic') ?? 'anthropic';
-        $this->assistantModel = GlobalSetting::get('assistant_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
+        $this->defaultLlmProvider = GlobalSetting::get('default_llm_provider', $firstProvider) ?? $firstProvider;
+        if (! isset($availableProviders[$this->defaultLlmProvider])) {
+            $this->defaultLlmProvider = $firstProvider;
+        }
+        $firstDefaultModel = array_key_first($availableProviders[$this->defaultLlmProvider]['models'] ?? []) ?? '';
+        $this->defaultLlmModel = GlobalSetting::get('default_llm_model', $firstDefaultModel) ?? $firstDefaultModel;
+        if (! isset($availableProviders[$this->defaultLlmProvider]['models'][$this->defaultLlmModel])) {
+            $this->defaultLlmModel = $firstDefaultModel;
+        }
+
+        $this->assistantProvider = GlobalSetting::get('assistant_llm_provider', $firstProvider) ?? $firstProvider;
+        if (! isset($availableProviders[$this->assistantProvider])) {
+            $this->assistantProvider = $firstProvider;
+        }
+        $firstAssistantModel = array_key_first($availableProviders[$this->assistantProvider]['models'] ?? []) ?? '';
+        $this->assistantModel = GlobalSetting::get('assistant_llm_model', $firstAssistantModel) ?? $firstAssistantModel;
+        if (! isset($availableProviders[$this->assistantProvider]['models'][$this->assistantModel])) {
+            $this->assistantModel = $firstAssistantModel;
+        }
 
         // AI Routing
         $this->budgetPressureEnabled = (bool) GlobalSetting::get('ai_routing.budget_pressure_enabled', config('ai_routing.budget_pressure.enabled', true));
@@ -171,6 +188,18 @@ class GlobalSettingsPage extends Component
         $this->verificationEnabled = (bool) GlobalSetting::get('ai_routing.verification_enabled', config('ai_routing.verification.enabled', true));
         $this->verificationMaxRetries = (int) GlobalSetting::get('ai_routing.verification_max_retries', config('ai_routing.verification.max_retries', 2));
         $this->stuckDetectionEnabled = (bool) GlobalSetting::get('ai_routing.stuck_detection_enabled', config('ai_routing.stuck_detection.enabled', true));
+    }
+
+    public function updatedDefaultLlmProvider(): void
+    {
+        $providers = app(ProviderResolver::class)->availableProviders(auth()->user()?->currentTeam);
+        $this->defaultLlmModel = array_key_first($providers[$this->defaultLlmProvider]['models'] ?? []) ?? '';
+    }
+
+    public function updatedAssistantProvider(): void
+    {
+        $providers = app(ProviderResolver::class)->availableProviders(auth()->user()?->currentTeam);
+        $this->assistantModel = array_key_first($providers[$this->assistantProvider]['models'] ?? []) ?? '';
     }
 
     public function saveBudgetSettings(): void

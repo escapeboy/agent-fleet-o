@@ -237,8 +237,10 @@
     <x-pwa-install-prompt />
     <x-pwa-update-toast />
 
-    {{-- WebMCP: polyfill for browser AI agent tool discovery --}}
-    @if(config('webmcp.enabled', true))
+    {{-- WebMCP: polyfill for browser AI agent tool discovery.
+         Suppressed on pages that set $suppressWebmcp (e.g. the GrapesJS builder) to
+         prevent its DOM-mutation observer from interfering with editor internals. --}}
+    @if(config('webmcp.enabled', true) && empty($suppressWebmcp))
         <script src="https://unpkg.com/@mcp-b/global@2.2.0/dist/index.iife.js" defer></script>
     @endif
 </body>

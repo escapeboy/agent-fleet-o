@@ -1,5 +1,9 @@
 <?php
 
+use App\Domain\Website\Models\Website;
+use App\Domain\Website\Models\WebsitePage;
+use App\Domain\Website\Services\GrapesJsExporter;
+use App\Domain\Website\Services\WebsiteZipBuilder;
 use App\Http\Controllers\AgentCardController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
@@ -94,6 +98,10 @@ use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Tools\ToolTemplateCatalogPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
+use App\Livewire\Websites\CreateWebsiteForm;
+use App\Livewire\Websites\WebsiteBuilderPage;
+use App\Livewire\Websites\WebsiteDetailPage;
+use App\Livewire\Websites\WebsiteListPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
@@ -327,6 +335,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/git-repositories', GitRepositoryListPage::class)->name('git-repositories.index');
     Route::get('/git-repositories/create', CreateGitRepositoryForm::class)->name('git-repositories.create');
     Route::get('/git-repositories/{gitRepository}', GitRepositoryDetailPage::class)->name('git-repositories.show');
+
+    // Websites
+    Route::get('/websites', WebsiteListPage::class)->name('websites.index');
+    Route::get('/websites/create', CreateWebsiteForm::class)->name('websites.create');
+    Route::get('/websites/{website}/export', function (Website $website, WebsiteZipBuilder $builder) {
+        $website->load('pages');
+        $zipPath = $builder->build($website);
+
+        return response()->download($zipPath, $website->slug.'.zip', ['Content-Type' => 'application/zip'])
+            ->deleteFileAfterSend();
+    })->name('websites.export');
+    Route::get('/websites/{website}', WebsiteDetailPage::class)->name('websites.show');
+    Route::get('/websites/{website}/pages/{page}/builder', WebsiteBuilderPage::class)->name('websites.builder');
+    // Authenticated preview — serves current saved content (regardless of publish status).
+    // Opens in a new tab from the builder; Tailwind CDN is injected for AI-generated pages.
+    Route::get('/websites/{website}/pages/{page}/preview', function (
+        Website $website,
+        WebsitePage $page,
+        GrapesJsExporter $exporter,
+    ) {
+        $extraHead = [];
+        if (empty(trim($page->exported_css ?? ''))) {
+            $extraHead[] = '<script src="https://cdn.tailwindcss.com"></script>';
+        }
+
+        $html = $exporter->toStandaloneHtml(
+            html: $page->exported_html ?? '',
+            css: $page->exported_css ?? '',
+            title: $page->title,
+            extraHead: $extraHead,
+        );
+
+        return response($html, 200, [
+            'Content-Type'  => 'text/html; charset=utf-8',
+            'X-Frame-Options' => 'SAMEORIGIN',
+            'Cache-Control' => 'no-store',
+        ]);
+    })->name('websites.page.preview');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

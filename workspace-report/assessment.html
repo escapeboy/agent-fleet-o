@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workspace Assessment - Oaken AI Workspace Optimizer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0a; color: #e0e0e0; line-height: 1.6; }
+.container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+h1 { font-size: 1.8rem; color: #fff; margin-bottom: 0.25rem; }
+h2 { font-size: 1.3rem; color: #fff; margin: 1.5rem 0 0.75rem; }
+h3 { font-size: 1rem; color: #c8956c; margin: 1rem 0 0.5rem; }
+.subtitle { color: #888; margin-bottom: 1.5rem; font-size: 0.9rem; }
+.brand { font-size: 0.75rem; color: #c8956c; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 0.5rem; }
+.hero-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+@media (max-width: 768px) { .hero-stats { grid-template-columns: 1fr 1fr; } }
+.hero-stat { background: #151515; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1.25rem; text-align: center; }
+.hero-stat .value { font-size: 2.2rem; font-weight: 800; }
+.hero-stat .value.green { color: #4ade80; }
+.hero-stat .value.red { color: #ef4444; }
+.hero-stat .value.yellow { color: #eab308; }
+.hero-stat .value.copper { color: #c8956c; }
+.hero-stat .label { font-size: 0.75rem; color: #888; margin-top: 0.25rem; }
+.card { background: #151515; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+.card.critical { border-color: rgba(239,68,68,0.4); }
+.card.warning { border-color: rgba(234,179,8,0.3); }
+.card.info { border-color: rgba(96,165,250,0.3); }
+.card.good { border-color: rgba(74,222,128,0.3); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-right: 0.5rem; }
+.badge-critical { background: rgba(239,68,68,0.2); color: #ef4444; }
+.badge-warning { background: rgba(234,179,8,0.2); color: #eab308; }
+.badge-info { background: rgba(96,165,250,0.2); color: #60a5fa; }
+.badge-good { background: rgba(74,222,128,0.2); color: #4ade80; }
+table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; }
+th { text-align: left; padding: 0.5rem; color: #888; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid #2a2a2a; }
+td { padding: 0.5rem; font-size: 0.85rem; border-bottom: 1px solid #1a1a1a; }
+code { background: #1e1e1e; padding: 1px 6px; border-radius: 3px; font-size: 0.85rem; color: #c8956c; }
+.bar { height: 8px; background: #1e1e1e; border-radius: 4px; margin-top: 0.5rem; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; }
+.footer { text-align: center; padding: 2rem 0 1rem; border-top: 1px solid #2a2a2a; margin-top: 2rem; font-size: 0.8rem; color: #666; }
+.footer a { color: #c8956c; text-decoration: none; }
+.rec { padding: 1rem 1.25rem; border-left: 3px solid; margin-bottom: 0.75rem; background: #151515; border-radius: 0 8px 8px 0; }
+.rec.p0 { border-color: #ef4444; }
+.rec.p1 { border-color: #eab308; }
+.rec.p2 { border-color: #60a5fa; }
+.rec-title { font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+.rec-body { font-size: 0.85rem; color: #bbb; }
+.rec-meta { font-size: 0.75rem; color: #666; margin-top: 0.5rem; }
+.score-ring { width: 120px; height: 120px; margin: 0 auto 1rem; position: relative; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="brand"><a href="https://oakenai.tech/tools/claude-workspace-optimizer" style="color:#c8956c;text-decoration:none;">Oaken AI Workspace Optimizer</a></div>
+    <h1>Workspace Assessment Report</h1>
+    <p class="subtitle">Generated April 04, 2026 | Analysis of your Claude Code workspace context efficiency</p>
+
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="value red">38</div>
+            <div class="label">Health Score (0-100)</div>
+        </div>
+        <div class="hero-stat">
+            <div class="value copper">1,610</div>
+            <div class="label">Total Context Lines (per session)</div>
+        </div>
+        <div class="hero-stat">
+            <div class="value copper">24.8%</div>
+            <div class="label">Memory Visibility</div>
+        </div>
+        <div class="hero-stat">
+            <div class="value copper">1</div>
+            <div class="label">Rule Files</div>
+        </div>
+    </div>
+
+    <h2>Issues Found</h2>
+    <p style="font-size:0.85rem;color:#888;margin-bottom:1rem;">Based on patterns from Claude Code's internal architecture.</p>
+    
+        <div class="card critical">
+            <span class="badge badge-critical">CRITICAL</span>
+            <strong>Only 24.8% of MEMORY.md is visible. 605 lines are silently truncated (Claude loads first 200 lines).</strong>
+            <span style="font-size:0.75rem;color:#888;margin-left:0.5rem;">-37 points</span>
+        </div>
+        
+        <div class="card warning">
+            <span class="badge badge-warning">WARNING</span>
+            <strong>MEMORY.md is 50.0KB (recommended max: 25KB).</strong>
+            <span style="font-size:0.75rem;color:#888;margin-left:0.5rem;">-10 points</span>
+        </div>
+        
+        <div class="card warning">
+            <span class="badge badge-warning">WARNING</span>
+            <strong>21 sections have inline content that should be in topic files (413 lines of bloat).</strong>
+            <span style="font-size:0.75rem;color:#888;margin-left:0.5rem;">-15 points</span>
+        </div>
+        
+
+    
+        <div class="card critical">
+            <h3>Memory Index (MEMORY.md)</h3>
+            <table>
+                <tr><td>Index lines</td><td><strong>805</strong> (visibility cap: 200)</td></tr>
+                <tr><td>Visible lines</td><td><strong style="color:red">200</strong> (24.8%)</td></tr>
+                <tr><td>Index size</td><td>50.0 KB</td></tr>
+                <tr><td>Topic files</td><td>16 topic files</td></tr>
+            </table>
+            <div class="bar"><div class="bar-fill" style="width:24.8%;background:#ef4444"></div></div>
+            <p style="font-size:0.75rem;color:#888;margin-top:0.25rem;">24.8% of memory visible to Claude</p>
+            <h3>Inline Bloat Detected</h3><table><th>Section</th><th>Lines</th><tr><td>Stack</td><td>13 lines</td></tr><tr><td>Project Structure</td><td>176 lines</td></tr><tr><td>Web Routes (auth-protected, Livewire)</td><td>46 lines</td></tr><tr><td>API v1 Routes (`/api/v1/`)</td><td>33 lines</td></tr><tr><td>Legacy API Routes (`/api/`)</td><td>6 lines</td></tr><tr><td>Single-Team Architecture</td><td>7 lines</td></tr><tr><td>[IsIdempotent]</td><td>8 lines</td></tr><tr><td>Form Components (Blade)</td><td>6 lines</td></tr><tr><td>Pipeline</td><td>15 lines</td></tr><tr><td>Tool System</td><td>6 lines</td></tr></table>
+        </div>
+        
+    
+        <div class="card good">
+            <h3>Rules (Always-On Context)</h3>
+            <table>
+                <tr><td>Total rule files</td><td><strong>1</strong></td></tr>
+                <tr><td>Total lines (all loaded every session)</td><td><strong>805</strong></td></tr>
+                <tr><td>Total size</td><td>50.0 KB</td></tr>
+            </table>
+            <h3>Largest Rule Files</h3>
+            <table><tr><th>File</th><th>Lines</th><th>Size</th></tr><tr><td><span class="badge badge-info">rule</span> <code>CLAUDE.md</code></td><td>805</td><td>50.0KB</td></tr></table>
+            
+        </div>
+        
+
+    <h2>Recommendations</h2>
+    <p style="font-size:0.85rem;color:#888;margin-bottom:1rem;">Prioritized optimization plan based on Claude Code's internal architecture patterns.</p>
+    
+        <div class="rec p0">
+            <div class="rec-title"><span class="badge badge-critical">P0</span> Compress MEMORY.md to fit within 200-line visibility cap</div>
+            <div class="rec-body">Your memory index has 805 lines but only the first 200 are loaded. Extract detailed sections into topic files and keep the index as a pure pointer file (1-2 lines per entry, link + summary).</div>
+            <div class="rec-meta">Estimated time: 20-30 minutes | Impact: Restore 75% of invisible memory</div>
+        </div>
+        
+        <div class="rec p1">
+            <div class="rec-title"><span class="badge badge-warning">P1</span> Extract inline content from MEMORY.md into topic files</div>
+            <div class="rec-body">These sections have too much inline detail: Stack, Project Structure, Web Routes (auth-protected, Li, API v1 Routes (`/api/v1/`), Legacy API Routes (`/api/`). Each should be a separate .md file linked from the index.</div>
+            <div class="rec-meta">Estimated time: 15-20 minutes | Impact: Reduce index by ~413 lines</div>
+        </div>
+        
+
+    <div class="card" style="background:linear-gradient(135deg, #1a1510 0%, #151515 100%); border-color:rgba(200,149,108,0.3); margin-top:2rem;">
+        <h3 style="color:#c8956c;">Need Help Optimizing?</h3>
+        <p style="font-size:0.9rem;">Oaken AI builds <a href="https://oakenai.tech/services" style="color:#c8956c;text-decoration:none;">AI automation services</a> for businesses. From workspace optimization to full AI system architecture, we help teams get more from their AI tools.</p>
+        <p style="margin-top:0.75rem;"><a href="https://oakenai.tech/intro-call" style="color:#c8956c;text-decoration:none;">Book a free strategy call</a> | Explore <a href="https://oakenai.tech/tools" style="color:#c8956c;text-decoration:none;">AI Tools</a> | Read the <a href="https://oakenai.tech/blog" style="color:#c8956c;text-decoration:none;">AI Implementation Blog</a></p>
+    </div>
+
+    <div class="footer">
+        Generated by <a href="https://oakenai.tech/tools/claude-workspace-optimizer" style="color:#c8956c;text-decoration:none;">Oaken AI Workspace Optimizer</a> v0.1.0<br>
+        <a href="https://oakenai.tech" style="color:#c8956c;text-decoration:none;">AI Consulting</a> | <a href="https://oakenai.tech/ai-readiness" style="color:#c8956c;text-decoration:none;">Free AI Assessment</a>
+    </div>
+</div>
+</body>
+</html>

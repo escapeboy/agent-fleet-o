@@ -1,6 +1,6 @@
 @php
     $activeRailGroup = match(true) {
-        request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'crews.*', 'approvals.*', 'chatbots.*') => 'fleet',
+        request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'crews.*', 'approvals.*', 'chatbots.*', 'websites.*') => 'fleet',
         request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'triggers.*', 'evolution.*') => 'build',
         request()->routeIs('signals.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'metrics.*') => 'monitor',
         request()->routeIs('app.marketplace.*', 'marketplace.*', 'plugins', 'telegram.*') => 'marketplace',
@@ -125,6 +125,7 @@
                 @if(auth()->user()?->currentTeam?->settings['chatbot_enabled'] ?? false)
                     <x-sidebar-link href="{{ route('chatbots.index') }}" :active="request()->routeIs('chatbots.*')" icon="chat-bubble-left-right">Chatbots</x-sidebar-link>
                 @endif
+                <x-sidebar-link href="{{ route('websites.index') }}" :active="request()->routeIs('websites.*')" icon="globe-alt">Websites</x-sidebar-link>
             </nav>
         </div>
 

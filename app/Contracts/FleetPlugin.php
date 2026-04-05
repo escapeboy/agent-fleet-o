@@ -3,46 +3,12 @@
 namespace App\Contracts;
 
 /**
- * Contract for all FleetQ plugins.
+ * Host-app alias for the SDK FleetPlugin contract.
  *
- * Plugins distributed as Composer packages implement this interface and declare
- * their service provider in composer.json using Laravel auto-discovery:
+ * Extends FleetQ\PluginSdk\Contracts\FleetPlugin so that code using either
+ * namespace is satisfied. New plugins distributed as Composer packages should
+ * implement the SDK interface directly.
  *
- *   "extra": {
- *     "laravel": { "providers": ["Acme\\MyPlugin\\MyPluginServiceProvider"] },
- *     "fleet":   { "plugin": "my-plugin", "name": "My Plugin", "min-version": "1.0.0" }
- *   }
- *
- * The service provider should extend FleetPluginServiceProvider and return
- * an instance of this interface from createPlugin().
+ * @deprecated Use \FleetQ\PluginSdk\Contracts\FleetPlugin instead.
  */
-interface FleetPlugin
-{
-    /**
-     * Unique slug for this plugin (e.g. 'fleet-analytics').
-     * Used as the plugin registry key and namespaced meta key prefix.
-     */
-    public function getId(): string;
-
-    /**
-     * Human-readable name (e.g. 'Fleet Analytics').
-     */
-    public function getName(): string;
-
-    /**
-     * Semantic version string (e.g. '1.0.0').
-     */
-    public function getVersion(): string;
-
-    /**
-     * Called during the service provider's register() phase.
-     * Use only for container bindings — no event listeners, routes, or macros here.
-     */
-    public function register(): void;
-
-    /**
-     * Called during the service provider's boot() phase.
-     * Safe to register event listeners, routes, blade directives, etc.
-     */
-    public function boot(): void;
-}
+interface FleetPlugin extends \FleetQ\PluginSdk\Contracts\FleetPlugin {}

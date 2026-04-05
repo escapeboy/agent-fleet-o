@@ -39,6 +39,8 @@ use App\Http\Controllers\Api\V1\ToolTemplateController;
 use App\Http\Controllers\Api\V1\TriggerController;
 use App\Http\Controllers\Api\V1\VoiceSessionController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
+use App\Http\Controllers\Api\V1\WebsiteController;
+use App\Http\Controllers\Api\V1\WebsitePageController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
 
@@ -326,4 +328,22 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)
     Route::post('/broadcasting/auth', [BridgeController::class, 'broadcastingAuth']);
+
+    // Websites
+    Route::post('/websites/generate', [WebsiteController::class, 'generate']);
+    Route::get('/websites', [WebsiteController::class, 'index']);
+    Route::post('/websites', [WebsiteController::class, 'store']);
+    Route::get('/websites/{website}', [WebsiteController::class, 'show']);
+    Route::put('/websites/{website}', [WebsiteController::class, 'update']);
+    Route::delete('/websites/{website}', [WebsiteController::class, 'destroy']);
+    Route::get('/websites/{website}/export', [WebsiteController::class, 'export']);
+
+    // Website Pages (nested under website)
+    Route::get('/websites/{website}/pages', [WebsitePageController::class, 'index']);
+    Route::post('/websites/{website}/pages', [WebsitePageController::class, 'store']);
+    Route::get('/websites/{website}/pages/{page}', [WebsitePageController::class, 'show']);
+    Route::put('/websites/{website}/pages/{page}', [WebsitePageController::class, 'update']);
+    Route::delete('/websites/{website}/pages/{page}', [WebsitePageController::class, 'destroy']);
+    Route::post('/websites/{website}/pages/{page}/publish', [WebsitePageController::class, 'publish']);
+    Route::post('/websites/{website}/pages/{page}/unpublish', [WebsitePageController::class, 'unpublish']);
 });

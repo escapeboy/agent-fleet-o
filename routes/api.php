@@ -14,6 +14,7 @@ use App\Http\Controllers\JiraWebhookController;
 use App\Http\Controllers\LinearWebhookController;
 use App\Http\Controllers\PagerDutyWebhookController;
 use App\Http\Controllers\PerTeamSignalWebhookController;
+use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\SentryAlertWebhookController;
 use App\Http\Controllers\SignalWebhookController;
 use App\Http\Controllers\SlackWebhookController;
@@ -123,4 +124,12 @@ Route::post('/chatbot/ticket/{tokenPrefix}', [ChatbotTicketWebhookController::cl
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/track/click', [TrackingController::class, 'click'])->name('track.click');
     Route::get('/track/pixel', [TrackingController::class, 'pixel'])->name('track.pixel');
+});
+
+// Public site API — serves published website pages + handles form submissions as Signals
+// No auth required; throttled per IP to prevent abuse.
+Route::middleware('throttle:120,1')->prefix('public/sites')->group(function () {
+    Route::get('/{siteSlug}/pages', [PublicSiteController::class, 'pages'])->name('public.sites.pages');
+    Route::post('/{siteSlug}/forms/{formId}', [PublicSiteController::class, 'submitForm'])->middleware('throttle:10,1')->name('public.sites.form');
+    Route::get('/{siteSlug}/{pageSlug?}', [PublicSiteController::class, 'page'])->name('public.sites.page');
 });

@@ -79,6 +79,8 @@
         <i class="fas fa-wand-magic-sparkles h-5 w-5"></i>
     @elseif($icon === 'share')
         <i class="fas fa-share-nodes h-5 w-5"></i>
+    @elseif($icon === 'globe-alt')
+        <i class="fas fa-globe h-5 w-5"></i>
     @endif
     {{ $slot }}
 </a>

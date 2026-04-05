@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use App\Contracts\FleetPlugin;
 use App\Contracts\PanelExtension;
+use FleetQ\PluginSdk\Contracts\FleetPlugin;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Domain\Outbound\Managers\OutboundConnectorManager;
 use App\Domain\Shared\Models\PluginState;
@@ -194,8 +194,10 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
         if (! empty($this->mcpTools)) {
             $this->app->tag($this->mcpTools, 'fleet.mcp.tools');
             // Accumulate class names so AgentFleetServer::boot() can append them
-            $existing = $this->app->make('fleet.mcp.tool_classes');
-            $this->app->instance('fleet.mcp.tool_classes', array_merge($existing, $this->mcpTools));
+            if ($this->app->bound('fleet.mcp.tool_classes')) {
+                $existing = $this->app->make('fleet.mcp.tool_classes');
+                $this->app->instance('fleet.mcp.tool_classes', array_merge($existing, $this->mcpTools));
+            }
         }
 
         if (! empty($this->aiMiddleware)) {

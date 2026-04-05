@@ -5,8 +5,46 @@
     "description": "AI Agent Mission Control Platform — self-hosted, open-source.",
     "keywords": ["ai", "agents", "experiments", "laravel"],
     "license": "AGPL-3.0-or-later",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "/Users/katsarov/htdocs/fleetq-plugin-sdk",
+            "options": { "symlink": true }
+        },
+        {
+            "type": "path",
+            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-core",
+            "options": { "symlink": true }
+        },
+        {
+            "type": "path",
+            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-blog",
+            "options": { "symlink": true }
+        },
+        {
+            "type": "path",
+            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-forms",
+            "options": { "symlink": true }
+        },
+        {
+            "type": "path",
+            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-chatbot",
+            "options": { "symlink": true }
+        },
+        {
+            "type": "path",
+            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce",
+            "options": { "symlink": true }
+        }
+    ],
     "require": {
         "php": "^8.2",
+        "fleetq/plugin-sdk": "^1.0",
+        "fleetq/website-plugin-core": "^1.0",
+        "fleetq/website-plugin-blog": "^1.0",
+        "fleetq/website-plugin-forms": "^1.0",
+        "fleetq/website-plugin-chatbot": "^1.0",
+        "fleetq/website-plugin-ecommerce": "^1.0",
         "asbiin/laravel-webauthn": "^5.4",
         "dedoc/scramble": "^0.13.12",
         "laravel-notification-channels/webpush": "*",

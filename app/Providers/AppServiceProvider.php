@@ -12,6 +12,7 @@ use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Domain\Chatbot\Listeners\DeliverChatbotWorkflowResultListener;
 use App\Domain\Chatbot\Listeners\ExtractChatMemoriesListener;
 use App\Domain\Credential\Observers\SecretScanObserver;
+use App\Domain\Crew\Events\CrewExecuted;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Events\StuckPatternDetected;
 use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
@@ -71,6 +72,8 @@ use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Tool\Services\McpHandleRegistry;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
+use App\Domain\Website\Listeners\MaterializeWebsiteOnCrewCompletedListener;
+use App\Domain\Website\Services\WebsiteBlockRegistry;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
@@ -131,6 +134,9 @@ class AppServiceProvider extends ServiceProvider
         // Plugin extension points
         $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);
         $this->app->singleton(NavigationRegistry::class, fn () => new NavigationRegistry);
+        $this->app->singleton(WebsiteBlockRegistry::class, fn () => new WebsiteBlockRegistry(
+            $this->app->make(PluginRegistry::class),
+        ));
 
         // Accumulator for plugin-contributed MCP tool class names
         $this->app->instance('fleet.mcp.tool_classes', []);
@@ -354,6 +360,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Barsy chatbot: extract durable facts from chat exchanges into proposed memories
         Event::listen(ChatMessageCompleted::class, ExtractChatMemoriesListener::class);
+
+        // Website: materialize pages from crew output when generation completes
+        Event::listen(CrewExecuted::class, MaterializeWebsiteOnCrewCompletedListener::class);
 
         // Skill evolution: analyze completed executions and auto-propose improvements
         Event::listen(AgentExecuted::class, DispatchEvolutionAnalysisListener::class);

@@ -28,6 +28,7 @@ Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
+Schedule::command('websites:recover-stuck')->everyFiveMinutes();
 Schedule::command('human-tasks:check-sla')->everyFiveMinutes();
 Schedule::command('workflows:poll-time-gates')->everyMinute()->withoutOverlapping(1);
 

@@ -2,7 +2,7 @@
 
 namespace App\Domain\Shared\Services;
 
-use App\Contracts\FleetPlugin;
+use FleetQ\PluginSdk\Contracts\FleetPlugin;
 use App\Domain\Shared\Models\PluginState;
 use Illuminate\Support\Collection;
 
