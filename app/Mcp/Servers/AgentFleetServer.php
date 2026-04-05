@@ -131,6 +131,9 @@ use App\Mcp\Tools\Email\EmailThemeListTool;
 use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evaluation\EvaluationDatasetManageTool;
 use App\Mcp\Tools\Evaluation\EvaluationRunTool;
+use App\Mcp\Tools\Evaluation\FlowEvaluationDatasetCreateTool;
+use App\Mcp\Tools\Evaluation\FlowEvaluationResultsTool;
+use App\Mcp\Tools\Evaluation\FlowEvaluationRunStartTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionApproveTool;
@@ -716,9 +719,12 @@ class AgentFleetServer extends Server
         BudgetCheckTool::class,
         BudgetForecastTool::class,
 
-        // Evaluation (2)
+        // Evaluation (5)
         EvaluationDatasetManageTool::class,
         EvaluationRunTool::class,
+        FlowEvaluationDatasetCreateTool::class,
+        FlowEvaluationRunStartTool::class,
+        FlowEvaluationResultsTool::class,
 
         // Cache (2)
         SemanticCacheStatsTool::class,

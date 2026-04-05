@@ -1,7 +1,7 @@
 @php
     $activeRailGroup = match(true) {
         request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'crews.*', 'approvals.*', 'chatbots.*') => 'fleet',
-        request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'triggers.*', 'evolution.*') => 'build',
+        request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'evaluations.*', 'triggers.*', 'evolution.*') => 'build',
         request()->routeIs('signals.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'metrics.*') => 'monitor',
         request()->routeIs('app.marketplace.*', 'marketplace.*', 'plugins', 'telegram.*') => 'marketplace',
         request()->routeIs('tools.*', 'credentials.*', 'integrations.*', 'git-repositories.*', 'team.*', 'settings', 'profile', 'notifications.*') => 'settings',
@@ -137,7 +137,8 @@
                 <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*') && !request()->routeIs('knowledge.*')" icon="circle-stack">Memory</x-sidebar-link>
                 <x-sidebar-link href="{{ route('knowledge.index') }}" :active="request()->routeIs('knowledge.*') && !request()->routeIs('knowledge-graph.*')" icon="book-open">Knowledge</x-sidebar-link>
                 <x-sidebar-link href="{{ route('knowledge-graph.index') }}" :active="request()->routeIs('knowledge-graph.*')" icon="share">Knowledge Graph</x-sidebar-link>
-                <x-sidebar-link href="{{ route('evaluation.index') }}" :active="request()->routeIs('evaluation.*')" icon="scale">Evaluation</x-sidebar-link>
+                <x-sidebar-link href="{{ route('evaluation.index') }}" :active="request()->routeIs('evaluation.index')" icon="scale">Evaluation</x-sidebar-link>
+                <x-sidebar-link href="{{ route('evaluations.index') }}" :active="request()->routeIs('evaluations.*')" icon="beaker">Flow Evals</x-sidebar-link>
                 <x-sidebar-link href="{{ route('triggers.index') }}" :active="request()->routeIs('triggers.*')" icon="bolt">Triggers</x-sidebar-link>
                 @if(Route::has('evolution.index'))
                     <x-sidebar-link href="{{ route('evolution.index') }}" :active="request()->routeIs('evolution.*')" icon="sparkles">

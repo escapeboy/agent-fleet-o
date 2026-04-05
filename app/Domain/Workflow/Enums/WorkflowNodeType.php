@@ -23,6 +23,9 @@ enum WorkflowNodeType: string
     case VariableAggregator = 'variable_aggregator';
     case TemplateTransform = 'template_transform';
     case KnowledgeRetrieval = 'knowledge_retrieval';
+    case Annotation = 'annotation';
+    case Iteration = 'iteration';
+    case WorkflowRef = 'workflow_ref';
 
     public function label(): string
     {
@@ -46,6 +49,9 @@ enum WorkflowNodeType: string
             self::VariableAggregator => 'Variable Aggregator',
             self::TemplateTransform => 'Template',
             self::KnowledgeRetrieval => 'Knowledge Retrieval',
+            self::Annotation => 'Annotation',
+            self::Iteration => 'Iteration',
+            self::WorkflowRef => 'Workflow Reference',
         };
     }
 
@@ -71,6 +77,9 @@ enum WorkflowNodeType: string
             self::VariableAggregator => 'squares-plus',
             self::TemplateTransform => 'document-text',
             self::KnowledgeRetrieval => 'magnifying-glass',
+            self::Annotation => 'pencil-square',
+            self::Iteration => 'arrows-pointing-in',
+            self::WorkflowRef => 'arrow-top-right-on-square',
         };
     }
 
@@ -173,6 +182,15 @@ enum WorkflowNodeType: string
                 'inputs' => [['name' => 'query', 'type' => 'text']],
                 'outputs' => [['name' => 'chunks', 'type' => 'structured']],
             ],
+            self::Annotation => ['inputs' => [], 'outputs' => []],
+            self::Iteration => [
+                'inputs' => [['name' => 'items', 'type' => 'array']],
+                'outputs' => [['name' => 'results', 'type' => 'array']],
+            ],
+            self::WorkflowRef => [
+                'inputs' => [['name' => 'input', 'type' => 'structured']],
+                'outputs' => [['name' => 'output', 'type' => 'structured']],
+            ],
             default => [
                 'inputs' => [['name' => 'data', 'type' => 'any']],
                 'outputs' => [['name' => 'data', 'type' => 'any']],
@@ -190,6 +208,8 @@ enum WorkflowNodeType: string
             self::DynamicFork,
             self::DoWhile,
             self::Merge,
+            self::Annotation,
+            self::Iteration,
         ]);
     }
 
@@ -211,6 +231,7 @@ enum WorkflowNodeType: string
             self::VariableAggregator,
             self::TemplateTransform,
             self::KnowledgeRetrieval,
+            self::WorkflowRef,
         ]);
     }
 }

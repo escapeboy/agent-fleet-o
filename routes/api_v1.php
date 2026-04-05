@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\EmailTemplateController;
 use App\Http\Controllers\Api\V1\EmailThemeController;
 use App\Http\Controllers\Api\V1\EvolutionController;
 use App\Http\Controllers\Api\V1\ExperimentController;
+use App\Http\Controllers\Api\V1\FlowEvaluationController;
 use App\Http\Controllers\Api\V1\GitRepositoryController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IntegrationController;
@@ -244,6 +245,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/integrations/{integration}/disconnect', [IntegrationController::class, 'disconnect']);
     Route::post('/integrations/{integration}/ping', [IntegrationController::class, 'ping']);
     Route::post('/integrations/{integration}/execute', [IntegrationController::class, 'execute']);
+    Route::post('/integrations/{integration}/sync', [IntegrationController::class, 'sync']);
     Route::get('/integrations/{integration}/capabilities', [IntegrationController::class, 'capabilities']);
 
     // Assistant conversations
@@ -327,4 +329,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)
     Route::post('/broadcasting/auth', [BridgeController::class, 'broadcastingAuth']);
+
+    // Flow Evaluations
+    Route::get('/flow-evaluations', [FlowEvaluationController::class, 'index']);
+    Route::post('/flow-evaluations', [FlowEvaluationController::class, 'store']);
+    Route::get('/flow-evaluations/{dataset}', [FlowEvaluationController::class, 'show']);
+    Route::post('/flow-evaluations/{dataset}/run', [FlowEvaluationController::class, 'run']);
+    Route::get('/flow-evaluations/{dataset}/runs', [FlowEvaluationController::class, 'runs']);
+    Route::get('/flow-evaluation-runs/{run}', [FlowEvaluationController::class, 'runShow']);
+    Route::get('/flow-evaluation-runs/{run}/results', [FlowEvaluationController::class, 'runResults']);
 });

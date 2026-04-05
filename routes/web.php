@@ -94,6 +94,7 @@ use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Tools\ToolTemplateCatalogPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
+use App\Livewire\Workflows\EvaluationListPage as WorkflowEvaluationListPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
@@ -290,6 +291,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
+    Route::get('/evaluations', WorkflowEvaluationListPage::class)->name('evaluations.index');
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
     Route::get('/health', HealthPage::class)->name('health');

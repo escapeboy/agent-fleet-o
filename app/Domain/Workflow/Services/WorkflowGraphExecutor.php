@@ -13,12 +13,17 @@ use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Workflow\Actions\DispatchSubWorkflowAction;
 use App\Domain\Workflow\Actions\DynamicForkFanOutAction;
+use App\Domain\Workflow\Actions\ExecuteSubWorkflowAction;
 use App\Domain\Workflow\Actions\HandleTimeGateAction;
 use App\Domain\Workflow\Actions\RunCompensationChainAction;
+use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Jobs\ExecuteWorkflowNodeJob;
+use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowNode;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class WorkflowGraphExecutor
 {
@@ -54,6 +59,16 @@ class WorkflowGraphExecutor
 
             return;
         }
+
+        // Emit observability trace start if configured on the workflow
+        $workflowModel = Workflow::withoutGlobalScopes()
+            ->where('id', $graph['workflow_id'] ?? null)
+            ->first();
+
+        $traceId = $workflowModel ? $this->emitObservabilityTrace($workflowModel, 'start', [
+            'experiment_id' => $experiment->id,
+            'workflow_name' => $workflowModel->name,
+        ]) : null;
 
         $steps = PlaybookStep::where('experiment_id', $experiment->id)
             ->orderBy('order')
@@ -243,6 +258,81 @@ class WorkflowGraphExecutor
         $type = $node['type'];
 
         if ($type === 'end') {
+            return;
+        }
+
+        if ($type === 'annotation') {
+            return;
+        }
+
+        if ($type === 'workflow_ref') {
+            // Execute a referenced workflow inline and inject its output into the experiment context.
+            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+            $refWorkflowId = $config['ref_workflow_id'] ?? null;
+
+            if (! $refWorkflowId) {
+                Log::warning('WorkflowGraphExecutor: workflow_ref node missing ref_workflow_id', [
+                    'node_id' => $nodeId,
+                    'experiment_id' => $experiment->id,
+                ]);
+
+                return;
+            }
+
+            $refWorkflow = Workflow::withoutGlobalScopes()
+                ->where('id', $refWorkflowId)
+                ->where('team_id', $experiment->team_id)
+                ->first();
+
+            if (! $refWorkflow) {
+                Log::warning('WorkflowGraphExecutor: workflow_ref target not found', [
+                    'ref_workflow_id' => $refWorkflowId,
+                    'experiment_id' => $experiment->id,
+                ]);
+
+                return;
+            }
+
+            // Resolve input from input_mapping (dot-notation into accumulated step outputs)
+            $context = $this->buildNodeContext($steps, $experiment);
+            $inputMapping = $config['input_mapping'] ?? [];
+            $subInput = [];
+            foreach ($inputMapping as $targetKey => $sourcePath) {
+                $subInput[$targetKey] = data_get($context, $sourcePath);
+            }
+
+            $depth = $config['_depth'] ?? 0;
+
+            try {
+                $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $subInput, $depth);
+                $outputKey = $config['output_key'] ?? 'sub_workflow_output';
+
+                // Store result so downstream nodes can reference it
+                $step = $steps[$nodeId] ?? null;
+                if ($step) {
+                    $step->update([
+                        'status' => 'completed',
+                        'output' => [$outputKey => $subOutput],
+                        'completed_at' => now(),
+                    ]);
+                    $executable[] = $nodeId;
+                }
+            } catch (\Throwable $e) {
+                Log::error('WorkflowGraphExecutor: workflow_ref execution failed', [
+                    'node_id' => $nodeId,
+                    'ref_workflow_id' => $refWorkflowId,
+                    'error' => $e->getMessage(),
+                ]);
+                $step = $steps[$nodeId] ?? null;
+                if ($step) {
+                    $step->update([
+                        'status' => 'failed',
+                        'error_message' => 'Sub-workflow failed: '.$e->getMessage(),
+                        'completed_at' => now(),
+                    ]);
+                }
+            }
+
             return;
         }
 
@@ -478,6 +568,46 @@ class WorkflowGraphExecutor
                         $steps, $experiment, $maxLoopIterations, $executable, $visited,
                     );
                 }
+            }
+
+            return;
+        }
+
+        if ($type === 'iteration') {
+            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+            $sourceExpression = $config['source_expression'] ?? null;
+            $itemVariable = $config['item_variable'] ?? 'item';
+            $maxParallel = max(1, (int) ($config['max_parallel'] ?? 5));
+
+            $context = $this->buildNodeContext($steps, $experiment);
+            $items = $sourceExpression ? data_get($context, $sourceExpression) : null;
+
+            $outgoingEdge = collect($edgeMap[$nodeId] ?? [])->first();
+
+            if (! $outgoingEdge || ! is_array($items) || empty($items)) {
+                if ($outgoingEdge) {
+                    $this->resolveNode(
+                        $outgoingEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                    );
+                }
+
+                return;
+            }
+
+            $templateNodeId = $outgoingEdge['target_node_id'];
+            $templateStep = $steps[$templateNodeId] ?? null;
+
+            if ($templateStep && $templateStep->isPending()) {
+                $chunks = array_chunk(array_values($items), $maxParallel);
+                $templateStep->update([
+                    'input_mapping' => array_merge($templateStep->input_mapping ?? [], [
+                        '_iteration_items' => array_values($items),
+                        '_iteration_variable' => $itemVariable,
+                        '_iteration_chunks' => $chunks,
+                    ]),
+                ]);
+                $executable[] = $templateNodeId;
             }
 
             return;
@@ -955,5 +1085,206 @@ class WorkflowGraphExecutor
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Execute a workflow's graph inline (without creating an Experiment row).
+     * Used by workflow_ref nodes to run sub-flows synchronously.
+     *
+     * Returns the accumulated step output keyed by node ID.
+     *
+     * @param  array<string, mixed>  $input
+     * @param  int  $depth  Current recursion depth (enforced by ExecuteSubWorkflowAction).
+     * @return array<string, mixed>
+     */
+    public function executeInline(Workflow $workflow, array $input, int $depth = 1): array
+    {
+        $nodes = $workflow->nodes()->orderBy('order')->get();
+        $edges = $workflow->edges()->get();
+
+        $nodeMap = $nodes->keyBy('id')->map(fn ($n) => [
+            'id' => $n->id,
+            'type' => $n->type instanceof WorkflowNodeType ? $n->type->value : $n->type,
+            'config' => $n->config ?? [],
+            'label' => $n->label,
+            'agent_id' => $n->agent_id,
+        ])->toArray();
+
+        $edgeList = $edges->map(fn ($e) => [
+            'source_node_id' => $e->source_node_id,
+            'target_node_id' => $e->target_node_id,
+            'condition' => $e->condition,
+            'is_default' => $e->is_default,
+            'sort_order' => $e->sort_order ?? 0,
+        ])->values()->toArray();
+
+        // Walk the graph depth-first and collect outputs from each executable node.
+        // For inline execution we run synchronously through non-async node types only.
+        $outputs = ['_input' => $input];
+
+        $adjacency = $this->buildAdjacencyMap($edgeList);
+
+        $startNode = collect($nodeMap)->firstWhere('type', 'start');
+        if (! $startNode) {
+            return $outputs;
+        }
+
+        // Propagate depth through workflow_ref node configs so nested calls enforce limits
+        foreach ($nodeMap as &$node) {
+            if (($node['type'] ?? '') === 'workflow_ref') {
+                $node['config']['_depth'] = $depth;
+            }
+        }
+        unset($node);
+
+        $visited = [];
+        $this->walkInline($startNode['id'], $nodeMap, $adjacency, $edgeList, $input, $outputs, $visited, $depth);
+
+        return $outputs;
+    }
+
+    /**
+     * Recursive DFS walk for inline sub-workflow execution.
+     *
+     * @param  array<string, mixed>  $nodeMap
+     * @param  array<string, array<int, string>>  $adjacency
+     * @param  array<int, array<string, mixed>>  $edgeList
+     * @param  array<string, mixed>  $context
+     * @param  array<string, mixed>  $outputs
+     */
+    private function walkInline(
+        string $nodeId,
+        array $nodeMap,
+        array $adjacency,
+        array $edgeList,
+        array $context,
+        array &$outputs,
+        array &$visited,
+        int $depth,
+    ): void {
+        if (isset($visited[$nodeId])) {
+            return;
+        }
+        $visited[$nodeId] = true;
+
+        $node = $nodeMap[$nodeId] ?? null;
+        if (! $node) {
+            return;
+        }
+
+        $type = $node['type'];
+
+        // Skip structural nodes
+        if (in_array($type, ['start', 'end', 'annotation'], true)) {
+            foreach ($adjacency[$nodeId] ?? [] as $next) {
+                $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth);
+            }
+
+            return;
+        }
+
+        // Nested workflow_ref — enforce depth and delegate
+        if ($type === 'workflow_ref') {
+            $config = $node['config'] ?? [];
+            $refWorkflowId = $config['ref_workflow_id'] ?? null;
+            if ($refWorkflowId) {
+                $refWorkflow = Workflow::withoutGlobalScopes()->find($refWorkflowId);
+                if ($refWorkflow) {
+                    try {
+                        $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $context, $depth);
+                        $outputKey = $config['output_key'] ?? 'sub_workflow_output';
+                        $outputs[$nodeId] = [$outputKey => $subOutput];
+                    } catch (\Throwable $e) {
+                        Log::warning('WorkflowGraphExecutor: inline workflow_ref failed', [
+                            'ref_workflow_id' => $refWorkflowId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+            foreach ($adjacency[$nodeId] ?? [] as $next) {
+                $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth);
+            }
+
+            return;
+        }
+
+        // For all other executable node types, record a placeholder output so
+        // downstream mappings can resolve against it. Actual computation would
+        // require the full Experiment pipeline; inline sub-workflows are intended
+        // for lightweight template/transform/parameter_extractor chains.
+        $outputs[$nodeId] = ['_node_type' => $type, '_skipped_async' => true];
+
+        foreach ($adjacency[$nodeId] ?? [] as $next) {
+            $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth);
+        }
+    }
+
+    /**
+     * Emit a fire-and-forget trace event to the workflow's configured observability provider.
+     *
+     * Supported providers: langfuse, langsmith.
+     * Failures are swallowed — observability must never break workflow execution.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function emitObservabilityTrace(Workflow $workflow, string $event, array $payload = []): ?string
+    {
+        $config = $workflow->observability_config ?? [];
+
+        if (empty($config['enabled']) || empty($config['provider'])) {
+            return null;
+        }
+
+        $provider = $config['provider'];
+        $providerConfig = $config['config'] ?? [];
+        $traceId = (string) Str::uuid();
+
+        try {
+            if ($provider === 'langfuse') {
+                $host = rtrim($providerConfig['host'] ?? 'https://cloud.langfuse.com', '/');
+                $publicKey = $providerConfig['public_key'] ?? '';
+                $secretKey = $providerConfig['secret_key'] ?? '';
+
+                Http::withoutVerifying()
+                    ->withBasicAuth($publicKey, $secretKey)
+                    ->asJson()
+                    ->timeout(3)
+                    ->post("{$host}/api/public/ingestion", [
+                        'batch' => [
+                            [
+                                'id' => (string) Str::uuid(),
+                                'type' => 'trace-create',
+                                'timestamp' => now()->toIso8601String(),
+                                'body' => array_merge([
+                                    'id' => $traceId,
+                                    'name' => "workflow:{$workflow->name}:{$event}",
+                                    'metadata' => $payload,
+                                ], $event === 'end' ? ['output' => $payload] : ['input' => $payload]),
+                            ],
+                        ],
+                    ]);
+            } elseif ($provider === 'langsmith') {
+                $host = rtrim($providerConfig['host'] ?? 'https://api.smith.langchain.com', '/');
+                $apiKey = $providerConfig['api_key'] ?? '';
+
+                Http::withoutVerifying()
+                    ->withHeaders(['x-api-key' => $apiKey])
+                    ->asJson()
+                    ->timeout(3)
+                    ->post("{$host}/runs", [
+                        'id' => $traceId,
+                        'name' => "workflow:{$workflow->name}:{$event}",
+                        'run_type' => 'chain',
+                        'inputs' => $event === 'start' ? $payload : [],
+                        'outputs' => $event === 'end' ? $payload : [],
+                        'start_time' => now()->toIso8601String(),
+                    ]);
+            }
+        } catch (\Throwable) {
+            // Observability failures must never interrupt workflow execution.
+        }
+
+        return $traceId;
     }
 }

@@ -39,12 +39,14 @@ class Workflow extends Model
         'mcp_execution_mode',
         'settings',
         'meta',
+        'observability_config',
     ];
 
     protected function casts(): array
     {
         return [
             'meta' => 'array',
+            'observability_config' => 'array',
             'status' => WorkflowStatus::class,
             'version' => 'integer',
             'max_loop_iterations' => 'integer',
