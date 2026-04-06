@@ -15,7 +15,6 @@ use App\Domain\Website\Actions\UpdateWebsiteAction;
 use App\Domain\Website\Actions\UploadWebsiteAssetAction;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use Livewire\Attributes\Locked;
@@ -69,21 +68,9 @@ class WebsiteDetailPage extends Component
 
     public string $linkProjectId = '';
 
-    public Collection $availableCrews;
-
-    public Collection $availableProjects;
-
     public function mount(Website $website): void
     {
         $this->website = $website->load(['pages', 'assets', 'managingCrew', 'projects']);
-
-        $this->availableCrews = Crew::where('team_id', $website->team_id)
-            ->where('status', 'active')
-            ->get();
-
-        $this->availableProjects = Project::where('team_id', $website->team_id)
-            ->whereNull('website_id')
-            ->get();
     }
 
     public function startEditWebsite(): void
@@ -282,7 +269,15 @@ class WebsiteDetailPage extends Component
             $this->website = $this->website->fresh(['pages']) ?? $this->website;
         }
 
-        return view('livewire.websites.website-detail-page')
+        $availableCrews = Crew::where('team_id', $this->website->team_id)
+            ->where('status', 'active')
+            ->get();
+
+        $availableProjects = Project::where('team_id', $this->website->team_id)
+            ->whereNull('website_id')
+            ->get();
+
+        return view('livewire.websites.website-detail-page', compact('availableCrews', 'availableProjects'))
             ->layout('layouts.app', ['header' => $this->website->name]);
     }
 }
