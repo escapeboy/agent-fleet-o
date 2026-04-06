@@ -10,4 +10,5 @@ enum ExperimentTrack: string
     case Engagement = 'engagement';
     case Debug = 'debug';
     case Workflow = 'workflow';
+    case WebBuild = 'web_build';
 }

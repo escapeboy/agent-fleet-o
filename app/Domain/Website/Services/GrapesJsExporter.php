@@ -28,10 +28,27 @@ class GrapesJsExporter
         string $title = '',
         string $metaDescription = '',
         array $extraHead = [],
+        string $canonicalUrl = '',
     ): string {
         $escapedTitle = htmlspecialchars($title, ENT_QUOTES);
         $escapedDescription = htmlspecialchars($metaDescription, ENT_QUOTES);
-        $extraHeadHtml = implode("\n        ", $extraHead);
+        $escapedCanonical = htmlspecialchars($canonicalUrl, ENT_QUOTES);
+
+        $seoTags = [];
+        if ($canonicalUrl) {
+            $seoTags[] = "<link rel=\"canonical\" href=\"{$escapedCanonical}\">";
+        }
+        $seoTags[] = '<meta name="robots" content="index,follow">';
+        $seoTags[] = "<meta property=\"og:title\" content=\"{$escapedTitle}\">";
+        if ($metaDescription) {
+            $seoTags[] = "<meta property=\"og:description\" content=\"{$escapedDescription}\">";
+        }
+        if ($canonicalUrl) {
+            $seoTags[] = "<meta property=\"og:url\" content=\"{$escapedCanonical}\">";
+        }
+        $seoTags[] = '<meta property="og:type" content="website">';
+
+        $extraHeadHtml = implode("\n        ", array_merge($seoTags, $extraHead));
 
         $html = $this->sanitize($this->stripLlmPreamble($html));
         $css = $this->sanitizeCss($css);

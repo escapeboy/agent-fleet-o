@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\ToolTemplateController;
 use App\Http\Controllers\Api\V1\TriggerController;
 use App\Http\Controllers\Api\V1\VoiceSessionController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
+use App\Http\Controllers\Api\V1\WebsiteAssetController;
 use App\Http\Controllers\Api\V1\WebsiteController;
 use App\Http\Controllers\Api\V1\WebsitePageController;
 use App\Http\Controllers\Api\V1\WorkflowController;
@@ -346,4 +347,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::delete('/websites/{website}/pages/{page}', [WebsitePageController::class, 'destroy']);
     Route::post('/websites/{website}/pages/{page}/publish', [WebsitePageController::class, 'publish']);
     Route::post('/websites/{website}/pages/{page}/unpublish', [WebsitePageController::class, 'unpublish']);
+
+    // Website Assets
+    Route::get('/websites/{website}/assets', [WebsiteAssetController::class, 'index']);
+    Route::post('/websites/{website}/assets', [WebsiteAssetController::class, 'store']);
+    Route::delete('/websites/{website}/assets/{asset}', [WebsiteAssetController::class, 'destroy']);
 });

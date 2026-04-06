@@ -4,6 +4,7 @@ namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
 use App\Domain\Project\Actions\CreateProjectAction;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Livewire\Component;
 
 class QuickAgentForm extends Component
@@ -14,11 +15,18 @@ class QuickAgentForm extends Component
 
     public string $schedule = 'daily';
 
-    public string $provider = 'anthropic';
+    public string $provider = '';
 
-    public string $model = 'claude-sonnet-4-5';
+    public string $model = '';
 
     public bool $createProject = true;
+
+    public function mount(): void
+    {
+        $resolved = app(ProviderResolver::class)->resolve(team: auth()->user()?->currentTeam);
+        $this->provider = $resolved['provider'];
+        $this->model = $resolved['model'];
+    }
 
     protected function rules(): array
     {

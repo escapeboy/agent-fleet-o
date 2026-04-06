@@ -8,13 +8,19 @@ use App\Domain\Website\Actions\DeleteWebsitePageAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
 use App\Domain\Website\Actions\UnpublishWebsitePageAction;
 use App\Domain\Website\Actions\UpdateWebsiteAction;
+use App\Domain\Website\Actions\UploadWebsiteAssetAction;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
+use App\Domain\Website\Models\WebsiteAsset;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class WebsiteDetailPage extends Component
 {
+    use WithFileUploads;
+
     #[Locked]
     public Website $website;
 
@@ -36,9 +42,12 @@ class WebsiteDetailPage extends Component
 
     public string $newPageType = 'page';
 
+    // Asset upload
+    public mixed $newAsset = null;
+
     public function mount(Website $website): void
     {
-        $this->website = $website->load('pages');
+        $this->website = $website->load(['pages', 'assets']);
     }
 
     public function startEditWebsite(): void
@@ -139,6 +148,27 @@ class WebsiteDetailPage extends Component
         if ($page) {
             $action->execute($page);
             $this->website->load('pages');
+        }
+    }
+
+    public function uploadAsset(UploadWebsiteAssetAction $action): void
+    {
+        $this->validate([
+            'newAsset' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $action->execute($this->website, $this->newAsset);
+        $this->newAsset = null;
+        $this->website->load('assets');
+    }
+
+    public function deleteAsset(string $assetId): void
+    {
+        $asset = $this->website->assets->firstWhere('id', $assetId);
+        if ($asset) {
+            Storage::disk($asset->disk)->delete($asset->path);
+            $asset->delete();
+            $this->website->load('assets');
         }
     }
 

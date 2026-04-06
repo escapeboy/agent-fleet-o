@@ -2,6 +2,7 @@
 
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
 use App\Http\Middleware\BypassAuth;
+use App\Http\Middleware\ResolveWebsiteByDomain;
 use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetCurrentTeam;
@@ -50,6 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
         $middleware->append(SecurityHeaders::class);
+        $middleware->prepend(ResolveWebsiteByDomain::class);
         $middleware->appendToGroup('web', BypassAuth::class);
         $middleware->appendToGroup('web', SetCurrentTeam::class);
         $middleware->appendToGroup('web', EnsureTermsAccepted::class);

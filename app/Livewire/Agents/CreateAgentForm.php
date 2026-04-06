@@ -8,6 +8,7 @@ use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Models\GlobalSetting;
 use Livewire\Component;
 
 class CreateAgentForm extends Component
@@ -31,9 +32,9 @@ class CreateAgentForm extends Component
 
     public string $personalityResponseFormat = '';
 
-    public string $provider = 'anthropic';
+    public string $provider = '';
 
-    public string $model = 'claude-sonnet-4-5';
+    public string $model = '';
 
     public ?int $budgetCapCredits = null;
 
@@ -71,6 +72,10 @@ class CreateAgentForm extends Component
 
     public function mount(): void
     {
+        $resolved = app(ProviderResolver::class)->resolve(team: auth()->user()?->currentTeam);
+        $this->provider = $resolved['provider'];
+        $this->model = $resolved['model'];
+
         $templateSlug = request('template');
         if ($templateSlug) {
             $template = collect(config('agent-templates', []))

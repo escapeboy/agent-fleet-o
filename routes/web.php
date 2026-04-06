@@ -363,7 +363,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $html = $exporter->toStandaloneHtml(
             html: $page->exported_html ?? '',
             css: $page->exported_css ?? '',
-            title: $page->title,
+            title: $page->getMetaTitle(),
+            metaDescription: $page->getMetaDescription(),
             extraHead: $extraHead,
         );
 

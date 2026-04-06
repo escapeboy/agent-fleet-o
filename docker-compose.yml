@@ -170,6 +170,12 @@ services:
     volumes:
       - .:/var/www
       - vendor_data:/var/www/vendor
+      - /Users/katsarov/htdocs/fleetq-plugin-sdk:/Users/katsarov/htdocs/fleetq-plugin-sdk
+      - /Users/katsarov/htdocs/fleetq-website-plugin-core:/Users/katsarov/htdocs/fleetq-website-plugin-core
+      - /Users/katsarov/htdocs/fleetq-website-plugin-blog:/Users/katsarov/htdocs/fleetq-website-plugin-blog
+      - /Users/katsarov/htdocs/fleetq-website-plugin-forms:/Users/katsarov/htdocs/fleetq-website-plugin-forms
+      - /Users/katsarov/htdocs/fleetq-website-plugin-chatbot:/Users/katsarov/htdocs/fleetq-website-plugin-chatbot
+      - /Users/katsarov/htdocs/fleetq-website-plugin-ecommerce:/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce
     environment:
       - APP_ENV=local
       - RUNNING_IN_DOCKER=true

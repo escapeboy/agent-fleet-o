@@ -54,12 +54,15 @@ class PublicSiteController extends Controller
             $extraHead[] = '<script src="https://cdn.tailwindcss.com"></script>';
         }
 
+        $canonicalUrl = url("/api/public/sites/{$siteSlug}/{$slug}");
+
         $html = app(GrapesJsExporter::class)->toStandaloneHtml(
             html: $page->exported_html ?? '',
             css: $page->exported_css ?? '',
             title: $page->getMetaTitle(),
-            description: $page->getMetaDescription(),
+            metaDescription: $page->getMetaDescription(),
             extraHead: $extraHead,
+            canonicalUrl: $canonicalUrl,
         );
 
         return response($html, 200, [

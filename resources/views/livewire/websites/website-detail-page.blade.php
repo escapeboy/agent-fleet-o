@@ -71,6 +71,51 @@
         </div>
     @endif
 
+    {{-- Assets section --}}
+    <div class="mb-6">
+        <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-gray-900">Assets</h2>
+        </div>
+
+        <form wire:submit="uploadAsset" class="mb-4 flex items-center gap-3">
+            <input type="file" wire:model="newAsset" accept="image/*"
+                class="block text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100">
+            <button type="submit"
+                class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                <i class="fa-solid fa-upload mr-1"></i>Upload
+            </button>
+        </form>
+        @error('newAsset') <p class="mb-3 text-xs text-red-600">{{ $message }}</p> @enderror
+
+        @if($website->assets->isEmpty())
+            <p class="text-sm text-gray-400">No assets yet. Upload images to use in your pages.</p>
+        @else
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                @foreach($website->assets as $asset)
+                    <div class="group relative overflow-hidden rounded-lg border border-gray-200 bg-white">
+                        <img src="{{ $asset->url }}" alt="{{ $asset->filename }}"
+                            class="h-24 w-full object-cover">
+                        <div class="px-2 py-1.5">
+                            <p class="truncate text-xs text-gray-500" title="{{ $asset->filename }}">{{ $asset->filename }}</p>
+                            <p class="text-xs text-gray-400">{{ number_format($asset->size_bytes / 1024, 0) }} KB</p>
+                        </div>
+                        <button wire:click="deleteAsset('{{ $asset->id }}')"
+                            wire:confirm="Delete this asset?"
+                            class="absolute right-1 top-1 hidden rounded bg-red-500 px-1.5 py-0.5 text-xs text-white group-hover:block">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                        <button type="button"
+                            onclick="navigator.clipboard.writeText('{{ $asset->url }}')"
+                            class="absolute left-1 top-1 hidden rounded bg-gray-700/70 px-1.5 py-0.5 text-xs text-white group-hover:block"
+                            title="Copy URL">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
     {{-- Visual builder warning --}}
     <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
         <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>
@@ -161,6 +206,11 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
+                                    <a href="{{ route('websites.page.preview', [$website, $page]) }}"
+                                        target="_blank"
+                                        class="text-sm text-blue-500 hover:text-blue-700" title="Preview">
+                                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                    </a>
                                     @if($page->status->value === 'published')
                                         <button wire:click="unpublishPage('{{ $page->id }}')"
                                             class="text-sm text-amber-600 hover:text-amber-800" title="Unpublish">

@@ -6,6 +6,7 @@ use App\Domain\Approval\Actions\CreateApprovalRequestAction;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
@@ -15,6 +16,7 @@ use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Website\Models\Website;
 use Illuminate\Support\Str;
 
 class CreateOutboundProposals extends BaseStageJob
@@ -31,6 +33,13 @@ class CreateOutboundProposals extends BaseStageJob
 
     protected function process(Experiment $experiment, ExperimentStage $stage): void
     {
+        // web_build experiments have no outbound proposals — create a website review request instead
+        if ($experiment->track === ExperimentTrack::WebBuild) {
+            $this->processWebBuildApproval($experiment, $stage);
+
+            return;
+        }
+
         $autoApprove = $experiment->constraints['auto_approve'] ?? false;
 
         // Get the building stage output for artifact/channel info
@@ -141,6 +150,74 @@ class CreateOutboundProposals extends BaseStageJob
         }
 
         // When not auto-approved, no transition — awaiting_approval is a human gate
+    }
+
+    /**
+     * Handle web_build experiments: create a website review ApprovalRequest
+     * so the user can inspect the generated site before it is published.
+     * No outbound proposals are created — there is nothing to send.
+     */
+    private function processWebBuildApproval(Experiment $experiment, ExperimentStage $stage): void
+    {
+        $buildingStage = $experiment->stages()
+            ->where('stage', StageType::Building)
+            ->where('iteration', $experiment->current_iteration)
+            ->latest()
+            ->first();
+
+        $websiteId = $buildingStage?->output_snapshot['website_id'] ?? null;
+        $website = $websiteId ? Website::withoutGlobalScopes()->with('pages')->find($websiteId) : null;
+
+        $publicUrl = $website ? url("/api/public/sites/{$website->slug}") : null;
+        $adminUrl = $website ? route('websites.show', $website) : null;
+        $pages = $website?->pages->map(fn ($p) => ['slug' => $p->slug, 'title' => $p->title])->toArray() ?? [];
+
+        $createApproval = app(CreateApprovalRequestAction::class);
+        $approvalRequest = $createApproval->execute(
+            experiment: $experiment,
+            outboundProposal: null,
+            context: [
+                'type' => 'website_review',
+                'website_id' => $websiteId,
+                'website_url' => $publicUrl,
+                'admin_url' => $adminUrl,
+                'pages' => $pages,
+                'message' => 'Review the generated website before finalising.',
+            ],
+        );
+
+        $autoApprove = $experiment->constraints['auto_approve'] ?? false;
+
+        if ($autoApprove) {
+            $approvalRequest->update([
+                'status' => ApprovalStatus::Approved,
+                'reviewed_at' => now(),
+                'reviewed_by' => null,
+                'reviewer_notes' => 'Auto-approved by experiment constraints',
+            ]);
+
+            $transitionAction = app(TransitionExperimentAction::class);
+            $experiment = $transitionAction->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::Approved,
+                reason: 'Website auto-approved',
+            );
+            $transitionAction->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::Executing,
+                reason: 'Website auto-approved — proceeding to execution',
+            );
+        }
+
+        $stage->update([
+            'output_snapshot' => [
+                'type' => 'website_review',
+                'website_id' => $websiteId,
+                'website_url' => $publicUrl,
+                'approval_request_id' => $approvalRequest->id,
+                'auto_approved' => $autoApprove,
+            ],
+        ]);
     }
 
     /**
