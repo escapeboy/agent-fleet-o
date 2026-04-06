@@ -297,10 +297,7 @@
     </div>
 
     {{-- Visual builder warning --}}
-    <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>
-        The visual page builder is currently unavailable due to a known performance issue that freezes the browser. Pages can still be managed and published below.
-    </div>
+
 
     {{-- Pages section --}}
     <div class="mb-4 flex items-center justify-between">
@@ -314,25 +311,40 @@
     {{-- Add page form --}}
     @if($addingPage)
         <div class="mb-4 rounded-xl border border-primary-200 bg-primary-50 p-4">
-            <form wire:submit="addPage" class="flex flex-wrap items-end gap-3">
-                <div class="flex-1 min-w-40">
-                    <x-form-input wire:model.live="newPageTitle" label="Title" placeholder="About Us" compact required />
+            <form wire:submit="addPage" class="space-y-3">
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="flex-1 min-w-40">
+                        <x-form-input wire:model.live="newPageTitle" label="Title" placeholder="About Us" compact required />
+                    </div>
+                    <div class="flex-1 min-w-40">
+                        <x-form-input wire:model="newPageSlug" label="Slug" placeholder="about-us" compact required />
+                    </div>
+                    <div class="min-w-32">
+                        <x-form-select wire:model="newPageType" label="Type" compact>
+                            <option value="page">Page</option>
+                            <option value="post">Post</option>
+                            <option value="product">Product</option>
+                            <option value="landing">Landing</option>
+                        </x-form-select>
+                    </div>
                 </div>
-                <div class="flex-1 min-w-40">
-                    <x-form-input wire:model="newPageSlug" label="Slug" placeholder="about-us" compact required />
+                <div>
+                    <x-form-textarea
+                        wire:model="newPageBrief"
+                        label="Brief (optional)"
+                        placeholder="Describe what this page should contain and do. The managing crew will generate the content based on your brief."
+                        rows="3"
+                        hint="{{ $website->managing_crew_id ? 'The managing crew will generate this page automatically.' : 'Assign a managing crew to auto-generate content from a brief.' }}"
+                    />
                 </div>
-                <div class="min-w-32">
-                    <x-form-select wire:model="newPageType" label="Type" compact>
-                        <option value="page">Page</option>
-                        <option value="post">Post</option>
-                        <option value="product">Product</option>
-                        <option value="landing">Landing</option>
-                    </x-form-select>
-                </div>
-                <div class="flex items-center gap-2 pb-0.5">
+                <div class="flex items-center gap-2">
                     <button type="submit"
                         class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
-                        Add
+                        @if($website->managing_crew_id && trim($newPageBrief) !== '')
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Add & Generate
+                        @else
+                            <i class="fa-solid fa-plus mr-1"></i>Add Page
+                        @endif
                     </button>
                     <button type="button" wire:click="$set('addingPage', false)"
                         class="text-sm text-gray-500 hover:text-gray-700">

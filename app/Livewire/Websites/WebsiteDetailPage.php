@@ -46,6 +46,8 @@ class WebsiteDetailPage extends Component
 
     public string $newPageType = 'page';
 
+    public string $newPageBrief = '';
+
     // Asset upload
     public mixed $newAsset = null;
 
@@ -124,12 +126,13 @@ class WebsiteDetailPage extends Component
         }
     }
 
-    public function addPage(CreateWebsitePageAction $action): void
+    public function addPage(CreateWebsitePageAction $action, ExecuteWebsiteCommandAction $commandAction): void
     {
         $this->validate([
             'newPageTitle' => ['required', 'string', 'max:255'],
             'newPageSlug' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9-]+$/'],
             'newPageType' => ['required', 'string', 'in:page,post,product,landing'],
+            'newPageBrief' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $page = $action->execute(
@@ -141,10 +144,15 @@ class WebsiteDetailPage extends Component
             ],
         );
 
-        $this->reset('newPageTitle', 'newPageSlug', 'newPageType', 'addingPage');
-        $this->website->load('pages');
+        $brief = trim($this->newPageBrief);
 
-        $this->redirectRoute('websites.builder', ['website' => $this->website, 'page' => $page]);
+        if ($brief !== '' && $this->website->managing_crew_id) {
+            $command = "Generate the full HTML content for the '{$page->title}' page (/{$page->slug}, type: {$this->newPageType}).\n\nBrief:\n{$brief}";
+            $commandAction->execute($this->website, $command, $page->id);
+        }
+
+        $this->reset('newPageTitle', 'newPageSlug', 'newPageType', 'newPageBrief', 'addingPage');
+        $this->website->load('pages');
     }
 
     public function publishPage(string $pageId, PublishWebsitePageAction $action): void
