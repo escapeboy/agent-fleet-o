@@ -2,17 +2,22 @@
 
 namespace App\Livewire\Websites;
 
+use App\Domain\Crew\Models\Crew;
+use App\Domain\Project\Models\Project;
+use App\Domain\Website\Actions\AssignWebsiteCrewAction;
 use App\Domain\Website\Actions\CreateWebsitePageAction;
 use App\Domain\Website\Actions\DeleteWebsiteAction;
 use App\Domain\Website\Actions\DeleteWebsitePageAction;
+use App\Domain\Website\Actions\ExecuteWebsiteCommandAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
 use App\Domain\Website\Actions\UnpublishWebsitePageAction;
 use App\Domain\Website\Actions\UpdateWebsiteAction;
 use App\Domain\Website\Actions\UploadWebsiteAssetAction;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
-use App\Domain\Website\Models\WebsiteAsset;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use InvalidArgumentException;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -45,9 +50,40 @@ class WebsiteDetailPage extends Component
     // Asset upload
     public mixed $newAsset = null;
 
+    // Command panel
+    public string $command = '';
+
+    public ?string $commandPageId = null;
+
+    public bool $commandLoading = false;
+
+    public ?string $commandCrewExecutionId = null;
+
+    public ?string $commandError = null;
+
+    // Crew assignment
+    public string $assigningCrewId = '';
+
+    // Linked projects section
+    public bool $linkingProject = false;
+
+    public string $linkProjectId = '';
+
+    public Collection $availableCrews;
+
+    public Collection $availableProjects;
+
     public function mount(Website $website): void
     {
-        $this->website = $website->load(['pages', 'assets']);
+        $this->website = $website->load(['pages', 'assets', 'managingCrew', 'projects']);
+
+        $this->availableCrews = Crew::where('team_id', $website->team_id)
+            ->where('status', 'active')
+            ->get();
+
+        $this->availableProjects = Project::where('team_id', $website->team_id)
+            ->whereNull('website_id')
+            ->get();
     }
 
     public function startEditWebsite(): void
@@ -170,6 +206,74 @@ class WebsiteDetailPage extends Component
             $asset->delete();
             $this->website->load('assets');
         }
+    }
+
+    public function executeCommand(ExecuteWebsiteCommandAction $action): void
+    {
+        $this->commandError = null;
+
+        $this->validate(['command' => ['required', 'string']]);
+
+        $this->commandLoading = true;
+
+        try {
+            $execution = $action->execute($this->website, $this->command, $this->commandPageId);
+            $this->commandCrewExecutionId = $execution->id;
+            $this->command = '';
+            $this->commandPageId = null;
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Command sent to crew']);
+        } catch (InvalidArgumentException $e) {
+            $this->commandError = $e->getMessage();
+        } finally {
+            $this->commandLoading = false;
+        }
+    }
+
+    public function setCommandPage(string $pageId): void
+    {
+        $this->commandPageId = $pageId;
+    }
+
+    public function clearCommandPage(): void
+    {
+        $this->commandPageId = null;
+    }
+
+    public function assignCrew(AssignWebsiteCrewAction $action): void
+    {
+        try {
+            $action->execute($this->website, $this->assigningCrewId ?: null);
+            $this->website->refresh();
+            $this->website->load('managingCrew');
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Managing crew updated']);
+        } catch (InvalidArgumentException $e) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function linkProject(): void
+    {
+        $this->validate(['linkProjectId' => ['required', 'string']]);
+
+        Project::find($this->linkProjectId)?->update(['website_id' => $this->website->id]);
+        $this->website->load('projects');
+
+        $this->availableProjects = Project::where('team_id', $this->website->team_id)
+            ->whereNull('website_id')
+            ->get();
+
+        $this->linkingProject = false;
+        $this->linkProjectId = '';
+    }
+
+    public function unlinkProject(string $projectId): void
+    {
+        Project::find($projectId)?->update(['website_id' => null]);
+        $this->website->load('projects');
+
+        $this->availableProjects = Project::where('team_id', $this->website->team_id)
+            ->whereNull('website_id')
+            ->get();
     }
 
     public function render()

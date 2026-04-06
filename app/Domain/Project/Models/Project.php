@@ -9,6 +9,7 @@ use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
+use App\Domain\Website\Models\Website;
 use App\Domain\Workflow\Models\Workflow;
 use App\Models\User;
 use Database\Factories\Domain\Project\ProjectFactory;
@@ -57,6 +58,7 @@ class Project extends Model
         'goal',
         'crew_id',
         'workflow_id',
+        'website_id',
         'agent_config',
         'budget_config',
         'notification_config',
@@ -118,6 +120,11 @@ class Project extends Model
     public function workflow(): BelongsTo
     {
         return $this->belongsTo(Workflow::class);
+    }
+
+    public function website(): BelongsTo
+    {
+        return $this->belongsTo(Website::class);
     }
 
     public function emailTemplate(): BelongsTo

@@ -2,7 +2,9 @@
 
 namespace App\Domain\Website\Models;
 
+use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Website\Enums\WebsiteStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -23,6 +25,7 @@ class Website extends Model
         'custom_domain',
         'settings',
         'crew_execution_id',
+        'managing_crew_id',
     ];
 
     protected function casts(): array
@@ -51,6 +54,16 @@ class Website extends Model
     public function crewExecution(): BelongsTo
     {
         return $this->belongsTo(CrewExecution::class);
+    }
+
+    public function managingCrew(): BelongsTo
+    {
+        return $this->belongsTo(Crew::class, 'managing_crew_id');
+    }
+
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class);
     }
 
     public function isGenerating(): bool

@@ -71,6 +71,186 @@
         </div>
     @endif
 
+    {{-- Managing Crew section --}}
+    <div class="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+            <h2 class="text-base font-semibold text-gray-900">Managing Crew</h2>
+        </div>
+        <div class="px-6 py-4">
+            @if($website->managingCrew)
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+                        <span class="font-medium text-gray-900">{{ $website->managingCrew->name }}</span>
+                        <span class="text-xs text-gray-400">· Send a command below to trigger crew actions</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select wire:model="assigningCrewId"
+                            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                            <option value="">— change crew —</option>
+                            @foreach($availableCrews as $crew)
+                                <option value="{{ $crew->id }}" @selected($crew->id === $website->managing_crew_id)>{{ $crew->name }}</option>
+                            @endforeach
+                        </select>
+                        <button wire:click="assignCrew"
+                            class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                            Change
+                        </button>
+                        <button wire:click="$set('assigningCrewId', '')" wire:click="assignCrew"
+                            onclick="if(confirm('Unassign the managing crew?')) { @this.set('assigningCrewId', ''); @this.call('assignCrew'); }"
+                            class="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                            Unassign
+                        </button>
+                    </div>
+                </div>
+            @else
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-sm text-gray-500">No managing crew assigned.</span>
+                    <select wire:model="assigningCrewId"
+                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                        <option value="">— select a crew —</option>
+                        @foreach($availableCrews as $crew)
+                            <option value="{{ $crew->id }}">{{ $crew->name }}</option>
+                        @endforeach
+                    </select>
+                    <button wire:click="assignCrew"
+                        class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                        Assign
+                    </button>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Command Panel --}}
+    @if($website->managingCrew)
+        <div id="command-panel" class="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div class="border-b border-gray-100 px-6 py-4">
+                <h2 class="text-base font-semibold text-gray-900">Send Command</h2>
+            </div>
+            <div class="px-6 py-4 space-y-3">
+                @if($commandError)
+                    <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        <i class="fa-solid fa-circle-exclamation mr-1.5"></i>{{ $commandError }}
+                    </div>
+                @endif
+
+                @if($commandCrewExecutionId)
+                    <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                        <i class="fa-solid fa-circle-check mr-1.5"></i>
+                        Command dispatched.
+                        <a href="{{ route('crews.execute', ['crew' => $website->managing_crew_id]) }}" class="underline font-medium">
+                            View execution
+                        </a>
+                    </div>
+                @endif
+
+                @if($commandPageId)
+                    @php $commandPage = $website->pages->firstWhere('id', $commandPageId); @endphp
+                    @if($commandPage)
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                                <i class="fa-solid fa-file-lines"></i>
+                                Page: {{ $commandPage->title }}
+                                <button wire:click="clearCommandPage" class="ml-1 text-blue-600 hover:text-blue-900">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                            </span>
+                        </div>
+                    @endif
+                @endif
+
+                <textarea wire:model="command"
+                    rows="3"
+                    placeholder="e.g. Update the hero section for Black Friday sale..."
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"></textarea>
+
+                <div class="flex items-center gap-2">
+                    <button wire:click="executeCommand"
+                        wire:loading.attr="disabled"
+                        wire:target="executeCommand"
+                        @if(!$command) disabled @endif
+                        class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="executeCommand"><i class="fa-solid fa-terminal mr-1.5"></i>Run</span>
+                        <span wire:loading wire:target="executeCommand"><i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Sending...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Linked Projects section --}}
+    <div class="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+            <h2 class="text-base font-semibold text-gray-900">Linked Projects</h2>
+            @if(!$linkingProject)
+                <button wire:click="$set('linkingProject', true)"
+                    class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <i class="fa-solid fa-link mr-1"></i>Link Project
+                </button>
+            @endif
+        </div>
+
+        @if($linkingProject)
+            <div class="border-b border-gray-100 bg-gray-50 px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <select wire:model="linkProjectId"
+                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                        <option value="">— select a project —</option>
+                        @foreach($availableProjects as $project)
+                            <option value="{{ $project->id }}">{{ $project->title }}</option>
+                        @endforeach
+                    </select>
+                    <button wire:click="linkProject"
+                        class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                        Link
+                    </button>
+                    <button wire:click="$set('linkingProject', false)"
+                        class="text-sm text-gray-500 hover:text-gray-700">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        <div class="px-6 py-4">
+            @if($website->projects->isEmpty())
+                <p class="text-sm text-gray-400">No projects linked to this website yet.</p>
+            @else
+                <table class="w-full divide-y divide-gray-200 text-sm">
+                    <thead>
+                        <tr class="text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th class="pb-3">Project</th>
+                            <th class="pb-3">Type</th>
+                            <th class="pb-3">Status</th>
+                            <th class="pb-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($website->projects as $project)
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-3 font-medium text-gray-900">
+                                    <a href="{{ route('projects.show', $project) }}" class="hover:text-primary-600">
+                                        {{ $project->title }}
+                                    </a>
+                                </td>
+                                <td class="py-3 capitalize text-gray-500">{{ $project->type->value }}</td>
+                                <td class="py-3 text-gray-500">{{ $project->status->value }}</td>
+                                <td class="py-3 text-right">
+                                    <button wire:click="unlinkProject('{{ $project->id }}')"
+                                        wire:confirm="Unlink this project from the website?"
+                                        class="text-xs text-red-400 hover:text-red-600">
+                                        <i class="fa-solid fa-unlink mr-1"></i>Unlink
+                                    </button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        </div>
+    </div>
+
     {{-- Assets section --}}
     <div class="mb-6">
         <div class="mb-3 flex items-center justify-between">
@@ -206,6 +386,14 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
+                                    @if($website->managingCrew)
+                                        <button wire:click="setCommandPage('{{ $page->id }}')"
+                                            onclick="document.getElementById('command-panel')?.scrollIntoView({behavior:'smooth'})"
+                                            title="Send command for this page"
+                                            class="text-sm text-gray-400 hover:text-primary-600">
+                                            <i class="fa-solid fa-terminal"></i>
+                                        </button>
+                                    @endif
                                     <a href="{{ route('websites.page.preview', [$website, $page]) }}"
                                         target="_blank"
                                         class="text-sm text-blue-500 hover:text-blue-700" title="Preview">

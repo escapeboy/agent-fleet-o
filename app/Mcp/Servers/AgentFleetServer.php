@@ -349,8 +349,10 @@ use App\Mcp\Tools\Webhook\WebhookCreateTool;
 use App\Mcp\Tools\Webhook\WebhookDeleteTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
 use App\Mcp\Tools\Webhook\WebhookUpdateTool;
+use App\Mcp\Tools\Website\WebsiteAssignCrewTool;
 use App\Mcp\Tools\Website\WebsiteCreateTool;
 use App\Mcp\Tools\Website\WebsiteDeleteTool;
+use App\Mcp\Tools\Website\WebsiteExecuteCommandTool;
 use App\Mcp\Tools\Website\WebsiteGenerateTool;
 use App\Mcp\Tools\Website\WebsiteGetTool;
 use App\Mcp\Tools\Website\WebsiteListTool;
@@ -941,7 +943,7 @@ class AgentFleetServer extends Server
         A2uiRenderSurfaceTool::class,
         A2uiValidateSurfaceTool::class,
 
-        // Websites (11) — AI website builder, page management, publish/export
+        // Websites (13) — AI website builder, page management, publish/export, managing crew
         WebsiteListTool::class,
         WebsiteGetTool::class,
         WebsiteCreateTool::class,
@@ -953,6 +955,8 @@ class AgentFleetServer extends Server
         WebsitePageCreateTool::class,
         WebsitePageUpdateTool::class,
         WebsitePagePublishTool::class,
+        WebsiteAssignCrewTool::class,
+        WebsiteExecuteCommandTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */
