@@ -115,6 +115,17 @@ class ApproveAction
             'created_at' => now(),
         ]);
 
+        // Skip state transitions if the experiment already reached a terminal state
+        // (e.g. it completed, was killed, or expired while the approval was pending).
+        if ($experiment->status->isTerminal()) {
+            if ($approvalRequest->callback_url) {
+                $approvalRequest->update(['callback_status' => 'pending']);
+                FireApprovalWebhookJob::dispatch($approvalRequest->id);
+            }
+
+            return;
+        }
+
         // Transition experiment to approved, which triggers executing
         $this->transition->execute(
             experiment: $experiment,
