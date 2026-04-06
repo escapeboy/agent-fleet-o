@@ -107,12 +107,15 @@ class GrapesJsExporter
      */
     public function sanitize(string $html): string
     {
-        // Allow only FleetQ-sourced script tags (chatbot widget, form handler)
+        // Allow only FleetQ-sourced external script tags (chatbot widget, form handler).
+        // Inline scripts (no src) are always stripped — data-fleetq alone is not sufficient.
         $html = preg_replace_callback(
             '/<script\b([^>]*)>(.*?)<\/script>/is',
             function ($matches) {
                 $attrs = $matches[1];
-                if (str_contains($attrs, 'data-fleetq') || preg_match('/src=["\'][^"\']*fleetq/i', $attrs)) {
+                $body = trim($matches[2]);
+                // Only allow external FleetQ scripts with empty body
+                if ($body === '' && preg_match('/src=["\'][^"\']*fleetq/i', $attrs)) {
                     return $matches[0];
                 }
 
@@ -128,9 +131,10 @@ class GrapesJsExporter
             $html,
         ) ?? $html;
 
-        // Remove dangerous void/self-closing elements
+        // Remove dangerous void/self-closing elements.
+        // <link> is stripped from body HTML — legitimate head links belong in extraHead.
         $html = preg_replace(
-            '/<(iframe|object|embed|base)\b[^>]*\/?>/is',
+            '/<(iframe|object|embed|base|link)\b[^>]*\/?>/is',
             '',
             $html,
         ) ?? $html;
@@ -160,8 +164,8 @@ class GrapesJsExporter
      */
     public function sanitizeCss(string $css): string
     {
-        // Remove IE CSS expression() calls
-        $css = preg_replace('/expression\s*\(/i', '(', $css) ?? $css;
+        // Remove IE CSS expression() calls entirely (replace the whole call with a safe value)
+        $css = preg_replace('/expression\s*\([^)]*\)/i', 'initial', $css) ?? $css;
 
         // Remove -moz-binding (Firefox XBL injection)
         $css = preg_replace('/-moz-binding\s*:\s*[^;]*/i', '', $css) ?? $css;

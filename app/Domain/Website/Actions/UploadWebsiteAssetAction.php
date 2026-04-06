@@ -16,11 +16,11 @@ class UploadWebsiteAssetAction
         return WebsiteAsset::create([
             'website_id' => $website->id,
             'team_id' => $website->team_id,
-            'filename' => $file->getClientOriginalName(),
+            'filename' => mb_substr(str_replace("\0", '', $file->getClientOriginalName()), 0, 255),
             'disk' => 'public',
             'path' => $path,
             'url' => Storage::disk('public')->url($path),
-            'mime_type' => $file->getMimeType() ?? $file->getClientMimeType(),
+            'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
             'size_bytes' => $file->getSize(),
         ]);
     }
