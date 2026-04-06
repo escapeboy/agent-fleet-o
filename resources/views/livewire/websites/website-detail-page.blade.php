@@ -71,6 +71,42 @@
         </div>
     @endif
 
+    {{-- Edit page content modal --}}
+    @if($editingPageId)
+        <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+            <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+                <h3 class="mb-1 text-lg font-semibold">Edit Page Content</h3>
+                <p class="mb-4 text-sm text-gray-500">{{ $editingPageTitle }}</p>
+                <form wire:submit="submitPageEdit" class="space-y-4">
+                    <x-form-textarea
+                        wire:model="editPageBrief"
+                        label="What changes do you want?"
+                        placeholder="e.g. Update the hero headline to say 'Summer Sale — 30% Off', change the CTA button colour to orange, and add a countdown timer section..."
+                        rows="4"
+                        required
+                    />
+                    <div class="flex items-center gap-3 pt-1">
+                        <button type="submit"
+                            wire:loading.attr="disabled"
+                            wire:target="submitPageEdit"
+                            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
+                            <span wire:loading.remove wire:target="submitPageEdit">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Generate Changes
+                            </span>
+                            <span wire:loading wire:target="submitPageEdit">
+                                <i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Sending to crew...
+                            </span>
+                        </button>
+                        <button type="button" wire:click="$set('editingPageId', null)"
+                            class="text-sm text-gray-500 hover:text-gray-700">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
     {{-- Managing Crew section --}}
     <div class="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
@@ -399,12 +435,22 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     @if($website->managingCrew)
+                                        <button wire:click="startEditPageContent('{{ $page->id }}')"
+                                            title="Edit page content via crew"
+                                            class="text-sm text-gray-400 hover:text-primary-600">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                        </button>
                                         <button wire:click="setCommandPage('{{ $page->id }}')"
                                             onclick="document.getElementById('command-panel')?.scrollIntoView({behavior:'smooth'})"
                                             title="Send command for this page"
                                             class="text-sm text-gray-400 hover:text-primary-600">
                                             <i class="fa-solid fa-terminal"></i>
                                         </button>
+                                    @else
+                                        <span title="Assign a managing crew to edit page content"
+                                            class="cursor-not-allowed text-sm text-gray-200">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                        </span>
                                     @endif
                                     <a href="{{ route('websites.page.preview', [$website, $page]) }}"
                                         target="_blank"

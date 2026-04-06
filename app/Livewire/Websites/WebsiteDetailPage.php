@@ -70,6 +70,13 @@ class WebsiteDetailPage extends Component
 
     public string $linkProjectId = '';
 
+    // Edit page content via crew
+    public ?string $editingPageId = null;
+
+    public string $editingPageTitle = '';
+
+    public string $editPageBrief = '';
+
     public function mount(Website $website): void
     {
         $this->website = $website->load(['pages', 'assets', 'managingCrew', 'projects']);
@@ -265,10 +272,31 @@ class WebsiteDetailPage extends Component
     {
         Project::find($projectId)?->update(['website_id' => null]);
         $this->website->load('projects');
+    }
 
-        $this->availableProjects = Project::where('team_id', $this->website->team_id)
-            ->whereNull('website_id')
-            ->get();
+    public function startEditPageContent(string $pageId): void
+    {
+        $page = $this->website->pages->firstWhere('id', $pageId);
+
+        if (! $page) {
+            return;
+        }
+
+        $this->editingPageId = $pageId;
+        $this->editingPageTitle = $page->title;
+        $this->editPageBrief = '';
+    }
+
+    public function submitPageEdit(ExecuteWebsiteCommandAction $action): void
+    {
+        $this->validate([
+            'editPageBrief' => ['required', 'string', 'min:5', 'max:2000'],
+        ]);
+
+        $command = "Edit the '{$this->editingPageTitle}' page.\n\nInstructions:\n{$this->editPageBrief}";
+        $action->execute($this->website, $command, $this->editingPageId);
+
+        $this->reset('editingPageId', 'editingPageTitle', 'editPageBrief');
     }
 
     public function render()
