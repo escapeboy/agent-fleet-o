@@ -32,7 +32,7 @@ class WebsiteAssetController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'max:10240',
-                'mimes:jpg,jpeg,png,gif,webp,svg,ico,css,js,woff,woff2,ttf,eot,pdf'],
+                'mimes:jpg,jpeg,png,gif,webp,ico,css,js,woff,woff2,ttf,eot,pdf'],
         ]);
 
         $file = $request->file('file');

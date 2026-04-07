@@ -66,8 +66,8 @@ final class HtmlSanitizer
         // Only allow http/https/mailto links
         $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
 
-        // Remove on* event handlers (javascript: is blocked by URI.AllowedSchemes)
-        $config->set('HTML.ForbiddenAttributes', 'onclick,onload,onerror,onmouseover,onmouseout,onfocus,onblur,onchange,onsubmit,onkeydown,onkeyup,onkeypress');
+        // on* event handlers are stripped automatically — they are not in HTML.Allowed.
+        // javascript: URIs are blocked by URI.AllowedSchemes.
 
         $config->set('Cache.SerializerPath', storage_path('framework/cache/htmlpurifier'));
         @mkdir(storage_path('framework/cache/htmlpurifier'), 0755, true);

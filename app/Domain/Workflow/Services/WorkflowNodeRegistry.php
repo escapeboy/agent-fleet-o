@@ -17,6 +17,10 @@ class WorkflowNodeRegistry
      */
     public function register(string $handlerClass): void
     {
+        if (! is_a($handlerClass, WorkflowNodeHandlerInterface::class, true)) {
+            throw new \InvalidArgumentException("{$handlerClass} must implement WorkflowNodeHandlerInterface.");
+        }
+
         $definition = $handlerClass::definition();
         $this->handlers[$definition->type] = $handlerClass;
     }

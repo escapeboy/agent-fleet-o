@@ -17,13 +17,18 @@ class ExportWebsiteController extends Controller
 {
     public function __invoke(Request $request, Website $website, WebsiteZipBuilder $builder): StreamedResponse
     {
+        abort_if($website->team_id !== $request->user()->currentTeam->id, 403);
+
         $zipPath = $builder->build($website);
 
         $filename = 'website-'.Str::slug($website->name).'.zip';
 
         return response()->streamDownload(function () use ($zipPath) {
-            readfile($zipPath);
-            @unlink($zipPath);
+            try {
+                readfile($zipPath);
+            } finally {
+                @unlink($zipPath);
+            }
         }, $filename, [
             'Content-Type' => 'application/zip',
         ]);
