@@ -9,6 +9,8 @@ use App\Domain\Outbound\Managers\OutboundConnectorManager;
 use App\Domain\Shared\Models\PluginState;
 use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
+use App\Domain\Workflow\Contracts\WorkflowNodeHandlerInterface;
+use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
@@ -78,6 +80,9 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
 
     /** @var list<class-string<PanelExtension>> PanelExtension implementations */
     protected array $panels = [];
+
+    /** @var list<class-string<WorkflowNodeHandlerInterface>> Custom workflow node handlers */
+    protected array $workflowNodes = [];
 
     /**
      * Socialite provider driver names to add to the social login allowlist.
@@ -154,6 +159,7 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
         $this->bootPanelExtensions();
         $this->bootOutboundConnectors();
         $this->bootIntegrationDrivers();
+        $this->bootWorkflowNodes();
 
         if ($this->app->runningInConsole()) {
             $this->bootCommands();
@@ -204,6 +210,10 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
 
         if (! empty($this->integrations)) {
             $this->app->tag($this->integrations, 'fleet.integrations');
+        }
+
+        if (! empty($this->workflowNodes)) {
+            $this->app->tag($this->workflowNodes, 'fleet.workflow.nodes');
         }
     }
 
@@ -279,6 +289,26 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
             if ($driverName) {
                 $manager->extend($driverName, fn () => $connector);
             }
+        }
+    }
+
+    /**
+     * Register plugin workflow node handlers with the WorkflowNodeRegistry.
+     */
+    protected function bootWorkflowNodes(): void
+    {
+        if (empty($this->workflowNodes)) {
+            return;
+        }
+
+        if (! $this->app->bound(WorkflowNodeRegistry::class)) {
+            return;
+        }
+
+        $registry = $this->app->make(WorkflowNodeRegistry::class);
+
+        foreach ($this->workflowNodes as $handlerClass) {
+            $registry->register($handlerClass);
         }
     }
 

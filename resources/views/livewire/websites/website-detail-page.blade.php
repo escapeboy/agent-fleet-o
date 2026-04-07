@@ -140,6 +140,12 @@
                             </td>
                             <td class="px-5 py-4 text-right">
                                 <div class="flex items-center justify-end gap-2">
+                                    @if($page->exported_html)
+                                        <a href="{{ route('websites.pages.preview', [$website, $page]) }}" target="_blank"
+                                           class="text-xs text-gray-500 hover:text-gray-700">
+                                            Preview
+                                        </a>
+                                    @endif
                                     @if($page->status->value === 'draft')
                                         <button wire:click="publishPage('{{ $page->id }}')"
                                             class="text-xs text-green-600 hover:text-green-800">

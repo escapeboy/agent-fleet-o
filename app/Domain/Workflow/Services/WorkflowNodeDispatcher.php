@@ -62,6 +62,13 @@ class WorkflowNodeDispatcher
                 continue;
             }
 
+            if ($nodeType === 'plugin' || app(WorkflowNodeRegistry::class)->has($nodeType)) {
+                $this->dispatchPluginNode($step, $experiment, $nodeMap[$nodeId]);
+                $dispatchedNodeIds[] = $nodeId;
+
+                continue;
+            }
+
             if ($nodeType === 'crew') {
                 $jobs[] = new ExecuteCrewWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
             } elseif (in_array($nodeType, ['llm', 'http_request', 'parameter_extractor', 'variable_aggregator', 'template_transform', 'knowledge_retrieval'], true)) {
@@ -96,6 +103,42 @@ class WorkflowNodeDispatcher
                 WorkflowGraphExecutor::handleBatchFailureStatic($experimentId);
             })
             ->dispatch();
+    }
+
+    public function dispatchPluginNode(PlaybookStep $step, Experiment $experiment, array $nodeData): void
+    {
+        $nodeType = $nodeData['type'] ?? '';
+        $registry = app(WorkflowNodeRegistry::class);
+        $handlerClass = $registry->handlerFor($nodeType);
+
+        if (! $handlerClass) {
+            Log::warning('WorkflowNodeDispatcher: No plugin handler for node type', [
+                'step_id' => $step->id,
+                'node_type' => $nodeType,
+            ]);
+            $step->update([
+                'status' => 'failed',
+                'error_message' => "No handler registered for node type: {$nodeType}",
+                'completed_at' => now(),
+            ]);
+
+            return;
+        }
+
+        try {
+            app($handlerClass)->handle($step, $experiment, $nodeData);
+        } catch (\Throwable $e) {
+            Log::error('WorkflowNodeDispatcher: Plugin node handler failed', [
+                'step_id' => $step->id,
+                'node_type' => $nodeType,
+                'error' => $e->getMessage(),
+            ]);
+            $step->update([
+                'status' => 'failed',
+                'error_message' => "Plugin node failed: {$e->getMessage()}",
+                'completed_at' => now(),
+            ]);
+        }
     }
 
     public function dispatchHumanTask(PlaybookStep $step, Experiment $experiment, array $nodeData): void

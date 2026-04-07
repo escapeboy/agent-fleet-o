@@ -9,15 +9,18 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Metrics\Models\Metric;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Services\ProviderResolver;
 
 class ExecuteHeartbeatTurnAction
 {
     public function __construct(
         private readonly AiGatewayInterface $gateway,
         private readonly TriggerProjectRunAction $triggerRun,
+        private readonly ProviderResolver $providerResolver,
     ) {}
 
     public function execute(Project $project): ?ProjectRun
@@ -34,9 +37,12 @@ class ExecuteHeartbeatTurnAction
 
         $prompt = $this->buildHeartbeatPrompt($context);
 
+        $team = Team::find($project->team_id);
+        $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
+
         $request = new AiRequestDTO(
-            provider: $agent->provider ?? 'anthropic',
-            model: $agent->model ?? 'claude-haiku-4-5',
+            provider: $agent->provider ?? $resolved['provider'],
+            model: $agent->model ?? $resolved['model'],
             systemPrompt: $agent->backstory ?? '',
             userPrompt: $prompt,
             teamId: $project->team_id,

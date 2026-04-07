@@ -18,6 +18,12 @@
             <span class="text-sm font-medium text-gray-700">{{ $page->title }}</span>
         </div>
         <div class="flex items-center gap-2">
+            @if($page->exported_html)
+                <a href="{{ route('websites.pages.preview', [$website, $page]) }}" target="_blank"
+                   class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+                    Preview
+                </a>
+            @endif
             <button @click="save()"
                 class="rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
                 Save

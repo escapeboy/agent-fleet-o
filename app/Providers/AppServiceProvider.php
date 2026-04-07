@@ -74,6 +74,7 @@ use App\Domain\Tool\Services\McpHandleRegistry;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
@@ -133,6 +134,7 @@ class AppServiceProvider extends ServiceProvider
         // Plugin extension points
         $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);
         $this->app->singleton(NavigationRegistry::class, fn () => new NavigationRegistry);
+        $this->app->singleton(WorkflowNodeRegistry::class, fn () => new WorkflowNodeRegistry);
 
         // Accumulator for plugin-contributed MCP tool class names
         $this->app->instance('fleet.mcp.tool_classes', []);

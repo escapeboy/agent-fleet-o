@@ -4,6 +4,7 @@ namespace App\Domain\Website\Actions;
 
 use App\Domain\Shared\Models\Team;
 use App\Domain\Website\Models\Website;
+use App\Domain\Website\Services\HtmlSanitizer;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -94,7 +95,7 @@ PROMPT;
                 'page_type' => $pageData['page_type'] ?? 'page',
             ]);
 
-            $html = $pageData['html'] ?? '';
+            $html = HtmlSanitizer::purify($pageData['html'] ?? '');
             $css = '';
 
             app(UpdateWebsitePageAction::class)->execute($page, [

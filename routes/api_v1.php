@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\V1\WebsiteAssetController;
 use App\Http\Controllers\Api\V1\WebsiteController;
 use App\Http\Controllers\Api\V1\WebsitePageController;
 use App\Http\Controllers\Api\V1\WorkflowController;
+use App\Http\Controllers\Api\V1\WorkflowPluginNodesController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -169,6 +170,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/workflows/{workflow}/cost', [WorkflowController::class, 'estimateCost']);
     Route::get('/workflows/{workflow}/export', [WorkflowController::class, 'export']);
     Route::post('/workflows/import', [WorkflowController::class, 'import']);
+    Route::get('/workflows/plugin-nodes', [WorkflowPluginNodesController::class, 'index']);
 
     // Crews
     Route::apiResource('crews', CrewController::class);
