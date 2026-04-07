@@ -94,6 +94,10 @@ use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Tools\ToolTemplateCatalogPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
+use App\Livewire\Websites\CreateWebsiteForm;
+use App\Livewire\Websites\WebsiteBuilderPage;
+use App\Livewire\Websites\WebsiteDetailPage;
+use App\Livewire\Websites\WebsiteListPage;
 use App\Livewire\Workflows\EvaluationListPage as WorkflowEvaluationListPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
@@ -329,6 +333,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/git-repositories', GitRepositoryListPage::class)->name('git-repositories.index');
     Route::get('/git-repositories/create', CreateGitRepositoryForm::class)->name('git-repositories.create');
     Route::get('/git-repositories/{gitRepository}', GitRepositoryDetailPage::class)->name('git-repositories.show');
+
+    // Websites
+    Route::get('/websites', WebsiteListPage::class)->name('websites.index');
+    Route::get('/websites/create', CreateWebsiteForm::class)->name('websites.create');
+    Route::get('/websites/{website}', WebsiteDetailPage::class)->name('websites.show');
+    Route::get('/websites/{website}/pages/{page}/edit', WebsiteBuilderPage::class)->name('websites.pages.edit');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

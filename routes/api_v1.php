@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\EmailTemplateController;
 use App\Http\Controllers\Api\V1\EmailThemeController;
 use App\Http\Controllers\Api\V1\EvolutionController;
 use App\Http\Controllers\Api\V1\ExperimentController;
+use App\Http\Controllers\Api\V1\ExportWebsiteController;
 use App\Http\Controllers\Api\V1\FlowEvaluationController;
 use App\Http\Controllers\Api\V1\GitRepositoryController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -40,6 +41,9 @@ use App\Http\Controllers\Api\V1\ToolTemplateController;
 use App\Http\Controllers\Api\V1\TriggerController;
 use App\Http\Controllers\Api\V1\VoiceSessionController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
+use App\Http\Controllers\Api\V1\WebsiteAssetController;
+use App\Http\Controllers\Api\V1\WebsiteController;
+use App\Http\Controllers\Api\V1\WebsitePageController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
 
@@ -329,6 +333,20 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)
     Route::post('/broadcasting/auth', [BridgeController::class, 'broadcastingAuth']);
+
+    // Websites
+    Route::apiResource('websites', WebsiteController::class);
+    Route::get('/websites/{website}/pages', [WebsitePageController::class, 'index']);
+    Route::post('/websites/{website}/pages', [WebsitePageController::class, 'store']);
+    Route::get('/websites/{website}/pages/{page}', [WebsitePageController::class, 'show']);
+    Route::put('/websites/{website}/pages/{page}', [WebsitePageController::class, 'update']);
+    Route::post('/websites/{website}/pages/{page}/publish', [WebsitePageController::class, 'publish']);
+    Route::post('/websites/{website}/pages/{page}/unpublish', [WebsitePageController::class, 'unpublish']);
+    Route::delete('/websites/{website}/pages/{page}', [WebsitePageController::class, 'destroy']);
+    Route::get('/websites/{website}/assets', [WebsiteAssetController::class, 'index']);
+    Route::post('/websites/{website}/assets', [WebsiteAssetController::class, 'store']);
+    Route::delete('/websites/{website}/assets/{asset}', [WebsiteAssetController::class, 'destroy']);
+    Route::get('/websites/{website}/export', ExportWebsiteController::class);
 
     // Flow Evaluations
     Route::get('/flow-evaluations', [FlowEvaluationController::class, 'index']);

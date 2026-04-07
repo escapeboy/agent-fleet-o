@@ -14,6 +14,7 @@ use App\Http\Controllers\JiraWebhookController;
 use App\Http\Controllers\LinearWebhookController;
 use App\Http\Controllers\PagerDutyWebhookController;
 use App\Http\Controllers\PerTeamSignalWebhookController;
+use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\SentryAlertWebhookController;
 use App\Http\Controllers\SignalWebhookController;
 use App\Http\Controllers\SlackWebhookController;
@@ -23,6 +24,16 @@ use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\WhatsAppOutboundWebhookController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
+
+// Public site API (no auth, rate limited)
+Route::prefix('public/sites')->middleware('throttle:60,1')->group(function () {
+    Route::get('/{slug}', [PublicSiteController::class, 'show']);
+    Route::get('/{slug}/pages', [PublicSiteController::class, 'pages']);
+    Route::get('/{slug}/pages/{pageSlug}', [PublicSiteController::class, 'page']);
+    Route::post('/{slug}/forms/{formId}', [PublicSiteController::class, 'submitForm']);
+    Route::get('/{slug}/posts', [PublicSiteController::class, 'posts']);
+    Route::get('/{slug}/posts/{postSlug}', [PublicSiteController::class, 'post']);
+});
 
 // Subscription-based signal webhooks — per-subscription URL, per-subscription HMAC secret.
 // POST /api/signals/subscription/{subscriptionId}
