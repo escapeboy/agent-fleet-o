@@ -98,8 +98,7 @@ class GenerateWebsiteTest extends TestCase
 
         $landingPage = $website->pages->firstWhere('slug', 'index');
         $this->assertStringContainsString('<form', $landingPage->exported_html);
-        $this->assertStringContainsString('/api/public/my-app/forms/', $landingPage->exported_html);
-        $this->assertStringContainsString('/submit', $landingPage->exported_html);
+        $this->assertStringContainsString('/api/public/sites/my-app/forms/', $landingPage->exported_html);
     }
 
     public function test_contact_form_is_injected_on_contact_page(): void

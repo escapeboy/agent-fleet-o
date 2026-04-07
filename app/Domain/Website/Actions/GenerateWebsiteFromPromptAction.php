@@ -55,7 +55,7 @@ CRITICAL RULES:
 2. Use 3-5 pages. All page slugs will be known before you write any HTML.
 3. Every page MUST contain a <nav> element with <a> links to every other page using their actual slugs (e.g. <a href="/about">About</a>). Internal hrefs must start with "/".
 4. Contact or landing pages MUST include a real <form> element. Use:
-   method="POST" action="/api/public/WEBSITE_SLUG/forms/UNIQUE_ID/submit"
+   method="POST" action="/api/public/sites/WEBSITE_SLUG/forms/UNIQUE_ID"
    Replace WEBSITE_SLUG and generate a random UNIQUE_ID for each form.
 5. Use inline CSS only (no external files or <link> tags).
 6. Generate real, specific content — no Lorem Ipsum or placeholder text.
@@ -63,7 +63,7 @@ PROMPT;
 
         $userPrompt = "Website name: {$name}\nWebsite slug: {$websiteSlug}\nDescription: {$prompt}\n\n"
             .'Generate the website structure as JSON. Remember: all pages share the same <nav>, '
-            ."and any contact/landing page needs a <form action=\"/api/public/{$websiteSlug}/forms/UNIQUE_ID/submit\">.";
+            ."and any contact/landing page needs a <form action=\"/api/public/sites/{$websiteSlug}/forms/UNIQUE_ID\">.";
 
         $response = $this->gateway->complete(new AiRequestDTO(
             provider: $provider,

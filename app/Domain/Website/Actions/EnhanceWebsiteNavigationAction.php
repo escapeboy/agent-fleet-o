@@ -85,7 +85,7 @@ class EnhanceWebsiteNavigationAction
 
         $formId = (string) Str::uuid();
         // $websiteSlug is pre-validated to /^[a-z0-9-]+$/; e() as belt-and-suspenders.
-        $action = e('/api/public/'.$websiteSlug.'/forms/'.$formId.'/submit');
+        $action = e('/api/public/sites/'.$websiteSlug.'/forms/'.$formId);
 
         $form = <<<HTML
 <section style="background:#f8fafc;padding:48px 24px;margin-top:32px">

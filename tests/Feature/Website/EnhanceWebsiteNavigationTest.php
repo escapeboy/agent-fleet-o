@@ -99,8 +99,7 @@ class EnhanceWebsiteNavigationTest extends TestCase
 
         $this->assertStringContainsString('<form', $page->exported_html);
         $this->assertStringContainsString('method="POST"', $page->exported_html);
-        $this->assertStringContainsString('/api/public/test-site/forms/', $page->exported_html);
-        $this->assertStringContainsString('/submit', $page->exported_html);
+        $this->assertStringContainsString('/api/public/sites/test-site/forms/', $page->exported_html);
     }
 
     public function test_injects_contact_form_when_page_mentions_contact(): void
@@ -134,7 +133,7 @@ class EnhanceWebsiteNavigationTest extends TestCase
     {
         // Simulate a page that already has an injected /api/public/ form (second run idempotency)
         $html = '<div>Contact us</div>'
-            .'<form method="POST" action="/api/public/test-site/forms/some-uuid/submit">'
+            .'<form method="POST" action="/api/public/sites/test-site/forms/some-uuid">'
             .'<input name="fields[name]"><button type="submit">Send</button></form>';
 
         $page = app(CreateWebsitePageAction::class)->execute($this->website, [
@@ -172,8 +171,8 @@ class EnhanceWebsiteNavigationTest extends TestCase
         $this->website->load('pages');
         $savedPage = $this->website->pages->firstWhere('slug', 'contact');
 
-        // Should inject a proper form with /api/public/ action
-        $this->assertStringContainsString('/api/public/test-site/forms/', $savedPage->exported_html);
+        // Should inject a proper form with /api/public/sites/ action
+        $this->assertStringContainsString('/api/public/sites/test-site/forms/', $savedPage->exported_html);
     }
 
     public function test_empty_website_does_nothing(): void

@@ -22,6 +22,13 @@
                 {{ ucfirst($website->status->value) }}
             </span>
         </div>
+        @if($website->status !== \App\Domain\Website\Enums\WebsiteStatus::Published)
+            <button wire:click="publishWebsite"
+                wire:confirm="Publish this website? All draft pages will be published and the site will go live."
+                class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                Publish Website
+            </button>
+        @endif
     </div>
 
     {{-- Info card --}}

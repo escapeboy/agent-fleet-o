@@ -6,6 +6,8 @@ use App\Domain\Website\Actions\CreateWebsitePageAction;
 use App\Domain\Website\Actions\DeleteWebsiteAction;
 use App\Domain\Website\Actions\DeleteWebsitePageAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
+use App\Domain\Website\Actions\UpdateWebsiteAction;
+use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
 use Illuminate\Support\Str;
@@ -70,6 +72,19 @@ class WebsiteDetailPage extends Component
         app(PublishWebsitePageAction::class)->execute($page);
 
         session()->flash('success', 'Page published.');
+        $this->website->refresh();
+    }
+
+    public function publishWebsite(): void
+    {
+        // Publish all draft pages first
+        $this->website->pages()->where('status', 'draft')->get()->each(function (WebsitePage $page): void {
+            app(PublishWebsitePageAction::class)->execute($page);
+        });
+
+        app(UpdateWebsiteAction::class)->execute($this->website, ['status' => WebsiteStatus::Published]);
+
+        session()->flash('success', 'Website published.');
         $this->website->refresh();
     }
 
