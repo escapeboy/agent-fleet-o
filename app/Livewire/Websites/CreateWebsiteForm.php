@@ -62,14 +62,19 @@ class CreateWebsiteForm extends Component
 
         $this->generating = true;
 
-        $website = app(GenerateWebsiteFromPromptAction::class)->execute(
-            team: auth()->user()->currentTeam,
-            prompt: $this->prompt,
-            name: $this->name,
-        );
+        try {
+            $website = app(GenerateWebsiteFromPromptAction::class)->execute(
+                team: auth()->user()->currentTeam,
+                prompt: $this->prompt,
+                name: $this->name,
+            );
 
-        session()->flash('success', 'Website generated with AI.');
-        $this->redirectRoute('websites.show', $website);
+            session()->flash('success', 'Website generated with AI.');
+            $this->redirectRoute('websites.show', $website);
+        } catch (\Throwable) {
+            $this->generating = false;
+            $this->addError('prompt', 'AI generation failed. Please try again or create a blank website.');
+        }
     }
 
     public function render()

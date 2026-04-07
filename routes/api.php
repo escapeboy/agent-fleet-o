@@ -26,13 +26,19 @@ use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // Public site API (no auth, rate limited)
-Route::prefix('public/sites')->middleware('throttle:60,1')->group(function () {
-    Route::get('/{slug}', [PublicSiteController::class, 'show']);
-    Route::get('/{slug}/pages', [PublicSiteController::class, 'pages']);
-    Route::get('/{slug}/pages/{pageSlug}', [PublicSiteController::class, 'page']);
-    Route::post('/{slug}/forms/{formId}', [PublicSiteController::class, 'submitForm']);
-    Route::get('/{slug}/posts', [PublicSiteController::class, 'posts']);
-    Route::get('/{slug}/posts/{postSlug}', [PublicSiteController::class, 'post']);
+Route::prefix('public/sites')->group(function () {
+    // Read endpoints — 60 req/min per IP
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/{slug}', [PublicSiteController::class, 'show']);
+        Route::get('/{slug}/pages', [PublicSiteController::class, 'pages']);
+        Route::get('/{slug}/pages/{pageSlug}', [PublicSiteController::class, 'page']);
+        Route::get('/{slug}/posts', [PublicSiteController::class, 'posts']);
+        Route::get('/{slug}/posts/{postSlug}', [PublicSiteController::class, 'post']);
+    });
+
+    // Form submission — 10 req/min per IP (tighter to limit spam)
+    Route::post('/{slug}/forms/{formId}', [PublicSiteController::class, 'submitForm'])
+        ->middleware('throttle:10,1');
 });
 
 // Subscription-based signal webhooks — per-subscription URL, per-subscription HMAC secret.

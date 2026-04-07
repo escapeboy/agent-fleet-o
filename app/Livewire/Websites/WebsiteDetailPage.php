@@ -59,7 +59,8 @@ class WebsiteDetailPage extends Component
 
     public function deletePage(string $pageId): void
     {
-        $page = WebsitePage::findOrFail($pageId);
+        // Scope to this website — prevents cross-website page deletion within same team
+        $page = $this->website->pages()->findOrFail($pageId);
         app(DeleteWebsitePageAction::class)->execute($page);
 
         session()->flash('success', 'Page deleted.');
@@ -68,7 +69,8 @@ class WebsiteDetailPage extends Component
 
     public function publishPage(string $pageId): void
     {
-        $page = WebsitePage::findOrFail($pageId);
+        // Scope to this website — prevents cross-website page publishing within same team
+        $page = $this->website->pages()->findOrFail($pageId);
         app(PublishWebsitePageAction::class)->execute($page);
 
         session()->flash('success', 'Page published.');
@@ -77,10 +79,14 @@ class WebsiteDetailPage extends Component
 
     public function publishWebsite(): void
     {
-        // Publish all draft pages first
-        $this->website->pages()->where('status', 'draft')->get()->each(function (WebsitePage $page): void {
-            app(PublishWebsitePageAction::class)->execute($page);
-        });
+        // Only publish draft pages that have content — skip empty drafts
+        $this->website->pages()
+            ->where('status', 'draft')
+            ->whereNotNull('exported_html')
+            ->get()
+            ->each(function (WebsitePage $page): void {
+                app(PublishWebsitePageAction::class)->execute($page);
+            });
 
         app(UpdateWebsiteAction::class)->execute($this->website, ['status' => WebsiteStatus::Published]);
 

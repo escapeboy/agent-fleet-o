@@ -12,6 +12,8 @@ class WebsiteListPage extends Component
 {
     use WithPagination;
 
+    private const SORTABLE = ['name', 'status', 'created_at'];
+
     #[Url]
     public string $search = '';
 
@@ -24,6 +26,10 @@ class WebsiteListPage extends Component
 
     public function sortBy(string $field): void
     {
+        if (! in_array($field, self::SORTABLE, true)) {
+            return;
+        }
+
         if ($this->sortField === $field) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {

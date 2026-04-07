@@ -22,6 +22,8 @@ class WebsiteBuilderPage extends Component
 
     public function mount(Website $website, WebsitePage $page): void
     {
+        abort_if($page->website_id !== $website->id, 404);
+
         $this->website = $website;
         $this->page = $page;
         $this->title = $page->title;
