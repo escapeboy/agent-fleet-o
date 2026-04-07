@@ -82,6 +82,8 @@ class PublicSiteController extends Controller
             'page_type' => $page->page_type->value,
             'meta' => $page->meta,
             'exported_html' => $page->exported_html,
+        ])->withHeaders([
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 
@@ -171,6 +173,8 @@ class PublicSiteController extends Controller
             'meta' => $page->meta,
             'exported_html' => $page->exported_html,
             'published_at' => $page->published_at?->toISOString(),
+        ])->withHeaders([
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 }

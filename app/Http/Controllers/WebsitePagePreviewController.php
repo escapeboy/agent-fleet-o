@@ -14,6 +14,7 @@ class WebsitePagePreviewController extends Controller
 
         $html = $page->exported_html ?? '<p>No content yet.</p>';
         $encoded = base64_encode($html);
+        $nonce = base64_encode(random_bytes(16));
 
         $title = e($page->title);
         $slug = e($page->slug);
@@ -50,19 +51,22 @@ class WebsitePagePreviewController extends Controller
             </div>
             <iframe
                 id="preview-frame"
-                sandbox="allow-same-origin allow-forms"
+                sandbox="allow-forms"
                 referrerpolicy="no-referrer"
             ></iframe>
-            <script>
-                // Decode base64 and set srcdoc — avoids any script injection from the content
-                const encoded = '{$encoded}';
-                const html = atob(encoded);
+            <script nonce="{$nonce}">
+                const html = atob('{$encoded}');
                 document.getElementById('preview-frame').srcdoc = html;
             </script>
         </body>
         </html>
         HTML;
 
-        return response($wrapper, 200, ['Content-Type' => 'text/html']);
+        return response($wrapper, 200, [
+            'Content-Type' => 'text/html; charset=utf-8',
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Frame-Options' => 'SAMEORIGIN',
+            'Content-Security-Policy' => "default-src 'none'; script-src 'nonce-{$nonce}'; style-src 'unsafe-inline'; frame-src 'self'",
+        ]);
     }
 }
