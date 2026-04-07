@@ -21,13 +21,16 @@ class UpdateWebsiteAction
             $data['slug'] = $slug;
         }
 
-        $website->update(array_filter([
-            'name' => $data['name'] ?? null,
-            'slug' => $data['slug'] ?? null,
-            'status' => $data['status'] ?? null,
-            'settings' => $data['settings'] ?? null,
-            'custom_domain' => $data['custom_domain'] ?? null,
-        ], fn ($v) => $v !== null));
+        $fields = ['name', 'slug', 'status', 'settings', 'custom_domain'];
+        $update = [];
+
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data)) {
+                $update[$field] = $data[$field];
+            }
+        }
+
+        $website->update($update);
 
         return $website->fresh();
     }

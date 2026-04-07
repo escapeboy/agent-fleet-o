@@ -175,6 +175,46 @@ class EnhanceWebsiteNavigationTest extends TestCase
         $this->assertStringContainsString('/api/public/sites/test-site/forms/', $savedPage->exported_html);
     }
 
+    public function test_stores_form_id_on_page_after_injection(): void
+    {
+        $this->createPage('contact', 'Contact', '<div><h1>Contact us</h1></div>');
+
+        app(EnhanceWebsiteNavigationAction::class)->execute($this->website);
+
+        $this->website->load('pages');
+        $page = $this->website->pages->first();
+
+        $this->assertNotNull($page->form_id, 'form_id must be persisted on the page');
+        // The stored form_id must appear in the injected HTML action URL
+        $this->assertStringContainsString($page->form_id, $page->exported_html);
+    }
+
+    public function test_form_id_not_overwritten_on_second_run(): void
+    {
+        $this->createPage('contact', 'Contact', '<div><h1>Contact us</h1></div>');
+
+        app(EnhanceWebsiteNavigationAction::class)->execute($this->website);
+        $this->website->load('pages');
+        $originalFormId = $this->website->pages->first()->form_id;
+
+        // Run again — idempotent; form_id must not change
+        app(EnhanceWebsiteNavigationAction::class)->execute($this->website);
+        $this->website->load('pages');
+        $this->assertSame($originalFormId, $this->website->pages->first()->form_id);
+    }
+
+    public function test_honeypot_field_present_in_injected_form(): void
+    {
+        $this->createPage('contact', 'Contact', '<div>Contact us</div>');
+
+        app(EnhanceWebsiteNavigationAction::class)->execute($this->website);
+
+        $this->website->load('pages');
+        $page = $this->website->pages->first();
+
+        $this->assertStringContainsString('name="_hp"', $page->exported_html);
+    }
+
     public function test_empty_website_does_nothing(): void
     {
         // No pages — should not throw

@@ -27,6 +27,7 @@ class WebsitePage extends Model
         'meta',
         'sort_order',
         'published_at',
+        'form_id',
     ];
 
     protected $casts = [

@@ -18,7 +18,7 @@ class EnhanceWebsiteNavigationAction
             throw new \InvalidArgumentException("Invalid website slug: {$website->slug}");
         }
 
-        $pages = $website->pages()->orderBy('sort_order')->get(['id', 'slug', 'title', 'page_type', 'exported_html']);
+        $pages = $website->pages()->orderBy('sort_order')->get(['id', 'slug', 'title', 'page_type', 'exported_html', 'form_id']);
 
         if ($pages->isEmpty()) {
             return;
@@ -36,14 +36,20 @@ class EnhanceWebsiteNavigationAction
         foreach ($pages as $page) {
             $html = $page->exported_html ?? '';
             $html = $this->injectNavigation($html, $nav);
-            $html = $this->injectContactForm($html, $page, $website->slug);
+            [$html, $formId] = $this->injectContactForm($html, $page, $website->slug);
 
             // Direct update — HTML was already sanitized in Phase 1.
             // We bypass UpdateWebsitePageAction here because:
             // 1. The nav and form HTML is server-generated (trusted), not user input.
             // 2. HtmlSanitizer strips form[action] (to prevent phishing). Re-running
             //    it would remove the safe /api/public/... action we just injected.
-            $page->update(['exported_html' => $html]);
+            $update = ['exported_html' => $html];
+
+            if ($formId !== null) {
+                $update['form_id'] = $formId;
+            }
+
+            $page->update($update);
         }
     }
 
@@ -65,13 +71,16 @@ class EnhanceWebsiteNavigationAction
         return $nav.$html;
     }
 
-    private function injectContactForm(string $html, WebsitePage $page, string $websiteSlug): string
+    /**
+     * @return array{string, string|null} [html, formId|null]
+     */
+    private function injectContactForm(string $html, WebsitePage $page, string $websiteSlug): array
     {
         // HtmlSanitizer strips form[action] to prevent phishing — AI-generated forms
         // will have their action removed. Skip only if the form already has an action
         // pointing to our API (i.e., was injected by this action in a prior run).
         if (stripos($html, '/api/public/') !== false && stripos($html, '<form') !== false) {
-            return $html;
+            return [$html, $page->form_id]; // preserve existing form_id
         }
 
         $wantsForm = $page->page_type === WebsitePageType::Landing
@@ -80,7 +89,7 @@ class EnhanceWebsiteNavigationAction
             || stripos($html, 'reach us') !== false;
 
         if (! $wantsForm) {
-            return $html;
+            return [$html, null];
         }
 
         $formId = (string) Str::uuid();
@@ -98,6 +107,7 @@ class EnhanceWebsiteNavigationAction
              style="padding:12px 16px;border:1px solid #cbd5e1;border-radius:6px;font-size:15px">
       <textarea name="fields[message]" placeholder="Your message" rows="4" required
                 style="padding:12px 16px;border:1px solid #cbd5e1;border-radius:6px;font-size:15px;resize:vertical"></textarea>
+      <input type="text" name="_hp" style="display:none;position:absolute;left:-9999px" tabindex="-1" autocomplete="off">
       <button type="submit"
               style="padding:12px 24px;background:#4f46e5;color:#fff;border:none;border-radius:6px;font-size:15px;cursor:pointer;font-weight:600">
         Send message
@@ -107,6 +117,6 @@ class EnhanceWebsiteNavigationAction
 </section>
 HTML;
 
-        return $html.$form;
+        return [$html.$form, $formId];
     }
 }

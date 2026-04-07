@@ -89,11 +89,24 @@ class PublicSiteController extends Controller
 
     public function submitForm(Request $request, string $slug, string $formId): JsonResponse
     {
+        // Honeypot — bots fill hidden fields, humans don't
+        if ($request->filled('_hp')) {
+            return response()->json(['success' => true]); // silent discard
+        }
+
         $website = Website::where('slug', $slug)
             ->where('status', WebsiteStatus::Published)
             ->first();
 
         if (! $website) {
+            return response()->json(['error' => 'Not found'], 404);
+        }
+
+        // Validate that the formId matches a known form on this website.
+        // Prevents submissions with fabricated UUIDs that were never injected.
+        $page = $website->pages()->where('form_id', $formId)->first();
+
+        if (! $page) {
             return response()->json(['error' => 'Not found'], 404);
         }
 
@@ -111,7 +124,7 @@ class PublicSiteController extends Controller
             files: [],
             sourceNativeId: null,
             teamId: $website->team_id,
-            senderHints: ['website_slug' => $slug, 'form_id' => $formId],
+            senderHints: ['website_slug' => $slug, 'form_id' => $formId, 'page_slug' => $page->slug],
         );
 
         return response()->json(['success' => true]);
