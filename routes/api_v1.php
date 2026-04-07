@@ -12,7 +12,6 @@ use App\Http\Controllers\Api\V1\ChatbotInstanceController;
 use App\Http\Controllers\Api\V1\CredentialController;
 use App\Http\Controllers\Api\V1\CrewController;
 use App\Http\Controllers\Api\V1\DashboardController;
-use App\Http\Controllers\Api\V1\DomainController;
 use App\Http\Controllers\Api\V1\EmailTemplateController;
 use App\Http\Controllers\Api\V1\EmailThemeController;
 use App\Http\Controllers\Api\V1\EvolutionController;
@@ -350,9 +349,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/websites/{website}/assets', [WebsiteAssetController::class, 'store']);
     Route::delete('/websites/{website}/assets/{asset}', [WebsiteAssetController::class, 'destroy']);
     Route::get('/websites/{website}/export', ExportWebsiteController::class);
-    Route::get('/websites/{website}/domain/check', [DomainController::class, 'check']);
-    Route::post('/websites/{website}/domain/purchase', [DomainController::class, 'purchase']);
-    Route::post('/websites/{website}/domain/dns', [DomainController::class, 'dns']);
 
     // Flow Evaluations
     Route::get('/flow-evaluations', [FlowEvaluationController::class, 'index']);

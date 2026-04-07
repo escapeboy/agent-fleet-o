@@ -363,9 +363,6 @@ use App\Mcp\Tools\Webhook\WebhookCreateTool;
 use App\Mcp\Tools\Webhook\WebhookDeleteTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
 use App\Mcp\Tools\Webhook\WebhookUpdateTool;
-use App\Mcp\Tools\Website\DomainCheckTool;
-use App\Mcp\Tools\Website\DomainDnsTool;
-use App\Mcp\Tools\Website\DomainPurchaseTool;
 use App\Mcp\Tools\Website\WebsiteAnalyticsTool;
 use App\Mcp\Tools\Website\WebsiteCreateTool;
 use App\Mcp\Tools\Website\WebsiteDeleteTool;
@@ -988,9 +985,6 @@ class AgentFleetServer extends Server
         WebsiteGenerateTool::class,
         WebsiteExportTool::class,
         WebsiteAnalyticsTool::class,
-        DomainCheckTool::class,
-        DomainPurchaseTool::class,
-        DomainDnsTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */
