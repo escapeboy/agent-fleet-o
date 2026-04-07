@@ -130,18 +130,50 @@ class EnhanceWebsiteNavigationTest extends TestCase
         $this->assertStringNotContainsString('<form', $page->exported_html);
     }
 
-    public function test_does_not_inject_form_when_form_already_exists(): void
+    public function test_does_not_inject_duplicate_form_when_api_form_already_injected(): void
     {
-        $html = '<div>Contact<form method="POST" action="/existing"><input name="test"></form></div>';
-        $this->createPage('contact', 'Contact', $html);
+        // Simulate a page that already has an injected /api/public/ form (second run idempotency)
+        $html = '<div>Contact us</div>'
+            .'<form method="POST" action="/api/public/test-site/forms/some-uuid/submit">'
+            .'<input name="fields[name]"><button type="submit">Send</button></form>';
+
+        $page = app(CreateWebsitePageAction::class)->execute($this->website, [
+            'slug' => 'contact',
+            'title' => 'Contact',
+            'page_type' => 'page',
+        ]);
+        // Directly set exported_html — bypasses sanitizer since action is already server-generated
+        $page->update(['exported_html' => $html]);
 
         app(EnhanceWebsiteNavigationAction::class)->execute($this->website);
 
         $this->website->load('pages');
-        $page = $this->website->pages->first();
+        $savedPage = $this->website->pages->firstWhere('slug', 'contact');
 
-        // Should have exactly one <form> — the original one
-        $this->assertSame(1, substr_count($page->exported_html, '<form'));
+        // Should not add a second form — the /api/public/ form is already present
+        $this->assertSame(1, substr_count($savedPage->exported_html, '<form'));
+    }
+
+    public function test_reinjects_form_when_action_was_stripped_by_sanitizer(): void
+    {
+        // Simulate what happens after sanitizer strips form[action] from AI-generated HTML
+        // The form element exists but has no action (sanitizer stripped it)
+        $html = '<div>Contact us</div><form method="POST"><input name="test"></form>';
+
+        $page = app(CreateWebsitePageAction::class)->execute($this->website, [
+            'slug' => 'contact',
+            'title' => 'Contact',
+            'page_type' => 'page',
+        ]);
+        $page->update(['exported_html' => $html]);
+
+        app(EnhanceWebsiteNavigationAction::class)->execute($this->website);
+
+        $this->website->load('pages');
+        $savedPage = $this->website->pages->firstWhere('slug', 'contact');
+
+        // Should inject a proper form with /api/public/ action
+        $this->assertStringContainsString('/api/public/test-site/forms/', $savedPage->exported_html);
     }
 
     public function test_empty_website_does_nothing(): void

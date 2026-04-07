@@ -11,6 +11,13 @@ class EnhanceWebsiteNavigationAction
 {
     public function execute(Website $website): void
     {
+        // Validate slug before using it in URL construction (defense-in-depth).
+        // Str::slug() already guarantees this at creation time, but the slug
+        // could be modified via direct DB access or the API.
+        if (! preg_match('/^[a-z0-9-]+$/', $website->slug)) {
+            throw new \InvalidArgumentException("Invalid website slug: {$website->slug}");
+        }
+
         $pages = $website->pages()->orderBy('sort_order')->get(['id', 'slug', 'title', 'page_type', 'exported_html']);
 
         if ($pages->isEmpty()) {
@@ -32,8 +39,10 @@ class EnhanceWebsiteNavigationAction
             $html = $this->injectContactForm($html, $page, $website->slug);
 
             // Direct update — HTML was already sanitized in Phase 1.
-            // Skipping UpdateWebsitePageAction avoids a redundant sanitizer pass
-            // and preserves injected form elements that are now whitelisted.
+            // We bypass UpdateWebsitePageAction here because:
+            // 1. The nav and form HTML is server-generated (trusted), not user input.
+            // 2. HtmlSanitizer strips form[action] (to prevent phishing). Re-running
+            //    it would remove the safe /api/public/... action we just injected.
             $page->update(['exported_html' => $html]);
         }
     }
@@ -44,7 +53,12 @@ class EnhanceWebsiteNavigationAction
         if (preg_match('/<nav[\s>]/i', $html)) {
             $replaced = preg_replace('/<nav\b[^>]*>.*?<\/nav>/is', $nav, $html, 1);
 
-            return $replaced ?? $html;
+            if ($replaced === null) {
+                // preg_replace failed (e.g. PREG_BACKTRACK_LIMIT_ERROR) — fall back to prepend
+                return $nav.$html;
+            }
+
+            return $replaced;
         }
 
         // No <nav> — prepend to page content
@@ -53,8 +67,10 @@ class EnhanceWebsiteNavigationAction
 
     private function injectContactForm(string $html, WebsitePage $page, string $websiteSlug): string
     {
-        // Skip pages that already have a functional form
-        if (stripos($html, '<form') !== false) {
+        // HtmlSanitizer strips form[action] to prevent phishing — AI-generated forms
+        // will have their action removed. Skip only if the form already has an action
+        // pointing to our API (i.e., was injected by this action in a prior run).
+        if (stripos($html, '/api/public/') !== false && stripos($html, '<form') !== false) {
             return $html;
         }
 
@@ -68,6 +84,7 @@ class EnhanceWebsiteNavigationAction
         }
 
         $formId = (string) Str::uuid();
+        // $websiteSlug is pre-validated to /^[a-z0-9-]+$/; e() as belt-and-suspenders.
         $action = e('/api/public/'.$websiteSlug.'/forms/'.$formId.'/submit');
 
         $form = <<<HTML

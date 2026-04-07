@@ -19,7 +19,7 @@ final class HtmlSanitizer
 
         // Must be set before maybeGetRawHTMLDefinition
         $config->set('HTML.DefinitionID', 'fleet-website-sanitizer');
-        $config->set('HTML.DefinitionRev', 2); // bumped: enabled form elements via HTML.Forms
+        $config->set('HTML.DefinitionRev', 3); // bumped: form action made optional
         $config->set('HTML.Forms', true);     // enables HTMLPurifier's built-in Forms module
 
         // Allow common HTML elements and attributes
@@ -104,6 +104,10 @@ final class HtmlSanitizer
             $def->addAttribute('textarea', 'maxlength', 'CDATA');
             $def->addAttribute('select', 'required', 'Bool#required');
             $def->addAttribute('form', 'id', 'ID');
+            // The Forms module marks action as required (action*). Override to optional so
+            // sanitizer accepts <form> elements without action (e.g. before EnhanceWebsiteNavigationAction
+            // injects the real /api/public/... endpoint). URI validation still applies.
+            $def->addAttribute('form', 'action', 'URI');
         }
 
         return (new HTMLPurifier($config))->purify($html);
