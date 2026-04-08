@@ -72,6 +72,10 @@ class BrowserSidecarClient
             $payload['llm_model'] = $options['llm_model'];
         }
 
+        if (! empty($options['proxy_url'])) {
+            $payload['proxy_url'] = $options['proxy_url'];
+        }
+
         try {
             $response = Http::timeout($httpTimeout)
                 ->baseUrl($this->baseUrl)

@@ -530,6 +530,12 @@ class ToolTranslator
                         }
                     }
 
+                    // Per-tool proxy — team-scoped, stored in transport_config.
+                    $proxyUrl = $toolModel->transport_config['proxy_url'] ?? null;
+                    if ($proxyUrl) {
+                        $options['proxy_url'] = $proxyUrl;
+                    }
+
                     try {
                         if ($mode === 'cloud') {
                             $result = app(BrowserUseCloudClient::class, ['apiKey' => $apiKey])->run($task, $options);
