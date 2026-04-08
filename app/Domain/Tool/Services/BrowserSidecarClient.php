@@ -68,6 +68,10 @@ class BrowserSidecarClient
             $payload['llm_provider'] = $options['llm_provider'];
         }
 
+        if (! empty($options['llm_model'])) {
+            $payload['llm_model'] = $options['llm_model'];
+        }
+
         try {
             $response = Http::timeout($httpTimeout)
                 ->baseUrl($this->baseUrl)

@@ -526,6 +526,7 @@ class ToolTranslator
                         if ($byok) {
                             $options['llm_api_key'] = $byok['api_key'];
                             $options['llm_provider'] = $byok['provider'];
+                            $options['llm_model'] = $byok['model'];
                         }
                     }
 
@@ -793,9 +794,16 @@ class ToolTranslator
                 ->first();
 
             if ($credential && ! empty($credential->credentials['api_key'])) {
+                $defaultModel = match ($provider) {
+                    'anthropic' => 'claude-sonnet-4-5-20250514',
+                    'openai' => 'gpt-4o',
+                    default => 'gpt-4o',
+                };
+
                 return [
                     'api_key' => $credential->credentials['api_key'],
                     'provider' => $provider,
+                    'model' => $defaultModel,
                 ];
             }
         }
