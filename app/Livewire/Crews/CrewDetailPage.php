@@ -80,10 +80,11 @@ class CrewDetailPage extends Component
         $this->editProcessType = $this->crew->process_type->value;
         $this->editCoordinatorId = $this->crew->coordinator_agent_id;
         $this->editQaId = $this->crew->qa_agent_id;
-        $this->editWorkerIds = $this->crew->workerMembers()->pluck('agent_id')->toArray();
+        $workerMembers = $this->crew->workerMembers()->get();
+        $this->editWorkerIds = $workerMembers->pluck('agent_id')->toArray();
         // Populate existing constraint values for each current worker
         $this->editWorkerConstraints = [];
-        foreach ($this->crew->workerMembers()->get() as $member) {
+        foreach ($workerMembers as $member) {
             $this->editWorkerConstraints[$member->agent_id] = [
                 'tool_allowlist' => implode(', ', $member->tool_allowlist ?? []),
                 'max_steps' => $member->max_steps !== null ? (string) $member->max_steps : '',

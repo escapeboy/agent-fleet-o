@@ -10,6 +10,7 @@ use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\EstimateWorkflowCostAction;
+use App\Domain\Workflow\Actions\GenerateWorkflowFromPromptAction;
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
@@ -61,6 +62,15 @@ class WorkflowBuilderPage extends Component
     public bool $hasRunningSteps = false;
 
     public bool $executionMode = false;
+
+    // NL Workflow Generator
+    public string $generatePrompt = '';
+
+    public bool $showGeneratePanel = false;
+
+    public bool $isGenerating = false;
+
+    public array $generateErrors = [];
 
     public function mount(?Workflow $workflow = null): void
     {
@@ -425,6 +435,33 @@ class WorkflowBuilderPage extends Component
 
         $this->hasRunningSteps = collect($this->stepStatuses)
             ->contains(fn ($s) => $s['status'] === 'running');
+    }
+
+    public function generateFromPrompt(): void
+    {
+        if ($this->generatePrompt === '') {
+            return;
+        }
+
+        $this->isGenerating = true;
+        $this->generateErrors = [];
+
+        $result = app(GenerateWorkflowFromPromptAction::class)->execute(
+            prompt: $this->generatePrompt,
+            userId: auth()->id(),
+            teamId: auth()->user()?->currentTeam?->id,
+        );
+
+        $this->isGenerating = false;
+
+        if ($result['workflow'] === null) {
+            $this->generateErrors = $result['errors'];
+
+            return;
+        }
+
+        // Redirect to the generated workflow's edit page
+        $this->redirect(route('workflows.edit', $result['workflow']), navigate: true);
     }
 
     public function render()

@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Evaluation\Enums\EvaluationStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Workflow\Models\Workflow;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,10 +21,14 @@ class EvaluationRun extends Model
         'dataset_id',
         'experiment_id',
         'agent_id',
+        'workflow_id',
         'status',
         'criteria',
         'aggregate_scores',
         'total_cost_credits',
+        'judge_model',
+        'judge_prompt',
+        'summary',
         'started_at',
         'completed_at',
     ];
@@ -34,6 +39,7 @@ class EvaluationRun extends Model
             'status' => EvaluationStatus::class,
             'criteria' => 'array',
             'aggregate_scores' => 'array',
+            'summary' => 'array',
             'total_cost_credits' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
@@ -43,6 +49,11 @@ class EvaluationRun extends Model
     public function dataset(): BelongsTo
     {
         return $this->belongsTo(EvaluationDataset::class, 'dataset_id');
+    }
+
+    public function workflow(): BelongsTo
+    {
+        return $this->belongsTo(Workflow::class);
     }
 
     public function experiment(): BelongsTo
@@ -58,5 +69,10 @@ class EvaluationRun extends Model
     public function scores(): HasMany
     {
         return $this->hasMany(EvaluationScore::class, 'run_id');
+    }
+
+    public function results(): HasMany
+    {
+        return $this->hasMany(EvaluationRunResult::class, 'run_id');
     }
 }

@@ -34,11 +34,16 @@ use App\Mcp\Tools\Agent\AgentResetSessionTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
 use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
 use App\Mcp\Tools\Agent\AgentSandboxTool;
+use App\Mcp\Tools\Agent\AgentSetReasoningStrategyTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
+use App\Mcp\Tools\Agent\AgentToolApprovalConfigureTool;
 use App\Mcp\Tools\Agent\AgentToolSyncTool;
+use App\Mcp\Tools\Agent\AgentUpdateIdentityTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
+use App\Mcp\Tools\Agent\AgentWorkspaceExportTool;
+use App\Mcp\Tools\Agent\AgentWorkspaceImportTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
@@ -126,6 +131,9 @@ use App\Mcp\Tools\Email\EmailThemeListTool;
 use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evaluation\EvaluationDatasetManageTool;
 use App\Mcp\Tools\Evaluation\EvaluationRunTool;
+use App\Mcp\Tools\Evaluation\FlowEvaluationDatasetCreateTool;
+use App\Mcp\Tools\Evaluation\FlowEvaluationResultsTool;
+use App\Mcp\Tools\Evaluation\FlowEvaluationRunStartTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionApproveTool;
@@ -138,15 +146,18 @@ use App\Mcp\Tools\Experiment\ExperimentGetTool;
 use App\Mcp\Tools\Experiment\ExperimentKillTool;
 use App\Mcp\Tools\Experiment\ExperimentListTool;
 use App\Mcp\Tools\Experiment\ExperimentPauseTool;
+use App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
 use App\Mcp\Tools\Experiment\ExperimentSearchHistoryTool;
 use App\Mcp\Tools\Experiment\ExperimentShareTool;
+use App\Mcp\Tools\Experiment\ExperimentStageTelemetryTool;
 use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Experiment\PlanWithKnowledgeTool;
+use App\Mcp\Tools\Experiment\ReasoningBankSearchTool;
 use App\Mcp\Tools\Experiment\UncertaintyEmitTool;
 use App\Mcp\Tools\Experiment\UncertaintyResolveTool;
 use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
@@ -219,6 +230,7 @@ use App\Mcp\Tools\Project\ProjectActivateTool;
 use App\Mcp\Tools\Project\ProjectArchiveTool;
 use App\Mcp\Tools\Project\ProjectCreateTool;
 use App\Mcp\Tools\Project\ProjectGetTool;
+use App\Mcp\Tools\Project\ProjectHeartbeatConfigureTool;
 use App\Mcp\Tools\Project\ProjectListTool;
 use App\Mcp\Tools\Project\ProjectPauseTool;
 use App\Mcp\Tools\Project\ProjectRestartTool;
@@ -238,6 +250,7 @@ use App\Mcp\Tools\RAGFlow\RagflowRaptorBuildTool;
 use App\Mcp\Tools\RAGFlow\RagflowSearchTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
+use App\Mcp\Tools\Shared\ContactHealthScoreTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
@@ -284,6 +297,7 @@ use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
 use App\Mcp\Tools\Skill\SkillAnnotateTool;
+use App\Mcp\Tools\Skill\SkillAutoGenerateRunTool;
 use App\Mcp\Tools\Skill\SkillBenchmarkCancelTool;
 use App\Mcp\Tools\Skill\SkillBenchmarkListTool;
 use App\Mcp\Tools\Skill\SkillBenchmarkStartTool;
@@ -349,6 +363,19 @@ use App\Mcp\Tools\Webhook\WebhookCreateTool;
 use App\Mcp\Tools\Webhook\WebhookDeleteTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
 use App\Mcp\Tools\Webhook\WebhookUpdateTool;
+use App\Mcp\Tools\Website\WebsiteAnalyticsTool;
+use App\Mcp\Tools\Website\WebsiteCreateTool;
+use App\Mcp\Tools\Website\WebsiteDeleteTool;
+use App\Mcp\Tools\Website\WebsiteExportTool;
+use App\Mcp\Tools\Website\WebsiteGenerateTool;
+use App\Mcp\Tools\Website\WebsiteGetTool;
+use App\Mcp\Tools\Website\WebsiteListTool;
+use App\Mcp\Tools\Website\WebsitePageCreateTool;
+use App\Mcp\Tools\Website\WebsitePageGetTool;
+use App\Mcp\Tools\Website\WebsitePageListTool;
+use App\Mcp\Tools\Website\WebsitePagePublishTool;
+use App\Mcp\Tools\Website\WebsitePageUpdateTool;
+use App\Mcp\Tools\Website\WebsiteUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
 use App\Mcp\Tools\Workflow\WorkflowDisableGatewayTool;
@@ -472,12 +499,13 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
-        // Agent (19)
+        // Agent (20)
         AgentListTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
         AgentUpdateTool::class,
         AgentToggleStatusTool::class,
+        AgentSetReasoningStrategyTool::class,
         AgentTemplatesListTool::class,
         AgentConstraintTemplatesTool::class,
         AgentSkillSyncTool::class,
@@ -497,6 +525,10 @@ class AgentFleetServer extends Server
         AgentHookCreateTool::class,
         AgentHookToggleTool::class,
         AgentHookDeleteTool::class,
+        AgentUpdateIdentityTool::class,
+        AgentToolApprovalConfigureTool::class,
+        AgentWorkspaceExportTool::class,
+        AgentWorkspaceImportTool::class,
 
         // Evolution (5)
         EvolutionProposalListTool::class,
@@ -528,6 +560,8 @@ class AgentFleetServer extends Server
         ExperimentResumeTool::class,
         ExperimentRetryTool::class,
         ExperimentRetryFromStepTool::class,
+        ExperimentResumeFromCheckpointTool::class,
+        ExperimentStageTelemetryTool::class,
         ExperimentKillTool::class,
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
@@ -541,6 +575,7 @@ class AgentFleetServer extends Server
         WorklogAppendTool::class,
         WorklogReadTool::class,
         PlanWithKnowledgeTool::class,
+        ReasoningBankSearchTool::class,
 
         // Skill (19)
         SkillListTool::class,
@@ -565,6 +600,7 @@ class AgentFleetServer extends Server
         SkillBenchmarkStatusTool::class,
         SkillBenchmarkCancelTool::class,
         SkillBenchmarkListTool::class,
+        SkillAutoGenerateRunTool::class,
 
         // Tool (19)
         ToolListTool::class,
@@ -644,6 +680,7 @@ class AgentFleetServer extends Server
         ProjectArchiveTool::class,
         ProjectScheduleManageTool::class,
         ProjectScheduleNlpTool::class,
+        ProjectHeartbeatConfigureTool::class,
         ProjectRunListTool::class,
         ProjectRunGetTool::class,
 
@@ -695,9 +732,12 @@ class AgentFleetServer extends Server
         BudgetCheckTool::class,
         BudgetForecastTool::class,
 
-        // Evaluation (2)
+        // Evaluation (5)
         EvaluationDatasetManageTool::class,
         EvaluationRunTool::class,
+        FlowEvaluationDatasetCreateTool::class,
+        FlowEvaluationRunStartTool::class,
+        FlowEvaluationResultsTool::class,
 
         // Cache (2)
         SemanticCacheStatsTool::class,
@@ -765,7 +805,8 @@ class AgentFleetServer extends Server
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
 
-        // Shared (15)
+        // Shared (16)
+        ContactHealthScoreTool::class,
         NotificationTool::class,
         TeamGetTool::class,
         TeamUpdateTool::class,
@@ -929,6 +970,21 @@ class AgentFleetServer extends Server
         A2uiComponentCatalogTool::class,
         A2uiRenderSurfaceTool::class,
         A2uiValidateSurfaceTool::class,
+
+        // Website (16)
+        WebsiteListTool::class,
+        WebsiteGetTool::class,
+        WebsiteCreateTool::class,
+        WebsiteUpdateTool::class,
+        WebsiteDeleteTool::class,
+        WebsitePageListTool::class,
+        WebsitePageGetTool::class,
+        WebsitePageCreateTool::class,
+        WebsitePageUpdateTool::class,
+        WebsitePagePublishTool::class,
+        WebsiteGenerateTool::class,
+        WebsiteExportTool::class,
+        WebsiteAnalyticsTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */

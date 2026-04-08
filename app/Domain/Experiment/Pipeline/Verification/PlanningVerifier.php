@@ -13,21 +13,12 @@ class PlanningVerifier implements StageVerifier
         $output = $stage->output_snapshot ?? [];
         $errors = [];
 
-        $steps = $output['steps'] ?? $output['plan'] ?? null;
+        $planSummary = $output['plan_summary'] ?? null;
 
-        if ($steps === null) {
-            $errors[] = 'Missing required "steps" or "plan" key in output.';
-        } elseif (! is_array($steps) || empty($steps)) {
-            $errors[] = 'The "steps"/"plan" value must be a non-empty array.';
-        } else {
-            foreach ($steps as $index => $step) {
-                if (! is_array($step)) {
-                    continue;
-                }
-                if (! isset($step['description']) || ! is_string($step['description']) || trim($step['description']) === '') {
-                    $errors[] = "Step [{$index}] is missing a valid \"description\" key.";
-                }
-            }
+        if ($planSummary === null) {
+            $errors[] = 'Missing required "plan_summary" key in output.';
+        } elseif (! is_string($planSummary) || trim($planSummary) === '') {
+            $errors[] = 'The "plan_summary" value must be a non-empty string.';
         }
 
         return ['passed' => empty($errors), 'errors' => $errors];

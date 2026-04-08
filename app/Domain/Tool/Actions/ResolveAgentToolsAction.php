@@ -13,6 +13,7 @@ use App\Domain\GitRepository\Tools\GitRepositoryToolBuilder;
 use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Enums\BuiltInToolKind;
+use App\Domain\Tool\Enums\ToolApprovalMode;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
@@ -64,6 +65,17 @@ class ResolveAgentToolsAction
         $agentTools = $agent->tools()
             ->where('status', ToolStatus::Active->value)
             ->get();
+
+        // Filter out tools with approval_mode = 'deny' on the pivot
+        $agentTools = $agentTools->filter(function (Tool $tool) {
+            $mode = $tool->pivot->approval_mode ?? null;
+
+            if ($mode instanceof ToolApprovalMode) {
+                return $mode !== ToolApprovalMode::Deny;
+            }
+
+            return ($mode ?? 'auto') !== ToolApprovalMode::Deny->value;
+        });
 
         // Apply project-level restrictions if set
         if ($project && ! empty($project->allowed_tool_ids)) {

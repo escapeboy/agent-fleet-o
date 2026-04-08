@@ -30,6 +30,8 @@ class WorkflowUpdateTool extends Tool
                 ->enum(['sync', 'async', 'exit']),
             'budget_cap_credits' => $schema->integer()
                 ->description('Maximum credits per execution. Set to 0 to remove the cap.'),
+            'observability_config' => $schema->object()
+                ->description('Observability provider config. Schema: {"provider":"langfuse|langsmith|none","enabled":true,"config":{"public_key":"...","secret_key":"...","host":"https://cloud.langfuse.com"}}'),
         ];
     }
 
@@ -41,6 +43,7 @@ class WorkflowUpdateTool extends Tool
             'description' => 'nullable|string',
             'checkpoint_mode' => 'nullable|string|in:sync,async,exit',
             'budget_cap_credits' => 'nullable|integer|min:0',
+            'observability_config' => 'nullable|array',
         ]);
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
@@ -56,7 +59,8 @@ class WorkflowUpdateTool extends Tool
         $hasUpdates = ($validated['name'] ?? null) !== null
             || ($validated['description'] ?? null) !== null
             || ($validated['checkpoint_mode'] ?? null) !== null
-            || array_key_exists('budget_cap_credits', $validated);
+            || array_key_exists('budget_cap_credits', $validated)
+            || ($validated['observability_config'] ?? null) !== null;
 
         if (! $hasUpdates) {
             return Response::error('No fields to update. Provide at least one of: name, description, checkpoint_mode.');
@@ -69,6 +73,12 @@ class WorkflowUpdateTool extends Tool
             }
 
             $budgetCap = $validated['budget_cap_credits'] ?? null;
+
+            // Persist observability_config directly (not handled by UpdateWorkflowAction)
+            if (! empty($validated['observability_config'])) {
+                $workflow->observability_config = $validated['observability_config'];
+                $workflow->save();
+            }
 
             $result = app(UpdateWorkflowAction::class)->execute(
                 workflow: $workflow,

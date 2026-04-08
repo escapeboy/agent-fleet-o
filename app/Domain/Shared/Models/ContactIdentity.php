@@ -21,6 +21,11 @@ class ContactIdentity extends Model
         'risk_score',
         'risk_flags',
         'risk_evaluated_at',
+        'health_score',
+        'health_recency_score',
+        'health_frequency_score',
+        'health_sentiment_score',
+        'health_scored_at',
     ];
 
     protected function casts(): array
@@ -30,6 +35,11 @@ class ContactIdentity extends Model
             'risk_flags' => 'array',
             'risk_score' => 'integer',
             'risk_evaluated_at' => 'datetime',
+            'health_score' => 'float',
+            'health_recency_score' => 'float',
+            'health_frequency_score' => 'float',
+            'health_sentiment_score' => 'float',
+            'health_scored_at' => 'datetime',
         ];
     }
 

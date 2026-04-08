@@ -3,6 +3,7 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
+use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Skill\Models\Skill;
@@ -31,9 +32,9 @@ class CreateAgentForm extends Component
 
     public string $personalityResponseFormat = '';
 
-    public string $provider = 'anthropic';
+    public string $provider = '';
 
-    public string $model = 'claude-sonnet-4-5';
+    public string $model = '';
 
     public ?int $budgetCapCredits = null;
 
@@ -54,6 +55,8 @@ class CreateAgentForm extends Component
     /** @var array<string> */
     public array $gitRepositoryIds = [];
 
+    public string $reasoningStrategy = 'function_calling';
+
     public string $toolProfile = '';
 
     public ?string $knowledgeBaseId = null;
@@ -67,6 +70,10 @@ class CreateAgentForm extends Component
 
     public function mount(): void
     {
+        $resolved = app(ProviderResolver::class)->resolve(team: auth()->user()?->currentTeam);
+        $this->provider = $resolved['provider'];
+        $this->model = $resolved['model'];
+
         $templateSlug = request('template');
         if ($templateSlug) {
             $template = collect(config('agent-templates', []))
@@ -189,6 +196,11 @@ class CreateAgentForm extends Component
 
         if ($heartbeatDefinition !== null) {
             $agent->update(['heartbeat_definition' => $heartbeatDefinition]);
+        }
+
+        $strategy = AgentReasoningStrategy::tryFrom($this->reasoningStrategy);
+        if ($strategy && $strategy !== AgentReasoningStrategy::FunctionCalling) {
+            $agent->update(['reasoning_strategy' => $strategy]);
         }
 
         session()->flash('message', 'Agent created successfully!');

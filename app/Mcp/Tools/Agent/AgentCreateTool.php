@@ -4,6 +4,8 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
 use App\Domain\Knowledge\Models\KnowledgeBase;
+use App\Domain\Shared\Models\Team;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -28,11 +30,9 @@ class AgentCreateTool extends Tool
             'backstory' => $schema->string()
                 ->description('Agent backstory'),
             'provider' => $schema->string()
-                ->description('LLM provider: anthropic, openai, google (default: anthropic)')
-                ->enum(['anthropic', 'openai', 'google'])
-                ->default('anthropic'),
+                ->description('LLM provider key (e.g. anthropic, openai, google, claude-code). Defaults to platform default.'),
             'model' => $schema->string()
-                ->description('LLM model name (default: claude-sonnet-4-5)'),
+                ->description('LLM model name. Defaults to platform default.'),
             'personality' => $schema->object()
                 ->description('Agent personality traits: {tone, communication_style, traits[], behavioral_rules[], response_format_preference}'),
             'data_classification' => $schema->string()
@@ -61,7 +61,7 @@ class AgentCreateTool extends Tool
             'role' => 'nullable|string',
             'goal' => 'nullable|string',
             'backstory' => 'nullable|string',
-            'provider' => 'nullable|string|in:anthropic,openai,google',
+            'provider' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
             'personality' => 'nullable|array',
             'tool_profile' => 'nullable|string',
@@ -98,10 +98,13 @@ class AgentCreateTool extends Tool
         }
 
         try {
+            $team = Team::find($teamId);
+            $resolved = app(ProviderResolver::class)->resolve(team: $team);
+
             $agent = app(CreateAgentAction::class)->execute(
                 name: $validated['name'],
-                provider: $validated['provider'] ?? 'anthropic',
-                model: $validated['model'] ?? 'claude-sonnet-4-5',
+                provider: $validated['provider'] ?? $resolved['provider'],
+                model: $validated['model'] ?? $resolved['model'],
                 role: $validated['role'] ?? null,
                 goal: $validated['goal'] ?? null,
                 backstory: $validated['backstory'] ?? null,

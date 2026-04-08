@@ -1,0 +1,68 @@
+<?php
+
+namespace App\Mcp\Tools\Agent;
+
+use App\Domain\Agent\Enums\AgentReasoningStrategy;
+use App\Domain\Agent\Models\Agent;
+use Laravel\Mcp\Http\Request;
+use Laravel\Mcp\Http\Response;
+use Laravel\Mcp\Schema\JsonSchema;
+use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tool\Attribute\IsDestructive;
+
+#[IsDestructive]
+class AgentSetReasoningStrategyTool extends Tool
+{
+    protected string $name = 'agent_set_reasoning_strategy';
+
+    protected string $description = 'Set the reasoning strategy for an agent. Strategies shape how the agent thinks before acting. Options: function_calling (default), react (Reason+Act), chain_of_thought, plan_and_execute, tree_of_thought.';
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'agent_id' => $schema->string()
+                ->description('The agent UUID')
+                ->required(),
+            'strategy' => $schema->string()
+                ->description('Reasoning strategy: function_calling | react | chain_of_thought | plan_and_execute | tree_of_thought')
+                ->required(),
+        ];
+    }
+
+    public function handle(Request $request): Response
+    {
+        $validated = $request->validate([
+            'agent_id' => 'required|string',
+            'strategy' => 'required|string',
+        ]);
+
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+
+        $strategy = AgentReasoningStrategy::tryFrom($validated['strategy']);
+        if (! $strategy) {
+            $valid = implode(', ', array_column(AgentReasoningStrategy::cases(), 'value'));
+
+            return Response::error("Invalid strategy '{$validated['strategy']}'. Valid: {$valid}");
+        }
+
+        $agent = Agent::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->find($validated['agent_id']);
+
+        if (! $agent) {
+            return Response::error('Agent not found.');
+        }
+
+        $agent->update(['reasoning_strategy' => $strategy]);
+
+        return Response::text(json_encode([
+            'success' => true,
+            'agent_id' => $agent->id,
+            'strategy' => $strategy->value,
+            'label' => $strategy->label(),
+        ]));
+    }
+}

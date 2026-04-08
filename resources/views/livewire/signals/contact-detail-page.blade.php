@@ -32,6 +32,45 @@
         </div>
     </div>
 
+    {{-- Relationship Health Score --}}
+    @if($contact->health_scored_at)
+        <div class="rounded-xl border border-gray-200 bg-white p-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-900">Relationship Health</h3>
+                <span @class([
+                    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                    'bg-green-100 text-green-800' => $contact->health_score >= 0.7,
+                    'bg-yellow-100 text-yellow-800' => $contact->health_score >= 0.4 && $contact->health_score < 0.7,
+                    'bg-red-100 text-red-800' => $contact->health_score < 0.4,
+                ])>
+                    {{ $contact->health_score >= 0.7 ? 'Healthy' : ($contact->health_score >= 0.4 ? 'At Risk' : 'Cold') }}
+                </span>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Overall Score</dt>
+                    <dd class="mt-0.5 text-2xl font-semibold text-gray-900">{{ number_format($contact->health_score * 100) }}<span class="text-sm font-normal text-gray-400">%</span></dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Recency</dt>
+                    <dd class="mt-0.5 text-sm text-gray-700">{{ number_format($contact->health_recency_score * 100) }}%</dd>
+                    <div class="mt-1 h-1.5 w-full rounded-full bg-gray-100"><div class="h-1.5 rounded-full bg-blue-400" style="width: {{ number_format($contact->health_recency_score * 100) }}%"></div></div>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Frequency</dt>
+                    <dd class="mt-0.5 text-sm text-gray-700">{{ number_format($contact->health_frequency_score * 100) }}%</dd>
+                    <div class="mt-1 h-1.5 w-full rounded-full bg-gray-100"><div class="h-1.5 rounded-full bg-purple-400" style="width: {{ number_format($contact->health_frequency_score * 100) }}%"></div></div>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Sentiment</dt>
+                    <dd class="mt-0.5 text-sm text-gray-700">{{ number_format($contact->health_sentiment_score * 100) }}%</dd>
+                    <div class="mt-1 h-1.5 w-full rounded-full bg-gray-100"><div class="h-1.5 rounded-full bg-emerald-400" style="width: {{ number_format($contact->health_sentiment_score * 100) }}%"></div></div>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-gray-400">Last scored {{ $contact->health_scored_at->diffForHumans() }}</p>
+        </div>
+    @endif
+
     {{-- Channels --}}
     <div class="rounded-xl border border-gray-200 bg-white">
         <div class="border-b border-gray-200 px-6 py-4">

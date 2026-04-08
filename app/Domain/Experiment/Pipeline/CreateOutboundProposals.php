@@ -3,6 +3,7 @@
 namespace App\Domain\Experiment\Pipeline;
 
 use App\Domain\Approval\Actions\CreateApprovalRequestAction;
+use App\Domain\Approval\Enums\ApprovalMode;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
@@ -96,6 +97,13 @@ class CreateOutboundProposals extends BaseStageJob
         }
 
         // Create approval request (auto-approved or pending)
+        $approvalMode = $autoApprove
+            ? ApprovalMode::InLoop
+            : (ApprovalMode::tryFrom($experiment->constraints['approval_mode'] ?? 'in_loop') ?? ApprovalMode::InLoop);
+        $interventionWindowSeconds = (! $autoApprove && $approvalMode === ApprovalMode::OnLoop)
+            ? ($experiment->constraints['intervention_window_seconds'] ?? null)
+            : null;
+
         $createApproval = app(CreateApprovalRequestAction::class);
         $approvalRequest = $createApproval->execute(
             experiment: $experiment,
@@ -106,6 +114,8 @@ class CreateOutboundProposals extends BaseStageJob
                 'channels' => array_column($channels, 'channel'),
                 'auto_approved' => $autoApprove,
             ],
+            mode: $approvalMode,
+            interventionWindowSeconds: $interventionWindowSeconds,
         );
 
         if ($autoApprove) {

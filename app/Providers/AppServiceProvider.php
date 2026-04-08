@@ -19,10 +19,12 @@ use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\HandleStuckPattern;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
+use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
 use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
+use App\Domain\Memory\Listeners\FlushAgentMemoryOnCompletion;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
@@ -72,6 +74,7 @@ use App\Domain\Tool\Services\McpHandleRegistry;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
@@ -131,6 +134,7 @@ class AppServiceProvider extends ServiceProvider
         // Plugin extension points
         $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);
         $this->app->singleton(NavigationRegistry::class, fn () => new NavigationRegistry);
+        $this->app->singleton(WorkflowNodeRegistry::class, fn () => new WorkflowNodeRegistry);
 
         // Accumulator for plugin-contributed MCP tool class names
         $this->app->instance('fleet.mcp.tool_classes', []);
@@ -337,11 +341,17 @@ class AppServiceProvider extends ServiceProvider
         // Memory: extract learnings from completed experiments
         Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);
 
+        // ReasoningBank: record strategy embeddings from completed experiments
+        Event::listen(ExperimentTransitioned::class, RecordReasoningBankEntry::class);
+
         // Memory: extract failure lesson when experiment enters a failed state
         Event::listen(ExperimentTransitioned::class, ExtractFailureLessonListener::class);
 
         // Memory: extract success pattern when experiment reaches Completed
         Event::listen(ExperimentTransitioned::class, ExtractSuccessPatternListener::class);
+
+        // Memory: flush agent memory on workflow experiment completion
+        Event::listen(ExperimentTransitioned::class, FlushAgentMemoryOnCompletion::class);
 
         // Stuck pattern detection: handle detected stuck patterns (notify/pause/kill)
         Event::listen(StuckPatternDetected::class, HandleStuckPattern::class);

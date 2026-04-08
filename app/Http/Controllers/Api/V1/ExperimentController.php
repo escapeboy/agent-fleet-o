@@ -7,6 +7,7 @@ use App\Domain\Experiment\Actions\CreateExperimentAction;
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
+use App\Domain\Experiment\Actions\ResumeFromCheckpointAction;
 use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\RetryFromStepAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
@@ -145,6 +146,19 @@ class ExperimentController extends Controller
         $action->execute($experiment, $step);
 
         return response()->json(['message' => 'Retry from step initiated.'], 202);
+    }
+
+    /**
+     * Resume an experiment from its most recent checkpoint without resetting progress.
+     *
+     * @response 202 {"resumed": true, "step_id": "uuid", "message": "Resumed from checkpoint at step #2."}
+     * @response 422 {"resumed": false, "step_id": null, "message": "No checkpoint data found."}
+     */
+    public function resumeFromCheckpoint(Experiment $experiment, ResumeFromCheckpointAction $action): JsonResponse
+    {
+        $result = $action->execute($experiment);
+
+        return response()->json($result, $result['resumed'] ? 202 : 422);
     }
 
     public function steps(Experiment $experiment): AnonymousResourceCollection

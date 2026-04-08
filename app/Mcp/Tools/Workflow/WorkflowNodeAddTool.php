@@ -29,6 +29,9 @@ Node types:
   variable_aggregator — merge outputs from multiple predecessor nodes; no special config
   template_transform — Mustache-style {{variable}} rendering, zero LLM cost; config: {template}
   knowledge_retrieval — pgvector semantic search against a KnowledgeBase; config: {knowledge_base_id, top_k}
+  annotation         — display-only sticky note, not executed; config: {text, color} where color is one of yellow|blue|green|pink
+  iteration          — map over an array, executing the downstream node for each item; config: {source_expression (dot-notation path into context, e.g. steps.fetch.output.items), item_variable (default: item), max_parallel (default: 5)}
+  workflow_ref       — call another saved workflow inline and inject its output; config: {ref_workflow_id (UUID), input_mapping (object mapping target param to dot-notation source path), output_key (default: sub_workflow_output), max_depth (default: 3)}
 DESC;
 
     public function schema(JsonSchema $schema): array
@@ -39,7 +42,7 @@ DESC;
                 ->required(),
             'type' => $schema->string()
                 ->description('Node type (see tool description for full list and config details)')
-                ->enum(['agent', 'conditional', 'human_task', 'switch', 'dynamic_fork', 'do_while', 'llm', 'http_request', 'parameter_extractor', 'variable_aggregator', 'template_transform', 'knowledge_retrieval'])
+                ->enum(['agent', 'conditional', 'human_task', 'switch', 'dynamic_fork', 'do_while', 'llm', 'http_request', 'parameter_extractor', 'variable_aggregator', 'template_transform', 'knowledge_retrieval', 'annotation', 'iteration', 'workflow_ref'])
                 ->required(),
             'label' => $schema->string()
                 ->description('Human-readable label for this node')
@@ -67,7 +70,7 @@ DESC;
     {
         $validated = $request->validate([
             'workflow_id' => 'required|string',
-            'type' => 'required|string|in:agent,conditional,human_task,switch,dynamic_fork,do_while,llm,http_request,parameter_extractor,variable_aggregator,template_transform,knowledge_retrieval',
+            'type' => 'required|string|in:agent,conditional,human_task,switch,dynamic_fork,do_while,llm,http_request,parameter_extractor,variable_aggregator,template_transform,knowledge_retrieval,annotation,iteration,workflow_ref',
             'label' => 'required|string|max:255',
             'agent_id' => 'nullable|uuid|exists:agents,id',
             'skill_id' => 'nullable|uuid|exists:skills,id',

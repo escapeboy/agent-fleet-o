@@ -2,23 +2,11 @@
 
 namespace Tests\Unit\Domain\Workflow;
 
-use App\Domain\Workflow\Services\WorkflowGraphExecutor;
+use App\Domain\Workflow\Services\WorkflowGraphAnalyzer;
 use PHPUnit\Framework\TestCase;
-use ReflectionMethod;
 
 class WorkflowNodePriorityTest extends TestCase
 {
-    private WorkflowGraphExecutor $executor;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Create executor without constructor deps (we only test private helper methods via reflection)
-        $this->executor = (new \ReflectionClass(WorkflowGraphExecutor::class))
-            ->newInstanceWithoutConstructor();
-    }
-
     public function test_node_with_more_descendants_gets_higher_priority(): void
     {
         // Graph: A -> B -> C -> End
@@ -159,8 +147,6 @@ class WorkflowNodePriorityTest extends TestCase
 
     private function invokeCalculateNodePriorities(array $nodeIds, array $adjacency, array $nodeMap): array
     {
-        $method = new ReflectionMethod(WorkflowGraphExecutor::class, 'calculateNodePriorities');
-
-        return $method->invoke($this->executor, $nodeIds, $adjacency, $nodeMap);
+        return WorkflowGraphAnalyzer::calculateNodePriorities($nodeIds, $adjacency, $nodeMap);
     }
 }

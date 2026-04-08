@@ -133,8 +133,54 @@
         </div>
     @endif
 
+    {{-- Stage Telemetry --}}
+    @if($stageTelemetry->isNotEmpty())
+        <div class="rounded-lg border border-gray-200 bg-white p-5">
+            <h3 class="mb-3 text-sm font-semibold text-gray-900">Per-Stage Telemetry</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead>
+                        <tr class="border-b border-gray-100 text-left text-gray-500">
+                            <th class="pb-2 pr-4 font-medium">Stage</th>
+                            <th class="pb-2 pr-4 font-medium">Iter.</th>
+                            <th class="pb-2 pr-4 font-medium">Latency</th>
+                            <th class="pb-2 pr-4 font-medium">Tokens In</th>
+                            <th class="pb-2 pr-4 font-medium">Tokens Out</th>
+                            <th class="pb-2 pr-4 font-medium">LLM Calls</th>
+                            <th class="pb-2 font-medium">Retries</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @foreach($stageTelemetry as $s)
+                            @php $t = $s->telemetry ?? []; @endphp
+                            <tr class="text-gray-700">
+                                <td class="py-2 pr-4">{{ ucfirst(str_replace('_', ' ', $s->stage->value)) }}</td>
+                                <td class="py-2 pr-4 text-gray-400">#{{ $s->iteration }}</td>
+                                <td class="py-2 pr-4">{{ $this->formatDuration(($t['stage_latency_ms'] ?? $s->duration_ms ?? 0) / 1000) }}</td>
+                                <td class="py-2 pr-4">{{ number_format($t['token_input'] ?? 0) }}</td>
+                                <td class="py-2 pr-4">{{ number_format($t['token_output'] ?? 0) }}</td>
+                                <td class="py-2 pr-4">{{ $t['llm_calls'] ?? 0 }}</td>
+                                <td class="py-2">{{ $t['retry_round'] ?? 0 }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="border-t border-gray-200 font-medium text-gray-900">
+                        <tr>
+                            <td class="pt-2 pr-4" colspan="2">Total</td>
+                            <td class="pt-2 pr-4">{{ $this->formatDuration($stageTelemetry->sum(fn($s) => ($s->telemetry['stage_latency_ms'] ?? $s->duration_ms ?? 0)) / 1000) }}</td>
+                            <td class="pt-2 pr-4">{{ number_format($stageTelemetry->sum(fn($s) => $s->telemetry['token_input'] ?? 0)) }}</td>
+                            <td class="pt-2 pr-4">{{ number_format($stageTelemetry->sum(fn($s) => $s->telemetry['token_output'] ?? 0)) }}</td>
+                            <td class="pt-2 pr-4">{{ $stageTelemetry->sum(fn($s) => $s->telemetry['llm_calls'] ?? 0) }}</td>
+                            <td class="pt-2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    @endif
+
     {{-- Empty State --}}
-    @if($pipelineTimings->isEmpty() && !$hasOutboundMetrics && $recentActivity->isEmpty())
+    @if($pipelineTimings->isEmpty() && !$hasOutboundMetrics && $recentActivity->isEmpty() && $stageTelemetry->isEmpty())
         <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
             <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>

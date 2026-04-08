@@ -9,6 +9,7 @@ use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
+use App\Http\Controllers\WebsitePagePreviewController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\SetCurrentTeam;
@@ -94,6 +95,11 @@ use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Tools\ToolTemplateCatalogPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
+use App\Livewire\Websites\CreateWebsiteForm;
+use App\Livewire\Websites\WebsiteBuilderPage;
+use App\Livewire\Websites\WebsiteDetailPage;
+use App\Livewire\Websites\WebsiteListPage;
+use App\Livewire\Workflows\EvaluationListPage as WorkflowEvaluationListPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
@@ -290,6 +296,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
+    Route::get('/evaluations', WorkflowEvaluationListPage::class)->name('evaluations.index');
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
     Route::get('/health', HealthPage::class)->name('health');
@@ -327,6 +334,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/git-repositories', GitRepositoryListPage::class)->name('git-repositories.index');
     Route::get('/git-repositories/create', CreateGitRepositoryForm::class)->name('git-repositories.create');
     Route::get('/git-repositories/{gitRepository}', GitRepositoryDetailPage::class)->name('git-repositories.show');
+
+    // Websites
+    Route::get('/websites', WebsiteListPage::class)->name('websites.index');
+    Route::get('/websites/create', CreateWebsiteForm::class)->name('websites.create');
+    Route::get('/websites/{website}', WebsiteDetailPage::class)->name('websites.show');
+    Route::get('/websites/{website}/pages/{page}/edit', WebsiteBuilderPage::class)->name('websites.pages.edit');
+    Route::get('/websites/{website}/pages/{page}/preview', WebsitePagePreviewController::class)->name('websites.pages.preview');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

@@ -7,6 +7,7 @@ use App\Domain\Assistant\Agents\FleetQAssistant;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\ConversationManager;
+use App\Domain\Budget\Services\CostCalculator;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -229,7 +230,12 @@ class ProcessAssistantMessageJob implements ShouldQueue
             'token_usage' => $streamResponse->usage ? json_encode([
                 'prompt_tokens' => $streamResponse->usage->inputTokens ?? 0,
                 'completion_tokens' => $streamResponse->usage->outputTokens ?? 0,
-                'cost_credits' => 0, // TODO: calculate from usage
+                'cost_credits' => app(CostCalculator::class)->calculateCost(
+                    $provider,
+                    $model,
+                    $streamResponse->usage->inputTokens ?? 0,
+                    $streamResponse->usage->outputTokens ?? 0,
+                ),
             ]) : null,
             'metadata' => json_encode(['status' => 'completed']),
         ]);
