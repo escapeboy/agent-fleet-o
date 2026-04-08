@@ -537,6 +537,12 @@ class ToolTranslator
                         $options['proxy_url'] = $proxyUrl;
                     }
 
+                    // Remote browser via CDP (e.g. OpenClaw real Chrome).
+                    $cdpUrl = $toolModel->transport_config['cdp_url'] ?? null;
+                    if ($cdpUrl) {
+                        $options['cdp_url'] = $cdpUrl;
+                    }
+
                     try {
                         if ($mode === 'cloud') {
                             $result = app(BrowserUseCloudClient::class, ['apiKey' => $apiKey])->run($task, $options);

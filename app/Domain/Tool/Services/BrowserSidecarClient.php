@@ -76,6 +76,10 @@ class BrowserSidecarClient
             $payload['proxy_url'] = $options['proxy_url'];
         }
 
+        if (! empty($options['cdp_url'])) {
+            $payload['cdp_url'] = $options['cdp_url'];
+        }
+
         try {
             $response = Http::timeout($httpTimeout)
                 ->baseUrl($this->baseUrl)
