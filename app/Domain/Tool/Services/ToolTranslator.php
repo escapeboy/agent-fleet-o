@@ -12,6 +12,7 @@ use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -519,6 +520,15 @@ class ToolTranslator
                     $credentials = (array) $toolModel->credentials;
                     $apiKey = $credentials['api_key'] ?? config('agent.browser_use_cloud_api_key', '');
 
+                    // Resolve BYOK credentials for the sidecar LLM.
+                    if ($mode === 'sidecar' && $toolModel->team_id) {
+                        $byok = $this->resolveBrowserByok($toolModel->team_id);
+                        if ($byok) {
+                            $options['llm_api_key'] = $byok['api_key'];
+                            $options['llm_provider'] = $byok['provider'];
+                        }
+                    }
+
                     try {
                         if ($mode === 'cloud') {
                             $result = app(BrowserUseCloudClient::class, ['apiKey' => $apiKey])->run($task, $options);
@@ -765,5 +775,31 @@ class ToolTranslator
                     'error' => 'Computer use requires a Pro plan with sandbox enabled. Please upgrade to access desktop automation.',
                 ])),
         ];
+    }
+
+    /**
+     * Resolve BYOK LLM credentials for the browser sidecar.
+     * Prefers anthropic, falls back to openai.
+     *
+     * @return array{api_key: string, provider: string}|null
+     */
+    private function resolveBrowserByok(string $teamId): ?array
+    {
+        foreach (['anthropic', 'openai'] as $provider) {
+            $credential = TeamProviderCredential::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('provider', $provider)
+                ->where('is_active', true)
+                ->first();
+
+            if ($credential && ! empty($credential->credentials['api_key'])) {
+                return [
+                    'api_key' => $credential->credentials['api_key'],
+                    'provider' => $provider,
+                ];
+            }
+        }
+
+        return null;
     }
 }

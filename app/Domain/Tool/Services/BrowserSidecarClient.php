@@ -30,7 +30,7 @@ class BrowserSidecarClient
     /**
      * Run a browser task via the sidecar container.
      *
-     * @param  array{max_steps?: int, timeout_seconds?: int, allowed_domains?: string[], start_url?: string}  $options
+     * @param  array{max_steps?: int, timeout_seconds?: int, allowed_domains?: string[], start_url?: string, llm_api_key?: string, llm_provider?: string}  $options
      * @return array{status: string, output: string, steps_taken: int, duration_ms: int, screenshots: string[], urls_visited: string[], error: string|null}
      *
      * @throws BrowserTaskTimeoutException
@@ -58,6 +58,14 @@ class BrowserSidecarClient
 
         if (! empty($options['start_url'])) {
             $payload['start_url'] = $options['start_url'];
+        }
+
+        if (! empty($options['llm_api_key'])) {
+            $payload['llm_api_key'] = $options['llm_api_key'];
+        }
+
+        if (! empty($options['llm_provider'])) {
+            $payload['llm_provider'] = $options['llm_provider'];
         }
 
         try {
