@@ -42,6 +42,17 @@ class CreateCredentialForm extends Component
     // Custom KV
     public array $customPairs = [['key' => '', 'value' => '']];
 
+    // Proxy
+    public string $proxyHost = '';
+
+    public string $proxyPort = '1080';
+
+    public string $proxyProtocol = 'socks5';
+
+    public string $proxyUsername = '';
+
+    public string $proxyPassword = '';
+
     // Step 3: Metadata
     public string $expiresAt = '';
 
@@ -51,7 +62,7 @@ class CreateCredentialForm extends Component
             $this->validate([
                 'name' => 'required|min:2|max:255',
                 'description' => 'max:1000',
-                'credentialType' => 'required|in:basic_auth,api_token,ssh_key,custom_kv',
+                'credentialType' => 'required|in:basic_auth,api_token,ssh_key,custom_kv,oauth2,proxy',
             ]);
         }
 
@@ -88,6 +99,11 @@ class CreateCredentialForm extends Component
                 'customPairs.*.value' => 'required|string|min:1',
             ]),
             CredentialType::OAuth2 => null,
+            CredentialType::Proxy => $this->validate([
+                'proxyHost' => 'required|min:1',
+                'proxyPort' => 'required|integer|min:1|max:65535',
+                'proxyProtocol' => 'required|in:socks5,socks4,http,https',
+            ]),
         };
     }
 
@@ -123,6 +139,7 @@ class CreateCredentialForm extends Component
         $this->privateKey = '';
         $this->passphrase = '';
         $this->customPairs = [['key' => '', 'value' => '']];
+        $this->proxyPassword = '';
 
         session()->flash('message', 'Credential created successfully!');
         $this->redirect(route('credentials.index'));
@@ -151,6 +168,13 @@ class CreateCredentialForm extends Component
                 ->pluck('value', 'key')
                 ->toArray(),
             CredentialType::OAuth2 => [],
+            CredentialType::Proxy => array_filter([
+                'host' => $this->proxyHost,
+                'port' => (int) $this->proxyPort,
+                'protocol' => $this->proxyProtocol,
+                'username' => $this->proxyUsername ?: null,
+                'password' => $this->proxyPassword ?: null,
+            ]),
         };
     }
 

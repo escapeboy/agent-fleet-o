@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Tools;
 
+use App\Domain\Credential\Enums\CredentialType;
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Tool\Actions\ActivatePlatformToolAction;
 use App\Domain\Tool\Actions\DeactivatePlatformToolAction;
 use App\Domain\Tool\Actions\DeleteToolAction;
@@ -34,9 +36,12 @@ class ToolDetailPage extends Component
 
     public array $credentialInputs = [];
 
+    public string $proxyCredentialId = '';
+
     public function mount(Tool $tool): void
     {
         $this->tool = $tool;
+        $this->proxyCredentialId = $tool->transport_config['proxy_credential_id'] ?? '';
 
         if ($tool->isPlatformTool()) {
             $this->activation = $tool->activationFor(auth()->user()->current_team_id);
@@ -140,6 +145,25 @@ class ToolDetailPage extends Component
         session()->flash('message', 'Tool updated successfully.');
     }
 
+    public function saveProxyCredential(): void
+    {
+        $config = $this->tool->transport_config ?? [];
+
+        if ($this->proxyCredentialId) {
+            $config['proxy_credential_id'] = $this->proxyCredentialId;
+        } else {
+            unset($config['proxy_credential_id']);
+        }
+
+        // Remove legacy proxy_url when switching to credential-based.
+        unset($config['proxy_url']);
+
+        $this->tool->update(['transport_config' => $config]);
+        $this->tool->refresh();
+
+        session()->flash('message', 'Proxy configuration saved.');
+    }
+
     public function deleteTool(): void
     {
         if ($this->tool->isPlatformTool()) {
@@ -161,11 +185,16 @@ class ToolDetailPage extends Component
 
         $middlewareConfigs = $this->tool->middlewareConfigs()->get();
 
+        $proxyCredentials = Credential::where('credential_type', CredentialType::Proxy)
+            ->orderBy('name')
+            ->get(['id', 'name', 'secret_data']);
+
         return view('livewire.tools.tool-detail-page', [
             'agents' => $agents,
             'riskLevels' => ToolRiskLevel::cases(),
             'linkedCredential' => $linkedCredential,
             'middlewareConfigs' => $middlewareConfigs,
+            'proxyCredentials' => $proxyCredentials,
         ])->layout('layouts.app', ['header' => $this->tool->name]);
     }
 }

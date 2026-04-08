@@ -12,6 +12,7 @@ use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Cache;
@@ -530,8 +531,8 @@ class ToolTranslator
                         }
                     }
 
-                    // Per-tool proxy — team-scoped, stored in transport_config.
-                    $proxyUrl = $toolModel->transport_config['proxy_url'] ?? null;
+                    // Per-tool proxy — resolved from linked Credential (type: proxy).
+                    $proxyUrl = $this->resolveProxyUrl($toolModel);
                     if ($proxyUrl) {
                         $options['proxy_url'] = $proxyUrl;
                     }
@@ -815,5 +816,41 @@ class ToolTranslator
         }
 
         return null;
+    }
+
+    /**
+     * Resolve a proxy URL from the tool's transport_config.proxy_credential_id,
+     * or fall back to a raw transport_config.proxy_url string.
+     */
+    private function resolveProxyUrl(Tool $tool): ?string
+    {
+        $config = $tool->transport_config ?? [];
+
+        // Credential-based proxy (preferred).
+        $credentialId = $config['proxy_credential_id'] ?? null;
+        if ($credentialId && $tool->team_id) {
+            $credential = Credential::withoutGlobalScopes()
+                ->where('id', $credentialId)
+                ->where('team_id', $tool->team_id)
+                ->first();
+
+            if ($credential) {
+                $data = $credential->secret_data ?? [];
+                $protocol = $data['protocol'] ?? 'socks5';
+                $host = $data['host'] ?? '';
+                $port = $data['port'] ?? 1080;
+                $username = $data['username'] ?? null;
+                $password = $data['password'] ?? null;
+
+                if ($host) {
+                    $auth = ($username && $password) ? "{$username}:{$password}@" : '';
+
+                    return "{$protocol}://{$auth}{$host}:{$port}";
+                }
+            }
+        }
+
+        // Fallback: raw proxy_url in transport_config (for manual/legacy config).
+        return $config['proxy_url'] ?? null;
     }
 }
