@@ -618,6 +618,31 @@ class ExecuteAgentAction
             '"I need [outcome] — calling [tool_name] because [reason]."',
         ]);
 
+        // Browser tool usage policy — inject only if agent has a browser tool
+        $hasBrowserTool = $agent->tools()
+            ->where('type', 'built_in')
+            ->get()
+            ->contains(fn ($t) => ($t->transport_config['kind'] ?? null) === 'browser');
+        if ($hasBrowserTool) {
+            $parts[] = implode("\n", [
+                '## Browser Tool Usage Policy',
+                'The `browser_task` tool supports two modes via the `headless` parameter:',
+                '',
+                '- **headless="true"** (DEFAULT, use for most tasks):',
+                '  - Fast (~3x faster than headful)',
+                '  - Lower memory footprint',
+                '  - Use for: scraping public pages, extracting data, navigating simple sites, fetching content.',
+                '',
+                '- **headless="false"** (use ONLY when needed):',
+                '  - Runs real Chrome in a virtual display (Xvfb) — bypasses anti-bot detection.',
+                '  - Slower and uses more memory.',
+                '  - Use for: Reddit, Twitter/X, Cloudflare-protected sites, any site showing a JS challenge or "checking your browser" page.',
+                '  - Also use when a previous headless attempt was blocked with a 403/captcha/security page.',
+                '',
+                'Rule of thumb: start with headless="true". If the page returns a bot-detection challenge, retry with headless="false". Do NOT use headless="false" preemptively for sites that work fine headless — it wastes time and memory.',
+            ]);
+        }
+
         // Include available credentials from project scope
         $credentials = $this->resolveCredentials->execute($project);
         if (! empty($credentials)) {

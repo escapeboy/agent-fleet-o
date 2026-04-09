@@ -68,6 +68,22 @@ class BrowserSidecarClient
             $payload['llm_provider'] = $options['llm_provider'];
         }
 
+        if (! empty($options['llm_model'])) {
+            $payload['llm_model'] = $options['llm_model'];
+        }
+
+        if (! empty($options['proxy_url'])) {
+            $payload['proxy_url'] = $options['proxy_url'];
+        }
+
+        if (! empty($options['cdp_url'])) {
+            $payload['cdp_url'] = $options['cdp_url'];
+        }
+
+        if (isset($options['headless'])) {
+            $payload['headless'] = (bool) $options['headless'];
+        }
+
         try {
             $response = Http::timeout($httpTimeout)
                 ->baseUrl($this->baseUrl)

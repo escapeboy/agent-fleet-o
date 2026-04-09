@@ -16,18 +16,24 @@ class OrchestrationTree extends Component
 
     public function render()
     {
-        // Find the root experiment (top of the tree)
+        // Walk to root via TeamScope so cross-team parents are invisible.
+        // The previous withoutGlobalScopes() variant disclosed parent and
+        // descendant experiment names from other teams whenever a child
+        // happened to point at a foreign-team ancestor.
         $root = $this->experiment;
         while ($root->parent_experiment_id) {
-            $root = Experiment::withoutGlobalScopes()->find($root->parent_experiment_id) ?? $root;
+            $parent = Experiment::query()->find($root->parent_experiment_id);
+            if (! $parent) {
+                break;
+            }
+            $root = $parent;
             break; // Only go up one level for display
         }
 
-        // Load the tree: root + children (up to 2 levels deep)
+        // Load the tree: root + children (up to 2 levels deep). TeamScope
+        // applies via the relationship's eager-load query.
         $root->load(['children' => function ($q) {
-            $q->withoutGlobalScopes()->with(['children' => function ($q2) {
-                $q2->withoutGlobalScopes();
-            }]);
+            $q->with('children');
         }]);
 
         return view('livewire.experiments.orchestration-tree', [

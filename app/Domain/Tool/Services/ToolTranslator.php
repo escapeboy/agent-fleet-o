@@ -12,6 +12,7 @@ use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
+use App\Domain\Credential\Models\Credential;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Cache;
@@ -475,11 +476,12 @@ class ToolTranslator
 
         return [
             PrismTool::as('browser_task')
-                ->for('Autonomously browse the web to complete a task (navigate, click, fill forms, extract data). Returns the extracted result as text.')
+                ->for('Autonomously browse the web to complete a task (navigate, click, fill forms, extract data). Returns the extracted result as text. Set headless=false for sites with anti-bot protection (Reddit, Cloudflare-protected sites) — runs in a virtual display.')
                 ->withStringParameter('task', 'Natural language description of the browsing task to perform')
                 ->withStringParameter('start_url', 'Optional starting URL to begin from', required: false)
                 ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10, plan-capped)', required: false)
-                ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null) use ($mode, $toolModel): string {
+                ->withStringParameter('headless', 'Run browser in headless mode. Pass "true" (default) or "false". Use "false" for sites with anti-bot detection (Reddit, Cloudflare challenges) — uses a real visible Chrome in a virtual display.', required: false)
+                ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null, ?string $headless = null) use ($mode, $toolModel): string {
                     // Execution-time plan gate — cloud registers 'browser.plan_gate' as a callable.
                     if ($toolModel->team_id && app()->bound('browser.plan_gate')) {
                         $gate = app('browser.plan_gate');
@@ -526,7 +528,27 @@ class ToolTranslator
                         if ($byok) {
                             $options['llm_api_key'] = $byok['api_key'];
                             $options['llm_provider'] = $byok['provider'];
+                            $options['llm_model'] = $byok['model'];
                         }
+                    }
+
+                    // Per-tool proxy — resolved from linked Credential (type: proxy).
+                    $proxyUrl = $this->resolveProxyUrl($toolModel);
+                    if ($proxyUrl) {
+                        $options['proxy_url'] = $proxyUrl;
+                    }
+
+                    // Remote browser via CDP (e.g. OpenClaw real Chrome).
+                    $cdpUrl = $toolModel->transport_config['cdp_url'] ?? null;
+                    if ($cdpUrl) {
+                        $options['cdp_url'] = $cdpUrl;
+                    }
+
+                    // Headless mode — agent-controlled, falls back to tool config default.
+                    if ($headless !== null && $headless !== '') {
+                        $options['headless'] = filter_var($headless, FILTER_VALIDATE_BOOLEAN);
+                    } elseif (isset($toolModel->transport_config['headless'])) {
+                        $options['headless'] = (bool) $toolModel->transport_config['headless'];
                     }
 
                     try {
@@ -793,13 +815,56 @@ class ToolTranslator
                 ->first();
 
             if ($credential && ! empty($credential->credentials['api_key'])) {
+                $defaultModel = match ($provider) {
+                    'anthropic' => 'claude-sonnet-4-5-20250514',
+                    'openai' => 'gpt-4o',
+                    default => 'gpt-4o',
+                };
+
                 return [
                     'api_key' => $credential->credentials['api_key'],
                     'provider' => $provider,
+                    'model' => $defaultModel,
                 ];
             }
         }
 
         return null;
+    }
+
+    /**
+     * Resolve a proxy URL from the tool's transport_config.proxy_credential_id,
+     * or fall back to a raw transport_config.proxy_url string.
+     */
+    private function resolveProxyUrl(Tool $tool): ?string
+    {
+        $config = $tool->transport_config ?? [];
+
+        // Credential-based proxy (preferred).
+        $credentialId = $config['proxy_credential_id'] ?? null;
+        if ($credentialId && $tool->team_id) {
+            $credential = Credential::withoutGlobalScopes()
+                ->where('id', $credentialId)
+                ->where('team_id', $tool->team_id)
+                ->first();
+
+            if ($credential) {
+                $data = $credential->secret_data ?? [];
+                $protocol = $data['protocol'] ?? 'socks5';
+                $host = $data['host'] ?? '';
+                $port = $data['port'] ?? 1080;
+                $username = $data['username'] ?? null;
+                $password = $data['password'] ?? null;
+
+                if ($host) {
+                    $auth = ($username && $password) ? "{$username}:{$password}@" : '';
+
+                    return "{$protocol}://{$auth}{$host}:{$port}";
+                }
+            }
+        }
+
+        // Fallback: raw proxy_url in transport_config (for manual/legacy config).
+        return $config['proxy_url'] ?? null;
     }
 }
