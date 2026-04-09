@@ -47,25 +47,39 @@ class EnhanceWebsiteNavigationAction
         $nav = $this->buildNav($navPages);
         $validPaths = $this->buildValidPathSet($navPages);
 
-        foreach ($allPages as $page) {
-            $html = $page->exported_html ?? '';
-            $html = $this->injectNavigation($html, $nav);
-            $html = $this->rewriteInternalLinks($html, $validPaths);
-            [$html, $formId] = $this->injectContactForm($html, $page, $website->slug);
+        // Bypass WebsitePageObserver during the bulk update loop. Without
+        // this, the observer would bump website.content_version once per
+        // page (N UPDATEs on the websites row for a site with N pages).
+        // We bump the version ONCE at the end so cache invalidation still
+        // happens correctly.
+        WebsitePage::withoutEvents(function () use ($allPages, $nav, $validPaths, $website): void {
+            foreach ($allPages as $page) {
+                $html = $page->exported_html ?? '';
+                $html = $this->injectNavigation($html, $nav);
+                $html = $this->rewriteInternalLinks($html, $validPaths);
+                [$html, $formId] = $this->injectContactForm($html, $page, $website->slug);
 
-            // Direct update — HTML was already sanitized in Phase 1.
-            // We bypass UpdateWebsitePageAction here because:
-            // 1. The nav and form HTML is server-generated (trusted), not user input.
-            // 2. HtmlSanitizer strips form[action] (to prevent phishing). Re-running
-            //    it would remove the safe /api/public/... action we just injected.
-            $update = ['exported_html' => $html];
+                // Direct update — HTML was already sanitized in Phase 1.
+                // We bypass UpdateWebsitePageAction here because:
+                // 1. The nav and form HTML is server-generated (trusted), not user input.
+                // 2. HtmlSanitizer strips form[action] (to prevent phishing). Re-running
+                //    it would remove the safe /api/public/... action we just injected.
+                $update = ['exported_html' => $html];
 
-            if ($formId !== null) {
-                $update['form_id'] = $formId;
+                if ($formId !== null) {
+                    $update['form_id'] = $formId;
+                }
+
+                $page->update($update);
             }
+        });
 
-            $page->update($update);
-        }
+        // Single atomic bump of content_version to invalidate all cached
+        // widget output for this website. Equivalent to what the observer
+        // would have done N times, but only once.
+        Website::query()
+            ->whereKey($website->id)
+            ->update(['content_version' => \Illuminate\Support\Facades\DB::raw('content_version + 1')]);
     }
 
     /**
