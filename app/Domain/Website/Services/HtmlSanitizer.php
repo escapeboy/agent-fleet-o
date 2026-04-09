@@ -19,8 +19,12 @@ final class HtmlSanitizer
 
         // Must be set before maybeGetRawHTMLDefinition
         $config->set('HTML.DefinitionID', 'fleet-website-sanitizer');
-        $config->set('HTML.DefinitionRev', 3); // bumped: form action made optional
+        $config->set('HTML.DefinitionRev', 4); // bumped: allow fleetq widget comments
         $config->set('HTML.Forms', true);     // enables HTMLPurifier's built-in Forms module
+
+        // Preserve <!-- fleetq:widget ... --> markers so WebsiteWidgetRenderer
+        // can expand them at serve time. Other HTML comments are still stripped.
+        $config->set('HTML.AllowedCommentsRegexp', '/^\s*fleetq:/i');
 
         // Allow common HTML elements and attributes
         $config->set('HTML.Allowed', implode(',', [
