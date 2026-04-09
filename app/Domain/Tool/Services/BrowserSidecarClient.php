@@ -80,6 +80,10 @@ class BrowserSidecarClient
             $payload['cdp_url'] = $options['cdp_url'];
         }
 
+        if (isset($options['headless'])) {
+            $payload['headless'] = (bool) $options['headless'];
+        }
+
         try {
             $response = Http::timeout($httpTimeout)
                 ->baseUrl($this->baseUrl)

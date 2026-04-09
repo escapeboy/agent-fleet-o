@@ -476,11 +476,12 @@ class ToolTranslator
 
         return [
             PrismTool::as('browser_task')
-                ->for('Autonomously browse the web to complete a task (navigate, click, fill forms, extract data). Returns the extracted result as text.')
+                ->for('Autonomously browse the web to complete a task (navigate, click, fill forms, extract data). Returns the extracted result as text. Set headless=false for sites with anti-bot protection (Reddit, Cloudflare-protected sites) — runs in a virtual display.')
                 ->withStringParameter('task', 'Natural language description of the browsing task to perform')
                 ->withStringParameter('start_url', 'Optional starting URL to begin from', required: false)
                 ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10, plan-capped)', required: false)
-                ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null) use ($mode, $toolModel): string {
+                ->withStringParameter('headless', 'Run browser in headless mode. Pass "true" (default) or "false". Use "false" for sites with anti-bot detection (Reddit, Cloudflare challenges) — uses a real visible Chrome in a virtual display.', required: false)
+                ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null, ?string $headless = null) use ($mode, $toolModel): string {
                     // Execution-time plan gate — cloud registers 'browser.plan_gate' as a callable.
                     if ($toolModel->team_id && app()->bound('browser.plan_gate')) {
                         $gate = app('browser.plan_gate');
@@ -541,6 +542,13 @@ class ToolTranslator
                     $cdpUrl = $toolModel->transport_config['cdp_url'] ?? null;
                     if ($cdpUrl) {
                         $options['cdp_url'] = $cdpUrl;
+                    }
+
+                    // Headless mode — agent-controlled, falls back to tool config default.
+                    if ($headless !== null && $headless !== '') {
+                        $options['headless'] = filter_var($headless, FILTER_VALIDATE_BOOLEAN);
+                    } elseif (isset($toolModel->transport_config['headless'])) {
+                        $options['headless'] = (bool) $toolModel->transport_config['headless'];
                     }
 
                     try {
