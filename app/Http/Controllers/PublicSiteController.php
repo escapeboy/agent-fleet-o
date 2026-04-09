@@ -7,6 +7,7 @@ use App\Domain\Website\Enums\WebsitePageStatus;
 use App\Domain\Website\Enums\WebsitePageType;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
+use App\Domain\Website\Services\WebsiteWidgetRenderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -56,7 +57,7 @@ class PublicSiteController extends Controller
         return response()->json($pages);
     }
 
-    public function page(string $slug, string $pageSlug): JsonResponse
+    public function page(string $slug, string $pageSlug, WebsiteWidgetRenderer $widgets): JsonResponse
     {
         $website = Website::where('slug', $slug)
             ->where('status', WebsiteStatus::Published)
@@ -75,13 +76,19 @@ class PublicSiteController extends Controller
             return response()->json(['error' => 'Not found'], 404);
         }
 
+        // Widget pass: replace <!-- fleetq:recent-posts --> etc. with rendered
+        // snippets using team-scoped queries. Safe to run against AI-generated
+        // HTML because the placeholder syntax is restrictive and all attribute
+        // values are cast/validated in the renderer.
+        $html = $widgets->render($page->exported_html ?? '', $website);
+
         return response()->json([
             'id' => $page->id,
             'slug' => $page->slug,
             'title' => $page->title,
             'page_type' => $page->page_type->value,
             'meta' => $page->meta,
-            'exported_html' => $page->exported_html,
+            'exported_html' => $html,
         ])->withHeaders([
             'X-Content-Type-Options' => 'nosniff',
         ]);

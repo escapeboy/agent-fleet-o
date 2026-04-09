@@ -22,14 +22,36 @@
                 {{ ucfirst($website->status->value) }}
             </span>
         </div>
-        @if($website->status !== \App\Domain\Website\Enums\WebsiteStatus::Published)
-            <button wire:click="publishWebsite"
-                wire:confirm="Publish this website? All draft pages will be published and the site will go live."
-                class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
-                Publish Website
-            </button>
-        @endif
+        <div class="flex items-center gap-2">
+            @if($website->status === \App\Domain\Website\Enums\WebsiteStatus::Published)
+                <button wire:click="deployWebsite('zip')"
+                    class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    Deploy ZIP
+                </button>
+                <button wire:click="deployWebsite('vercel')"
+                    class="rounded-lg border border-primary-600 bg-white px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50">
+                    Deploy to Vercel
+                </button>
+                <button wire:click="unpublishWebsite"
+                    wire:confirm="Unpublish this website? The site will go offline and all pages will revert to draft."
+                    class="rounded-lg border border-yellow-300 bg-white px-4 py-2 text-sm font-medium text-yellow-700 hover:bg-yellow-50">
+                    Unpublish Website
+                </button>
+            @else
+                <button wire:click="publishWebsite"
+                    wire:confirm="Publish this website? All draft pages will be published and the site will go live."
+                    class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                    Publish Website
+                </button>
+            @endif
+        </div>
     </div>
+
+    @if(session('error'))
+        <div class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
 
     {{-- Info card --}}
     <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5">
@@ -158,6 +180,12 @@
                                             class="text-xs text-green-600 hover:text-green-800">
                                             Publish
                                         </button>
+                                    @else
+                                        <button wire:click="unpublishPage('{{ $page->id }}')"
+                                            wire:confirm="Unpublish this page? It will no longer be publicly accessible."
+                                            class="text-xs text-yellow-600 hover:text-yellow-800">
+                                            Unpublish
+                                        </button>
                                     @endif
                                     <button wire:click="deletePage('{{ $page->id }}')"
                                         wire:confirm="Delete this page? This cannot be undone."
@@ -171,6 +199,62 @@
                         <tr>
                             <td colspan="5" class="px-5 py-10 text-center text-sm text-gray-400">
                                 No pages yet.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- Deployments section --}}
+    <div class="mb-6 rounded-xl border border-gray-200 bg-white">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <h2 class="text-sm font-semibold text-gray-900">Deployments</h2>
+            <span class="text-xs text-gray-400">{{ $deployments->count() }} recent</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Provider</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                        <th class="hidden md:table-cell px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">When</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">URL / Log</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    @forelse($deployments as $deployment)
+                        <tr>
+                            <td class="px-5 py-4 text-sm font-medium text-gray-900">{{ ucfirst($deployment->provider->value) }}</td>
+                            <td class="px-5 py-4">
+                                @php
+                                    $statusColor = match($deployment->status->value) {
+                                        'deployed' => 'green',
+                                        'failed' => 'red',
+                                        'building' => 'blue',
+                                        default => 'gray',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-{{ $statusColor }}-100 text-{{ $statusColor }}-800">
+                                    {{ ucfirst($deployment->status->value) }}
+                                </span>
+                            </td>
+                            <td class="hidden md:table-cell px-5 py-4 text-xs text-gray-500">
+                                {{ $deployment->created_at->diffForHumans() }}
+                            </td>
+                            <td class="px-5 py-4 text-xs text-gray-600">
+                                @if($deployment->url)
+                                    <a href="{{ $deployment->url }}" target="_blank" class="text-primary-600 hover:text-primary-800">Download / Open</a>
+                                @else
+                                    <span class="text-gray-400">{{ Str::limit($deployment->build_log ?? '—', 80) }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="px-5 py-6 text-center text-sm text-gray-400">
+                                No deployments yet. Publish the website first, then click Deploy.
                             </td>
                         </tr>
                     @endforelse

@@ -6,6 +6,8 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
+use App\Domain\Website\Models\Website;
+use App\Domain\Website\Models\WebsitePage;
 use App\Domain\Workflow\Models\Workflow;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
@@ -23,6 +25,8 @@ class GetEntityTools
             self::getAgent(),
             self::getCrew(),
             self::getWorkflow(),
+            self::getWebsite(),
+            self::getWebsitePage(),
         ];
     }
 
@@ -162,6 +166,70 @@ class GetEntityTools
                     ])->toArray(),
                     'edges_count' => $workflow->edges->count(),
                     'url' => route('workflows.show', $workflow),
+                ]);
+            });
+    }
+
+    private static function getWebsite(): PrismToolObject
+    {
+        return PrismTool::as('get_website')
+            ->for('Get detailed information about a specific website, including its pages')
+            ->withStringParameter('website_id', 'The website UUID', required: true)
+            ->using(function (string $website_id) {
+                $website = Website::with('pages')->find($website_id);
+                if (! $website) {
+                    return json_encode(['error' => 'Website not found']);
+                }
+
+                return json_encode([
+                    'id' => $website->id,
+                    'name' => $website->name,
+                    'slug' => $website->slug,
+                    'status' => $website->status->value,
+                    'custom_domain' => $website->custom_domain,
+                    'settings' => $website->settings,
+                    'pages_count' => $website->pages->count(),
+                    'pages' => $website->pages->map(fn ($p) => [
+                        'id' => $p->id,
+                        'title' => $p->title,
+                        'slug' => $p->slug,
+                        'page_type' => $p->page_type->value,
+                        'status' => $p->status->value,
+                    ])->toArray(),
+                    'public_url' => url("/api/public/sites/{$website->slug}"),
+                    'builder_url' => route('websites.show', $website),
+                    'created' => $website->created_at->toIso8601String(),
+                    'updated' => $website->updated_at->toIso8601String(),
+                ]);
+            });
+    }
+
+    private static function getWebsitePage(): PrismToolObject
+    {
+        return PrismTool::as('get_website_page')
+            ->for('Get detailed information about a specific website page, including HTML preview')
+            ->withStringParameter('page_id', 'The page UUID', required: true)
+            ->using(function (string $page_id) {
+                $page = WebsitePage::with('website')->find($page_id);
+                if (! $page) {
+                    return json_encode(['error' => 'Website page not found']);
+                }
+
+                return json_encode([
+                    'id' => $page->id,
+                    'website_id' => $page->website_id,
+                    'website_name' => $page->website?->name,
+                    'title' => $page->title,
+                    'slug' => $page->slug,
+                    'page_type' => $page->page_type->value,
+                    'status' => $page->status->value,
+                    'sort_order' => $page->sort_order,
+                    'has_exported_html' => ! empty($page->exported_html),
+                    'html_length' => strlen($page->exported_html ?? ''),
+                    'html_preview' => mb_substr($page->exported_html ?? '', 0, 500),
+                    'meta' => $page->meta,
+                    'form_id' => $page->form_id,
+                    'published_at' => $page->published_at?->toIso8601String(),
                 ]);
             });
     }

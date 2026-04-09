@@ -9,6 +9,7 @@ use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
+use App\Http\Controllers\WebsiteDeploymentDownloadController;
 use App\Http\Controllers\WebsitePagePreviewController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
@@ -341,6 +342,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/websites/{website}', WebsiteDetailPage::class)->name('websites.show');
     Route::get('/websites/{website}/pages/{page}/edit', WebsiteBuilderPage::class)->name('websites.pages.edit');
     Route::get('/websites/{website}/pages/{page}/preview', WebsitePagePreviewController::class)->name('websites.pages.preview');
+    Route::get('/websites/deployments/{deployment}/download', WebsiteDeploymentDownloadController::class)
+        ->name('websites.deployment.download');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

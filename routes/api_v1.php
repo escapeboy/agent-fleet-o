@@ -338,6 +338,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Websites
     Route::apiResource('websites', WebsiteController::class);
+    Route::post('/websites/{website}/publish', [WebsiteController::class, 'publish']);
+    Route::post('/websites/{website}/unpublish', [WebsiteController::class, 'unpublish']);
+    Route::post('/websites/{website}/deploy', [WebsiteController::class, 'deploy']);
+    Route::get('/websites/{website}/deployments', [WebsiteController::class, 'deployments']);
+    Route::get('/websites/{website}/deployments/{deployment}', [WebsiteController::class, 'deployment']);
     Route::get('/websites/{website}/pages', [WebsitePageController::class, 'index']);
     Route::post('/websites/{website}/pages', [WebsitePageController::class, 'store']);
     Route::get('/websites/{website}/pages/{page}', [WebsitePageController::class, 'show']);

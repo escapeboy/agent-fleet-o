@@ -2,14 +2,27 @@
 
 namespace App\Domain\Website\Actions;
 
+use App\Domain\Website\Enums\WebsitePageStatus;
 use App\Domain\Website\Enums\WebsitePageType;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class EnhanceWebsiteNavigationAction
 {
-    public function execute(Website $website): void
+    /**
+     * Re-enhance every page in the website: rebuild the nav, validate internal
+     * links, and inject contact forms where appropriate.
+     *
+     * @param  bool  $publishedOnly  When true, the nav only lists published pages.
+     *                               Used by post-mutation hooks so drafts don't
+     *                               appear in the public navigation. Default false
+     *                               preserves the behaviour of the initial AI
+     *                               generation path (all pages are drafts until
+     *                               the user publishes them).
+     */
+    public function execute(Website $website, bool $publishedOnly = false): void
     {
         // Validate slug before using it in URL construction (defense-in-depth).
         // Str::slug() already guarantees this at creation time, but the slug
@@ -18,10 +31,64 @@ class EnhanceWebsiteNavigationAction
             throw new \InvalidArgumentException("Invalid website slug: {$website->slug}");
         }
 
-        $pages = $website->pages()->orderBy('sort_order')->get(['id', 'slug', 'title', 'page_type', 'exported_html', 'form_id']);
+        // Page set to enhance. When $publishedOnly is true we still update every
+        // page's HTML (so a newly-unpublished page can also be freshened), but
+        // the NAV only lists the published pages.
+        $allPages = $website->pages()->orderBy('sort_order')->get(['id', 'slug', 'title', 'page_type', 'status', 'exported_html', 'form_id']);
 
-        if ($pages->isEmpty()) {
+        if ($allPages->isEmpty()) {
             return;
+        }
+
+        $navPages = $publishedOnly
+            ? $allPages->where('status', WebsitePageStatus::Published)->values()
+            : $allPages;
+
+        $nav = $this->buildNav($navPages);
+        $validPaths = $this->buildValidPathSet($navPages);
+
+        // Bypass WebsitePageObserver during the bulk update loop. Without
+        // this, the observer would bump website.content_version once per
+        // page (N UPDATEs on the websites row for a site with N pages).
+        // We bump the version ONCE at the end so cache invalidation still
+        // happens correctly.
+        WebsitePage::withoutEvents(function () use ($allPages, $nav, $validPaths, $website): void {
+            foreach ($allPages as $page) {
+                $html = $page->exported_html ?? '';
+                $html = $this->injectNavigation($html, $nav);
+                $html = $this->rewriteInternalLinks($html, $validPaths);
+                [$html, $formId] = $this->injectContactForm($html, $page, $website->slug);
+
+                // Direct update — HTML was already sanitized in Phase 1.
+                // We bypass UpdateWebsitePageAction here because:
+                // 1. The nav and form HTML is server-generated (trusted), not user input.
+                // 2. HtmlSanitizer strips form[action] (to prevent phishing). Re-running
+                //    it would remove the safe /api/public/... action we just injected.
+                $update = ['exported_html' => $html];
+
+                if ($formId !== null) {
+                    $update['form_id'] = $formId;
+                }
+
+                $page->update($update);
+            }
+        });
+
+        // Single atomic bump of content_version to invalidate all cached
+        // widget output for this website. Equivalent to what the observer
+        // would have done N times, but only once.
+        Website::query()
+            ->whereKey($website->id)
+            ->update(['content_version' => \Illuminate\Support\Facades\DB::raw('content_version + 1')]);
+    }
+
+    /**
+     * @param  Collection<int, WebsitePage>  $pages
+     */
+    private function buildNav(Collection $pages): string
+    {
+        if ($pages->isEmpty()) {
+            return '<nav style="background:#1e293b;color:#e2e8f0;padding:14px 24px"></nav>';
         }
 
         $navLinks = $pages->map(fn (WebsitePage $p) => '<a href="/'.e($p->slug).'" '
@@ -29,28 +96,92 @@ class EnhanceWebsiteNavigationAction
             .e($p->title).'</a>',
         )->implode('');
 
-        $nav = '<nav style="background:#1e293b;color:#e2e8f0;padding:14px 24px;'
+        return '<nav style="background:#1e293b;color:#e2e8f0;padding:14px 24px;'
             .'display:flex;align-items:center;flex-wrap:wrap;gap:4px">'
             .$navLinks.'</nav>';
+    }
+
+    /**
+     * Internal paths that a link is allowed to target. Homepage ("/") is always
+     * valid. Page paths like "/about" are added per page.
+     *
+     * @param  Collection<int, WebsitePage>  $pages
+     * @return array<int, string>
+     */
+    private function buildValidPathSet(Collection $pages): array
+    {
+        $paths = ['/'];
 
         foreach ($pages as $page) {
-            $html = $page->exported_html ?? '';
-            $html = $this->injectNavigation($html, $nav);
-            [$html, $formId] = $this->injectContactForm($html, $page, $website->slug);
+            $paths[] = '/'.$page->slug;
 
-            // Direct update — HTML was already sanitized in Phase 1.
-            // We bypass UpdateWebsitePageAction here because:
-            // 1. The nav and form HTML is server-generated (trusted), not user input.
-            // 2. HtmlSanitizer strips form[action] (to prevent phishing). Re-running
-            //    it would remove the safe /api/public/... action we just injected.
-            $update = ['exported_html' => $html];
-
-            if ($formId !== null) {
-                $update['form_id'] = $formId;
+            if (in_array($page->slug, ['index', 'home'], true)) {
+                // Root is already in the list.
+                continue;
             }
-
-            $page->update($update);
         }
+
+        return array_values(array_unique($paths));
+    }
+
+    /**
+     * Rewrite broken internal links to "/" (homepage).
+     *
+     * Scans every <a href="/..."> in the HTML and checks whether the target
+     * path matches a real page slug. Unknown paths are rewritten so users
+     * don't land on a 404. Preserves external URLs, anchor-only links,
+     * API endpoints, protocol-relative URLs, and mailto/tel schemes.
+     *
+     * @param  array<int, string>  $validPaths
+     */
+    private function rewriteInternalLinks(string $html, array $validPaths): string
+    {
+        $result = preg_replace_callback(
+            '/(<a\s(?:[^>]*?\s)?)href="([^"]*)"([^>]*>)/i',
+            function (array $match) use ($validPaths): string {
+                $href = $match[2];
+
+                // Empty or anchor-only: leave it alone.
+                if ($href === '' || $href[0] === '#') {
+                    return $match[0];
+                }
+
+                // External URLs, mailto, tel, protocol-relative: leave alone.
+                if (str_starts_with($href, 'http://')
+                    || str_starts_with($href, 'https://')
+                    || str_starts_with($href, 'mailto:')
+                    || str_starts_with($href, 'tel:')
+                    || str_starts_with($href, '//')) {
+                    return $match[0];
+                }
+
+                // API endpoints (form actions, asset fetches): leave alone.
+                if (str_starts_with($href, '/api/')) {
+                    return $match[0];
+                }
+
+                // Only rewrite root-relative paths like "/learn-more".
+                if ($href[0] !== '/') {
+                    return $match[0];
+                }
+
+                // Strip query + fragment before matching. Using explode()
+                // instead of strtok() which relies on PHP global tokeniser
+                // state and is brittle inside a preg callback.
+                $path = explode('#', explode('?', $href, 2)[0], 2)[0];
+
+                if (in_array($path, $validPaths, true)) {
+                    return $match[0];
+                }
+
+                return $match[1].'href="/"'.$match[3];
+            },
+            $html,
+        );
+
+        // preg_replace_callback returns null on regex error (PREG_BACKTRACK_LIMIT_ERROR
+        // etc.). Fall back to original HTML rather than corrupting the page.
+        return $result ?? $html;
     }
 
     private function injectNavigation(string $html, string $nav): string
@@ -76,10 +207,18 @@ class EnhanceWebsiteNavigationAction
      */
     private function injectContactForm(string $html, WebsitePage $page, string $websiteSlug): array
     {
-        // HtmlSanitizer strips form[action] to prevent phishing — AI-generated forms
-        // will have their action removed. Skip only if the form already has an action
-        // pointing to our API (i.e., was injected by this action in a prior run).
-        if (stripos($html, '/api/public/') !== false && stripos($html, '<form') !== false) {
+        // Skip injection ONLY if the page already contains a <form> whose own
+        // action attribute points at our form ingestion endpoint for THIS
+        // website. Matching the form tag directly (rather than a loose
+        // substring that could be anywhere in the page) prevents an
+        // AI-authored page from defeating the heuristic by smuggling a
+        // phishing form plus a stray "/api/public/" token in unrelated text.
+        // The form_id character class is intentionally broad (URL-safe) — the
+        // real validation of form_id happens at the submission endpoint.
+        if (preg_match(
+            '/<form\b[^>]*\baction="\/api\/public\/sites\/'.preg_quote($websiteSlug, '/').'\/forms\/[A-Za-z0-9_-]{4,}"/i',
+            $html,
+        ) === 1) {
             return [$html, $page->form_id]; // preserve existing form_id
         }
 

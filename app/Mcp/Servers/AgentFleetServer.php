@@ -366,6 +366,8 @@ use App\Mcp\Tools\Webhook\WebhookUpdateTool;
 use App\Mcp\Tools\Website\WebsiteAnalyticsTool;
 use App\Mcp\Tools\Website\WebsiteCreateTool;
 use App\Mcp\Tools\Website\WebsiteDeleteTool;
+use App\Mcp\Tools\Website\WebsiteDeploymentListTool;
+use App\Mcp\Tools\Website\WebsiteDeployTool;
 use App\Mcp\Tools\Website\WebsiteExportTool;
 use App\Mcp\Tools\Website\WebsiteGenerateTool;
 use App\Mcp\Tools\Website\WebsiteGetTool;
@@ -374,7 +376,9 @@ use App\Mcp\Tools\Website\WebsitePageCreateTool;
 use App\Mcp\Tools\Website\WebsitePageGetTool;
 use App\Mcp\Tools\Website\WebsitePageListTool;
 use App\Mcp\Tools\Website\WebsitePagePublishTool;
+use App\Mcp\Tools\Website\WebsitePageUnpublishTool;
 use App\Mcp\Tools\Website\WebsitePageUpdateTool;
+use App\Mcp\Tools\Website\WebsiteUnpublishTool;
 use App\Mcp\Tools\Website\WebsiteUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
@@ -971,20 +975,24 @@ class AgentFleetServer extends Server
         A2uiRenderSurfaceTool::class,
         A2uiValidateSurfaceTool::class,
 
-        // Website (16)
+        // Website (15)
         WebsiteListTool::class,
         WebsiteGetTool::class,
         WebsiteCreateTool::class,
         WebsiteUpdateTool::class,
         WebsiteDeleteTool::class,
+        WebsiteUnpublishTool::class,
         WebsitePageListTool::class,
         WebsitePageGetTool::class,
         WebsitePageCreateTool::class,
         WebsitePageUpdateTool::class,
         WebsitePagePublishTool::class,
+        WebsitePageUnpublishTool::class,
         WebsiteGenerateTool::class,
         WebsiteExportTool::class,
         WebsiteAnalyticsTool::class,
+        WebsiteDeployTool::class,
+        WebsiteDeploymentListTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */

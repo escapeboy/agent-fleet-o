@@ -10,11 +10,23 @@ use App\Domain\Website\Actions\UpdateWebsiteAction;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
 use Tests\TestCase;
 
 class PublicSiteControllerTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * The form-submit route is protected by `throttle:10,1`. When the full
+     * suite runs, upstream tests leave residual counter state that causes
+     * false 429 failures in these tests. Disable throttle only for this
+     * test class — actual rate limiting is verified elsewhere.
+     *
+     * @var array<int, string>
+     */
+    protected $middlewareGroups = [];
 
     private Team $team;
 
@@ -23,6 +35,11 @@ class PublicSiteControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->withoutMiddleware([
+            ThrottleRequests::class,
+            ThrottleRequestsWithRedis::class,
+        ]);
 
         $this->team = Team::factory()->create();
 

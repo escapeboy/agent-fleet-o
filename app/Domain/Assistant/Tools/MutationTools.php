@@ -8,6 +8,7 @@ use App\Domain\Assistant\Tools\Mutations\CrewMutationTools;
 use App\Domain\Assistant\Tools\Mutations\DataMutationTools;
 use App\Domain\Assistant\Tools\Mutations\ExperimentMutationTools;
 use App\Domain\Assistant\Tools\Mutations\ProjectMutationTools;
+use App\Domain\Assistant\Tools\Mutations\WebsiteMutationTools;
 use App\Domain\Assistant\Tools\Mutations\WorkflowMutationTools;
 use Prism\Prism\Tool as PrismToolObject;
 
@@ -24,6 +25,7 @@ class MutationTools
             CrewMutationTools::writeTools(),
             ExperimentMutationTools::writeTools(),
             WorkflowMutationTools::writeTools(),
+            WebsiteMutationTools::writeTools(),
             AdminMutationTools::writeTools(),
             DataMutationTools::writeTools(),
         );
@@ -38,6 +40,7 @@ class MutationTools
             ExperimentMutationTools::destructiveTools(),
             ProjectMutationTools::destructiveTools(),
             AgentMutationTools::destructiveTools(),
+            WebsiteMutationTools::destructiveTools(),
             DataMutationTools::destructiveTools(),
             AdminMutationTools::destructiveTools(),
         );

@@ -59,6 +59,18 @@ CRITICAL RULES:
    Replace WEBSITE_SLUG and generate a random UNIQUE_ID for each form.
 5. Use inline CSS only (no external files or <link> tags).
 6. Generate real, specific content — no Lorem Ipsum or placeholder text.
+7. DYNAMIC WIDGETS: Prefer server-side widget markers over hardcoded lists when
+   the page should show content that changes over time. The platform expands
+   these HTML comment markers at serve time with live data, so you don't have
+   to hand-write placeholder content. Supported widgets:
+   - <!-- fleetq:recent-posts limit="3" --> — lists the most recent blog posts
+     as cards linking to each post. Use on homepage hero sections, blog index
+     pages, or "latest news" sidebars. Limit is optional, default 5, max 50.
+   - <!-- fleetq:page-list type="page" --> — lists all published pages of the
+     given type as a simple link list. Use for sitemaps and footer nav. Type
+     must be one of: page, post, product, landing.
+   Place the marker where you want the dynamic content to appear. Do NOT
+   wrap it in a code block — output raw HTML comments.
 PROMPT;
 
         $userPrompt = "Website name: {$name}\nWebsite slug: {$websiteSlug}\nDescription: {$prompt}\n\n"

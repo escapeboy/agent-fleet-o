@@ -64,6 +64,7 @@ class AssistantToolRegistry
             in_array($toolName, [
                 'kill_experiment', 'archive_project',
                 'delete_agent', 'delete_memory', 'delete_connector_binding',
+                'delete_website', 'delete_website_page',
                 'manage_byok_credential', 'manage_api_token',
             ]) => 'destructive',
             str_starts_with($toolName, 'create_') ||
@@ -81,6 +82,9 @@ class AssistantToolRegistry
             str_starts_with($toolName, 'save_') ||
             str_starts_with($toolName, 'sync_') ||
             str_starts_with($toolName, 'upload_') ||
+            str_starts_with($toolName, 'publish_') ||
+            str_starts_with($toolName, 'unpublish_') ||
+            str_starts_with($toolName, 'deploy_') ||
             str_starts_with($toolName, 'schedule_') => 'write',
             default => 'read',
         };

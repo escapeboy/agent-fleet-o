@@ -23,11 +23,13 @@ class Website extends Model
         'status',
         'settings',
         'custom_domain',
+        'content_version',
     ];
 
     protected $casts = [
         'status' => WebsiteStatus::class,
         'settings' => 'array',
+        'content_version' => 'integer',
     ];
 
     public function user(): BelongsTo

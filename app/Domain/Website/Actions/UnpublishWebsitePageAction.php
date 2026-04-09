@@ -5,7 +5,7 @@ namespace App\Domain\Website\Actions;
 use App\Domain\Website\Enums\WebsitePageStatus;
 use App\Domain\Website\Models\WebsitePage;
 
-class PublishWebsitePageAction
+class UnpublishWebsitePageAction
 {
     public function __construct(
         private readonly EnhanceWebsiteNavigationAction $enhance,
@@ -13,17 +13,17 @@ class PublishWebsitePageAction
 
     public function execute(WebsitePage $page): WebsitePage
     {
-        if ($page->exported_html === null) {
-            throw new \RuntimeException('Page has no exported HTML to publish');
+        if ($page->status !== WebsitePageStatus::Published) {
+            return $page->fresh();
         }
 
         $page->update([
-            'status' => WebsitePageStatus::Published,
-            'published_at' => now(),
+            'status' => WebsitePageStatus::Draft,
+            'published_at' => null,
         ]);
 
-        // Refresh nav on every sibling page so the newly-published page shows up
-        // in their navigation. Only published pages appear in the public nav.
+        // Rebuild nav on every other published page so the unpublished page is
+        // removed from their navigation.
         if ($website = $page->website) {
             $this->enhance->execute($website, publishedOnly: true);
         }
