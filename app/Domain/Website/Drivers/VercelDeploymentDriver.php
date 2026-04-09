@@ -50,7 +50,7 @@ class VercelDeploymentDriver implements WebsiteDeploymentDriver
 
         if ($response->failed()) {
             throw new DeploymentDriverException(
-                'Vercel API error: '.$response->status().' '.$response->body(),
+                'Vercel API error: '.$response->status().' '.$this->scrubResponseBody($response->body()),
             );
         }
 
@@ -133,5 +133,33 @@ class VercelDeploymentDriver implements WebsiteDeploymentDriver
     private function projectName(Website $website): string
     {
         return Str::slug('fleetq-'.$website->slug, '-');
+    }
+
+    /**
+     * Truncate and redact the Vercel response body before it ends up in logs
+     * or exception messages. Vercel does not echo the bearer token in error
+     * bodies today, but we defensively scrub anything that looks like an
+     * Authorization header value or a JSON "token" field so a future API
+     * change cannot leak credentials into Horizon/audit logs.
+     */
+    private function scrubResponseBody(string $body): string
+    {
+        $truncated = mb_substr($body, 0, 500);
+
+        // Redact JSON token-like fields.
+        $truncated = preg_replace(
+            '/"(token|access_token|api_key|authorization)"\s*:\s*"[^"]*"/i',
+            '"$1":"[REDACTED]"',
+            $truncated,
+        ) ?? $truncated;
+
+        // Redact Bearer tokens.
+        $truncated = preg_replace(
+            '/\bBearer\s+[A-Za-z0-9._~+\/=-]{10,}/',
+            'Bearer [REDACTED]',
+            $truncated,
+        ) ?? $truncated;
+
+        return $truncated;
     }
 }

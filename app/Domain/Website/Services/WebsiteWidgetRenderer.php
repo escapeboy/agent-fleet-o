@@ -25,15 +25,33 @@ class WebsiteWidgetRenderer
 {
     public const SUPPORTED = ['recent-posts', 'page-list'];
 
+    /**
+     * Maximum number of widget placeholders expanded per page. Widgets past
+     * this cap are replaced with an empty string. The cap prevents a
+     * malicious or runaway AI-generated page from issuing hundreds of DB
+     * queries per public request.
+     */
+    public const MAX_WIDGETS_PER_PAGE = 20;
+
     public function render(string $html, Website $website): string
     {
         if (! str_contains($html, 'fleetq:')) {
             return $html;
         }
 
+        $expanded = 0;
+        // Per-call memoization: the same widget+attribute combination only
+        // runs one DB query per render, no matter how many times it appears.
+        $cache = [];
+
         $result = preg_replace_callback(
             '/<!--\s*fleetq:([a-z][a-z0-9-]*)\s*([^>]*?)\s*-->/i',
-            function (array $match) use ($website): string {
+            function (array $match) use ($website, &$expanded, &$cache): string {
+                if ($expanded >= self::MAX_WIDGETS_PER_PAGE) {
+                    return '';
+                }
+                $expanded++;
+
                 $widget = strtolower($match[1]);
                 $attrs = $this->parseAttrs($match[2]);
 
@@ -41,11 +59,22 @@ class WebsiteWidgetRenderer
                     return '';
                 }
 
-                return match ($widget) {
+                ksort($attrs);
+                $cacheKey = $widget.'|'.http_build_query($attrs);
+
+                if (isset($cache[$cacheKey])) {
+                    return $cache[$cacheKey];
+                }
+
+                $rendered = match ($widget) {
                     'recent-posts' => $this->widgetRecentPosts($website, $attrs),
                     'page-list' => $this->widgetPageList($website, $attrs),
                     default => '',
                 };
+
+                $cache[$cacheKey] = $rendered;
+
+                return $rendered;
             },
             $html,
         );

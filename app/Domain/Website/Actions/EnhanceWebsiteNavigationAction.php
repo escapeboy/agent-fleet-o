@@ -151,8 +151,10 @@ class EnhanceWebsiteNavigationAction
                     return $match[0];
                 }
 
-                // Strip query + fragment before matching.
-                $path = strtok($href, '?#');
+                // Strip query + fragment before matching. Using explode()
+                // instead of strtok() which relies on PHP global tokeniser
+                // state and is brittle inside a preg callback.
+                $path = explode('#', explode('?', $href, 2)[0], 2)[0];
 
                 if (in_array($path, $validPaths, true)) {
                     return $match[0];
@@ -191,10 +193,18 @@ class EnhanceWebsiteNavigationAction
      */
     private function injectContactForm(string $html, WebsitePage $page, string $websiteSlug): array
     {
-        // HtmlSanitizer strips form[action] to prevent phishing — AI-generated forms
-        // will have their action removed. Skip only if the form already has an action
-        // pointing to our API (i.e., was injected by this action in a prior run).
-        if (stripos($html, '/api/public/') !== false && stripos($html, '<form') !== false) {
+        // Skip injection ONLY if the page already contains a <form> whose own
+        // action attribute points at our form ingestion endpoint for THIS
+        // website. Matching the form tag directly (rather than a loose
+        // substring that could be anywhere in the page) prevents an
+        // AI-authored page from defeating the heuristic by smuggling a
+        // phishing form plus a stray "/api/public/" token in unrelated text.
+        // The form_id character class is intentionally broad (URL-safe) — the
+        // real validation of form_id happens at the submission endpoint.
+        if (preg_match(
+            '/<form\b[^>]*\baction="\/api\/public\/sites\/'.preg_quote($websiteSlug, '/').'\/forms\/[A-Za-z0-9_-]{4,}"/i',
+            $html,
+        ) === 1) {
             return [$html, $page->form_id]; // preserve existing form_id
         }
 
