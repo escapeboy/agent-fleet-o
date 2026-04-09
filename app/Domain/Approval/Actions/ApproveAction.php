@@ -14,6 +14,7 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class ApproveAction
@@ -24,117 +25,152 @@ class ApproveAction
 
     public function execute(ApprovalRequest $approvalRequest, ?string $reviewerId, ?string $notes = null): void
     {
-        if ($approvalRequest->status !== ApprovalStatus::Pending) {
-            throw new InvalidArgumentException(
-                "Approval request [{$approvalRequest->id}] is not pending.",
-            );
-        }
+        DB::transaction(function () use ($approvalRequest, $reviewerId, $notes): void {
+            // Re-fetch with row lock so concurrent approve/reject calls
+            // serialize on the same row. Without the lock two parallel
+            // requests both pass the pending check and fire webhook /
+            // credential activation twice.
+            $locked = ApprovalRequest::query()
+                ->whereKey($approvalRequest->id)
+                ->lockForUpdate()
+                ->first();
 
-        $approvalRequest->update([
-            'status' => ApprovalStatus::Approved,
-            'reviewed_by' => $reviewerId,
-            'reviewer_notes' => $notes,
-            'reviewed_at' => now(),
-        ]);
-
-        // Chatbot response approval: deliver approved content via event
-        if ($approvalRequest->isChatbotResponse()) {
-            $message = ChatbotMessage::find($approvalRequest->chatbot_message_id);
-            if ($message) {
-                $approvedContent = $approvalRequest->edited_content ?? $message->draft_content ?? '';
-                $message->update([
-                    'content' => $approvedContent,
-                    'was_escalated' => true,
-                ]);
-
-                ChatbotResponseApprovedEvent::dispatch(
-                    chatbotMessageId: $message->id,
-                    sessionId: $message->session_id,
-                    approvedContent: $approvedContent,
+            if (! $locked) {
+                throw new InvalidArgumentException(
+                    "Approval request [{$approvalRequest->id}] not found.",
                 );
             }
 
-            if ($approvalRequest->callback_url) {
-                $approvalRequest->update(['callback_status' => 'pending']);
-                FireApprovalWebhookJob::dispatch($approvalRequest->id);
+            if ($locked->status !== ApprovalStatus::Pending) {
+                throw new InvalidArgumentException(
+                    "Approval request [{$locked->id}] is not pending.",
+                );
             }
 
-            return;
-        }
+            $locked->update([
+                'status' => ApprovalStatus::Approved,
+                'reviewed_by' => $reviewerId,
+                'reviewer_notes' => $notes,
+                'reviewed_at' => now(),
+            ]);
 
-        // Credential review approval: activate the credential
-        if ($approvalRequest->isCredentialReview()) {
-            $credential = $approvalRequest->credential;
-            if ($credential) {
-                $credential->update(['status' => CredentialStatus::Active]);
+            // Reflect the freshly loaded state on the caller-supplied model
+            // so downstream code that already holds the original instance
+            // sees the same data.
+            $approvalRequest->setRawAttributes($locked->getAttributes(), true);
+
+            // Chatbot response approval: deliver approved content via event
+            if ($locked->isChatbotResponse()) {
+                $message = ChatbotMessage::find($locked->chatbot_message_id);
+                if ($message) {
+                    $approvedContent = $locked->edited_content ?? $message->draft_content ?? '';
+                    $message->update([
+                        'content' => $approvedContent,
+                        'was_escalated' => true,
+                    ]);
+
+                    DB::afterCommit(function () use ($message, $approvedContent): void {
+                        ChatbotResponseApprovedEvent::dispatch(
+                            chatbotMessageId: $message->id,
+                            sessionId: $message->session_id,
+                            approvedContent: $approvedContent,
+                        );
+                    });
+                }
+
+                $this->scheduleCallback($locked);
+
+                return;
             }
+
+            // Credential review approval: activate the credential
+            if ($locked->isCredentialReview()) {
+                $credential = $locked->credential;
+                if ($credential) {
+                    $credential->update(['status' => CredentialStatus::Active]);
+                }
+
+                $ocsf = OcsfMapper::classify('approval.approved');
+                AuditEntry::withoutGlobalScopes()->create([
+                    'user_id' => $reviewerId,
+                    'team_id' => $locked->team_id,
+                    'event' => 'approval.approved',
+                    'ocsf_class_uid' => $ocsf['class_uid'],
+                    'ocsf_severity_id' => $ocsf['severity_id'],
+                    'subject_type' => ApprovalRequest::class,
+                    'subject_id' => $locked->id,
+                    'properties' => [
+                        'credential_id' => $locked->credential_id,
+                        'notes' => $notes,
+                    ],
+                    'created_at' => now(),
+                ]);
+
+                $this->scheduleCallback($locked);
+
+                return;
+            }
+
+            // Approve all proposals in the batch
+            $experiment = $locked->experiment;
+            $experiment->outboundProposals()
+                ->where('status', OutboundProposalStatus::PendingApproval)
+                ->update(['status' => OutboundProposalStatus::Approved]);
 
             $ocsf = OcsfMapper::classify('approval.approved');
             AuditEntry::withoutGlobalScopes()->create([
                 'user_id' => $reviewerId,
-                'team_id' => $approvalRequest->team_id,
+                'team_id' => $experiment->team_id,
                 'event' => 'approval.approved',
                 'ocsf_class_uid' => $ocsf['class_uid'],
                 'ocsf_severity_id' => $ocsf['severity_id'],
                 'subject_type' => ApprovalRequest::class,
-                'subject_id' => $approvalRequest->id,
+                'subject_id' => $locked->id,
                 'properties' => [
-                    'credential_id' => $approvalRequest->credential_id,
+                    'experiment_id' => $experiment->id,
                     'notes' => $notes,
                 ],
                 'created_at' => now(),
             ]);
 
-            if ($approvalRequest->callback_url) {
-                $approvalRequest->update(['callback_status' => 'pending']);
-                FireApprovalWebhookJob::dispatch($approvalRequest->id);
-            }
+            // Transition experiment to approved, which triggers executing.
+            // TransitionExperimentAction nests its own SELECT FOR UPDATE; the
+            // outer transaction here uses Postgres savepoints so nested locks
+            // are safe.
+            $this->transition->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::Approved,
+                reason: 'Approved by operator',
+                actorId: $reviewerId,
+                metadata: ['notes' => $notes],
+            );
 
+            // Immediately transition to executing
+            $this->transition->execute(
+                experiment: Experiment::withoutGlobalScopes()->find($experiment->id),
+                toState: ExperimentStatus::Executing,
+                reason: 'Outbound dispatched after approval',
+            );
+
+            $this->scheduleCallback($locked);
+        });
+    }
+
+    /**
+     * Mark the request as having a pending callback (so polling stays in
+     * sync) and queue the webhook dispatch for after commit so a rolled-back
+     * approval never fires the callback.
+     */
+    private function scheduleCallback(ApprovalRequest $approvalRequest): void
+    {
+        if (! $approvalRequest->callback_url) {
             return;
         }
 
-        // Approve all proposals in the batch
-        $experiment = $approvalRequest->experiment;
-        $experiment->outboundProposals()
-            ->where('status', OutboundProposalStatus::PendingApproval)
-            ->update(['status' => OutboundProposalStatus::Approved]);
+        $approvalRequest->update(['callback_status' => 'pending']);
 
-        $ocsf = OcsfMapper::classify('approval.approved');
-        AuditEntry::withoutGlobalScopes()->create([
-            'user_id' => $reviewerId,
-            'team_id' => $experiment->team_id,
-            'event' => 'approval.approved',
-            'ocsf_class_uid' => $ocsf['class_uid'],
-            'ocsf_severity_id' => $ocsf['severity_id'],
-            'subject_type' => ApprovalRequest::class,
-            'subject_id' => $approvalRequest->id,
-            'properties' => [
-                'experiment_id' => $experiment->id,
-                'notes' => $notes,
-            ],
-            'created_at' => now(),
-        ]);
-
-        // Transition experiment to approved, which triggers executing
-        $this->transition->execute(
-            experiment: $experiment,
-            toState: ExperimentStatus::Approved,
-            reason: 'Approved by operator',
-            actorId: $reviewerId,
-            metadata: ['notes' => $notes],
-        );
-
-        // Immediately transition to executing
-        $this->transition->execute(
-            experiment: Experiment::withoutGlobalScopes()->find($experiment->id),
-            toState: ExperimentStatus::Executing,
-            reason: 'Outbound dispatched after approval',
-        );
-
-        // Fire webhook callback if configured
-        if ($approvalRequest->callback_url) {
-            $approvalRequest->update(['callback_status' => 'pending']);
+        DB::afterCommit(function () use ($approvalRequest): void {
             FireApprovalWebhookJob::dispatch($approvalRequest->id);
-        }
+        });
     }
 }

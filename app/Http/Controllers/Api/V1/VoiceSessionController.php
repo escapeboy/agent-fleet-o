@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Shared\Services\PlanEnforcer;
 use App\Domain\VoiceSession\Actions\AppendTranscriptAction;
 use App\Domain\VoiceSession\Actions\CreateVoiceSessionAction;
 use App\Domain\VoiceSession\Actions\EndVoiceSessionAction;
@@ -13,6 +14,7 @@ use App\Domain\VoiceSession\Services\LiveKitCredentialResolver;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -44,14 +46,17 @@ class VoiceSessionController extends Controller
      */
     public function store(Request $request, CreateVoiceSessionAction $action, LiveKitCredentialResolver $resolver): JsonResponse
     {
+        $teamId = $request->user()?->current_team_id;
         $request->validate([
-            'agent_id' => ['required', 'uuid', 'exists:agents,id'],
-            'approval_request_id' => ['sometimes', 'nullable', 'uuid', 'exists:approval_requests,id'],
+            'agent_id' => ['required', 'uuid',
+                Rule::exists('agents', 'id')->where('team_id', $teamId)],
+            'approval_request_id' => ['sometimes', 'nullable', 'uuid',
+                Rule::exists('approval_requests', 'id')->where('team_id', $teamId)],
             'settings' => ['sometimes', 'array'],
         ]);
 
-        if (app()->bound(\App\Domain\Shared\Services\PlanEnforcer::class)) {
-            $enforcer = app(\App\Domain\Shared\Services\PlanEnforcer::class);
+        if (app()->bound(PlanEnforcer::class)) {
+            $enforcer = app(PlanEnforcer::class);
             if (! $enforcer->hasFeature($request->user()->currentTeam, 'voice_agent')) {
                 return response()->json([
                     'message' => 'Voice Agent is available on the Enterprise plan.',

@@ -6,6 +6,7 @@ use App\Domain\GitRepository\Actions\CreateGitRepositoryAction;
 use App\Domain\GitRepository\Enums\GitProvider;
 use App\Domain\GitRepository\Enums\GitRepoMode;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -52,19 +53,21 @@ DESC;
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'url' => 'required|string|max:2048',
             'mode' => 'nullable|string|in:api_only,sandbox,bridge',
             'provider' => 'nullable|string|in:github,gitlab,bitbucket,gitea,generic',
             'default_branch' => 'nullable|string|max:255',
-            'credential_id' => 'nullable|uuid|exists:credentials,id',
+            'credential_id' => ['nullable', 'uuid',
+                Rule::exists('credentials', 'id')->where('team_id', $teamId)],
             'config' => 'nullable|array',
         ]);
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-        if (! $teamId) {
-            return Response::error('No current team.');
-        }
 
         try {
             $repo = app(CreateGitRepositoryAction::class)->execute(

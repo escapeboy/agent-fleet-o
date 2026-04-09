@@ -14,6 +14,7 @@ use App\Http\Resources\Api\V1\TriggerRuleResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -46,7 +47,8 @@ class TriggerController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'project_id' => ['sometimes', 'nullable', 'string', 'exists:projects,id'],
+            'project_id' => ['sometimes', 'nullable', 'string',
+                Rule::exists('projects', 'id')->where('team_id', $request->user()?->current_team_id)],
             'source_type' => ['sometimes', 'string', 'max:64'],
             'conditions' => ['sometimes', 'nullable', 'array'],
             'input_mapping' => ['sometimes', 'nullable', 'array'],
@@ -74,7 +76,8 @@ class TriggerController extends Controller
     {
         $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'project_id' => ['sometimes', 'nullable', 'string', 'exists:projects,id'],
+            'project_id' => ['sometimes', 'nullable', 'string',
+                Rule::exists('projects', 'id')->where('team_id', $request->user()?->current_team_id)],
             'source_type' => ['sometimes', 'string', 'max:64'],
             'conditions' => ['sometimes', 'nullable', 'array'],
             'input_mapping' => ['sometimes', 'nullable', 'array'],
