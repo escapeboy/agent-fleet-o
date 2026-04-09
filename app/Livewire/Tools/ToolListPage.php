@@ -57,7 +57,11 @@ class ToolListPage extends Component
 
     public function toggleStatus(string $toolId): void
     {
-        $tool = Tool::withoutGlobalScopes()->findOrFail($toolId);
+        // TeamScope already includes platform records (team_id IS NULL), so
+        // a normal scoped query covers both own-team and platform tools and
+        // refuses cross-tenant IDs. The previous withoutGlobalScopes() call
+        // let any authenticated user toggle any team's tool by ID.
+        $tool = Tool::query()->findOrFail($toolId);
         $teamId = auth()->user()->current_team_id;
 
         if ($tool->isPlatformTool()) {

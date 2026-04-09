@@ -15,7 +15,10 @@ class CrewExecutionPanel extends Component
 
     public function terminateExecution(): void
     {
-        $execution = CrewExecution::withoutGlobalScopes()->find($this->executionId);
+        // Rely on TeamScope: cross-tenant executionId resolves to null,
+        // so an attacker spoofing the Reactive prop cannot terminate
+        // another team's crew run.
+        $execution = CrewExecution::query()->find($this->executionId);
 
         if ($execution && $execution->status->isActive()) {
             $execution->update([
@@ -28,7 +31,7 @@ class CrewExecutionPanel extends Component
 
     public function render()
     {
-        $execution = CrewExecution::withoutGlobalScopes()
+        $execution = CrewExecution::query()
             ->withCount('artifacts')
             ->with(['taskExecutions' => fn ($q) => $q->orderBy('sort_order'), 'taskExecutions.agent', 'chatMessages'])
             ->find($this->executionId);

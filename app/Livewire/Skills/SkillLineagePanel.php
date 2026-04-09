@@ -15,6 +15,10 @@ class SkillLineagePanel extends Component
 
     public function mount(string $skillId): void
     {
+        // Verify ownership before storing the ID; SkillVersion has no
+        // BelongsToTeam trait, so the version query below would otherwise
+        // happily disclose other teams' prompt history.
+        Skill::query()->findOrFail($skillId);
         $this->skillId = $skillId;
     }
 
@@ -30,7 +34,7 @@ class SkillLineagePanel extends Component
      */
     public function getLineageData(): array
     {
-        $skill = Skill::withoutGlobalScopes()->find($this->skillId);
+        $skill = Skill::query()->find($this->skillId);
 
         if (! $skill) {
             return ['nodes' => [], 'edges' => []];

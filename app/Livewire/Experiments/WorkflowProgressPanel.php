@@ -17,6 +17,17 @@ class WorkflowProgressPanel extends Component
     public ?string $expandedNodeId = null;
 
     /**
+     * Verify the experiment belongs to the current team. TeamScope returns
+     * null for cross-tenant IDs → 404. Without this guard, PlaybookStep
+     * (no BelongsToTeam trait) leaks via experiment_id queries below.
+     */
+    public function mount(string $experimentId): void
+    {
+        Experiment::query()->findOrFail($experimentId);
+        $this->experimentId = $experimentId;
+    }
+
+    /**
      * Real-time node states pushed via WorkflowNodeUpdated broadcast event.
      * Keyed by workflow_node_id. Each entry: {status, durationMs, cost, outputPreview}.
      *
@@ -63,13 +74,15 @@ class WorkflowProgressPanel extends Component
      */
     public function retryStep(string $stepId): void
     {
-        $step = PlaybookStep::find($stepId);
-        if (! $step || $step->experiment_id !== $this->experimentId) {
+        // Re-verify ownership: $experimentId is bound at mount but a hostile
+        // client could try to swap properties on subsequent updates.
+        $experiment = Experiment::query()->find($this->experimentId);
+        if (! $experiment) {
             return;
         }
 
-        $experiment = Experiment::withoutGlobalScopes()->find($this->experimentId);
-        if (! $experiment) {
+        $step = PlaybookStep::find($stepId);
+        if (! $step || $step->experiment_id !== $experiment->id) {
             return;
         }
 
@@ -86,7 +99,7 @@ class WorkflowProgressPanel extends Component
 
     public function render()
     {
-        $experiment = Experiment::withoutGlobalScopes()->find($this->experimentId);
+        $experiment = Experiment::query()->find($this->experimentId);
         $graph = $experiment?->constraints['workflow_graph'] ?? null;
 
         if (! $graph) {
