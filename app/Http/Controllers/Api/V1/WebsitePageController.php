@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Website\Actions\CreateWebsitePageAction;
 use App\Domain\Website\Actions\DeleteWebsitePageAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
+use App\Domain\Website\Actions\UnpublishWebsitePageAction;
 use App\Domain\Website\Actions\UpdateWebsitePageAction;
-use App\Domain\Website\Enums\WebsitePageStatus;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
 use App\Http\Controllers\Controller;
@@ -83,16 +83,13 @@ class WebsitePageController extends Controller
         return new WebsitePageResource($page);
     }
 
-    public function unpublish(Website $website, WebsitePage $page): WebsitePageResource
+    public function unpublish(Website $website, WebsitePage $page, UnpublishWebsitePageAction $action): WebsitePageResource
     {
         abort_if($page->website_id !== $website->id, 404);
 
-        $page->update([
-            'status' => WebsitePageStatus::Draft,
-            'published_at' => null,
-        ]);
+        $page = $action->execute($page);
 
-        return new WebsitePageResource($page->fresh());
+        return new WebsitePageResource($page);
     }
 
     public function destroy(Website $website, WebsitePage $page, DeleteWebsitePageAction $action): JsonResponse

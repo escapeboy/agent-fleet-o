@@ -5,9 +5,14 @@ namespace App\Livewire\Websites;
 use App\Domain\Website\Actions\CreateWebsitePageAction;
 use App\Domain\Website\Actions\DeleteWebsiteAction;
 use App\Domain\Website\Actions\DeleteWebsitePageAction;
+use App\Domain\Website\Actions\DeployWebsiteAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
+use App\Domain\Website\Actions\UnpublishWebsiteAction;
+use App\Domain\Website\Actions\UnpublishWebsitePageAction;
 use App\Domain\Website\Actions\UpdateWebsiteAction;
+use App\Domain\Website\Enums\DeploymentProvider;
 use App\Domain\Website\Enums\WebsiteStatus;
+use App\Domain\Website\Exceptions\DeploymentDriverException;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
 use Illuminate\Support\Str;
@@ -77,6 +82,24 @@ class WebsiteDetailPage extends Component
         $this->website->refresh();
     }
 
+    public function unpublishPage(string $pageId): void
+    {
+        // Scope to this website — prevents cross-website page unpublishing within same team
+        $page = $this->website->pages()->findOrFail($pageId);
+        app(UnpublishWebsitePageAction::class)->execute($page);
+
+        session()->flash('success', 'Page unpublished.');
+        $this->website->refresh();
+    }
+
+    public function unpublishWebsite(): void
+    {
+        app(UnpublishWebsiteAction::class)->execute($this->website);
+
+        session()->flash('success', 'Website unpublished.');
+        $this->website->refresh();
+    }
+
     public function publishWebsite(): void
     {
         // Only publish draft pages that have content — skip empty drafts
@@ -102,10 +125,32 @@ class WebsiteDetailPage extends Component
         $this->redirectRoute('websites.index');
     }
 
+    public function deployWebsite(string $provider = 'zip'): void
+    {
+        $providerEnum = DeploymentProvider::tryFrom($provider);
+        if (! $providerEnum) {
+            session()->flash('error', "Unknown deployment provider '{$provider}'.");
+
+            return;
+        }
+
+        try {
+            app(DeployWebsiteAction::class)->execute($this->website, $providerEnum);
+        } catch (DeploymentDriverException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
+        session()->flash('success', 'Deployment queued. Refresh in a few seconds to see the result.');
+        $this->website->refresh();
+    }
+
     public function render()
     {
         return view('livewire.websites.website-detail-page', [
             'pages' => $this->website->pages()->orderBy('sort_order')->get(),
+            'deployments' => $this->website->deployments()->orderByDesc('created_at')->limit(10)->get(),
         ])->layout('layouts.app', ['header' => $this->website->name]);
     }
 }
