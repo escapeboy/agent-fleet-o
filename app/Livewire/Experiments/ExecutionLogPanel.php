@@ -5,6 +5,7 @@ namespace App\Livewire\Experiments;
 use App\Domain\Approval\Actions\ApproveAction;
 use App\Domain\Approval\Actions\RejectAction;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Domain\Experiment\Models\PlaybookStep;
@@ -17,6 +18,17 @@ use Livewire\Component;
 class ExecutionLogPanel extends Component
 {
     public string $experimentId;
+
+    /**
+     * Verify the experiment belongs to the current team. TeamScope returns
+     * null for cross-tenant IDs → 404. Without this guard PlaybookStep (no
+     * BelongsToTeam trait) leaks via experiment_id queries below.
+     */
+    public function mount(string $experimentId): void
+    {
+        Experiment::query()->findOrFail($experimentId);
+        $this->experimentId = $experimentId;
+    }
 
     /** ID of the ApprovalRequest currently being rejected (drives modal visibility). */
     public string $rejectingApprovalId = '';
@@ -69,28 +81,27 @@ class ExecutionLogPanel extends Component
 
     public function render(): View
     {
-        // Load all stages ordered by start time
-        $stages = ExperimentStage::withoutGlobalScopes()
+        // Ownership already enforced in mount(); rely on TeamScope for the
+        // models that ship BelongsToTeam, and on the verified experimentId
+        // for PlaybookStep (which has no BelongsToTeam trait).
+        $stages = ExperimentStage::query()
             ->where('experiment_id', $this->experimentId)
             ->orderBy('started_at')
             ->orderBy('created_at')
             ->get();
 
-        // Load all state transitions
-        $allTransitions = ExperimentStateTransition::withoutGlobalScopes()
+        $allTransitions = ExperimentStateTransition::query()
             ->where('experiment_id', $this->experimentId)
             ->orderBy('created_at')
             ->get();
 
-        // Load all playbook steps
         $allSteps = PlaybookStep::where('experiment_id', $this->experimentId)
             ->orderBy('started_at')
             ->with('agent')
             ->limit(200)
             ->get();
 
-        // Load LLM calls grouped by stage (they have experiment_stage_id)
-        $allLlmLogs = LlmRequestLog::withoutGlobalScopes()
+        $allLlmLogs = LlmRequestLog::query()
             ->where('experiment_id', $this->experimentId)
             ->orderBy('created_at')
             ->limit(500)
