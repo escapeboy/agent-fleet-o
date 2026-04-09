@@ -7,6 +7,7 @@ use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool as ToolModel;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -44,21 +45,23 @@ class ToolUpdateTool extends Tool
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+
         $validated = $request->validate([
             'tool_id' => 'required|string',
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'status' => 'nullable|string|in:active,disabled',
             'risk_level' => 'nullable|string|in:safe,read,write,destructive',
-            'credential_id' => 'nullable|uuid|exists:credentials,id',
+            'credential_id' => ['nullable', 'uuid',
+                Rule::exists('credentials', 'id')->where('team_id', $teamId)],
             'clear_credential_id' => 'nullable|boolean',
             'network_policy' => 'nullable|string',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-        if (! $teamId) {
-            return Response::error('No current team.');
-        }
         $tool = ToolModel::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['tool_id']);
 
         if (! $tool) {

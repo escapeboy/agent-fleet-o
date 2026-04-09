@@ -194,12 +194,24 @@ class MemoryBrowserPage extends Component
             ->where('tier', MemoryTier::Proposed->value)
             ->count();
 
-        // Collect distinct tags across all memories for the filter dropdown
+        // Collect distinct tags across the current team's memories. The
+        // explicit team_id bind keeps tag names from leaking across tenants
+        // (the memories table has no row-level security; this query bypasses
+        // TeamScope by going through the DB facade, so the filter is mandatory).
         $availableTags = collect();
         if (config('database.default') === 'pgsql') {
-            $availableTags = collect(DB::select(
-                "SELECT DISTINCT jsonb_array_elements_text(tags) AS tag FROM memories WHERE tags IS NOT NULL AND tags != '[]'::jsonb ORDER BY tag",
-            ))->pluck('tag');
+            $teamId = auth()->user()?->current_team_id;
+            if ($teamId !== null) {
+                $availableTags = collect(DB::select(
+                    "SELECT DISTINCT jsonb_array_elements_text(tags) AS tag
+                     FROM memories
+                     WHERE team_id = ?
+                       AND tags IS NOT NULL
+                       AND tags != '[]'::jsonb
+                     ORDER BY tag",
+                    [$teamId],
+                ))->pluck('tag');
+            }
         }
 
         return view('livewire.memory.memory-browser-page', [

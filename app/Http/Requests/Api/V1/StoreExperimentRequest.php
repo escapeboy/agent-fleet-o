@@ -24,7 +24,8 @@ class StoreExperimentRequest extends FormRequest
             'max_outbound_count' => ['sometimes', 'integer', 'min:0'],
             'constraints' => ['sometimes', 'array'],
             'success_criteria' => ['sometimes', 'array'],
-            'workflow_id' => ['sometimes', 'nullable', 'uuid', 'exists:workflows,id'],
+            'workflow_id' => ['sometimes', 'nullable', 'uuid',
+                Rule::exists('workflows', 'id')->where('team_id', $this->user()?->current_team_id)],
         ];
     }
 }

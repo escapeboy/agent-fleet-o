@@ -5,6 +5,7 @@ namespace App\Http\Requests\Api\V1;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class StoreToolRequest extends FormRequest
@@ -25,7 +26,8 @@ class StoreToolRequest extends FormRequest
             'tool_definitions' => ['sometimes', 'nullable', 'array'],
             'settings' => ['sometimes', 'nullable', 'array'],
             'risk_level' => ['sometimes', 'nullable', new Enum(ToolRiskLevel::class)],
-            'credential_id' => ['sometimes', 'nullable', 'uuid', 'exists:credentials,id'],
+            'credential_id' => ['sometimes', 'nullable', 'uuid',
+                Rule::exists('credentials', 'id')->where('team_id', $this->user()?->current_team_id)],
         ];
     }
 }

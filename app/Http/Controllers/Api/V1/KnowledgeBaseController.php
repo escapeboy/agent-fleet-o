@@ -45,7 +45,8 @@ class KnowledgeBaseController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'agent_id' => ['sometimes', 'nullable', 'uuid', 'exists:agents,id'],
+            'agent_id' => ['sometimes', 'nullable', 'uuid',
+                Rule::exists('agents', 'id')->where('team_id', $request->user()?->current_team_id)],
         ]);
 
         $kb = $action->execute(
@@ -103,7 +104,8 @@ class KnowledgeBaseController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'agent_id' => ['sometimes', 'nullable', 'uuid', 'exists:agents,id'],
+            'agent_id' => ['sometimes', 'nullable', 'uuid',
+                Rule::exists('agents', 'id')->where('team_id', $request->user()?->current_team_id)],
         ]);
 
         $kb = $action->execute(
