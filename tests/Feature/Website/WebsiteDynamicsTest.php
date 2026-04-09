@@ -5,6 +5,7 @@ namespace Tests\Feature\Website;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Website\Actions\DeleteWebsitePageAction;
 use App\Domain\Website\Actions\EnhanceWebsiteNavigationAction;
+use App\Domain\Website\Actions\GenerateWebsiteFromPromptAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
 use App\Domain\Website\Actions\UnpublishWebsitePageAction;
 use App\Domain\Website\Actions\UpdateWebsitePageAction;
@@ -17,6 +18,7 @@ use App\Domain\Website\Services\HtmlSanitizer;
 use App\Domain\Website\Services\WebsiteWidgetRenderer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class WebsiteDynamicsTest extends TestCase
@@ -49,6 +51,9 @@ class WebsiteDynamicsTest extends TestCase
             'slug' => 'demo',
             'status' => WebsiteStatus::Published,
         ]);
+        // Refresh to pull the DB-default content_version into memory.
+        // Without this, the attribute is null until first fetch from DB.
+        $this->website->refresh();
     }
 
     private function makePage(string $slug, string $title, WebsitePageStatus $status, ?string $html = null, WebsitePageType $type = WebsitePageType::Page): WebsitePage
@@ -393,5 +398,131 @@ class WebsiteDynamicsTest extends TestCase
         $html = $renderer->render($input, $this->website);
 
         $this->assertSame(3, substr_count($html, 'Only Post'));
+    }
+
+    // ─── Widget caching (#3) ────────────────────────────────────────────────
+
+    public function test_widget_output_is_cached_across_renders(): void
+    {
+        Cache::flush();
+
+        $this->makePage('post-1', 'Cached Post', WebsitePageStatus::Published, '<p>x</p>', WebsitePageType::Post);
+
+        $renderer = new WebsiteWidgetRenderer;
+        $first = $renderer->render('<!-- fleetq:recent-posts limit="3" -->', $this->website);
+
+        // Delete the post — second render should still show "Cached Post"
+        // because it was cached. (Content version did NOT bump because we
+        // deleted via DB query, not via the observer.)
+        WebsitePage::query()
+            ->where('title', 'Cached Post')
+            ->update(['status' => WebsitePageStatus::Draft]);
+
+        $second = $renderer->render('<!-- fleetq:recent-posts limit="3" -->', $this->website);
+
+        $this->assertSame($first, $second, 'cache hit should return identical HTML');
+        $this->assertStringContainsString('Cached Post', $second);
+    }
+
+    public function test_cache_invalidates_when_content_version_bumps(): void
+    {
+        Cache::flush();
+
+        $this->makePage('post-1', 'Initial Post', WebsitePageStatus::Published, '<p>x</p>', WebsitePageType::Post);
+
+        $renderer = new WebsiteWidgetRenderer;
+        $renderer->render('<!-- fleetq:recent-posts -->', $this->website);
+
+        // Bump the version directly (simulating an observer hit from a page
+        // save elsewhere). This should cause the next render to miss cache.
+        $this->website->update(['content_version' => $this->website->content_version + 1]);
+        $this->website->refresh();
+
+        // Remove the post so the fresh render would show empty if cache
+        // actually missed and a fresh DB query ran.
+        WebsitePage::query()
+            ->where('title', 'Initial Post')
+            ->delete();
+
+        $html = $renderer->render('<!-- fleetq:recent-posts -->', $this->website);
+
+        $this->assertStringNotContainsString('Initial Post', $html);
+    }
+
+    public function test_observer_bumps_content_version_on_page_save(): void
+    {
+        $initial = $this->website->content_version;
+
+        $this->makePage('new-page', 'New Page', WebsitePageStatus::Published);
+
+        $this->website->refresh();
+        $this->assertGreaterThan($initial, $this->website->content_version);
+    }
+
+    public function test_observer_bumps_content_version_on_page_delete(): void
+    {
+        $page = $this->makePage('temp', 'Temp Page', WebsitePageStatus::Published);
+        $this->website->refresh();
+        $versionBeforeDelete = $this->website->content_version;
+
+        $page->delete();
+
+        $this->website->refresh();
+        $this->assertGreaterThan($versionBeforeDelete, $this->website->content_version);
+    }
+
+    public function test_widget_cache_keys_are_scoped_by_website_id(): void
+    {
+        Cache::flush();
+
+        // Team A — this->website
+        $this->makePage('post-1', 'Team A Post', WebsitePageStatus::Published, '<p>a</p>', WebsitePageType::Post);
+
+        // Team B — a separate website with a separate post
+        $ownerB = User::factory()->create();
+        $teamB = Team::create([
+            'name' => 'B',
+            'slug' => 'b-'.uniqid(),
+            'owner_id' => $ownerB->id,
+            'settings' => [],
+        ]);
+        $websiteB = Website::create([
+            'team_id' => $teamB->id,
+            'user_id' => $ownerB->id,
+            'name' => 'Site B',
+            'slug' => 'site-b',
+            'status' => WebsiteStatus::Published,
+        ]);
+        WebsitePage::create([
+            'website_id' => $websiteB->id,
+            'team_id' => $teamB->id,
+            'slug' => 'post-b',
+            'title' => 'Team B Post',
+            'page_type' => WebsitePageType::Post,
+            'status' => WebsitePageStatus::Published,
+            'exported_html' => '<p>b</p>',
+            'published_at' => now(),
+            'sort_order' => 1,
+        ]);
+
+        $renderer = new WebsiteWidgetRenderer;
+        $htmlA = $renderer->render('<!-- fleetq:recent-posts -->', $this->website);
+        $htmlB = $renderer->render('<!-- fleetq:recent-posts -->', $websiteB->fresh());
+
+        $this->assertStringContainsString('Team A Post', $htmlA);
+        $this->assertStringNotContainsString('Team B Post', $htmlA);
+        $this->assertStringContainsString('Team B Post', $htmlB);
+        $this->assertStringNotContainsString('Team A Post', $htmlB);
+    }
+
+    public function test_ai_system_prompt_mentions_widget_vocabulary(): void
+    {
+        // Ensure the GenerateWebsiteFromPromptAction prompt includes widget
+        // markers so the AI uses them by default.
+        $reflection = new \ReflectionClass(GenerateWebsiteFromPromptAction::class);
+        $source = file_get_contents($reflection->getFileName());
+
+        $this->assertStringContainsString('fleetq:recent-posts', $source);
+        $this->assertStringContainsString('fleetq:page-list', $source);
     }
 }

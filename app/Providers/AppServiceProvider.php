@@ -76,6 +76,8 @@ use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use App\Domain\Website\Drivers\VercelDeploymentDriver;
 use App\Domain\Website\Drivers\WebsiteDeploymentDriverRegistry;
 use App\Domain\Website\Drivers\ZipDeploymentDriver;
+use App\Domain\Website\Models\WebsitePage;
+use App\Domain\Website\Observers\WebsitePageObserver;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
@@ -281,6 +283,11 @@ class AppServiceProvider extends ServiceProvider
         Agent::observe(SecretScanObserver::class);
         Skill::observe(SecretScanObserver::class);
         WorkflowNode::observe(SecretScanObserver::class);
+
+        // Website widget cache invalidation: bump website.content_version
+        // whenever a page is saved or deleted so cached widget output becomes
+        // unreachable (old cache keys are abandoned, TTL sweeps them up).
+        WebsitePage::observe(WebsitePageObserver::class);
 
         // Community edition: all authenticated users have full access
         Gate::define('manage-team', fn ($user) => true);
