@@ -73,6 +73,9 @@ use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Tool\Services\McpHandleRegistry;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
+use App\Domain\Website\Drivers\VercelDeploymentDriver;
+use App\Domain\Website\Drivers\WebsiteDeploymentDriverRegistry;
+use App\Domain\Website\Drivers\ZipDeploymentDriver;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
@@ -135,6 +138,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);
         $this->app->singleton(NavigationRegistry::class, fn () => new NavigationRegistry);
         $this->app->singleton(WorkflowNodeRegistry::class, fn () => new WorkflowNodeRegistry);
+
+        // Website deployment drivers — plugins register additional providers via the registry
+        $this->app->singleton(WebsiteDeploymentDriverRegistry::class, function ($app) {
+            $registry = new WebsiteDeploymentDriverRegistry;
+            $registry->register($app->make(ZipDeploymentDriver::class));
+            $registry->register($app->make(VercelDeploymentDriver::class));
+
+            return $registry;
+        });
 
         // Accumulator for plugin-contributed MCP tool class names
         $this->app->instance('fleet.mcp.tool_classes', []);

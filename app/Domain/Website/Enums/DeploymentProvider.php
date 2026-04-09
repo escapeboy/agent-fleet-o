@@ -4,8 +4,9 @@ namespace App\Domain\Website\Enums;
 
 enum DeploymentProvider: string
 {
-    case Cloudflare = 'cloudflare';
+    case Zip = 'zip';
     case Vercel = 'vercel';
+    case Cloudflare = 'cloudflare';
     case Netlify = 'netlify';
     case Manual = 'manual';
 }

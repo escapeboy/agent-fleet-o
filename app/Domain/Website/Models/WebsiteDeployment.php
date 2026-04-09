@@ -19,6 +19,8 @@ class WebsiteDeployment extends Model
         'provider',
         'config',
         'status',
+        'url',
+        'started_at',
         'deployed_at',
         'build_log',
     ];
@@ -27,6 +29,7 @@ class WebsiteDeployment extends Model
         'provider' => DeploymentProvider::class,
         'status' => DeploymentStatus::class,
         'config' => 'array',
+        'started_at' => 'datetime',
         'deployed_at' => 'datetime',
     ];
 
