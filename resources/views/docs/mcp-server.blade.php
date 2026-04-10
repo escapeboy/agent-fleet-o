@@ -239,6 +239,77 @@ php artisan mcp:start agent-fleet</x-docs.code>
         Perfect for development and testing.
     </x-docs.callout>
 
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Troubleshooting</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Common issues and fixes when connecting the FleetQ MCP server:
+    </p>
+    <div class="mt-4 space-y-4 text-sm text-gray-600">
+        <div>
+            <p class="font-semibold text-gray-900">401 <code class="text-xs">Unauthorized — bearer token required</code></p>
+            <p class="mt-1">
+                Your client did not send a bearer token, or the token has expired. In Claude.ai, disconnect and reconnect
+                the connector to trigger a fresh OAuth flow. For manual Sanctum tokens, create a new one in
+                <a href="/team" class="text-primary-600 hover:underline">Team Settings &rarr; API Tokens</a> and update your client config.
+            </p>
+        </div>
+        <div>
+            <p class="font-semibold text-gray-900">OAuth redirect URI mismatch</p>
+            <p class="mt-1">
+                FleetQ uses <a href="https://datatracker.ietf.org/doc/html/rfc7591" class="text-primary-600 hover:underline" target="_blank" rel="noopener">Dynamic Client Registration (RFC 7591)</a>, so
+                redirect URIs are registered automatically. If you see a redirect mismatch error, your client is
+                probably using a stale cached client_id. Clear the connector from Claude.ai and re-add it.
+            </p>
+        </div>
+        <div>
+            <p class="font-semibold text-gray-900">Tool call returns <code class="text-xs">insufficient_budget</code></p>
+            <p class="mt-1">
+                The team's credit reservation check failed. Check
+                <a href="/billing" class="text-primary-600 hover:underline">Billing</a> for the current balance, or
+                upgrade to Pro to remove the monthly usage cap. Tool calls that use BYOK provider keys are not
+                billed against the FleetQ budget — make sure your team has at least one active provider credential
+                in <a href="/team" class="text-primary-600 hover:underline">Team Settings &rarr; Provider Credentials</a>.
+            </p>
+        </div>
+        <div>
+            <p class="font-semibold text-gray-900">Tool call times out after 300s</p>
+            <p class="mt-1">
+                Claude.ai enforces a 5-minute timeout per tool call. Long-running experiments, workflows, and crew
+                executions run asynchronously — use the <code class="text-xs">experiment_start</code> or
+                <code class="text-xs">workflow_execute</code> tools which return a run ID immediately, then poll
+                <code class="text-xs">experiment_get</code> / <code class="text-xs">workflow_run_get</code> for status.
+            </p>
+        </div>
+        <div>
+            <p class="font-semibold text-gray-900">429 rate limit</p>
+            <p class="mt-1">
+                FleetQ enforces 200 tool calls per minute per team. If you hit this limit, slow down batched calls
+                or upgrade to Enterprise for a custom rate. The <code class="text-xs">Retry-After</code> header tells
+                you when to retry.
+            </p>
+        </div>
+        <div>
+            <p class="font-semibold text-gray-900">tools/list response is missing tools</p>
+            <p class="mt-1">
+                Per-team tool filtering is active — check
+                <a href="/team" class="text-primary-600 hover:underline">Team Settings &rarr; MCP Tool Preferences</a>
+                for the active profile. Set to <code class="text-xs">full</code> to expose all 400 tools.
+            </p>
+        </div>
+        <div>
+            <p class="font-semibold text-gray-900">Approvals inbox widget does not render</p>
+            <p class="mt-1">
+                The <code class="text-xs">ui://fleetq/approvals</code> MCP App resource only appears in clients that
+                declare the MCP Apps capability during the initialize handshake (currently Claude.ai and Claude Desktop
+                on recent builds). Claude Code does not yet render MCP Apps.
+            </p>
+        </div>
+    </div>
+    <p class="mt-4 text-sm text-gray-600">
+        Still stuck? Email <a href="mailto:support@fleetq.net" class="text-primary-600 hover:underline">support@fleetq.net</a>
+        with your team ID (visible in <a href="/team" class="text-primary-600 hover:underline">Team Settings</a>) and a
+        description of what you were trying to do. We respond within 2 business hours during review.
+    </p>
+
     <h2 class="mt-10 text-xl font-bold text-gray-900">Privacy, terms & support</h2>
     <p class="mt-2 text-sm text-gray-600">
         Use of the FleetQ MCP server is governed by our public policies:
