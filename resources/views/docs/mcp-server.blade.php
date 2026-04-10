@@ -87,6 +87,35 @@ php artisan mcp:start agent-fleet</x-docs.code>
   }
 }</x-docs.code>
 
+    {{-- OAuth for Claude.ai and other dynamic clients --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Setting up in Claude.ai (OAuth)</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Claude.ai, Claude Desktop, and other MCP clients that speak OAuth 2.0 can connect without a
+        pre-issued API token. Go to <strong>Settings &rarr; Connectors &rarr; Add custom connector</strong>
+        in Claude.ai and paste the server URL:
+    </p>
+
+    <x-docs.code lang="text" title="Server URL">{{ url('/mcp') }}</x-docs.code>
+
+    <p class="mt-4 text-sm text-gray-600">
+        FleetQ implements the full
+        <a href="https://modelcontextprotocol.io/specification/latest/basic/authorization" class="text-primary-600 hover:underline" target="_blank" rel="noopener">MCP authorization spec</a>:
+    </p>
+    <ul class="mt-2 list-disc pl-6 text-sm text-gray-600 space-y-1">
+        <li><strong>Authorization Code flow with PKCE (S256)</strong> — no client secret required for public clients</li>
+        <li><strong>Dynamic Client Registration (RFC 7591)</strong> at <code class="text-xs">/oauth/register</code> — no manual client setup</li>
+        <li><strong>Authorization Server metadata (RFC 8414)</strong> at <code class="text-xs">/.well-known/oauth-authorization-server</code></li>
+        <li><strong>Protected Resource metadata (RFC 9728)</strong> at <code class="text-xs">/.well-known/oauth-protected-resource</code></li>
+        <li><strong>Scope:</strong> <code class="text-xs">mcp:use</code> (single scope covering all tool invocations)</li>
+        <li><strong>Refresh tokens</strong> via the standard <code class="text-xs">refresh_token</code> grant</li>
+    </ul>
+
+    <p class="mt-4 text-sm text-gray-600">
+        When Claude.ai connects, you will be redirected to the FleetQ consent screen to authorize access
+        for the calling team. Tokens are scoped to the team you choose at consent time — no cross-tenant
+        access is possible.
+    </p>
+
     {{-- Compact vs Full --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Compact vs Full server</h2>
     <p class="mt-2 text-sm text-gray-600">
@@ -209,4 +238,14 @@ php artisan mcp:start agent-fleet</x-docs.code>
         FleetQ's <code class="text-xs">LocalAgentGateway</code> spawns CLI processes directly with no API call.
         Perfect for development and testing.
     </x-docs.callout>
+
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Privacy, terms & support</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Use of the FleetQ MCP server is governed by our public policies:
+    </p>
+    <ul class="mt-2 list-disc pl-6 text-sm text-gray-600 space-y-1">
+        <li><a href="{{ route('legal.privacy') }}" class="text-primary-600 hover:underline">Privacy Policy</a> — GDPR + CCPA compliant, covers data collection, retention, third-party sharing, and your rights.</li>
+        <li><a href="{{ route('legal.terms') }}" class="text-primary-600 hover:underline">Terms of Service</a> — acceptable use, liability, and service level.</li>
+        <li><strong>Support:</strong> <a href="mailto:support@fleetq.net" class="text-primary-600 hover:underline">support@fleetq.net</a> for connector issues, onboarding questions, or enterprise enquiries.</li>
+    </ul>
 </x-layouts.docs>

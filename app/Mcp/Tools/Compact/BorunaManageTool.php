@@ -7,7 +7,9 @@ use App\Mcp\Tools\Boruna\BorunaEvidenceTool;
 use App\Mcp\Tools\Boruna\BorunaRunTool;
 use App\Mcp\Tools\Boruna\BorunaSkillManageTool;
 use App\Mcp\Tools\Boruna\BorunaValidateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class BorunaManageTool extends CompactTool
 {
     protected string $name = 'boruna_manage';

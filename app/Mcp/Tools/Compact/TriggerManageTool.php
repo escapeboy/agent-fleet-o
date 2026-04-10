@@ -7,7 +7,9 @@ use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
 use App\Mcp\Tools\Trigger\TriggerRuleListTool;
 use App\Mcp\Tools\Trigger\TriggerRuleTestTool;
 use App\Mcp\Tools\Trigger\TriggerRuleUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class TriggerManageTool extends CompactTool
 {
     protected string $name = 'trigger_manage';

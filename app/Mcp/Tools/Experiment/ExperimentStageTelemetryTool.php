@@ -4,11 +4,11 @@ namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
-use Laravel\Mcp\Http\Request;
-use Laravel\Mcp\Http\Response;
-use Laravel\Mcp\Schema\JsonSchema;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
-use Laravel\Mcp\Server\Tool\Attribute\IsReadOnly;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 class ExperimentStageTelemetryTool extends Tool

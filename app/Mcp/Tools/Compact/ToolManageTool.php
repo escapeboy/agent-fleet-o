@@ -14,7 +14,9 @@ use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolProbeRemoteMcpTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class ToolManageTool extends CompactTool
 {
     protected string $name = 'tool_manage';

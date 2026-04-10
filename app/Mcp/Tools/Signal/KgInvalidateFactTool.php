@@ -8,6 +8,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for invalidating (soft-deleting) a knowledge graph fact by UUID.
@@ -15,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
  * Sets invalid_at = now(). The fact is retained for historical queries
  * but excluded from all future searches and entity fact lookups.
  */
+#[IsDestructive]
 class KgInvalidateFactTool extends Tool
 {
     protected string $name = 'kg_invalidate_fact';

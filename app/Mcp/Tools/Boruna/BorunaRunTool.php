@@ -11,6 +11,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * Run a Boruna deterministic script directly or via a saved skill.
@@ -19,6 +20,7 @@ use Laravel\Mcp\Server\Tool as McpTool;
  *  - inline: provide `script` + `boruna_tool_id` directly
  *  - skill:  provide `skill_id` to execute a saved boruna_script skill
  */
+#[IsDestructive]
 class BorunaRunTool extends McpTool
 {
     protected string $name = 'boruna_run';

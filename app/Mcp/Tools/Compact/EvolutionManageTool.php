@@ -7,7 +7,9 @@ use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionApproveTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
 use App\Mcp\Tools\Evolution\EvolutionRejectTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class EvolutionManageTool extends CompactTool
 {
     protected string $name = 'evolution_manage';

@@ -9,6 +9,7 @@ use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool that stores a memory in the `proposed` tier.
@@ -17,6 +18,7 @@ use Laravel\Mcp\Server\Tool;
  * rather than writing directly to the working tier.
  * Proposed memories receive a lower retrieval boost until promoted to a curated tier.
  */
+#[IsDestructive]
 class MemoryProposeTool extends Tool
 {
     protected string $name = 'memory_propose';

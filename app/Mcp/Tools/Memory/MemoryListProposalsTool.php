@@ -8,6 +8,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 /**
  * MCP tool to list unreviewed memories in the `proposed` tier.
@@ -15,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
  * Returns memories that agents have proposed but a human has not yet
  * promoted or discarded. Use memory_promote to approve them.
  */
+#[IsReadOnly]
 class MemoryListProposalsTool extends Tool
 {
     protected string $name = 'memory_list_proposals';

@@ -6,7 +6,9 @@ use App\Mcp\Tools\Artifact\ArtifactContentTool;
 use App\Mcp\Tools\Artifact\ArtifactDownloadTool;
 use App\Mcp\Tools\Artifact\ArtifactGetTool;
 use App\Mcp\Tools\Artifact\ArtifactListTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class ArtifactManageTool extends CompactTool
 {
     protected string $name = 'artifact_manage';

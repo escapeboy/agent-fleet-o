@@ -10,6 +10,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for updating per-member permission policy on a crew member.
@@ -18,6 +19,7 @@ use Laravel\Mcp\Server\Tool;
  * Stores context_scope in the CrewMember.context_scope JSONB column.
  * These constraints are enforced at execution time by ExecuteCrewTaskJob / ExecuteAgentAction.
  */
+#[IsDestructive]
 class CrewMemberUpdatePolicyTool extends Tool
 {
     protected string $name = 'crew_member_update_policy';

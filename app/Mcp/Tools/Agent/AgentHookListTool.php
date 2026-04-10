@@ -4,8 +4,8 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Models\AgentHook;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Mcp\Attributes\IsIdempotent;
-use Laravel\Mcp\Attributes\IsReadOnly;
+use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;

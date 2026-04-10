@@ -9,7 +9,9 @@ use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
 use App\Mcp\Tools\Memory\MemoryUploadKnowledgeTool;
 use App\Mcp\Tools\Memory\SupabaseProvisionMemoryTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class MemoryManageTool extends CompactTool
 {
     protected string $name = 'memory_manage';

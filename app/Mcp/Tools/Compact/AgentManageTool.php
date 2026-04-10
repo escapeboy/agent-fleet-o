@@ -9,7 +9,9 @@ use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class AgentManageTool extends CompactTool
 {
     protected string $name = 'agent_manage';

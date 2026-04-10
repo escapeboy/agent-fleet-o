@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class AgentToolApprovalConfigureTool extends McpTool
 {
     protected string $name = 'agent_tool_approval_configure';

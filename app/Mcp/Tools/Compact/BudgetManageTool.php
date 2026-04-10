@@ -5,7 +5,9 @@ namespace App\Mcp\Tools\Compact;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
 use App\Mcp\Tools\Budget\BudgetForecastTool;
 use App\Mcp\Tools\Budget\BudgetSummaryTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class BudgetManageTool extends CompactTool
 {
     protected string $name = 'budget_manage';

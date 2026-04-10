@@ -15,7 +15,9 @@ use App\Mcp\Tools\GitRepository\GitRepositoryGetTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryListTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryTestTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class GitManageTool extends CompactTool
 {
     protected string $name = 'git_manage';

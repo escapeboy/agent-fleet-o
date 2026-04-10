@@ -13,7 +13,9 @@ use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class SystemManageTool extends CompactTool
 {
     protected string $name = 'system_manage';

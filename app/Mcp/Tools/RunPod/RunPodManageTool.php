@@ -8,6 +8,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for managing RunPod GPU cloud integration.
@@ -23,6 +24,7 @@ use Laravel\Mcp\Server\Tool;
  *   pod_list           — List all pods for the account
  *   pod_stop           — Stop a running pod
  */
+#[IsDestructive]
 class RunPodManageTool extends Tool
 {
     protected string $name = 'runpod_manage';

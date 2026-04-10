@@ -16,7 +16,9 @@ use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Shared\TermsAcceptanceHistoryTool;
 use App\Mcp\Tools\Shared\TermsAcceptanceStatusTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class TeamManageTool extends CompactTool
 {
     protected string $name = 'team_manage';

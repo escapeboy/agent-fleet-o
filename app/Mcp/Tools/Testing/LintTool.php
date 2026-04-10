@@ -7,6 +7,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 /**
  * MCP tool for running linters and code style checkers in a repository.
@@ -14,6 +15,7 @@ use Laravel\Mcp\Server\Tool;
  * Supports PHP (Pint, PHPCS, PHPStan), JavaScript (ESLint, Prettier),
  * Python (flake8, black, mypy), and custom lint commands.
  */
+#[IsReadOnly]
 class LintTool extends Tool
 {
     protected string $name = 'lint_run';

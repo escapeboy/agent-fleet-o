@@ -10,7 +10,9 @@ use App\Mcp\Tools\Signal\ImapMailboxTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class SignalManageTool extends CompactTool
 {
     protected string $name = 'signal_manage';
