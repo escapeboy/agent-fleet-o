@@ -22,19 +22,40 @@
             <tbody class="divide-y divide-gray-100">
                 <tr>
                     <td class="py-3 pl-4 pr-4 font-medium text-gray-900">RunPod</td>
-                    <td class="py-3 pr-4 text-gray-600">On-demand GPU instances (A100, H100, etc.)</td>
+                    <td class="py-3 pr-4 text-gray-600">On-demand GPU instances (A100, H100, etc.) with pod lifecycle control.</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-4 font-medium text-gray-900">Vast.ai</td>
+                    <td class="py-3 pr-4 text-gray-600">Marketplace GPU rentals — typically the cheapest option for batch jobs.</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-4 font-medium text-gray-900">Fal</td>
+                    <td class="py-3 pr-4 text-gray-600">Serverless inference for image, audio, and video models.</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-4 font-medium text-gray-900">Replicate</td>
+                    <td class="py-3 pr-4 text-gray-600">Hosted model inference API (Stable Diffusion, LLaMA variants, custom models).</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pl-4 pr-4 font-medium text-gray-900">Browser sidecar (Xvfb)</td>
+                    <td class="py-3 pr-4 text-gray-600">Headful Chromium + patchright running inside an Xvfb virtual display. Use for anti-bot scenarios (Reddit, Cloudflare) that block headless browsers. Combine with a <a href="{{ route('docs.show', 'credentials') }}" class="text-primary-600 hover:underline">proxy credential</a> for residential-IP bypass.</td>
                 </tr>
                 <tr>
                     <td class="py-3 pl-4 pr-4 font-medium text-gray-900">Bridge</td>
-                    <td class="py-3 pr-4 text-gray-600">Use your own hardware via FleetQ Bridge (local LLMs, local agents)</td>
+                    <td class="py-3 pr-4 text-gray-600">Use your own hardware via FleetQ Bridge (local LLMs, local agents).</td>
                 </tr>
                 <tr>
                     <td class="py-3 pl-4 pr-4 font-medium text-gray-900">Platform</td>
-                    <td class="py-3 pr-4 text-gray-600">Default shared compute for standard LLM API calls</td>
+                    <td class="py-3 pr-4 text-gray-600">Default shared compute for standard LLM API calls.</td>
                 </tr>
             </tbody>
         </table>
     </div>
+
+    <x-docs.callout type="tip">
+        A unified <code class="font-mono text-xs">CostEstimator</code> projects spend per compute job across all
+        providers before scheduling — useful for budget gating and plan-limit enforcement.
+    </x-docs.callout>
 
     {{-- RunPod integration --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">RunPod integration</h2>

@@ -57,9 +57,32 @@
                     </td>
                 </tr>
                 <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Activepieces</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Point FleetQ at a self-hosted Activepieces instance and gain immediate access to
+                        <strong>660+ pre-built integrations</strong> — Stripe, Slack, GitHub, Google Sheets,
+                        HubSpot, Salesforce, Notion, OpenAI, and many more. See the Activepieces section below.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">WhatsApp</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Verified webhook endpoint for WhatsApp Business Cloud API. Ingests inbound messages as
+                        Signals and delivers outbound messages via the <code class="rounded bg-gray-100 px-1">whatsapp</code>
+                        outbound connector. GET challenge + POST delivery receipts supported.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Google Drive / Notion / Confluence</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Read-only integrations used primarily to power Chatbot and Knowledge Base indexing.
+                        Documents are ingested, chunked, and embedded for retrieval by agents.
+                    </td>
+                </tr>
+                <tr>
                     <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">More coming soon</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">
-                        New integrations are added regularly. Check the
+                        New first-party integrations are added regularly. Check the
                         <a href="/integrations" class="text-primary-600 hover:underline">Integrations page</a>
                         for the latest available providers.
                     </td>
@@ -67,6 +90,27 @@
             </tbody>
         </table>
     </div>
+
+    {{-- Activepieces --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Activepieces — 660+ integrations at once</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        <a href="https://activepieces.com" class="text-primary-600 hover:underline" target="_blank" rel="noopener">Activepieces</a>
+        is an open-source automation platform. Each "piece" it ships with is natively exposed as an MCP server
+        endpoint. FleetQ's Activepieces connector lets any team that runs an Activepieces instance auto-import
+        <strong>all of them</strong> as <code class="rounded bg-gray-100 px-1">mcp_http</code> Tool records —
+        zero per-connector maintenance, maximum integration surface.
+    </p>
+    <ul class="mt-3 list-disc pl-5 text-sm text-gray-600">
+        <li><strong>Hourly sync job</strong> discovers new pieces and updates existing ones.</li>
+        <li><strong>Piece filter</strong> — restrict which pieces are imported (e.g. only <code class="font-mono text-xs">stripe</code>, <code class="font-mono text-xs">slack</code>, <code class="font-mono text-xs">notion</code>).</li>
+        <li><strong>SSRF guard</strong> — the Activepieces URL is validated on every sync and API call.</li>
+        <li><strong>Manual trigger</strong> — run <code class="font-mono text-xs">integration_manage({action: "activepieces_sync"})</code> to refresh on demand.</li>
+    </ul>
+    <x-docs.callout type="info">
+        Imported pieces show up in the regular <a href="{{ route('docs.show', 'tools') }}" class="text-primary-600 hover:underline">Tools</a>
+        list and can be attached to agents like any other MCP HTTP tool. When Activepieces updates a piece, the
+        sync job updates the corresponding Tool record in place — assignments are preserved.
+    </x-docs.callout>
 
     {{-- Connecting --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Connecting an integration</h2>

@@ -136,6 +136,58 @@ curl -X POST /api/v1/chatbots \
         requiring a full fine-tune.
     </p>
 
+    <h3 class="mt-6 text-base font-semibold text-gray-900">Knowledge base indexing</h3>
+    <p class="mt-2 text-sm text-gray-600">
+        A chatbot can index external knowledge sources so its backing agent can answer with up-to-date, grounded
+        information. Indexing runs on a schedule and stores chunks in the team's knowledge base with the
+        chatbot's tag so retrieval stays scoped to this bot.
+    </p>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Source</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">What gets indexed</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">GitHub repo</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Markdown files, README, and docs directories. Supports private repos via the GitHub integration.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Notion workspace</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Pages and databases. Each page is chunked and embedded; hierarchical context is preserved.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Confluence space</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">All pages in a space via the Atlassian REST API.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Uploaded documents</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">PDF / TXT / MD / CSV dropped into the chatbot detail page.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="mt-6 text-base font-semibold text-gray-900">Human escalation</h3>
+    <p class="mt-2 text-sm text-gray-600">
+        When the backing agent signals uncertainty (low confidence, explicit "I don't know", or a user
+        clicking "Talk to a human"), the conversation is flagged for escalation. FleetQ creates a
+        <a href="{{ route('docs.show', 'approvals') }}" class="text-primary-600 hover:underline">Human Task</a>
+        in the Approval Inbox with the full chat history so an operator can jump in, reply, and mark the
+        session as resolved. The chatbot resumes AI control on the next inbound message unless the operator
+        keeps the session locked.
+    </p>
+
+    <h3 class="mt-6 text-base font-semibold text-gray-900">Widget streaming &amp; isolation</h3>
+    <p class="mt-2 text-sm text-gray-600">
+        The widget is rendered inside a <strong>Shadow DOM</strong> so host-page CSS can never break it (and
+        your widget styles can't bleed out into the host). Messages stream via <strong>Server-Sent Events
+        (SSE)</strong> so users see the agent's reply token-by-token, exactly like a native chat product.
+    </p>
+
     <h3 class="mt-6 text-base font-semibold text-gray-900">Analytics</h3>
     <p class="mt-2 text-sm text-gray-600">
         The chatbot analytics summary tracks:

@@ -1,6 +1,6 @@
 <x-layouts.docs
     title="MCP Server"
-    description="Connect AI agents directly to FleetQ via MCP (Model Context Protocol). 34 consolidated tools for Claude.ai or 400 granular tools for power users, available via stdio or HTTP/SSE with OAuth 2.0."
+    description="Connect AI agents directly to FleetQ via MCP (Model Context Protocol). 34 consolidated meta-tools for Claude.ai or 400+ granular tools across 33 domains for power users, available via stdio or HTTP/SSE with OAuth 2.0."
     page="mcp-server"
 >
     <h1 class="text-3xl font-bold tracking-tight text-gray-900">MCP Server — Connect AI Agents Directly</h1>
@@ -45,14 +45,14 @@
                 <tr>
                     <td class="py-3 pl-4 pr-6 font-mono text-xs text-gray-900">POST /mcp/full</td>
                     <td class="py-3 pr-6 text-xs text-gray-600">HTTP / SSE</td>
-                    <td class="py-3 pr-6 text-xs text-gray-600">400 granular tools</td>
+                    <td class="py-3 pr-6 text-xs text-gray-600">400+ granular tools</td>
                     <td class="py-3 pr-6 text-xs text-gray-600">OAuth 2.0 or bearer token</td>
                     <td class="py-3 pr-4 text-xs text-gray-600">Cursor, remote automation, CI pipelines</td>
                 </tr>
                 <tr>
                     <td class="py-3 pl-4 pr-6 font-mono text-xs text-gray-900">agent-fleet</td>
                     <td class="py-3 pr-6 text-xs text-gray-600">stdio</td>
-                    <td class="py-3 pr-6 text-xs text-gray-600">400 granular tools</td>
+                    <td class="py-3 pr-6 text-xs text-gray-600">400+ granular tools</td>
                     <td class="py-3 pr-6 text-xs text-gray-600">Auto (team owner)</td>
                     <td class="py-3 pr-4 text-xs text-gray-600">Claude Code, Codex — local dev machines</td>
                 </tr>
@@ -95,7 +95,7 @@ php artisan mcp:start agent-fleet</x-docs.code>
         then configure your MCP client:
     </p>
 
-    <x-docs.code lang="json" title="Cursor MCP config — full server (all 400 tools)">
+    <x-docs.code lang="json" title="Cursor MCP config — full server (all 400+ tools)">
 {
   "mcpServers": {
     "agent-fleet": {
@@ -145,7 +145,7 @@ php artisan mcp:start agent-fleet</x-docs.code>
     <p class="mt-2 text-sm text-gray-600">
         On the compact server (<code class="text-xs">/mcp</code>), teams can further restrict which meta-tools are
         visible via profiles in <strong>Team Settings &rarr; MCP Tools</strong>. The full server
-        (<code class="text-xs">/mcp/full</code>) always exposes all 400 tools.
+        (<code class="text-xs">/mcp/full</code>) always exposes all 400+ tools.
     </p>
     <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
         <table class="w-full text-sm">
@@ -235,10 +235,22 @@ php artisan mcp:start agent-fleet</x-docs.code>
 
     <p class="mt-6 text-sm text-gray-600">
         Need direct access to each granular operation? Connect to <code class="text-xs">/mcp/full</code> instead —
-        it exposes 400 individual tools (e.g. <code class="text-xs">agent_list</code>, <code class="text-xs">agent_create</code>,
+        it exposes 400+ individual tools across 33 domains (e.g. <code class="text-xs">agent_list</code>, <code class="text-xs">agent_create</code>,
         <code class="text-xs">agent_update</code> as separate entries in tools/list). Both servers share the same
         OAuth flow, BYOK credentials, and ApprovalsResource MCP App widget.
     </p>
+
+    <x-docs.callout type="info">
+        A few newer domains are currently available <strong>only on <code class="text-xs">/mcp/full</code></strong> and
+        haven't been consolidated into compact meta-tools yet: <strong>Website Builder</strong>
+        (<code class="text-xs">website_create</code>, <code class="text-xs">website_generate</code>,
+        <code class="text-xs">website_deploy</code>, …), <strong>Voice Agents</strong>
+        (<code class="text-xs">voice_session_create</code>, <code class="text-xs">voice_session_end</code>,
+        <code class="text-xs">voice_session_get_transcript</code>, …), and the
+        <strong>Flow Evaluation Suite</strong> (<code class="text-xs">flow_evaluation_run_start</code>,
+        <code class="text-xs">flow_evaluation_results</code>, <code class="text-xs">evaluation_dataset_manage</code>, …).
+        Point Claude Code, Cursor, or any OAuth-capable MCP client at <code class="text-xs">/mcp/full</code> to use them.
+    </x-docs.callout>
 
     <x-docs.callout type="tip">
         Local agents (Claude Code, Codex) connected via stdio cost <strong>zero credits</strong> —
@@ -298,7 +310,7 @@ php artisan mcp:start agent-fleet</x-docs.code>
             <p class="font-semibold text-gray-900">tools/list only returns 34 tools, not 400</p>
             <p class="mt-1">
                 You are connected to the compact server at <code class="text-xs">/mcp</code>, which consolidates
-                the 400 granular tools into 34 meta-tools. To get each operation as a separate tool, point your
+                the 400+ granular tools into 34 meta-tools. To get each operation as a separate tool, point your
                 client to <code class="text-xs">/mcp/full</code> instead. Both endpoints share the same OAuth flow
                 and credentials.
             </p>

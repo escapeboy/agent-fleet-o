@@ -29,23 +29,33 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">api_key</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Single API key for a service (e.g., OpenAI, Anthropic, SendGrid). Stored in <code class="rounded bg-gray-100 px-1">secret_data.key</code>.</td>
-                </tr>
-                <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">oauth2</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">OAuth2 client credentials flow. Stores <code class="rounded bg-gray-100 px-1">client_id</code>, <code class="rounded bg-gray-100 px-1">client_secret</code>, <code class="rounded bg-gray-100 px-1">access_token</code>, and <code class="rounded bg-gray-100 px-1">refresh_token</code>.</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">api_token</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Single API key or bearer token for a service (OpenAI, Anthropic, SendGrid, …). Stored in <code class="rounded bg-gray-100 px-1">secret_data.token</code>.</td>
                 </tr>
                 <tr>
                     <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">basic_auth</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Username and password for HTTP Basic Authentication.</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Username and password for HTTP Basic Authentication. Required fields: <code class="rounded bg-gray-100 px-1">username</code>, <code class="rounded bg-gray-100 px-1">password</code>.</td>
                 </tr>
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">bearer_token</td>
-                    <td class="py-2.5 pr-4 text-xs text-gray-600">Bearer token passed in the <code class="rounded bg-gray-100 px-1">Authorization</code> header. Common for REST APIs and JWTs.</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">ssh_key</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">SSH private key material for git and shell tools. Required field: <code class="rounded bg-gray-100 px-1">private_key</code>.</td>
                 </tr>
                 <tr>
-                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">custom</td>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">oauth2</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">OAuth 2.0 tokens. Stores <code class="rounded bg-gray-100 px-1">access_token</code> and optionally <code class="rounded bg-gray-100 px-1">refresh_token</code>, <code class="rounded bg-gray-100 px-1">client_id</code>, <code class="rounded bg-gray-100 px-1">client_secret</code>.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">proxy</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        HTTP/HTTPS/SOCKS5 proxy definition with optional username and password. Assign to a
+                        Tool via <code class="rounded bg-gray-100 px-1">transport_config.proxy_credential_id</code>
+                        to route that tool's outbound traffic through the proxy — used with the browser sandbox
+                        headful mode for residential-proxy anti-bot scenarios. Chromium SOCKS5 with auth is
+                        handled by a local <code class="rounded bg-gray-100 px-1">gost</code> forwarder.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">custom_kv</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Arbitrary key-value pairs in <code class="rounded bg-gray-100 px-1">secret_data</code>. Use for services with non-standard auth formats.</td>
                 </tr>
             </tbody>
@@ -68,6 +78,15 @@
         Rotating the <code>APP_KEY</code> requires re-encrypting team DEKs. Use the
         <code>credentials:re-encrypt</code> Artisan command to batch-migrate all secrets to a new key.
     </x-docs.callout>
+
+    <p class="mt-4 text-sm text-gray-600">
+        <strong>Optional KMS wrappers.</strong> For teams with stricter compliance requirements, the DEK can
+        be wrapped by an external Key Management Service instead of the platform's <code class="rounded bg-gray-100 px-1">APP_KEY</code>.
+        FleetQ ships adapters for <strong>AWS KMS</strong>, <strong>Azure Key Vault</strong>, and
+        <strong>Google Cloud KMS</strong> via <code class="rounded bg-gray-100 px-1">app/Infrastructure/Encryption/KMS</code>.
+        Enable a KMS wrapper by pointing the team at a managed key ARN/URI in Team Settings — existing
+        credentials are re-wrapped on the next rotation.
+    </p>
 
     {{-- Statuses --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Credential statuses</h2>
@@ -97,32 +116,41 @@
     </p>
     <ul class="mt-2 list-disc pl-5 text-sm text-gray-600">
         <li><strong>Name</strong> — human-readable label (e.g., <em>OpenAI Production Key</em>).</li>
-        <li><strong>Type</strong> — one of the five credential types above.</li>
+        <li><strong>Type</strong> — one of the six credential types above.</li>
         <li><strong>Secret data</strong> — JSON object with the actual secret values (see example below).</li>
         <li><strong>Description</strong> (optional) — notes about the credential's purpose or scope.</li>
         <li><strong>Expires at</strong> (optional) — ISO 8601 date. FleetQ auto-expires the credential when this date passes.</li>
     </ul>
 
     <x-docs.code lang="json" title="secret_data examples by type">
-// api_key
-{ "key": "sk-abc123..." }
-
-// oauth2
-{
-  "client_id": "my-app",
-  "client_secret": "secret",
-  "access_token": "ya29.abc...",
-  "refresh_token": "1//0g..."
-}
+// api_token
+{ "token": "sk-abc123..." }
 
 // basic_auth
 { "username": "admin", "password": "hunter2" }
 
-// bearer_token
-{ "token": "eyJhbGci..." }
+// ssh_key
+{ "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\n..." }
 
-// custom
-{ "account_id": "ACC-9001", "api_secret": "xyz", "region": "us-east-1" }</x-docs.code>
+// oauth2
+{
+  "access_token": "ya29.abc...",
+  "refresh_token": "1//0g...",
+  "client_id": "my-app",
+  "client_secret": "secret"
+}
+
+// custom_kv
+{ "account_id": "ACC-9001", "api_secret": "xyz", "region": "us-east-1" }
+
+// proxy
+{
+  "protocol": "socks5",
+  "host": "proxy.example.net",
+  "port": 1080,
+  "username": "fleetq",
+  "password": "s3cret"
+}</x-docs.code>
 
     <x-docs.callout type="warning">
         Never paste secrets into the <strong>Name</strong> or <strong>Description</strong> fields — those
