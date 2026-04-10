@@ -705,7 +705,6 @@ class AgentFleetServer extends Server
         AlertConnectorTool::class,
         SlackConnectorTool::class,
         HttpMonitorTool::class,
-        SearxngSearchTool::class,
         InboundConnectorManageTool::class,
         ConnectorBindingTool::class,
         ConnectorBindingDeleteTool::class,
