@@ -7,6 +7,7 @@ use App\Domain\Website\Enums\WebsitePageType;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class EnhanceWebsiteNavigationAction
@@ -79,7 +80,7 @@ class EnhanceWebsiteNavigationAction
         // would have done N times, but only once.
         Website::query()
             ->whereKey($website->id)
-            ->update(['content_version' => \Illuminate\Support\Facades\DB::raw('content_version + 1')]);
+            ->update(['content_version' => DB::raw('content_version + 1')]);
     }
 
     /**

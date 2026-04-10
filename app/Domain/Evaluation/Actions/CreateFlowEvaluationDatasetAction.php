@@ -5,6 +5,7 @@ namespace App\Domain\Evaluation\Actions;
 use App\Domain\Evaluation\Models\EvaluationDataset;
 use App\Domain\Evaluation\Models\EvaluationDatasetRow;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CreateFlowEvaluationDatasetAction
 {
@@ -32,7 +33,7 @@ class CreateFlowEvaluationDatasetAction
             if (! empty($rows)) {
                 $now = now()->toDateTimeString();
                 $inserts = array_map(fn ($rowData) => [
-                    'id' => (string) \Illuminate\Support\Str::uuid(),
+                    'id' => (string) Str::uuid(),
                     'dataset_id' => $dataset->id,
                     'input' => json_encode($rowData['input'] ?? []),
                     'expected_output' => $rowData['expected_output'] ?? null,
