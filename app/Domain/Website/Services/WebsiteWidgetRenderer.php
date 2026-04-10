@@ -84,11 +84,18 @@ class WebsiteWidgetRenderer
                     $website->content_version ?? 1,
                 );
 
-                $rendered = Cache::remember(
-                    $remoteKey,
-                    now()->addSeconds(self::CACHE_TTL_SECONDS),
-                    fn () => $this->renderWidget($widget, $website, $attrs),
-                );
+                // Manual hit/miss check so we can record observability
+                // metrics — Cache::remember would hide the result from us.
+                $cached = Cache::get($remoteKey);
+
+                if ($cached !== null) {
+                    app(WebsiteWidgetMetrics::class)->recordHit($widget);
+                    $rendered = $cached;
+                } else {
+                    app(WebsiteWidgetMetrics::class)->recordMiss($widget);
+                    $rendered = $this->renderWidget($widget, $website, $attrs);
+                    Cache::put($remoteKey, $rendered, now()->addSeconds(self::CACHE_TTL_SECONDS));
+                }
 
                 $localCache[$localKey] = $rendered;
 

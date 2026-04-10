@@ -15,6 +15,7 @@ use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
 use App\Domain\Website\Services\HtmlSanitizer;
+use App\Domain\Website\Services\WebsiteWidgetMetrics;
 use App\Domain\Website\Services\WebsiteWidgetRenderer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -524,5 +525,61 @@ class WebsiteDynamicsTest extends TestCase
 
         $this->assertStringContainsString('fleetq:recent-posts', $source);
         $this->assertStringContainsString('fleetq:page-list', $source);
+    }
+
+    // ─── Widget cache metrics (#3) ──────────────────────────────────────────
+
+    public function test_metrics_record_miss_on_first_render(): void
+    {
+        Cache::flush();
+        $metrics = app(WebsiteWidgetMetrics::class);
+        $metrics->reset();
+
+        $this->makePage('post-1', 'Post', WebsitePageStatus::Published, '<p>x</p>', WebsitePageType::Post);
+
+        $renderer = new WebsiteWidgetRenderer;
+        $renderer->render('<!-- fleetq:recent-posts -->', $this->website);
+
+        $snapshot = $metrics->snapshot();
+        $this->assertSame(1, $snapshot['per_widget']['recent-posts']['misses']);
+        $this->assertSame(0, $snapshot['per_widget']['recent-posts']['hits']);
+    }
+
+    public function test_metrics_record_hit_on_second_render_with_same_version(): void
+    {
+        Cache::flush();
+        $metrics = app(WebsiteWidgetMetrics::class);
+        $metrics->reset();
+
+        $this->makePage('post-1', 'Post', WebsitePageStatus::Published, '<p>x</p>', WebsitePageType::Post);
+
+        $renderer = new WebsiteWidgetRenderer;
+        $renderer->render('<!-- fleetq:recent-posts -->', $this->website);
+        $renderer->render('<!-- fleetq:recent-posts -->', $this->website);
+
+        $snapshot = $metrics->snapshot();
+        $this->assertSame(1, $snapshot['per_widget']['recent-posts']['misses']);
+        $this->assertSame(1, $snapshot['per_widget']['recent-posts']['hits']);
+        $this->assertSame(0.5, $snapshot['per_widget']['recent-posts']['hit_rate']);
+    }
+
+    public function test_metrics_snapshot_includes_overall_hit_rate(): void
+    {
+        Cache::flush();
+        $metrics = app(WebsiteWidgetMetrics::class);
+        $metrics->reset();
+
+        $this->makePage('post-1', 'Post', WebsitePageStatus::Published, '<p>x</p>', WebsitePageType::Post);
+
+        $renderer = new WebsiteWidgetRenderer;
+        // 1 miss (first call), then 4 hits (same-version repeats)
+        for ($i = 0; $i < 5; $i++) {
+            $renderer->render('<!-- fleetq:recent-posts -->', $this->website);
+        }
+
+        $snapshot = $metrics->snapshot();
+        $this->assertSame(4, $snapshot['total_hits']);
+        $this->assertSame(1, $snapshot['total_misses']);
+        $this->assertSame(0.8, $snapshot['hit_rate']);
     }
 }
