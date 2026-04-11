@@ -6,6 +6,7 @@ use App\Domain\Assistant\Actions\AnnotateMessageAction;
 use App\Domain\Assistant\Actions\ReviewAssistantConversationAction;
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
 use App\Domain\Assistant\Enums\AnnotationRating;
+use App\Domain\Assistant\Jobs\ProcessAssistantMessageJob;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Http\Controllers\Controller;
@@ -127,7 +128,18 @@ class AssistantController extends Controller
     }
 
     /**
-     * Send a message and get the assistant's reply synchronously.
+     * Send a message and get the assistant's reply.
+     *
+     * Sync mode (default): runs the full tool loop in-process and returns
+     * the final assistant message. Capped by the web server request timeout
+     * — behind Cloudflare that's ~100s.
+     *
+     * Async mode (`async: true` in body): enqueues the work on the
+     * `ai-calls` queue (timeout 900s) and returns 202 immediately with a
+     * placeholder message id. The client polls
+     * GET /api/v1/assistant/conversations/{id} and reads the placeholder's
+     * `metadata.status` (queued|streaming|continuing|completed|failed) +
+     * content. Use this for autonomous tasks that take more than ~90s.
      */
     public function send(Request $request, AssistantConversation $conversation, SendAssistantMessageAction $action): JsonResponse
     {
@@ -135,14 +147,67 @@ class AssistantController extends Controller
             'message' => ['required', 'string', 'min:1'],
             'context_type' => ['sometimes', 'nullable', 'string', 'max:64'],
             'context_id' => ['sometimes', 'nullable', 'string'],
+            'async' => ['sometimes', 'boolean'],
+            'provider' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'model' => ['sometimes', 'nullable', 'string', 'max:128'],
         ]);
+
+        $contextType = $request->input('context_type', $conversation->context_type);
+        $contextId = $request->input('context_id', $conversation->context_id);
+        $async = filter_var(
+            $request->input('async', $request->query('async', false)),
+            FILTER_VALIDATE_BOOLEAN,
+        );
+
+        if ($async) {
+            $userMessage = $request->input('message');
+
+            // Persist the user message so the conversation reflects it
+            // immediately — the polling client sees it on the next read.
+            $conversation->messages()->create([
+                'role' => 'user',
+                'content' => $userMessage,
+                'created_at' => now(),
+            ]);
+
+            // Placeholder assistant message the job will update in place.
+            $placeholder = $conversation->messages()->create([
+                'role' => 'assistant',
+                'content' => '',
+                'metadata' => ['status' => 'queued', 'async' => true],
+                'created_at' => now(),
+            ]);
+
+            $conversation->update(['last_message_at' => now()]);
+
+            ProcessAssistantMessageJob::dispatch(
+                conversationId: $conversation->id,
+                placeholderMessageId: $placeholder->id,
+                userMessage: $userMessage,
+                userId: $request->user()->id,
+                teamId: $request->user()->current_team_id,
+                provider: $request->input('provider'),
+                model: $request->input('model'),
+                contextType: $contextType,
+                contextId: $contextId,
+            );
+
+            return response()->json([
+                'async' => true,
+                'queued' => true,
+                'conversation_id' => $conversation->id,
+                'message_id' => $placeholder->id,
+                'poll_url' => "/api/v1/assistant/conversations/{$conversation->id}",
+                'status' => 'queued',
+            ], 202);
+        }
 
         $response = $action->execute(
             conversation: $conversation,
             userMessage: $request->input('message'),
             user: $request->user(),
-            contextType: $request->input('context_type', $conversation->context_type),
-            contextId: $request->input('context_id', $conversation->context_id),
+            contextType: $contextType,
+            contextId: $contextId,
         );
 
         // Fetch the assistant reply that was just saved

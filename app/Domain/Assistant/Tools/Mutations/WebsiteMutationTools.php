@@ -280,11 +280,14 @@ final class WebsiteMutationTools
     public static function updateWebsitePage(): PrismToolObject
     {
         return PrismTool::as('update_website_page')
-            ->for('Update a website page title or slug')
+            ->for('Update a website page. Can change title, slug, page_type, the rendered HTML body, and the meta JSON (used for product price/sku/images on product pages).')
             ->withStringParameter('page_id', 'The page UUID', required: true)
             ->withStringParameter('title', 'New title')
             ->withStringParameter('slug', 'New slug')
-            ->using(function (string $page_id, ?string $title = null, ?string $slug = null) {
+            ->withStringParameter('page_type', 'New type: page, post, product, landing')
+            ->withStringParameter('exported_html', 'Full HTML body of the page (passed through HtmlSanitizer; <script> tags are stripped — use external <script src> in the rendering shell instead).')
+            ->withStringParameter('meta_json', 'JSON object merged into the page meta. Required keys for product pages: price (cents), currency, in_stock, sku, images, description, keywords.')
+            ->using(function (string $page_id, ?string $title = null, ?string $slug = null, ?string $page_type = null, ?string $exported_html = null, ?string $meta_json = null) {
                 $page = WebsitePage::query()->find($page_id);
                 if (! $page) {
                     return json_encode(['error' => 'Website page not found']);
@@ -296,6 +299,23 @@ final class WebsiteMutationTools
                 }
                 if ($slug !== null) {
                     $data['slug'] = Str::slug($slug);
+                }
+                if ($page_type !== null) {
+                    $typeEnum = WebsitePageType::tryFrom($page_type);
+                    if (! $typeEnum) {
+                        return json_encode(['error' => "Invalid page_type '{$page_type}'. Must be one of: page, post, product, landing."]);
+                    }
+                    $data['page_type'] = $typeEnum;
+                }
+                if ($exported_html !== null) {
+                    $data['exported_html'] = $exported_html;
+                }
+                if ($meta_json !== null) {
+                    $decoded = json_decode($meta_json, true);
+                    if (! is_array($decoded)) {
+                        return json_encode(['error' => 'meta_json must be a JSON object.']);
+                    }
+                    $data['meta'] = array_merge((array) ($page->meta ?? []), $decoded);
                 }
 
                 if (empty($data)) {
@@ -310,7 +330,10 @@ final class WebsiteMutationTools
                         'page_id' => $page->id,
                         'title' => $page->title,
                         'slug' => $page->slug,
+                        'page_type' => $page->page_type->value,
                         'status' => $page->status->value,
+                        'has_html' => ! empty($page->exported_html),
+                        'meta_keys' => array_keys((array) ($page->meta ?? [])),
                     ]);
                 } catch (\Throwable $e) {
                     return json_encode(['error' => $e->getMessage()]);
