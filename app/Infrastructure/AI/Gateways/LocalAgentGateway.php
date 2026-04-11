@@ -250,6 +250,12 @@ class LocalAgentGateway implements AiGatewayInterface
             'PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin',
             'HOME' => $workdir,
             'CLAUDE_CODE_OAUTH_TOKEN' => $oauthToken,
+            // Claude Code refuses --dangerously-skip-permissions when running as root
+            // for safety reasons. On the VPS this process runs inside the app container
+            // (root by default in php-fpm-alpine) so we opt into the documented sandbox
+            // escape hatch. The surrounding container + ephemeral workdir + scrubbed env
+            // form the real sandbox — this flag just tells the CLI to accept it.
+            'IS_SANDBOX' => '1',
         ];
 
         Log::info('LocalAgentGateway: executing claude-code-vps', [
