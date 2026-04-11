@@ -185,9 +185,12 @@ class ToolDetailPage extends Component
 
         $middlewareConfigs = $this->tool->middlewareConfigs()->get();
 
+        // `team_id` is required for the TeamEncryptedArray cast on `secret_data`
+        // to resolve the per-team encryption key. Without it the cast falls
+        // back to null and throws "no team key available" on v2 envelopes.
         $proxyCredentials = Credential::where('credential_type', CredentialType::Proxy)
             ->orderBy('name')
-            ->get(['id', 'name', 'secret_data']);
+            ->get(['id', 'team_id', 'name', 'secret_data']);
 
         return view('livewire.tools.tool-detail-page', [
             'agents' => $agents,

@@ -185,6 +185,7 @@ class ToolTranslator
             BuiltInToolKind::Ssh => $this->buildSshTools($tool, $overrides),
             BuiltInToolKind::BrowserRelay => $this->buildBrowserRelayTools($tool),
             BuiltInToolKind::ComputerUse => $this->buildComputerUseTools($tool),
+            BuiltInToolKind::BrowserUseCloud => $this->buildBrowserUseCloudTools($tool),
             default => [],
         };
     }
@@ -611,6 +612,139 @@ class ToolTranslator
                     $output = $result['output'];
 
                     // Truncate to avoid context overflow (50k chars ≈ ~12k tokens).
+                    if (mb_strlen($output) > 50000) {
+                        $output = mb_substr($output, 0, 50000)."\n... [output truncated]";
+                    }
+
+                    return $output ?: '(Task completed with no text output)';
+                }),
+        ];
+    }
+
+    /**
+     * Explicit "browser_use_cloud" tool kind — always routes to the browser-use
+     * Cloud REST API (cloud.browser-use.com) regardless of the global
+     * browser_sandbox_mode. Lets a team provision a dedicated Cloud-backed
+     * browser tool with its own BYOK api_key stored in $tool->credentials,
+     * independent of the platform's default browser mode.
+     *
+     * @see https://docs.browser-use.com/cloud/api-reference
+     */
+    private function buildBrowserUseCloudTools(Tool $tool): array
+    {
+        $toolModel = $tool;
+
+        return [
+            PrismTool::as('browser_task')
+                ->for('Autonomously browse the web to complete a task via browser-use Cloud (cloud.browser-use.com). Natural language task description, returns the extracted result as text. Good for: form filling, data extraction, multi-step navigation, sites that need a real browser.')
+                ->withStringParameter('task', 'Natural language description of the browsing task to perform')
+                ->withStringParameter('start_url', 'Optional starting URL to begin from', required: false)
+                ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10)', required: false)
+                ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null) use ($toolModel): string {
+                    // Execution-time plan gate — cloud registers 'browser.plan_gate' as a callable.
+                    if ($toolModel->team_id && app()->bound('browser.plan_gate')) {
+                        $gate = app('browser.plan_gate');
+                        if (! $gate($toolModel->team_id)) {
+                            return 'Error: Browser automation requires a paid plan (Starter or above). Please upgrade to continue.';
+                        }
+                    }
+
+                    $effectiveMaxSteps = $max_steps ?? 10;
+                    if ($toolModel->team_id && app()->bound('browser.max_steps_gate')) {
+                        $planMaxSteps = app('browser.max_steps_gate')($toolModel->team_id);
+                        if ($planMaxSteps > 0) {
+                            $effectiveMaxSteps = min($effectiveMaxSteps, $planMaxSteps);
+                        }
+                    }
+
+                    $timeoutSeconds = 120;
+                    if ($toolModel->team_id && app()->bound('browser.timeout_gate')) {
+                        $planTimeout = app('browser.timeout_gate')($toolModel->team_id);
+                        if ($planTimeout > 0) {
+                            $timeoutSeconds = $planTimeout;
+                        }
+                    }
+
+                    $options = [
+                        'max_steps' => $effectiveMaxSteps,
+                        'timeout_seconds' => $timeoutSeconds,
+                    ];
+
+                    if ($start_url) {
+                        $options['start_url'] = $start_url;
+                    }
+
+                    // API key resolution order:
+                    //  1. team-owned tool: encrypted $toolModel->credentials['api_key']
+                    //  2. platform template activated per-team: credential_overrides
+                    //     are merged into transport_config.env by ResolveAgentToolsAction
+                    //  3. platform-wide env var BROWSER_USE_CLOUD_API_KEY (fallback)
+                    /** @var array<string, mixed> $credentials */
+                    $credentials = (array) $toolModel->credentials;
+                    $envBag = $toolModel->transport_config['env'] ?? [];
+                    $apiKey = $credentials['api_key']
+                        ?? ($envBag['api_key'] ?? null)
+                        ?? ($envBag['API_KEY'] ?? null)
+                        ?? config('agent.browser_use_cloud_api_key', '');
+
+                    if ($apiKey === '') {
+                        return 'Error: browser-use Cloud requires an API key. Add it to the tool credentials (field: api_key) — get one at https://cloud.browser-use.com/settings.';
+                    }
+
+                    try {
+                        $result = app(BrowserUseCloudClient::class, ['apiKey' => $apiKey])->run($task, $options);
+                    } catch (BrowserTaskTimeoutException $e) {
+                        return "Error: {$e->getMessage()}";
+                    } catch (BrowserTaskFailedException $e) {
+                        return "Error: {$e->getMessage()}";
+                    } catch (\Throwable $e) {
+                        Log::error('BrowserUseCloudTool error', ['error' => $e->getMessage(), 'team_id' => $toolModel->team_id]);
+
+                        return 'Error: Browser task encountered an unexpected error. Please try again.';
+                    }
+
+                    // Capture screenshots as artifacts when available.
+                    $screenshots = $result['screenshots'] ?? [];
+                    if (! empty($screenshots) && $toolModel->team_id && app()->bound('ai.current_experiment_id')) {
+                        try {
+                            app(CaptureScreenshotArtifactsAction::class)->execute(
+                                screenshots: $screenshots,
+                                teamId: $toolModel->team_id,
+                                experimentId: app('ai.current_experiment_id'),
+                                agentId: app()->bound('ai.current_agent_id') ? app('ai.current_agent_id') : null,
+                                stepIndex: 1,
+                            );
+                        } catch (\Throwable $e) {
+                            Log::warning('ToolTranslator: screenshot artifact capture failed', [
+                                'error' => $e->getMessage(),
+                                'team_id' => $toolModel->team_id,
+                            ]);
+                        }
+                    }
+
+                    // Audit every browser-use Cloud task in production.
+                    if (app()->environment('production') && $toolModel->team_id) {
+                        $ocsf = OcsfMapper::classify('browser.task_executed');
+                        AuditEntry::create([
+                            'team_id' => $toolModel->team_id,
+                            'event' => 'browser.task_executed',
+                            'ocsf_class_uid' => $ocsf['class_uid'],
+                            'ocsf_severity_id' => $ocsf['severity_id'],
+                            'properties' => [
+                                'tool_id' => $toolModel->id,
+                                'kind' => 'browser_use_cloud',
+                                'task_length' => strlen($task),
+                                'start_url' => $start_url,
+                                'max_steps' => $effectiveMaxSteps,
+                                'status' => $result['status'] ?? 'unknown',
+                                'duration_ms' => $result['duration_ms'] ?? 0,
+                                'steps_taken' => $result['steps_taken'] ?? 0,
+                            ],
+                        ]);
+                    }
+
+                    $output = $result['output'];
+
                     if (mb_strlen($output) > 50000) {
                         $output = mb_substr($output, 0, 50000)."\n... [output truncated]";
                     }

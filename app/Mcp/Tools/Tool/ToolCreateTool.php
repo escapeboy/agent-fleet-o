@@ -28,6 +28,7 @@ built_in   — host capability. transport_config depends on kind:
   filesystem: {kind:"filesystem", allowed_paths:[], read_only:false}
   ssh: {kind:"ssh", host, port, username, credential_id, allowed_commands:[]}
   browser_relay: {kind:"browser_relay"}  — browser automation via bridge relay agent
+  browser_use_cloud: {kind:"browser_use_cloud"}  — autonomous browser task via cloud.browser-use.com. Store api_key in credentials or transport_config.env.api_key. Exposes a single browser_task(task, start_url?, max_steps?) tool.
 
 For mcp_bridge: the bridge_server_name must match a server name reported by the team's bridge daemon.
 For SSH tools: create an ssh_key Credential first, then reference its ID in credential_id.

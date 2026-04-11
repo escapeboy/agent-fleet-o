@@ -10,6 +10,7 @@ enum BuiltInToolKind: string
     case Ssh = 'ssh';
     case BrowserRelay = 'browser_relay';
     case ComputerUse = 'computer_use';
+    case BrowserUseCloud = 'browser_use_cloud';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum BuiltInToolKind: string
             self::Ssh => 'SSH Remote',
             self::BrowserRelay => 'Browser Relay (via relay agent)',
             self::ComputerUse => 'Computer Use (desktop automation)',
+            self::BrowserUseCloud => 'Browser Use Cloud (cloud.browser-use.com)',
         };
     }
 }
