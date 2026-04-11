@@ -868,7 +868,7 @@ class ExecuteAgentAction
                         'original_input' => $ctx->input,
                         'experiment_title' => $experiment->title,
                     ],
-                    'form_schema' => [
+                    'form_schema' => $ctx->clarificationFormSchema ?? [
                         'fields' => [
                             [
                                 'name' => 'answer',

@@ -26,6 +26,13 @@ final class AgentExecutionContext
         public bool $requiresClarification = false,
         /** The clarifying question to surface in the ApprovalInbox */
         public ?string $clarificationQuestion = null,
+        /**
+         * Optional JSON-Schema-ish form spec for the clarification UI.
+         * When set, HumanTaskForm renders these fields instead of the
+         * default single textarea. Shape is a flat fields array:
+         *   [['name' => 'answer', 'type' => 'select', 'options' => [...], ...], ...]
+         */
+        public ?array $clarificationFormSchema = null,
         /** Set by SummarizeContext when input was compressed */
         public bool $contextSummarized = false,
         /** Set by PreExecutionScout — targeted knowledge queries to improve memory/KG retrieval */
