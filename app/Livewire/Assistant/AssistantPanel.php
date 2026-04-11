@@ -87,6 +87,73 @@ class AssistantPanel extends Component
         }
     }
 
+    /**
+     * Gap 2: scratchpad for artifact-form field values, keyed by messageId.
+     * Populated by wire:model in the form artifact renderer, drained by
+     * handleArtifactFormSubmit() when the user clicks submit.
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    public array $artifactForms = [];
+
+    /**
+     * Gap 2: when a user clicks a choice card, feed the choice back into the
+     * assistant as a new turn. Keeps the feature frozen-per-our-spec: no
+     * in-place mutation of the prior message; the button simply composes a
+     * follow-up message and dispatches it through sendMessage().
+     */
+    public function handleArtifactChoice(string $messageId, string $value): void
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return;
+        }
+        $this->sendMessage("My choice: {$value}");
+    }
+
+    /**
+     * Gap 2: confirm click from a confirmation_dialog artifact. Re-asks the
+     * assistant to execute whatever it proposed — the LLM re-reads its own
+     * prior `on_confirm` instructions from the message context and fires the
+     * relevant tool call.
+     */
+    public function handleArtifactConfirm(string $messageId): void
+    {
+        $this->sendMessage('Confirmed. Please proceed.');
+    }
+
+    /**
+     * Gap 2: dismiss click — no-op follow-up that tells the assistant the
+     * user declined. Keeps the conversation flowing instead of leaving a
+     * dead artifact hanging at the end of the chat.
+     */
+    public function handleArtifactDismiss(string $messageId): void
+    {
+        $this->sendMessage('Cancelled.');
+    }
+
+    /**
+     * Gap 2: submit a form artifact. The artifact body renders
+     * wire:model="artifactForms.{messageId}.{fieldName}" so all values land
+     * here. We serialize them into a follow-up user message and clear the
+     * scratchpad for this message.
+     */
+    public function handleArtifactFormSubmit(string $messageId): void
+    {
+        $data = $this->artifactForms[$messageId] ?? [];
+        if (! is_array($data) || $data === []) {
+            return;
+        }
+
+        $summary = collect($data)
+            ->map(fn ($value, $key) => sprintf('%s: %s', $key, is_scalar($value) ? (string) $value : json_encode($value)))
+            ->implode("\n");
+
+        unset($this->artifactForms[$messageId]);
+
+        $this->sendMessage("Form submission:\n{$summary}");
+    }
+
     public function sendMessage(string $message): void
     {
         $message = trim($message);
