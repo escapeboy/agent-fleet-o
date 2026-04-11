@@ -86,10 +86,14 @@ class SendAssistantMessageAction
         $supportsToolLoop = $localAgentKey === 'claude-code';
         $supportsMcpNatively = $localAgentKey === 'codex';
 
+        // VPS-flagged local providers (claude-code-vps) run on the server itself via
+        // LocalAgentGateway::executeVps — they must NOT be rewritten to bridge_agent.
+        $isVpsLocal = $isLocal && (bool) config("llm_providers.{$provider}.vps");
+
         // In relay mode, local agents run on the user's machine via the bridge daemon.
         // Rewrite the request to use the bridge_agent provider so FallbackAiGateway
         // routes it through LocalBridgeGateway (Redis → relay → bridge daemon WebSocket).
-        if ($isLocal && $this->agentDiscovery->isRelayMode()) {
+        if ($isLocal && ! $isVpsLocal && $this->agentDiscovery->isRelayMode()) {
             $provider = 'bridge_agent';
             // Build compound "agent_key:model" so bridge passes the correct model to the CLI.
             $agentKey = $localAgentKey ?? $provider;
@@ -520,8 +524,12 @@ class SendAssistantMessageAction
         $supportsToolLoop = $localAgentKey === 'claude-code';
         $supportsMcpNatively = $localAgentKey === 'codex';
 
+        // VPS-flagged local providers (claude-code-vps) run on the server itself via
+        // LocalAgentGateway::executeVps — they must NOT be rewritten to bridge_agent.
+        $isVpsLocal = $isLocal && (bool) config("llm_providers.{$provider}.vps");
+
         // In relay mode, route local agents through the bridge daemon
-        if ($isLocal && $this->agentDiscovery->isRelayMode()) {
+        if ($isLocal && ! $isVpsLocal && $this->agentDiscovery->isRelayMode()) {
             $provider = 'bridge_agent';
             $agentKey = $localAgentKey ?? $provider;
             $model = ($model !== '' && $model !== $agentKey) ? "{$agentKey}:{$model}" : $agentKey;
