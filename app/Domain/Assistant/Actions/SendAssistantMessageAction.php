@@ -78,12 +78,14 @@ class SendAssistantMessageAction
         $isLocal = $provider === 'local' || (bool) config("llm_providers.{$provider}.local");
 
         // Resolve the local agent key to determine capabilities.
-        // claude-code: supports text-based <tool_call> format (tool loop managed by us).
+        // claude-code / claude-code-vps: support text-based <tool_call> format
+        // (tool loop managed by us). The VPS variant runs the same binary on
+        // the server with a pre-provisioned OAuth token.
         // codex: supports MCP natively — connect it to our FleetQ MCP server.
         $localAgentKey = $isLocal
             ? config("llm_providers.{$provider}.agent_key", $provider)
             : null;
-        $supportsToolLoop = $localAgentKey === 'claude-code';
+        $supportsToolLoop = in_array($localAgentKey, ['claude-code', 'claude-code-vps'], true);
         $supportsMcpNatively = $localAgentKey === 'codex';
 
         // VPS-flagged local providers (claude-code-vps) run on the server itself via
@@ -521,7 +523,7 @@ class SendAssistantMessageAction
         $localAgentKey = $isLocal
             ? config("llm_providers.{$provider}.agent_key", $provider)
             : null;
-        $supportsToolLoop = $localAgentKey === 'claude-code';
+        $supportsToolLoop = in_array($localAgentKey, ['claude-code', 'claude-code-vps'], true);
         $supportsMcpNatively = $localAgentKey === 'codex';
 
         // VPS-flagged local providers (claude-code-vps) run on the server itself via

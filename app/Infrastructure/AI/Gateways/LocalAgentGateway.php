@@ -175,6 +175,19 @@ class LocalAgentGateway implements AiGatewayInterface
             throw new RuntimeException("Unknown local agent: {$agentKey}");
         }
 
+        // VPS-only agents run on the server itself via executeVps — they must
+        // never be routed through the host bridge, even in bridge mode. Mirror
+        // the vps_only guard from complete() so the tool-loop streaming path
+        // (LocalToolLoopExecutor → gateway->stream) reaches the right handler.
+        if (! empty($config['vps_only'])) {
+            $response = $this->complete($request);
+            if ($onChunk && $response->content) {
+                $onChunk($response->content);
+            }
+
+            return $response;
+        }
+
         // Bridge mode: use NDJSON streaming for real-time output
         if ($this->discovery->isBridgeMode()) {
             return $this->streamViaBridge($agentKey, $config, $request, $onChunk);
@@ -234,16 +247,30 @@ class LocalAgentGateway implements AiGatewayInterface
         $timeout = (int) config('local_agents.vps.timeout_seconds', 300);
         $oauthToken = (string) config('local_agents.vps.oauth_token');
 
-        $prompt = LocalAgentPromptBuilder::buildPrompt($request);
+        // Assistant mode uses the same --system-prompt / --tools "" separation as
+        // the regular claude-code assistant path. That's what lets our text-based
+        // <tool_call> loop work reliably — tool instructions live in system_prompt,
+        // user input goes on stdin, and --tools "" disables the CLI's own
+        // filesystem/bash tools so the agent has to emit our tag format.
+        $isAssistant = $request->purpose === 'platform_assistant';
 
-        $args = array_merge(
-            [$binaryPath],
-            $config['execute_flags'] ?? ['-p', '--output-format', 'stream-json', '--dangerously-skip-permissions'],
-        );
-
-        if ($request->model) {
-            $args[] = '--model';
-            $args[] = $request->model;
+        if ($isAssistant) {
+            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs(
+                $binaryPath,
+                $request->systemPrompt,
+                $request->model,
+            );
+            $prompt = $request->userPrompt;
+        } else {
+            $prompt = LocalAgentPromptBuilder::buildPrompt($request);
+            $args = array_merge(
+                [$binaryPath],
+                $config['execute_flags'] ?? ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'],
+            );
+            if ($request->model) {
+                $args[] = '--model';
+                $args[] = $request->model;
+            }
         }
 
         $env = [
