@@ -3,14 +3,17 @@
     'title' => '',
     'icon' => 'default',
     'open' => false,
+    'popoutPayload' => null,
 ])
 
 @php
     $typeLabel = str_replace('_', ' ', $type);
+    $hasPopout = $popoutPayload !== null;
 @endphp
 
 <details @if($open) open @endif
     class="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white open:bg-gray-50"
+    @if($hasPopout) data-artifact-payload="{{ json_encode($popoutPayload, JSON_UNESCAPED_UNICODE) }}" @endif
 >
     <summary class="flex cursor-pointer items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
         <svg class="h-3.5 w-3.5 flex-shrink-0 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,6 +42,19 @@
         </svg>
         <span class="truncate">{{ $title ?: $typeLabel }}</span>
         <span class="ml-auto flex-shrink-0 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">{{ $typeLabel }}</span>
+        @if($hasPopout)
+            <button
+                type="button"
+                onclick="event.preventDefault(); event.stopPropagation(); const p = JSON.parse(this.closest('details').dataset.artifactPayload || '{}'); window.dispatchEvent(new CustomEvent('artifact-popout', { detail: { payload: p } }));"
+                aria-label="Open in full-screen modal"
+                title="Open in full-screen modal"
+                class="flex-shrink-0 rounded p-0.5 text-gray-400 hover:bg-white hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            >
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                </svg>
+            </button>
+        @endif
         <svg class="h-3 w-3 flex-shrink-0 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
         </svg>

@@ -5,8 +5,12 @@ namespace App\Livewire\Assistant;
 use App\Domain\Assistant\Jobs\ProcessAssistantMessageJob;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\ConversationManager;
+use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Shared\Enums\TeamRole;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
 class AssistantPanel extends Component
@@ -96,52 +100,130 @@ class AssistantPanel extends Component
      */
     public array $artifactForms = [];
 
+    private const ARTIFACT_ACTION_RATE_LIMIT = 10;
+
+    private const ARTIFACT_ACTION_RATE_WINDOW_SECONDS = 60;
+
     /**
-     * Gap 2: when a user clicks a choice card, feed the choice back into the
-     * assistant as a new turn. Keeps the feature frozen-per-our-spec: no
-     * in-place mutation of the prior message; the button simply composes a
-     * follow-up message and dispatches it through sendMessage().
+     * Gap 2 hardening: entry gate for every artifact click. Enforces rate
+     * limit, per-role gating, and writes an audit row for every attempt
+     * (allowed or blocked). Returns true when the click is allowed to proceed.
      */
-    public function handleArtifactChoice(string $messageId, string $value): void
+    private function authorizeArtifactClick(string $messageId, string $action, bool $destructive = false): bool
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        $team = $user->currentTeam;
+        $role = $team ? $user->teamRole($team) : null;
+        $roleValue = $role?->value ?? 'unknown';
+
+        $rateKey = "assistant-artifact-click:{$user->id}";
+        if (! RateLimiter::attempt(
+            $rateKey,
+            self::ARTIFACT_ACTION_RATE_LIMIT,
+            fn () => null,
+            self::ARTIFACT_ACTION_RATE_WINDOW_SECONDS,
+        )) {
+            $this->writeArtifactAudit($user->id, $team?->id, $messageId, $action, $roleValue, 'rate_limited', $destructive);
+            session()->flash('assistant_error', 'Too many actions. Please wait a moment.');
+
+            return false;
+        }
+
+        $allowed = match ($role) {
+            TeamRole::Owner,
+            TeamRole::Admin => true,
+            TeamRole::Member => ! $destructive,
+            TeamRole::Viewer => false,
+            default => false,
+        };
+
+        if (! $allowed) {
+            $this->writeArtifactAudit($user->id, $team?->id, $messageId, $action, $roleValue, 'role_blocked', $destructive);
+            session()->flash('assistant_error', 'Your team role does not permit this action.');
+
+            return false;
+        }
+
+        $this->writeArtifactAudit($user->id, $team?->id, $messageId, $action, $roleValue, 'allowed', $destructive);
+
+        return true;
+    }
+
+    private function writeArtifactAudit(
+        string $userId,
+        ?string $teamId,
+        string $messageId,
+        string $action,
+        string $role,
+        string $outcome,
+        bool $destructive,
+    ): void {
+        try {
+            AuditEntry::create([
+                'team_id' => $teamId,
+                'user_id' => $userId,
+                'event' => 'assistant.artifact_action',
+                'subject_type' => AssistantMessage::class,
+                'subject_id' => $messageId,
+                'properties' => [
+                    'action' => $action,
+                    'role' => $role,
+                    'outcome' => $outcome,
+                    'destructive' => $destructive,
+                ],
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('AssistantPanel: artifact audit write failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function handleArtifactChoice(string $messageId, string $value, bool $destructive = false): void
     {
         $value = trim($value);
         if ($value === '') {
             return;
         }
+
+        if (! $this->authorizeArtifactClick($messageId, 'choice', $destructive)) {
+            return;
+        }
+
         $this->sendMessage("My choice: {$value}");
     }
 
-    /**
-     * Gap 2: confirm click from a confirmation_dialog artifact. Re-asks the
-     * assistant to execute whatever it proposed — the LLM re-reads its own
-     * prior `on_confirm` instructions from the message context and fires the
-     * relevant tool call.
-     */
-    public function handleArtifactConfirm(string $messageId): void
+    public function handleArtifactConfirm(string $messageId, bool $destructive = true): void
     {
+        if (! $this->authorizeArtifactClick($messageId, 'confirm', $destructive)) {
+            return;
+        }
+
         $this->sendMessage('Confirmed. Please proceed.');
     }
 
-    /**
-     * Gap 2: dismiss click — no-op follow-up that tells the assistant the
-     * user declined. Keeps the conversation flowing instead of leaving a
-     * dead artifact hanging at the end of the chat.
-     */
     public function handleArtifactDismiss(string $messageId): void
     {
+        if (! $this->authorizeArtifactClick($messageId, 'dismiss', false)) {
+            return;
+        }
+
         $this->sendMessage('Cancelled.');
     }
 
-    /**
-     * Gap 2: submit a form artifact. The artifact body renders
-     * wire:model="artifactForms.{messageId}.{fieldName}" so all values land
-     * here. We serialize them into a follow-up user message and clear the
-     * scratchpad for this message.
-     */
     public function handleArtifactFormSubmit(string $messageId): void
     {
         $data = $this->artifactForms[$messageId] ?? [];
         if (! is_array($data) || $data === []) {
+            return;
+        }
+
+        if (! $this->authorizeArtifactClick($messageId, 'form_submit', false)) {
             return;
         }
 

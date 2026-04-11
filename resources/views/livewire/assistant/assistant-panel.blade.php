@@ -638,4 +638,24 @@
             </div>
         </div>
     </div>
+
+    {{-- Gap 2 hardening: pop-out modal for wide artifacts (data_table > 10 rows). --}}
+    <x-assistant.artifacts.popout-modal />
+
+    {{-- Gap 2 hardening: mobile force-collapse below 360px panel width. --}}
+    <script>
+        (function () {
+            function collapseMobileArtifacts() {
+                if (window.innerWidth >= 360) {
+                    return;
+                }
+                document.querySelectorAll('.assistant-response + div details[open]').forEach(function (el) {
+                    el.removeAttribute('open');
+                });
+            }
+            document.addEventListener('DOMContentLoaded', collapseMobileArtifacts);
+            document.addEventListener('livewire:navigated', collapseMobileArtifacts);
+            document.addEventListener('livewire:update', collapseMobileArtifacts);
+        })();
+    </script>
 </div>
