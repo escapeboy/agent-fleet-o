@@ -20,7 +20,7 @@ class FallbackAiGateway implements AiGatewayInterface
         private readonly PrismAiGateway $gateway,
         private readonly CircuitBreaker $circuitBreaker,
         private readonly array $fallbackChains = [],
-        private readonly ?LocalAgentGateway $localGateway = null,
+        private readonly ?AiGatewayInterface $localGateway = null,
         private readonly ?LocalBridgeGateway $bridgeGateway = null,
         private readonly ?EscalationStrategy $escalationStrategy = null,
     ) {}
