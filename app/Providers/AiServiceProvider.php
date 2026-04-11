@@ -119,7 +119,14 @@ class AiServiceProvider extends ServiceProvider
                         ['provider' => 'google', 'model' => 'gemini-2.5-pro'],
                     ],
                 ],
-                localGateway: config('local_agents.enabled')
+                // Bind the LocalAgentGateway whenever local agents are enabled OR the
+                // VPS-only Claude Code path has an OAuth token provisioned. The VPS
+                // variant is a deliberately-scoped local-agent exception that must
+                // remain reachable even when the generic local_agents kill switch is
+                // off (cloud forces local_agents.enabled=false, then rebinds the
+                // concrete gateway to DisabledLocalAgentGateway which only lets VPS
+                // calls through).
+                localGateway: (config('local_agents.enabled') || ! empty(config('local_agents.vps.oauth_token')))
                     ? $app->make(LocalAgentGateway::class)
                     : null,
                 bridgeGateway: $app->make(LocalBridgeGateway::class),
