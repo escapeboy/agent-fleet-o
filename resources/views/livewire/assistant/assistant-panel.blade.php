@@ -483,6 +483,17 @@
                                         </div>
                                     @endforeach
                                 @endif
+                                @if(!empty($msg['ui_artifacts']['items']))
+                                    <div class="-mx-1 mt-2">
+                                        @foreach($msg['ui_artifacts']['items'] as $artifactIndex => $artifactPayload)
+                                            <x-assistant.artifacts.renderer
+                                                :payload="$artifactPayload"
+                                                :index="$artifactIndex"
+                                                :messageId="$msg['id'] ?? null"
+                                            />
+                                        @endforeach
+                                    </div>
+                                @endif
                                 @if(!empty($msg['tool_calls_count']))
                                     <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-3 w-3">

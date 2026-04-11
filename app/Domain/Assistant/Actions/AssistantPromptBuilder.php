@@ -7,8 +7,15 @@ use Prism\Prism\Tool as PrismToolObject;
 
 final class AssistantPromptBuilder
 {
-    public static function buildSystemPrompt(string $context, User $user, bool $includeToolCallFormat, bool $canExecuteTools, array $tools = [], bool $supportsMcpNatively = false): string
-    {
+    public static function buildSystemPrompt(
+        string $context,
+        User $user,
+        bool $includeToolCallFormat,
+        bool $canExecuteTools,
+        array $tools = [],
+        bool $supportsMcpNatively = false,
+        bool $uiArtifactsEnabled = false,
+    ): string {
         $role = $user->teamRole($user->currentTeam);
         $roleName = $role?->value ?? 'viewer';
 
@@ -67,6 +74,8 @@ final class AssistantPromptBuilder
             - **CRITICAL: Always respond in the exact same language the user writes in. Bulgarian and Russian are different languages — if the user writes in Bulgarian, respond in Bulgarian (not Russian or a mix of the two). Mirror the user's language precisely.**
             GUIDE;
 
+        $artifactInstructions = $uiArtifactsEnabled ? self::buildArtifactInstructions() : '';
+
         return <<<PROMPT
         You are the **FleetQ Platform Assistant** — an AI-powered helper embedded in the FleetQ platform.
         {$introLine}
@@ -104,6 +113,106 @@ final class AssistantPromptBuilder
         {$toolsSection}
 
         {$guidelines}
+
+        {$artifactInstructions}
+        PROMPT;
+    }
+
+    /**
+     * Gap 2: optional inline UI artifact format. Appended to the system prompt
+     * only when the team has `assistant_ui_artifacts_allowed = true` AND the
+     * global `assistant.ui_artifacts_enabled` switch is on.
+     *
+     * The LLM emits regular markdown text, optionally followed by a single
+     * delimited block containing a JSON artifact list. The parser strips the
+     * block from the visible text before rendering.
+     */
+    private static function buildArtifactInstructions(): string
+    {
+        return <<<'PROMPT'
+        ## UI Artifacts (optional)
+
+        You may enrich your reply with up to 3 inline UI artifacts. They render
+        inside the conversation bubble and disappear with the message — they are
+        ephemeral, not persistent screens.
+
+        **How to emit them:** write your normal markdown answer first, then at
+        the very end append this block **exactly once**:
+
+            <<<FLEETQ_ARTIFACTS>>>
+            {"artifacts": [ ... ]}
+            <<<END>>>
+
+        **Allowed artifact types** (9 total, pick the one that best fits):
+
+        - `data_table` — use when listing 3+ entities with attributes.
+          REQUIRES `source_tool`: the MCP tool whose output you are showing, and
+          that tool MUST have been called in this turn. Shape:
+            {"type":"data_table","title":"...","source_tool":"experiment_list",
+             "columns":[{"key":"id","label":"ID"}],
+             "rows":[{"id":"abc"},...]}
+
+        - `chart` — use for time series or distributions (4-type enum: line,
+          bar, pie, area). REQUIRES `source_tool`. Shape:
+            {"type":"chart","title":"...","chart_type":"bar","source_tool":"...",
+             "x_axis_label":"day","y_axis_label":"spend",
+             "data_points":[{"label":"Mon","value":12.5}]}
+
+        - `choice_cards` — use when asking the user to pick 2-6 options.
+          Actions: {"type":"dismiss"} (default), {"type":"navigate","url":"/..."},
+          {"type":"invoke_tool","tool_name":"...","parameters":{...},"destructive":false}.
+          Shape:
+            {"type":"choice_cards","question":"...",
+             "options":[{"label":"A","value":"a","description":"...",
+                         "action":{"type":"dismiss"}}]}
+
+        - `form` — use for quick structured input (9 field types: text,
+          textarea, number, select, multi_select, radio_cards, checkbox, date).
+          Shape:
+            {"type":"form","title":"...","submit_label":"Save",
+             "fields":[{"name":"...","label":"...","type":"select","required":true,
+                        "options":[{"value":"x","label":"X"}]}]}
+
+        - `link_list` — use for curated external/internal references.
+          URLs must be http/https or relative to `/`. Max 10 items. Shape:
+            {"type":"link_list","title":"Docs",
+             "items":[{"label":"Guide","url":"https://fleetq.net/docs",
+                       "description":"..."}]}
+
+        - `code_diff` — use for showing before/after code changes. Language
+          whitelist: php, ts, js, py, rb, go, rust, yaml, json, md, sql, blade.
+          Max 100 lines, 5000 chars total. Shape:
+            {"type":"code_diff","title":"...","language":"php","file_path":"app/Foo.php",
+             "before":"...","after":"..."}
+
+        - `confirmation_dialog` — use ONLY for destructive confirmations. Always
+          visible, amber border if `destructive:true`. Shape:
+            {"type":"confirmation_dialog","title":"Kill experiment?",
+             "body":"This cannot be undone.","confirm_label":"Yes, kill",
+             "cancel_label":"Cancel","destructive":true,
+             "on_confirm":{"type":"invoke_tool","tool_name":"experiment_kill",
+                           "parameters":{"id":"..."}}}
+
+        - `metric_card` — use for a single headline number. Source_tool optional
+          (literal values allowed for simple calculations). Shape:
+            {"type":"metric_card","label":"Spend this week","value":1234.56,
+             "unit":"EUR","delta":-5.2,"trend":"down","context":"vs last week"}
+
+        - `progress_tracker` — use only for live operations. States: pending,
+          running, completed, failed, paused. Shape:
+            {"type":"progress_tracker","label":"Processing","progress":42,
+             "state":"running","eta":"2 min"}
+
+        **Rules:**
+        - Max 3 artifacts per reply.
+        - Max 32 KB total JSON payload.
+        - Keep the visible text meaningful even without the artifacts — the
+          artifact is a visual bonus, not a replacement for a good textual answer.
+        - If you are not confident an artifact will help, omit the block entirely.
+          A clean text reply is always better than a hallucinated table.
+        - Do NOT wrap the block in markdown code fences. The delimiters are
+          literal text.
+        - Do NOT emit the block anywhere except at the very end of the reply.
         PROMPT;
     }
 

@@ -4,8 +4,11 @@ namespace App\Domain\Assistant\Actions;
 
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
+use App\Domain\Assistant\Services\AssistantArtifactsFeatureFlag;
 use App\Domain\Assistant\Services\AssistantIntentClassifier;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
+use App\Domain\Assistant\Services\AssistantUiArtifactParser;
+use App\Domain\Assistant\Services\AssistantUiArtifactPersister;
 use App\Domain\Assistant\Services\ContextResolver;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Assistant\Services\ToolUsageTracker;
@@ -32,6 +35,9 @@ class SendAssistantMessageAction
         private readonly LocalAgentDiscovery $agentDiscovery,
         private readonly ToolUsageTracker $toolUsageTracker,
         private readonly LocalToolLoopExecutor $localToolLoopExecutor,
+        private readonly AssistantArtifactsFeatureFlag $artifactsFeatureFlag,
+        private readonly AssistantUiArtifactParser $artifactParser,
+        private readonly AssistantUiArtifactPersister $artifactPersister,
     ) {}
 
     /**
@@ -117,7 +123,16 @@ class SendAssistantMessageAction
         // <tool_call> text format, codex uses MCP tools natively (FleetQ MCP server connected).
         $canExecuteTools = ! $isLocal || $supportsToolLoop || $supportsMcpNatively;
         $context = $this->contextResolver->resolve($contextType, $contextId);
-        $systemPrompt = AssistantPromptBuilder::buildSystemPrompt($context, $user, $supportsToolLoop, $canExecuteTools, $tools, $supportsMcpNatively);
+        $uiArtifactsEnabled = $this->artifactsFeatureFlag->isEnabledForTeam($user->currentTeam);
+        $systemPrompt = AssistantPromptBuilder::buildSystemPrompt(
+            $context,
+            $user,
+            $supportsToolLoop,
+            $canExecuteTools,
+            $tools,
+            $supportsMcpNatively,
+            $uiArtifactsEnabled,
+        );
 
         // Append tool budget hint when any tool approaches its throttle threshold.
         $budgetHint = $this->toolUsageTracker->buildBudgetHint($conversation->id);
@@ -410,7 +425,20 @@ class SendAssistantMessageAction
             $metadata['a2ui_surfaces'] = $a2uiSurfaces;
         }
 
+        // Gap 2: parse UI artifacts from the reply if the feature is enabled for this team.
+        // The parser strips the delimiter block from the visible text so users see a clean
+        // reply; the sanitized artifact VOs get persisted after the message row exists.
+        $extractedArtifacts = [];
+        if ($uiArtifactsEnabled && $finalContent !== '' && $finalStatus === 'completed') {
+            $parsed = $this->artifactParser->parse($finalContent, $response->toolResults ?? []);
+            if (! empty($parsed['artifacts'])) {
+                $finalContent = $parsed['text'];
+                $extractedArtifacts = $parsed['artifacts'];
+            }
+        }
+
         // Save assistant response — update existing placeholder (async mode) or create new message
+        $savedMessage = null;
         if ($placeholderMessageId !== null) {
             AssistantMessage::where('id', $placeholderMessageId)->update([
                 'content' => $finalContent,
@@ -422,11 +450,12 @@ class SendAssistantMessageAction
                 ]),
                 'metadata' => json_encode($metadata),
             ]);
+            $savedMessage = AssistantMessage::find($placeholderMessageId);
         } else {
-            $this->conversationManager->addMessage(
+            $savedMessage = $this->conversationManager->addMessage(
                 conversation: $conversation,
                 role: 'assistant',
-                content: $response->content,
+                content: $finalContent,
                 toolCalls: $response->toolResults,
                 tokenUsage: [
                     'prompt_tokens' => $response->usage->promptTokens,
@@ -435,6 +464,20 @@ class SendAssistantMessageAction
                 ],
                 metadata: $metadata,
             );
+        }
+
+        // Gap 2: persist any extracted artifacts in one atomic transaction
+        // that writes both the denormalized JSONB column on the message row
+        // and the queryable assistant_ui_artifacts rows.
+        if ($savedMessage !== null && $extractedArtifacts !== []) {
+            try {
+                $this->artifactPersister->persist($savedMessage, $extractedArtifacts);
+            } catch (\Throwable $e) {
+                Log::warning('SendAssistantMessageAction: artifact persistence failed', [
+                    'message_id' => $savedMessage->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         // Auto-generate title from first message
