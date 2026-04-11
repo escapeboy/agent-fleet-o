@@ -160,13 +160,14 @@ class LocalAgentDiscovery
      * that run fleetq-bridge as a relay (e.g. fleetq.net prod), so the VPS-local
      * claude would never be found through it. This method is the dedicated seam
      * for the super-admin-gated VPS provider.
+     *
+     * Deliberately NOT gated on `config('local_agents.enabled')`: the cloud
+     * edition forces that global flag to false as a safety net against the
+     * generic local-agent shell-execution path. The VPS path has its own gate
+     * in ClaudeCodeVpsGate + the gateway-level assertAllowed() check.
      */
     public function vpsBinaryPath(): ?string
     {
-        if (! config('local_agents.enabled')) {
-            return null;
-        }
-
         $configured = config('local_agents.vps.binary_path');
         if (is_string($configured) && $configured !== '' && is_executable($configured)) {
             return $configured;

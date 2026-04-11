@@ -20,7 +20,6 @@ class ClaudeCodeVpsGateTest extends TestCase
         parent::setUp();
 
         $this->gate = new ClaudeCodeVpsGate;
-        config(['local_agents.enabled' => true]);
         config(['local_agents.vps.oauth_token' => 'sk-ant-oat-test']);
     }
 
@@ -30,14 +29,17 @@ class ClaudeCodeVpsGateTest extends TestCase
         $this->assertFalse($this->gate->isConfigured());
     }
 
-    public function test_is_configured_returns_false_when_feature_disabled(): void
+    public function test_is_configured_returns_true_when_token_set(): void
     {
-        config(['local_agents.enabled' => false]);
-        $this->assertFalse($this->gate->isConfigured());
+        $this->assertTrue($this->gate->isConfigured());
     }
 
-    public function test_is_configured_returns_true_when_token_set_and_enabled(): void
+    public function test_is_configured_ignores_global_local_agents_flag(): void
     {
+        // Cloud edition forces local_agents.enabled = false as a global safety
+        // net against the generic shell-execution local-agent path. The VPS
+        // path must work independently because it has its own gates.
+        config(['local_agents.enabled' => false]);
         $this->assertTrue($this->gate->isConfigured());
     }
 
@@ -79,13 +81,15 @@ class ClaudeCodeVpsGateTest extends TestCase
         $this->assertFalse($this->gate->isAllowedForUser(null, $team));
     }
 
-    public function test_feature_disabled_denies_even_super_admin(): void
+    public function test_global_flag_does_not_block_super_admin(): void
     {
+        // Cloud forces local_agents.enabled = false but the VPS path ignores
+        // that flag — super admin must still get access.
         config(['local_agents.enabled' => false]);
         $user = User::factory()->create(['is_super_admin' => true]);
         $team = $this->createTeam(true);
 
-        $this->assertFalse($this->gate->isAllowedForUser($user, $team));
+        $this->assertTrue($this->gate->isAllowedForUser($user, $team));
     }
 
     public function test_assert_allowed_throws_not_configured_when_token_missing(): void

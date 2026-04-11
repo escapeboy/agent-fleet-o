@@ -307,13 +307,10 @@ class ProviderResolver
 
             // CLI-based local agent providers (Codex, Claude Code)
             if (! empty($provider['local'])) {
-                if (! $localAgentsEnabled) {
-                    unset($providers[$key]);
-
-                    continue;
-                }
-
-                // VPS variant: gated by super-admin + team flag, direct binary probe.
+                // VPS variant: MUST be checked before the global localAgentsEnabled
+                // flag because the cloud edition forces that flag to false as a
+                // safety net against the generic shell-execution local-agent path.
+                // The VPS path has its own, stricter gates.
                 if (! empty($provider['vps'])) {
                     $gate = app(ClaudeCodeVpsGate::class);
                     $user = auth()->user();
@@ -327,6 +324,12 @@ class ProviderResolver
                     if (! app(LocalAgentDiscovery::class)->isVpsAgentAvailable()) {
                         unset($providers[$key]);
                     }
+
+                    continue;
+                }
+
+                if (! $localAgentsEnabled) {
+                    unset($providers[$key]);
 
                     continue;
                 }
