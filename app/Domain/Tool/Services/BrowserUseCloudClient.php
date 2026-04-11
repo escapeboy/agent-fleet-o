@@ -22,7 +22,18 @@ class BrowserUseCloudClient
 
     private const POLL_INTERVAL_SECONDS = 2;
 
-    private const TERMINAL_STATUSES = ['completed', 'failed', 'stopped', 'timed_out'];
+    /**
+     * v2 terminal statuses observed on production:
+     *   finished  — task ran to completion (check isSuccess for pass/fail)
+     *   failed    — hard failure before completion (LLM error, crash)
+     *   stopped   — user/API aborted the task
+     *   cancelled — alternative cancel spelling used by some v2 responses
+     *   timed_out — task exceeded browser-use Cloud's own timeout
+     *
+     * 'completed' is kept for backwards compatibility in case the API
+     * ever returns it again.
+     */
+    private const TERMINAL_STATUSES = ['finished', 'completed', 'failed', 'stopped', 'cancelled', 'timed_out'];
 
     private readonly string $apiKey;
 
@@ -59,9 +70,12 @@ class BrowserUseCloudClient
             if (in_array($status, self::TERMINAL_STATUSES, true)) {
                 $durationMs = (int) ((microtime(true) - $startedAt) * 1000);
 
-                if ($status === 'failed' || $status === 'stopped') {
+                // v2 explicit failure statuses
+                if (in_array($status, ['failed', 'stopped', 'cancelled'], true)) {
                     throw new BrowserTaskFailedException(
-                        $taskData['error'] ?? "Browser task ended with status: {$status}",
+                        $taskData['error']
+                        ?? $taskData['judgement']
+                        ?? "Browser task ended with status: {$status}",
                     );
                 }
 
@@ -69,13 +83,53 @@ class BrowserUseCloudClient
                     throw new BrowserTaskTimeoutException($timeoutSeconds);
                 }
 
+                // 'finished' — check isSuccess to distinguish semantic failure
+                // from a run that completed but didn't achieve the goal.
+                if ($status === 'finished' && ($taskData['isSuccess'] ?? null) === false) {
+                    throw new BrowserTaskFailedException(
+                        $taskData['judgement']
+                        ?? 'Browser task finished but did not reach the goal (isSuccess=false).',
+                    );
+                }
+
+                // v2 shape: steps is an array, urls live inside each step,
+                // screenshots come from outputFiles (image URLs).
+                $steps = is_array($taskData['steps'] ?? null) ? $taskData['steps'] : [];
+                $outputFiles = is_array($taskData['outputFiles'] ?? null) ? $taskData['outputFiles'] : [];
+
+                $urlsVisited = [];
+                foreach ($steps as $step) {
+                    if (! is_array($step)) {
+                        continue;
+                    }
+                    $url = $step['url'] ?? ($step['currentUrl'] ?? null);
+                    if (is_string($url) && $url !== '' && ! in_array($url, $urlsVisited, true)) {
+                        $urlsVisited[] = $url;
+                    }
+                }
+
+                $screenshots = [];
+                foreach ($outputFiles as $file) {
+                    if (is_string($file) && str_contains($file, '://')) {
+                        $screenshots[] = $file;
+
+                        continue;
+                    }
+                    if (is_array($file)) {
+                        $url = $file['url'] ?? ($file['path'] ?? null);
+                        if (is_string($url) && $url !== '') {
+                            $screenshots[] = $url;
+                        }
+                    }
+                }
+
                 return [
                     'status' => $status,
-                    'output' => $taskData['output'] ?? '',
-                    'steps_taken' => $taskData['steps'] ?? 0,
+                    'output' => (string) ($taskData['output'] ?? ''),
+                    'steps_taken' => count($steps),
                     'duration_ms' => $durationMs,
-                    'screenshots' => $taskData['screenshots'] ?? [],
-                    'urls_visited' => $taskData['urls'] ?? [],
+                    'screenshots' => $screenshots,
+                    'urls_visited' => $urlsVisited,
                     'error' => null,
                 ];
             }
