@@ -55,7 +55,9 @@
                     $type = $field['type'] ?? 'text';
                     $label = $field['label'] ?? ucfirst(str_replace('_', ' ', $name));
                     $required = $field['required'] ?? false;
-                    $hint = $field['hint'] ?? null;
+                    $hint = $field['hint'] ?? $field['help'] ?? null;
+                    $placeholder = $field['placeholder'] ?? null;
+                    $fieldId = 'field_'.$name;
                 @endphp
 
                 @if($type === 'textarea')
@@ -77,10 +79,80 @@
                             <option value="{{ $option['value'] }}">{{ $option['label'] }}</option>
                         @endforeach
                     </x-form-select>
+                @elseif($type === 'multi_select')
+                    <div>
+                        <label for="{{ $fieldId }}" class="mb-1 block text-sm font-medium text-gray-700">
+                            {{ $label }}@if($required)<span class="text-red-500">*</span>@endif
+                        </label>
+                        <select
+                            id="{{ $fieldId }}"
+                            wire:model="formData.{{ $name }}"
+                            multiple
+                            @if($required) required @endif
+                            size="{{ min(6, max(3, count($field['options'] ?? []))) }}"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:ring-primary-500"
+                            aria-describedby="{{ $fieldId }}_hint"
+                        >
+                            @foreach($field['options'] ?? [] as $option)
+                                <option value="{{ $option['value'] }}">{{ $option['label'] }}</option>
+                            @endforeach
+                        </select>
+                        @if($hint)
+                            <p id="{{ $fieldId }}_hint" class="mt-1 text-xs text-gray-500">{{ $hint }}</p>
+                        @endif
+                    </div>
+                @elseif($type === 'radio_cards')
+                    <div role="radiogroup" aria-labelledby="{{ $fieldId }}_label" aria-required="{{ $required ? 'true' : 'false' }}">
+                        <span id="{{ $fieldId }}_label" class="mb-2 block text-sm font-medium text-gray-700">
+                            {{ $label }}@if($required)<span class="text-red-500">*</span>@endif
+                        </span>
+                        <div class="grid gap-2 sm:grid-cols-{{ min(3, max(1, count($field['options'] ?? []))) }}">
+                            @foreach($field['options'] ?? [] as $option)
+                                @php $optionId = $fieldId.'_'.$loop->index; @endphp
+                                <label
+                                    for="{{ $optionId }}"
+                                    class="relative flex cursor-pointer rounded-lg border p-3 text-sm transition hover:border-primary-400 has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500"
+                                >
+                                    <input
+                                        type="radio"
+                                        id="{{ $optionId }}"
+                                        wire:model="formData.{{ $name }}"
+                                        value="{{ $option['value'] }}"
+                                        @if($required) required @endif
+                                        class="sr-only"
+                                    />
+                                    <span class="flex-1 font-medium text-gray-900">{{ $option['label'] }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @if($hint)
+                            <p class="mt-1 text-xs text-gray-500">{{ $hint }}</p>
+                        @endif
+                    </div>
                 @elseif($type === 'checkbox' || $type === 'boolean')
                     <x-form-checkbox
                         wire:model="formData.{{ $name }}"
                         :label="$label"
+                    />
+                @elseif($type === 'number')
+                    <x-form-input
+                        wire:model="formData.{{ $name }}"
+                        type="number"
+                        :label="$label"
+                        :hint="$hint"
+                        :required="$required"
+                        :placeholder="$placeholder"
+                        :min="$field['min'] ?? null"
+                        :max="$field['max'] ?? null"
+                        step="{{ $field['step'] ?? 'any' }}"
+                    />
+                @elseif($type === 'date')
+                    <x-form-input
+                        wire:model="formData.{{ $name }}"
+                        type="date"
+                        :label="$label"
+                        :hint="$hint"
+                        :required="$required"
                     />
                 @else
                     <x-form-input
@@ -89,11 +161,12 @@
                         :label="$label"
                         :hint="$hint"
                         :required="$required"
+                        :placeholder="$placeholder"
                     />
                 @endif
 
                 @error("formData.{$name}")
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    <p class="mt-1 text-xs text-red-600" role="alert">{{ $message }}</p>
                 @enderror
             @endforeach
 

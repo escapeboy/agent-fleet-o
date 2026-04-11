@@ -89,8 +89,9 @@ class HumanTaskForm extends Component
             }
 
             $this->formData[$key] = $field['default'] ?? match ($field['type'] ?? 'text') {
-                'checkbox' => false,
+                'checkbox', 'boolean' => false,
                 'number' => null,
+                'multi_select' => [],
                 default => '',
             };
         }
@@ -132,6 +133,7 @@ class HumanTaskForm extends Component
             }
 
             $fieldRules = [];
+            $type = $field['type'] ?? 'text';
 
             if ($field['required'] ?? false) {
                 $fieldRules[] = 'required';
@@ -139,20 +141,35 @@ class HumanTaskForm extends Component
                 $fieldRules[] = 'nullable';
             }
 
-            match ($field['type'] ?? 'text') {
+            match ($type) {
                 'number' => $fieldRules[] = 'numeric',
                 'email' => $fieldRules[] = 'email',
                 'url' => $fieldRules[] = 'url',
-                'select' => $fieldRules[] = 'in:'.implode(',', array_column($field['options'] ?? [], 'value')),
-                'checkbox' => $fieldRules[] = 'boolean',
+                'date' => $fieldRules[] = 'date',
+                'select', 'radio_cards' => $fieldRules[] = 'in:'.implode(',', array_column($field['options'] ?? [], 'value')),
+                'multi_select' => $fieldRules[] = 'array',
+                'checkbox', 'boolean' => $fieldRules[] = 'boolean',
                 default => $fieldRules[] = 'string',
             };
 
-            if (isset($field['max'])) {
+            if ($type === 'number') {
+                if (isset($field['min'])) {
+                    $fieldRules[] = 'min:'.$field['min'];
+                }
+                if (isset($field['max'])) {
+                    $fieldRules[] = 'max:'.$field['max'];
+                }
+            } elseif (isset($field['max'])) {
                 $fieldRules[] = 'max:'.$field['max'];
             }
 
             $rules["formData.{$key}"] = $fieldRules;
+
+            // Per-item validation for multi_select: every value must be in the whitelist.
+            if ($type === 'multi_select') {
+                $allowed = implode(',', array_column($field['options'] ?? [], 'value'));
+                $rules["formData.{$key}.*"] = $allowed ? ['string', "in:{$allowed}"] : ['string'];
+            }
         }
 
         return $rules;
