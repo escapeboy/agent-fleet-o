@@ -64,12 +64,18 @@ abstract class BaseArtifact
     /**
      * Helper for subclasses: verify a claimed source tool actually ran in this turn.
      *
+     * Accepts the three key shapes that the different execution paths emit:
+     *   - PrismPHP cloud tool results:        $call['name']
+     *   - Laravel AI agent tool events:       $call['tool']
+     *   - LocalToolLoopExecutor (claude-code and claude-code-vps text loop):
+     *                                          $call['toolName']
+     *
      * @param  list<array<string, mixed>>  $toolCallsInTurn
      */
     final protected static function toolRanInTurn(string $toolName, array $toolCallsInTurn): bool
     {
         foreach ($toolCallsInTurn as $call) {
-            $callName = $call['name'] ?? $call['tool'] ?? null;
+            $callName = $call['name'] ?? $call['tool'] ?? $call['toolName'] ?? null;
             if ($callName === $toolName) {
                 return true;
             }

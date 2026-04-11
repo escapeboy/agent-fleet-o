@@ -35,7 +35,7 @@ class LocalAgentGateway implements AiGatewayInterface
         }
 
         if (! empty($config['vps_only'])) {
-            return $this->executeVps($agentKey, $config, $request);
+            return $this->executeVps($agentKey, $config, $request, null);
         }
 
         if ($this->discovery->isBridgeMode()) {
@@ -179,13 +179,11 @@ class LocalAgentGateway implements AiGatewayInterface
         // never be routed through the host bridge, even in bridge mode. Mirror
         // the vps_only guard from complete() so the tool-loop streaming path
         // (LocalToolLoopExecutor → gateway->stream) reaches the right handler.
+        // Pass the onChunk callback through so executeVps can emit progressive
+        // chunks by parsing stream-json events from stdout incrementally
+        // instead of dumping the whole response at the end.
         if (! empty($config['vps_only'])) {
-            $response = $this->complete($request);
-            if ($onChunk && $response->content) {
-                $onChunk($response->content);
-            }
-
-            return $response;
+            return $this->executeVps($agentKey, $config, $request, $onChunk);
         }
 
         // Bridge mode: use NDJSON streaming for real-time output
@@ -220,7 +218,7 @@ class LocalAgentGateway implements AiGatewayInterface
      * inherits only a scrubbed environment, and is bounded by a per-team
      * concurrency cap. All invocations are written to the audit log.
      */
-    private function executeVps(string $agentKey, array $config, AiRequestDTO $request): AiResponseDTO
+    private function executeVps(string $agentKey, array $config, AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
         $gate = app(ClaudeCodeVpsGate::class);
         $cap = app(ClaudeCodeVpsConcurrencyCap::class);
@@ -252,14 +250,17 @@ class LocalAgentGateway implements AiGatewayInterface
         // <tool_call> loop work reliably — tool instructions live in system_prompt,
         // user input goes on stdin, and --tools "" disables the CLI's own
         // filesystem/bash tools so the agent has to emit our tag format.
+        //
+        // When an $onChunk callback is provided we use stream-json output so
+        // we can emit progressive assistant text chunks by reading stdout
+        // incrementally instead of waiting for the final JSON payload.
         $isAssistant = $request->purpose === 'platform_assistant';
+        $useStreaming = $isAssistant && $onChunk !== null;
 
         if ($isAssistant) {
-            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs(
-                $binaryPath,
-                $request->systemPrompt,
-                $request->model,
-            );
+            $args = $useStreaming
+                ? LocalAgentPromptBuilder::buildClaudeCodeAssistantStreamArgs($binaryPath, $request->systemPrompt, $request->model)
+                : LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model);
             $prompt = $request->userPrompt;
         } else {
             $prompt = LocalAgentPromptBuilder::buildPrompt($request);
@@ -292,6 +293,7 @@ class LocalAgentGateway implements AiGatewayInterface
             'prompt_length' => strlen($prompt),
             'workdir' => $workdir,
             'timeout' => $timeout,
+            'streaming' => $useStreaming,
         ]);
 
         $startTime = hrtime(true);
@@ -300,7 +302,13 @@ class LocalAgentGateway implements AiGatewayInterface
 
         try {
             $process = new Process($args, $workdir, $env, $prompt, $timeout);
-            $process->run();
+
+            if ($useStreaming) {
+                $this->runVpsProcessStreaming($process, $onChunk);
+            } else {
+                $process->run();
+            }
+
             $exitCode = $process->getExitCode();
             $stderr = (string) $process->getErrorOutput();
             $stdout = (string) $process->getOutput();
@@ -332,6 +340,84 @@ class LocalAgentGateway implements AiGatewayInterface
             $this->removeEphemeralWorkdir($workdir);
             $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr);
         }
+    }
+
+    /**
+     * Run the claude-code-vps process with incremental stdout reading and
+     * emit progressive text chunks via $onChunk as the CLI streams JSONL
+     * events. Strips <tool_call> blocks from the visible stream so the UI
+     * never flashes raw tag markup.
+     */
+    private function runVpsProcessStreaming(Process $process, callable $onChunk): void
+    {
+        $buffer = '';
+        $accumulatedText = '';
+        $lastEmittedLength = 0;
+
+        $process->start();
+
+        $process->wait(function (string $type, string $data) use (
+            &$buffer,
+            &$accumulatedText,
+            &$lastEmittedLength,
+            $onChunk
+        ): void {
+            if ($type !== Process::OUT) {
+                return;
+            }
+
+            $buffer .= $data;
+
+            // Parse every complete JSONL line that arrived in this read.
+            while (($pos = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $pos));
+                $buffer = substr($buffer, $pos + 1);
+
+                if ($line === '') {
+                    continue;
+                }
+
+                $event = json_decode($line, true);
+                if (! is_array($event)) {
+                    continue;
+                }
+
+                // Claude Code stream-json: assistant events carry progressive
+                // text blocks in message.content[].
+                if (($event['type'] ?? '') !== 'assistant') {
+                    continue;
+                }
+                $contentBlocks = $event['message']['content'] ?? null;
+                if (! is_array($contentBlocks)) {
+                    continue;
+                }
+                foreach ($contentBlocks as $block) {
+                    if (($block['type'] ?? '') !== 'text') {
+                        continue;
+                    }
+                    $text = $block['text'] ?? '';
+                    if (! is_string($text) || $text === '') {
+                        continue;
+                    }
+                    $accumulatedText .= $text;
+
+                    // Hide in-progress <tool_call> markup + anything after the
+                    // Gap 2 artifact delimiter so the UI never renders raw JSON.
+                    $visible = preg_replace('/<tool_call>.*?<\/tool_call>/s', '', $accumulatedText);
+                    $visible = preg_replace('/<tool_call>[\s\S]*$/', '', $visible);
+                    $artifactStart = strpos($visible, '<<<FLEETQ_ARTIFACTS>>>');
+                    if ($artifactStart !== false) {
+                        $visible = substr($visible, 0, $artifactStart);
+                    }
+                    $visible = rtrim($visible);
+
+                    if ($visible !== '' && strlen($visible) > $lastEmittedLength) {
+                        $onChunk($visible);
+                        $lastEmittedLength = strlen($visible);
+                    }
+                }
+            }
+        });
     }
 
     private function makeEphemeralWorkdir(): string

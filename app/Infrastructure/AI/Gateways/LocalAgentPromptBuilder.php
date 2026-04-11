@@ -100,4 +100,35 @@ final class LocalAgentPromptBuilder
 
         return $args;
     }
+
+    /**
+     * Streaming variant — same system-prompt / --tools "" separation, but
+     * with --output-format stream-json --verbose so the caller can consume
+     * progressive JSONL events from stdout and emit incremental text chunks
+     * to the UI instead of waiting for the final JSON payload.
+     *
+     * @return array<string>
+     */
+    public static function buildClaudeCodeAssistantStreamArgs(string $binaryPath, string $systemPrompt, ?string $model = null): array
+    {
+        $args = [
+            $binaryPath,
+            '--print',
+            '--output-format', 'stream-json',
+            '--verbose',
+            '--system-prompt', $systemPrompt,
+            '--tools', '',
+            '--dangerously-skip-permissions',
+            '--no-session-persistence',
+            '--strict-mcp-config',
+            '--mcp-config', '{"mcpServers":{}}',
+        ];
+
+        if ($model) {
+            $args[] = '--model';
+            $args[] = $model;
+        }
+
+        return $args;
+    }
 }

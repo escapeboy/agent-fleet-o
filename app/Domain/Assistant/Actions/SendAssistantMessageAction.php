@@ -434,13 +434,17 @@ class SendAssistantMessageAction
         // Gap 2: parse UI artifacts from the reply if the feature is enabled for this team.
         // The parser strips the delimiter block from the visible text so users see a clean
         // reply; the sanitized artifact VOs get persisted after the message row exists.
+        //
+        // IMPORTANT: we strip the delimiter block from $finalContent whether or not any
+        // artifact survived validation. A rejected artifact (unknown type, size cap,
+        // source_tool mismatch) must not cause the raw JSON to leak into the chat UI —
+        // the user should see the natural-language text only, even if we end up rendering
+        // nothing in its place.
         $extractedArtifacts = [];
         if ($uiArtifactsEnabled && $finalContent !== '' && $finalStatus === 'completed') {
             $parsed = $this->artifactParser->parse($finalContent, $response->toolResults ?? []);
-            if (! empty($parsed['artifacts'])) {
-                $finalContent = $parsed['text'];
-                $extractedArtifacts = $parsed['artifacts'];
-            }
+            $finalContent = $parsed['text'];
+            $extractedArtifacts = $parsed['artifacts'];
         }
 
         // Save assistant response — update existing placeholder (async mode) or create new message
