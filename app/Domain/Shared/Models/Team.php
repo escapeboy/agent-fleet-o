@@ -44,6 +44,7 @@ class Team extends Model
         'owner_id',
         'is_platform',
         'claude_code_vps_allowed',
+        'assistant_ui_artifacts_allowed',
         'settings',
         'credential_key',
         'default_email_theme_id',
@@ -58,6 +59,7 @@ class Team extends Model
         return [
             'is_platform' => 'boolean',
             'claude_code_vps_allowed' => 'boolean',
+            'assistant_ui_artifacts_allowed' => 'boolean',
             'settings' => 'array',
             'credential_key' => 'encrypted',
         ];
