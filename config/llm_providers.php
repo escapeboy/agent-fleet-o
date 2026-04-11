@@ -132,6 +132,17 @@ return [
             'claude-haiku-4-5' => ['label' => 'Claude Haiku 4.5', 'input_cost' => 0, 'output_cost' => 0],
         ],
     ],
+    'claude-code-vps' => [
+        'name' => 'Claude Code (VPS — super-admin)',
+        'local' => true,
+        'vps' => true,
+        'agent_key' => 'claude-code-vps',
+        'models' => [
+            'claude-sonnet-4-5' => ['label' => 'Claude Sonnet 4.5', 'input_cost' => 0, 'output_cost' => 0],
+            'claude-opus-4-6' => ['label' => 'Claude Opus 4.6', 'input_cost' => 0, 'output_cost' => 0],
+            'claude-haiku-4-5' => ['label' => 'Claude Haiku 4.5', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
     'gemini-cli' => [
         'name' => 'Gemini CLI (Local)',
         'local' => true,

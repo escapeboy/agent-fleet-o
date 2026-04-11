@@ -1,7 +1,7 @@
 @props([
     'title' => config('app.name'),
     'description' => 'AI Agent Mission Control Platform — build, deploy, and manage autonomous AI agent workflows.',
-    'ogImage' => null,
+    'ogImage' => '/og-image.png',
     'keywords' => null,
 ])
 <!DOCTYPE html>
@@ -28,15 +28,23 @@
     <meta name="msapplication-TileColor" content="#2563eb">
     <meta name="msapplication-config" content="/browserconfig.xml">
 
+    @php
+        // Resolve og image to an absolute URL — social crawlers reject relative paths.
+        $ogImageUrl = $ogImage
+            ? (str_starts_with($ogImage, 'http') ? $ogImage : url($ogImage))
+            : null;
+    @endphp
+
     {{-- Open Graph --}}
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">
-    @if($ogImage)
-        <meta property="og:image" content="{{ $ogImage }}">
+    @if($ogImageUrl)
+        <meta property="og:image" content="{{ $ogImageUrl }}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="{{ $title }}">
     @endif
     <meta property="og:site_name" content="{{ config('app.name') }}">
     <meta property="og:locale" content="en_US">
@@ -45,8 +53,9 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $title }}">
     <meta name="twitter:description" content="{{ $description }}">
-    @if($ogImage)
-        <meta name="twitter:image" content="{{ $ogImage }}">
+    @if($ogImageUrl)
+        <meta name="twitter:image" content="{{ $ogImageUrl }}">
+        <meta name="twitter:image:alt" content="{{ $title }}">
     @endif
 
     <meta name="theme-color" content="#2563eb">

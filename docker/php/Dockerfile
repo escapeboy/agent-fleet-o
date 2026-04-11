@@ -62,13 +62,23 @@ RUN if [ -n "$BORUNA_VERSION" ]; then \
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Install Claude Code (npm package) — used by the super-admin-gated
+# VPS provider. The binary is harmless if unused: the feature is gated
+# behind CLAUDE_CODE_OAUTH_TOKEN + user.is_super_admin + team.claude_code_vps_allowed.
+# Set CLAUDE_CODE_VERSION build arg to pin a release (e.g. --build-arg CLAUDE_CODE_VERSION=1.0.0).
+ARG CLAUDE_CODE_VERSION="latest"
+RUN apk add --no-cache nodejs npm \
+    && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
+    && ln -sf "$(npm prefix -g)/bin/claude" /usr/local/bin/claude \
+    && claude --version
+
 WORKDIR /var/www
 
 # ---------- Development stage ----------
 FROM base AS development
 
-# Install Node.js for Vite
-RUN apk add --no-cache nodejs npm
+# Node.js + npm already installed in base stage (see Claude Code install).
+# Vite can reuse the same binaries.
 
 COPY . .
 

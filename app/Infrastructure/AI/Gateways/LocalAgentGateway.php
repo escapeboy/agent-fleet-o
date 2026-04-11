@@ -2,11 +2,17 @@
 
 namespace App\Infrastructure\AI\Gateways;
 
+use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
+use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
+use App\Infrastructure\AI\Services\ClaudeCodeVpsGate;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
+use App\Models\User;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +32,10 @@ class LocalAgentGateway implements AiGatewayInterface
 
         if (! $config) {
             throw new RuntimeException("Unknown local agent: {$agentKey}");
+        }
+
+        if (! empty($config['vps_only'])) {
+            return $this->executeVps($agentKey, $config, $request);
         }
 
         if ($this->discovery->isBridgeMode()) {
@@ -189,6 +199,174 @@ class LocalAgentGateway implements AiGatewayInterface
     /**
      * Execute an agent via the host bridge HTTP server.
      */
+    /**
+     * Execute the VPS-installed Claude Code with a pre-provisioned Max OAuth token.
+     *
+     * This path is super-admin gated and completely self-contained: no bridge, no
+     * relay, no shared working directory. Each call runs in an ephemeral tmpdir,
+     * inherits only a scrubbed environment, and is bounded by a per-team
+     * concurrency cap. All invocations are written to the audit log.
+     */
+    private function executeVps(string $agentKey, array $config, AiRequestDTO $request): AiResponseDTO
+    {
+        $gate = app(ClaudeCodeVpsGate::class);
+        $cap = app(ClaudeCodeVpsConcurrencyCap::class);
+
+        $user = $request->userId ? User::find($request->userId) : null;
+        $team = $request->teamId ? Team::withoutGlobalScopes()->find($request->teamId) : null;
+
+        $gate->assertAllowed($user, $team);
+
+        $binaryPath = $this->discovery->vpsBinaryPath();
+        if (! $binaryPath) {
+            throw VpsLocalAgentException::binaryMissing(
+                (string) config('local_agents.vps.binary_path'),
+            );
+        }
+
+        $teamId = $request->teamId ?? 'platform';
+        $slotToken = $cap->acquire($teamId);
+        if ($slotToken === false) {
+            throw VpsLocalAgentException::concurrencyCapReached($cap->cap());
+        }
+
+        $workdir = $this->makeEphemeralWorkdir();
+        $timeout = (int) config('local_agents.vps.timeout_seconds', 300);
+        $oauthToken = (string) config('local_agents.vps.oauth_token');
+
+        $prompt = LocalAgentPromptBuilder::buildPrompt($request);
+
+        $args = array_merge(
+            [$binaryPath],
+            $config['execute_flags'] ?? ['-p', '--output-format', 'stream-json', '--dangerously-skip-permissions'],
+        );
+
+        if ($request->model) {
+            $args[] = '--model';
+            $args[] = $request->model;
+        }
+
+        $env = [
+            'PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin',
+            'HOME' => $workdir,
+            'CLAUDE_CODE_OAUTH_TOKEN' => $oauthToken,
+        ];
+
+        Log::info('LocalAgentGateway: executing claude-code-vps', [
+            'team_id' => $teamId,
+            'user_id' => $request->userId,
+            'model' => $request->model,
+            'prompt_length' => strlen($prompt),
+            'workdir' => $workdir,
+            'timeout' => $timeout,
+        ]);
+
+        $startTime = hrtime(true);
+        $exitCode = null;
+        $stderr = '';
+
+        try {
+            $process = new Process($args, $workdir, $env, $prompt, $timeout);
+            $process->run();
+            $exitCode = $process->getExitCode();
+            $stderr = (string) $process->getErrorOutput();
+            $stdout = (string) $process->getOutput();
+
+            $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+            if (! $process->isSuccessful() && $stdout === '') {
+                throw new RuntimeException(
+                    "Claude Code (VPS) failed (exit {$exitCode}): ".substr($stderr ?: 'no error output', 0, 500),
+                );
+            }
+
+            $parsed = LocalAgentOutputParser::parseOutput($agentKey, $stdout);
+
+            return new AiResponseDTO(
+                content: $parsed['content'],
+                parsedOutput: $parsed['structured'],
+                usage: new AiUsageDTO(
+                    promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                    completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
+                    costCredits: 0,
+                ),
+                provider: $request->provider,
+                model: $request->model,
+                latencyMs: $latencyMs,
+            );
+        } finally {
+            $cap->release($teamId, $slotToken);
+            $this->removeEphemeralWorkdir($workdir);
+            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr);
+        }
+    }
+
+    private function makeEphemeralWorkdir(): string
+    {
+        $base = sys_get_temp_dir().'/claude-vps';
+        if (! is_dir($base)) {
+            @mkdir($base, 0700, true);
+        }
+
+        $path = $base.'/'.bin2hex(random_bytes(8));
+        mkdir($path, 0700, true);
+
+        return $path;
+    }
+
+    private function removeEphemeralWorkdir(string $path): void
+    {
+        if (! str_starts_with($path, sys_get_temp_dir().'/claude-vps/')) {
+            return;
+        }
+
+        $items = @scandir($path) ?: [];
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $target = $path.'/'.$item;
+            if (is_dir($target)) {
+                $this->removeEphemeralWorkdir($target);
+            } else {
+                @unlink($target);
+            }
+        }
+
+        @rmdir($path);
+    }
+
+    private function recordVpsAudit(
+        AiRequestDTO $request,
+        ?User $user,
+        ?Team $team,
+        ?int $exitCode,
+        int $startTime,
+        string $stderr,
+    ): void {
+        try {
+            AuditEntry::create([
+                'team_id' => $team?->id,
+                'user_id' => $user?->id,
+                'event' => 'claude_code_vps.invoke',
+                'subject_type' => $team ? Team::class : null,
+                'subject_id' => $team?->id,
+                'properties' => [
+                    'model' => $request->model,
+                    'prompt_length' => strlen($request->userPrompt),
+                    'duration_ms' => (int) ((hrtime(true) - $startTime) / 1_000_000),
+                    'exit_code' => $exitCode,
+                    'stderr_preview' => $stderr !== '' ? substr($stderr, 0, 200) : null,
+                ],
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: failed to write VPS audit entry', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function executeViaBridge(string $agentKey, array $config, AiRequestDTO $request): AiResponseDTO
     {
         $prompt = LocalAgentPromptBuilder::buildPrompt($request);
