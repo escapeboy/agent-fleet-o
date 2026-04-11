@@ -260,6 +260,7 @@ use App\Mcp\Tools\Shared\PushSubscriptionManageTool;
 use App\Mcp\Tools\Shared\TeamAiFeaturesGetTool;
 use App\Mcp\Tools\Shared\TeamAiFeaturesUpdateTool;
 use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
+use App\Mcp\Tools\Shared\TeamClaudeCodeVpsAccessTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
@@ -705,7 +706,6 @@ class AgentFleetServer extends Server
         AlertConnectorTool::class,
         SlackConnectorTool::class,
         HttpMonitorTool::class,
-        SearxngSearchTool::class,
         InboundConnectorManageTool::class,
         ConnectorBindingTool::class,
         ConnectorBindingDeleteTool::class,
@@ -819,6 +819,7 @@ class AgentFleetServer extends Server
         TeamAiFeaturesUpdateTool::class,
         LocalLlmTool::class,
         TeamByokCredentialManageTool::class,
+        TeamClaudeCodeVpsAccessTool::class,
         PortkeyGatewayTool::class,
         CustomEndpointManageTool::class,
         ApiTokenManageTool::class,

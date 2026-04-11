@@ -8,6 +8,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 /**
  * MCP tool for generating changelogs from git commit history.
@@ -15,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
  * Groups commits by type (feat, fix, chore, etc.) using Conventional Commits
  * format and generates a structured changelog entry for a given version.
  */
+#[IsReadOnly]
 class GitChangelogTool extends Tool
 {
     protected string $name = 'git_changelog_generate';

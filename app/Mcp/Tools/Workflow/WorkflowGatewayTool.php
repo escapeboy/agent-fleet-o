@@ -9,11 +9,13 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * Dynamically wraps an MCP-exposed workflow as a named MCP tool.
  * One instance is created per exposed workflow in AgentFleetServer::boot().
  */
+#[IsDestructive]
 class WorkflowGatewayTool extends Tool
 {
     public function __construct(

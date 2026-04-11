@@ -8,12 +8,14 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 /**
  * List the version history of a credential.
  *
  * Secret data is never returned — only metadata (version number, note, created_at).
  */
+#[IsReadOnly]
 class CredentialListVersionsTool extends Tool
 {
     protected string $name = 'credential_list_versions';

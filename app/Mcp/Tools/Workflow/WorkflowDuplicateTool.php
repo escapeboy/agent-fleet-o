@@ -11,7 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class WorkflowDuplicateTool extends Tool
 {
     protected string $name = 'workflow_duplicate';

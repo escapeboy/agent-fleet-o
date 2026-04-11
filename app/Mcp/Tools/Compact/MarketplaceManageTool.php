@@ -8,7 +8,9 @@ use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class MarketplaceManageTool extends CompactTool
 {
     protected string $name = 'marketplace_manage';

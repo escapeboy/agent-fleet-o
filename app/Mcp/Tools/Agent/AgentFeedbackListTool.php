@@ -28,7 +28,8 @@ class AgentFeedbackListTool extends Tool
             'score' => $schema->integer()
                 ->description('Filter by score: 1 (positive), -1 (negative), 0 (neutral). Omit to return all.'),
             'limit' => $schema->integer()
-                ->description('Max entries to return (default 20, max 100)'),
+                ->description('Max entries to return (default 20, max 100)')
+                ->default(20),
         ];
     }
 

@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class CustomEndpointManageTool extends Tool
 {
     protected string $name = 'custom_endpoint_manage';

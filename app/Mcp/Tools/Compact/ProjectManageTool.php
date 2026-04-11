@@ -16,7 +16,9 @@ use App\Mcp\Tools\Project\ProjectScheduleManageTool;
 use App\Mcp\Tools\Project\ProjectScheduleNlpTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class ProjectManageTool extends CompactTool
 {
     protected string $name = 'project_manage';

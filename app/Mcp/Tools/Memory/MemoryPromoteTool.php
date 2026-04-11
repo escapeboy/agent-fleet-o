@@ -8,6 +8,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool to promote a memory to a higher curation tier.
@@ -16,6 +17,7 @@ use Laravel\Mcp\Server\Tool;
  * has been reviewed and is now considered trusted knowledge.
  * Promoted memories receive a +0.10 retrieval score boost.
  */
+#[IsDestructive]
 class MemoryPromoteTool extends Tool
 {
     protected string $name = 'memory_promote';

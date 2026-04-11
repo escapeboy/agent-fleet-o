@@ -7,7 +7,9 @@ use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class OutboundManageTool extends CompactTool
 {
     protected string $name = 'outbound_manage';

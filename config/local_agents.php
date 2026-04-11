@@ -120,6 +120,28 @@ return [
             'output_format' => 'acp',
             'requires_pty' => false,
         ],
+        'claude-code-vps' => [
+            'name' => 'Claude Code (VPS)',
+            'binary' => 'claude',
+            'description' => 'Claude Code running on the VPS with a pre-provisioned Max OAuth token (super-admin gated)',
+            'detect_command' => 'claude --version',
+            'requires_env' => null,
+            'capabilities' => ['code_generation', 'file_editing', 'shell_execution', 'git', 'mcp'],
+            'supported_modes' => ['sync'],
+            'execute_flags' => ['-p', '--output-format', 'stream-json', '--dangerously-skip-permissions'],
+            'stream_flags' => ['-p', '--output-format', 'stream-json', '--dangerously-skip-permissions'],
+            'output_format' => 'stream-json',
+            'requires_pty' => false,
+            'vps_only' => true,
+        ],
+    ],
+
+    // VPS-installed Claude Code — super-admin gated
+    'vps' => [
+        'oauth_token' => env('CLAUDE_CODE_OAUTH_TOKEN'),
+        'binary_path' => env('CLAUDE_CODE_VPS_BINARY', '/usr/local/bin/claude'),
+        'max_concurrency_per_team' => (int) env('CLAUDE_CODE_VPS_MAX_CONCURRENCY', 2),
+        'timeout_seconds' => (int) env('CLAUDE_CODE_VPS_TIMEOUT', 300),
     ],
 
     // Host bridge — allows Docker containers to reach host-installed agents

@@ -2,6 +2,55 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.18.0] - 2026-04-10
+
+### Added
+
+- **Website Builder — feature complete across 5 sprints.** The 1.17.0 website builder MVP is now production-ready:
+  - **Assistant parity** — 11 new AI tools + 4 read tools in `WebsiteMutationTools`, `ListEntitiesTools`, `GetEntityTools`. In-app assistant can create, update, publish, unpublish, delete, and generate websites end-to-end.
+  - **Unpublish path** — `UnpublishWebsiteAction`, `UnpublishWebsitePageAction`, REST, MCP (`website_unpublish`, `website_page_unpublish`), UI buttons.
+  - **Deployment pipeline** — `WebsiteDeploymentDriver` contract, `ZipDeploymentDriver` (7-day signed URL), `VercelDeploymentDriver` (credential-scoped, log scrub), `DeployWebsiteAction`, `DeployWebsiteJob`, REST (`POST /api/v1/websites/{id}/deploy`), MCP (`website_deploy`, `website_deployment_list`), Livewire Deploy buttons, deployments table.
+  - **Dynamic content** — `EnhanceWebsiteNavigationAction` auto-runs on publish/unpublish/delete/rename. `rewriteInternalLinks()` rewrites broken `<a href="/...">` to `/`. `WebsiteWidgetRenderer` expands `<!-- fleetq:recent-posts -->` and `<!-- fleetq:page-list -->` at serve time with Redis caching, `content_version` invalidation, per-render memoization, 20-widget hard cap.
+  - **Widget cache metrics** — `WebsiteWidgetMetrics` service with 24h per-widget counters and `snapshot()` API.
+  - **AI prompt vocabulary** — `GenerateWebsiteFromPromptAction` now documents widgets so AI-generated sites use them by default.
+- **15 MCP website tools** registered in `AgentFleetServer`: list/get/create/update/delete (website + page), publish/unpublish (website + page), generate, deploy, deployment_list, export, analytics.
+- **Migrations** — `add_url_and_started_at_to_website_deployments_table`, `add_content_version_to_websites_table`.
+- **HtmlSanitizer unit tests** — `tests/Unit/Domain/Website/HtmlSanitizerTest.php` (15 tests covering XSS, form handling, HTML5 semantic tags, event handler stripping, CSS sanitization, malformed input).
+- **Dynamics feature tests** — `tests/Feature/Website/WebsiteDynamicsTest.php` (30 tests covering re-enhance hooks, link validator edge cases, widget rendering, widget caching, observer version bumps, widget metrics, AI prompt lock-in).
+- **Throttle assertion test** — `tests/Feature/Website/PublicSiteControllerThrottleTest.php` (3 tests verifying `throttle:10,1` middleware actually fires on the 11th form submit; isolated from full-suite flakiness via monotonic unique IPs and multi-store cache flush).
+
+### Fixed
+
+- **CRITICAL — `ezyang/htmlpurifier` composer dep missing.** `HtmlSanitizer::purify()` has always called `HTMLPurifier_Config::createDefault()` but the package was never in `composer.json`. Every page save was silently crashing. Dependency added; sanitization actually works now.
+- **CRITICAL — `TeamScope` bypassed in the entire test suite.** `phpunit.xml` was missing `force="true"` on the `APP_ENV=testing` env var. `Application::runningUnitTests()` returned false → `TeamScope::apply()` early-returned → zero tenant scoping in tests since day 1. Fix: force the env var in phpunit.xml AND add `defined('PHPUNIT_COMPOSER_INSTALL')` defence-in-depth in `TeamScope` itself. Production always enforced the scope correctly; this only fixes the test harness.
+- **HIGH — `EnhanceWebsiteNavigationAction::injectContactForm` phishing bypass.** Loose `stripos` check could be defeated by a page mentioning `/api/public/` in unrelated text plus a phishing form. Tightened to a regex matching the `<form action="/api/public/sites/{slug}/forms/{id}">` pattern directly.
+- **MEDIUM — Widget DoS from unbounded widget count per page.** `MAX_WIDGETS_PER_PAGE = 20` hard cap + per-render memoization.
+- **MEDIUM — Observer N+1 during bulk enhance.** `EnhanceWebsiteNavigationAction` wraps its loop in `WebsitePage::withoutEvents()` and issues a single atomic `content_version` bump at the end.
+- **MEDIUM — `strtok` global state leak** in `rewriteInternalLinks` → replaced with `explode`.
+- **LOW — Vercel error body verbatim in logs.** `VercelDeploymentDriver::scrubResponseBody()` truncates to 500 chars and redacts token/key/Bearer patterns.
+
+### Changed
+
+- **`HtmlSanitizer`** allows `<!-- fleetq:... -->` comments via `HTML.AllowedCommentsRegexp` so widget markers survive Phase 1 sanitization. Other comments still stripped.
+- **`PublicSiteController::page()`** invokes `WebsiteWidgetRenderer::render()` on exported HTML before returning. Widget queries use `withoutGlobalScopes([TeamScope::class])` + explicit `where('team_id', ...)` for safe public serving without an auth user.
+- **`AssistantToolRegistry::toolTier()`** classifies `publish_`, `unpublish_`, `deploy_` prefixes as write-tier.
+- **`MutationTools::writeTools()`** + `destructiveTools()` include `WebsiteMutationTools`.
+- **`ListEntitiesTools::tools()`** adds `list_websites` and `list_website_pages`.
+- **`GetEntityTools::tools()`** adds `get_website` and `get_website_page`.
+- **`WebsiteDetailPage` Livewire component** gains Deploy buttons (ZIP + Vercel), Unpublish buttons (site + per-page), deployments table section.
+- **Pint housekeeping** — `ExportWebsiteController`, `CreateFlowEvaluationDatasetAction`, `ToolTranslator`, `EnhanceWebsiteNavigationAction` formatting drift fixed. Full repo is `pint --test` clean.
+
+### Security
+
+- Form-action phishing bypass closed.
+- Widget DoS hard-capped.
+- Vercel credential log scrub.
+- Tenant isolation active in tests for the first time ever.
+
+### Tests
+
+- **1796 passing**, 0 failing, 1 risky, 10 skipped. Up from ~1630 in 1.17.0. Includes full regression coverage for every security finding across the 5 sprints.
+
 ## [1.17.0] - 2026-04-02
 
 ### Added

@@ -10,10 +10,12 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * Manage boruna_script skills: create, list, get, and list recent executions.
  */
+#[IsDestructive]
 class BorunaSkillManageTool extends McpTool
 {
     protected string $name = 'boruna_skill_manage';

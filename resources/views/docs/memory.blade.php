@@ -150,6 +150,63 @@ memory_upload_knowledge(
         future agents on the team will benefit from it without prompt engineering.
     </x-docs.callout>
 
+    <p class="mt-4 text-sm text-gray-600">
+        Supported formats for <code class="font-mono text-xs">memory_upload_knowledge</code> include
+        <code class="rounded bg-gray-100 px-1">PDF</code>, <code class="rounded bg-gray-100 px-1">TXT</code>,
+        <code class="rounded bg-gray-100 px-1">MD</code>, and <code class="rounded bg-gray-100 px-1">CSV</code>.
+        Each source is automatically tagged so you can later filter or delete everything that came from a
+        specific document.
+    </p>
+
+    {{-- Memory tag scoping --}}
+    <h2 class="mt-12 text-xl font-bold text-gray-900">Memory tag scoping</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Every memory can carry one or more <strong>tags</strong>. Retrieval can be scoped to a tag set so that
+        different agents on the same team see completely different memory pools. This is essential when a
+        single team runs multiple customer-facing chatbots (one team, many brands) and you need each bot to
+        stay ignorant of the others' knowledge.
+    </p>
+    <ul class="mt-3 list-disc pl-5 text-sm text-gray-600">
+        <li><code class="font-mono text-xs">RetrieveRelevantMemoriesAction</code> accepts a <code class="font-mono text-xs">tags</code> array and filters results before the cosine-similarity ranking.</li>
+        <li>Tags are edited via the Memory Browser UI (per-entry checkboxes) or the <code class="font-mono text-xs">memory_update</code> MCP tool.</li>
+        <li>Chatbots declare their allowed tag set in their configuration — the InjectMemoryContext middleware automatically narrows retrieval for every inbound message.</li>
+    </ul>
+
+    {{-- KG data quality --}}
+    <h2 class="mt-12 text-xl font-bold text-gray-900">Knowledge Graph data quality</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Raw agent-written facts drift fast — the same company can be stored as "Acme", "Acme Corp", "ACME Corp.",
+        or "acme_corp". FleetQ's KG uses two mechanisms to keep the graph clean:
+    </p>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Mechanism</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">What it does</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">EntityType enum</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Every entity is classified into one of 11 types (Company, Person, Product, Technology,
+                        Concept, Event, Location, Organisation, Document, Metric, Other). Retrieval can scope
+                        to a single type for precision queries.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">NormalizeKnowledgeInputAction</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Before <code class="font-mono text-xs">kg_add_fact</code> persists a new edge, an LLM
+                        pass canonicalises entity names, deduplicates synonyms, rejects garbage strings, and
+                        assigns an <code class="font-mono text-xs">EntityType</code>. Keeps the graph tight.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
     {{-- Knowledge Graph --}}
     <h2 class="mt-12 text-xl font-bold text-gray-900">Knowledge Graph</h2>
     <p class="mt-2 text-sm text-gray-600">

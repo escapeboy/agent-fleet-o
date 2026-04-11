@@ -6,7 +6,9 @@ use App\Mcp\Tools\Bridge\BridgeDisconnectTool;
 use App\Mcp\Tools\Bridge\BridgeEndpointListTool;
 use App\Mcp\Tools\Bridge\BridgeEndpointToggleTool;
 use App\Mcp\Tools\Bridge\BridgeStatusTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class BridgeManageTool extends CompactTool
 {
     protected string $name = 'bridge_manage';

@@ -11,7 +11,9 @@ use App\Mcp\Tools\Admin\AdminUserRevokeSessionsTool;
 use App\Mcp\Tools\Admin\AdminUserSendPasswordResetTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class AdminManageTool extends CompactTool
 {
     protected string $name = 'admin_manage';

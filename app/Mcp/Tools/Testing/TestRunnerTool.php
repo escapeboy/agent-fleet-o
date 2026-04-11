@@ -7,6 +7,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for running tests in a connected git repository via bridge.
@@ -14,6 +15,7 @@ use Laravel\Mcp\Server\Tool;
  * Executes test suites (PHPUnit, Jest, pytest, etc.) in the repository
  * working directory on the connected bridge machine and returns results.
  */
+#[IsDestructive]
 class TestRunnerTool extends Tool
 {
     protected string $name = 'test_run';

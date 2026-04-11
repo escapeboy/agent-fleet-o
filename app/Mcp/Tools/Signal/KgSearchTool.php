@@ -37,7 +37,8 @@ class KgSearchTool extends Tool
             'include_history' => $schema->boolean()
                 ->description('Include invalidated historical facts (default: false — only current facts)'),
             'limit' => $schema->integer()
-                ->description('Maximum number of results (default: 10, max: 50)'),
+                ->description('Maximum number of results (default: 10, max: 50)')
+                ->default(10),
         ];
     }
 

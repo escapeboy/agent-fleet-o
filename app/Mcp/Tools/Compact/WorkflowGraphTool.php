@@ -8,7 +8,9 @@ use App\Mcp\Tools\Workflow\WorkflowNodeAddTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeDeleteTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowSaveGraphTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class WorkflowGraphTool extends CompactTool
 {
     protected string $name = 'workflow_graph';

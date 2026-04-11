@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for managing ConnectorSignalSubscriptions.
@@ -18,6 +19,7 @@ use Laravel\Mcp\Server\Tool;
  * Agents can list, create, toggle, and delete per-source webhook subscriptions
  * backed by OAuth integrations (GitHub, Linear, Jira, etc.).
  */
+#[IsDestructive]
 class ConnectorSubscriptionTool extends Tool
 {
     protected string $name = 'connector_subscription_manage';

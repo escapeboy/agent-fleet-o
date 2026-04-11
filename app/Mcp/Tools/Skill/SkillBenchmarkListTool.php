@@ -27,7 +27,8 @@ class SkillBenchmarkListTool extends Tool
                 ->description('Filter by status: pending, running, completed, cancelled, failed (optional)')
                 ->enum(['pending', 'running', 'completed', 'cancelled', 'failed']),
             'limit' => $schema->integer()
-                ->description('Maximum results to return (default: 20, max: 100)'),
+                ->description('Maximum results to return (default: 20, max: 100)')
+                ->default(20),
         ];
     }
 

@@ -11,6 +11,8 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
+#[IsReadOnly]
+#[IsIdempotent]
 class LangfuseConfigTool extends Tool
 {
     protected string $name = 'langfuse_config';

@@ -10,6 +10,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool: skill_generate_improvement
@@ -18,6 +19,7 @@ use Laravel\Mcp\Server\Tool;
  * good/bad examples, and produces an AI-improved SkillVersion.
  * Requires at least 1 good and 1 bad annotation.
  */
+#[IsDestructive]
 class SkillGenerateImprovementTool extends Tool
 {
     protected string $name = 'skill_generate_improvement';

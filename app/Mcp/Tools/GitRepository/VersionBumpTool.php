@@ -8,6 +8,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for bumping version numbers in repository files.
@@ -15,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
  * Reads the current version from common version files (package.json, composer.json,
  * VERSION, pyproject.toml), increments according to semver, and commits the change.
  */
+#[IsDestructive]
 class VersionBumpTool extends Tool
 {
     protected string $name = 'git_version_bump';

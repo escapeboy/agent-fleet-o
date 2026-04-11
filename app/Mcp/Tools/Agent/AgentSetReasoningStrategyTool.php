@@ -4,11 +4,11 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Models\Agent;
-use Laravel\Mcp\Http\Request;
-use Laravel\Mcp\Http\Response;
-use Laravel\Mcp\Schema\JsonSchema;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
-use Laravel\Mcp\Server\Tool\Attribute\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 class AgentSetReasoningStrategyTool extends Tool

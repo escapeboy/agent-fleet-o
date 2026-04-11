@@ -6,7 +6,9 @@ use App\Mcp\Tools\Assistant\AssistantConversationClearTool;
 use App\Mcp\Tools\Assistant\AssistantConversationGetTool;
 use App\Mcp\Tools\Assistant\AssistantConversationListTool;
 use App\Mcp\Tools\Assistant\AssistantSendMessageTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class AssistantManageTool extends CompactTool
 {
     protected string $name = 'assistant_manage';

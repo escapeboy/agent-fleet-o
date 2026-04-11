@@ -8,7 +8,9 @@ use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class WebhookCreateTool extends Tool
 {
     protected string $name = 'webhook_create';

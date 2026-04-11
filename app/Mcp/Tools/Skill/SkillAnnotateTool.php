@@ -8,12 +8,14 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool: skill_annotate
  *
  * Persists a thumbs-up or thumbs-down annotation on a skill playground output.
  */
+#[IsDestructive]
 class SkillAnnotateTool extends Tool
 {
     protected string $name = 'skill_annotate';

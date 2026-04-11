@@ -313,6 +313,24 @@ class ProviderResolver
                     continue;
                 }
 
+                // VPS variant: gated by super-admin + team flag, direct binary probe.
+                if (! empty($provider['vps'])) {
+                    $gate = app(ClaudeCodeVpsGate::class);
+                    $user = auth()->user();
+
+                    if (! $gate->isAllowedForUser($user, $team)) {
+                        unset($providers[$key]);
+
+                        continue;
+                    }
+
+                    if (! app(LocalAgentDiscovery::class)->isVpsAgentAvailable()) {
+                        unset($providers[$key]);
+                    }
+
+                    continue;
+                }
+
                 // Lazy-detect once
                 if ($detected === null) {
                     $detected = app(LocalAgentDiscovery::class)->detect();

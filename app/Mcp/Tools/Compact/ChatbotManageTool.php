@@ -13,7 +13,9 @@ use App\Mcp\Tools\Chatbot\ChatbotToggleStatusTool;
 use App\Mcp\Tools\Chatbot\ChatbotTokenCreateTool;
 use App\Mcp\Tools\Chatbot\ChatbotTokenRevokeTool;
 use App\Mcp\Tools\Chatbot\ChatbotUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class ChatbotManageTool extends CompactTool
 {
     protected string $name = 'chatbot_manage';

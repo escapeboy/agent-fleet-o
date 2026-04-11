@@ -14,7 +14,9 @@ use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class WorkflowManageTool extends CompactTool
 {
     protected string $name = 'workflow_manage';

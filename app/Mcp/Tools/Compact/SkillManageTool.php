@@ -13,7 +13,9 @@ use App\Mcp\Tools\Skill\SkillListTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class SkillManageTool extends CompactTool
 {
     protected string $name = 'skill_manage';

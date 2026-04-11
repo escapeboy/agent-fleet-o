@@ -9,6 +9,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool: trigger an on-demand Activepieces piece sync.
@@ -16,6 +17,7 @@ use Laravel\Mcp\Server\Tool;
  * Fetches the piece catalogue from the connected Activepieces instance and
  * upserts each piece as an MCP-HTTP Tool record in FleetQ.
  */
+#[IsDestructive]
 class ActivepiecesSyncTool extends Tool
 {
     protected string $name = 'activepieces_sync';

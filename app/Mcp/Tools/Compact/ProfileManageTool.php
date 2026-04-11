@@ -8,7 +8,9 @@ use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
 use App\Mcp\Tools\Profile\ProfileGetTool;
 use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
 use App\Mcp\Tools\Profile\ProfileUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class ProfileManageTool extends CompactTool
 {
     protected string $name = 'profile_manage';

@@ -80,6 +80,75 @@
                         HMAC-verified webhook maps company/person data into a signal with a FIRE model composite score.
                     </td>
                 </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Alert connectors</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Dedicated webhook endpoints for <strong>Sentry</strong>, <strong>Datadog</strong>, and
+                        <strong>PagerDuty</strong>. Each connector validates the provider's signing scheme and
+                        maps alert payloads (title, severity, runbook URL) into structured signals. Feed
+                        production alerts directly into your incident response experiment.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">IMAP mailbox</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Poll an IMAP inbox on a schedule. New messages become signals with parsed headers,
+                        sender, subject, and body. Useful for support-ticket ingestion and contact-form
+                        replies. Configure via <code class="rounded bg-gray-100 px-1">imap_mailbox</code> MCP tool.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">HTTP monitor</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Periodically probes an HTTP endpoint and emits a signal whenever the response changes
+                        (status code, latency, body diff). Acts as a lightweight uptime + change detector.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Slack (inbound)</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Slash command or @-mention in Slack creates a signal. Useful for "/triage" style
+                        commands that launch an experiment from chat.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Generic integration webhook</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Fallback endpoint at <code class="rounded bg-gray-100 px-1 text-xs">/api/integrations/webhook/{slug}</code>
+                        for any service not listed above. HMAC-verified, per-slug binding.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    {{-- Alert connector routes --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Alert connector routes</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Production incident tooling ships pre-configured endpoints. Point your provider at these URLs and
+        add the binding secret in <strong>Signal Sources → Bindings</strong>.
+    </p>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Provider</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Endpoint</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Sentry</td>
+                    <td class="py-2.5 pr-4 font-mono text-xs text-gray-700">POST /api/signals/sentry</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Datadog</td>
+                    <td class="py-2.5 pr-4 font-mono text-xs text-gray-700">POST /api/signals/datadog<br/>(<code class="rounded bg-gray-100 px-1">X-Datadog-Webhook-Secret</code> header)</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">PagerDuty</td>
+                    <td class="py-2.5 pr-4 font-mono text-xs text-gray-700">POST /api/signals/pagerduty</td>
+                </tr>
             </tbody>
         </table>
     </div>

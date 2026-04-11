@@ -15,7 +15,9 @@ use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SupabaseConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class SignalConnectorsTool extends CompactTool
 {
     protected string $name = 'signal_connectors';

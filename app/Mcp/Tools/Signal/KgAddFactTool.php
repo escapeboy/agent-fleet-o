@@ -9,6 +9,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for directly adding a structured fact to the knowledge graph.
@@ -17,6 +18,7 @@ use Laravel\Mcp\Server\Tool;
  * changed their price, or confirming a contact's new role). Contradiction detection
  * runs automatically — conflicting current facts will be invalidated.
  */
+#[IsDestructive]
 class KgAddFactTool extends Tool
 {
     protected string $name = 'kg_add_fact';

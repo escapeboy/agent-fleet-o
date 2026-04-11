@@ -7,7 +7,9 @@ use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
 use App\Mcp\Tools\Approval\ApprovalRejectTool;
 use App\Mcp\Tools\Approval\ApprovalWebhookTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class ApprovalManageTool extends CompactTool
 {
     protected string $name = 'approval_manage';

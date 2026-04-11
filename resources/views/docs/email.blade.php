@@ -187,6 +187,44 @@
         </table>
     </div>
 
+    {{-- MJML rendering --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">MJML rendering microservice</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Email templates can be authored in <a href="https://mjml.io" class="text-primary-600 hover:underline" target="_blank" rel="noopener">MJML</a>
+        — a responsive email markup language that compiles to inlined, table-based HTML compatible with every
+        mail client. FleetQ ships an <strong>MJML rendering microservice</strong> as a Docker sidecar so you
+        never need to install the MJML CLI or Node.js on the application container.
+    </p>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Component</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">Details</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Docker service</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">docker/mjml/</code> — a tiny Node.js container running the MJML HTTP API.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Service URL</td>
+                    <td class="py-2.5 pr-4 font-mono text-xs text-gray-700">MJML_SERVER_URL=http://mjml:15500</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Renderer class</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">MjmlRenderer</code> posts template bodies to the sidecar and returns the compiled HTML. Falls back to a plain-HTML pass-through when the service is unreachable.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <x-docs.callout type="tip">
+        Write your template body with MJML tags (<code class="font-mono text-xs">&lt;mj-section&gt;</code>,
+        <code class="font-mono text-xs">&lt;mj-button&gt;</code>, …) and FleetQ compiles to bulletproof HTML at
+        send time. The AI generator (below) can also produce MJML directly if you ask for it.
+    </x-docs.callout>
+
     {{-- AI generation --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">AI template generation</h2>
     <p class="mt-2 text-sm text-gray-600">
@@ -215,6 +253,13 @@ curl -X POST https://your-instance.example/api/v1/email-templates/{id}/generate 
         For example: "Professional alert email for a DevOps team notifying them that an experiment has failed,
         including the experiment name and a link to the failure log."
     </x-docs.callout>
+
+    <p class="mt-4 text-sm text-gray-600">
+        The FleetQ assistant can also generate full email <em>themes</em> (not just templates) via the
+        <code class="rounded bg-gray-100 px-1 text-xs">email_theme_create</code> tool. Ask it to "create a
+        dark-mode theme for our Acme product" and it will pick a cohesive colour palette, drop in the logo,
+        and craft a footer — all in one turn.
+    </p>
 
     {{-- Using templates with outbound --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Using templates with outbound delivery</h2>
