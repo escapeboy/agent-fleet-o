@@ -115,6 +115,7 @@ use App\Mcp\Tools\Credential\CredentialRotateTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
 use App\Mcp\Tools\Crew\CrewActivateTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
+use App\Mcp\Tools\Crew\CrewDeleteTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
@@ -586,6 +587,7 @@ class AgentFleetServer extends Server
         CrewGenerateFromPromptTool::class,
         CrewProposeRestructuringTool::class,
         CrewActivateTool::class,
+        CrewDeleteTool::class,
         CrewMemberRemoveTool::class,
 
         // Experiment (16)
