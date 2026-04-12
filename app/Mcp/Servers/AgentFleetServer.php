@@ -117,6 +117,8 @@ use App\Mcp\Tools\Crew\CrewActivateTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
 use App\Mcp\Tools\Crew\CrewDeleteTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
+use App\Mcp\Tools\Crew\CrewBlackboardPostTool;
+use App\Mcp\Tools\Crew\CrewBlackboardReadTool;
 use App\Mcp\Tools\Crew\CrewExecutionPauseTool;
 use App\Mcp\Tools\Crew\CrewExecutionResumeTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
@@ -575,7 +577,7 @@ class AgentFleetServer extends Server
         EvolutionGetTool::class,
         EvolutionDeleteTool::class,
 
-        // Crew (14)
+        // Crew (16)
         CrewListTool::class,
         CrewGetTool::class,
         CrewCreateTool::class,
@@ -593,6 +595,8 @@ class AgentFleetServer extends Server
         CrewActivateTool::class,
         CrewDeleteTool::class,
         CrewMemberRemoveTool::class,
+        CrewBlackboardPostTool::class,
+        CrewBlackboardReadTool::class,
 
         // Experiment (16)
         ExperimentListTool::class,
