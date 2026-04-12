@@ -68,6 +68,7 @@ class CrewBlackboardPostTool extends Tool
         ]);
 
         Redis::zadd($key, [microtime(true) => $payload]);
+        Redis::zremrangebyrank($key, 0, -1001); // keep newest 1000 entries
         Redis::expire($key, 86400);
 
         $count = (int) Redis::zcard($key);
