@@ -33,6 +33,8 @@ class MemoryUnifiedSearchTool extends Tool
                 ->default(10),
             'tags' => $schema->array()
                 ->description('Filter by tags — only return memories containing ANY of these tags. E.g. ["barsy:client", "barsy:shared"]. Omit to return all.'),
+            'topic' => $schema->string()
+                ->description('Namespace pre-filter by topic slug, e.g. "auth_migration". Narrows vector search to a named context before scoring.'),
         ];
     }
 
@@ -52,6 +54,8 @@ class MemoryUnifiedSearchTool extends Tool
         $tags = $request->get('tags');
         $tags = is_array($tags) && ! empty($tags) ? $tags : null;
 
+        $topic = $request->get('topic');
+
         $results = $action->execute(
             teamId: $teamId,
             query: $validated['query'],
@@ -59,6 +63,7 @@ class MemoryUnifiedSearchTool extends Tool
             projectId: $request->get('project_id'),
             topK: $topK,
             tags: $tags,
+            topic: is_string($topic) && $topic !== '' ? $topic : null,
         );
 
         return Response::text(json_encode([

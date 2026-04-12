@@ -12,6 +12,7 @@ use App\Domain\Assistant\Services\AssistantUiArtifactPersister;
 use App\Domain\Assistant\Services\ContextResolver;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Assistant\Services\ToolUsageTracker;
+use App\Domain\Memory\Jobs\AutoSaveConversationMemoryJob;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -492,6 +493,16 @@ class SendAssistantMessageAction
 
         // Auto-generate title from first message
         $this->conversationManager->generateTitle($conversation);
+
+        // Auto-save conversation memories every 15 messages
+        $msgCount = $conversation->messages()->count();
+        if ($msgCount > 0 && $msgCount % 15 === 0) {
+            AutoSaveConversationMemoryJob::dispatch(
+                $conversation->id,
+                $user->current_team_id,
+                $user->id,
+            );
+        }
 
         return $response;
     }

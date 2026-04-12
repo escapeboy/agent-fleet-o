@@ -2,6 +2,8 @@
 
 namespace App\Mcp\Tools\Memory;
 
+use App\Domain\Memory\Enums\MemoryCategory;
+use App\Domain\Memory\Jobs\ClassifyMemoryTopicJob;
 use App\Domain\Memory\Models\Memory;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -37,6 +39,10 @@ class MemoryAddTool extends Tool
                 ->default(1.0),
             'metadata' => $schema->object()
                 ->description('Additional structured metadata (key-value pairs)'),
+            'topic' => $schema->string()
+                ->description('Named topic context, e.g. "auth_migration". Auto-classified via Haiku if omitted.'),
+            'category' => $schema->string()
+                ->description('Memory category: facts|events|discoveries|preferences|advice|knowledge|context|behavior|goal'),
         ];
     }
 
@@ -51,11 +57,17 @@ class MemoryAddTool extends Tool
             'tags.*' => 'string|max:100',
             'confidence' => 'nullable|numeric|min:0|max:1',
             'metadata' => 'nullable|array',
+            'topic' => 'nullable|string|max:100',
+            'category' => 'nullable|string',
         ]);
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         $content = $validated['content'];
+        $topic = isset($validated['topic']) && $validated['topic'] !== '' ? $validated['topic'] : null;
+        $category = isset($validated['category'])
+            ? MemoryCategory::tryFrom($validated['category'])
+            : null;
 
         $memory = Memory::create([
             'team_id' => $teamId,
@@ -67,7 +79,13 @@ class MemoryAddTool extends Tool
             'tags' => $validated['tags'] ?? null,
             'confidence' => $validated['confidence'] ?? 1.0,
             'metadata' => $validated['metadata'] ?? null,
+            'topic' => $topic,
+            'category' => $category,
         ]);
+
+        if ($topic === null) {
+            ClassifyMemoryTopicJob::dispatch($memory->id);
+        }
 
         return Response::text(json_encode([
             'success' => true,
@@ -75,6 +93,8 @@ class MemoryAddTool extends Tool
             'content' => mb_substr($memory->content, 0, 200),
             'source_type' => $memory->source_type,
             'tags' => $memory->tags ?? [],
+            'topic' => $memory->topic,
+            'category' => $memory->category?->value,
             'confidence' => $memory->confidence,
             'created_at' => $memory->created_at?->toIso8601String(),
         ]));
