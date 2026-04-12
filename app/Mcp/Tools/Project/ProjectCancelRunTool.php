@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Enums\ProjectRunStatus;
 use App\Domain\Project\Models\ProjectRun;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('destructive')]
 class ProjectCancelRunTool extends Tool
 {
     protected string $name = 'project_run_cancel';

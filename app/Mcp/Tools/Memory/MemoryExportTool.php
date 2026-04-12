@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Models\Memory;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class MemoryExportTool extends Tool
 {
     protected string $name = 'memory_export';
