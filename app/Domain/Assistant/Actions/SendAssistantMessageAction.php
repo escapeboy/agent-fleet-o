@@ -12,6 +12,7 @@ use App\Domain\Assistant\Services\AssistantUiArtifactPersister;
 use App\Domain\Assistant\Services\ContextResolver;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Assistant\Services\ToolUsageTracker;
+use App\Domain\Memory\Jobs\AutoSaveConversationMemoryJob;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -349,17 +350,25 @@ class SendAssistantMessageAction
                 ]);
             }
 
-            // If we exhausted every auto-continue pass without the model ever
-            // producing final text, surface that instead of saving an empty
-            // message. This keeps the conversation UX honest when the task is
-            // genuinely too large for the hard cap.
-            if ($aggregatedContent === '' && $passes >= $maxPasses) {
-                $aggregatedContent = sprintf(
-                    'I reached the autonomous continuation cap (%d passes × %d steps = %d tool calls) without finishing. The task is still in progress — send `continue` to pick up where I left off.',
-                    $maxPasses,
-                    $maxStepsPerPass,
-                    $aggregatedToolCallsCount,
-                );
+            // If the model never produced final text, surface a fallback instead
+            // of saving an empty message. Two cases:
+            //   1. Hit the hard cap — task likely still unfinished, prompt user to continue.
+            //   2. Stopped mid-loop with no text and no more tool calls — the model completed
+            //      its tool calls silently (common with Claude after multi-step actions) but
+            //      forgot to write a summary. Show a minimal completion notice.
+            if ($aggregatedContent === '') {
+                if ($passes >= $maxPasses) {
+                    $aggregatedContent = sprintf(
+                        'I reached the autonomous continuation cap (%d passes × %d steps = %d tool calls) without finishing. The task is still in progress — send `continue` to pick up where I left off.',
+                        $maxPasses,
+                        $maxStepsPerPass,
+                        $aggregatedToolCallsCount,
+                    );
+                } else {
+                    $aggregatedContent = $aggregatedToolCallsCount > 0
+                        ? sprintf('Done. Completed %d tool call%s.', $aggregatedToolCallsCount, $aggregatedToolCallsCount === 1 ? '' : 's')
+                        : 'Done.';
+                }
             }
 
             // Build the final response from aggregated state. The save block
@@ -492,6 +501,16 @@ class SendAssistantMessageAction
 
         // Auto-generate title from first message
         $this->conversationManager->generateTitle($conversation);
+
+        // Auto-save conversation memories every 15 messages
+        $msgCount = $conversation->messages()->count();
+        if ($msgCount > 0 && $msgCount % 15 === 0) {
+            AutoSaveConversationMemoryJob::dispatch(
+                $conversation->id,
+                $user->current_team_id,
+                $user->id,
+            );
+        }
 
         return $response;
     }

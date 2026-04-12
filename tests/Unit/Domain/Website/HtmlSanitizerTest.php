@@ -158,6 +158,15 @@ class HtmlSanitizerTest extends TestCase
         $this->assertStringContainsString('alt="test"', $result);
     }
 
+    public function test_preserves_label_for_attribute(): void
+    {
+        $html = '<form><label for="email">Email</label><input type="email" id="email" name="email"></form>';
+        $result = HtmlSanitizer::purify($html);
+
+        $this->assertStringContainsString('for="email"', $result);
+        $this->assertStringContainsString('<label', $result);
+    }
+
     public function test_strips_data_uri_in_img_src(): void
     {
         $html = '<img src="data:image/svg+xml,<svg onload=alert(1)>" alt="x">';

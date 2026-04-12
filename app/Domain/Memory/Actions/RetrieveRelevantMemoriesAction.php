@@ -32,6 +32,7 @@ class RetrieveRelevantMemoriesAction
         ?string $teamId = null,
         float $minConfidence = 0.3,
         ?array $tags = null,
+        ?string $topic = null,
     ): Collection {
         if (! config('memory.enabled', true)) {
             return collect();
@@ -69,6 +70,12 @@ class RetrieveRelevantMemoriesAction
                 ->whereRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
                 ->where('confidence', '>=', $minConfidence)
                 ->orderByDesc('composite_score');
+
+            // Topic namespace pre-filter: narrows the candidate set before the pgvector scan.
+            // Skipped when topic is null to preserve backwards-compatible behaviour.
+            if ($topic !== null) {
+                $builder->where('topic', $topic);
+            }
 
             // Tag-based filtering (opt-in: only applied when tags are passed)
             if (! empty($tags)) {
