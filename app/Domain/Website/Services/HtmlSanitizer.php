@@ -63,7 +63,7 @@ final class HtmlSanitizer
 
         // Must be set before maybeGetRawHTMLDefinition
         $config->set('HTML.DefinitionID', 'fleet-website-sanitizer');
-        $config->set('HTML.DefinitionRev', 7); // bumped: register data-fleetq-* hooks
+        $config->set('HTML.DefinitionRev', 8); // bumped: label[for] added
         $config->set('HTML.Forms', true);     // enables HTMLPurifier's built-in Forms module
 
         // Preserve <!-- fleetq:widget ... --> markers so WebsiteWidgetRenderer
@@ -113,7 +113,7 @@ final class HtmlSanitizer
             'input[type|name|placeholder|required|value|style|class|id|min|max|step|maxlength|autocomplete'.$dataHookSuffix.']',
             'textarea[name|placeholder|required|rows|cols|style|class|id|maxlength]',
             'button[type|style|class|id'.$dataHookSuffix.']',
-            'label[style|class]', // 'for' intentionally excluded — HTMLPurifier IDREF not implemented
+            'label[style|class|for]',
             'select[name|required|style|class|id|multiple]',
             'option[value|selected]',
             'fieldset[style|class]',
@@ -174,6 +174,11 @@ final class HtmlSanitizer
             // sanitizer accepts <form> elements without action (e.g. before EnhanceWebsiteNavigationAction
             // injects the real /api/public/... endpoint). URI validation still applies.
             $def->addAttribute('form', 'action', 'URI');
+            // Register 'for' as CDATA (plain text) rather than IDREF so HTMLPurifier
+            // does not validate that the referenced ID exists in the same document.
+            // Standard browser behaviour treats 'for' as a plain string pointing to
+            // an input's id, which is exactly what CDATA captures.
+            $def->addAttribute('label', 'for', 'CDATA');
 
             // Register every data-fleetq-* / data-product-* hook as a Text
             // attribute on every element that may carry it. HTMLPurifier
