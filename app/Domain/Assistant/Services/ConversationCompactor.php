@@ -64,9 +64,11 @@ class ConversationCompactor
         ]);
 
         // Archive covered messages
+        // Use CASE to guard against metadata being a JSON array (not object),
+        // which would cause jsonb_set to fail with "path element is not an integer".
         AssistantMessage::whereIn('id', $coveredIds)->update([
             'metadata' => \DB::raw(
-                "jsonb_set(coalesce(metadata, '{}'), '{archived}', 'true')",
+                "jsonb_set(CASE WHEN jsonb_typeof(coalesce(metadata, '{}')) = 'object' THEN coalesce(metadata, '{}') ELSE '{}'::jsonb END, '{archived}', 'true')",
             ),
         ]);
 
