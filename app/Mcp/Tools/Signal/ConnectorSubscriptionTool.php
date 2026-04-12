@@ -12,6 +12,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for managing ConnectorSignalSubscriptions.
@@ -20,6 +21,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  * backed by OAuth integrations (GitHub, Linear, Jira, etc.).
  */
 #[IsDestructive]
+#[AssistantTool('read')]
 class ConnectorSubscriptionTool extends Tool
 {
     protected string $name = 'connector_subscription_manage';

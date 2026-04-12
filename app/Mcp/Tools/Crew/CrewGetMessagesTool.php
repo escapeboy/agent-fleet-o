@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Crew;
 
 use App\Domain\Crew\Models\CrewAgentMessage;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[AssistantTool('read')]
 class CrewGetMessagesTool extends Tool
 {
     protected string $name = 'crew_get_messages';

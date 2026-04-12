@@ -10,6 +10,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * Rollback a credential to a previous version's secret_data.
@@ -18,6 +19,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  * so no history is ever lost.
  */
 #[IsDestructive]
+#[AssistantTool('write')]
 class CredentialRollbackTool extends Tool
 {
     protected string $name = 'credential_rollback';

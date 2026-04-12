@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Evolution;
 
 use App\Domain\Evolution\Models\EvolutionProposal;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Collection;
 use Laravel\Mcp\Request;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class EvolutionProposalListTool extends Tool
 {
     protected string $name = 'evolution_list';

@@ -9,6 +9,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for sending ad-hoc ntfy push notifications.
@@ -17,6 +18,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  * OutboundConnectorConfig. Useful for one-off notifications or testing.
  */
 #[IsDestructive]
+#[AssistantTool('write')]
 class NtfySendTool extends Tool
 {
     protected string $name = 'ntfy_send';

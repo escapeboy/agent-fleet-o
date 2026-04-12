@@ -11,6 +11,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for synchronous web search via a self-hosted Searxng instance.
@@ -24,6 +25,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * @see https://github.com/searxng/searxng
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class SearxngSearchTool extends Tool
 {
     protected string $name = 'searxng_search';

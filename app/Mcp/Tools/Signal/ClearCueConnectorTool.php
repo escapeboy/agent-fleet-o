@@ -8,6 +8,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for managing the ClearCue GTM signal connector.
@@ -16,6 +17,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * for the ClearCue buyer intent integration.
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class ClearCueConnectorTool extends Tool
 {
     protected string $name = 'clearcue_connector_manage';

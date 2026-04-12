@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\Compute\ComputeProviderManager;
 use App\Infrastructure\Compute\DTOs\ComputeJobDTO;
 use App\Infrastructure\Compute\Services\ComputeCredentialResolver;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -24,6 +25,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  *   run                 — Run a compute job on any configured provider
  */
 #[IsDestructive]
+#[AssistantTool('write')]
 class ComputeManageTool extends Tool
 {
     protected string $name = 'compute_manage';

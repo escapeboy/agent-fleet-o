@@ -10,9 +10,11 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
+use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class ToolMiddlewareListTool extends McpTool
 {
     protected string $name = 'tool_middleware_list';

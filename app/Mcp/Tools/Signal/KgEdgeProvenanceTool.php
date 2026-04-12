@@ -12,6 +12,7 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for retrieving source provenance of a knowledge graph entity.
@@ -22,6 +23,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  */
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class KgEdgeProvenanceTool extends Tool
 {
     protected string $name = 'kg_edge_provenance';

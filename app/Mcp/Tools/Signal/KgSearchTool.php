@@ -9,6 +9,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for semantic search over temporal knowledge graph facts.
@@ -17,6 +18,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * Useful for agents to find relevant context about entities before taking action.
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class KgSearchTool extends Tool
 {
     protected string $name = 'kg_search';

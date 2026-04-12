@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\UserNotification;
 use App\Domain\Shared\Services\NotificationPreferencesService;
 use App\Domain\Shared\Services\NotificationService;
 use App\Models\User;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('read')]
 class NotificationTool extends Tool
 {
     protected string $name = 'notification_manage';

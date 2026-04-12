@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Integration;
 use App\Domain\Integration\Actions\SyncActivepiecesToolsAction;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Models\Integration;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +19,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  * upserts each piece as an MCP-HTTP Tool record in FleetQ.
  */
 #[IsDestructive]
+#[AssistantTool('write')]
 class ActivepiecesSyncTool extends Tool
 {
     protected string $name = 'activepieces_sync';

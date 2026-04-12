@@ -9,6 +9,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for invalidating (soft-deleting) a knowledge graph fact by UUID.
@@ -17,6 +18,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  * but excluded from all future searches and entity fact lookups.
  */
 #[IsDestructive]
+#[AssistantTool('read')]
 class KgInvalidateFactTool extends Tool
 {
     protected string $name = 'kg_invalidate_fact';

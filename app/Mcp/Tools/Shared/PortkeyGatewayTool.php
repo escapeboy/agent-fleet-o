@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -25,6 +26,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  *   remove     — delete the Portkey credential (disables the gateway)
  */
 #[IsDestructive]
+#[AssistantTool('write')]
 class PortkeyGatewayTool extends Tool
 {
     protected string $name = 'portkey_gateway_manage';

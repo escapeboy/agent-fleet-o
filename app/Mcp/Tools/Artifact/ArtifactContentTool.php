@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Artifact;
 use App\Domain\Experiment\Services\ArtifactContentResolver;
 use App\Models\Artifact;
 use App\Models\ArtifactVersion;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class ArtifactContentTool extends Tool
 {
     protected string $name = 'artifact_content';

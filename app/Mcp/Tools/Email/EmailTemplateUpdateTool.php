@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Email;
 use App\Domain\Email\Actions\UpdateEmailTemplateAction;
 use App\Domain\Email\Models\EmailTemplate;
 use App\Domain\Email\Services\MjmlRenderer;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('write')]
 class EmailTemplateUpdateTool extends Tool
 {
     protected string $name = 'email_template_update';

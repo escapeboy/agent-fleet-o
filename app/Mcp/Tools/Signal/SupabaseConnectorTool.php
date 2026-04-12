@@ -7,8 +7,10 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
+#[AssistantTool('read')]
 class SupabaseConnectorTool extends Tool
 {
     protected string $name = 'supabase_connector_manage';

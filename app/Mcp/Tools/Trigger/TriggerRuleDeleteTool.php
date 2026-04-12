@@ -9,8 +9,10 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
+#[AssistantTool('destructive')]
 class TriggerRuleDeleteTool extends Tool
 {
     protected string $name = 'trigger_rule_delete';

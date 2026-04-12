@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\RunPod;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\RunPod\RunPodClient;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -25,6 +26,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  *   pod_stop           — Stop a running pod
  */
 #[IsDestructive]
+#[AssistantTool('write')]
 class RunPodManageTool extends Tool
 {
     protected string $name = 'runpod_manage';

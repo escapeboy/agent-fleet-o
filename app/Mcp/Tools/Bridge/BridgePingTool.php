@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Bridge;
 
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Models\BridgeConnectionStatus;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
@@ -14,6 +15,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class BridgePingTool extends Tool
 {
     protected string $name = 'bridge_ping';

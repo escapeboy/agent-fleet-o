@@ -10,6 +10,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for directly adding a structured fact to the knowledge graph.
@@ -19,6 +20,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  * runs automatically — conflicting current facts will be invalidated.
  */
 #[IsDestructive]
+#[AssistantTool('read')]
 class KgAddFactTool extends Tool
 {
     protected string $name = 'kg_add_fact';

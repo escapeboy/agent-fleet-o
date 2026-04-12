@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Adapters\SupabaseVectorAdapter;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -10,6 +11,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[AssistantTool('write')]
 class SupabaseProvisionMemoryTool extends Tool
 {
     protected string $name = 'supabase_provision_vector_memory';

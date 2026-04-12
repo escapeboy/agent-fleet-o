@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Models\Memory;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('destructive')]
 class MemoryDeleteTool extends Tool
 {
     protected string $name = 'memory_delete';
