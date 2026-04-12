@@ -21,10 +21,9 @@ class ClassifyMemoryTopicsCommand extends Command
 
         $query = Memory::withoutGlobalScopes()
             ->whereNull('topic')
-            ->whereNotNull('content')
-            ->limit($limit);
+            ->whereNotNull('content');
 
-        $count = $query->count();
+        $count = min($query->count(), $limit);
 
         if ($count === 0) {
             $this->info('No memories without topics found.');
@@ -41,12 +40,11 @@ class ClassifyMemoryTopicsCommand extends Command
         }
 
         $dispatched = 0;
-        $query->chunk(50, function ($memories) use (&$dispatched) {
-            foreach ($memories as $memory) {
-                ClassifyMemoryTopicJob::dispatch($memory->id);
-                $dispatched++;
-            }
-        });
+        $ids = $query->orderBy('created_at')->limit($limit)->pluck('id');
+        foreach ($ids as $id) {
+            ClassifyMemoryTopicJob::dispatch($id);
+            $dispatched++;
+        }
 
         $this->info(sprintf('Dispatched %d classification job(s) to the default queue.', $dispatched));
 

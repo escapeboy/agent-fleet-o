@@ -58,9 +58,11 @@ PROMPT;
             return;
         }
 
-        // Fetch the last 15 messages
+        // Fetch the last 15 messages with non-empty content
         $messages = $conversation->messages()
             ->whereIn('role', ['user', 'assistant'])
+            ->whereNotNull('content')
+            ->where('content', '!=', '')
             ->latest()
             ->limit(15)
             ->get()
@@ -71,7 +73,7 @@ PROMPT;
             return;
         }
 
-        $snippet = $messages->map(fn ($m) => strtoupper($m->role).': '.mb_substr($m->content ?? '', 0, 300))
+        $snippet = $messages->map(fn ($m) => strtoupper($m->role).': '.mb_substr($m->content, 0, 300))
             ->implode("\n\n");
 
         try {
