@@ -22,9 +22,7 @@ class SupabaseProvisionMemoryTool extends Tool
     {
         return [
             'embedding_dimension' => $schema->integer()
-                ->description('Embedding dimension of your model. OpenAI text-embedding-3-small = 1536, Anthropic/Voyage = 1024, Google text-embedding-004 = 768. Default: 1536.')
-                ->minimum(64)
-                ->maximum(4096),
+                ->description('Embedding dimension of your model. OpenAI text-embedding-3-small = 1536, Anthropic/Voyage = 1024, Google text-embedding-004 = 768. Default: 1536. Min 64, max 4096.'),
         ];
     }
 
