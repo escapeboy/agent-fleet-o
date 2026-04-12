@@ -117,6 +117,13 @@ class ConversationCompactor
         $model = config('context_compaction.summarizer_model', 'anthropic/claude-haiku-4-5');
         [$modelProvider, $modelName] = array_pad(explode('/', $model, 2), 2, 'claude-haiku-4-5');
 
+        // If a dedicated compaction API key is configured, inject it for this call.
+        // PHP-FPM handles one request per worker — config override is process-safe.
+        $summariserApiKey = config('context_compaction.summarizer_api_key');
+        if ($summariserApiKey) {
+            config(["prism.providers.{$modelProvider}.api_key" => $summariserApiKey]);
+        }
+
         $schemaJson = json_encode(MemorySummarySchema::jsonSchema(), JSON_PRETTY_PRINT);
 
         $systemPrompt = <<<'SYSTEM'
