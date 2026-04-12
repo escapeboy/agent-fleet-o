@@ -70,7 +70,7 @@ class AssistantToolRegistry
      *
      * @return array<PrismToolObject>
      */
-    private function bridgedMcpTools(string $tier): array
+    protected function bridgedMcpTools(string $tier): array
     {
         $serverReflection = new ReflectionClass(AgentFleetServer::class);
         $toolClasses = $serverReflection->getDefaultProperties()['tools'] ?? [];
