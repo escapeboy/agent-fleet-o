@@ -40,6 +40,15 @@ class TeamModelAllowlistTool extends Tool
             return Response::error('Team not found.');
         }
 
+        $user = auth()->user();
+        if ($user) {
+            $member = $team->users()->where('users.id', $user->id)->first();
+            $role = $member?->pivot?->role;
+            if (! in_array($role, ['owner', 'admin'], true)) {
+                return Response::error('Only team owners and admins can update the model allowlist.');
+            }
+        }
+
         $allowedModels = $request->get('allowed_models');
         $team->update(['allowed_models' => empty($allowedModels) ? null : $allowedModels]);
 

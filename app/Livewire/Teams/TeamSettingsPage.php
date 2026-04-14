@@ -196,6 +196,8 @@ class TeamSettingsPage extends Component
 
     public function saveLlmDefaults(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         $settings = $team->settings ?? [];
 
@@ -209,6 +211,8 @@ class TeamSettingsPage extends Component
 
     public function saveAssistantLlm(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'assistantProvider' => 'required|string',
             'assistantModel' => 'required|string',
@@ -225,6 +229,8 @@ class TeamSettingsPage extends Component
 
     public function saveMediaAnalysis(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         $settings = $team->settings ?? [];
         $settings['media_analysis_enabled'] = $this->mediaAnalysisEnabled;
@@ -235,6 +241,8 @@ class TeamSettingsPage extends Component
 
     public function saveChatbotSettings(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         $settings = $team->settings ?? [];
         $settings['chatbot_enabled'] = $this->chatbotEnabled;

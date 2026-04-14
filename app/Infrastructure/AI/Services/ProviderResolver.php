@@ -180,6 +180,21 @@ class ProviderResolver
         ?Team $team = null,
         string $purpose = 'run',
     ): array {
+        $result = $this->resolveWithSourceInternal($skill, $agent, $team, $purpose);
+        $enforced = $this->enforceAllowedModels(
+            ['provider' => $result['provider'], 'model' => $result['model']],
+            $team,
+        );
+
+        return array_merge($result, $enforced);
+    }
+
+    private function resolveWithSourceInternal(
+        ?Skill $skill,
+        ?Agent $agent,
+        ?Team $team,
+        string $purpose,
+    ): array {
         // 1. Skill-level override
         if ($skill) {
             $config = $skill->configuration ?? [];
