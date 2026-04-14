@@ -190,21 +190,22 @@
                     </div>
                 @endif
 
-                <div class="flex gap-2">
-                    <textarea
-                        wire:model="commentText"
-                        rows="2"
-                        placeholder="Add a comment..."
-                        class="flex-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                    ></textarea>
+                <div class="flex gap-2 items-start">
+                    <div class="flex-1">
+                        <x-form-textarea
+                            wire:model="commentText"
+                            rows="2"
+                            placeholder="Add a comment..."
+                            :error="$errors->first('commentText')"
+                        />
+                    </div>
                     <button
                         wire:click="addComment"
-                        class="px-3 py-1.5 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700"
+                        class="px-3 py-2.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700"
                     >
                         Post
                     </button>
                 </div>
-                @error('commentText') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
             </div>
         </div>
 
@@ -260,24 +261,23 @@
             @if(! in_array($signal->status, [\App\Domain\Signal\Enums\SignalStatus::DelegatedToAgent, \App\Domain\Signal\Enums\SignalStatus::AgentFixing, \App\Domain\Signal\Enums\SignalStatus::Review, \App\Domain\Signal\Enums\SignalStatus::Resolved, \App\Domain\Signal\Enums\SignalStatus::Dismissed]))
                 <div class="bg-white rounded-lg border border-gray-200 p-4">
                     <h2 class="text-sm font-semibold text-gray-900 mb-3">Delegate to Agent</h2>
-                    <select
+                    <x-form-select
                         wire:model="delegateAgentId"
-                        class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 mb-2"
+                        :error="$errors->first('delegateAgentId')"
                     >
                         <option value="">Select agent...</option>
                         @foreach($agents as $agent)
                             <option value="{{ $agent->id }}">{{ $agent->name }}</option>
                         @endforeach
-                    </select>
+                    </x-form-select>
                     <button
                         wire:click="delegateToAgent"
                         wire:loading.attr="disabled"
-                        class="w-full px-3 py-1.5 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 disabled:opacity-50"
+                        class="mt-2 w-full px-3 py-2.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-50"
                     >
                         <span wire:loading.remove wire:target="delegateToAgent">Delegate</span>
                         <span wire:loading wire:target="delegateToAgent">Delegating…</span>
                     </button>
-                    @error('delegateAgentId') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                 </div>
             @endif
         </div>

@@ -5,32 +5,31 @@
 
     {{-- Filters --}}
     <div class="flex flex-wrap gap-3 mb-6">
-        <select wire:model.live="projectFilter" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+        <x-form-select wire:model.live="projectFilter">
             <option value="">All Projects</option>
             @foreach($projects as $project)
                 <option value="{{ $project }}">{{ $project }}</option>
             @endforeach
-        </select>
+        </x-form-select>
 
-        <select wire:model.live="severityFilter" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+        <x-form-select wire:model.live="severityFilter">
             <option value="">All Severities</option>
             @foreach($severities as $sev)
                 <option value="{{ $sev }}">{{ ucfirst($sev) }}</option>
             @endforeach
-        </select>
+        </x-form-select>
 
-        <select wire:model.live="statusFilter" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+        <x-form-select wire:model.live="statusFilter">
             <option value="">All Statuses</option>
             @foreach($statuses as $status)
                 <option value="{{ $status->value }}">{{ $status->label() }}</option>
             @endforeach
-        </select>
+        </x-form-select>
 
-        <input
+        <x-form-input
             wire:model.live.debounce.300ms="reporterFilter"
             type="text"
             placeholder="Reporter..."
-            class="rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500"
         />
     </div>
 
