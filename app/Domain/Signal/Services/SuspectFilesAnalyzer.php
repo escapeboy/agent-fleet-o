@@ -10,8 +10,6 @@ class SuspectFilesAnalyzer
      * Build a ranked list of suspect files from all available evidence.
      *
      * @param  array<string, mixed>  $payload  Signal payload
-     * @param  string  $teamId
-     * @param  string|null  $projectKey
      * @return array{suspect_files: array, source_hints: array}
      */
     public function analyze(array $payload, string $teamId, ?string $projectKey): array
@@ -40,8 +38,9 @@ class SuspectFilesAnalyzer
 
         // 2. Route map (look up the page URL)
         $url = $payload['url'] ?? null;
+        $routeName = $payload['route_name'] ?? null;
         if ($url && $projectKey) {
-            $routeEntry = $this->lookupRoute($teamId, $projectKey, $url);
+            $routeEntry = $this->lookupRoute($teamId, $projectKey, $url, $routeName);
 
             if ($routeEntry) {
                 $sourceHints['route'] = $routeEntry;
@@ -142,7 +141,7 @@ class SuspectFilesAnalyzer
         return array_values($byPath);
     }
 
-    private function lookupRoute(string $teamId, string $project, string $url): ?array
+    private function lookupRoute(string $teamId, string $project, string $url, ?string $routeName = null): ?array
     {
         $routeMap = RouteMap::where('team_id', $teamId)
             ->where('project', $project)
@@ -152,10 +151,21 @@ class SuspectFilesAnalyzer
             return null;
         }
 
-        // Extract path from URL for matching
-        $path = parse_url($url, PHP_URL_PATH) ?? $url;
+        $routes = $routeMap->routes ?? [];
 
-        foreach ($routeMap->routes ?? [] as $route) {
+        // Fast path: match by route name from payload (100% accurate when available)
+        if ($routeName) {
+            foreach ($routes as $route) {
+                if (($route['name'] ?? null) === $routeName) {
+                    return $route;
+                }
+            }
+        }
+
+        // Fallback: match by URL path
+        $path = ltrim(parse_url($url, PHP_URL_PATH) ?? $url, '/');
+
+        foreach ($routes as $route) {
             $uri = $route['uri'] ?? '';
 
             if ($this->uriMatches($uri, $path)) {
@@ -168,8 +178,12 @@ class SuspectFilesAnalyzer
 
     private function uriMatches(string $uri, string $path): bool
     {
+        // Normalize both sides: strip leading and trailing slashes
+        $uri = trim($uri, '/');
+        $path = trim($path, '/');
+
         // Exact match
-        if (rtrim($uri, '/') === rtrim($path, '/')) {
+        if ($uri === $path) {
             return true;
         }
 
@@ -184,7 +198,7 @@ class SuspectFilesAnalyzer
 
         $pattern .= '$#';
 
-        return (bool) preg_match($pattern, rtrim($path, '/'));
+        return (bool) preg_match($pattern, $path);
     }
 
     /**

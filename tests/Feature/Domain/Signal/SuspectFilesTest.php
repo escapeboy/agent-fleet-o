@@ -141,6 +141,69 @@ class SuspectFilesTest extends ApiTestCase
         $this->assertEquals($sorted, $confidences);
     }
 
+    public function test_uri_match_works_when_route_has_no_leading_slash(): void
+    {
+        RouteMap::create([
+            'team_id' => $this->team->id,
+            'project' => 'barsy',
+            'release' => 'v1',
+            'routes' => [
+                [
+                    'method' => 'GET',
+                    'uri' => 'bug-reports/{signal}',
+                    'controller' => 'App\\Http\\Controllers\\BugReportController@show',
+                    'livewire_component' => null,
+                    'name' => 'bug-reports.show',
+                ],
+            ],
+        ]);
+
+        $analyzer = app(SuspectFilesAnalyzer::class);
+
+        $result = $analyzer->analyze(
+            ['url' => 'https://app.barsy.dev/bug-reports/abc-123', 'resolved_errors' => []],
+            $this->team->id,
+            'barsy',
+        );
+
+        $paths = array_column($result['suspect_files'], 'path');
+        $this->assertContains('app/Http/Controllers/BugReportController.php', $paths);
+    }
+
+    public function test_route_name_fallback_matches_when_url_path_would_fail(): void
+    {
+        RouteMap::create([
+            'team_id' => $this->team->id,
+            'project' => 'barsy',
+            'release' => 'v1',
+            'routes' => [
+                [
+                    'method' => 'GET',
+                    'uri' => 'bug-reports/{signal}',
+                    'controller' => 'App\\Http\\Controllers\\BugReportController@show',
+                    'livewire_component' => null,
+                    'name' => 'bug-reports.show',
+                ],
+            ],
+        ]);
+
+        $analyzer = app(SuspectFilesAnalyzer::class);
+
+        // Pass a URL that would not match (e.g. absolute path confusion) but correct route_name
+        $result = $analyzer->analyze(
+            [
+                'url' => 'https://app.barsy.dev/some/unresolvable/path',
+                'route_name' => 'bug-reports.show',
+                'resolved_errors' => [],
+            ],
+            $this->team->id,
+            'barsy',
+        );
+
+        $paths = array_column($result['suspect_files'], 'path');
+        $this->assertContains('app/Http/Controllers/BugReportController.php', $paths);
+    }
+
     // AnalyzeSuspectFilesAction tests
 
     public function test_analyze_action_writes_suspect_files_to_signal_payload(): void

@@ -73,8 +73,63 @@
                 </div>
             @endif
 
-            {{-- Action Log --}}
-            @if(!empty($payload['action_log']))
+            {{-- Suspect Files --}}
+            @if(!empty($payload['suspect_files']))
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-3">Suspect Files</h2>
+                    <div class="space-y-2">
+                        @foreach($payload['suspect_files'] as $file)
+                            @php $pct = (int) round(($file['confidence'] ?? 0) * 100); @endphp
+                            <div class="flex items-start gap-3">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-mono text-gray-800 truncate">{{ $file['path'] ?? '' }}</p>
+                                    <p class="text-xs text-gray-400 truncate">{{ $file['reason'] ?? '' }}</p>
+                                </div>
+                                <span class="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold
+                                    {{ $pct >= 80 ? 'bg-red-100 text-red-700' : ($pct >= 60 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600') }}">
+                                    {{ $pct }}%
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            {{-- Breadcrumbs (structured, typed) — preferred over action_log when present --}}
+            @if(!empty($payload['breadcrumbs']))
+                @php
+                    $bcLevelColors = [
+                        'error'   => 'text-red-600 bg-red-50',
+                        'warning' => 'text-yellow-700 bg-yellow-50',
+                        'info'    => 'text-blue-600 bg-blue-50',
+                        'debug'   => 'text-gray-500 bg-gray-50',
+                        'log'     => 'text-gray-600',
+                    ];
+                @endphp
+                <div x-data="{ open: false }" class="bg-white rounded-lg border border-gray-200 p-4">
+                    <button @click="open = !open" class="flex items-center justify-between w-full text-sm font-semibold text-gray-900">
+                        <span>Breadcrumbs ({{ count($payload['breadcrumbs']) }})</span>
+                        <span x-text="open ? '▲' : '▼'" class="text-gray-400 text-xs"></span>
+                    </button>
+                    <div x-show="open" x-cloak class="mt-3 overflow-auto max-h-72 space-y-0.5 font-mono text-xs">
+                        @foreach($payload['breadcrumbs'] as $bc)
+                            @php
+                                $bcLevel = $bc['level'] ?? 'log';
+                                $bcCls = $bcLevelColors[$bcLevel] ?? 'text-gray-500';
+                            @endphp
+                            <div class="flex items-start gap-2 px-2 py-1 rounded {{ $bcCls }}">
+                                <span class="shrink-0 text-gray-400 whitespace-nowrap">{{ $bc['timestamp'] ?? '' }}</span>
+                                <span class="shrink-0 uppercase font-semibold w-14">{{ $bcLevel }}</span>
+                                @if(!empty($bc['category']))
+                                    <span class="shrink-0 text-gray-400">[{{ $bc['category'] }}]</span>
+                                @endif
+                                <span class="flex-1 break-all">{{ $bc['message'] ?? '' }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            {{-- Action Log (fallback when no structured breadcrumbs) --}}
+            @elseif(!empty($payload['action_log']))
                 <div x-data="{ open: false }" class="bg-white rounded-lg border border-gray-200 p-4">
                     <button @click="open = !open" class="flex items-center justify-between w-full text-sm font-semibold text-gray-900">
                         <span>Action Log ({{ count($payload['action_log']) }} events)</span>
@@ -256,6 +311,57 @@
                     @endif
                 </dl>
             </div>
+
+            {{-- Deploy Info --}}
+            @if(!empty($payload['deploy_commit']) || !empty($payload['deploy_timestamp']))
+                <div class="bg-white rounded-lg border border-gray-200 p-4 space-y-2">
+                    <h2 class="text-sm font-semibold text-gray-900">Deploy</h2>
+                    @if(!empty($payload['deploy_commit']))
+                        <div>
+                            <dt class="text-xs text-gray-500">Commit</dt>
+                            <dd class="text-xs font-mono text-gray-800">{{ substr($payload['deploy_commit'], 0, 12) }}</dd>
+                        </div>
+                    @endif
+                    @if(!empty($payload['deploy_timestamp']))
+                        <div>
+                            <dt class="text-xs text-gray-500">Deployed at</dt>
+                            <dd class="text-xs text-gray-800">{{ $payload['deploy_timestamp'] }}</dd>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Source Hints (route match) --}}
+            @php $routeHint = $payload['source_hints']['route'] ?? null; @endphp
+            @if($routeHint)
+                <div class="bg-white rounded-lg border border-gray-200 p-4 space-y-2">
+                    <h2 class="text-sm font-semibold text-gray-900">Route Match</h2>
+                    @if(!empty($routeHint['name']))
+                        <div>
+                            <dt class="text-xs text-gray-500">Route name</dt>
+                            <dd class="text-xs font-mono text-gray-800">{{ $routeHint['name'] }}</dd>
+                        </div>
+                    @endif
+                    @if(!empty($routeHint['uri']))
+                        <div>
+                            <dt class="text-xs text-gray-500">URI</dt>
+                            <dd class="text-xs font-mono text-gray-800">{{ $routeHint['uri'] }}</dd>
+                        </div>
+                    @endif
+                    @if(!empty($routeHint['controller']))
+                        <div>
+                            <dt class="text-xs text-gray-500">Controller</dt>
+                            <dd class="text-xs font-mono text-gray-700 break-all">{{ $routeHint['controller'] }}</dd>
+                        </div>
+                    @endif
+                    @if(!empty($routeHint['livewire_component']))
+                        <div>
+                            <dt class="text-xs text-gray-500">Livewire</dt>
+                            <dd class="text-xs font-mono text-gray-700 break-all">{{ $routeHint['livewire_component'] }}</dd>
+                        </div>
+                    @endif
+                </div>
+            @endif
 
             {{-- Delegate to Agent --}}
             @if(! in_array($signal->status, [\App\Domain\Signal\Enums\SignalStatus::DelegatedToAgent, \App\Domain\Signal\Enums\SignalStatus::AgentFixing, \App\Domain\Signal\Enums\SignalStatus::Review, \App\Domain\Signal\Enums\SignalStatus::Resolved, \App\Domain\Signal\Enums\SignalStatus::Dismissed]))
