@@ -30,8 +30,11 @@ use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProviderConfigController;
+use App\Http\Controllers\Api\V1\BugReportProjectConfigController;
 use App\Http\Controllers\Api\V1\BugReportSignalController;
+use App\Http\Controllers\Api\V1\RouteMapController;
 use App\Http\Controllers\Api\V1\SignalController;
+use App\Http\Controllers\Api\V1\SourceMapController;
 use App\Http\Controllers\Api\V1\SkillBenchmarkController;
 use App\Http\Controllers\Api\V1\SkillController;
 use App\Http\Controllers\Api\V1\SshFingerprintController;
@@ -154,6 +157,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/signals/{signal}', [SignalController::class, 'show']);
     Route::post('/signals', [SignalController::class, 'store']);
     Route::post('/signals/bug-report', [BugReportSignalController::class, 'store']);
+
+    // Bug Report enrichment APIs
+    Route::post('/source-maps', [SourceMapController::class, 'store']);
+    Route::post('/route-maps', [RouteMapController::class, 'store']);
+    Route::get('/route-maps/lookup', [RouteMapController::class, 'lookup']);
+    Route::get('/bug-report-configs/{project}', [BugReportProjectConfigController::class, 'show']);
+    Route::put('/bug-report-configs/{project}', [BugReportProjectConfigController::class, 'upsert']);
 
     // Approvals
     Route::get('/approvals', [ApprovalController::class, 'index']);

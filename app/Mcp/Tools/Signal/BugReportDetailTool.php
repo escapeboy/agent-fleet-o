@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Signal;
 
+use App\Domain\Signal\Models\BugReportProjectConfig;
 use App\Domain\Signal\Models\Signal;
 use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -18,7 +19,7 @@ class BugReportDetailTool extends Tool
 {
     protected string $name = 'bug_report_detail';
 
-    protected string $description = 'Get full details of a bug report: description, logs, screenshot URL, comments, and metadata.';
+    protected string $description = 'Get full details of a bug report: description, logs, screenshot URL, resolved errors, suspect files, agent instructions, comments, and metadata.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -40,6 +41,10 @@ class BugReportDetailTool extends Tool
 
         $payload = $signal->payload ?? [];
 
+        $projectConfig = BugReportProjectConfig::where('team_id', $signal->team_id)
+            ->where('project', $signal->project_key)
+            ->first();
+
         return Response::text(json_encode([
             'id' => $signal->id,
             'project' => $signal->project_key,
@@ -57,6 +62,11 @@ class BugReportDetailTool extends Tool
             'action_log' => $payload['action_log'] ?? [],
             'console_log' => $payload['console_log'] ?? [],
             'network_log' => $payload['network_log'] ?? [],
+            // Enriched fields (populated asynchronously after ingestion)
+            'resolved_errors' => $payload['resolved_errors'] ?? [],
+            'suspect_files' => $payload['suspect_files'] ?? [],
+            'source_hints' => $payload['source_hints'] ?? [],
+            'agent_instructions' => $projectConfig?->config ?? [],
             'experiment_id' => $signal->experiment_id,
             'comments' => $signal->comments->map(fn ($c) => [
                 'id' => $c->id,

@@ -5,6 +5,7 @@ namespace App\Domain\Signal\Connectors;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Enums\SignalStatus;
+use App\Domain\Signal\Jobs\EnrichBugReportJob;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Support\Facades\Log;
 
@@ -37,6 +38,17 @@ class BugReportConnector implements InputConnectorInterface
             Log::warning('BugReportConnector: Empty payload');
 
             return [];
+        }
+
+        // When breadcrumbs are provided, use them as the canonical action log
+        if (! empty($payload['breadcrumbs'])) {
+            $breadcrumbs = is_string($payload['breadcrumbs'])
+                ? (json_decode($payload['breadcrumbs'], true) ?? [])
+                : $payload['breadcrumbs'];
+
+            if (is_array($breadcrumbs)) {
+                $payload['action_log'] = $breadcrumbs;
+            }
         }
 
         // Parse JSON-encoded log strings into structured arrays
@@ -74,6 +86,10 @@ class BugReportConnector implements InputConnectorInterface
                     $signal->addMedia($file)->toMediaCollection('bug_report_files');
                 }
             }
+        }
+
+        if ($signal) {
+            EnrichBugReportJob::dispatch($signal->id);
         }
 
         return $signal ? [$signal] : [];
