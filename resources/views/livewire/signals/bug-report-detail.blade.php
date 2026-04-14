@@ -118,6 +118,8 @@
                                 $bcCategory = $bc['category'] ?? '';
                                 $bcData     = $bc['data']     ?? [];
                                 $bcCls      = $bcLevelColors[$bcLevel] ?? 'text-gray-500';
+                                $bcStack    = null;
+                                $bcError    = null;
 
                                 // Build the human-readable summary from data, keyed by category
                                 $bcSummary = '';
