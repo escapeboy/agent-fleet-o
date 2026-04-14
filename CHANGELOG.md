@@ -2,6 +2,15 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.20.0] - 2026-04-14
+
+### Added
+
+- **Public JS widget endpoint** — `POST /api/public/widget/bug-report` accepts bug reports from any domain without CORS per-domain configuration. Auth is via `team_public_key` in the request body (no `Authorization` header) enabling `Access-Control-Allow-Origin: *`. Rate-limited to 30 requests/minute per team.
+- **Widget public key management** — every team is issued a unique `wk_`-prefixed key on creation (backfilled for existing teams). Visible in Team Settings with a one-click copy button and a rotate button (owner/admin only).
+- **Migration** — `add_widget_public_key_to_teams_table` (unique, nullable, backfill via `lazyById()`).
+- **8 feature tests** in `BugReportWidgetTest` covering: submission without auth header, invalid key rejection, field validation, severity enum, key generation, key rotation, no-auth-header pass, and team scoping.
+
 ## [1.19.0] - 2026-04-14
 
 ### Added
