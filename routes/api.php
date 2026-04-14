@@ -14,6 +14,7 @@ use App\Http\Controllers\JiraWebhookController;
 use App\Http\Controllers\LinearWebhookController;
 use App\Http\Controllers\PagerDutyWebhookController;
 use App\Http\Controllers\PerTeamSignalWebhookController;
+use App\Http\Controllers\BugReportWidgetController;
 use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\SentryAlertWebhookController;
 use App\Http\Controllers\SignalWebhookController;
@@ -24,6 +25,11 @@ use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\WhatsAppOutboundWebhookController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
+
+// Public widget endpoint — no Sanctum auth, open CORS (*).
+// Auth is via team_public_key multipart field (write-only, scoped to signal ingestion).
+Route::post('/public/widget/bug-report', BugReportWidgetController::class)
+    ->name('widget.bug-report');
 
 // Public site API (no auth, rate limited)
 Route::prefix('public/sites')->group(function () {

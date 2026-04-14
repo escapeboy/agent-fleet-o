@@ -885,6 +885,17 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'Bridge routing saved.');
     }
 
+    public function rotateWidgetKey(): void
+    {
+        $this->authorize('manage-team');
+
+        auth()->user()->currentTeam->update([
+            'widget_public_key' => 'wk_'.\Illuminate\Support\Str::random(40),
+        ]);
+
+        session()->flash('message', 'Widget public key rotated.');
+    }
+
     public function render()
     {
         $team = auth()->user()->currentTeam;
