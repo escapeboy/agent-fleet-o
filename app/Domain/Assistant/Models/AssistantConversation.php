@@ -3,6 +3,7 @@
 namespace App\Domain\Assistant\Models;
 
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ class AssistantConversation extends Model
         'context_id',
         'metadata',
         'last_message_at',
+        'expired_at',
         'review',
     ];
 
@@ -30,7 +32,13 @@ class AssistantConversation extends Model
             'metadata' => 'array',
             'review' => 'array',
             'last_message_at' => 'datetime',
+            'expired_at' => 'datetime',
         ];
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('expired_at');
     }
 
     public function messages(): HasMany

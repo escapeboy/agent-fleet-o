@@ -21,6 +21,9 @@ class AgentListPage extends Component
     #[Url]
     public string $statusFilter = '';
 
+    #[Url]
+    public string $scopeFilter = 'all';
+
     public string $sortField = 'created_at';
 
     public string $sortDirection = 'desc';
@@ -91,6 +94,14 @@ class AgentListPage extends Component
 
         if ($this->statusFilter) {
             $query->where('status', $this->statusFilter);
+        }
+
+        if ($this->scopeFilter !== 'all') {
+            $query->where('scope', $this->scopeFilter);
+        }
+
+        if (auth()->check()) {
+            $query->visibleTo(auth()->user());
         }
 
         $allowedSorts = ['name', 'created_at', 'status', 'updated_at', 'provider', 'model'];

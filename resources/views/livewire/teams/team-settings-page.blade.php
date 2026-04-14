@@ -1032,4 +1032,41 @@
             Save AI Features
         </button>
     </div>
+
+    {{-- Model Allowlist --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Model Allowlist</h2>
+        <p class="mb-4 text-sm text-gray-500">Restrict which AI models your team can use. Leave empty to allow all models. Enter one <code class="rounded bg-gray-100 px-1 font-mono text-xs">provider/model</code> per line (e.g. <code class="rounded bg-gray-100 px-1 font-mono text-xs">anthropic/claude-sonnet-4-5</code>).</p>
+
+        <x-form-textarea
+            wire:model="allowedModelsInput"
+            label="Allowed Models"
+            hint="One provider/model per line. Empty = all models allowed."
+            :rows="5"
+            mono
+        />
+
+        <button wire:click="saveModelAllowlist" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            Save Allowlist
+        </button>
+    </div>
+
+    {{-- Session TTL --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Session TTL</h2>
+        <p class="mb-4 text-sm text-gray-500">Automatically expire assistant conversations after a period of inactivity. Set to 0 for no limit.</p>
+
+        <x-form-input
+            wire:model="maxSessionDurationMinutes"
+            label="Max Session Duration (minutes)"
+            type="number"
+            min="0"
+            max="10080"
+            hint="0 = unlimited. Expired conversations start a new session on next message."
+        />
+
+        <button wire:click="saveSessionTtl" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            Save Session TTL
+        </button>
+    </div>
 </div>

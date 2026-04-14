@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Enums\TeamRole;
+use App\Domain\Shared\Events\TeamMemberRemoved;
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -50,6 +51,8 @@ class TeamRemoveMemberTool extends Tool
         }
 
         $team->users()->detach($userId);
+
+        event(new TeamMemberRemoved($team, $userId));
 
         return Response::text(json_encode([
             'success' => true,

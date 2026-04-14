@@ -1,4 +1,11 @@
 <div>
+    {{-- Scope Filter --}}
+    <div class="flex gap-2 mb-4">
+        <button wire:click="$set('scopeFilter', 'all')" class="{{ $scopeFilter === 'all' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 border border-gray-300' }} px-3 py-1.5 rounded-md text-sm font-medium">All</button>
+        <button wire:click="$set('scopeFilter', 'team')" class="{{ $scopeFilter === 'team' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 border border-gray-300' }} px-3 py-1.5 rounded-md text-sm font-medium">Team</button>
+        <button wire:click="$set('scopeFilter', 'personal')" class="{{ $scopeFilter === 'personal' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 border border-gray-300' }} px-3 py-1.5 rounded-md text-sm font-medium">Personal</button>
+    </div>
+
     {{-- Toolbar --}}
     <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_agents" tooldescription="Filter agents by status and search query">
         <div class="relative flex-1">

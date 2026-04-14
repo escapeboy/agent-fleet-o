@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Agent\Events\AgentExecuted;
+use App\Domain\Agent\Listeners\ProvisionPersonalAgentListener;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
@@ -36,6 +37,8 @@ use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
+use App\Domain\Shared\Events\TeamMemberRemoved;
+use App\Domain\Shared\Listeners\RevokeTeamMemberAccess;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
@@ -100,6 +103,7 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Dedoc\Scramble\Support\Generator\SecuritySchemes\OAuthFlow;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -317,6 +321,9 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
+        // Auto-provision personal agent for new users
+        Event::listen(Registered::class, ProvisionPersonalAgentListener::class);
+
         // Apple Sign In via SocialiteProviders community package
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('apple', Provider::class);
@@ -386,6 +393,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Skill evolution: analyze completed executions and auto-propose improvements
         Event::listen(AgentExecuted::class, DispatchEvolutionAnalysisListener::class);
+
+        // Team member removal: revoke tokens + pause active experiments
+        Event::listen(TeamMemberRemoved::class, RevokeTeamMemberAccess::class);
 
         // Agent memory: store execution output as memory after completion
         AgentExecution::created(function (AgentExecution $execution) {
