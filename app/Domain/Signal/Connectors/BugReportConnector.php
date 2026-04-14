@@ -60,6 +60,25 @@ class BugReportConnector implements InputConnectorInterface
             }
         }
 
+        // Remove breadcrumb entries that are interactions with the bug reporter widget itself
+        foreach (['breadcrumbs', 'action_log'] as $field) {
+            if (! empty($payload[$field]) && is_array($payload[$field])) {
+                $payload[$field] = array_values(array_filter(
+                    $payload[$field],
+                    static function (array $bc): bool {
+                        $target = $bc['data']['target'] ?? null;
+                        if (is_array($target)) {
+                            $selector = $target['selector'] ?? '';
+
+                            return ! str_contains($selector, '__bug-reporter');
+                        }
+
+                        return true;
+                    }
+                ));
+            }
+        }
+
         $severity = $payload['severity'] ?? 'minor';
         $tags = ['bug_report', $severity];
 
