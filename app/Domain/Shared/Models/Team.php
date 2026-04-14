@@ -29,6 +29,9 @@ class Team extends Model
             if (! $team->credential_key) {
                 $team->credential_key = CredentialEncryption::generateKey();
             }
+            if (! $team->widget_public_key) {
+                $team->widget_public_key = 'wk_'.\Illuminate\Support\Str::random(40);
+            }
         });
 
         static::deleting(function (self $team) {
@@ -49,6 +52,7 @@ class Team extends Model
         'credential_key',
         'default_email_theme_id',
         'allowed_models',
+        'widget_public_key',
     ];
 
     protected $hidden = [
