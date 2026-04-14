@@ -40,6 +40,12 @@ class BugReportSignalController extends Controller
             'browser' => ['required', 'string', 'max:500'],
             'viewport' => ['required', 'string', 'max:50'],
             'environment' => ['required', Rule::in(['sandbox', 'production'])],
+            'deploy_commit' => ['nullable', 'string', 'max:64'],
+            'deploy_timestamp' => ['nullable', 'string', 'max:50'],
+            'route_name' => ['nullable', 'string', 'max:255'],
+            'breadcrumbs' => ['nullable', 'string'],
+            'failed_responses' => ['nullable', 'string'],
+            'livewire_components' => ['nullable', 'string'],
         ]);
 
         $files = array_filter([
@@ -65,6 +71,12 @@ class BugReportSignalController extends Controller
                 'browser' => $request->input('browser'),
                 'viewport' => $request->input('viewport'),
                 'environment' => $request->input('environment'),
+                'deploy_commit' => $request->input('deploy_commit'),
+                'deploy_timestamp' => $request->input('deploy_timestamp'),
+                'route_name' => $request->input('route_name'),
+                'breadcrumbs' => $request->input('breadcrumbs'),
+                'failed_responses' => $request->input('failed_responses'),
+                'livewire_components' => $request->input('livewire_components'),
             ],
         ]);
 

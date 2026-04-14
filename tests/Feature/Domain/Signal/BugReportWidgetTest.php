@@ -128,6 +128,67 @@ class BugReportWidgetTest extends ApiTestCase
         $response->assertStatus(201);
     }
 
+    public function test_widget_accepts_new_optional_fields(): void
+    {
+        $response = $this->postJson('/api/public/widget/bug-report', array_merge(
+            $this->validPayload([
+                'deploy_commit' => 'abc1234def5678901234567890123456789012345678',
+                'deploy_timestamp' => '2026-04-14T10:00:00Z',
+                'route_name' => 'settings.profile',
+                'breadcrumbs' => json_encode([['type' => 'navigation', 'url' => '/settings']]),
+                'failed_responses' => json_encode([['url' => '/api/user', 'status' => 500, 'body' => 'error']]),
+                'livewire_components' => json_encode([['class' => 'App\\Livewire\\SettingsPage']]),
+            ]),
+            ['screenshot' => UploadedFile::fake()->image('screenshot.png')],
+        ));
+
+        $response->assertStatus(201);
+
+        $signal = Signal::withoutGlobalScopes()
+            ->where('source_type', 'bug_report')
+            ->where('team_id', $this->team->id)
+            ->first();
+
+        $this->assertNotNull($signal);
+        $this->assertEquals('abc1234def5678901234567890123456789012345678', $signal->payload['deploy_commit']);
+        $this->assertEquals('settings.profile', $signal->payload['route_name']);
+    }
+
+    public function test_widget_breadcrumbs_override_action_log_in_payload(): void
+    {
+        $breadcrumbs = json_encode([
+            ['type' => 'navigation', 'url' => '/settings'],
+            ['type' => 'click', 'target' => 'button.save'],
+        ]);
+
+        $response = $this->postJson('/api/public/widget/bug-report', array_merge(
+            $this->validPayload(['breadcrumbs' => $breadcrumbs]),
+            ['screenshot' => UploadedFile::fake()->image('screenshot.png')],
+        ));
+
+        $response->assertStatus(201);
+
+        $signal = Signal::withoutGlobalScopes()
+            ->where('source_type', 'bug_report')
+            ->where('team_id', $this->team->id)
+            ->first();
+
+        $this->assertNotNull($signal);
+        // breadcrumbs should be stored and override action_log
+        $this->assertEquals($breadcrumbs, $signal->payload['breadcrumbs']);
+    }
+
+    public function test_widget_backward_compat_without_new_fields(): void
+    {
+        // All new fields are nullable — existing payloads must still work
+        $response = $this->postJson('/api/public/widget/bug-report', array_merge(
+            $this->validPayload(), // no new fields
+            ['screenshot' => UploadedFile::fake()->image('screenshot.png')],
+        ));
+
+        $response->assertStatus(201);
+    }
+
     public function test_widget_scopes_signal_to_correct_team(): void
     {
         $otherTeam = Team::factory()->create();
