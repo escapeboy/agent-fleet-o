@@ -26,6 +26,7 @@ class RouteMapController extends Controller
             'routes' => ['required', 'array', 'max:2000'],
             'routes.*.method' => ['required', 'string'],
             'routes.*.uri' => ['required', 'string'],
+            'routes.*.name' => ['nullable', 'string'],
             'routes.*.controller' => ['nullable', 'string'],
             'routes.*.livewire_component' => ['nullable', 'string'],
         ]);
@@ -72,7 +73,7 @@ class RouteMapController extends Controller
             return response()->json(['error' => 'no_route_match'], 404);
         }
 
-        $path = parse_url($url, PHP_URL_PATH) ?? $url;
+        $path = ltrim(parse_url($url, PHP_URL_PATH) ?? $url, '/');
 
         foreach ($routeMap->routes ?? [] as $route) {
             $uri = $route['uri'] ?? '';
@@ -91,7 +92,10 @@ class RouteMapController extends Controller
 
     private function uriMatches(string $uri, string $path): bool
     {
-        if (rtrim($uri, '/') === rtrim($path, '/')) {
+        $uri = trim($uri, '/');
+        $path = trim($path, '/');
+
+        if ($uri === $path) {
             return true;
         }
 
@@ -104,6 +108,6 @@ class RouteMapController extends Controller
 
         $pattern .= '$#';
 
-        return (bool) preg_match($pattern, rtrim($path, '/'));
+        return (bool) preg_match($pattern, $path);
     }
 }
