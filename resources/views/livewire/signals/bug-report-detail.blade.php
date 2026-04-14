@@ -128,9 +128,13 @@
                                     $to   = $bcData['to']   ?? '';
                                     $bcSummary = trim("$from → $to", ' →');
                                 } elseif ($bcCategory === 'ui.click' || ($bcCategory === 'ui' && !array_key_exists('value', $bcData))) {
-                                    $sel  = $bcData['selector'] ?? $bcData['target'] ?? '';
-                                    $text = $bcData['text']     ?? $bcData['label']  ?? '';
-                                    $bcSummary = trim('clicked '.trim($sel.' '.('' !== $text ? '"'.$text.'"' : '')));
+                                    $bcTarget = $bcData['target'] ?? null;
+                                    $sel  = $bcData['selector']
+                                        ?? (is_array($bcTarget) ? ($bcTarget['selector'] ?? '') : (is_string($bcTarget) ? $bcTarget : ''));
+                                    $text = $bcData['text']
+                                        ?? $bcData['label']
+                                        ?? (is_array($bcTarget) ? ($bcTarget['text'] ?? '') : '');
+                                    $bcSummary = trim('clicked '.trim($sel.' '.('' !== (string) $text ? '"'.$text.'"' : '')));
                                     if ($bcSummary === 'clicked' && !empty($bcData)) {
                                         $pairs = [];
                                         foreach (array_slice($bcData, 0, 3) as $k => $v) {
@@ -143,7 +147,11 @@
                                         }
                                     }
                                 } elseif ($bcCategory === 'ui.input' || ($bcCategory === 'ui' && array_key_exists('value', $bcData))) {
-                                    $name = $bcData['name'] ?? $bcData['target'] ?? $bcData['id'] ?? '';
+                                    $bcTarget = $bcData['target'] ?? null;
+                                    $name = $bcData['name']
+                                        ?? (is_array($bcTarget) ? ($bcTarget['name'] ?? $bcTarget['selector'] ?? '') : (is_string($bcTarget) ? $bcTarget : ''))
+                                        ?? $bcData['id']
+                                        ?? '';
                                     $bcSummary = trim('input '.$name).' (redacted)';
                                 } elseif (in_array($bcCategory, ['http', 'xhr', 'fetch'])) {
                                     $method = strtoupper($bcData['method'] ?? '');
