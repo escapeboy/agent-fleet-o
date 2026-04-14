@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProviderConfigController;
+use App\Http\Controllers\Api\V1\BugReportSignalController;
 use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillBenchmarkController;
 use App\Http\Controllers\Api\V1\SkillController;
@@ -152,6 +153,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/signals', [SignalController::class, 'index']);
     Route::get('/signals/{signal}', [SignalController::class, 'show']);
     Route::post('/signals', [SignalController::class, 'store']);
+    Route::post('/signals/bug-report', [BugReportSignalController::class, 'store']);
 
     // Approvals
     Route::get('/approvals', [ApprovalController::class, 'index']);

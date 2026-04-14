@@ -67,8 +67,14 @@ use App\Domain\Signal\Connectors\SignalProtocolConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
 use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
+use App\Domain\Signal\Connectors\BugReportConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
+use App\Domain\Signal\Events\SignalIngested;
+use App\Domain\Signal\Events\SignalStatusChanged;
+use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
+use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
+use App\Domain\Signal\Listeners\SyncSignalStatusOnExperimentComplete;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
 use App\Domain\Skill\Models\Skill;
@@ -186,6 +192,7 @@ class AppServiceProvider extends ServiceProvider
             NotionConnector::class,
             ConfluenceConnector::class,
             GitHubWikiConnector::class,
+            BugReportConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors
@@ -393,6 +400,13 @@ class AppServiceProvider extends ServiceProvider
 
         // Skill evolution: analyze completed executions and auto-propose improvements
         Event::listen(AgentExecuted::class, DispatchEvolutionAnalysisListener::class);
+
+        // Bug report signals: notify on critical severity + on status transitions
+        Event::listen(SignalIngested::class, NotifyOnCriticalBugReport::class);
+        Event::listen(SignalStatusChanged::class, NotifyOnSignalStatusChange::class);
+
+        // Bug report delegation: advance signal to review when agent experiment completes
+        Event::listen(ExperimentTransitioned::class, SyncSignalStatusOnExperimentComplete::class);
 
         // Team member removal: revoke tokens + pause active experiments
         Event::listen(TeamMemberRemoved::class, RevokeTeamMemberAccess::class);

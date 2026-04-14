@@ -76,6 +76,8 @@ use App\Livewire\Settings\PluginsPage;
 use App\Livewire\Setup\SetupPage;
 use App\Livewire\Shared\NotificationInboxPage;
 use App\Livewire\Shared\NotificationPreferencesPage;
+use App\Livewire\Signals\BugReportDetailPage;
+use App\Livewire\Signals\BugReportListPage;
 use App\Livewire\Signals\ConnectorBindingsPage;
 use App\Livewire\Signals\ConnectorSubscriptionsPage;
 use App\Livewire\Signals\ContactDetailPage;
@@ -288,6 +290,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
     Route::get('/signals/subscriptions', ConnectorSubscriptionsPage::class)->name('signals.subscriptions');
     Route::get('/signals/bindings', ConnectorBindingsPage::class)->name('signals.bindings');
+
+    Route::get('/bug-reports', BugReportListPage::class)->name('bug-reports.index');
+    Route::get('/bug-reports/{signal}', BugReportDetailPage::class)->name('bug-reports.show');
 
     Route::get('/contacts', ContactsPage::class)->name('contacts.index');
     Route::get('/contacts/{contact}', ContactDetailPage::class)->name('contacts.show');

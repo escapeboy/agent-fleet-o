@@ -295,6 +295,10 @@ use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Shared\TermsAcceptanceHistoryTool;
 use App\Mcp\Tools\Shared\TermsAcceptanceStatusTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
+use App\Mcp\Tools\Signal\BugReportAddCommentTool;
+use App\Mcp\Tools\Signal\BugReportDetailTool;
+use App\Mcp\Tools\Signal\BugReportListTool;
+use App\Mcp\Tools\Signal\BugReportUpdateStatusTool;
 use App\Mcp\Tools\Signal\ClearCueConnectorTool;
 use App\Mcp\Tools\Signal\ConnectorBindingDeleteTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
@@ -748,7 +752,7 @@ class AgentFleetServer extends Server
         ListSecurityReviewsTool::class,
         ResolveSecurityReviewTool::class,
 
-        // Signal (16)
+        // Signal (20)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -769,6 +773,10 @@ class AgentFleetServer extends Server
         SupabaseConnectorTool::class,
         ConnectorSubscriptionTool::class,
         IntentScoreTool::class,
+        BugReportListTool::class,
+        BugReportDetailTool::class,
+        BugReportUpdateStatusTool::class,
+        BugReportAddCommentTool::class,
 
         // Web Search (1)
         SearxngSearchTool::class,

@@ -81,6 +81,8 @@
         <i class="fas fa-share-nodes h-5 w-5"></i>
     @elseif($icon === 'globe-alt')
         <i class="fas fa-globe h-5 w-5"></i>
+    @elseif($icon === 'bug-ant')
+        <i class="fas fa-bug h-5 w-5"></i>
     @endif
     {{ $slot }}
 </a>
