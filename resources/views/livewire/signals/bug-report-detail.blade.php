@@ -127,13 +127,24 @@
                                     $from = $bcData['from'] ?? '';
                                     $to   = $bcData['to']   ?? '';
                                     $bcSummary = trim("$from → $to", ' →');
-                                } elseif ($bcCategory === 'ui.click') {
-                                    $sel  = $bcData['selector']    ?? $bcData['target'] ?? '';
-                                    $text = $bcData['text']         ?? $bcData['label']  ?? '';
-                                    $bcSummary = 'clicked '.$sel.($text ? ' "'.$text.'"' : '');
-                                } elseif ($bcCategory === 'ui.input') {
-                                    $name = $bcData['name'] ?? $bcData['target'] ?? '';
-                                    $bcSummary = 'input '.$name.' (redacted)';
+                                } elseif ($bcCategory === 'ui.click' || ($bcCategory === 'ui' && !array_key_exists('value', $bcData))) {
+                                    $sel  = $bcData['selector'] ?? $bcData['target'] ?? '';
+                                    $text = $bcData['text']     ?? $bcData['label']  ?? '';
+                                    $bcSummary = trim('clicked '.trim($sel.' '.('' !== $text ? '"'.$text.'"' : '')));
+                                    if ($bcSummary === 'clicked' && !empty($bcData)) {
+                                        $pairs = [];
+                                        foreach (array_slice($bcData, 0, 3) as $k => $v) {
+                                            if (is_scalar($v) && '' !== (string) $v) {
+                                                $pairs[] = "$k=$v";
+                                            }
+                                        }
+                                        if ($pairs) {
+                                            $bcSummary .= ' '.implode(' ', $pairs);
+                                        }
+                                    }
+                                } elseif ($bcCategory === 'ui.input' || ($bcCategory === 'ui' && array_key_exists('value', $bcData))) {
+                                    $name = $bcData['name'] ?? $bcData['target'] ?? $bcData['id'] ?? '';
+                                    $bcSummary = trim('input '.$name).' (redacted)';
                                 } elseif (in_array($bcCategory, ['http', 'xhr', 'fetch'])) {
                                     $method = strtoupper($bcData['method'] ?? '');
                                     $url    = $bcData['url']        ?? '';
