@@ -28,7 +28,10 @@ use Illuminate\Support\Facades\Route;
 
 // Public widget endpoint — no Sanctum auth, open CORS (*).
 // Auth is via team_public_key multipart field (write-only, scoped to signal ingestion).
+// Excluded from EnsureFrontendRequestsAreStateful: same-origin requests (e.g. barsy.dev calling
+// its own FleetQ instance) would otherwise trigger Sanctum stateful middleware + CSRF check → 419.
 Route::post('/public/widget/bug-report', BugReportWidgetController::class)
+    ->withoutMiddleware([\Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class])
     ->name('widget.bug-report');
 
 // Public site API (no auth, rate limited)
