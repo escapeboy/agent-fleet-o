@@ -128,31 +128,22 @@
                                     $to   = $bcData['to']   ?? '';
                                     $bcSummary = trim("$from → $to", ' →');
                                 } elseif ($bcCategory === 'ui.click' || ($bcCategory === 'ui' && !array_key_exists('value', $bcData))) {
-                                    $bcTarget = $bcData['target'] ?? null;
-                                    $sel  = $bcData['selector']
-                                        ?? (is_array($bcTarget) ? ($bcTarget['selector'] ?? '') : (is_string($bcTarget) ? $bcTarget : ''));
-                                    $text = $bcData['text']
-                                        ?? $bcData['label']
-                                        ?? (is_array($bcTarget) ? ($bcTarget['text'] ?? '') : '');
-                                    $bcSummary = trim('clicked '.trim($sel.' '.('' !== (string) $text ? '"'.$text.'"' : '')));
-                                    if ($bcSummary === 'clicked' && !empty($bcData)) {
-                                        $pairs = [];
-                                        foreach (array_slice($bcData, 0, 3) as $k => $v) {
-                                            if (is_scalar($v) && '' !== (string) $v) {
-                                                $pairs[] = "$k=$v";
-                                            }
-                                        }
-                                        if ($pairs) {
-                                            $bcSummary .= ' '.implode(' ', $pairs);
-                                        }
-                                    }
+                                    $bcTarget   = is_array($bcData['target'] ?? null) ? $bcData['target'] : [];
+                                    $role       = $bcTarget['role'] ?? '';
+                                    $rawText    = $bcTarget['text'] ?? $bcData['text'] ?? $bcData['label'] ?? '';
+                                    $cleanText  = trim(preg_replace('/\s+/', ' ', (string) $rawText));
+                                    $shortText  = mb_strlen($cleanText) > 50 ? mb_substr($cleanText, 0, 50).'…' : $cleanText;
+                                    $component  = $bcTarget['component'] ?? '';
+                                    $bcSummary  = 'clicked';
+                                    if ($role) { $bcSummary .= ' '.$role; }
+                                    if ($shortText) { $bcSummary .= ' "'.$shortText.'"'; }
+                                    if ($component) { $bcSummary .= ' @'.$component; }
                                 } elseif ($bcCategory === 'ui.input' || ($bcCategory === 'ui' && array_key_exists('value', $bcData))) {
-                                    $bcTarget = $bcData['target'] ?? null;
-                                    $name = $bcData['name']
-                                        ?? (is_array($bcTarget) ? ($bcTarget['name'] ?? $bcTarget['selector'] ?? '') : (is_string($bcTarget) ? $bcTarget : ''))
-                                        ?? $bcData['id']
-                                        ?? '';
+                                    $bcTarget  = is_array($bcData['target'] ?? null) ? $bcData['target'] : [];
+                                    $name      = $bcData['name'] ?? $bcTarget['name'] ?? $bcTarget['selector'] ?? $bcData['id'] ?? '';
+                                    $component = $bcTarget['component'] ?? '';
                                     $bcSummary = trim('input '.$name).' (redacted)';
+                                    if ($component) { $bcSummary .= ' @'.$component; }
                                 } elseif (in_array($bcCategory, ['http', 'xhr', 'fetch'])) {
                                     $method = strtoupper($bcData['method'] ?? '');
                                     $url    = $bcData['url']        ?? '';
