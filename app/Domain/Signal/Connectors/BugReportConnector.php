@@ -7,6 +7,7 @@ use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Jobs\EnrichBugReportJob;
 use App\Domain\Signal\Models\Signal;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 
 class BugReportConnector implements InputConnectorInterface
@@ -52,7 +53,7 @@ class BugReportConnector implements InputConnectorInterface
         }
 
         // Parse JSON-encoded log strings into structured arrays
-        foreach (['action_log', 'console_log', 'network_log'] as $field) {
+        foreach (['action_log', 'console_log', 'network_log', 'breadcrumbs', 'failed_responses'] as $field) {
             if (isset($payload[$field]) && is_string($payload[$field])) {
                 $decoded = json_decode($payload[$field], true);
                 $payload[$field] = is_array($decoded) ? $decoded : [];
@@ -82,7 +83,7 @@ class BugReportConnector implements InputConnectorInterface
         // generic 'attachments' collection), so screenshot and detail views resolve correctly.
         if ($signal) {
             foreach ($files as $file) {
-                if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
+                if ($file instanceof UploadedFile && $file->isValid()) {
                     $signal->addMedia($file)->toMediaCollection('bug_report_files');
                 }
             }
