@@ -7,6 +7,7 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Events\TeamMemberRemoved;
 use App\Models\User;
+use Illuminate\Support\Facades\Redis;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class RevokeTeamMemberAccess
@@ -15,10 +16,24 @@ class RevokeTeamMemberAccess
         private readonly PauseExperimentAction $pause,
     ) {}
 
+    // Redis TTL for session revocation markers — 7 days covers any realistic session lifetime.
+    private const REVOCATION_TTL_SECONDS = 604800;
+
     public function handle(TeamMemberRemoved $event): void
     {
         $this->revokeApiTokens($event);
+        $this->markSessionRevoked($event);
         $this->pauseActiveExperiments($event);
+    }
+
+    /**
+     * Write a Redis marker so SetCurrentTeam middleware can invalidate
+     * active web sessions for this user+team combination on next request.
+     */
+    private function markSessionRevoked(TeamMemberRemoved $event): void
+    {
+        $key = 'team_revoked:'.$event->userId.':'.$event->team->id;
+        Redis::connection('cache')->setex($key, self::REVOCATION_TTL_SECONDS, '1');
     }
 
     private function revokeApiTokens(TeamMemberRemoved $event): void

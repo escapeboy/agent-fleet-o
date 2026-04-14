@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redis;
 use Symfony\Component\HttpFoundation\Response;
 
 class SetCurrentTeam
@@ -11,6 +13,29 @@ class SetCurrentTeam
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
+
+        // Invalidate web sessions for removed team members.
+        // RevokeTeamMemberAccess listener writes "team_revoked:{userId}:{teamId}"
+        // to the cache Redis connection when a member is detached from a team.
+        if ($user && $user->current_team_id) {
+            $revocationKey = 'team_revoked:'.$user->id.':'.$user->current_team_id;
+
+            try {
+                if (Redis::connection('cache')->exists($revocationKey)) {
+                    Redis::connection('cache')->del($revocationKey);
+                    Auth::logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return redirect()->route('login')->with(
+                        'status',
+                        'Your access to this workspace has been revoked.',
+                    );
+                }
+            } catch (\Throwable) {
+                // Redis unavailable — fail open (don't block the request)
+            }
+        }
 
         if ($user && ! $user->current_team_id) {
             // Auto-assign first team if no current team set
