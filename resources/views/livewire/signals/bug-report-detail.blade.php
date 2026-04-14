@@ -114,16 +114,74 @@
                     <div x-show="open" x-cloak class="mt-3 overflow-auto max-h-72 space-y-0.5 font-mono text-xs">
                         @foreach($payload['breadcrumbs'] as $bc)
                             @php
-                                $bcLevel = $bc['level'] ?? 'log';
-                                $bcCls = $bcLevelColors[$bcLevel] ?? 'text-gray-500';
+                                $bcLevel    = $bc['level']    ?? 'log';
+                                $bcCategory = $bc['category'] ?? '';
+                                $bcData     = $bc['data']     ?? [];
+                                $bcCls      = $bcLevelColors[$bcLevel] ?? 'text-gray-500';
+
+                                // Build the human-readable summary from data, keyed by category
+                                $bcSummary = '';
+                                if (str_starts_with($bcCategory, 'navigation')) {
+                                    $from = $bcData['from'] ?? '';
+                                    $to   = $bcData['to']   ?? '';
+                                    $bcSummary = trim("$from → $to", ' →');
+                                } elseif ($bcCategory === 'ui.click') {
+                                    $sel  = $bcData['selector']    ?? $bcData['target'] ?? '';
+                                    $text = $bcData['text']         ?? $bcData['label']  ?? '';
+                                    $bcSummary = 'clicked '.$sel.($text ? ' "'.$text.'"' : '');
+                                } elseif ($bcCategory === 'ui.input') {
+                                    $name = $bcData['name'] ?? $bcData['target'] ?? '';
+                                    $bcSummary = 'input '.$name.' (redacted)';
+                                } elseif (in_array($bcCategory, ['http', 'xhr', 'fetch'])) {
+                                    $method = strtoupper($bcData['method'] ?? '');
+                                    $url    = $bcData['url']        ?? '';
+                                    $status = $bcData['status_code'] ?? $bcData['statusCode'] ?? $bcData['status'] ?? '';
+                                    $bcSummary = trim("$method $url".($status ? " → $status" : ''));
+                                    $bcError = ($status >= 400 && isset($bcData['response_body']))
+                                        ? $bcData['response_body']
+                                        : null;
+                                } elseif ($bcCategory === 'console') {
+                                    $lvl = strtoupper($bcData['level'] ?? $bcLevel);
+                                    $msg = $bcData['message'] ?? ($bc['message'] ?? '');
+                                    $bcSummary = "$lvl: $msg";
+                                } elseif ($bcCategory === 'error') {
+                                    $type = $bcData['type']    ?? 'Error';
+                                    $msg  = $bcData['message'] ?? ($bc['message'] ?? '');
+                                    $bcSummary = "$type: $msg";
+                                    $bcStack   = $bcData['stack'] ?? null;
+                                } else {
+                                    $bcSummary = $bc['message'] ?? '';
+                                    if (empty($bcSummary) && !empty($bcData)) {
+                                        // Generic fallback: key=value pairs
+                                        $pairs = [];
+                                        foreach (array_slice($bcData, 0, 4) as $k => $v) {
+                                            if (is_scalar($v)) $pairs[] = "$k=$v";
+                                        }
+                                        $bcSummary = implode(' ', $pairs);
+                                    }
+                                }
                             @endphp
-                            <div class="flex items-start gap-2 px-2 py-1 rounded {{ $bcCls }}">
-                                <span class="shrink-0 text-gray-400 whitespace-nowrap">{{ $bc['timestamp'] ?? '' }}</span>
-                                <span class="shrink-0 uppercase font-semibold w-14">{{ $bcLevel }}</span>
-                                @if(!empty($bc['category']))
-                                    <span class="shrink-0 text-gray-400">[{{ $bc['category'] }}]</span>
+                            <div class="px-2 py-1 rounded {{ $bcCls }}">
+                                <div class="flex items-start gap-2">
+                                    <span class="shrink-0 text-gray-400 whitespace-nowrap">{{ $bc['timestamp'] ?? '' }}</span>
+                                    @if($bcCategory)
+                                        <span class="shrink-0 text-gray-400">[{{ $bcCategory }}]</span>
+                                    @endif
+                                    <span class="flex-1 break-all">{{ $bcSummary }}</span>
+                                </div>
+                                {{-- Error stack trace (collapsible) --}}
+                                @if(!empty($bcStack))
+                                    <div x-data="{ s: false }" class="mt-0.5 ml-2">
+                                        <button @click="s = !s" class="text-gray-400 hover:text-gray-600 text-xs">
+                                            <span x-text="s ? '▲ hide stack' : '▼ stack trace'"></span>
+                                        </button>
+                                        <pre x-show="s" x-cloak class="mt-1 whitespace-pre-wrap text-gray-500 text-xs leading-tight">{{ $bcStack }}</pre>
+                                    </div>
                                 @endif
-                                <span class="flex-1 break-all">{{ $bc['message'] ?? '' }}</span>
+                                {{-- HTTP error response body --}}
+                                @if(!empty($bcError))
+                                    <div class="mt-0.5 ml-2 text-red-500 break-all">{{ Str::limit($bcError, 200) }}</div>
+                                @endif
                             </div>
                         @endforeach
                     </div>
