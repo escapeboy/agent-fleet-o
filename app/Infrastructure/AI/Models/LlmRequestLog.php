@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\MassPrunable;
@@ -25,6 +26,7 @@ class LlmRequestLog extends Model
 
     protected $fillable = [
         'team_id',
+        'user_id',
         'idempotency_key',
         'agent_id',
         'experiment_id',
@@ -54,6 +56,11 @@ class LlmRequestLog extends Model
             'latency_ms' => 'integer',
             'completed_at' => 'datetime',
         ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function agent(): BelongsTo

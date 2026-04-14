@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Telegram;
 
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -14,6 +15,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('write')]
 class TelegramBotTool extends Tool
 {
     protected string $name = 'telegram_bot_manage';

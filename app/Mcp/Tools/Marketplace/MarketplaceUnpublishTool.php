@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Marketplace;
 
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Marketplace\Models\MarketplaceListing;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('destructive')]
 class MarketplaceUnpublishTool extends Tool
 {
     protected string $name = 'marketplace_unpublish';

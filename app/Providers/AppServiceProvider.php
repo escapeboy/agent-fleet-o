@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Agent\Events\AgentExecuted;
+use App\Domain\Agent\Listeners\ProvisionPersonalAgentListener;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
@@ -36,6 +37,8 @@ use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
+use App\Domain\Shared\Events\TeamMemberRemoved;
+use App\Domain\Shared\Listeners\RevokeTeamMemberAccess;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
@@ -64,8 +67,14 @@ use App\Domain\Signal\Connectors\SignalProtocolConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
 use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
+use App\Domain\Signal\Connectors\BugReportConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
+use App\Domain\Signal\Events\SignalIngested;
+use App\Domain\Signal\Events\SignalStatusChanged;
+use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
+use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
+use App\Domain\Signal\Listeners\SyncSignalStatusOnExperimentComplete;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
 use App\Domain\Skill\Models\Skill;
@@ -100,6 +109,7 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Dedoc\Scramble\Support\Generator\SecuritySchemes\OAuthFlow;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -182,6 +192,7 @@ class AppServiceProvider extends ServiceProvider
             NotionConnector::class,
             ConfluenceConnector::class,
             GitHubWikiConnector::class,
+            BugReportConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors
@@ -317,6 +328,9 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
+        // Auto-provision personal agent for new users
+        Event::listen(Registered::class, ProvisionPersonalAgentListener::class);
+
         // Apple Sign In via SocialiteProviders community package
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('apple', Provider::class);
@@ -386,6 +400,16 @@ class AppServiceProvider extends ServiceProvider
 
         // Skill evolution: analyze completed executions and auto-propose improvements
         Event::listen(AgentExecuted::class, DispatchEvolutionAnalysisListener::class);
+
+        // Bug report signals: notify on critical severity + on status transitions
+        Event::listen(SignalIngested::class, NotifyOnCriticalBugReport::class);
+        Event::listen(SignalStatusChanged::class, NotifyOnSignalStatusChange::class);
+
+        // Bug report delegation: advance signal to review when agent experiment completes
+        Event::listen(ExperimentTransitioned::class, SyncSignalStatusOnExperimentComplete::class);
+
+        // Team member removal: revoke tokens + pause active experiments
+        Event::listen(TeamMemberRemoved::class, RevokeTeamMemberAccess::class);
 
         // Agent memory: store execution output as memory after completion
         AgentExecution::created(function (AgentExecution $execution) {

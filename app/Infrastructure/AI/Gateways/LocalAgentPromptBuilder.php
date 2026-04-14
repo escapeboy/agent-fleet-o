@@ -73,25 +73,23 @@ final class LocalAgentPromptBuilder
     /**
      * Build Claude Code process arguments for assistant mode.
      *
-     * Uses --system-prompt flag and --tools "" to ensure proper system/user
-     * prompt separation (avoids prompt injection detection) and disable
-     * built-in tools so the agent uses text-based <tool_call> format.
+     * When $systemPromptFile is provided, uses --system-prompt-file to avoid
+     * the ARG_MAX limit when the system prompt is very large (e.g. 200+ tools).
+     * When null, falls back to inline --system-prompt.
      *
      * @return array<string>
      */
-    public static function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null): array
+    public static function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null): array
     {
-        $args = [
-            $binaryPath,
-            '--print',
-            '--output-format', 'json',
-            '--system-prompt', $systemPrompt,
-            '--tools', '',
-            '--dangerously-skip-permissions',
-            '--no-session-persistence',
-            '--strict-mcp-config',
-            '--mcp-config', '{"mcpServers":{}}',
-        ];
+        $systemPromptArgs = $systemPromptFile
+            ? ['--system-prompt-file', $systemPromptFile]
+            : ['--system-prompt', $systemPrompt];
+
+        $args = array_merge(
+            [$binaryPath, '--print', '--output-format', 'json'],
+            $systemPromptArgs,
+            ['--tools', '', '--dangerously-skip-permissions', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}'],
+        );
 
         if ($model) {
             $args[] = '--model';
@@ -109,20 +107,17 @@ final class LocalAgentPromptBuilder
      *
      * @return array<string>
      */
-    public static function buildClaudeCodeAssistantStreamArgs(string $binaryPath, string $systemPrompt, ?string $model = null): array
+    public static function buildClaudeCodeAssistantStreamArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null): array
     {
-        $args = [
-            $binaryPath,
-            '--print',
-            '--output-format', 'stream-json',
-            '--verbose',
-            '--system-prompt', $systemPrompt,
-            '--tools', '',
-            '--dangerously-skip-permissions',
-            '--no-session-persistence',
-            '--strict-mcp-config',
-            '--mcp-config', '{"mcpServers":{}}',
-        ];
+        $systemPromptArgs = $systemPromptFile
+            ? ['--system-prompt-file', $systemPromptFile]
+            : ['--system-prompt', $systemPrompt];
+
+        $args = array_merge(
+            [$binaryPath, '--print', '--output-format', 'stream-json', '--verbose'],
+            $systemPromptArgs,
+            ['--tools', '', '--dangerously-skip-permissions', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}'],
+        );
 
         if ($model) {
             $args[] = '--model';

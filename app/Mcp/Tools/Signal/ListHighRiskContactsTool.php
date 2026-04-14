@@ -8,8 +8,10 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
+#[AssistantTool('read')]
 class ListHighRiskContactsTool extends Tool
 {
     protected string $name = 'contact_high_risk_list';

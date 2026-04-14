@@ -10,9 +10,11 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
+use App\Mcp\Attributes\AssistantTool;
 
 #[IsIdempotent]
 #[IsDestructive]
+#[AssistantTool('write')]
 class ToolProbeRemoteMcpTool extends McpTool
 {
     protected string $name = 'tool_probe_remote_mcp';

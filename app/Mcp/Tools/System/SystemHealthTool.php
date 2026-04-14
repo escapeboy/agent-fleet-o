@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\System;
 
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class SystemHealthTool extends Tool
 {
     protected string $name = 'system_health';

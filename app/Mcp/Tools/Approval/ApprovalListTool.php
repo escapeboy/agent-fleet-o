@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Approval;
 
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Mcp\Concerns\HasMcpAppUi;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class ApprovalListTool extends Tool
 {
     use HasMcpAppUi;

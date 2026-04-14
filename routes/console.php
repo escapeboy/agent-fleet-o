@@ -27,6 +27,7 @@ Schedule::command('connectors:poll --driver=signal_protocol')->everyMinute()->wi
 Schedule::command('connectors:poll --driver=matrix')->everyMinute()->withoutOverlapping(2);
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
+Schedule::command('signals:cleanup-bug-reports')->dailyAt('03:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
 Schedule::command('human-tasks:check-sla')->everyFiveMinutes();
@@ -72,6 +73,8 @@ Schedule::command('system:check-updates')->hourly()->runInBackground();
 
 // Pre-generate OpenAPI spec so /docs/api.json is served from a static file
 Schedule::command('scramble:export --path=public/api.json')->weeklyOn(1, '03:30');
+
+Schedule::command('conversations:expire')->everyFiveMinutes();
 
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
 

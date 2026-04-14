@@ -9,9 +9,11 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class ToolFederationGroupListTool extends Tool
 {
     protected string $name = 'tool_federation_group_list';

@@ -12,6 +12,7 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for knowledge-graph-aware memory retrieval using LightRAG traversal modes.
@@ -26,6 +27,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  */
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class KgGraphSearchTool extends Tool
 {
     protected string $name = 'kg_graph_search';

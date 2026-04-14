@@ -212,6 +212,20 @@ return [
     ],
 
     // HTTP-based local LLM providers (Ollama, OpenAI-compatible endpoints)
+
+    // Mesh LLM — distributed llama.cpp inference across machines.
+    // Pools spare GPU capacity and exposes a single OpenAI-compatible API.
+    // Install: curl -fsSL https://raw.githubusercontent.com/michaelneale/mesh-llm/main/install.sh | bash
+    // Start:   mesh-llm serve --auto
+    // Models are discovered dynamically from GET /v1/models.
+    'mesh_llm' => [
+        'name' => 'Mesh LLM (Local/Distributed)',
+        'http_local' => true,
+        'default_url' => 'http://localhost:9337/v1',
+        'url_hint' => 'Mesh LLM API URL — default http://localhost:9337/v1',
+        'models' => [], // Populated dynamically from GET /v1/models
+    ],
+
     'ollama' => [
         'name' => 'Ollama',
         'http_local' => true,

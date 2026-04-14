@@ -2,7 +2,7 @@
     $activeRailGroup = match(true) {
         request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'crews.*', 'approvals.*', 'chatbots.*') => 'fleet',
         request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'evaluations.*', 'triggers.*', 'evolution.*', 'websites.*') => 'build',
-        request()->routeIs('signals.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'metrics.*') => 'monitor',
+        request()->routeIs('signals.*', 'bug-reports.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'metrics.*') => 'monitor',
         request()->routeIs('app.marketplace.*', 'marketplace.*', 'plugins', 'telegram.*') => 'marketplace',
         request()->routeIs('tools.*', 'credentials.*', 'integrations.*', 'git-repositories.*', 'team.*', 'settings', 'profile', 'notifications.*') => 'settings',
         default => null,
@@ -161,6 +161,7 @@
                 <x-sidebar-link href="{{ route('signals.subscriptions') }}" :active="request()->routeIs('signals.subscriptions')" icon="bell">Subscriptions</x-sidebar-link>
                 <x-sidebar-link href="{{ route('signals.entities') }}" :active="request()->routeIs('signals.entities')" icon="squares-2x2">Entities</x-sidebar-link>
                 <x-sidebar-link href="{{ route('signals.bindings') }}" :active="request()->routeIs('signals.bindings')" icon="link">Bindings</x-sidebar-link>
+                <x-sidebar-link href="{{ route('bug-reports.index') }}" :active="request()->routeIs('bug-reports.*')" icon="bug-ant">Bug Reports</x-sidebar-link>
                 <x-sidebar-link href="{{ route('contacts.index') }}" :active="request()->routeIs('contacts.*')" icon="identification">Contacts</x-sidebar-link>
                 <x-sidebar-link href="{{ route('email.templates.index') }}" :active="request()->routeIs('email.templates.*')" icon="document-text">Email Templates</x-sidebar-link>
                 <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.themes.*')" icon="envelope">Email Themes</x-sidebar-link>

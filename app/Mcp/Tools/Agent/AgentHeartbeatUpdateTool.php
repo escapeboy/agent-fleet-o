@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\DTOs\AgentHeartbeatTask;
 use App\Domain\Agent\Models\Agent;
 use Cron\CronExpression;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -19,6 +20,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  * trigger an immediate execution outside the normal schedule.
  */
 #[IsDestructive]
+#[AssistantTool('write')]
 class AgentHeartbeatUpdateTool extends Tool
 {
     protected string $name = 'agent_heartbeat_update';

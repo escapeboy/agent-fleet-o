@@ -11,6 +11,7 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * Semantic search over all registered MCP tools.
@@ -20,6 +21,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  */
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class ToolSearchTool extends Tool
 {
     protected string $name = 'tool_search';

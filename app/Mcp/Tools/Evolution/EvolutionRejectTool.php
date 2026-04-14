@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Evolution;
 
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('write')]
 class EvolutionRejectTool extends Tool
 {
     protected string $name = 'evolution_reject';

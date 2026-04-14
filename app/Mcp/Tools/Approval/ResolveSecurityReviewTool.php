@@ -6,6 +6,7 @@ use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Signal\Jobs\EvaluateContactRiskJob;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -14,6 +15,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('write')]
 class ResolveSecurityReviewTool extends Tool
 {
     protected string $name = 'approval_security_review_resolve';

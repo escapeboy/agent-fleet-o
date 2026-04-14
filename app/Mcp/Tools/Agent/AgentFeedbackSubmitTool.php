@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Models\Agent;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('write')]
 class AgentFeedbackSubmitTool extends Tool
 {
     protected string $name = 'agent_feedback_submit';

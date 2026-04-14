@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Experiment;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Throwable;
 
 #[IsDestructive]
+#[AssistantTool('write')]
 class ExperimentSkipStageTool extends Tool
 {
     protected string $name = 'experiment_skip_stage';

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\System;
 
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Models\GlobalSetting;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
 #[IsDestructive]
+#[AssistantTool('destructive')]
 class GlobalSettingsUpdateTool extends Tool
 {
     protected string $name = 'global_settings_update';

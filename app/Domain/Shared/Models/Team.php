@@ -48,6 +48,7 @@ class Team extends Model
         'settings',
         'credential_key',
         'default_email_theme_id',
+        'allowed_models',
     ];
 
     protected $hidden = [
@@ -61,6 +62,7 @@ class Team extends Model
             'claude_code_vps_allowed' => 'boolean',
             'assistant_ui_artifacts_allowed' => 'boolean',
             'settings' => 'array',
+            'allowed_models' => 'array',
             'credential_key' => 'encrypted',
         ];
     }

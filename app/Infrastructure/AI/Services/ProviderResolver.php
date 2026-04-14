@@ -10,6 +10,7 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\PlanEnforcer;
 use App\Domain\Skill\Models\Skill;
 use App\Infrastructure\AI\Exceptions\DataClassificationException;
+use App\Infrastructure\AI\Exceptions\ModelNotAllowedException;
 use App\Infrastructure\AI\Gateways\PortkeyGateway;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Collection;
@@ -35,6 +36,7 @@ class ProviderResolver
         string $purpose = 'run',
     ): array {
         $resolved = $this->resolveHierarchy($skill, $agent, $team, $purpose);
+        $resolved = $this->enforceAllowedModels($resolved, $team);
 
         return $this->enforceDataClassification($resolved, $agent, $team);
     }
@@ -177,6 +179,21 @@ class ProviderResolver
         ?Agent $agent = null,
         ?Team $team = null,
         string $purpose = 'run',
+    ): array {
+        $result = $this->resolveWithSourceInternal($skill, $agent, $team, $purpose);
+        $enforced = $this->enforceAllowedModels(
+            ['provider' => $result['provider'], 'model' => $result['model']],
+            $team,
+        );
+
+        return array_merge($result, $enforced);
+    }
+
+    private function resolveWithSourceInternal(
+        ?Skill $skill,
+        ?Agent $agent,
+        ?Team $team,
+        string $purpose,
     ): array {
         // 1. Skill-level override
         if ($skill) {
@@ -558,6 +575,39 @@ class ProviderResolver
         }
 
         return $models;
+    }
+
+    /**
+     * Enforce the team's model allowlist if one is configured.
+     *
+     * @param  array{provider: string, model: string}  $resolved
+     * @return array{provider: string, model: string}
+     *
+     * @throws ModelNotAllowedException
+     */
+    private function enforceAllowedModels(array $resolved, ?Team $team): array
+    {
+        if (! $team) {
+            return $resolved;
+        }
+
+        $allowedModels = $team->allowed_models;
+
+        if (empty($allowedModels)) {
+            return $resolved;
+        }
+
+        $key = $resolved['provider'].'/'.$resolved['model'];
+
+        if (! in_array($key, $allowedModels, true)) {
+            throw new ModelNotAllowedException(
+                $resolved['provider'],
+                $resolved['model'],
+                $team->id,
+            );
+        }
+
+        return $resolved;
     }
 
     /**

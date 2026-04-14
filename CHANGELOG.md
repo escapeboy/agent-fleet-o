@@ -2,6 +2,29 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.19.0] - 2026-04-14
+
+### Added
+
+- **Bug Report Signal System** — lightweight QA reporting pipeline for teams using an external JS widget:
+  - `POST /api/v1/signals/bug-report` multipart endpoint accepts 15 fields: title, description, severity, URL, reporter, screenshot (PNG/JPG/WebP, 10 MB), optional attachment, action log, console log, network log, browser, viewport, environment, project key.
+  - `BugReportConnector` — new input connector (`driver=bug_report`) that parses JSON log strings, applies severity tags, and stores screenshot + attachments to the `bug_report_files` media collection.
+  - **Signal status lifecycle** — 8-state machine (`received → triaged → in_progress → delegated_to_agent → agent_fixing → review → resolved / dismissed`) with `SignalStatusTransitionMap`, `UpdateSignalStatusAction`, `SignalStatusChanged` event.
+  - **Signal comments** — `signal_comments` table (`SignalComment` model, `AddSignalCommentAction`). Human and agent comments tracked separately.
+  - **Agent delegation** — `DelegateBugReportToAgentAction` creates an Experiment with full bug context (title, description, console errors, action log, screenshot URL). `SyncSignalStatusOnExperimentComplete` listener advances signal to `review` when the experiment reaches `Completed`.
+  - **Dashboard UI** — `BugReportListPage` (filters: project, severity, status, reporter; sortable columns) + `BugReportDetailPage` (screenshot lightbox, collapsible action/console/network logs via Alpine.js, threaded comments, status controls, Delegate to Agent button). Routes: `GET /bug-reports` + `GET /bug-reports/{signal}`.
+  - **4 MCP tools** — `bug_report_list`, `bug_report_detail`, `bug_report_update_status`, `bug_report_add_comment` registered in `AgentFleetServer`.
+  - **In-app notifications** — critical severity triggers immediate owner/admin notification on ingestion; status → `review` notifies owner/admin that agent fix is ready.
+  - **Retention cleanup** — `signals:cleanup-bug-reports` command (daily at 03:00) deletes signals older than `team.settings.bug_report_retention_days` (default 90) and clears media.
+  - **Migrations** — `add_status_project_key_to_signals_table`, `create_signal_comments_table`.
+  - **14 feature tests** — `tests/Feature/Domain/Signal/BugReportSignalTest.php` covering submission, validation, auth, status transitions, invalid transition exception, comments, and tenant scoping.
+
+### Fixed
+
+- **Screenshot media collection mismatch** — `BugReportConnector` was previously routing uploaded files through `IngestSignalAction`'s generic `attachments` collection. Screenshots and attachments now stored directly to `bug_report_files` collection so detail view and MCP tool screenshot URLs are non-empty.
+- **`additional_file` unrestricted MIME type** — added `mimes:png,jpg,jpeg,webp,gif,pdf,txt,log,json,zip,csv` restriction to prevent executable file uploads.
+- **`SyncSignalStatusOnExperimentComplete` TeamScope bypass risk** — switched to `Signal::withoutGlobalScopes()` in the queue-listener context, consistent with all other signal-querying listeners (`EvaluateTriggerRulesJob`, `ExtractKnowledgeEdgesJob`, etc.).
+
 ## [1.18.0] - 2026-04-10
 
 ### Added

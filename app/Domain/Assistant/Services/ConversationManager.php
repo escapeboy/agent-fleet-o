@@ -27,7 +27,8 @@ class ConversationManager
                 ->where('team_id', $teamId)
                 ->where('user_id', $userId)
                 ->find($conversationId);
-            if ($conversation) {
+            // Treat expired conversations as not found — a new one will be created below
+            if ($conversation && $conversation->expired_at === null) {
                 return $conversation;
             }
         }

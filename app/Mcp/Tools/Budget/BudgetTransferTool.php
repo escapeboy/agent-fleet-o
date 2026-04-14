@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Budget;
 
 use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Budget\Models\CreditLedger;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('write')]
 class BudgetTransferTool extends Tool
 {
     protected string $name = 'budget_transfer';

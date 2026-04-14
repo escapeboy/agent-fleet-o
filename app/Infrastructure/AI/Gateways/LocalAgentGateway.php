@@ -55,9 +55,11 @@ class LocalAgentGateway implements AiGatewayInterface
         );
 
         // Claude Code assistant: use array-based Process for proper system prompt
-        // separation via --system-prompt flag (avoids prompt injection detection).
+        // separation via --system-prompt-file flag (avoids ARG_MAX when tool list is large).
         if ($agentKey === 'claude-code' && $isAssistant) {
-            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model);
+            $systemPromptFile = $workdir.'/system-prompt.txt';
+            file_put_contents($systemPromptFile, $request->systemPrompt);
+            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile);
             $prompt = $request->userPrompt;
             $env = getenv();
             unset($env['CLAUDECODE']);
@@ -258,9 +260,14 @@ class LocalAgentGateway implements AiGatewayInterface
         $useStreaming = $isAssistant && $onChunk !== null;
 
         if ($isAssistant) {
+            // Write system prompt to a file in the ephemeral workdir to avoid ARG_MAX
+            // when the tool list is large (230+ tools → system prompt can exceed 128KB).
+            // The file is cleaned up automatically with the workdir in finally{}.
+            $systemPromptFile = $workdir.'/system-prompt.txt';
+            file_put_contents($systemPromptFile, $request->systemPrompt);
             $args = $useStreaming
-                ? LocalAgentPromptBuilder::buildClaudeCodeAssistantStreamArgs($binaryPath, $request->systemPrompt, $request->model)
-                : LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model);
+                ? LocalAgentPromptBuilder::buildClaudeCodeAssistantStreamArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile)
+                : LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile);
             $prompt = $request->userPrompt;
         } else {
             $prompt = LocalAgentPromptBuilder::buildPrompt($request);

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Webhook;
 
 use App\Domain\Webhook\Enums\WebhookEvent;
 use App\Domain\Webhook\Models\WebhookEndpoint;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('write')]
 class WebhookUpdateTool extends Tool
 {
     protected string $name = 'webhook_update';

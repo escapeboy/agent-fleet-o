@@ -11,6 +11,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for retrieving all facts about a named entity from the knowledge graph.
@@ -19,6 +20,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * by name — useful for agents building context about a specific person or company.
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class KgEntityFactsTool extends Tool
 {
     protected string $name = 'kg_entity_facts';

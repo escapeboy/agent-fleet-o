@@ -9,6 +9,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for querying composite buyer intent scores.
@@ -20,6 +21,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * entity across all sources (ClearCue, GitHub, webhooks, etc.).
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class IntentScoreTool extends Tool
 {
     protected string $name = 'intent_score_query';

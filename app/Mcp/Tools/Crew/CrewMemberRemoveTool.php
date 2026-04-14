@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Crew;
 
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewMember;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('destructive')]
 class CrewMemberRemoveTool extends Tool
 {
     protected string $name = 'crew_member_remove';

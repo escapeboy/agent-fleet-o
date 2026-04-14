@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Webhook;
 
 use App\Domain\Webhook\Models\WebhookEndpoint;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class WebhookListTool extends Tool
 {
     protected string $name = 'webhook_list';

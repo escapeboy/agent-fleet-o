@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\System;
 
 use App\Livewire\Settings\SecurityPolicyPanel;
 use App\Models\GlobalSetting;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Mcp\Request;
@@ -14,6 +15,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
 #[IsDestructive]
+#[AssistantTool('write')]
 class SecurityPolicyManageTool extends Tool
 {
     protected string $name = 'security_policy_manage';

@@ -20,8 +20,8 @@ use App\Mcp\Tools\Agent\AgentConfigHistoryTool;
 use App\Mcp\Tools\Agent\AgentConstraintTemplatesTool;
 use App\Mcp\Tools\Agent\AgentCostsTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
-use App\Mcp\Tools\Agent\AgentExecutionsListTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
+use App\Mcp\Tools\Agent\AgentExecutionsListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
 use App\Mcp\Tools\Agent\AgentFeedbackSubmitTool;
@@ -114,8 +114,13 @@ use App\Mcp\Tools\Credential\CredentialRollbackTool;
 use App\Mcp\Tools\Credential\CredentialRotateTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
 use App\Mcp\Tools\Crew\CrewActivateTool;
+use App\Mcp\Tools\Crew\CrewBlackboardPostTool;
+use App\Mcp\Tools\Crew\CrewBlackboardReadTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
+use App\Mcp\Tools\Crew\CrewDeleteTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
+use App\Mcp\Tools\Crew\CrewExecutionPauseTool;
+use App\Mcp\Tools\Crew\CrewExecutionResumeTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
 use App\Mcp\Tools\Crew\CrewGenerateFromPromptTool;
@@ -270,9 +275,6 @@ use App\Mcp\Tools\RAGFlow\RagflowSearchTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\ContactHealthScoreTool;
-use App\Mcp\Tools\Shared\TeamInviteMemberTool;
-use App\Mcp\Tools\Shared\TeamRemoveMemberTool;
-use App\Mcp\Tools\Shared\TeamUpdateMemberRoleTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
 use App\Mcp\Tools\Shared\NotificationTool;
@@ -284,11 +286,19 @@ use App\Mcp\Tools\Shared\TeamAiFeaturesUpdateTool;
 use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
 use App\Mcp\Tools\Shared\TeamClaudeCodeVpsAccessTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
+use App\Mcp\Tools\Shared\TeamInviteMemberTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
+use App\Mcp\Tools\Shared\TeamModelAllowlistTool;
+use App\Mcp\Tools\Shared\TeamRemoveMemberTool;
+use App\Mcp\Tools\Shared\TeamUpdateMemberRoleTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
 use App\Mcp\Tools\Shared\TermsAcceptanceHistoryTool;
 use App\Mcp\Tools\Shared\TermsAcceptanceStatusTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
+use App\Mcp\Tools\Signal\BugReportAddCommentTool;
+use App\Mcp\Tools\Signal\BugReportDetailTool;
+use App\Mcp\Tools\Signal\BugReportListTool;
+use App\Mcp\Tools\Signal\BugReportUpdateStatusTool;
 use App\Mcp\Tools\Signal\ClearCueConnectorTool;
 use App\Mcp\Tools\Signal\ConnectorBindingDeleteTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
@@ -572,13 +582,15 @@ class AgentFleetServer extends Server
         EvolutionGetTool::class,
         EvolutionDeleteTool::class,
 
-        // Crew (12)
+        // Crew (16)
         CrewListTool::class,
         CrewGetTool::class,
         CrewCreateTool::class,
         CrewUpdateTool::class,
         CrewExecuteTool::class,
         CrewExecutionStatusTool::class,
+        CrewExecutionPauseTool::class,
+        CrewExecutionResumeTool::class,
         CrewExecutionsListTool::class,
         CrewSendMessageTool::class,
         CrewGetMessagesTool::class,
@@ -586,7 +598,10 @@ class AgentFleetServer extends Server
         CrewGenerateFromPromptTool::class,
         CrewProposeRestructuringTool::class,
         CrewActivateTool::class,
+        CrewDeleteTool::class,
         CrewMemberRemoveTool::class,
+        CrewBlackboardPostTool::class,
+        CrewBlackboardReadTool::class,
 
         // Experiment (16)
         ExperimentListTool::class,
@@ -737,7 +752,7 @@ class AgentFleetServer extends Server
         ListSecurityReviewsTool::class,
         ResolveSecurityReviewTool::class,
 
-        // Signal (16)
+        // Signal (20)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
@@ -758,6 +773,10 @@ class AgentFleetServer extends Server
         SupabaseConnectorTool::class,
         ConnectorSubscriptionTool::class,
         IntentScoreTool::class,
+        BugReportListTool::class,
+        BugReportDetailTool::class,
+        BugReportUpdateStatusTool::class,
+        BugReportAddCommentTool::class,
 
         // Web Search (1)
         SearxngSearchTool::class,
@@ -864,6 +883,7 @@ class AgentFleetServer extends Server
         TeamMembersTool::class,
         TeamAiFeaturesGetTool::class,
         TeamAiFeaturesUpdateTool::class,
+        TeamModelAllowlistTool::class,
         LocalLlmTool::class,
         TeamByokCredentialManageTool::class,
         TeamClaudeCodeVpsAccessTool::class,

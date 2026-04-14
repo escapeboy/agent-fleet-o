@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Tool\Models\Tool;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tool as McpTool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('write')]
 class AgentToolApprovalConfigureTool extends McpTool
 {
     protected string $name = 'agent_tool_approval_configure';

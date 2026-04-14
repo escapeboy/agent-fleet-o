@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Integration;
 
 use App\Domain\Integration\Actions\PingIntegrationAction;
 use App\Domain\Integration\Models\Integration;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
 #[IsDestructive]
+#[AssistantTool('write')]
 class IntegrationPingTool extends Tool
 {
     protected string $name = 'integration_ping';

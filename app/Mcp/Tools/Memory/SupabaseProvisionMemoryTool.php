@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Adapters\SupabaseVectorAdapter;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -10,6 +11,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[AssistantTool('write')]
 class SupabaseProvisionMemoryTool extends Tool
 {
     protected string $name = 'supabase_provision_vector_memory';
@@ -20,9 +22,7 @@ class SupabaseProvisionMemoryTool extends Tool
     {
         return [
             'embedding_dimension' => $schema->integer()
-                ->description('Embedding dimension of your model. OpenAI text-embedding-3-small = 1536, Anthropic/Voyage = 1024, Google text-embedding-004 = 768. Default: 1536.')
-                ->minimum(64)
-                ->maximum(4096),
+                ->description('Embedding dimension of your model. OpenAI text-embedding-3-small = 1536, Anthropic/Voyage = 1024, Google text-embedding-004 = 768. Default: 1536. Min 64, max 4096.'),
         ];
     }
 
