@@ -7,6 +7,34 @@
         <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
     @endif
 
+    {{-- Featured Solution Packs --}}
+    @if($featuredBundles->isNotEmpty() && $activeTab !== 'skills' && $activeTab !== 'connectors' && $activeTab !== 'channels')
+        <div class="mb-6">
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-gray-900">Solution Packs</h2>
+                <button wire:click="setTab('bundles')" class="text-xs text-primary-600 hover:text-primary-800">Browse all</button>
+            </div>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach($featuredBundles as $bundle)
+                    <div class="flex flex-col rounded-xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white p-4">
+                        <div class="mb-1 flex items-start justify-between gap-2">
+                            <p class="text-sm font-semibold text-gray-900 leading-tight">{{ $bundle->name }}</p>
+                            <span class="shrink-0 rounded-full bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-700">Pack</span>
+                        </div>
+                        <p class="mt-1 flex-1 text-xs text-gray-500 line-clamp-2">{{ $bundle->description }}</p>
+                        <div class="mt-3 flex items-center justify-between">
+                            <span class="text-[11px] text-gray-400">{{ number_format($bundle->install_count) }} installs</span>
+                            <button wire:click="install('{{ $bundle->id }}')"
+                                class="rounded-lg bg-primary-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-700 transition">
+                                Install
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     {{-- Tab Navigation --}}
     <div class="mb-6">
         <div class="inline-flex gap-1 rounded-xl bg-gray-100 p-1">
@@ -25,6 +53,10 @@
             <button wire:click="setTab('channels')"
                 class="{{ $activeTab === 'channels' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900' }} px-4 py-2 rounded-lg text-sm font-medium transition-all">
                 Channels
+            </button>
+            <button wire:click="setTab('bundles')"
+                class="{{ $activeTab === 'bundles' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900' }} px-4 py-2 rounded-lg text-sm font-medium transition-all">
+                Solution Packs
             </button>
         </div>
     </div>

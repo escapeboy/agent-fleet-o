@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * @property array<string, mixed>|null $settings
@@ -30,7 +31,7 @@ class Team extends Model
                 $team->credential_key = CredentialEncryption::generateKey();
             }
             if (! $team->widget_public_key) {
-                $team->widget_public_key = 'wk_'.\Illuminate\Support\Str::random(40);
+                $team->widget_public_key = 'wk_'.Str::random(40);
             }
         });
 
@@ -53,6 +54,7 @@ class Team extends Model
         'default_email_theme_id',
         'allowed_models',
         'widget_public_key',
+        'dashboard_config',
     ];
 
     protected $hidden = [
@@ -67,6 +69,7 @@ class Team extends Model
             'assistant_ui_artifacts_allowed' => 'boolean',
             'settings' => 'array',
             'allowed_models' => 'array',
+            'dashboard_config' => 'array',
             'credential_key' => 'encrypted',
         ];
     }

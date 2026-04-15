@@ -54,12 +54,18 @@ class DelegateBugReportToAgentAction
             $agentInstructions['verification'] = 'After fixing, run: '.$agentInstructions['test_command'].'. All tests must pass.';
         }
 
+        $safeTitle = $this->sanitize($title, 120);
+        $safeProject = $this->sanitize($projectKey, 100);
+        $safeDescription = $this->sanitize($payload['description'] ?? '', 2000);
+        $safeUrl = $this->sanitize($payload['url'] ?? '', 300);
+        $safeSeverity = $this->sanitize($payload['severity'] ?? 'unknown', 30);
+
         $thesis = implode("\n\n", array_filter([
-            "## Bug Report: {$title}",
-            "**Project:** {$projectKey}",
-            "**Description:**\n".($payload['description'] ?? ''),
-            "**Page URL:** ".($payload['url'] ?? ''),
-            "**Severity:** ".($payload['severity'] ?? 'unknown'),
+            "## Bug Report: {$safeTitle}",
+            "**Project:** {$safeProject}",
+            "**Description:**\n{$safeDescription}",
+            "**Page URL:** {$safeUrl}",
+            "**Severity:** {$safeSeverity}",
             $screenshotUrl ? "**Screenshot:** {$screenshotUrl}" : null,
             // Prefer resolved errors (with original source paths) over raw console errors
             ! empty($resolvedErrors)
@@ -109,11 +115,16 @@ class DelegateBugReportToAgentAction
         $lines = [];
 
         foreach ($resolvedErrors as $error) {
-            $lines[] = "- **{$error['type']}**: {$error['message']}";
+            $type = $this->sanitize($error['type'] ?? '', 80);
+            $message = $this->sanitize($error['message'] ?? '', 300);
+            $lines[] = "- **{$type}**: {$message}";
 
             if (! empty($error['firstProjectFrame'])) {
                 $f = $error['firstProjectFrame'];
-                $lines[] = "  First project frame: `{$f['file']}:{$f['line']}` in `{$f['function']}`";
+                $file = $this->sanitize($f['file'] ?? '', 200);
+                $line = (int) ($f['line'] ?? 0);
+                $function = $this->sanitize($f['function'] ?? '', 100);
+                $lines[] = "  First project frame: `{$file}:{$line}` in `{$function}`";
             }
         }
 
@@ -155,6 +166,11 @@ class DelegateBugReportToAgentAction
         }
 
         return array_values($tests);
+    }
+
+    private function sanitize(string $text, int $maxLen): string
+    {
+        return preg_replace('/[^\x20-\x7E]/', '', mb_substr($text, 0, $maxLen)) ?? '';
     }
 
     private function fileToTestPath(string $path): ?string

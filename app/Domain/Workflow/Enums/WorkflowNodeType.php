@@ -26,6 +26,7 @@ enum WorkflowNodeType: string
     case Annotation = 'annotation';
     case Iteration = 'iteration';
     case WorkflowRef = 'workflow_ref';
+    case SignalRoute = 'signal_route';
 
     public function label(): string
     {
@@ -52,6 +53,7 @@ enum WorkflowNodeType: string
             self::Annotation => 'Annotation',
             self::Iteration => 'Iteration',
             self::WorkflowRef => 'Workflow Reference',
+            self::SignalRoute => 'Signal Route',
         };
     }
 
@@ -80,6 +82,7 @@ enum WorkflowNodeType: string
             self::Annotation => 'pencil-square',
             self::Iteration => 'arrows-pointing-in',
             self::WorkflowRef => 'arrow-top-right-on-square',
+            self::SignalRoute => 'signal',
         };
     }
 
@@ -191,6 +194,10 @@ enum WorkflowNodeType: string
                 'inputs' => [['name' => 'input', 'type' => 'structured']],
                 'outputs' => [['name' => 'output', 'type' => 'structured']],
             ],
+            self::SignalRoute => [
+                'inputs' => [['name' => 'signal_data', 'type' => 'structured']],
+                'outputs' => [['name' => 'route', 'type' => 'passthrough']],
+            ],
             default => [
                 'inputs' => [['name' => 'data', 'type' => 'any']],
                 'outputs' => [['name' => 'data', 'type' => 'any']],
@@ -210,6 +217,7 @@ enum WorkflowNodeType: string
             self::Merge,
             self::Annotation,
             self::Iteration,
+            self::SignalRoute,
         ]);
     }
 
