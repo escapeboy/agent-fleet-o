@@ -24,7 +24,10 @@ class ChatbotMemoryContextProvider implements MemoryContextProviderInterface
             return null;
         }
 
-        $chatbot = $chatbotId ? Chatbot::find($chatbotId) : null;
+        // Use withoutGlobalScopes so this works consistently in queue/webhook contexts
+        // where SetCurrentTeam middleware (and thus TeamScope) may not be active.
+        // The chatbot's own team_id is the authoritative team source.
+        $chatbot = $chatbotId ? Chatbot::withoutGlobalScopes()->find($chatbotId) : null;
         $agentId = $chatbot?->agent_id;
         $teamId = $chatbot?->team_id ?? Team::first()?->id;
 
