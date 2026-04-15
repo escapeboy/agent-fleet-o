@@ -109,12 +109,14 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
 
     public function test_ai_extracted_with_injection_attempt_gets_sanitized(): void
     {
+        // Use only JSONB-safe non-printable chars (\x00 is rejected by PostgreSQL JSONB).
+        // \x1B (ESC) is storable in JSONB and representative of ANSI escape injection.
         $signal = $this->makeSignal([], [
             'ai_structured' => true,
             'ai_tags' => [],
             'ai_priority' => 'medium',
             'ai_extracted' => [
-                'steps_to_reproduce' => "Safe text\x00\x1B[31m injected ANSI",
+                'steps_to_reproduce' => "Safe text\x1B[31m injected ANSI",
                 'component' => "Normal",
             ],
         ]);
@@ -123,8 +125,7 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
         $action = $this->actionWithThesisCapture($thesis);
         $action->execute($signal, $this->user);
 
-        // Non-printable chars stripped by sanitize()
-        $this->assertStringNotContainsString("\x00", $thesis);
+        // \x1B (ESC) is below 0x20 and stripped by sanitize()
         $this->assertStringNotContainsString("\x1B", $thesis);
         // Printable content still present
         $this->assertStringContainsString('Safe text', $thesis);
