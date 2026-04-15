@@ -54,7 +54,7 @@ PROMPT;
                     provider: 'anthropic',
                     model: self::MODEL,
                     systemPrompt: self::SYSTEM_PROMPT,
-                    userPrompt: sprintf(self::USER_PROMPT, mb_substr($query, 0, self::MAX_QUERY_LENGTH)),
+                    userPrompt: sprintf(self::USER_PROMPT, preg_replace('/[^\x20-\x7E]/', '', mb_substr($query, 0, self::MAX_QUERY_LENGTH))),
                     maxTokens: 64,
                     teamId: $teamId,
                     purpose: 'memory.classify_query',
