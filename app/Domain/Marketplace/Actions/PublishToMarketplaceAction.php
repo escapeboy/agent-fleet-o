@@ -7,6 +7,7 @@ use App\Domain\Email\Models\EmailTemplate;
 use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
+use App\Domain\Marketplace\Jobs\ScanListingRiskJob;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Enums\BuiltInToolKind;
@@ -94,7 +95,7 @@ class PublishToMarketplaceAction
             ],
         };
 
-        return MarketplaceListing::create([
+        $listing = MarketplaceListing::create([
             'team_id' => $teamId,
             'published_by' => $userId,
             'type' => $type,
@@ -112,6 +113,13 @@ class PublishToMarketplaceAction
             'configuration_snapshot' => $configSnapshot,
             'execution_profile' => $this->deriveExecutionProfile($item),
         ]);
+
+        // Dispatch async risk scan for types with meaningful security surface
+        if (in_array($type, ['skill', 'agent', 'workflow'], true)) {
+            ScanListingRiskJob::dispatch($listing->id)->onQueue('default');
+        }
+
+        return $listing;
     }
 
     /**

@@ -222,6 +222,7 @@ use App\Mcp\Tools\Marketplace\MarketplaceCategoriesListTool;
 use App\Mcp\Tools\Marketplace\MarketplaceInstallTool;
 use App\Mcp\Tools\Marketplace\MarketplacePublishTool;
 use App\Mcp\Tools\Marketplace\MarketplaceQualityReportTool;
+use App\Mcp\Tools\Marketplace\MarketplaceRescanRiskTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
 use App\Mcp\Tools\Marketplace\MarketplaceUnpublishTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
@@ -300,8 +301,6 @@ use App\Mcp\Tools\Signal\BugReportDetailTool;
 use App\Mcp\Tools\Signal\BugReportListTool;
 use App\Mcp\Tools\Signal\BugReportResolveStackTool;
 use App\Mcp\Tools\Signal\BugReportUpdateStatusTool;
-use App\Mcp\Tools\Signal\RouteMapLookupTool;
-use App\Mcp\Tools\Signal\SourceMapUploadTool;
 use App\Mcp\Tools\Signal\ClearCueConnectorTool;
 use App\Mcp\Tools\Signal\ConnectorBindingDeleteTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
@@ -321,11 +320,13 @@ use App\Mcp\Tools\Signal\KgGraphSearchTool;
 use App\Mcp\Tools\Signal\KgInvalidateFactTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
 use App\Mcp\Tools\Signal\ListHighRiskContactsTool;
+use App\Mcp\Tools\Signal\RouteMapLookupTool;
 use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalListTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
+use App\Mcp\Tools\Signal\SourceMapUploadTool;
 use App\Mcp\Tools\Signal\SupabaseConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
 use App\Mcp\Tools\Skill\BrowserSkillTool;
@@ -824,6 +825,7 @@ class AgentFleetServer extends Server
         MarketplaceCategoriesListTool::class,
         MarketplaceQualityReportTool::class,
         MarketplaceUnpublishTool::class,
+        MarketplaceRescanRiskTool::class,
 
         // Knowledge Bases (5)
         KnowledgeBaseListTool::class,
