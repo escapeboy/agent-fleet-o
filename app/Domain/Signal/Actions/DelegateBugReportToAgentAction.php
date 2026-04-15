@@ -60,6 +60,27 @@ class DelegateBugReportToAgentAction
         $safeUrl = $this->sanitize($payload['url'] ?? '', 300);
         $safeSeverity = $this->sanitize($payload['severity'] ?? 'unknown', 30);
 
+        // Build AI-structured block when StructureBugReportJob has already run
+        $aiMetadata = $signal->metadata['ai_extracted'] ?? [];
+        $structuredBlock = [];
+
+        if (! empty($aiMetadata['steps_to_reproduce'])) {
+            $structuredBlock[] = "**Steps to reproduce (AI-extracted):**\n"
+                .$this->sanitize((string) $aiMetadata['steps_to_reproduce'], 1500);
+        }
+        if (! empty($aiMetadata['affected_user'])) {
+            $structuredBlock[] = '**Affected user:** '.$this->sanitize((string) $aiMetadata['affected_user'], 100);
+        }
+        if (! empty($aiMetadata['component'])) {
+            $structuredBlock[] = '**Component:** '.$this->sanitize((string) $aiMetadata['component'], 100);
+        }
+        if (! empty($signal->metadata['ai_tags'])) {
+            $structuredBlock[] = '**Tags:** '.implode(', ', array_map(
+                fn ($t) => $this->sanitize((string) $t, 30),
+                $signal->metadata['ai_tags']
+            ));
+        }
+
         $thesis = implode("\n\n", array_filter([
             "## Bug Report: {$safeTitle}",
             "**Project:** {$safeProject}",
@@ -80,6 +101,7 @@ class DelegateBugReportToAgentAction
             ! empty($payload['action_log'])
                 ? "**Reproduction Steps (last 30 actions):**\n".json_encode(array_slice((array) $payload['action_log'], -30), JSON_PRETTY_PRINT)
                 : null,
+            ...$structuredBlock,
         ]));
 
         $experiment = $this->createExperiment->execute(
