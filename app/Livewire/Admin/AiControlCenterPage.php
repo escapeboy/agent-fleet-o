@@ -55,12 +55,13 @@ class AiControlCenterPage extends Component
                     return $row;
                 });
 
-            // Circuit breaker states
-            $circuitBreakers = CircuitBreakerState::whereNotNull('provider')
-                ->whereNull('agent_id')
+            // Circuit breaker states (keyed by agent name for display)
+            $circuitBreakers = CircuitBreakerState::withoutGlobalScopes()
+                ->with('agent')
+                ->orderByDesc('failure_count')
+                ->limit(10)
                 ->get()
-                ->groupBy('provider')
-                ->map(fn ($rows) => $rows->first());
+                ->keyBy(fn ($cb) => $cb->agent?->name ?? substr($cb->agent_id ?? '', 0, 8) ?: 'Unknown');
 
             // Semantic cache stats
             $cacheTotal = SemanticCacheEntry::count();

@@ -32,9 +32,9 @@
                 <h3 class="text-sm font-semibold text-gray-900">Circuit Breaker Health</h3>
             </div>
             <div class="divide-y divide-gray-100">
-                @forelse($circuitBreakers as $provider => $cb)
+                @forelse($circuitBreakers as $label => $cb)
                     <div class="flex items-center justify-between px-5 py-3">
-                        <div class="font-medium text-sm text-gray-800">{{ ucfirst($provider) }}</div>
+                        <div class="font-medium text-sm text-gray-800">{{ $label }}</div>
                         <div class="flex items-center gap-3 text-sm">
                             <span class="text-gray-500">{{ $cb->failure_count }} failures</span>
                             <span @class([
