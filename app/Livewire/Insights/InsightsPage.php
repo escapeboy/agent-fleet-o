@@ -18,11 +18,11 @@ class InsightsPage extends Component
         $data = Cache::remember("insights.{$teamId}", 60, function () use ($teamId) {
             // Slowest pipeline stages (P95 duration in last 7 days)
             $slowestStages = ExperimentStage::whereNotNull('duration_ms')
-                ->where('team_id', $teamId)
+                ->whereHas('experiment', fn ($q) => $q->where('team_id', $teamId))
                 ->where('status', 'completed')
                 ->where('created_at', '>=', now()->subDays(7))
-                ->selectRaw('stage_type, COUNT(*) as total_runs, AVG(duration_ms) as avg_ms, MAX(duration_ms) as max_ms, PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms) as p95_ms')
-                ->groupBy('stage_type')
+                ->selectRaw('stage, COUNT(*) as total_runs, AVG(duration_ms) as avg_ms, MAX(duration_ms) as max_ms, PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms) as p95_ms')
+                ->groupBy('stage')
                 ->orderByDesc('p95_ms')
                 ->limit(8)
                 ->get();
@@ -44,7 +44,7 @@ class InsightsPage extends Component
 
             // Budget burn last 7 days per day
             $budgetBurn = CreditLedger::where('team_id', $teamId)
-                ->where('type', 'debit')
+                ->where('type', 'deduction')
                 ->where('created_at', '>=', now()->subDays(7))
                 ->selectRaw('DATE(created_at) as day, SUM(amount) as credits')
                 ->groupBy('day')
@@ -56,7 +56,7 @@ class InsightsPage extends Component
             $funnel = collect($funnelStates)->map(function ($state) use ($teamId) {
                 return [
                     'state' => $state,
-                    'count' => ExperimentStateTransition::where('team_id', $teamId)
+                    'count' => ExperimentStateTransition::whereHas('experiment', fn ($q) => $q->where('team_id', $teamId))
                         ->where('to_state', $state)
                         ->where('created_at', '>=', now()->subDays(30))
                         ->count(),
@@ -64,13 +64,13 @@ class InsightsPage extends Component
             });
 
             // Total experiments last 30d as funnel top
-            $totalStarted = ExperimentStateTransition::where('team_id', $teamId)
+            $totalStarted = ExperimentStateTransition::whereHas('experiment', fn ($q) => $q->where('team_id', $teamId))
                 ->where('to_state', 'scoring')
                 ->where('created_at', '>=', now()->subDays(30))
                 ->count();
 
             // Error clusters — state transitions going to failure states
-            $failureTransitions = ExperimentStateTransition::where('team_id', $teamId)
+            $failureTransitions = ExperimentStateTransition::whereHas('experiment', fn ($q) => $q->where('team_id', $teamId))
                 ->whereIn('to_state', ['scoring_failed', 'planning_failed', 'building_failed', 'killed'])
                 ->where('created_at', '>=', now()->subDays(7))
                 ->selectRaw('to_state, COUNT(*) as count')

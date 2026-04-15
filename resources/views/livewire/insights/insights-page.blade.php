@@ -30,7 +30,7 @@
                 @forelse($slowestStages as $stage)
                     <div class="flex items-center justify-between px-5 py-3">
                         <div>
-                            <div class="text-sm font-medium text-gray-800 capitalize">{{ str_replace('_', ' ', $stage->stage_type) }}</div>
+                            <div class="text-sm font-medium text-gray-800 capitalize">{{ str_replace('_', ' ', $stage->stage) }}</div>
                             <div class="text-xs text-gray-500">{{ number_format($stage->total_runs) }} runs · avg {{ number_format($stage->avg_ms / 1000, 1) }}s</div>
                         </div>
                         <div @class([
