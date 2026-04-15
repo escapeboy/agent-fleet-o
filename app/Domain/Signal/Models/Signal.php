@@ -30,6 +30,7 @@ class Signal extends Model implements HasMedia
         'payload',
         'score',
         'scoring_details',
+        'metadata',
         'content_hash',
         'status',
         'project_key',
@@ -45,6 +46,7 @@ class Signal extends Model implements HasMedia
         return [
             'payload' => 'array',
             'scoring_details' => 'array',
+            'metadata' => 'array',
             'tags' => 'array',
             'score' => 'float',
             'status' => SignalStatus::class,

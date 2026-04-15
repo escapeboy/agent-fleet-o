@@ -6,6 +6,7 @@ use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Jobs\EnrichBugReportJob;
+use App\Domain\Signal\Jobs\StructureBugReportJob;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -110,6 +111,7 @@ class BugReportConnector implements InputConnectorInterface
 
         if ($signal) {
             EnrichBugReportJob::dispatch($signal->id);
+            StructureBugReportJob::dispatch($signal->id);
         }
 
         return $signal ? [$signal] : [];
