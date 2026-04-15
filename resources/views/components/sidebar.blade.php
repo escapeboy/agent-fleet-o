@@ -173,6 +173,10 @@
                 <x-sidebar-link href="{{ route('audit') }}" :active="request()->routeIs('audit')" icon="document-text">Audit Log</x-sidebar-link>
                 <x-sidebar-link href="{{ route('metrics.models') }}" :active="request()->routeIs('metrics.models')" icon="scale">Model Comparison</x-sidebar-link>
                 <x-sidebar-link href="{{ route('metrics.ai-routing') }}" :active="request()->routeIs('metrics.ai-routing')" icon="arrow-path">AI Routing</x-sidebar-link>
+                <x-sidebar-link href="{{ route('insights') }}" :active="request()->routeIs('insights')" icon="light-bulb">Insights</x-sidebar-link>
+                @if(auth()->user()?->is_super_admin)
+                    <x-sidebar-link href="{{ route('admin.ai') }}" :active="request()->routeIs('admin.ai')" icon="cpu-chip">AI Control Center</x-sidebar-link>
+                @endif
             </nav>
         </div>
 

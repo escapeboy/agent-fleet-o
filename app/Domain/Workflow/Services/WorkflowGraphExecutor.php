@@ -8,6 +8,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Signal\Models\Signal;
 use App\Domain\Workflow\Actions\DynamicForkFanOutAction;
 use App\Domain\Workflow\Actions\ExecuteSubWorkflowAction;
 use App\Domain\Workflow\Actions\RunCompensationChainAction;
@@ -599,6 +600,50 @@ class WorkflowGraphExecutor
                     ]),
                 ]);
                 $executable[] = $templateNodeId;
+            }
+
+            return;
+        }
+
+        if ($type === 'signal_route') {
+            // Route based on a field in the experiment's signal metadata.
+            // Config: { "attribute": "priority", "edges": [{"value": "critical", "case_value": "..."}] }
+            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+            $attribute = $config['attribute'] ?? null;
+
+            // Resolve signal metadata from experiment context
+            $signalData = [];
+            if ($experiment->signal_id) {
+                $signal = Signal::withoutGlobalScopes()
+                    ->find($experiment->signal_id);
+                $signalData = $signal?->metadata ?? [];
+            }
+
+            $attributeValue = $attribute ? data_get($signalData, $attribute) : null;
+
+            $outgoingEdges = collect($edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+
+            $matchedEdge = $outgoingEdges->first(function ($edge) use ($attributeValue) {
+                return ! ($edge['is_default'] ?? false)
+                    && isset($edge['case_value'])
+                    && (string) $edge['case_value'] === (string) $attributeValue;
+            });
+
+            if ($matchedEdge) {
+                $this->resolveNode(
+                    $matchedEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                );
+
+                return;
+            }
+
+            $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
+            if ($defaultEdge) {
+                $this->resolveNode(
+                    $defaultEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                );
             }
 
             return;

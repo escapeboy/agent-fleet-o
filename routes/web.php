@@ -15,6 +15,7 @@ use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
+use App\Livewire\Admin\AiControlCenterPage;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
@@ -51,6 +52,7 @@ use App\Livewire\GitRepositories\CreateGitRepositoryForm;
 use App\Livewire\GitRepositories\GitRepositoryDetailPage;
 use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Health\HealthPage;
+use App\Livewire\Insights\InsightsPage;
 use App\Livewire\Integrations\IntegrationDetailPage;
 use App\Livewire\Integrations\IntegrationListPage;
 use App\Livewire\KnowledgeGraph\KnowledgeGraphBrowserPage;
@@ -83,6 +85,7 @@ use App\Livewire\Signals\ConnectorSubscriptionsPage;
 use App\Livewire\Signals\ContactDetailPage;
 use App\Livewire\Signals\ContactsPage;
 use App\Livewire\Signals\EntityBrowserPage;
+use App\Livewire\Signals\ManualSignalForm;
 use App\Livewire\Signals\SignalBrowserPage;
 use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
@@ -286,6 +289,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
 
     Route::get('/signals', SignalBrowserPage::class)->name('signals.index');
+    Route::get('/signals/new', ManualSignalForm::class)->name('signals.create');
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
     Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
     Route::get('/signals/subscriptions', ConnectorSubscriptionsPage::class)->name('signals.subscriptions');
@@ -308,6 +312,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/health', HealthPage::class)->name('health');
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
+    Route::get('/admin/ai', AiControlCenterPage::class)->name('admin.ai');
+    Route::get('/insights', InsightsPage::class)->name('insights');
     Route::get('/plugins', PluginsPage::class)->name('plugins');
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
 

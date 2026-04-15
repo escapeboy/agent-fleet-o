@@ -18,6 +18,7 @@ class WeeklyDigestNotification extends Notification
         public readonly int $outboundSent,
         public readonly int $signalsIngested,
         public readonly int $budgetSpentCents,
+        public readonly ?string $executiveBrief = null,
     ) {}
 
     public function via(object $notifiable): array
@@ -29,15 +30,23 @@ class WeeklyDigestNotification extends Notification
     {
         $budgetFormatted = '$'.number_format($this->budgetSpentCents / 100, 2);
 
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject("Weekly Digest — {$this->team->name}")
-            ->greeting('Your week in review')
-            ->line("Here's what happened on **{$this->team->name}** in the last 7 days:")
+            ->greeting('Your week in review');
+
+        if ($this->executiveBrief) {
+            $mail->line($this->executiveBrief)
+                ->line('---');
+        }
+
+        $mail->line("Here's what happened on **{$this->team->name}** in the last 7 days:")
             ->line("- **{$this->experimentsCreated}** experiments created")
             ->line("- **{$this->experimentsCompleted}** experiments completed")
             ->line("- **{$this->signalsIngested}** signals ingested")
             ->line("- **{$this->outboundSent}** outbound messages sent")
             ->line("- **{$budgetFormatted}** spent on AI calls")
             ->action('View Dashboard', url('/dashboard'));
+
+        return $mail;
     }
 }

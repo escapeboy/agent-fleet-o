@@ -41,7 +41,7 @@ class MarketplaceBrowsePage extends Component
      */
     public function setTab(string $tab): void
     {
-        if (! in_array($tab, ['all', 'skills', 'connectors', 'channels'], true)) {
+        if (! in_array($tab, ['all', 'skills', 'connectors', 'channels', 'bundles'], true)) {
             return;
         }
 
@@ -51,6 +51,7 @@ class MarketplaceBrowsePage extends Component
             'skills' => 'skill',
             'connectors' => 'connector',
             'channels' => 'channel',
+            'bundles' => 'bundle',
             default => '',
         };
 
@@ -200,11 +201,23 @@ class MarketplaceBrowsePage extends Component
             $availableProviders = [];
         }
 
+        // Featured solution packs — shown at top when not filtering to a specific type
+        $featuredBundles = ! $this->typeFilter || $this->typeFilter === 'bundle'
+            ? MarketplaceListing::query()
+                ->where('status', MarketplaceStatus::Published)
+                ->where('type', 'bundle')
+                ->where('visibility', ListingVisibility::Public)
+                ->orderByDesc('install_count')
+                ->limit(4)
+                ->get()
+            : collect();
+
         return view('livewire.marketplace.marketplace-browse-page', [
             'listings' => $query->paginate(12),
             'categories' => $categories,
             'availableProviders' => $availableProviders,
             'canPublish' => true,
+            'featuredBundles' => $featuredBundles,
         ])->layout('layouts.app', ['header' => 'Marketplace']);
     }
 }

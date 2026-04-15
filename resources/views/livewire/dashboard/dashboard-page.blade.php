@@ -1,4 +1,26 @@
 <div wire:poll.5s.visible>
+
+    {{-- Widget Customization Controls --}}
+    <div x-data="{ open: false }" class="mb-4 flex justify-end">
+        <button @click="open = !open" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-50 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            Customize
+        </button>
+        <div x-show="open" x-transition @click.outside="open = false"
+             class="absolute z-20 mt-8 mr-0 w-56 rounded-xl border border-gray-200 bg-white p-3 shadow-lg">
+            <p class="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Show Widgets</p>
+            @foreach(['experiments' => 'Experiments', 'projects' => 'Projects', 'agents' => 'Agents', 'skills' => 'Skills', 'budget' => 'Budget', 'approvals' => 'Approvals', 'activity' => 'Activity', 'chatbots' => 'Chatbots'] as $key => $label)
+                <label class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-gray-50 text-sm text-gray-700">
+                    <input type="checkbox"
+                           class="h-3.5 w-3.5 rounded border-gray-300 text-primary-600"
+                           wire:click="toggleWidget('{{ $key }}')"
+                           @checked($widgets[$key] ?? true)>
+                    {{ $label }}
+                </label>
+            @endforeach
+        </div>
+    </div>
+
     {{-- Bento KPI Grid --}}
     <div class="grid grid-cols-12 gap-4">
 
