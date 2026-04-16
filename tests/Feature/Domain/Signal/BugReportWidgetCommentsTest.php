@@ -273,6 +273,49 @@ class BugReportWidgetCommentsTest extends TestCase
         );
     }
 
+    public function test_list_reporter_reports_counts_visible_non_reporter_comments(): void
+    {
+        $signal = $this->createBugReport(['reporter_id' => 'alice']);
+
+        SignalComment::create([
+            'team_id' => $this->team->id,
+            'signal_id' => $signal->id,
+            'author_type' => 'agent',
+            'body' => 'looking into it',
+            'widget_visible' => true,
+        ]);
+        SignalComment::create([
+            'team_id' => $this->team->id,
+            'signal_id' => $signal->id,
+            'author_type' => 'support',
+            'body' => 'following up',
+            'widget_visible' => true,
+        ]);
+        // Not counted: reporter echo
+        SignalComment::create([
+            'team_id' => $this->team->id,
+            'signal_id' => $signal->id,
+            'author_type' => 'reporter',
+            'body' => 'my reply',
+            'widget_visible' => true,
+        ]);
+        // Not counted: internal human note
+        SignalComment::create([
+            'team_id' => $this->team->id,
+            'signal_id' => $signal->id,
+            'author_type' => 'human',
+            'body' => 'internal',
+            'widget_visible' => false,
+        ]);
+
+        $response = $this->getJson(sprintf(
+            '/api/public/widget/bug-reports?team_public_key=%s&reporter_id=alice',
+            $this->team->widget_public_key,
+        ))->assertStatus(200);
+
+        $this->assertSame(2, $response->json('reports.0.unread_comments_count'));
+    }
+
     public function test_list_reporter_maps_status_group(): void
     {
         $this->createBugReport(['reporter_id' => 'alice'], 'received');
