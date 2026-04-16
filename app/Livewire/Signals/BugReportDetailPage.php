@@ -6,10 +6,12 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Signal\Actions\AddSignalCommentAction;
 use App\Domain\Signal\Actions\DelegateBugReportToAgentAction;
 use App\Domain\Signal\Actions\UpdateSignalStatusAction;
+use App\Domain\Signal\Enums\CommentAuthorType;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Exceptions\InvalidSignalTransitionException;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\SignalStatusTransitionMap;
+use Illuminate\View\View;
 use Livewire\Component;
 
 class BugReportDetailPage extends Component
@@ -17,6 +19,8 @@ class BugReportDetailPage extends Component
     public Signal $signal;
 
     public string $commentText = '';
+
+    public bool $commentVisibleToReporter = true;
 
     public string $delegateAgentId = '';
 
@@ -45,10 +49,15 @@ class BugReportDetailPage extends Component
     {
         $this->validate(['commentText' => ['required', 'string', 'min:1', 'max:5000']]);
 
+        // "Visible to reporter" → support (shown in widget); unchecked → human (internal note).
+        $authorType = $this->commentVisibleToReporter
+            ? CommentAuthorType::Support
+            : CommentAuthorType::Human;
+
         app(AddSignalCommentAction::class)->execute(
             signal: $this->signal,
             body: $this->commentText,
-            authorType: 'human',
+            authorType: $authorType,
             userId: auth()->id(),
         );
 
@@ -73,11 +82,11 @@ class BugReportDetailPage extends Component
         $this->delegateAgentId = '';
     }
 
-    public function render(): \Illuminate\View\View
+    public function render(): View
     {
         $transitionMap = app(SignalStatusTransitionMap::class);
         $allowedTransitions = $transitionMap->allowedTransitionsFrom(
-            $this->signal->status ?? SignalStatus::Received
+            $this->signal->status ?? SignalStatus::Received,
         );
 
         $agents = Agent::query()->orderBy('name')->get(['id', 'name']);

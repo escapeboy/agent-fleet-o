@@ -295,17 +295,29 @@
                     <p class="text-sm text-gray-400 mb-4">No comments yet.</p>
                 @else
                     <div class="space-y-3 mb-4">
+                        @php
+                            $reporterName = $payload['reporter_name'] ?? 'Reporter';
+                            $authorMeta = function ($comment) use ($reporterName) {
+                                return match ($comment->author_type) {
+                                    'agent'    => ['label' => 'Agent',          'avatar' => 'AI', 'class' => 'bg-purple-100 text-purple-700'],
+                                    'reporter' => ['label' => $reporterName,    'avatar' => mb_substr($reporterName, 0, 1), 'class' => 'bg-blue-100 text-blue-700'],
+                                    'support'  => ['label' => $comment->user?->name ?? 'Support', 'avatar' => mb_substr($comment->user?->name ?? 'S', 0, 1), 'class' => 'bg-green-100 text-green-700'],
+                                    default    => ['label' => $comment->user?->name ?? 'Unknown', 'avatar' => mb_substr($comment->user?->name ?? 'U', 0, 1), 'class' => 'bg-gray-200 text-gray-600'],
+                                };
+                            };
+                        @endphp
                         @foreach($signal->comments as $comment)
+                            @php $meta = $authorMeta($comment); @endphp
                             <div class="flex items-start gap-3">
-                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold
-                                    {{ $comment->author_type === 'agent' ? 'bg-purple-100 text-purple-700' : 'bg-gray-200 text-gray-600' }}">
-                                    {{ $comment->author_type === 'agent' ? 'AI' : substr($comment->user?->name ?? 'U', 0, 1) }}
+                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold {{ $meta['class'] }}">
+                                    {{ $meta['avatar'] }}
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-0.5">
-                                        <span class="text-xs font-medium text-gray-800">
-                                            {{ $comment->author_type === 'agent' ? 'Agent' : ($comment->user?->name ?? 'Unknown') }}
-                                        </span>
+                                        <span class="text-xs font-medium text-gray-800">{{ $meta['label'] }}</span>
+                                        @if(! $comment->widget_visible)
+                                            <span class="text-[10px] uppercase tracking-wide bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">internal</span>
+                                        @endif
                                         <span class="text-xs text-gray-400">{{ $comment->created_at?->diffForHumans() }}</span>
                                     </div>
                                     <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $comment->body }}</p>
@@ -315,21 +327,27 @@
                     </div>
                 @endif
 
-                <div class="flex gap-2 items-start">
-                    <div class="flex-1">
-                        <x-form-textarea
-                            wire:model="commentText"
-                            rows="2"
-                            placeholder="Add a comment..."
-                            :error="$errors->first('commentText')"
-                        />
+                <div class="space-y-2">
+                    <div class="flex gap-2 items-start">
+                        <div class="flex-1">
+                            <x-form-textarea
+                                wire:model="commentText"
+                                rows="2"
+                                placeholder="Add a comment..."
+                                :error="$errors->first('commentText')"
+                            />
+                        </div>
+                        <button
+                            wire:click="addComment"
+                            class="px-3 py-2.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700"
+                        >
+                            Post
+                        </button>
                     </div>
-                    <button
-                        wire:click="addComment"
-                        class="px-3 py-2.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700"
-                    >
-                        Post
-                    </button>
+                    <label class="flex items-center gap-2 text-xs text-gray-600 select-none">
+                        <input type="checkbox" wire:model.live="commentVisibleToReporter" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                        Visible to reporter (sent to widget). Uncheck to keep as an internal note.
+                    </label>
                 </div>
             </div>
         </div>
