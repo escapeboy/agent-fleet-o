@@ -273,6 +273,29 @@ class BugReportWidgetCommentsTest extends TestCase
         );
     }
 
+    public function test_list_reporter_reports_filters_by_project_when_provided(): void
+    {
+        $chatbot = $this->createBugReport(['reporter_id' => 'alice', 'project' => 'chatbot']);
+        $menu = $this->createBugReport(['reporter_id' => 'alice', 'project' => 'menu']);
+
+        $scoped = $this->getJson(sprintf(
+            '/api/public/widget/bug-reports?team_public_key=%s&reporter_id=alice&project=chatbot',
+            $this->team->widget_public_key,
+        ))->assertStatus(200);
+
+        $this->assertSame(1, count($scoped->json('reports')));
+        $this->assertSame($chatbot->id, $scoped->json('reports.0.id'));
+
+        $unscoped = $this->getJson(sprintf(
+            '/api/public/widget/bug-reports?team_public_key=%s&reporter_id=alice',
+            $this->team->widget_public_key,
+        ))->assertStatus(200);
+
+        $ids = collect($unscoped->json('reports'))->pluck('id')->all();
+        $this->assertContains($chatbot->id, $ids);
+        $this->assertContains($menu->id, $ids);
+    }
+
     public function test_list_reporter_reports_counts_visible_non_reporter_comments(): void
     {
         $signal = $this->createBugReport(['reporter_id' => 'alice']);
