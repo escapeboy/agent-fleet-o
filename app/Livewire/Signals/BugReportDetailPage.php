@@ -96,7 +96,7 @@ class BugReportDetailPage extends Component
         return view('livewire.signals.bug-report-detail', [
             'allowedTransitions' => $allowedTransitions,
             'agents' => $agents,
-            'screenshotUrl' => $this->signal->getFirstMediaUrl('bug_report_files'),
+            'mediaFiles' => $this->signal->getMedia('bug_report_files'),
         ]);
     }
 }
