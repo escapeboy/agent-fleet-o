@@ -61,6 +61,7 @@ class SignalGetTool extends Tool
             'payload' => $signal->payload,
             'score' => $signal->score,
             'scored_at' => $signal->scored_at?->toIso8601String(),
+            'metadata' => $signal->metadata,
             'experiment_id' => $signal->experiment_id,
             'attachments' => $attachments,
             'created_at' => $signal->created_at?->toIso8601String(),

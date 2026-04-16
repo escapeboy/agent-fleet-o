@@ -43,6 +43,15 @@ class BugReportListPage extends Component
         $this->resetPage();
     }
 
+    public function delete(string $id): void
+    {
+        $report = Signal::query()
+            ->where('source_type', 'bug_report')
+            ->find($id);
+
+        $report?->delete();
+    }
+
     public function sort(string $column): void
     {
         if ($this->sortBy === $column) {

@@ -56,6 +56,8 @@ class AgentGetTool extends Tool
             'status' => $agent->status->value,
             'budget_spent' => $agent->budget_spent_credits,
             'budget_cap' => $agent->budget_cap_credits,
+            'scope' => $agent->scope?->value,
+            'owner_user_id' => $agent->owner_user_id,
             'created' => $agent->created_at?->toIso8601String(),
             'runtime_state' => $state ? [
                 'total_executions' => $state->total_executions,

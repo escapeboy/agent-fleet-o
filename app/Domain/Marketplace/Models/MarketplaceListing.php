@@ -55,6 +55,7 @@ class MarketplaceListing extends Model
         'community_reliability_rate',
         'effective_run_count',
         'quality_computed_at',
+        'risk_scan',
     ];
 
     protected function casts(): array
@@ -82,6 +83,7 @@ class MarketplaceListing extends Model
             'community_reliability_rate' => 'float',
             'effective_run_count' => 'integer',
             'quality_computed_at' => 'datetime',
+            'risk_scan' => 'array',
         ];
     }
 

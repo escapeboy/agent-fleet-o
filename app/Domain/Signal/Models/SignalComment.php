@@ -18,7 +18,15 @@ class SignalComment extends Model
         'user_id',
         'author_type',
         'body',
+        'widget_visible',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'widget_visible' => 'boolean',
+        ];
+    }
 
     public function signal(): BelongsTo
     {
