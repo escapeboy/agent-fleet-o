@@ -67,6 +67,7 @@ class BugReportDetailTool extends Tool
             'suspect_files' => $payload['suspect_files'] ?? [],
             'source_hints' => $payload['source_hints'] ?? [],
             'agent_instructions' => $projectConfig?->config ?? [],
+            'ai_extracted' => $signal->metadata['ai_extracted'] ?? null,
             'experiment_id' => $signal->experiment_id,
             'comments' => $signal->comments->map(fn ($c) => [
                 'id' => $c->id,

@@ -297,8 +297,10 @@ use App\Mcp\Tools\Shared\TermsAcceptanceHistoryTool;
 use App\Mcp\Tools\Shared\TermsAcceptanceStatusTool;
 use App\Mcp\Tools\Signal\AlertConnectorTool;
 use App\Mcp\Tools\Signal\BugReportAddCommentTool;
+use App\Mcp\Tools\Signal\BugReportDeleteTool;
 use App\Mcp\Tools\Signal\BugReportDetailTool;
 use App\Mcp\Tools\Signal\BugReportListTool;
+use App\Mcp\Tools\Signal\BugReportProjectConfigTool;
 use App\Mcp\Tools\Signal\BugReportResolveStackTool;
 use App\Mcp\Tools\Signal\BugReportUpdateStatusTool;
 use App\Mcp\Tools\Signal\ClearCueConnectorTool;
@@ -781,6 +783,8 @@ class AgentFleetServer extends Server
         BugReportDetailTool::class,
         BugReportUpdateStatusTool::class,
         BugReportAddCommentTool::class,
+        BugReportDeleteTool::class,
+        BugReportProjectConfigTool::class,
         BugReportResolveStackTool::class,
         RouteMapLookupTool::class,
         SourceMapUploadTool::class,
