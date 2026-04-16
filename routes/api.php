@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BugReportWidgetController;
 use App\Http\Controllers\ChatbotSlackWebhookController;
 use App\Http\Controllers\ChatbotTelegramWebhookController;
 use App\Http\Controllers\ChatbotTicketWebhookController;
@@ -14,7 +15,6 @@ use App\Http\Controllers\JiraWebhookController;
 use App\Http\Controllers\LinearWebhookController;
 use App\Http\Controllers\PagerDutyWebhookController;
 use App\Http\Controllers\PerTeamSignalWebhookController;
-use App\Http\Controllers\BugReportWidgetController;
 use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\SentryAlertWebhookController;
 use App\Http\Controllers\SignalWebhookController;
@@ -24,15 +24,41 @@ use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\WhatsAppOutboundWebhookController;
 use App\Http\Controllers\WhatsAppWebhookController;
+use App\Http\Controllers\Widget\BugReportCommentsCreateController;
+use App\Http\Controllers\Widget\BugReportCommentsListController;
+use App\Http\Controllers\Widget\BugReportConfirmController;
+use App\Http\Controllers\Widget\BugReportListController;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 // Public widget endpoint — no Sanctum auth, open CORS (*).
 // Auth is via team_public_key multipart field (write-only, scoped to signal ingestion).
 // Excluded from EnsureFrontendRequestsAreStateful: same-origin requests (e.g. barsy.dev calling
 // its own FleetQ instance) would otherwise trigger Sanctum stateful middleware + CSRF check → 419.
 Route::post('/public/widget/bug-report', BugReportWidgetController::class)
-    ->withoutMiddleware([\Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class])
+    ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class])
     ->name('widget.bug-report');
+
+// Widget follow-up channel — bidirectional comments between reporter and bug-fix agent.
+// Same public-key auth model as the submit endpoint; rate-limited per signal to prevent abuse.
+Route::get('/public/widget/bug-reports', BugReportListController::class)
+    ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class])
+    ->name('widget.bug-reports.list');
+
+Route::get('/public/widget/bug-report/{signal}/comments', BugReportCommentsListController::class)
+    ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class])
+    ->whereUuid('signal')
+    ->name('widget.bug-report.comments.list');
+
+Route::post('/public/widget/bug-report/{signal}/comments', BugReportCommentsCreateController::class)
+    ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class])
+    ->whereUuid('signal')
+    ->name('widget.bug-report.comments.create');
+
+Route::post('/public/widget/bug-report/{signal}/confirm', BugReportConfirmController::class)
+    ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class])
+    ->whereUuid('signal')
+    ->name('widget.bug-report.confirm');
 
 // Public site API (no auth, rate limited)
 Route::prefix('public/sites')->group(function () {
