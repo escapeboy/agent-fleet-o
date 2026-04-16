@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Skills;
 
+use App\Domain\Skill\Enums\Framework;
 use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
@@ -21,6 +22,9 @@ class SkillListPage extends Component
 
     #[Url]
     public string $statusFilter = '';
+
+    #[Url(as: 'framework')]
+    public string $frameworkFilter = '';
 
     public string $sortField = 'created_at';
 
@@ -70,12 +74,17 @@ class SkillListPage extends Component
             $query->where('status', $this->statusFilter);
         }
 
+        if ($this->frameworkFilter && Framework::tryFrom($this->frameworkFilter)) {
+            $query->where('framework', $this->frameworkFilter);
+        }
+
         $query->orderBy($this->sortField, $this->sortDirection);
 
         return view('livewire.skills.skill-list-page', [
             'skills' => $query->paginate(20),
             'types' => SkillType::cases(),
             'statuses' => SkillStatus::cases(),
+            'frameworks' => Framework::cases(),
             'canCreate' => true,
         ])->layout('layouts.app', ['header' => 'Skills']);
     }

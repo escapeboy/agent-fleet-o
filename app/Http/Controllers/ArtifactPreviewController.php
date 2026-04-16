@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Experiment\Enums\DeliverableType;
 use App\Domain\Experiment\Services\ArtifactContentResolver;
 use App\Infrastructure\A2ui\A2uiRenderer;
 use App\Models\Artifact;
@@ -20,6 +21,10 @@ class ArtifactPreviewController extends Controller
             ? $artifactVersion->content
             : json_encode($artifactVersion->content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
+        if ($artifact->deliverable_type !== null) {
+            return $this->renderDeliverable($artifact, $content);
+        }
+
         $category = ArtifactContentResolver::category($artifact->type, $content);
 
         // Check if JSON content is an A2UI surface
@@ -36,6 +41,29 @@ class ArtifactPreviewController extends Controller
             'json' => $this->renderJson($content, $artifact->name),
             default => $this->renderText($content, $artifact->name),
         };
+    }
+
+    private function renderDeliverable(Artifact $artifact, string $content): Response
+    {
+        $decoded = json_decode($content, true);
+        $data = is_array($decoded) ? $decoded : null;
+
+        $body = view($artifact->deliverable_type->bladePartial(), [
+            'artifact' => $artifact,
+            'content' => $content,
+            'data' => $data,
+        ])->render();
+
+        $headers = ['Content-Type' => 'text/html; charset=utf-8',
+            'X-Frame-Options' => 'SAMEORIGIN',
+            'Cache-Control' => 'private, max-age=3600',
+        ];
+
+        if ($artifact->deliverable_type === DeliverableType::LandingPage) {
+            $headers['Content-Security-Policy'] = "script-src 'none'; object-src 'none'";
+        }
+
+        return response($this->wrapInShell($body, $artifact->name), 200)->withHeaders($headers);
     }
 
     private function renderHtml(string $content): Response

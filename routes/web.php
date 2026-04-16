@@ -48,6 +48,7 @@ use App\Livewire\Evaluation\EvaluationPage;
 use App\Livewire\Evolution\EvolutionListPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
 use App\Livewire\Experiments\ExperimentListPage;
+use App\Livewire\Frameworks\FrameworksBrowsePage;
 use App\Livewire\GitRepositories\CreateGitRepositoryForm;
 use App\Livewire\GitRepositories\GitRepositoryDetailPage;
 use App\Livewire\GitRepositories\GitRepositoryListPage;
@@ -234,6 +235,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/skills', SkillListPage::class)->name('skills.index');
     Route::get('/skills/create', CreateSkillForm::class)->name('skills.create');
     Route::get('/skills/{skill}', SkillDetailPage::class)->name('skills.show');
+
+    Route::get('/frameworks', FrameworksBrowsePage::class)->name('frameworks.index');
 
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');

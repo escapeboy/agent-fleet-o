@@ -183,6 +183,9 @@ use App\Mcp\Tools\Experiment\WorklogAppendTool;
 use App\Mcp\Tools\Experiment\WorklogReadTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
+use App\Mcp\Tools\FounderMode\FounderModeInstallTool;
+use App\Mcp\Tools\FounderMode\FounderModeStatusTool;
+use App\Mcp\Tools\Framework\FrameworkListTool;
 use App\Mcp\Tools\GitRepository\CodeCallChainTool;
 use App\Mcp\Tools\GitRepository\CodeSearchTool;
 use App\Mcp\Tools\GitRepository\CodeSkimFileTool;
@@ -874,6 +877,11 @@ class AgentFleetServer extends Server
         ArtifactGetTool::class,
         ArtifactContentTool::class,
         ArtifactDownloadTool::class,
+
+        // Framework taxonomy + Founder Mode pack (3)
+        FrameworkListTool::class,
+        FounderModeStatusTool::class,
+        FounderModeInstallTool::class,
 
         // Outbound (6)
         ConnectorConfigListTool::class,

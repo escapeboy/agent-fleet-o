@@ -11,6 +11,7 @@ use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Marketplace\Models\MarketplaceInstallation;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Skill\Enums\ExecutionType;
+use App\Domain\Skill\Enums\Framework;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Enums\SkillType;
@@ -54,6 +55,7 @@ class InstallFromMarketplaceAction
                     'slug' => Str::slug($listing->name).'-'.Str::random(4),
                     'description' => $listing->description,
                     'type' => SkillType::from($snapshot['type'] ?? 'llm'),
+                    'framework' => isset($snapshot['framework']) ? Framework::tryFrom($snapshot['framework']) : null,
                     'execution_type' => ExecutionType::Sync,
                     'status' => SkillStatus::Active,
                     'risk_level' => RiskLevel::from($snapshot['risk_level'] ?? 'low'),
@@ -72,6 +74,9 @@ class InstallFromMarketplaceAction
                     'slug' => Str::slug($listing->name).'-'.Str::random(4),
                     'role' => $snapshot['role'] ?? null,
                     'goal' => $snapshot['goal'] ?? null,
+                    'backstory' => $snapshot['backstory'] ?? null,
+                    'personality' => $snapshot['personality'] ?? null,
+                    'system_prompt_template' => $snapshot['system_prompt_template'] ?? null,
                     'provider' => $snapshot['provider'] ?? 'anthropic',
                     'model' => $snapshot['model'] ?? 'claude-sonnet-4-5',
                     'status' => 'active',
@@ -161,6 +166,7 @@ class InstallFromMarketplaceAction
                     'slug' => Str::slug($name).'-'.Str::random(4),
                     'description' => $configuration['description'] ?? $name,
                     'type' => SkillType::from($configuration['type'] ?? 'llm'),
+                    'framework' => isset($configuration['framework']) ? Framework::tryFrom($configuration['framework']) : null,
                     'execution_type' => ExecutionType::Sync,
                     'status' => SkillStatus::Active,
                     'risk_level' => RiskLevel::from($configuration['risk_level'] ?? 'low'),
@@ -176,6 +182,9 @@ class InstallFromMarketplaceAction
                     'slug' => Str::slug($name).'-'.Str::random(4),
                     'role' => $configuration['role'] ?? null,
                     'goal' => $configuration['goal'] ?? null,
+                    'backstory' => $configuration['backstory'] ?? null,
+                    'personality' => $configuration['personality'] ?? null,
+                    'system_prompt_template' => $configuration['system_prompt_template'] ?? null,
                     'provider' => $configuration['provider'] ?? 'anthropic',
                     'model' => $configuration['model'] ?? 'claude-sonnet-4-5',
                     'status' => 'active',

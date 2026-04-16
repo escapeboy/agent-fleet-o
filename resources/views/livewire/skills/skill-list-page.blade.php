@@ -83,6 +83,9 @@
                                 } }}">
                                 {{ $skill->type->label() }}
                             </span>
+                            @if ($skill->framework)
+                                <x-framework-badge :framework="$skill->framework" class="ml-1 hidden xl:inline-flex" />
+                            @endif
                         </td>
                         <td class="px-3 py-3 md:px-6 md:py-4">
                             <x-status-badge :status="$skill->status->value" />

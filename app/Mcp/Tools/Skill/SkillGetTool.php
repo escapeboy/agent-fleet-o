@@ -50,6 +50,8 @@ class SkillGetTool extends Tool
             'id' => $skill->id,
             'name' => $skill->name,
             'type' => $skill->type->value,
+            'framework' => $skill->framework?->value,
+            'framework_label' => $skill->framework?->label(),
             'status' => $skill->status->value,
             'description' => $skill->description,
             'prompt_template' => $promptPreview,
