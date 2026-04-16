@@ -273,6 +273,23 @@ class BugReportWidgetCommentsTest extends TestCase
         );
     }
 
+    public function test_list_reporter_reports_includes_description_and_url(): void
+    {
+        $this->createBugReport([
+            'reporter_id' => 'alice',
+            'description' => 'Submit button does nothing.',
+            'url' => 'https://app.example.com/checkout',
+        ]);
+
+        $response = $this->getJson(sprintf(
+            '/api/public/widget/bug-reports?team_public_key=%s&reporter_id=alice',
+            $this->team->widget_public_key,
+        ))->assertStatus(200);
+
+        $this->assertSame('Submit button does nothing.', $response->json('reports.0.description'));
+        $this->assertSame('https://app.example.com/checkout', $response->json('reports.0.url'));
+    }
+
     public function test_list_reporter_reports_filters_by_project_when_provided(): void
     {
         $chatbot = $this->createBugReport(['reporter_id' => 'alice', 'project' => 'chatbot']);

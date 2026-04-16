@@ -62,6 +62,8 @@ class BugReportListController extends Controller
             return [
                 'id' => $signal->id,
                 'title' => $payload['title'] ?? null,
+                'description' => $payload['description'] ?? null,
+                'url' => $payload['url'] ?? null,
                 'severity' => $payload['severity'] ?? null,
                 'status' => $status,
                 'status_group' => self::STATUS_GROUPS[$status] ?? 'not_started',
