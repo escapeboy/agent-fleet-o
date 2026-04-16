@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Widget;
 
+use App\Domain\Signal\Enums\CommentAuthorType;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\Signal;
 use App\Http\Controllers\Controller;
@@ -39,6 +40,10 @@ class BugReportListController extends Controller
             ->where('team_id', $team->id)
             ->where('source_type', 'bug_report')
             ->where('payload->reporter_id', $validated['reporter_id'])
+            ->withCount(['comments as visible_comments_count' => function ($query) {
+                $query->where('widget_visible', true)
+                    ->where('author_type', '!=', CommentAuthorType::Reporter->value);
+            }])
             ->latest()
             ->limit(50)
             ->get(['id', 'payload', 'status', 'created_at']);
@@ -57,7 +62,7 @@ class BugReportListController extends Controller
                 'status' => $status,
                 'status_group' => self::STATUS_GROUPS[$status] ?? 'not_started',
                 'created_at' => $signal->created_at?->toISOString(),
-                'unread_comments_count' => 0,
+                'unread_comments_count' => (int) ($signal->visible_comments_count ?? 0),
             ];
         });
 
