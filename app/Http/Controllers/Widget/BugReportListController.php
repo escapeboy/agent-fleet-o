@@ -30,6 +30,7 @@ class BugReportListController extends Controller
         $validated = $request->validate([
             'team_public_key' => ['required', 'string'],
             'reporter_id' => ['required', 'string', 'max:255'],
+            'project' => ['nullable', 'string', 'max:100'],
         ]);
 
         $team = $this->resolveTeam($validated['team_public_key']);
@@ -40,6 +41,9 @@ class BugReportListController extends Controller
             ->where('team_id', $team->id)
             ->where('source_type', 'bug_report')
             ->where('payload->reporter_id', $validated['reporter_id'])
+            ->when($validated['project'] ?? null, function ($query, $project) {
+                $query->where('payload->project', $project);
+            })
             ->withCount(['comments as visible_comments_count' => function ($query) {
                 $query->where('widget_visible', true)
                     ->where('author_type', '!=', CommentAuthorType::Reporter->value);
