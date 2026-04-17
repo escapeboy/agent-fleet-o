@@ -10,12 +10,6 @@ use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 class SocialAccountService
 {
-    // All supported OAuth providers verify the user's email before returning it —
-    // safe to auto-link to existing accounts. The only exception is GitHub when
-    // the user has "Keep email private" enabled: getEmail() returns null and the
-    // collect-email flow handles that case separately.
-    private const VERIFIED_EMAIL_PROVIDERS = ['google', 'github', 'linkedin-openid', 'x', 'apple'];
-
     /**
      * Handle the OAuth callback and return the authenticated user,
      * or null if additional user interaction is required (email collection / merge confirm).
@@ -72,7 +66,7 @@ class SocialAccountService
         $user = User::create([
             'name' => $socialUser->getName() ?? 'User',
             'email' => $email,
-            'email_verified_at' => in_array($provider, self::VERIFIED_EMAIL_PROVIDERS, true) ? now() : null,
+            'email_verified_at' => $this->isVerifiedProvider($provider) ? now() : null,
             'password' => null,
         ]);
 
@@ -132,6 +126,17 @@ class SocialAccountService
         $user->socialAccounts()->where('provider', $provider)->delete();
 
         return true;
+    }
+
+    /**
+     * Whether the given Socialite driver is trusted to return a pre-verified email.
+     *
+     * Extended via `config/social.php` or the `SOCIAL_VERIFIED_EMAIL_PROVIDERS` env var —
+     * plugins registering corporate IdPs (OIDC, etc.) append their driver name here.
+     */
+    private function isVerifiedProvider(string $provider): bool
+    {
+        return in_array($provider, config('social.verified_email_providers', []), true);
     }
 
     private function attachSocialAccount(User $user, string $provider, SocialiteUser $socialUser): UserSocialAccount
