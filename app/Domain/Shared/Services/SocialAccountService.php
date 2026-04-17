@@ -53,13 +53,25 @@ class SocialAccountService
             return ['user' => null, 'redirect' => route('auth.social.collect-email')];
         }
 
-        // 4. Existing user with matching email — all providers are verified, auto-link.
+        // 4. Existing user with matching email — only auto-link if the provider verifies emails.
+        //    If the provider is not on the trusted list, the email claim is attacker-controlled
+        //    (any user can register at the IdP with an arbitrary email). Linking in that case
+        //    would let an attacker take over an existing account by claiming the victim's email.
+        //    Refuse and direct them to log in via their existing method, then link from Settings —
+        //    same protection as completePendingRegistration's user-supplied-email path.
         $existingUser = User::where('email', $email)->first();
 
         if ($existingUser) {
-            $this->attachSocialAccount($existingUser, $provider, $socialUser);
+            if ($this->isVerifiedProvider($provider)) {
+                $this->attachSocialAccount($existingUser, $provider, $socialUser);
 
-            return ['user' => $existingUser, 'redirect' => null];
+                return ['user' => $existingUser, 'redirect' => null];
+            }
+
+            $redirect = redirect()->route('login')
+                ->withErrors(['social' => 'An account with this email already exists. Please log in with your existing method and connect this provider from Settings.']);
+
+            return ['user' => null, 'redirect' => $redirect->getTargetUrl()];
         }
 
         // 5. Brand new user
