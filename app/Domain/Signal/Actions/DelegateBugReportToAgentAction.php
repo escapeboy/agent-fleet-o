@@ -77,7 +77,7 @@ class DelegateBugReportToAgentAction
         if (! empty($signal->metadata['ai_tags'])) {
             $structuredBlock[] = '**Tags:** '.implode(', ', array_map(
                 fn ($t) => $this->sanitize((string) $t, 30),
-                $signal->metadata['ai_tags']
+                $signal->metadata['ai_tags'],
             ));
         }
 

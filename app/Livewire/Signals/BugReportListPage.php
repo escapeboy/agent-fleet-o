@@ -4,6 +4,7 @@ namespace App\Livewire\Signals;
 
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\Signal;
+use Illuminate\View\View;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -64,7 +65,7 @@ class BugReportListPage extends Component
         $this->resetPage();
     }
 
-    public function render(): \Illuminate\View\View
+    public function render(): View
     {
         $query = Signal::query()
             ->where('source_type', 'bug_report')

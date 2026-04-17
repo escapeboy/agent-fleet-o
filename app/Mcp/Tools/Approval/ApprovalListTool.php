@@ -3,8 +3,8 @@
 namespace App\Mcp\Tools\Approval;
 
 use App\Domain\Approval\Models\ApprovalRequest;
-use App\Mcp\Concerns\HasMcpAppUi;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasMcpAppUi;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;

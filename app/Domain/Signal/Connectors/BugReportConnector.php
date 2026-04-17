@@ -75,7 +75,7 @@ class BugReportConnector implements InputConnectorInterface
                         }
 
                         return true;
-                    }
+                    },
                 ));
             }
         }

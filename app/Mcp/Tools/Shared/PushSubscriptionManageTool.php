@@ -2,8 +2,8 @@
 
 namespace App\Mcp\Tools\Shared;
 
-use App\Models\User;
 use App\Mcp\Attributes\AssistantTool;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;

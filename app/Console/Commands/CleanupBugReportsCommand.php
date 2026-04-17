@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Domain\Signal\Models\Signal;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Signal\Models\Signal;
 use Illuminate\Console\Command;
 
 class CleanupBugReportsCommand extends Command

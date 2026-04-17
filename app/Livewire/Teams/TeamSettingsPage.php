@@ -14,6 +14,7 @@ use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -890,7 +891,7 @@ class TeamSettingsPage extends Component
         $this->authorize('manage-team');
 
         auth()->user()->currentTeam->update([
-            'widget_public_key' => 'wk_'.\Illuminate\Support\Str::random(40),
+            'widget_public_key' => 'wk_'.Str::random(40),
         ]);
 
         session()->flash('message', 'Widget public key rotated.');

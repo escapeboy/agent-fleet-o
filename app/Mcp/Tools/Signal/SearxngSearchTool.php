@@ -5,13 +5,13 @@ namespace App\Mcp\Tools\Signal;
 use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Connectors\SearxngConnector;
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for synchronous web search via a self-hosted Searxng instance.

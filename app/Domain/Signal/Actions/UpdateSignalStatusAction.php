@@ -26,7 +26,7 @@ class UpdateSignalStatusAction
 
         if ($currentStatus !== $newStatus && ! $this->transitionMap->canTransition($currentStatus, $newStatus)) {
             throw new InvalidSignalTransitionException(
-                "Cannot transition signal from {$currentStatus->value} to {$newStatus->value}."
+                "Cannot transition signal from {$currentStatus->value} to {$newStatus->value}.",
             );
         }
 

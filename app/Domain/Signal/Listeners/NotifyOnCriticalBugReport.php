@@ -2,8 +2,8 @@
 
 namespace App\Domain\Signal\Listeners;
 
-use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Shared\Services\NotificationService;
+use App\Domain\Signal\Events\SignalIngested;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -32,7 +32,7 @@ class NotifyOnCriticalBugReport
 
         try {
             $owners = User::whereHas('teams', fn ($q) => $q->where('teams.id', $signal->team_id)
-                ->whereIn('team_user.role', ['owner', 'admin'])
+                ->whereIn('team_user.role', ['owner', 'admin']),
             )->get();
 
             foreach ($owners as $owner) {
