@@ -72,7 +72,7 @@ class SourceMapResolver
      * Parse VLQ-encoded mappings string into a lookup structure.
      *
      * @return array<int, array<int, array{genCol: int, src: int, origLine: int, origCol: int, name?: int}>>
-     *   Indexed by [genLine][segment_idx]
+     *                                                                                                       Indexed by [genLine][segment_idx]
      */
     private function parseMappings(array $mapData): array
     {

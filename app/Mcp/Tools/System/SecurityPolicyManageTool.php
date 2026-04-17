@@ -3,8 +3,8 @@
 namespace App\Mcp\Tools\System;
 
 use App\Livewire\Settings\SecurityPolicyPanel;
-use App\Models\GlobalSetting;
 use App\Mcp\Attributes\AssistantTool;
+use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Mcp\Request;

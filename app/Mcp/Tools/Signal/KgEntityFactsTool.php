@@ -5,13 +5,13 @@ namespace App\Mcp\Tools\Signal;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
 use App\Domain\Signal\Models\Entity;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for retrieving all facts about a named entity from the knowledge graph.

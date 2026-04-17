@@ -29,8 +29,8 @@ return [
         'trim',
         explode(',', (string) env(
             'SOCIAL_VERIFIED_EMAIL_PROVIDERS',
-            'google,github,linkedin-openid,x,apple'
-        ))
+            'google,github,linkedin-openid,x,apple',
+        )),
     ))),
 
     /*

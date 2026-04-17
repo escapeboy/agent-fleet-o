@@ -3,13 +3,13 @@
 namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\ToolFederationGroup;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]

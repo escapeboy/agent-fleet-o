@@ -117,7 +117,7 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
             'ai_priority' => 'medium',
             'ai_extracted' => [
                 'steps_to_reproduce' => "Safe text\x1B[31m injected ANSI",
-                'component' => "Normal",
+                'component' => 'Normal',
             ],
         ]);
 

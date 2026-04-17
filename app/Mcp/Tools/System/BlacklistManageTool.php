@@ -2,8 +2,8 @@
 
 namespace App\Mcp\Tools\System;
 
-use App\Models\Blacklist;
 use App\Mcp\Attributes\AssistantTool;
+use App\Models\Blacklist;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;

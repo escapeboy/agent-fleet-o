@@ -3,9 +3,9 @@
 namespace App\Mcp\Tools\Artifact;
 
 use App\Domain\Experiment\Services\ArtifactContentResolver;
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\Artifact;
 use App\Models\ArtifactVersion;
-use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Domain\Signal;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Models\BugReportProjectConfig;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -100,7 +101,7 @@ class BugReportProjectConfigTest extends ApiTestCase
         ]);
 
         // Another team's config with same project name
-        $otherTeam = \App\Domain\Shared\Models\Team::factory()->create();
+        $otherTeam = Team::factory()->create();
         BugReportProjectConfig::withoutGlobalScopes()->create([
             'team_id' => $otherTeam->id,
             'project' => 'myapp',

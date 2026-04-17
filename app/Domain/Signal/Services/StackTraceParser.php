@@ -30,6 +30,7 @@ class StackTraceParser
                     'column' => (int) $m[4],
                     'function' => $m[1] !== '<anonymous>' ? $m[1] : null,
                 ];
+
                 continue;
             }
 

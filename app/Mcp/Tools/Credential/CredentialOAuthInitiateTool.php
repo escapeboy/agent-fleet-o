@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Credential;
 
 use App\Domain\Agent\Models\Agent;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -10,7 +11,6 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('write')]

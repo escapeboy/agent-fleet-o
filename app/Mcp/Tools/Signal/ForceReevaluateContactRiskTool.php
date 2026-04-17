@@ -4,12 +4,12 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Signal\Jobs\EvaluateContactRiskJob;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('read')]

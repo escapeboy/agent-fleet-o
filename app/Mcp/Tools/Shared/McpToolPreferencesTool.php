@@ -3,8 +3,8 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
-use Generator;
 use App\Mcp\Attributes\AssistantTool;
+use Generator;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;

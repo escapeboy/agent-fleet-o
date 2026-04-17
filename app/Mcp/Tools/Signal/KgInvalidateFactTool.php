@@ -4,12 +4,12 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\KnowledgeGraph\Actions\InvalidateKgFactAction;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for invalidating (soft-deleting) a knowledge graph fact by UUID.

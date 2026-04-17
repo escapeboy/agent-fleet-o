@@ -63,7 +63,7 @@ class CrewBlackboardReadTool extends Tool
             ->filter()
             ->when(
                 isset($validated['type']),
-                fn ($col) => $col->filter(fn ($m) => ($m['type'] ?? null) === $validated['type'])
+                fn ($col) => $col->filter(fn ($m) => ($m['type'] ?? null) === $validated['type']),
             )
             ->take($validated['limit'] ?? 50)
             ->values()
