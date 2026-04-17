@@ -59,17 +59,31 @@
                 <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $payload['description'] ?? '—' }}</p>
             </div>
 
-            {{-- Screenshot --}}
-            @if($screenshotUrl)
+            {{-- Attachments --}}
+            @if($mediaFiles->isNotEmpty())
                 <div class="bg-white rounded-lg border border-gray-200 p-4">
-                    <h2 class="text-sm font-semibold text-gray-900 mb-3">Screenshot</h2>
-                    <a href="{{ $screenshotUrl }}" target="_blank">
-                        <img
-                            src="{{ $screenshotUrl }}"
-                            alt="Bug screenshot"
-                            class="rounded border border-gray-200 max-w-full cursor-zoom-in hover:opacity-90 transition"
-                        />
-                    </a>
+                    <h2 class="text-sm font-semibold text-gray-900 mb-3">Attachments ({{ $mediaFiles->count() }})</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @foreach($mediaFiles as $media)
+                            <a href="{{ $media->getUrl() }}" target="_blank" class="block">
+                                @if(Str::startsWith($media->mime_type, 'image/'))
+                                    <img
+                                        src="{{ $media->getUrl() }}"
+                                        alt="{{ $media->file_name }}"
+                                        class="rounded border border-gray-200 max-w-full cursor-zoom-in hover:opacity-90 transition"
+                                    />
+                                @else
+                                    <div class="flex items-center gap-2 p-3 rounded border border-gray-200 hover:bg-gray-50 transition">
+                                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        <span class="text-sm text-gray-700 truncate">{{ $media->file_name }}</span>
+                                        <span class="text-xs text-gray-400">({{ Number::fileSize($media->size) }})</span>
+                                    </div>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
             @endif
 

@@ -15,6 +15,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Verified-Email Providers
+    |--------------------------------------------------------------------------
+    |
+    | Socialite drivers whose returned email claim is considered pre-verified.
+    | When a new user is auto-provisioned from one of these providers, their
+    | `email_verified_at` is set immediately. Plugins that register corporate
+    | IdPs (OIDC, SAML-via-Socialite, etc.) can extend this list from a service
+    | provider, or operators can override it via the env var.
+    |
+    */
+    'verified_email_providers' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env(
+            'SOCIAL_VERIFIED_EMAIL_PROVIDERS',
+            'google,github,linkedin-openid,x,apple'
+        ))
+    ))),
+
+    /*
+    |--------------------------------------------------------------------------
     | PKCE-Enabled Providers
     |--------------------------------------------------------------------------
     |
