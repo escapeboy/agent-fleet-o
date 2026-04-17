@@ -156,6 +156,35 @@ class SocialLoginTest extends TestCase
         $this->assertNull($user->email_verified_at);
     }
 
+    public function test_callback_refuses_to_link_unverified_provider_to_existing_email(): void
+    {
+        // An operator/plugin adds a driver to social.providers but NOT to
+        // social.verified_email_providers. Such a provider does not guarantee
+        // the email claim — allowing auto-link on email match would let an
+        // attacker take over an existing account by claiming the victim's email.
+        config([
+            'social.providers' => array_merge(config('social.providers', []), ['unknown-idp']),
+            'social.verified_email_providers' => ['google', 'github', 'linkedin-openid', 'x', 'apple'],
+        ]);
+
+        $victim = User::factory()->create(['email' => 'victim@example.com', 'password' => bcrypt('secret')]);
+
+        $socialUser = $this->mockSocialiteUser(id: 'attacker-1', email: 'victim@example.com');
+        $driver = $this->mockDriver($socialUser);
+        Socialite::shouldReceive('driver')->with('unknown-idp')->andReturn($driver);
+
+        $response = $this->get(route('auth.social.callback', 'unknown-idp'));
+
+        // Must NOT log in as the victim, must NOT attach the attacker's social account.
+        $this->assertGuest();
+        $this->assertDatabaseMissing('user_social_accounts', [
+            'user_id' => $victim->id,
+            'provider' => 'unknown-idp',
+        ]);
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['social']);
+    }
+
     // ── callback: existing social account (returning user) ───────────────────
 
     public function test_callback_logs_in_existing_social_account_user(): void
