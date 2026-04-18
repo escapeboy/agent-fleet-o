@@ -2,6 +2,33 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.21.0] - 2026-04-18
+
+### Added
+
+- **Founder Mode pack** — platform-owned marketplace bundle of 6 persona agents (Strategist, Product Lead, Growth Hacker, Finance Advisor, Ops Manager, Risk Officer), 20 framework skills covering product/growth/finance/ops/testing methodologies (RICE, SPIN, BANT, MEDDIC, OKRs, Bullseye, Lean Startup, Shape Up, Unit Economics, Kano, TAM-SAM-SOM, K-Factor, Cash Flow, NPV-IRR, RACI, Lean Ops, A/B Testing, 3-Day MVP, OWASP, Bessemer), and 5 pre-built workflows. New `Framework` enum (20 cases) + `FrameworkCategory` (6) on `skills.framework`. `DeliverableType` enum (8 cases: ExecutiveReport/ActionPlan/ResearchBrief/Forecast/Pitch/ContentPiece/TechnicalSpec/Template) on `artifacts.deliverable_type` with typed Blade partials. `/frameworks` Livewire browser. 3 MCP tools (`framework_list`, `founder_mode_status`, `founder_mode_install`).
+- **Bidirectional widget comments for bug reports** — reporters and agents can now exchange comments through the public JS widget. New public endpoints: `GET /api/public/widget/bug-reports` (list with optional `?project=` filter), `GET /api/public/widget/bug-reports/{signal}/comments`, `POST /api/public/widget/bug-reports/{signal}/comments`. New `CommentAuthorType` enum (`human/agent/reporter/support`) with `isWidgetVisible()` helper. `signal_comments.widget_visible` column + partial index. Admin reply defaults to `support` type (visible to reporter) with opt-in downgrade to `human` (internal only). Reporter name shown in admin UI from `signal.payload.reporter_name`. `unread_comments_count` exposed via `withCount`. `SignalCommentAdded` event.
+- **Structured intake for widget bug reports (opt-in)** — `bug_report_project_configs` table allows per-project configuration of required fields and intake workflow. MCP tools: `bug_report_project_config_get`, `bug_report_project_config_update`.
+- **AI risk scanning for Marketplace listings** — automatic risk assessment before publish, exposed in `marketplace_browse` MCP results.
+- **MCP coverage audit gap fixes** — `signal_get` now exposes `metadata`; `bug_report_detail` exposes `ai_extracted`; `marketplace_browse` exposes `risk_level`; `agent_list`/`agent_get` expose `scope` and `owner_user_id`; `agent_list` adds `scope` filter; new `bug_report_delete` tool; new `bug_report_project_config` get + update tools.
+- **Configurable `VERIFIED_EMAIL_PROVIDERS`** — comma-separated env var (default: `gmail.com,outlook.com,yahoo.com,...`). Controls which OAuth email domains qualify for auto-link.
+- **Bug report list** — delete button added to admin list page.
+
+### Fixed
+
+- **Bug report detail** — only the first attachment was rendered; now renders all attachments in the media collection.
+- **Widget bug-report list** — `unread_comments_count` was always 0 (missing `withCount`); now returns real counts.
+- **InsightsPage** — team scoping via `whereHas`, correct stage column names, correct deduction type for spend calculations.
+- **AiControlCenterPage** — `circuit_breaker_states` query was broken; fixed column reference.
+- **StageType enum** — cast to `->value` in Insights Blade template to prevent `Object of class StageType could not be converted to string`.
+- **Sidebar** — light-bulb icon now registered in `sidebar-link.blade.php` for the Insights nav item.
+
+### Security
+
+- **CRITICAL — OAuth account takeover via unverified email auto-link.** `SocialAccountService::handleCallback()` step 4 auto-linked any OAuth account whose email matched an existing user without verifying the provider was trustworthy. Attacker could use a provider that hands out unverified emails (e.g. a custom OAuth provider) to hijack any account. Guard added: auto-link only runs when the OAuth provider is on the `verified_email_providers` list. Configurable via `VERIFIED_EMAIL_PROVIDERS` env.
+- **Prompt injection guard in chatbot memory context.** User-controlled content (agent name, memory tags) was interpolated unsanitized into the LLM context string. Strip to printable ASCII + truncate applied before interpolation.
+- **IDOR fix in chatbot memory context provider.** Memory lookup was missing team-scope check; fixed with explicit `where('team_id', ...)`.
+
 ## [1.20.0] - 2026-04-14
 
 ### Added
