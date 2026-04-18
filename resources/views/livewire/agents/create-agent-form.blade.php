@@ -99,6 +99,13 @@
                         <option value="{{ $effort->value }}">{{ $effort->label() }}</option>
                     @endforeach
                 </x-form-select>
+
+                <x-form-select wire:model="environment" label="Environment" hint="Preset that auto-attaches a tool bundle">
+                    <option value="">No preset</option>
+                    @foreach(\App\Domain\Agent\Enums\AgentEnvironment::cases() as $env)
+                        <option value="{{ $env->value }}">{{ $env->label() }}</option>
+                    @endforeach
+                </x-form-select>
             </div>
 
             @if(!empty($providers[$this->provider]['local']))

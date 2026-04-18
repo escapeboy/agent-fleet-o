@@ -3,6 +3,7 @@
 namespace App\Domain\Tool\Actions;
 
 use App\Domain\Agent\Actions\ExecuteAgentAction;
+use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Services\SandboxedWorkspace;
@@ -28,6 +29,7 @@ use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Services\SynchronousWorkflowExecutor;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Schema\StringSchema;
@@ -65,6 +67,11 @@ class ResolveAgentToolsAction
         $agentTools = $agent->tools()
             ->where('status', ToolStatus::Active->value)
             ->get();
+
+        // Auto-attach tools declared by the agent's environment preset.
+        // Environment is a convenience dropdown: Coding → bash+filesystem, Browsing → browser+web_search, etc.
+        // Tools are matched by slug within the agent's team and merged uniquely by ID.
+        $agentTools = $this->mergeEnvironmentTools($agent, $agentTools);
 
         // Filter out tools with approval_mode = 'deny' on the pivot
         $agentTools = $agentTools->filter(function (Tool $tool) {
@@ -258,6 +265,38 @@ class ResolveAgentToolsAction
         }
 
         return $prismTools;
+    }
+
+    /**
+     * Look up tools matching the agent environment's declared slugs (team-scoped)
+     * and merge them with the explicit agent tool set, deduplicated by tool ID.
+     * A missing slug is a silent no-op — the team may not have the tool seeded yet.
+     *
+     * @param  Collection<int, Tool>  $existing
+     * @return Collection<int, Tool>
+     */
+    private function mergeEnvironmentTools(Agent $agent, Collection $existing): Collection
+    {
+        $environment = $agent->environment;
+        if (! $environment instanceof AgentEnvironment) {
+            return $existing;
+        }
+
+        $slugs = $environment->toolSlugs();
+        if (empty($slugs) || $agent->team_id === null) {
+            return $existing;
+        }
+
+        $envTools = Tool::where('team_id', $agent->team_id)
+            ->whereIn('slug', $slugs)
+            ->where('status', ToolStatus::Active->value)
+            ->get();
+
+        if ($envTools->isEmpty()) {
+            return $existing;
+        }
+
+        return $existing->merge($envTools)->unique('id')->values();
     }
 
     /**

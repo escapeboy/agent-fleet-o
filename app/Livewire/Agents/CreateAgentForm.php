@@ -3,6 +3,7 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
+use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
@@ -63,6 +64,8 @@ class CreateAgentForm extends Component
 
     public string $toolProfile = '';
 
+    public string $environment = '';
+
     public ?string $knowledgeBaseId = null;
 
     public bool $evaluationEnabled = false;
@@ -118,6 +121,7 @@ class CreateAgentForm extends Component
             'model' => 'required|max:255',
             'thinkingBudget' => 'nullable|integer|min:0|max:100000',
             'reasoningEffort' => ['nullable', Rule::enum(ReasoningEffort::class)],
+            'environment' => ['nullable', Rule::enum(AgentEnvironment::class)],
         ];
     }
 
@@ -190,6 +194,10 @@ class CreateAgentForm extends Component
 
         if ($this->toolProfile !== '') {
             $agent->update(['tool_profile' => $this->toolProfile]);
+        }
+
+        if ($this->environment !== '') {
+            $agent->update(['environment' => $this->environment]);
         }
 
         if ($this->knowledgeBaseId) {
