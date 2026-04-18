@@ -8,10 +8,12 @@ use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for managing external integrations.
@@ -25,6 +27,8 @@ use Laravel\Mcp\Server\Tool;
  *   list_triggers    — List available triggers for a driver
  *   list_actions     — List available actions for a driver
  */
+#[IsDestructive]
+#[AssistantTool('write')]
 class IntegrationManageTool extends Tool
 {
     protected string $name = 'integration_manage';

@@ -4,13 +4,17 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Skill\Models\Skill;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
+#[IsDestructive]
+#[AssistantTool('write')]
 class AgentSkillSyncTool extends Tool
 {
     protected string $name = 'agent_skill_sync';

@@ -23,6 +23,8 @@ class Workflow extends Model
         return WorkflowFactory::new();
     }
 
+    protected $hidden = ['observability_config'];
+
     protected $fillable = [
         'team_id',
         'user_id',
@@ -39,12 +41,14 @@ class Workflow extends Model
         'mcp_execution_mode',
         'settings',
         'meta',
+        'observability_config',
     ];
 
     protected function casts(): array
     {
         return [
             'meta' => 'array',
+            'observability_config' => 'array',
             'status' => WorkflowStatus::class,
             'version' => 'integer',
             'max_loop_iterations' => 'integer',

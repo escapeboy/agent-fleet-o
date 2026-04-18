@@ -4,10 +4,12 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Actions\DeployToolTemplateAction;
 use App\Domain\Tool\Models\ToolTemplate;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for browsing and deploying GPU tool templates.
@@ -17,6 +19,8 @@ use Laravel\Mcp\Server\Tool;
  *   get    — Get details of a specific template
  *   deploy — Deploy a template as a new tool for the team
  */
+#[IsDestructive]
+#[AssistantTool('write')]
 class ToolTemplateManageTool extends Tool
 {
     protected string $name = 'tool_template_manage';

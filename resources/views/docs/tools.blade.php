@@ -144,8 +144,37 @@ curl -X POST {{ url('/api/v1/tools') }} \
         <div class="rounded-xl border border-gray-200 p-4">
             <p class="font-semibold text-gray-900">Bash</p>
             <p class="mt-1 text-sm text-gray-600">
-                Executes shell commands on the host machine. Three execution policies control what commands are permitted:
+                Executes shell commands. The <strong>sandbox mode</strong> determines <em>where</em> commands run
+                (set via <code class="font-mono text-xs">AGENT_BASH_SANDBOX_MODE</code> in <code class="font-mono text-xs">.env</code>), and the <strong>execution policy</strong>
+                determines <em>which</em> commands are permitted.
             </p>
+            <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Sandbox modes</p>
+            <div class="mt-2 overflow-hidden rounded-lg border border-gray-200">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 bg-gray-50">
+                            <th class="py-2 pl-3 pr-6 text-left font-semibold text-gray-700">Mode</th>
+                            <th class="py-2 pr-3 text-left font-semibold text-gray-700">Behaviour</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr>
+                            <td class="py-2 pl-3 pr-6 font-mono text-xs font-medium text-gray-900">php</td>
+                            <td class="py-2 pr-3 text-xs text-gray-600">Commands run in-process with <code class="rounded bg-gray-100 px-1">CommandSecurityPolicy</code> allowlist. Default for development.</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 pl-3 pr-6 font-mono text-xs font-medium text-gray-900">docker</td>
+                            <td class="py-2 pr-3 text-xs text-gray-600">Each command runs in a Docker container with <code class="rounded bg-gray-100 px-1">--network none</code>, <code class="rounded bg-gray-100 px-1">--read-only</code>, and a mounted workspace.</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 pl-3 pr-6 font-mono text-xs font-medium text-gray-900">just_bash</td>
+                            <td class="py-2 pr-3 text-xs text-gray-600">Commands run inside a persistent <code class="rounded bg-gray-100 px-1">just-bash</code> Node.js sidecar container. Recommended for cloud/production.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Execution policies</p>
+            <p class="mt-1 text-sm text-gray-600">Policies are orthogonal to sandbox mode — they apply an allowlist/denylist to whatever is allowed through the sandbox.</p>
             <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
                 <table class="w-full text-sm">
                     <thead>
@@ -184,8 +213,37 @@ curl -X POST {{ url('/api/v1/tools') }} \
         <div class="rounded-xl border border-gray-200 p-4">
             <p class="font-semibold text-gray-900">Browser</p>
             <p class="mt-1 text-sm text-gray-600">
-                Web automation powered by Playwright. Agents can navigate pages, click elements, fill forms, take
-                screenshots, and extract content — useful for research, monitoring, and testing workflows.
+                Web automation powered by Playwright / patchright. Agents can navigate pages, click elements,
+                fill forms, take screenshots, and extract content. The <strong>browser sandbox mode</strong>
+                (<code class="font-mono text-xs">AGENT_BROWSER_SANDBOX_MODE</code>) controls <em>how</em> the browser runs:
+            </p>
+            <div class="mt-2 overflow-hidden rounded-lg border border-gray-200">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 bg-gray-50">
+                            <th class="py-2 pl-3 pr-6 text-left font-semibold text-gray-700">Mode</th>
+                            <th class="py-2 pr-3 text-left font-semibold text-gray-700">When to use it</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr>
+                            <td class="py-2 pl-3 pr-6 font-mono text-xs font-medium text-gray-900">disabled</td>
+                            <td class="py-2 pr-3 text-xs text-gray-600">Browser tool returns a plan-upgrade prompt. Default — safest.</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 pl-3 pr-6 font-mono text-xs font-medium text-gray-900">cloud</td>
+                            <td class="py-2 pr-3 text-xs text-gray-600">Tasks delegated to the cloud browser sidecar (headless Chromium, fast, cheap).</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 pl-3 pr-6 font-mono text-xs font-medium text-gray-900">headful (Xvfb)</td>
+                            <td class="py-2 pr-3 text-xs text-gray-600">Runs a real Chromium + patchright inside an Xvfb virtual display. Combine with a <a href="{{ route('docs.show', 'credentials') }}" class="text-primary-600 hover:underline">proxy credential</a> for Reddit/Cloudflare/anti-bot scenarios. Set <code class="rounded bg-gray-100 px-1">headless="false"</code> on the tool.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-2 text-xs text-gray-500">
+                FleetQ's system prompt auto-injects a policy that tells agents when to reach for headful mode
+                (sites with heavy bot detection) versus cloud mode (fast plain scraping).
             </p>
         </div>
     </div>
@@ -203,6 +261,34 @@ curl -X POST {{ url('/api/v1/tools') }} \
         MCP tool or the <span class="font-mono text-xs">GET /api/v1/tools/ssh-fingerprints</span> endpoint.
         Fingerprints are checked automatically when the tool initiates a connection.
     </p>
+
+    {{-- Semantic tool selection --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Semantic tool selection (<code class="text-lg">tool_search</code>)</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        When a team has more than 15 active tools, loading <em>all</em> of them into every agent prompt wastes
+        tokens and dilutes the LLM's focus. FleetQ solves this with <strong>semantic tool selection</strong>:
+        tool descriptions are embedded with pgvector and the most relevant tools for the current task are
+        retrieved per call.
+    </p>
+    <ul class="mt-3 list-disc pl-5 text-sm text-gray-600">
+        <li>Embeddings live in the <code class="font-mono text-xs">tool_registry_entries</code> table (cosine distance, HNSW index).</li>
+        <li>The <code class="font-mono text-xs">tool_search</code> MCP tool can be called directly by agents for explicit tool discovery.</li>
+        <li>Retrieval threshold is <code class="font-mono text-xs">&ge; 0.75</code> cosine similarity; tools below that floor are excluded from the agent's toolbelt for that turn.</li>
+    </ul>
+
+    {{-- Activepieces auto-sync --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Activepieces auto-sync (660+ integrations)</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Point FleetQ at a self-hosted <a href="https://activepieces.com" class="text-primary-600 hover:underline" target="_blank" rel="noopener">Activepieces</a>
+        instance and every one of its 660+ "pieces" (Stripe, Slack, GitHub, HubSpot, Salesforce, Notion,
+        OpenAI, Google Sheets, …) becomes available in FleetQ automatically as <code class="font-mono text-xs">mcp_http</code> Tool records.
+    </p>
+    <ul class="mt-3 list-disc pl-5 text-sm text-gray-600">
+        <li>Hourly sync job discovers new pieces and updates existing ones.</li>
+        <li>Optional <code class="font-mono text-xs">piece_filter</code> limits which pieces are imported.</li>
+        <li>SSRF-protected — the Activepieces URL is validated on every request.</li>
+        <li>Trigger a manual refresh with the <code class="font-mono text-xs">activepieces_sync</code> action on the <code class="font-mono text-xs">integration_manage</code> MCP meta-tool.</li>
+    </ul>
 
     {{-- Popular tools --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Popular tools</h2>

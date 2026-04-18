@@ -54,7 +54,7 @@ class SecretPatternLibraryTest extends TestCase
     public function test_detects_stripe_secret_key(): void
     {
         // Built at runtime so static secret scanners do not flag test fixtures.
-        $fakeKey = 'sk_live_' . str_repeat('a', 24);
+        $fakeKey = 'sk_live_'.str_repeat('a', 24);
         $findings = $this->library->scan($fakeKey);
         $ids = array_column($findings, 'pattern_id');
         $this->assertContains('STRIPE_SECRET', $ids);
@@ -63,7 +63,7 @@ class SecretPatternLibraryTest extends TestCase
     public function test_detects_stripe_test_key(): void
     {
         // Built at runtime so static secret scanners do not flag test fixtures.
-        $fakeKey = 'sk_test_' . str_repeat('a', 24);
+        $fakeKey = 'sk_test_'.str_repeat('a', 24);
         $findings = $this->library->scan($fakeKey);
         $ids = array_column($findings, 'pattern_id');
         $this->assertContains('STRIPE_TEST', $ids);
@@ -91,7 +91,7 @@ class SecretPatternLibraryTest extends TestCase
 
     public function test_scan_fields_returns_field_names_in_findings(): void
     {
-        $fakeKey = 'sk_live_' . str_repeat('c', 24);
+        $fakeKey = 'sk_live_'.str_repeat('c', 24);
         $findings = $this->library->scanFields([
             'role' => 'You are a helpful assistant',
             'goal' => "{$fakeKey} is the payment key",
@@ -115,8 +115,8 @@ class SecretPatternLibraryTest extends TestCase
     public function test_scan_deduplicates_multiple_matches_of_same_pattern(): void
     {
         // Two Stripe test keys built at runtime so static secret scanners do not flag test fixtures.
-        $key1 = 'sk_test_' . str_repeat('a', 24);
-        $key2 = 'sk_test_' . str_repeat('A', 24);
+        $key1 = 'sk_test_'.str_repeat('a', 24);
+        $key2 = 'sk_test_'.str_repeat('A', 24);
         $text = "{$key1} and {$key2}";
         $findings = $this->library->scan($text);
         $stripeFindings = array_filter($findings, fn ($f) => $f['pattern_id'] === 'STRIPE_TEST');

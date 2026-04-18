@@ -31,8 +31,12 @@ interface IntegrationDriverInterface
     public function authType(): AuthType;
 
     /**
-     * Credential fields required by this driver.
+     * Credential fields required by this driver for manual (non-OAuth) credential entry.
      * Format: ['field_name' => ['type' => 'string', 'required' => true, 'label' => '...']]
+     *
+     * Return an empty array when the driver uses OAuth exclusively and no manual API key
+     * fields are presented to the user (e.g. Attio, GitHub, GitLab, Monday, Pipedrive, …).
+     * The UI hides the credential form when this returns [].
      */
     public function credentialSchema(): array;
 

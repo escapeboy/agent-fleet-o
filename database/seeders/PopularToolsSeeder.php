@@ -384,6 +384,38 @@ class PopularToolsSeeder extends Seeder
             ],
 
             [
+                'name' => 'Browser Use Cloud',
+                'slug' => 'browser-use-cloud',
+                'description' => 'Autonomous browser task execution via cloud.browser-use.com — natural language instructions, multi-step navigation, form filling, and data extraction run on hosted browsers. Requires a browser-use Cloud API key (get one at https://cloud.browser-use.com/settings).',
+                'type' => ToolType::BuiltIn,
+                'risk_level' => ToolRiskLevel::Write,
+                'transport_config' => [
+                    'kind' => 'browser_use_cloud',
+                    // Declared env keys drive the credential input form on the
+                    // tool detail page. On activation, ResolveAgentToolsAction
+                    // merges credential_overrides back into transport_config.env
+                    // so buildBrowserUseCloudTools can read api_key at runtime.
+                    'env' => ['api_key' => ''],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'browser_task',
+                        'description' => 'Autonomously browse the web to complete a task via browser-use Cloud. Returns extracted text.',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'task' => ['type' => 'string', 'description' => 'Natural language description of the browsing task'],
+                                'start_url' => ['type' => 'string', 'description' => 'Optional starting URL'],
+                                'max_steps' => ['type' => 'integer', 'description' => 'Maximum browser steps (default 10)'],
+                            ],
+                            'required' => ['task'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 180],
+            ],
+
+            [
                 'name' => 'Puppeteer',
                 'slug' => 'puppeteer',
                 'description' => 'Browser automation — navigate pages, take screenshots, click elements, fill forms, and execute JavaScript. Runs a headless Chromium browser for web scraping and testing.',

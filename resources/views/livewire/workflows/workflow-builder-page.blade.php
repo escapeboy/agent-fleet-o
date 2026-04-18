@@ -13,6 +13,10 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <button wire:click="$set('showGeneratePanel', !$showGeneratePanel)" class="flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 hover:bg-violet-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Generate
+            </button>
             <button @click="$wire.save()" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Save Draft
             </button>
@@ -24,6 +28,24 @@
             </button>
         </div>
     </div>
+
+    {{-- NL Workflow Generator Panel --}}
+    @if($showGeneratePanel)
+    <div class="mx-4 mt-2 rounded-lg border border-violet-200 bg-violet-50 p-4">
+        <h3 class="mb-2 text-sm font-semibold text-violet-800">Generate Workflow from Description</h3>
+        <p class="mb-3 text-xs text-violet-600">Describe what you want the workflow to do in plain English and AI will build the graph for you.</p>
+        <div class="flex gap-2">
+            <x-form-textarea wire:model="generatePrompt" placeholder="E.g. Research a topic, have a human review the findings, then send a summary email..." class="flex-1" :mono="false" compact />
+            <button wire:click="generateFromPrompt" wire:loading.attr="disabled" class="flex-shrink-0 self-start rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50">
+                <span wire:loading.remove wire:target="generateFromPrompt">Generate</span>
+                <span wire:loading wire:target="generateFromPrompt">Generating...</span>
+            </button>
+        </div>
+        @if(count($generateErrors) > 0)
+            <div class="mt-2 text-xs text-red-600">{{ implode('; ', $generateErrors) }}</div>
+        @endif
+    </div>
+    @endif
 
     {{-- Flash Messages --}}
     @if(session('success'))

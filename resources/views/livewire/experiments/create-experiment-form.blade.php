@@ -76,9 +76,29 @@
                 :error="$errors->first('successCriteria')" />
         </div>
 
-        <div class="mt-2">
-            <x-form-checkbox wire:model="autoApprove" id="autoApprove" label="Auto-approve outbound proposals" />
-            <p class="ml-6 mt-1 text-xs text-gray-500">Skip the approval gate and let the pipeline proceed automatically.</p>
+        <div class="mt-2 space-y-2">
+            <x-form-checkbox wire:model.live="autoApprove" id="autoApprove" label="Auto-approve outbound proposals" />
+            <p class="ml-6 text-xs text-gray-500">Skip the approval gate and let the pipeline proceed automatically.</p>
+
+            @if(!$autoApprove)
+                <div class="ml-6 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p class="text-xs font-medium text-gray-700">Approval mode</p>
+                    <div class="flex items-center gap-6">
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <input type="radio" wire:model.live="approvalMode" value="in_loop" class="text-primary-600"> In-loop <span class="text-xs text-gray-500">(blocks until approved)</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <input type="radio" wire:model.live="approvalMode" value="on_loop" class="text-primary-600"> On-loop <span class="text-xs text-gray-500">(auto-approves after window)</span>
+                        </label>
+                    </div>
+                    @if($approvalMode === 'on_loop')
+                        <div class="flex items-center gap-2">
+                            <x-form-input wire:model="interventionWindowHours" type="number" min="1" max="168" compact />
+                            <span class="text-sm text-gray-600">hours intervention window before auto-approval</span>
+                        </div>
+                    @endif
+                </div>
+            @endif
         </div>
 
         <div class="flex items-center gap-3 pt-2">

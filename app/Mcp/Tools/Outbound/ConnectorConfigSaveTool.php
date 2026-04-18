@@ -3,11 +3,15 @@
 namespace App\Mcp\Tools\Outbound;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class ConnectorConfigSaveTool extends Tool
 {
     protected string $name = 'connector_config_save';

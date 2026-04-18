@@ -1,4 +1,11 @@
 <div>
+    {{-- Scope Filter --}}
+    <div class="flex gap-2 mb-4">
+        <button wire:click="$set('scopeFilter', 'all')" class="{{ $scopeFilter === 'all' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 border border-gray-300' }} px-3 py-1.5 rounded-md text-sm font-medium">All</button>
+        <button wire:click="$set('scopeFilter', 'team')" class="{{ $scopeFilter === 'team' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 border border-gray-300' }} px-3 py-1.5 rounded-md text-sm font-medium">Team</button>
+        <button wire:click="$set('scopeFilter', 'personal')" class="{{ $scopeFilter === 'personal' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 border border-gray-300' }} px-3 py-1.5 rounded-md text-sm font-medium">Personal</button>
+    </div>
+
     {{-- Toolbar --}}
     <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_agents" tooldescription="Filter agents by status and search query">
         <div class="relative flex-1">
@@ -27,6 +34,11 @@
             Quick Agent
         </a>
 
+        <button wire:click="$set('showImportModal', true)"
+            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Import
+        </button>
+
         @if($canCreate)
             <a href="{{ route('agents.create') }}"
                 class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
@@ -38,6 +50,49 @@
             </span>
         @endif
     </form>
+
+    {{-- Import Modal --}}
+    @if($showImportModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click.self="$set('showImportModal', false)">
+            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                <h3 class="mb-4 text-lg font-semibold text-gray-900">Import Agent Workspace</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700">File (ZIP or YAML, max 10MB)</label>
+                        <input type="file" wire:model="importFile" accept=".zip,.yaml,.yml"
+                            class="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100" />
+                        @error('importFile') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <x-form-select wire:model.live="importMode" label="Mode">
+                        <option value="create">Create new agent</option>
+                        <option value="merge">Merge into existing agent</option>
+                    </x-form-select>
+
+                    @if($importMode === 'merge')
+                        <x-form-select wire:model="mergeAgentId" label="Target Agent">
+                            <option value="">Select an agent...</option>
+                            @foreach(\App\Domain\Agent\Models\Agent::orderBy('name')->get() as $a)
+                                <option value="{{ $a->id }}">{{ $a->name }}</option>
+                            @endforeach
+                        </x-form-select>
+                    @endif
+
+                    <div class="flex justify-end gap-2 border-t border-gray-200 pt-4">
+                        <button wire:click="$set('showImportModal', false)"
+                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button wire:click="importWorkspace" wire:loading.attr="disabled"
+                            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
+                            <span wire:loading.remove wire:target="importWorkspace">Import</span>
+                            <span wire:loading wire:target="importWorkspace">Importing...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">

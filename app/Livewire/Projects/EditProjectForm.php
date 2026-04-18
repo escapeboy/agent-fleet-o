@@ -55,6 +55,15 @@ class EditProjectForm extends Component
 
     public bool $notifyOnFailure = true;
 
+    // Heartbeat
+    public bool $heartbeatEnabled = false;
+
+    public ?int $heartbeatIntervalMinutes = 30;
+
+    public ?int $heartbeatBudgetCap = null;
+
+    public array $heartbeatContextSources = ['signals', 'metrics', 'audit'];
+
     // Budget
     public ?int $perRunCap = null;
 
@@ -90,6 +99,10 @@ class EditProjectForm extends Component
             $this->timezone = $schedule->timezone ?? 'UTC';
             $this->overlapPolicy = $schedule->overlap_policy->value;
             $this->maxConsecutiveFailures = $schedule->max_consecutive_failures;
+            $this->heartbeatEnabled = $schedule->heartbeat_enabled ?? false;
+            $this->heartbeatIntervalMinutes = $schedule->heartbeat_interval_minutes ?? 30;
+            $this->heartbeatBudgetCap = $schedule->heartbeat_budget_cap;
+            $this->heartbeatContextSources = $schedule->heartbeat_context_sources ?? ['signals', 'metrics', 'audit'];
         }
 
         // Delivery
@@ -142,6 +155,12 @@ class EditProjectForm extends Component
         $rules['allowedOutboundChannels'] = 'array';
         $rules['allowedOutboundChannels.*'] = 'string|in:email,slack,telegram,webhook';
 
+        $rules['heartbeatEnabled'] = 'boolean';
+        $rules['heartbeatIntervalMinutes'] = 'nullable|integer|in:15,30,60,120,240';
+        $rules['heartbeatBudgetCap'] = 'nullable|integer|min:1';
+        $rules['heartbeatContextSources'] = 'array';
+        $rules['heartbeatContextSources.*'] = 'string|in:signals,metrics,audit,experiments';
+
         return $rules;
     }
 
@@ -184,6 +203,10 @@ class EditProjectForm extends Component
                 'timezone' => $this->timezone,
                 'overlap_policy' => $this->overlapPolicy,
                 'max_consecutive_failures' => $this->maxConsecutiveFailures,
+                'heartbeat_enabled' => $this->heartbeatEnabled,
+                'heartbeat_interval_minutes' => $this->heartbeatEnabled ? $this->heartbeatIntervalMinutes : null,
+                'heartbeat_budget_cap' => $this->heartbeatBudgetCap ?: null,
+                'heartbeat_context_sources' => $this->heartbeatContextSources,
             ];
         }
 

@@ -6,12 +6,16 @@ use App\Domain\Signal\Models\Signal;
 use App\Domain\Trigger\Actions\EvaluateTriggerRulesAction;
 use App\Domain\Trigger\Actions\ExecuteTriggerRuleAction;
 use App\Domain\Trigger\Models\TriggerRule;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class TriggerRuleTestTool extends Tool
 {
     protected string $name = 'trigger_rule_test';

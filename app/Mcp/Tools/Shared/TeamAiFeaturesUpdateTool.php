@@ -3,11 +3,15 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class TeamAiFeaturesUpdateTool extends Tool
 {
     protected string $name = 'team_ai_features_update';

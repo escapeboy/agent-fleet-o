@@ -58,6 +58,7 @@ class IdempotencyCheck implements AiMiddlewareInterface
             // Create pending log entry (withoutGlobalScopes for queue context)
             $log = LlmRequestLog::withoutGlobalScopes()->create([
                 'team_id' => $request->teamId,
+                'user_id' => $request->userId,
                 'idempotency_key' => $idempotencyKey,
                 'agent_id' => $request->agentId,
                 'experiment_id' => $request->experimentId,

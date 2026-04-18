@@ -6,6 +6,7 @@ use App\Domain\Credential\Models\Credential;
 use App\Domain\GitRepository\Actions\CreateGitRepositoryAction;
 use App\Domain\GitRepository\Enums\GitProvider;
 use App\Domain\GitRepository\Enums\GitRepoMode;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class CreateGitRepositoryForm extends Component
@@ -84,7 +85,8 @@ class CreateGitRepositoryForm extends Component
             'mode' => 'required|in:api_only,sandbox,bridge',
             'provider' => 'required|in:github,gitlab,bitbucket,gitea,generic',
             'defaultBranch' => 'required|max:255',
-            'credentialId' => 'nullable|uuid|exists:credentials,id',
+            'credentialId' => ['nullable', 'uuid',
+                Rule::exists('credentials', 'id')->where('team_id', auth()->user()?->current_team_id)],
         ]);
 
         $config = ['pr' => ['require_approval' => $this->requireApproval]];

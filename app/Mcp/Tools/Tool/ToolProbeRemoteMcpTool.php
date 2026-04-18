@@ -4,13 +4,17 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpHttpClient;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
+#[IsDestructive]
+#[AssistantTool('write')]
 class ToolProbeRemoteMcpTool extends McpTool
 {
     protected string $name = 'tool_probe_remote_mcp';

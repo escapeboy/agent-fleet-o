@@ -469,6 +469,17 @@
                                         </div>
                                     @endforeach
                                 @endif
+                                @if(!empty($msg['ui_artifacts']['items']))
+                                    <div class="-mx-1 mt-2">
+                                        @foreach($msg['ui_artifacts']['items'] as $artifactIndex => $artifactPayload)
+                                            <x-assistant.artifacts.renderer
+                                                :payload="$artifactPayload"
+                                                :index="$artifactIndex"
+                                                :messageId="$msg['id'] ?? null"
+                                            />
+                                        @endforeach
+                                    </div>
+                                @endif
                                 @if(!empty($msg['tool_calls_count']))
                                     <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
                                         <i class="fa-solid fa-screwdriver-wrench text-xs"></i>
@@ -604,4 +615,24 @@
             </div>
         </div>
     </div>
+
+    {{-- Gap 2 hardening: pop-out modal for wide artifacts (data_table > 10 rows). --}}
+    <x-assistant.artifacts.popout-modal />
+
+    {{-- Gap 2 hardening: mobile force-collapse below 360px panel width. --}}
+    <script>
+        (function () {
+            function collapseMobileArtifacts() {
+                if (window.innerWidth >= 360) {
+                    return;
+                }
+                document.querySelectorAll('.assistant-response + div details[open]').forEach(function (el) {
+                    el.removeAttribute('open');
+                });
+            }
+            document.addEventListener('DOMContentLoaded', collapseMobileArtifacts);
+            document.addEventListener('livewire:navigated', collapseMobileArtifacts);
+            document.addEventListener('livewire:update', collapseMobileArtifacts);
+        })();
+    </script>
 </div>

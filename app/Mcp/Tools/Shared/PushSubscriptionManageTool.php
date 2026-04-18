@@ -2,13 +2,17 @@
 
 namespace App\Mcp\Tools\Shared;
 
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use NotificationChannels\WebPush\PushSubscription;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class PushSubscriptionManageTool extends Tool
 {
     protected string $name = 'push_subscription_manage';

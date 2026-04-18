@@ -24,6 +24,42 @@ use Livewire\Component;
 
 class DashboardPage extends Component
 {
+    /** @var array<string, bool> */
+    public array $widgets = [];
+
+    /** Default widget visibility — all on by default */
+    protected const DEFAULT_WIDGETS = [
+        'experiments' => true,
+        'projects' => true,
+        'agents' => true,
+        'skills' => true,
+        'budget' => true,
+        'approvals' => true,
+        'activity' => true,
+        'chatbots' => true,
+    ];
+
+    public function mount(): void
+    {
+        $team = auth()->user()->currentTeam;
+        $saved = $team?->dashboard_config['widgets'] ?? [];
+        $this->widgets = array_merge(self::DEFAULT_WIDGETS, $saved);
+    }
+
+    public function toggleWidget(string $key): void
+    {
+        if (! array_key_exists($key, self::DEFAULT_WIDGETS)) {
+            return;
+        }
+
+        $this->widgets[$key] = ! ($this->widgets[$key] ?? true);
+
+        $team = auth()->user()->currentTeam;
+        $config = $team->dashboard_config ?? [];
+        $config['widgets'] = $this->widgets;
+        $team->update(['dashboard_config' => $config]);
+    }
+
     public function render()
     {
         $terminalStatuses = [

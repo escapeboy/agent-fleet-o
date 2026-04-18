@@ -16,41 +16,42 @@ class WebsiteListTool extends Tool
 {
     protected string $name = 'website_list';
 
-    protected string $description = 'List websites for the current team. Returns id, name, slug, status, page count, and custom domain.';
+    protected string $description = 'List websites for the current team. Optionally filter by status.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
             'status' => $schema->string()
-                ->description('Filter by status: draft, published, archived')
+                ->description('Filter by status')
                 ->enum(['draft', 'published', 'archived']),
             'limit' => $schema->integer()
-                ->description('Max results (default 20, max 100)')
-                ->default(20),
+                ->description('Max results (default 10, max 100)')
+                ->default(10),
         ];
     }
 
     public function handle(Request $request): Response
     {
-        $query = Website::query()->withCount('pages')->orderBy('name');
+        $query = Website::query()->orderBy('name');
 
-        if ($status = $request->get('status')) {
-            $query->where('status', $status);
+        if ($request->get('status')) {
+            $query->where('status', $request->get('status'));
         }
 
-        $limit = min((int) ($request->get('limit', 20)), 100);
-        $websites = $query->limit($limit)->get();
+        $limit = min((int) ($request->get('limit') ?? 10), 100);
+        $websites = $query->withCount('pages')->limit($limit)->get();
 
         return Response::text(json_encode([
             'count' => $websites->count(),
-            'websites' => $websites->map(fn ($w) => [
+            'websites' => $websites->map(fn (Website $w) => [
                 'id' => $w->id,
                 'name' => $w->name,
                 'slug' => $w->slug,
-                'status' => $w->status->value,
-                'pages_count' => $w->pages_count,
+                'status' => $w->status instanceof \BackedEnum ? $w->status->value : $w->status,
                 'custom_domain' => $w->custom_domain,
-            ])->toArray(),
-        ]));
+                'page_count' => $w->pages_count,
+                'created_at' => $w->created_at?->toIso8601String(),
+            ]),
+        ], JSON_PRETTY_PRINT));
     }
 }

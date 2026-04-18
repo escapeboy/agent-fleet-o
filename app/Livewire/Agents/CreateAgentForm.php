@@ -3,6 +3,7 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
+use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Skill\Models\Skill;
@@ -58,6 +59,8 @@ class CreateAgentForm extends Component
 
     /** @var array<string> */
     public array $gitRepositoryIds = [];
+
+    public string $reasoningStrategy = 'function_calling';
 
     public string $toolProfile = '';
 
@@ -206,6 +209,11 @@ class CreateAgentForm extends Component
 
         if ($heartbeatDefinition !== null) {
             $agent->update(['heartbeat_definition' => $heartbeatDefinition]);
+        }
+
+        $strategy = AgentReasoningStrategy::tryFrom($this->reasoningStrategy);
+        if ($strategy && $strategy !== AgentReasoningStrategy::FunctionCalling) {
+            $agent->update(['reasoning_strategy' => $strategy]);
         }
 
         session()->flash('message', 'Agent created successfully!');

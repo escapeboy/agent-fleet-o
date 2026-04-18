@@ -10,7 +10,9 @@ use App\Mcp\Tools\Credential\CredentialOAuthFinalizeTool;
 use App\Mcp\Tools\Credential\CredentialOAuthInitiateTool;
 use App\Mcp\Tools\Credential\CredentialRotateTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class CredentialManageTool extends CompactTool
 {
     protected string $name = 'credential_manage';

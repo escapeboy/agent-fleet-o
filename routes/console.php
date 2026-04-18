@@ -11,6 +11,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('approvals:expire-stale')->hourly();
+Schedule::command('approvals:auto-approve-on-loop')->everyMinute()->withoutOverlapping(1);
 // Temporarily disabled to avoid rate-limiting Google Gemini during experiment runs
 // Schedule::command('agents:health-check')->everyFiveMinutes();
 Schedule::command('tools:health-check')->everyFiveMinutes()->withoutOverlapping(4);
@@ -26,6 +27,7 @@ Schedule::command('connectors:poll --driver=signal_protocol')->everyMinute()->wi
 Schedule::command('connectors:poll --driver=matrix')->everyMinute()->withoutOverlapping(2);
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
+Schedule::command('signals:cleanup-bug-reports')->dailyAt('03:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
 Schedule::command('websites:recover-stuck')->everyFiveMinutes();
@@ -44,9 +46,16 @@ Schedule::command('credentials:refresh-reddit')->hourly()->withoutOverlapping(5)
 // Project scheduling & budget enforcement
 Schedule::command('projects:check-budgets')->hourly();
 
+// Relationship health scoring (daily)
+Schedule::command('contacts:score-health')->dailyAt('03:30')->withoutOverlapping(60);
+
+// Auto-skill generation from recurring experiment patterns (weekly)
+Schedule::command('skills:auto-generate')->weeklyOn(0, '02:00')->withoutOverlapping(120);
+
 // Agent memory consolidation & pruning (consolidate BEFORE prune)
 Schedule::command('memories:consolidate')->dailyAt('02:30')->withoutOverlapping(90)->onOneServer();
 Schedule::command('memories:prune')->dailyAt('03:00');
+Schedule::command('memory:prune')->dailyAt('03:15')->withoutOverlapping(30);
 
 // Agent feedback analysis — weekly batch generates EvolutionProposals for underperforming agents
 Schedule::command('agents:analyze-feedback')->weeklyOn(1, '06:00');
@@ -66,10 +75,15 @@ Schedule::command('system:check-updates')->hourly()->runInBackground();
 // Pre-generate OpenAPI spec so /docs/api.json is served from a static file
 Schedule::command('scramble:export --path=public/api.json')->weeklyOn(1, '03:30');
 
+Schedule::command('conversations:expire')->everyFiveMinutes();
+
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
 
 // Agent heartbeats — evaluate scheduled autonomous tasks every minute
 Schedule::command('agents:heartbeats')->everyMinute()->withoutOverlapping(1);
+
+// Clean stale per-agent serial execution locks
+Schedule::command('agents:clean-locks')->everyFiveMinutes()->withoutOverlapping();
 
 // Refresh webhooks with expiring TTLs (e.g. Jira Cloud 30-day webhook expiry)
 Schedule::job(new RefreshExpiringWebhooksJob)->weekly();

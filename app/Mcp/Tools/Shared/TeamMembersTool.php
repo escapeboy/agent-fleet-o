@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class TeamMembersTool extends Tool
 {
     protected string $name = 'team_members';

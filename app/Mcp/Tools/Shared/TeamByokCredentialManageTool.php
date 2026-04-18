@@ -3,12 +3,16 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class TeamByokCredentialManageTool extends Tool
 {
     protected string $name = 'team_byok_credential_manage';

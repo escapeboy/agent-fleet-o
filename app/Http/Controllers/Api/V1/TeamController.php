@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Shared\Events\TeamMemberRemoved;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Http\Controllers\Controller;
@@ -72,6 +73,8 @@ class TeamController extends Controller
         }
 
         $team->users()->detach($userId);
+
+        event(new TeamMemberRemoved($team, $userId));
 
         return response()->json(['message' => 'Member removed.']);
     }

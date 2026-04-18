@@ -2,16 +2,18 @@
 
 namespace App\Livewire\Agents;
 
+use App\Domain\Agent\Actions\ImportAgentWorkspaceAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class AgentListPage extends Component
 {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     #[Url]
     public string $search = '';
@@ -19,9 +21,21 @@ class AgentListPage extends Component
     #[Url]
     public string $statusFilter = '';
 
+    #[Url]
+    public string $scopeFilter = 'all';
+
     public string $sortField = 'created_at';
 
     public string $sortDirection = 'desc';
+
+    // Import
+    public $importFile = null;
+
+    public string $importMode = 'create';
+
+    public ?string $mergeAgentId = null;
+
+    public bool $showImportModal = false;
 
     public function sortBy(string $field): void
     {
@@ -43,6 +57,27 @@ class AgentListPage extends Component
         $this->resetPage();
     }
 
+    public function importWorkspace(): void
+    {
+        $this->validate(['importFile' => 'required|file|mimes:zip,yaml,yml|max:10240']);
+
+        $action = app(ImportAgentWorkspaceAction::class);
+        $result = $action->execute(
+            $this->importFile,
+            auth()->user()->current_team_id,
+            $this->importMode,
+            $this->mergeAgentId,
+        );
+
+        $this->showImportModal = false;
+        $this->importFile = null;
+        $this->importMode = 'create';
+        $this->mergeAgentId = null;
+
+        session()->flash('message', "Agent imported: {$result['agent_name']}");
+        $this->redirect(route('agents.show', $result['agent_id']));
+    }
+
     public function render()
     {
         $query = Agent::query()->notChatbotAgent()
@@ -61,7 +96,17 @@ class AgentListPage extends Component
             $query->where('status', $this->statusFilter);
         }
 
-        $query->orderBy($this->sortField, $this->sortDirection);
+        if ($this->scopeFilter !== 'all') {
+            $query->where('scope', $this->scopeFilter);
+        }
+
+        if (auth()->check()) {
+            $query->visibleTo(auth()->user());
+        }
+
+        $allowedSorts = ['name', 'created_at', 'status', 'updated_at', 'provider', 'model'];
+        $sortField = in_array($this->sortField, $allowedSorts) ? $this->sortField : 'created_at';
+        $query->orderBy($sortField, $this->sortDirection);
 
         return view('livewire.agents.agent-list-page', [
             'agents' => $query->paginate(20),

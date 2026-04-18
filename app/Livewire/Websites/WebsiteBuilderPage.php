@@ -2,74 +2,72 @@
 
 namespace App\Livewire\Websites;
 
+use App\Domain\Website\Actions\PublishWebsitePageAction;
 use App\Domain\Website\Actions\UpdateWebsitePageAction;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
-use App\Domain\Website\Services\GrapesJsExporter;
-use App\Domain\Website\Services\WebsiteBlockRegistry;
-use Livewire\Attributes\Locked;
-use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 class WebsiteBuilderPage extends Component
 {
-    #[Locked]
     public Website $website;
 
-    #[Locked]
     public WebsitePage $page;
 
-    /** @var array<string, mixed> Serialised GrapesJS editor state (synced via Alpine.js) */
-    public array $grapesJson = [];
+    public string $title = '';
 
-    public string $exportedHtml = '';
+    public string $slug = '';
 
-    public string $exportedCss = '';
+    public string $pageType = 'page';
 
     public function mount(Website $website, WebsitePage $page): void
     {
+        abort_if($page->website_id !== $website->id, 404);
+
         $this->website = $website;
         $this->page = $page;
-        $this->grapesJson = $page->grapes_json ?? [];
-        $this->exportedHtml = app(GrapesJsExporter::class)->stripLlmPreamble($page->exported_html ?? '');
-        $this->exportedCss = $page->exported_css ?? '';
+        $this->title = $page->title;
+        $this->slug = $page->slug;
+        $this->pageType = $page->page_type->value;
     }
 
-    /**
-     * Called by Alpine.js when the editor content changes and the user clicks Save.
-     * Renderless: Livewire must NOT re-render after this action — doing so would
-     * re-initialize GrapesJS via x-init, doubling blocks and freezing the page.
-     *
-     * @param  array<string, mixed>  $grapesJson  Full GrapesJS project data
-     * @param  string  $html  Cleaned HTML from GrapesJS
-     * @param  string  $css  Cleaned CSS from GrapesJS
-     */
-    #[Renderless]
-    public function save(array $grapesJson, string $html, string $css, UpdateWebsitePageAction $action): void
+    public function saveContent(array $grapesJson, string $html, string $css): void
     {
-        $action->execute(
-            page: $this->page,
-            data: [
-                'grapes_json' => $grapesJson,
-                'exported_html' => $html,
-                'exported_css' => $css,
-            ],
-        );
+        app(UpdateWebsitePageAction::class)->execute($this->page, [
+            'grapes_json' => $grapesJson,
+            'exported_html' => $html,
+            'exported_css' => $css,
+        ]);
+
+        $this->dispatch('saved');
+    }
+
+    public function saveSettings(): void
+    {
+        $this->validate([
+            'title' => 'required|max:255',
+            'slug' => 'required|max:255',
+        ]);
+
+        app(UpdateWebsitePageAction::class)->execute($this->page, [
+            'title' => $this->title,
+            'slug' => $this->slug,
+            'page_type' => $this->pageType,
+        ]);
+
+        session()->flash('message', 'Settings saved.');
+    }
+
+    public function publishPage(): void
+    {
+        app(PublishWebsitePageAction::class)->execute($this->page);
+
+        session()->flash('message', 'Page published.');
     }
 
     public function render()
     {
-        $registry = app(WebsiteBlockRegistry::class);
-
-        return view('livewire.websites.website-builder-page', [
-            'blocks' => $registry->blocks(),
-            'editorScripts' => $registry->scripts(),
-            'editorStyles' => $registry->styles(),
-        ])->layout('layouts.app', [
-            'header' => "Builder — {$this->page->title}",
-            // Suppress @mcp-b/global on the builder page — its DOM-mutation observer
-            // fires on every GrapesJS panel update and freezes the renderer.
-            'suppressWebmcp' => true,
-        ]);
+        return view('livewire.websites.website-builder-page')
+            ->layout('layouts.app', ['header' => $this->page->title]);
     }
 }

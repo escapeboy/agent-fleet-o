@@ -7,7 +7,9 @@ use App\Mcp\Tools\Knowledge\KnowledgeBaseDeleteTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseIngestTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseListTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseSearchTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class KnowledgeManageTool extends CompactTool
 {
     protected string $name = 'knowledge_manage';

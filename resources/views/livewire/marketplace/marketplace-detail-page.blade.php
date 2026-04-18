@@ -95,6 +95,77 @@
         </div>
     </div>
 
+    {{-- Security Scan --}}
+    @if(in_array($listing->type, ['skill', 'agent', 'workflow']))
+        @php
+            $riskScan    = $listing->risk_scan ?? null;
+            $riskLevel   = $riskScan['level'] ?? null;
+            $riskFindings = $riskScan['findings'] ?? [];
+            $riskHistory  = $riskScan['history'] ?? [];
+            $riskColors  = [
+                'none'     => ['bg' => 'bg-green-50',  'border' => 'border-green-200', 'text' => 'text-green-700',  'badge' => 'bg-green-100 text-green-800'],
+                'low'      => ['bg' => 'bg-yellow-50', 'border' => 'border-yellow-200','text' => 'text-yellow-700', 'badge' => 'bg-yellow-100 text-yellow-800'],
+                'medium'   => ['bg' => 'bg-orange-50', 'border' => 'border-orange-200','text' => 'text-orange-700', 'badge' => 'bg-orange-100 text-orange-800'],
+                'high'     => ['bg' => 'bg-red-50',    'border' => 'border-red-200',   'text' => 'text-red-700',    'badge' => 'bg-red-100 text-red-800'],
+                'critical' => ['bg' => 'bg-red-100',   'border' => 'border-red-300',   'text' => 'text-red-900',    'badge' => 'bg-red-200 text-red-900'],
+            ];
+            $colors = $riskColors[$riskLevel] ?? ['bg' => 'bg-gray-50', 'border' => 'border-gray-200', 'text' => 'text-gray-500', 'badge' => 'bg-gray-100 text-gray-600'];
+        @endphp
+        <div class="mb-6 rounded-xl border {{ $riskLevel ? $colors['border'] : 'border-gray-200' }} {{ $riskLevel ? $colors['bg'] : 'bg-gray-50' }} p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="h-4 w-4 {{ $riskLevel ? $colors['text'] : 'text-gray-400' }}" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-sm font-medium text-gray-700">Security Scan</span>
+                    @if($riskLevel)
+                        <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ $colors['badge'] }}">
+                            {{ ucfirst($riskLevel) }} risk
+                        </span>
+                        @if(!empty($riskHistory))
+                            <span class="text-xs text-gray-400">
+                                Trend:
+                                @foreach(array_slice(array_reverse($riskHistory), 0, 5) as $h)
+                                    <span class="{{ match($h['level'] ?? '') { 'none' => 'text-green-600', 'low' => 'text-yellow-600', 'medium' => 'text-orange-500', 'high', 'critical' => 'text-red-600', default => 'text-gray-400' } }}">&#9632;</span>
+                                @endforeach
+                                <span class="{{ $colors['text'] }}">&#9632;</span>
+                            </span>
+                        @endif
+                    @endif
+                </div>
+                @if($riskScan)
+                    <span class="text-xs text-gray-400">
+                        Scanned {{ \Carbon\Carbon::parse($riskScan['scanned_at'])->diffForHumans() }}
+                    </span>
+                @endif
+            </div>
+
+            @if(!$riskScan)
+                <p class="mt-2 text-xs text-gray-400">Security scan pending — results appear shortly after publish.</p>
+            @elseif($riskLevel === 'none')
+                <p class="mt-2 text-xs {{ $colors['text'] }}">No security concerns found by AI scan.</p>
+            @elseif(!empty($riskFindings))
+                <div class="mt-3 space-y-2">
+                    @foreach($riskFindings as $finding)
+                        <div class="flex items-start gap-2 text-xs">
+                            <span class="mt-0.5 shrink-0 rounded px-1.5 py-0.5 font-medium
+                                {{ match($finding['severity'] ?? 'low') {
+                                    'critical' => 'bg-red-200 text-red-900',
+                                    'high'     => 'bg-red-100 text-red-800',
+                                    'medium'   => 'bg-orange-100 text-orange-800',
+                                    default    => 'bg-yellow-100 text-yellow-800',
+                                } }}">
+                                {{ ucfirst($finding['severity'] ?? 'low') }}
+                            </span>
+                            <span class="font-medium text-gray-700">{{ str_replace('_', ' ', ucfirst($finding['type'] ?? '')) }}:</span>
+                            <span class="text-gray-600">{{ $finding['explanation'] ?? '' }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    @endif
+
     {{-- Tags --}}
     @if($listing->category || !empty($listing->tags))
         <div class="mb-4 flex flex-wrap gap-1">

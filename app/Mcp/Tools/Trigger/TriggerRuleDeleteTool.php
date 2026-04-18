@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Trigger;
 
 use App\Domain\Trigger\Actions\DeleteTriggerRuleAction;
 use App\Domain\Trigger\Models\TriggerRule;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('destructive')]
 class TriggerRuleDeleteTool extends Tool
 {
     protected string $name = 'trigger_rule_delete';

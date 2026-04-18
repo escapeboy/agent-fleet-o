@@ -14,6 +14,7 @@ use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -100,6 +101,12 @@ class TeamSettingsPage extends Component
 
     public int $experimentTtlMinutes = 120;
 
+    // Model allowlist
+    public string $allowedModelsInput = '';
+
+    // Session TTL
+    public int $maxSessionDurationMinutes = 0;
+
     // MCP tool preferences
     public string $mcpToolProfile = 'full';
 
@@ -143,6 +150,8 @@ class TeamSettingsPage extends Component
         $this->scoutPhaseEnabled = (bool) ($settings['scout_phase_enabled'] ?? config('agent.scout_phase.enabled', false));
         $this->contextCompactionEnabled = (bool) ($settings['context_compaction_enabled'] ?? config('context_compaction.enabled', true));
         $this->experimentTtlMinutes = (int) ($settings['experiment_ttl_minutes'] ?? config('experiments.default_ttl_minutes', 120));
+        $this->allowedModelsInput = implode("\n", $team->allowed_models ?? []);
+        $this->maxSessionDurationMinutes = (int) ($settings['max_session_duration_minutes'] ?? 0);
 
         // Bridge routing preferences
         $bridgeSettings = $settings['bridge'] ?? [];
@@ -188,6 +197,8 @@ class TeamSettingsPage extends Component
 
     public function saveLlmDefaults(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         $settings = $team->settings ?? [];
 
@@ -201,6 +212,8 @@ class TeamSettingsPage extends Component
 
     public function saveAssistantLlm(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'assistantProvider' => 'required|string',
             'assistantModel' => 'required|string',
@@ -217,6 +230,8 @@ class TeamSettingsPage extends Component
 
     public function saveMediaAnalysis(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         $settings = $team->settings ?? [];
         $settings['media_analysis_enabled'] = $this->mediaAnalysisEnabled;
@@ -227,6 +242,8 @@ class TeamSettingsPage extends Component
 
     public function saveChatbotSettings(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         $settings = $team->settings ?? [];
         $settings['chatbot_enabled'] = $this->chatbotEnabled;
@@ -263,6 +280,37 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'AI features saved.');
+    }
+
+    public function saveModelAllowlist(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $team = auth()->user()->currentTeam;
+
+        $models = array_values(array_filter(
+            array_map('trim', explode("\n", $this->allowedModelsInput)),
+        ));
+
+        $team->update(['allowed_models' => empty($models) ? null : $models]);
+
+        session()->flash('message', 'Model allowlist saved.');
+    }
+
+    public function saveSessionTtl(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $this->validate(['maxSessionDurationMinutes' => 'integer|min:0|max:10080']);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['max_session_duration_minutes'] = $this->maxSessionDurationMinutes > 0
+            ? $this->maxSessionDurationMinutes
+            : null;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Session TTL saved.');
     }
 
     public function saveApprovalSettings(): void
@@ -836,6 +884,17 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Bridge routing saved.');
+    }
+
+    public function rotateWidgetKey(): void
+    {
+        $this->authorize('manage-team');
+
+        auth()->user()->currentTeam->update([
+            'widget_public_key' => 'wk_'.Str::random(40),
+        ]);
+
+        session()->flash('message', 'Widget public key rotated.');
     }
 
     public function render()

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Tool;
 
 use App\Infrastructure\AI\Services\EmbeddingService;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  */
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class ToolSearchTool extends Tool
 {
     protected string $name = 'tool_search';

@@ -47,6 +47,7 @@
         "fleetq/website-plugin-ecommerce": "^1.0",
         "asbiin/laravel-webauthn": "^5.4",
         "dedoc/scramble": "^0.13.12",
+        "ezyang/htmlpurifier": "^4.19",
         "laravel-notification-channels/webpush": "*",
         "laravel/ai": "*",
         "laravel/fortify": "^1.34",

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\Signal;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class SignalGetTool extends Tool
 {
     protected string $name = 'signal_get';
@@ -59,6 +61,7 @@ class SignalGetTool extends Tool
             'payload' => $signal->payload,
             'score' => $signal->score,
             'scored_at' => $signal->scored_at?->toIso8601String(),
+            'metadata' => $signal->metadata,
             'experiment_id' => $signal->experiment_id,
             'attachments' => $attachments,
             'created_at' => $signal->created_at?->toIso8601String(),

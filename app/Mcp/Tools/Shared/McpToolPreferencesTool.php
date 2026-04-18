@@ -3,12 +3,16 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
+use App\Mcp\Attributes\AssistantTool;
 use Generator;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class McpToolPreferencesTool extends Tool
 {
     protected string $name = 'mcp_tool_preferences';

@@ -12,6 +12,7 @@ use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -50,7 +51,8 @@ class GitRepositoryController extends Controller
             'mode' => ['required', new Enum(GitRepoMode::class)],
             'provider' => ['sometimes', new Enum(GitProvider::class)],
             'default_branch' => ['sometimes', 'string', 'max:255'],
-            'credential_id' => ['nullable', 'uuid', 'exists:credentials,id'],
+            'credential_id' => ['nullable', 'uuid',
+                Rule::exists('credentials', 'id')->where('team_id', $request->user()?->current_team_id)],
             'config' => ['sometimes', 'array'],
         ]);
 
@@ -74,7 +76,8 @@ class GitRepositoryController extends Controller
             'name' => ['sometimes', 'string', 'min:2', 'max:255'],
             'default_branch' => ['sometimes', 'string', 'max:255'],
             'status' => ['sometimes', new Enum(GitRepositoryStatus::class)],
-            'credential_id' => ['nullable', 'uuid', 'exists:credentials,id'],
+            'credential_id' => ['nullable', 'uuid',
+                Rule::exists('credentials', 'id')->where('team_id', $request->user()?->current_team_id)],
             'config' => ['sometimes', 'array'],
         ]);
 

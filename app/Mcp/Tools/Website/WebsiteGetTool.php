@@ -16,44 +16,39 @@ class WebsiteGetTool extends Tool
 {
     protected string $name = 'website_get';
 
-    protected string $description = 'Get a website by ID or slug, including its pages list.';
+    protected string $description = 'Get a website by ID including its pages.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'id' => $schema->string()
-                ->description('Website UUID'),
-            'slug' => $schema->string()
-                ->description('Website slug'),
+            'website_id' => $schema->string()->description('The website UUID'),
         ];
     }
 
     public function handle(Request $request): Response
     {
-        $website = $request->get('id')
-            ? Website::with('pages')->find($request->get('id'))
-            : Website::with('pages')->where('slug', $request->get('slug'))->first();
+        $website = Website::with('pages')->find($request->get('website_id'));
 
         if (! $website) {
-            return Response::error('Website not found.');
+            return Response::text(json_encode(['error' => 'Website not found'], JSON_PRETTY_PRINT));
         }
 
         return Response::text(json_encode([
             'id' => $website->id,
             'name' => $website->name,
             'slug' => $website->slug,
-            'status' => $website->status->value,
+            'status' => $website->status instanceof \BackedEnum ? $website->status->value : $website->status,
             'custom_domain' => $website->custom_domain,
             'settings' => $website->settings,
+            'created_at' => $website->created_at?->toIso8601String(),
+            'updated_at' => $website->updated_at?->toIso8601String(),
             'pages' => $website->pages->map(fn ($p) => [
                 'id' => $p->id,
                 'slug' => $p->slug,
                 'title' => $p->title,
-                'page_type' => $p->page_type->value,
-                'status' => $p->status->value,
-                'has_content' => ! empty($p->exported_html),
+                'status' => $p->status instanceof \BackedEnum ? $p->status->value : $p->status,
                 'sort_order' => $p->sort_order,
-            ])->toArray(),
-        ]));
+            ]),
+        ], JSON_PRETTY_PRINT));
     }
 }

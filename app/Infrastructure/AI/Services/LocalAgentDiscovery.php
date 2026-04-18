@@ -154,6 +154,51 @@ class LocalAgentDiscovery
     }
 
     /**
+     * Direct (bypass relay/bridge) detection for the VPS-installed Claude Code
+     * binary. Returns the absolute binary path when found + valid, null otherwise.
+     *
+     * The regular detect()/binaryPath() flow short-circuits to the relay on hosts
+     * that run fleetq-bridge as a relay (e.g. fleetq.net prod), so the VPS-local
+     * claude would never be found through it. This method is the dedicated seam
+     * for the super-admin-gated VPS provider.
+     *
+     * Deliberately NOT gated on `config('local_agents.enabled')`: the cloud
+     * edition forces that global flag to false as a safety net against the
+     * generic local-agent shell-execution path. The VPS path has its own gate
+     * in ClaudeCodeVpsGate + the gateway-level assertAllowed() check.
+     */
+    public function vpsBinaryPath(): ?string
+    {
+        $configured = config('local_agents.vps.binary_path');
+        if (is_string($configured) && $configured !== '' && is_executable($configured)) {
+            return $configured;
+        }
+
+        try {
+            $process = Process::fromShellCommandline('which claude');
+            $process->setTimeout(5);
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                $path = trim($process->getOutput());
+
+                return $path !== '' ? $path : null;
+            }
+        } catch (\Throwable $e) {
+            Log::debug('LocalAgentDiscovery: vps claude probe failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    public function isVpsAgentAvailable(): bool
+    {
+        return $this->vpsBinaryPath() !== null;
+    }
+
+    /**
      * Whether the app is running inside Docker and should use the host bridge.
      */
     public function isBridgeMode(): bool

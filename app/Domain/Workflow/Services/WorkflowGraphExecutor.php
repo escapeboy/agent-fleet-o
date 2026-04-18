@@ -2,29 +2,28 @@
 
 namespace App\Domain\Workflow\Services;
 
-use App\Domain\Approval\Actions\CreateHumanTaskAction;
-use App\Domain\Crew\Jobs\ExecuteCrewWorkflowNodeJob;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
-use App\Domain\Experiment\Pipeline\ExecutePlaybookStepJob;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\ProjectRun;
-use App\Domain\Workflow\Actions\DispatchSubWorkflowAction;
+use App\Domain\Signal\Models\Signal;
 use App\Domain\Workflow\Actions\DynamicForkFanOutAction;
-use App\Domain\Workflow\Actions\HandleTimeGateAction;
+use App\Domain\Workflow\Actions\ExecuteSubWorkflowAction;
 use App\Domain\Workflow\Actions\RunCompensationChainAction;
-use App\Domain\Workflow\Jobs\ExecuteWorkflowNodeJob;
-use App\Domain\Workflow\Models\WorkflowNode;
-use Illuminate\Support\Facades\Bus;
+use App\Domain\Workflow\Enums\WorkflowNodeType;
+use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class WorkflowGraphExecutor
 {
     public function __construct(
         private readonly TransitionExperimentAction $transitionAction,
         private readonly ConditionEvaluator $conditionEvaluator,
+        private readonly WorkflowNodeDispatcher $nodeDispatcher,
     ) {}
 
     /**
@@ -55,6 +54,16 @@ class WorkflowGraphExecutor
             return;
         }
 
+        // Emit observability trace start if configured on the workflow
+        $workflowModel = Workflow::withoutGlobalScopes()
+            ->where('id', $graph['workflow_id'] ?? null)
+            ->first();
+
+        $traceId = $workflowModel ? $this->emitObservabilityTrace($workflowModel, 'start', [
+            'experiment_id' => $experiment->id,
+            'workflow_name' => $workflowModel->name,
+        ]) : null;
+
         $steps = PlaybookStep::where('experiment_id', $experiment->id)
             ->orderBy('order')
             ->get()
@@ -79,8 +88,8 @@ class WorkflowGraphExecutor
         }
 
         // Build adjacency + edge maps from snapshot
-        $adjacency = $this->buildAdjacencyMap($graph['edges']);
-        $edgeMap = $this->buildEdgeMap($graph['edges']);
+        $adjacency = WorkflowGraphAnalyzer::buildAdjacencyMap($graph['edges']);
+        $edgeMap = WorkflowGraphAnalyzer::buildEdgeMap($graph['edges']);
         $nodeMap = collect($graph['nodes'])->keyBy('id')->toArray();
         $maxLoopIterations = $graph['max_loop_iterations'] ?? 10;
 
@@ -95,7 +104,7 @@ class WorkflowGraphExecutor
 
         // Filter to nodes whose ALL predecessors are complete (join semantics).
         // Merge nodes use OR semantics (any predecessor complete is enough).
-        $executableNodeIds = $this->filterReadyNodes($executableNodeIds, $graph['edges'], $steps, $nodeMap);
+        $executableNodeIds = WorkflowGraphAnalyzer::filterReadyNodes($executableNodeIds, $graph['edges'], $steps, $nodeMap);
 
         if (empty($executableNodeIds)) {
             [$state, $msg] = $this->resolveCompletionState($experiment, 'Workflow completed');
@@ -130,8 +139,8 @@ class WorkflowGraphExecutor
             ->get()
             ->keyBy('workflow_node_id');
 
-        $adjacency = $this->buildAdjacencyMap($graph['edges']);
-        $edgeMap = $this->buildEdgeMap($graph['edges']);
+        $adjacency = WorkflowGraphAnalyzer::buildAdjacencyMap($graph['edges']);
+        $edgeMap = WorkflowGraphAnalyzer::buildEdgeMap($graph['edges']);
         $nodeMap = collect($graph['nodes'])->keyBy('id')->toArray();
         $maxLoopIterations = $graph['max_loop_iterations'] ?? 10;
 
@@ -154,7 +163,7 @@ class WorkflowGraphExecutor
         $nextNodeIds = array_unique($nextNodeIds);
 
         // Filter to nodes where ALL predecessors are complete (AND) or ANY (Merge/OR).
-        $nextNodeIds = $this->filterReadyNodes($nextNodeIds, $graph['edges'], $steps, $nodeMap);
+        $nextNodeIds = WorkflowGraphAnalyzer::filterReadyNodes($nextNodeIds, $graph['edges'], $steps, $nodeMap);
 
         $executableNodeIds = $this->resolveExecutableNodes(
             $nextNodeIds, $nodeMap, $edgeMap, $adjacency, $steps, $experiment, $maxLoopIterations,
@@ -243,6 +252,79 @@ class WorkflowGraphExecutor
         $type = $node['type'];
 
         if ($type === 'end') {
+            return;
+        }
+
+        if ($type === 'annotation') {
+            return;
+        }
+
+        if ($type === 'workflow_ref') {
+            // Execute a referenced workflow inline and inject its output into the experiment context.
+            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+            $refWorkflowId = $config['ref_workflow_id'] ?? null;
+
+            if (! $refWorkflowId) {
+                Log::warning('WorkflowGraphExecutor: workflow_ref node missing ref_workflow_id', [
+                    'node_id' => $nodeId,
+                    'experiment_id' => $experiment->id,
+                ]);
+
+                return;
+            }
+
+            $refWorkflow = Workflow::withoutGlobalScopes()
+                ->where('id', $refWorkflowId)
+                ->where('team_id', $experiment->team_id)
+                ->first();
+
+            if (! $refWorkflow) {
+                Log::warning('WorkflowGraphExecutor: workflow_ref target not found', [
+                    'ref_workflow_id' => $refWorkflowId,
+                    'experiment_id' => $experiment->id,
+                ]);
+
+                return;
+            }
+
+            // Resolve input from input_mapping (dot-notation into accumulated step outputs)
+            $context = $this->buildNodeContext($steps, $experiment);
+            $inputMapping = $config['input_mapping'] ?? [];
+            $subInput = [];
+            foreach ($inputMapping as $targetKey => $sourcePath) {
+                $subInput[$targetKey] = data_get($context, $sourcePath);
+            }
+
+            try {
+                $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $subInput, 0);
+                $outputKey = $config['output_key'] ?? 'sub_workflow_output';
+
+                // Store result so downstream nodes can reference it
+                $step = $steps[$nodeId] ?? null;
+                if ($step) {
+                    $step->update([
+                        'status' => 'completed',
+                        'output' => [$outputKey => $subOutput],
+                        'completed_at' => now(),
+                    ]);
+                    $executable[] = $nodeId;
+                }
+            } catch (\Throwable $e) {
+                Log::error('WorkflowGraphExecutor: workflow_ref execution failed', [
+                    'node_id' => $nodeId,
+                    'ref_workflow_id' => $refWorkflowId,
+                    'error' => $e->getMessage(),
+                ]);
+                $step = $steps[$nodeId] ?? null;
+                if ($step) {
+                    $step->update([
+                        'status' => 'failed',
+                        'error_message' => 'Sub-workflow failed: '.$e->getMessage(),
+                        'completed_at' => now(),
+                    ]);
+                }
+            }
+
             return;
         }
 
@@ -483,6 +565,90 @@ class WorkflowGraphExecutor
             return;
         }
 
+        if ($type === 'iteration') {
+            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+            $sourceExpression = $config['source_expression'] ?? null;
+            $itemVariable = $config['item_variable'] ?? 'item';
+            $maxParallel = max(1, (int) ($config['max_parallel'] ?? 5));
+
+            $context = $this->buildNodeContext($steps, $experiment);
+            $items = $sourceExpression ? data_get($context, $sourceExpression) : null;
+
+            $outgoingEdge = collect($edgeMap[$nodeId] ?? [])->first();
+
+            if (! $outgoingEdge || ! is_array($items) || empty($items)) {
+                if ($outgoingEdge) {
+                    $this->resolveNode(
+                        $outgoingEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                    );
+                }
+
+                return;
+            }
+
+            $templateNodeId = $outgoingEdge['target_node_id'];
+            $templateStep = $steps[$templateNodeId] ?? null;
+
+            if ($templateStep && $templateStep->isPending()) {
+                $chunks = array_chunk(array_values($items), $maxParallel);
+                $templateStep->update([
+                    'input_mapping' => array_merge($templateStep->input_mapping ?? [], [
+                        '_iteration_items' => array_values($items),
+                        '_iteration_variable' => $itemVariable,
+                        '_iteration_chunks' => $chunks,
+                    ]),
+                ]);
+                $executable[] = $templateNodeId;
+            }
+
+            return;
+        }
+
+        if ($type === 'signal_route') {
+            // Route based on a field in the experiment's signal metadata.
+            // Config: { "attribute": "priority", "edges": [{"value": "critical", "case_value": "..."}] }
+            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+            $attribute = $config['attribute'] ?? null;
+
+            // Resolve signal metadata from experiment context
+            $signalData = [];
+            if ($experiment->signal_id) {
+                $signal = Signal::withoutGlobalScopes()
+                    ->find($experiment->signal_id);
+                $signalData = $signal?->metadata ?? [];
+            }
+
+            $attributeValue = $attribute ? data_get($signalData, $attribute) : null;
+
+            $outgoingEdges = collect($edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+
+            $matchedEdge = $outgoingEdges->first(function ($edge) use ($attributeValue) {
+                return ! ($edge['is_default'] ?? false)
+                    && isset($edge['case_value'])
+                    && (string) $edge['case_value'] === (string) $attributeValue;
+            });
+
+            if ($matchedEdge) {
+                $this->resolveNode(
+                    $matchedEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                );
+
+                return;
+            }
+
+            $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
+            if ($defaultEdge) {
+                $this->resolveNode(
+                    $defaultEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
+                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
+                );
+            }
+
+            return;
+        }
+
         // Merge node — OR fan-in: pass through to successors immediately.
         // filterReadyNodes handles the OR semantics (any predecessor complete).
         if ($type === 'merge') {
@@ -505,56 +671,6 @@ class WorkflowGraphExecutor
                 );
             }
         }
-    }
-
-    /**
-     * Filter candidate node IDs to only those that are ready to execute.
-     *
-     * Activation modes (per-node via activation_mode field):
-     * - 'all' (default, AND): ALL incoming predecessors must be complete.
-     * - 'any' (OR): ANY predecessor complete is sufficient.
-     * - 'n_of_m' (threshold): At least N predecessors must be complete (N = activation_threshold).
-     *
-     * Merge nodes default to 'any' for backward compatibility.
-     */
-    private function filterReadyNodes(array $candidateNodeIds, array $edges, $steps, array $nodeMap = []): array
-    {
-        $ready = [];
-
-        foreach ($candidateNodeIds as $nodeId) {
-            $incomingEdges = collect($edges)->where('target_node_id', $nodeId);
-            $node = $nodeMap[$nodeId] ?? [];
-            $nodeType = $node['type'] ?? null;
-
-            // Determine activation mode: explicit config > merge backward compat > default 'all'
-            $activationMode = $node['activation_mode'] ?? null;
-            if (! $activationMode) {
-                $activationMode = ($nodeType === 'merge') ? 'any' : 'all';
-            }
-
-            $completedCount = 0;
-            $totalCount = $incomingEdges->count();
-
-            foreach ($incomingEdges as $edge) {
-                $sourceStep = $steps[$edge['source_node_id']] ?? null;
-                // Control-flow nodes have no step — always "complete"
-                if (! $sourceStep || $sourceStep->isCompleted() || $sourceStep->isSkipped()) {
-                    $completedCount++;
-                }
-            }
-
-            $isReady = match ($activationMode) {
-                'any' => $completedCount > 0,
-                'n_of_m' => $completedCount >= max(1, (int) ($node['activation_threshold'] ?? $totalCount)),
-                default => $completedCount >= $totalCount, // 'all' — AND semantics
-            };
-
-            if ($isReady) {
-                $ready[] = $nodeId;
-            }
-        }
-
-        return $ready;
     }
 
     /**
@@ -589,280 +705,7 @@ class WorkflowGraphExecutor
      */
     private function dispatchNodeBatch(Experiment $experiment, array $nodeIds, array $graph, $steps): void
     {
-        $jobs = [];
-        $dispatchedNodeIds = [];
-        $adjacency = $this->buildAdjacencyMap($graph['edges']);
-        $nodeMap = collect($graph['nodes'])->keyBy('id')->toArray();
-
-        // Sort nodes by priority (highest first) so the most impactful nodes execute first
-        $priorities = $this->calculateNodePriorities($nodeIds, $adjacency, $nodeMap);
-        arsort($priorities);
-        $sortedNodeIds = array_keys($priorities);
-
-        Log::info('WorkflowGraphExecutor: Node priorities', [
-            'experiment_id' => $experiment->id,
-            'priorities' => $priorities,
-        ]);
-
-        foreach ($sortedNodeIds as $nodeId) {
-            $step = $steps[$nodeId] ?? null;
-
-            if (! $step || (! $step->isPending() && $step->status !== 'running')) {
-                continue;
-            }
-
-            $nodeType = $nodeMap[$nodeId]['type'] ?? 'agent';
-
-            if ($nodeType === 'human_task') {
-                // Human tasks create an approval request instead of dispatching a job
-                $this->dispatchHumanTask($step, $experiment, $nodeMap[$nodeId]);
-                $dispatchedNodeIds[] = $nodeId;
-
-                continue;
-            }
-
-            if ($nodeType === 'time_gate') {
-                // Time gates mark the step as waiting_time and schedule a delayed wakeup
-                $this->dispatchTimeGate($step, $experiment, $nodeMap[$nodeId]);
-                $dispatchedNodeIds[] = $nodeId;
-
-                continue;
-            }
-
-            if ($nodeType === 'sub_workflow') {
-                // Sub-workflow nodes spawn a child experiment and keep the step in "running"
-                $this->dispatchSubWorkflow($step, $experiment, $nodeMap[$nodeId]);
-                $dispatchedNodeIds[] = $nodeId;
-
-                continue;
-            }
-
-            if ($nodeType === 'crew') {
-                $jobs[] = new ExecuteCrewWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
-            } elseif (in_array($nodeType, ['llm', 'http_request', 'parameter_extractor', 'variable_aggregator', 'template_transform', 'knowledge_retrieval'], true)) {
-                // Lightweight node types use the dedicated ExecuteWorkflowNodeJob
-                $jobs[] = new ExecuteWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
-            } else {
-                // agent, boruna_step, and any future execution node types all use ExecutePlaybookStepJob
-                $jobs[] = new ExecutePlaybookStepJob($step->id, $experiment->id, $experiment->team_id);
-            }
-
-            $dispatchedNodeIds[] = $nodeId;
-        }
-
-        if (empty($jobs)) {
-            return;
-        }
-
-        $experimentId = $experiment->id;
-
-        Log::info('WorkflowGraphExecutor: Dispatching node batch', [
-            'experiment_id' => $experimentId,
-            'node_count' => count($jobs),
-            'node_ids' => $dispatchedNodeIds,
-        ]);
-
-        Bus::batch($jobs)
-            ->name("workflow:{$experimentId}:batch:".implode('-', array_slice($dispatchedNodeIds, 0, 3)))
-            ->onQueue('experiments')
-            ->allowFailures()
-            ->then(function () use ($experimentId, $dispatchedNodeIds) {
-                self::staticContinueAfterBatch($experimentId, $dispatchedNodeIds);
-            })
-            ->catch(function () use ($experimentId) {
-                self::staticHandleBatchFailure($experimentId);
-            })
-            ->dispatch();
-    }
-
-    private function dispatchHumanTask(PlaybookStep $step, Experiment $experiment, array $nodeData): void
-    {
-        $workflowNode = WorkflowNode::find($step->workflow_node_id);
-
-        if (! $workflowNode) {
-            Log::warning('WorkflowGraphExecutor: Human task node not found', [
-                'step_id' => $step->id,
-                'workflow_node_id' => $step->workflow_node_id,
-            ]);
-            $step->update([
-                'status' => 'failed',
-                'error_message' => 'Workflow node not found for human task',
-                'completed_at' => now(),
-            ]);
-
-            return;
-        }
-
-        try {
-            app(CreateHumanTaskAction::class)->execute($experiment, $step, $workflowNode);
-
-            Log::info('WorkflowGraphExecutor: Human task created', [
-                'step_id' => $step->id,
-                'experiment_id' => $experiment->id,
-                'node_label' => $nodeData['label'] ?? 'unknown',
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('WorkflowGraphExecutor: Failed to create human task', [
-                'step_id' => $step->id,
-                'error' => $e->getMessage(),
-            ]);
-            $step->update([
-                'status' => 'failed',
-                'error_message' => 'Failed to create human task: '.$e->getMessage(),
-                'completed_at' => now(),
-            ]);
-        }
-    }
-
-    private function dispatchTimeGate(PlaybookStep $step, Experiment $experiment, array $nodeData): void
-    {
-        try {
-            app(HandleTimeGateAction::class)->execute($step, $experiment, $nodeData);
-        } catch (\Throwable $e) {
-            Log::error('WorkflowGraphExecutor: Failed to activate time gate', [
-                'step_id' => $step->id,
-                'error' => $e->getMessage(),
-            ]);
-            $step->update([
-                'status' => 'failed',
-                'error_message' => 'Failed to activate time gate: '.$e->getMessage(),
-                'completed_at' => now(),
-            ]);
-        }
-    }
-
-    private function dispatchSubWorkflow(PlaybookStep $step, Experiment $experiment, array $nodeData): void
-    {
-        try {
-            app(DispatchSubWorkflowAction::class)->execute($step, $experiment, $nodeData);
-        } catch (\Throwable $e) {
-            Log::error('WorkflowGraphExecutor: Failed to dispatch sub-workflow', [
-                'step_id' => $step->id,
-                'error' => $e->getMessage(),
-            ]);
-            $step->update([
-                'status' => 'failed',
-                'error_message' => 'Failed to dispatch sub-workflow: '.$e->getMessage(),
-                'completed_at' => now(),
-            ]);
-        }
-    }
-
-    /**
-     * Calculate priority scores for nodes based on unblocking potential.
-     * Higher score = should execute first.
-     *
-     * Score = descendant_count * 2 + critical_path_depth + type_weight
-     */
-    private function calculateNodePriorities(array $nodeIds, array $adjacency, array $nodeMap): array
-    {
-        $priorities = [];
-
-        foreach ($nodeIds as $nodeId) {
-            $descendants = $this->countDescendants($nodeId, $adjacency);
-            $depth = $this->longestPathToEnd($nodeId, $adjacency, $nodeMap);
-
-            // Human tasks take longer — prioritize unblocking them first
-            $typeWeight = match ($nodeMap[$nodeId]['type'] ?? 'agent') {
-                'human_task' => 3,
-                'sub_workflow' => 3,
-                'crew' => 2,
-                'time_gate' => 2,
-                'agent' => 1,
-                'boruna_step' => 1,
-                'llm' => 1,
-                'http_request' => 1,
-                'parameter_extractor' => 1,
-                'knowledge_retrieval' => 1,
-                'variable_aggregator' => 0,
-                'template_transform' => 0,
-                default => 0,
-            };
-
-            $priorities[$nodeId] = ($descendants * 2) + $depth + $typeWeight;
-        }
-
-        return $priorities;
-    }
-
-    /**
-     * Count all transitive descendants of a node (BFS).
-     */
-    private function countDescendants(string $nodeId, array $adjacency): int
-    {
-        $visited = [];
-        $queue = $adjacency[$nodeId] ?? [];
-        $count = 0;
-
-        while (! empty($queue)) {
-            $current = array_shift($queue);
-            if (isset($visited[$current])) {
-                continue;
-            }
-            $visited[$current] = true;
-            $count++;
-            foreach ($adjacency[$current] ?? [] as $child) {
-                if (! isset($visited[$child])) {
-                    $queue[] = $child;
-                }
-            }
-        }
-
-        return $count;
-    }
-
-    /**
-     * Longest path from node to any end node (critical path approximation).
-     * Uses memoization and a visiting set to handle cycles safely.
-     */
-    private function longestPathToEnd(string $nodeId, array $adjacency, array $nodeMap, array &$memo = [], array &$visiting = []): int
-    {
-        if (isset($memo[$nodeId])) {
-            return $memo[$nodeId];
-        }
-
-        // Cycle detection: if we're already visiting this node, return 0
-        if (isset($visiting[$nodeId])) {
-            return 0;
-        }
-
-        if (($nodeMap[$nodeId]['type'] ?? '') === 'end') {
-            return $memo[$nodeId] = 0;
-        }
-
-        $visiting[$nodeId] = true;
-
-        $max = 0;
-        foreach ($adjacency[$nodeId] ?? [] as $child) {
-            $childDepth = $this->longestPathToEnd($child, $adjacency, $nodeMap, $memo, $visiting);
-            $max = max($max, $childDepth + 1);
-        }
-
-        unset($visiting[$nodeId]);
-
-        return $memo[$nodeId] = $max;
-    }
-
-    private function buildAdjacencyMap(array $edges): array
-    {
-        $map = [];
-
-        foreach ($edges as $edge) {
-            $map[$edge['source_node_id']][] = $edge['target_node_id'];
-        }
-
-        return $map;
-    }
-
-    private function buildEdgeMap(array $edges): array
-    {
-        $map = [];
-
-        foreach ($edges as $edge) {
-            $map[$edge['source_node_id']][] = $edge;
-        }
-
-        return $map;
+        $this->nodeDispatcher->dispatchBatch($experiment, $nodeIds, $graph, $steps);
     }
 
     /**
@@ -901,7 +744,7 @@ class WorkflowGraphExecutor
      * Static callback: continue execution after a batch completes.
      * Resolved from container to avoid serializing DI dependencies in closures.
      */
-    private static function staticContinueAfterBatch(string $experimentId, array $completedNodeIds): void
+    public static function continueAfterBatchStatic(string $experimentId, array $completedNodeIds): void
     {
         try {
             $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
@@ -917,7 +760,7 @@ class WorkflowGraphExecutor
                 'error' => $e->getMessage(),
             ]);
 
-            self::staticHandleBatchFailure($experimentId);
+            self::handleBatchFailureStatic($experimentId);
         }
     }
 
@@ -925,7 +768,7 @@ class WorkflowGraphExecutor
      * Static callback: handle batch failure by transitioning experiment.
      * Resolved from container to avoid serializing DI dependencies in closures.
      */
-    private static function staticHandleBatchFailure(string $experimentId): void
+    public static function handleBatchFailureStatic(string $experimentId): void
     {
         try {
             $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
@@ -955,5 +798,245 @@ class WorkflowGraphExecutor
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Execute a workflow's graph inline (without creating an Experiment row).
+     * Used by workflow_ref nodes to run sub-flows synchronously.
+     *
+     * Returns the accumulated step output keyed by node ID.
+     *
+     * @param  array<string, mixed>  $input
+     * @param  int  $depth  Current recursion depth (enforced by ExecuteSubWorkflowAction).
+     * @return array<string, mixed>
+     */
+    public function executeInline(Workflow $workflow, array $input, int $depth = 1): array
+    {
+        $nodes = $workflow->nodes()->orderBy('order')->get();
+        $edges = $workflow->edges()->get();
+
+        $nodeMap = $nodes->keyBy('id')->map(fn ($n) => [
+            'id' => $n->id,
+            'type' => $n->type instanceof WorkflowNodeType ? $n->type->value : $n->type,
+            'config' => $n->config ?? [],
+            'label' => $n->label,
+            'agent_id' => $n->agent_id,
+        ])->toArray();
+
+        $edgeList = $edges->map(fn ($e) => [
+            'source_node_id' => $e->source_node_id,
+            'target_node_id' => $e->target_node_id,
+            'condition' => $e->condition,
+            'is_default' => $e->is_default,
+            'sort_order' => $e->sort_order ?? 0,
+        ])->values()->toArray();
+
+        // Walk the graph depth-first and collect outputs from each executable node.
+        // For inline execution we run synchronously through non-async node types only.
+        $outputs = ['_input' => $input];
+
+        $adjacency = WorkflowGraphAnalyzer::buildAdjacencyMap($edgeList);
+
+        $startNode = collect($nodeMap)->firstWhere('type', 'start');
+        if (! $startNode) {
+            return $outputs;
+        }
+
+        // Propagate depth through workflow_ref node configs so nested calls enforce limits
+        foreach ($nodeMap as &$node) {
+            if (($node['type'] ?? '') === 'workflow_ref') {
+                $node['config']['_depth'] = $depth;
+            }
+        }
+        unset($node);
+
+        $visited = [];
+        $this->walkInline($startNode['id'], $nodeMap, $adjacency, $edgeList, $input, $outputs, $visited, $depth, $workflow->team_id);
+
+        return $outputs;
+    }
+
+    /**
+     * Recursive DFS walk for inline sub-workflow execution.
+     *
+     * @param  array<string, mixed>  $nodeMap
+     * @param  array<string, array<int, string>>  $adjacency
+     * @param  array<int, array<string, mixed>>  $edgeList
+     * @param  array<string, mixed>  $context
+     * @param  array<string, mixed>  $outputs
+     */
+    private function walkInline(
+        string $nodeId,
+        array $nodeMap,
+        array $adjacency,
+        array $edgeList,
+        array $context,
+        array &$outputs,
+        array &$visited,
+        int $depth,
+        string $teamId = '',
+    ): void {
+        if (isset($visited[$nodeId])) {
+            return;
+        }
+        $visited[$nodeId] = true;
+
+        $node = $nodeMap[$nodeId] ?? null;
+        if (! $node) {
+            return;
+        }
+
+        $type = $node['type'];
+
+        // Skip structural nodes
+        if (in_array($type, ['start', 'end', 'annotation'], true)) {
+            foreach ($adjacency[$nodeId] ?? [] as $next) {
+                $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth, $teamId);
+            }
+
+            return;
+        }
+
+        // Nested workflow_ref — enforce depth and delegate
+        if ($type === 'workflow_ref') {
+            $config = $node['config'] ?? [];
+            $refWorkflowId = $config['ref_workflow_id'] ?? null;
+            if ($refWorkflowId && $teamId) {
+                $refWorkflow = Workflow::withoutGlobalScopes()
+                    ->where('id', $refWorkflowId)
+                    ->where('team_id', $teamId)
+                    ->first();
+                if ($refWorkflow) {
+                    try {
+                        $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $context, $depth);
+                        $outputKey = $config['output_key'] ?? 'sub_workflow_output';
+                        $outputs[$nodeId] = [$outputKey => $subOutput];
+                    } catch (\Throwable $e) {
+                        Log::warning('WorkflowGraphExecutor: inline workflow_ref failed', [
+                            'ref_workflow_id' => $refWorkflowId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+            foreach ($adjacency[$nodeId] ?? [] as $next) {
+                $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth, $teamId);
+            }
+
+            return;
+        }
+
+        // For all other executable node types, record a placeholder output so
+        // downstream mappings can resolve against it. Actual computation would
+        // require the full Experiment pipeline; inline sub-workflows are intended
+        // for lightweight template/transform/parameter_extractor chains.
+        $outputs[$nodeId] = ['_node_type' => $type, '_skipped_async' => true];
+
+        foreach ($adjacency[$nodeId] ?? [] as $next) {
+            $this->walkInline($next, $nodeMap, $adjacency, $edgeList, $context, $outputs, $visited, $depth, $teamId);
+        }
+    }
+
+    /**
+     * Emit a fire-and-forget trace event to the workflow's configured observability provider.
+     *
+     * Supported providers: langfuse, langsmith.
+     * Failures are swallowed — observability must never break workflow execution.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function emitObservabilityTrace(Workflow $workflow, string $event, array $payload = []): ?string
+    {
+        $config = $workflow->observability_config ?? [];
+
+        if (empty($config['enabled']) || empty($config['provider'])) {
+            return null;
+        }
+
+        $provider = $config['provider'];
+        $providerConfig = $config['config'] ?? [];
+        $traceId = (string) Str::uuid();
+
+        try {
+            if ($provider === 'langfuse') {
+                $host = rtrim($providerConfig['host'] ?? 'https://cloud.langfuse.com', '/');
+                if (! $this->isSafeObservabilityUrl($host)) {
+                    return null;
+                }
+                $publicKey = $providerConfig['public_key'] ?? '';
+                $secretKey = $providerConfig['secret_key'] ?? '';
+
+                Http::withBasicAuth($publicKey, $secretKey)
+                    ->asJson()
+                    ->timeout(3)
+                    ->post("{$host}/api/public/ingestion", [
+                        'batch' => [
+                            [
+                                'id' => (string) Str::uuid(),
+                                'type' => 'trace-create',
+                                'timestamp' => now()->toIso8601String(),
+                                'body' => array_merge([
+                                    'id' => $traceId,
+                                    'name' => "workflow:{$workflow->name}:{$event}",
+                                    'metadata' => $payload,
+                                ], $event === 'end' ? ['output' => $payload] : ['input' => $payload]),
+                            ],
+                        ],
+                    ]);
+            } elseif ($provider === 'langsmith') {
+                $host = rtrim($providerConfig['host'] ?? 'https://api.smith.langchain.com', '/');
+                if (! $this->isSafeObservabilityUrl($host)) {
+                    return null;
+                }
+                $apiKey = $providerConfig['api_key'] ?? '';
+
+                Http::withHeaders(['x-api-key' => $apiKey])
+                    ->asJson()
+                    ->timeout(3)
+                    ->post("{$host}/runs", [
+                        'id' => $traceId,
+                        'name' => "workflow:{$workflow->name}:{$event}",
+                        'run_type' => 'chain',
+                        'inputs' => $event === 'start' ? $payload : [],
+                        'outputs' => $event === 'end' ? $payload : [],
+                        'start_time' => now()->toIso8601String(),
+                    ]);
+            }
+        } catch (\Throwable) {
+            // Observability failures must never interrupt workflow execution.
+        }
+
+        return $traceId;
+    }
+
+    /**
+     * Guard against SSRF: only allow HTTPS URLs pointing to public (non-RFC-1918) hosts.
+     */
+    private function isSafeObservabilityUrl(string $url): bool
+    {
+        $parsed = parse_url($url);
+        if (($parsed['scheme'] ?? '') !== 'https') {
+            return false;
+        }
+        $host = $parsed['host'] ?? '';
+        if (! $host) {
+            return false;
+        }
+        // Block loopback and link-local
+        if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+            return false;
+        }
+        // Resolve and block RFC-1918 / loopback / link-local ranges
+        $ip = gethostbyname($host);
+        if ($ip === $host && ! filter_var($ip, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+        foreach (['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.', '127.', '169.254.'] as $prefix) {
+            if (str_starts_with($ip, $prefix)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

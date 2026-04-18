@@ -7,11 +7,15 @@ use App\Domain\Tool\Models\Tool as ToolModel;
 use App\Domain\Tool\Models\ToolEmbedding;
 use App\Domain\Tool\Services\SemanticToolSelector;
 use App\Domain\Tool\Services\ToolTranslator;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class ToolEmbeddingManageTool extends Tool
 {
     protected string $name = 'tool_embedding_manage';

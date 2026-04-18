@@ -4,16 +4,20 @@ namespace App\Mcp\Tools\Credential;
 
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Credential\Models\CredentialVersion;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 /**
  * List the version history of a credential.
  *
  * Secret data is never returned — only metadata (version number, note, created_at).
  */
+#[IsReadOnly]
+#[AssistantTool('read')]
 class CredentialListVersionsTool extends Tool
 {
     protected string $name = 'credential_list_versions';

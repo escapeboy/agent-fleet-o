@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BridgeController;
 use App\Http\Controllers\Api\V1\BudgetController;
+use App\Http\Controllers\Api\V1\BugReportProjectConfigController;
+use App\Http\Controllers\Api\V1\BugReportSignalController;
 use App\Http\Controllers\Api\V1\ChatbotInstanceController;
 use App\Http\Controllers\Api\V1\CredentialController;
 use App\Http\Controllers\Api\V1\CrewController;
@@ -16,6 +18,8 @@ use App\Http\Controllers\Api\V1\EmailTemplateController;
 use App\Http\Controllers\Api\V1\EmailThemeController;
 use App\Http\Controllers\Api\V1\EvolutionController;
 use App\Http\Controllers\Api\V1\ExperimentController;
+use App\Http\Controllers\Api\V1\ExportWebsiteController;
+use App\Http\Controllers\Api\V1\FlowEvaluationController;
 use App\Http\Controllers\Api\V1\GitRepositoryController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IntegrationController;
@@ -28,9 +32,11 @@ use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProviderConfigController;
+use App\Http\Controllers\Api\V1\RouteMapController;
 use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillBenchmarkController;
 use App\Http\Controllers\Api\V1\SkillController;
+use App\Http\Controllers\Api\V1\SourceMapController;
 use App\Http\Controllers\Api\V1\SshFingerprintController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ToolController;
@@ -43,6 +49,7 @@ use App\Http\Controllers\Api\V1\WebsiteAssetController;
 use App\Http\Controllers\Api\V1\WebsiteController;
 use App\Http\Controllers\Api\V1\WebsitePageController;
 use App\Http\Controllers\Api\V1\WorkflowController;
+use App\Http\Controllers\Api\V1\WorkflowPluginNodesController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -95,6 +102,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/experiments/{experiment}/retry', [ExperimentController::class, 'retry']);
     Route::post('/experiments/{experiment}/kill', [ExperimentController::class, 'kill']);
     Route::post('/experiments/{experiment}/retry-from-step', [ExperimentController::class, 'retryFromStep']);
+    Route::post('/experiments/{experiment}/resume-from-checkpoint', [ExperimentController::class, 'resumeFromCheckpoint']);
     Route::get('/experiments/{experiment}/steps', [ExperimentController::class, 'steps']);
     Route::get('/experiments/{experiment}/snapshots', [ExperimentController::class, 'snapshots']);
     Route::get('/experiments/{experiment}/cost', [ExperimentController::class, 'cost']);
@@ -148,6 +156,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/signals', [SignalController::class, 'index']);
     Route::get('/signals/{signal}', [SignalController::class, 'show']);
     Route::post('/signals', [SignalController::class, 'store']);
+    Route::post('/signals/bug-report', [BugReportSignalController::class, 'store']);
+
+    // Bug Report enrichment APIs
+    Route::post('/source-maps', [SourceMapController::class, 'store']);
+    Route::post('/route-maps', [RouteMapController::class, 'store']);
+    Route::get('/route-maps/lookup', [RouteMapController::class, 'lookup']);
+    Route::get('/bug-report-configs/{project}', [BugReportProjectConfigController::class, 'show']);
+    Route::put('/bug-report-configs/{project}', [BugReportProjectConfigController::class, 'upsert']);
 
     // Approvals
     Route::get('/approvals', [ApprovalController::class, 'index']);
@@ -166,6 +182,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/workflows/{workflow}/cost', [WorkflowController::class, 'estimateCost']);
     Route::get('/workflows/{workflow}/export', [WorkflowController::class, 'export']);
     Route::post('/workflows/import', [WorkflowController::class, 'import']);
+    Route::get('/workflows/plugin-nodes', [WorkflowPluginNodesController::class, 'index']);
 
     // Crews
     Route::apiResource('crews', CrewController::class);
@@ -246,6 +263,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/integrations/{integration}/disconnect', [IntegrationController::class, 'disconnect']);
     Route::post('/integrations/{integration}/ping', [IntegrationController::class, 'ping']);
     Route::post('/integrations/{integration}/execute', [IntegrationController::class, 'execute']);
+    Route::post('/integrations/{integration}/sync', [IntegrationController::class, 'sync']);
     Route::get('/integrations/{integration}/capabilities', [IntegrationController::class, 'capabilities']);
 
     // Assistant conversations
@@ -331,25 +349,30 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/broadcasting/auth', [BridgeController::class, 'broadcastingAuth']);
 
     // Websites
-    Route::post('/websites/generate', [WebsiteController::class, 'generate']);
-    Route::get('/websites', [WebsiteController::class, 'index']);
-    Route::post('/websites', [WebsiteController::class, 'store']);
-    Route::get('/websites/{website}', [WebsiteController::class, 'show']);
-    Route::put('/websites/{website}', [WebsiteController::class, 'update']);
-    Route::delete('/websites/{website}', [WebsiteController::class, 'destroy']);
-    Route::get('/websites/{website}/export', [WebsiteController::class, 'export']);
-
-    // Website Pages (nested under website)
+    Route::apiResource('websites', WebsiteController::class);
+    Route::post('/websites/{website}/publish', [WebsiteController::class, 'publish']);
+    Route::post('/websites/{website}/unpublish', [WebsiteController::class, 'unpublish']);
+    Route::post('/websites/{website}/deploy', [WebsiteController::class, 'deploy']);
+    Route::get('/websites/{website}/deployments', [WebsiteController::class, 'deployments']);
+    Route::get('/websites/{website}/deployments/{deployment}', [WebsiteController::class, 'deployment']);
     Route::get('/websites/{website}/pages', [WebsitePageController::class, 'index']);
     Route::post('/websites/{website}/pages', [WebsitePageController::class, 'store']);
     Route::get('/websites/{website}/pages/{page}', [WebsitePageController::class, 'show']);
     Route::put('/websites/{website}/pages/{page}', [WebsitePageController::class, 'update']);
-    Route::delete('/websites/{website}/pages/{page}', [WebsitePageController::class, 'destroy']);
     Route::post('/websites/{website}/pages/{page}/publish', [WebsitePageController::class, 'publish']);
     Route::post('/websites/{website}/pages/{page}/unpublish', [WebsitePageController::class, 'unpublish']);
-
-    // Website Assets
+    Route::delete('/websites/{website}/pages/{page}', [WebsitePageController::class, 'destroy']);
     Route::get('/websites/{website}/assets', [WebsiteAssetController::class, 'index']);
     Route::post('/websites/{website}/assets', [WebsiteAssetController::class, 'store']);
     Route::delete('/websites/{website}/assets/{asset}', [WebsiteAssetController::class, 'destroy']);
+    Route::get('/websites/{website}/export', ExportWebsiteController::class);
+
+    // Flow Evaluations
+    Route::get('/flow-evaluations', [FlowEvaluationController::class, 'index']);
+    Route::post('/flow-evaluations', [FlowEvaluationController::class, 'store']);
+    Route::get('/flow-evaluations/{dataset}', [FlowEvaluationController::class, 'show']);
+    Route::post('/flow-evaluations/{dataset}/run', [FlowEvaluationController::class, 'run']);
+    Route::get('/flow-evaluations/{dataset}/runs', [FlowEvaluationController::class, 'runs']);
+    Route::get('/flow-evaluation-runs/{run}', [FlowEvaluationController::class, 'runShow']);
+    Route::get('/flow-evaluation-runs/{run}/results', [FlowEvaluationController::class, 'runResults']);
 });

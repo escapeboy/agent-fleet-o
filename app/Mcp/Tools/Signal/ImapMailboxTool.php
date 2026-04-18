@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\Tools\Signal;
 
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\Connector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -15,6 +16,7 @@ use Webklex\PHPIMAP\ClientManager;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class ImapMailboxTool extends Tool
 {
     protected string $name = 'imap_mailbox';

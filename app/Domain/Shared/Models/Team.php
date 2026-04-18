@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * @property array<string, mixed>|null $settings
@@ -29,6 +30,9 @@ class Team extends Model
             if (! $team->credential_key) {
                 $team->credential_key = CredentialEncryption::generateKey();
             }
+            if (! $team->widget_public_key) {
+                $team->widget_public_key = 'wk_'.Str::random(40);
+            }
         });
 
         static::deleting(function (self $team) {
@@ -43,9 +47,14 @@ class Team extends Model
         'slug',
         'owner_id',
         'is_platform',
+        'claude_code_vps_allowed',
+        'assistant_ui_artifacts_allowed',
         'settings',
         'credential_key',
         'default_email_theme_id',
+        'allowed_models',
+        'widget_public_key',
+        'dashboard_config',
     ];
 
     protected $hidden = [
@@ -56,7 +65,11 @@ class Team extends Model
     {
         return [
             'is_platform' => 'boolean',
+            'claude_code_vps_allowed' => 'boolean',
+            'assistant_ui_artifacts_allowed' => 'boolean',
             'settings' => 'array',
+            'allowed_models' => 'array',
+            'dashboard_config' => 'array',
             'credential_key' => 'encrypted',
         ];
     }

@@ -5,10 +5,12 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\DTOs\AgentHeartbeatTask;
 use App\Domain\Agent\Jobs\ExecuteAgentHeartbeatJob;
 use App\Domain\Agent\Models\Agent;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool: immediately dispatch an agent's heartbeat outside its normal schedule.
@@ -16,6 +18,8 @@ use Laravel\Mcp\Server\Tool;
  * Useful for testing the heartbeat prompt or triggering an ad-hoc
  * run without waiting for the next cron window.
  */
+#[IsDestructive]
+#[AssistantTool('write')]
 class AgentHeartbeatRunNowTool extends Tool
 {
     protected string $name = 'agent_heartbeat_run_now';

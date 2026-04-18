@@ -41,6 +41,8 @@
                     <p class="text-sm text-gray-500">SSH private key for secure server access.</p>
                 @elseif($credentialType === 'custom_kv')
                     <p class="text-sm text-gray-500">Custom key-value pairs for flexible credential storage.</p>
+                @elseif($credentialType === 'proxy')
+                    <p class="text-sm text-gray-500">SOCKS5 or HTTP proxy for browser automation. Assign to tools that need a residential IP.</p>
                 @endif
             </div>
         @endif
@@ -80,6 +82,25 @@
                         hint="If the key is passphrase-protected" />
                     <x-form-input wire:model="sshHost" label="Host (optional)" type="text"
                         placeholder="server.example.com" />
+                @endif
+
+                @if($credentialType === 'proxy')
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-form-input wire:model="proxyHost" label="Host" type="text"
+                            placeholder="gate.proxy-cheap.com" :error="$errors->first('proxyHost')" />
+                        <x-form-input wire:model="proxyPort" label="Port" type="number"
+                            placeholder="1080" :error="$errors->first('proxyPort')" />
+                    </div>
+                    <x-form-select wire:model="proxyProtocol" label="Protocol" :error="$errors->first('proxyProtocol')">
+                        <option value="socks5">SOCKS5</option>
+                        <option value="socks4">SOCKS4</option>
+                        <option value="http">HTTP</option>
+                        <option value="https">HTTPS</option>
+                    </x-form-select>
+                    <x-form-input wire:model="proxyUsername" label="Username (optional)" type="text"
+                        placeholder="Leave blank if using IP whitelist" />
+                    <x-form-input wire:model="proxyPassword" label="Password (optional)" type="password"
+                        placeholder="Leave blank if using IP whitelist" />
                 @endif
 
                 @if($credentialType === 'custom_kv')
@@ -171,6 +192,16 @@
                     @elseif($credentialType === 'custom_kv')
                         <div class="text-gray-500">Key-Value Pairs</div>
                         <div>{{ collect($customPairs)->filter(fn($p) => !empty($p['key']))->count() }} pairs</div>
+                    @elseif($credentialType === 'proxy')
+                        <div class="text-gray-500">Proxy</div>
+                        <div class="font-mono text-xs">{{ $proxyProtocol }}://{{ $proxyHost }}:{{ $proxyPort }}</div>
+                        @if($proxyUsername)
+                            <div class="text-gray-500">Auth</div>
+                            <div>{{ $proxyUsername }} / ********</div>
+                        @else
+                            <div class="text-gray-500">Auth</div>
+                            <div class="text-gray-400">IP whitelist (no credentials)</div>
+                        @endif
                     @endif
 
                     @if($expiresAt)

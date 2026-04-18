@@ -8,7 +8,9 @@ use App\Mcp\Tools\Integration\IntegrationDisconnectTool;
 use App\Mcp\Tools\Integration\IntegrationExecuteTool;
 use App\Mcp\Tools\Integration\IntegrationListTool;
 use App\Mcp\Tools\Integration\IntegrationPingTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class IntegrationManageTool extends CompactTool
 {
     protected string $name = 'integration_manage';

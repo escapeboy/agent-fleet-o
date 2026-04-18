@@ -5,12 +5,14 @@ namespace App\Domain\Signal\Models;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Signal\Enums\SignalStatus;
 use Database\Factories\Domain\Signal\SignalFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -28,7 +30,10 @@ class Signal extends Model implements HasMedia
         'payload',
         'score',
         'scoring_details',
+        'metadata',
         'content_hash',
+        'status',
+        'project_key',
         'tags',
         'received_at',
         'scored_at',
@@ -41,8 +46,10 @@ class Signal extends Model implements HasMedia
         return [
             'payload' => 'array',
             'scoring_details' => 'array',
+            'metadata' => 'array',
             'tags' => 'array',
             'score' => 'float',
+            'status' => SignalStatus::class,
             'received_at' => 'datetime',
             'scored_at' => 'datetime',
             'duplicate_count' => 'integer',
@@ -72,6 +79,11 @@ class Signal extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    public function comments(): HasMany
+    {
+        return $this->hasMany(SignalComment::class)->orderBy('created_at');
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('attachments')
@@ -88,5 +100,11 @@ class Signal extends Model implements HasMedia
             ->height(256)
             ->queued()
             ->performOnCollections('attachments');
+
+        $this->addMediaCollection('bug_report_files')
+            ->acceptsMimeTypes([
+                'image/png', 'image/jpeg', 'image/webp',
+                'application/pdf', 'text/plain', 'text/csv',
+            ]);
     }
 }

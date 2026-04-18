@@ -4,11 +4,15 @@ namespace App\Mcp\Tools\Chatbot;
 
 use App\Domain\Chatbot\Actions\ToggleChatbotStatusAction;
 use App\Domain\Chatbot\Models\Chatbot;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class ChatbotToggleStatusTool extends Tool
 {
     protected string $name = 'chatbot_toggle_status';

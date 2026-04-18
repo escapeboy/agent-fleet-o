@@ -15,30 +15,25 @@ class WebsiteDeleteTool extends Tool
 {
     protected string $name = 'website_delete';
 
-    protected string $description = 'Permanently delete a website and all its pages. This action cannot be undone.';
+    protected string $description = 'Permanently delete a website and all its pages and assets.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'website_id' => $schema->string()
-                ->description('Website UUID to delete')
-                ->required(),
+            'website_id' => $schema->string()->description('The website UUID to delete (required)'),
         ];
     }
 
     public function handle(Request $request): Response
     {
         $website = Website::find($request->get('website_id'));
+
         if (! $website) {
-            return Response::error('Website not found.');
+            return Response::text(json_encode(['error' => 'Website not found'], JSON_PRETTY_PRINT));
         }
 
-        try {
-            app(DeleteWebsiteAction::class)->execute($website);
+        app(DeleteWebsiteAction::class)->execute($website);
 
-            return Response::text(json_encode(['success' => true, 'message' => 'Website deleted.']));
-        } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
-        }
+        return Response::text(json_encode(['success' => true], JSON_PRETTY_PRINT));
     }
 }

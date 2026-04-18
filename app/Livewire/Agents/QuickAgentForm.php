@@ -34,7 +34,7 @@ class QuickAgentForm extends Component
             'name' => 'required|min:2|max:255',
             'markdown' => 'required|min:10|max:10000',
             'schedule' => 'required|in:hourly,daily,weekly,monthly,manual',
-            'provider' => 'required|in:anthropic,openai,google',
+            'provider' => 'required|string|max:255',
             'model' => 'required|max:255',
         ];
     }

@@ -70,6 +70,21 @@
                 @endif
             @endif
 
+            @if($experiment->status->isFailed() || $experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Paused)
+                @if($showResumeCheckpointConfirm)
+                    <div class="flex items-center gap-2 rounded-lg border border-purple-300 bg-purple-50 px-3 py-2">
+                        <span class="text-sm text-purple-700">Resume from last checkpoint?</span>
+                        <button wire:click="resumeFromCheckpoint" class="rounded bg-purple-600 px-2 py-1 text-xs font-medium text-white hover:bg-purple-700">Yes, resume</button>
+                        <button wire:click="$set('showResumeCheckpointConfirm', false)" class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">Cancel</button>
+                    </div>
+                @else
+                    <button wire:click="$set('showResumeCheckpointConfirm', true)"
+                        class="rounded-lg border border-purple-300 bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100">
+                        Resume Checkpoint
+                    </button>
+                @endif
+            @endif
+
             @if(!$experiment->status->isTerminal())
                 @if($showKillConfirm)
                     <div class="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2">

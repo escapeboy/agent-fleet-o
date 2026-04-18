@@ -2,11 +2,17 @@
 
 namespace App\Infrastructure\AI\Gateways;
 
+use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
+use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
+use App\Infrastructure\AI\Services\ClaudeCodeVpsGate;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
+use App\Models\User;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +34,10 @@ class LocalAgentGateway implements AiGatewayInterface
             throw new RuntimeException("Unknown local agent: {$agentKey}");
         }
 
+        if (! empty($config['vps_only'])) {
+            return $this->executeVps($agentKey, $config, $request, null);
+        }
+
         if ($this->discovery->isBridgeMode()) {
             return $this->executeViaBridge($agentKey, $config, $request);
         }
@@ -45,9 +55,11 @@ class LocalAgentGateway implements AiGatewayInterface
         );
 
         // Claude Code assistant: use array-based Process for proper system prompt
-        // separation via --system-prompt flag (avoids prompt injection detection).
+        // separation via --system-prompt-file flag (avoids ARG_MAX when tool list is large).
         if ($agentKey === 'claude-code' && $isAssistant) {
-            $args = $this->buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model);
+            $systemPromptFile = $workdir.'/system-prompt.txt';
+            file_put_contents($systemPromptFile, $request->systemPrompt);
+            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile);
             $prompt = $request->userPrompt;
             $env = getenv();
             unset($env['CLAUDECODE']);
@@ -63,9 +75,9 @@ class LocalAgentGateway implements AiGatewayInterface
             $process = new Process($args, $workdir, $env, $prompt, $timeout);
             $process->run();
         } else {
-            $prompt = $this->buildPrompt($request);
-            $usesStdin = $this->readsFromStdin($agentKey);
-            $command = $this->buildCommand(
+            $prompt = LocalAgentPromptBuilder::buildPrompt($request);
+            $usesStdin = LocalAgentPromptBuilder::readsFromStdin($agentKey);
+            $command = LocalAgentPromptBuilder::buildCommand(
                 $agentKey, $binaryPath, $request->model, $request->purpose,
                 $usesStdin ? null : $prompt,
             );
@@ -102,14 +114,14 @@ class LocalAgentGateway implements AiGatewayInterface
                 ]);
 
                 try {
-                    $parsed = $this->parseOutput($agentKey, $stdout);
+                    $parsed = LocalAgentOutputParser::parseOutput($agentKey, $stdout);
                     if ($parsed['content'] !== '') {
                         return new AiResponseDTO(
                             content: $parsed['content'],
                             parsedOutput: $parsed['structured'],
                             usage: new AiUsageDTO(
-                                promptTokens: $this->estimateTokens($prompt),
-                                completionTokens: $this->estimateTokens($parsed['content']),
+                                promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                                completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
                                 costCredits: 0,
                             ),
                             provider: $request->provider,
@@ -140,14 +152,14 @@ class LocalAgentGateway implements AiGatewayInterface
         }
 
         $output = $process->getOutput();
-        $parsed = $this->parseOutput($agentKey, $output);
+        $parsed = LocalAgentOutputParser::parseOutput($agentKey, $output);
 
         return new AiResponseDTO(
             content: $parsed['content'],
             parsedOutput: $parsed['structured'],
             usage: new AiUsageDTO(
-                promptTokens: $this->estimateTokens($prompt),
-                completionTokens: $this->estimateTokens($parsed['content']),
+                promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
                 costCredits: 0,
             ),
             provider: $request->provider,
@@ -163,6 +175,17 @@ class LocalAgentGateway implements AiGatewayInterface
 
         if (! $config) {
             throw new RuntimeException("Unknown local agent: {$agentKey}");
+        }
+
+        // VPS-only agents run on the server itself via executeVps — they must
+        // never be routed through the host bridge, even in bridge mode. Mirror
+        // the vps_only guard from complete() so the tool-loop streaming path
+        // (LocalToolLoopExecutor → gateway->stream) reaches the right handler.
+        // Pass the onChunk callback through so executeVps can emit progressive
+        // chunks by parsing stream-json events from stdout incrementally
+        // instead of dumping the whole response at the end.
+        if (! empty($config['vps_only'])) {
+            return $this->executeVps($agentKey, $config, $request, $onChunk);
         }
 
         // Bridge mode: use NDJSON streaming for real-time output
@@ -189,9 +212,290 @@ class LocalAgentGateway implements AiGatewayInterface
     /**
      * Execute an agent via the host bridge HTTP server.
      */
+    /**
+     * Execute the VPS-installed Claude Code with a pre-provisioned Max OAuth token.
+     *
+     * This path is super-admin gated and completely self-contained: no bridge, no
+     * relay, no shared working directory. Each call runs in an ephemeral tmpdir,
+     * inherits only a scrubbed environment, and is bounded by a per-team
+     * concurrency cap. All invocations are written to the audit log.
+     */
+    private function executeVps(string $agentKey, array $config, AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
+    {
+        $gate = app(ClaudeCodeVpsGate::class);
+        $cap = app(ClaudeCodeVpsConcurrencyCap::class);
+
+        $user = $request->userId ? User::find($request->userId) : null;
+        $team = $request->teamId ? Team::withoutGlobalScopes()->find($request->teamId) : null;
+
+        $gate->assertAllowed($user, $team);
+
+        $binaryPath = $this->discovery->vpsBinaryPath();
+        if (! $binaryPath) {
+            throw VpsLocalAgentException::binaryMissing(
+                (string) config('local_agents.vps.binary_path'),
+            );
+        }
+
+        $teamId = $request->teamId ?? 'platform';
+        $slotToken = $cap->acquire($teamId);
+        if ($slotToken === false) {
+            throw VpsLocalAgentException::concurrencyCapReached($cap->cap());
+        }
+
+        $workdir = $this->makeEphemeralWorkdir();
+        $timeout = (int) config('local_agents.vps.timeout_seconds', 300);
+        $oauthToken = (string) config('local_agents.vps.oauth_token');
+
+        // Assistant mode uses the same --system-prompt / --tools "" separation as
+        // the regular claude-code assistant path. That's what lets our text-based
+        // <tool_call> loop work reliably — tool instructions live in system_prompt,
+        // user input goes on stdin, and --tools "" disables the CLI's own
+        // filesystem/bash tools so the agent has to emit our tag format.
+        //
+        // When an $onChunk callback is provided we use stream-json output so
+        // we can emit progressive assistant text chunks by reading stdout
+        // incrementally instead of waiting for the final JSON payload.
+        $isAssistant = $request->purpose === 'platform_assistant';
+        $useStreaming = $isAssistant && $onChunk !== null;
+
+        if ($isAssistant) {
+            // Write system prompt to a file in the ephemeral workdir to avoid ARG_MAX
+            // when the tool list is large (230+ tools → system prompt can exceed 128KB).
+            // The file is cleaned up automatically with the workdir in finally{}.
+            $systemPromptFile = $workdir.'/system-prompt.txt';
+            file_put_contents($systemPromptFile, $request->systemPrompt);
+            $args = $useStreaming
+                ? LocalAgentPromptBuilder::buildClaudeCodeAssistantStreamArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile)
+                : LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile);
+            $prompt = $request->userPrompt;
+        } else {
+            $prompt = LocalAgentPromptBuilder::buildPrompt($request);
+            $args = array_merge(
+                [$binaryPath],
+                $config['execute_flags'] ?? ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'],
+            );
+            if ($request->model) {
+                $args[] = '--model';
+                $args[] = $request->model;
+            }
+        }
+
+        $env = [
+            'PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin',
+            'HOME' => $workdir,
+            'CLAUDE_CODE_OAUTH_TOKEN' => $oauthToken,
+            // Claude Code refuses --dangerously-skip-permissions when running as root
+            // for safety reasons. On the VPS this process runs inside the app container
+            // (root by default in php-fpm-alpine) so we opt into the documented sandbox
+            // escape hatch. The surrounding container + ephemeral workdir + scrubbed env
+            // form the real sandbox — this flag just tells the CLI to accept it.
+            'IS_SANDBOX' => '1',
+        ];
+
+        Log::info('LocalAgentGateway: executing claude-code-vps', [
+            'team_id' => $teamId,
+            'user_id' => $request->userId,
+            'model' => $request->model,
+            'prompt_length' => strlen($prompt),
+            'workdir' => $workdir,
+            'timeout' => $timeout,
+            'streaming' => $useStreaming,
+        ]);
+
+        $startTime = hrtime(true);
+        $exitCode = null;
+        $stderr = '';
+
+        try {
+            $process = new Process($args, $workdir, $env, $prompt, $timeout);
+
+            if ($useStreaming) {
+                $this->runVpsProcessStreaming($process, $onChunk);
+            } else {
+                $process->run();
+            }
+
+            $exitCode = $process->getExitCode();
+            $stderr = (string) $process->getErrorOutput();
+            $stdout = (string) $process->getOutput();
+
+            $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+            if (! $process->isSuccessful() && $stdout === '') {
+                throw new RuntimeException(
+                    "Claude Code (VPS) failed (exit {$exitCode}): ".substr($stderr ?: 'no error output', 0, 500),
+                );
+            }
+
+            $parsed = LocalAgentOutputParser::parseOutput($agentKey, $stdout);
+
+            return new AiResponseDTO(
+                content: $parsed['content'],
+                parsedOutput: $parsed['structured'],
+                usage: new AiUsageDTO(
+                    promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                    completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
+                    costCredits: 0,
+                ),
+                provider: $request->provider,
+                model: $request->model,
+                latencyMs: $latencyMs,
+            );
+        } finally {
+            $cap->release($teamId, $slotToken);
+            $this->removeEphemeralWorkdir($workdir);
+            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr);
+        }
+    }
+
+    /**
+     * Run the claude-code-vps process with incremental stdout reading and
+     * emit progressive text chunks via $onChunk as the CLI streams JSONL
+     * events. Strips <tool_call> blocks from the visible stream so the UI
+     * never flashes raw tag markup.
+     */
+    private function runVpsProcessStreaming(Process $process, callable $onChunk): void
+    {
+        $buffer = '';
+        $accumulatedText = '';
+        $lastEmittedLength = 0;
+
+        $process->start();
+
+        $process->wait(function (string $type, string $data) use (
+            &$buffer,
+            &$accumulatedText,
+            &$lastEmittedLength,
+            $onChunk
+        ): void {
+            if ($type !== Process::OUT) {
+                return;
+            }
+
+            $buffer .= $data;
+
+            // Parse every complete JSONL line that arrived in this read.
+            while (($pos = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $pos));
+                $buffer = substr($buffer, $pos + 1);
+
+                if ($line === '') {
+                    continue;
+                }
+
+                $event = json_decode($line, true);
+                if (! is_array($event)) {
+                    continue;
+                }
+
+                // Claude Code stream-json: assistant events carry progressive
+                // text blocks in message.content[].
+                if (($event['type'] ?? '') !== 'assistant') {
+                    continue;
+                }
+                $contentBlocks = $event['message']['content'] ?? null;
+                if (! is_array($contentBlocks)) {
+                    continue;
+                }
+                foreach ($contentBlocks as $block) {
+                    if (($block['type'] ?? '') !== 'text') {
+                        continue;
+                    }
+                    $text = $block['text'] ?? '';
+                    if (! is_string($text) || $text === '') {
+                        continue;
+                    }
+                    $accumulatedText .= $text;
+
+                    // Hide in-progress <tool_call> markup + anything after the
+                    // Gap 2 artifact delimiter so the UI never renders raw JSON.
+                    $visible = preg_replace('/<tool_call>.*?<\/tool_call>/s', '', $accumulatedText);
+                    $visible = preg_replace('/<tool_call>[\s\S]*$/', '', $visible);
+                    $artifactStart = strpos($visible, '<<<FLEETQ_ARTIFACTS>>>');
+                    if ($artifactStart !== false) {
+                        $visible = substr($visible, 0, $artifactStart);
+                    }
+                    $visible = rtrim($visible);
+
+                    if ($visible !== '' && strlen($visible) > $lastEmittedLength) {
+                        $onChunk($visible);
+                        $lastEmittedLength = strlen($visible);
+                    }
+                }
+            }
+        });
+    }
+
+    private function makeEphemeralWorkdir(): string
+    {
+        $base = sys_get_temp_dir().'/claude-vps';
+        if (! is_dir($base)) {
+            @mkdir($base, 0700, true);
+        }
+
+        $path = $base.'/'.bin2hex(random_bytes(8));
+        mkdir($path, 0700, true);
+
+        return $path;
+    }
+
+    private function removeEphemeralWorkdir(string $path): void
+    {
+        if (! str_starts_with($path, sys_get_temp_dir().'/claude-vps/')) {
+            return;
+        }
+
+        $items = @scandir($path) ?: [];
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $target = $path.'/'.$item;
+            if (is_dir($target)) {
+                $this->removeEphemeralWorkdir($target);
+            } else {
+                @unlink($target);
+            }
+        }
+
+        @rmdir($path);
+    }
+
+    private function recordVpsAudit(
+        AiRequestDTO $request,
+        ?User $user,
+        ?Team $team,
+        ?int $exitCode,
+        int $startTime,
+        string $stderr,
+    ): void {
+        try {
+            AuditEntry::create([
+                'team_id' => $team?->id,
+                'user_id' => $user?->id,
+                'event' => 'claude_code_vps.invoke',
+                'subject_type' => $team ? Team::class : null,
+                'subject_id' => $team?->id,
+                'properties' => [
+                    'model' => $request->model,
+                    'prompt_length' => strlen($request->userPrompt),
+                    'duration_ms' => (int) ((hrtime(true) - $startTime) / 1_000_000),
+                    'exit_code' => $exitCode,
+                    'stderr_preview' => $stderr !== '' ? substr($stderr, 0, 200) : null,
+                ],
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: failed to write VPS audit entry', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function executeViaBridge(string $agentKey, array $config, AiRequestDTO $request): AiResponseDTO
     {
-        $prompt = $this->buildPrompt($request);
+        $prompt = LocalAgentPromptBuilder::buildPrompt($request);
         $bridgeTimeout = config('local_agents.timeout', 300);  // Time the bridge gives the CLI process
         $httpTimeout = $bridgeTimeout + 60;                     // HTTP timeout = bridge timeout + buffer
         $bridgeUrl = $this->discovery->bridgeUrl();
@@ -266,14 +570,14 @@ class LocalAgentGateway implements AiGatewayInterface
                 ]);
 
                 try {
-                    $parsed = $this->parseOutput($agentKey, $stdout);
+                    $parsed = LocalAgentOutputParser::parseOutput($agentKey, $stdout);
                     if ($parsed['content'] !== '') {
                         return new AiResponseDTO(
                             content: $parsed['content'],
                             parsedOutput: $parsed['structured'],
                             usage: new AiUsageDTO(
-                                promptTokens: $this->estimateTokens($prompt),
-                                completionTokens: $this->estimateTokens($parsed['content']),
+                                promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                                completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
                                 costCredits: 0,
                             ),
                             provider: $request->provider,
@@ -308,14 +612,14 @@ class LocalAgentGateway implements AiGatewayInterface
 
         $output = $data['output'] ?? '';
 
-        $parsed = $this->parseOutput($agentKey, $output);
+        $parsed = LocalAgentOutputParser::parseOutput($agentKey, $output);
 
         return new AiResponseDTO(
             content: $parsed['content'],
             parsedOutput: $parsed['structured'],
             usage: new AiUsageDTO(
-                promptTokens: $this->estimateTokens($prompt),
-                completionTokens: $this->estimateTokens($parsed['content']),
+                promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
                 costCredits: 0,
             ),
             provider: $request->provider,
@@ -333,7 +637,7 @@ class LocalAgentGateway implements AiGatewayInterface
      */
     private function streamViaBridge(string $agentKey, array $config, AiRequestDTO $request, ?callable $onChunk): AiResponseDTO
     {
-        $prompt = $this->buildPrompt($request);
+        $prompt = LocalAgentPromptBuilder::buildPrompt($request);
         $bridgeTimeout = config('local_agents.timeout', 300);
         $bridgeUrl = $this->discovery->bridgeUrl();
         $bridgeSecret = $this->discovery->bridgeSecret();
@@ -427,7 +731,7 @@ class LocalAgentGateway implements AiGatewayInterface
 
                     // Extract human-readable text from stream-json events
                     if ($onChunk) {
-                        $text = $this->extractTextFromStreamEvent($data);
+                        $text = LocalAgentOutputParser::extractTextFromStreamEvent($data);
                         if ($text !== null) {
                             $onChunk($text);
                         }
@@ -460,14 +764,14 @@ class LocalAgentGateway implements AiGatewayInterface
             ]);
 
             if ($fullOutput !== '') {
-                $parsed = $this->parseOutput($agentKey, $fullOutput);
+                $parsed = LocalAgentOutputParser::parseOutput($agentKey, $fullOutput);
                 if ($parsed['content'] !== '') {
                     return new AiResponseDTO(
                         content: $parsed['content'],
                         parsedOutput: $parsed['structured'],
                         usage: new AiUsageDTO(
-                            promptTokens: $this->estimateTokens($prompt),
-                            completionTokens: $this->estimateTokens($parsed['content']),
+                            promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                            completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
                             costCredits: 0,
                         ),
                         provider: $request->provider,
@@ -504,14 +808,14 @@ class LocalAgentGateway implements AiGatewayInterface
                 ]);
 
                 try {
-                    $parsed = $this->parseOutput($agentKey, $recoveryOutput);
+                    $parsed = LocalAgentOutputParser::parseOutput($agentKey, $recoveryOutput);
                     if ($parsed['content'] !== '') {
                         return new AiResponseDTO(
                             content: $parsed['content'],
                             parsedOutput: $parsed['structured'],
                             usage: new AiUsageDTO(
-                                promptTokens: $this->estimateTokens($prompt),
-                                completionTokens: $this->estimateTokens($parsed['content']),
+                                promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                                completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
                                 costCredits: 0,
                             ),
                             provider: $request->provider,
@@ -543,373 +847,20 @@ class LocalAgentGateway implements AiGatewayInterface
 
         // Use the done event's output (complete), fall back to streamed output
         $finalOutput = $stdout !== '' ? $stdout : trim($fullOutput);
-        $parsed = $this->parseOutput($agentKey, $finalOutput);
+        $parsed = LocalAgentOutputParser::parseOutput($agentKey, $finalOutput);
 
         return new AiResponseDTO(
             content: $parsed['content'],
             parsedOutput: $parsed['structured'],
             usage: new AiUsageDTO(
-                promptTokens: $this->estimateTokens($prompt),
-                completionTokens: $this->estimateTokens($parsed['content']),
+                promptTokens: LocalAgentOutputParser::estimateTokens($prompt),
+                completionTokens: LocalAgentOutputParser::estimateTokens($parsed['content']),
                 costCredits: 0,
             ),
             provider: $request->provider,
             model: $request->model,
             latencyMs: $doneEvent['execution_time_ms'] ?? $latencyMs,
         );
-    }
-
-    /**
-     * Extract human-readable text from a Claude Code stream-json or Codex JSONL event.
-     *
-     * Returns the text content if the event contains displayable output, null otherwise.
-     */
-    private function extractTextFromStreamEvent(string $eventLine): ?string
-    {
-        $event = json_decode($eventLine, true);
-
-        if (! is_array($event)) {
-            return null;
-        }
-
-        $type = $event['type'] ?? '';
-
-        // Claude Code 2.1+ wraps streaming events in a stream_event envelope.
-        // Unwrap to get the inner event for content_block_delta extraction.
-        if ($type === 'stream_event' && isset($event['event'])) {
-            $inner = $event['event'];
-            $innerType = $inner['type'] ?? '';
-
-            if ($innerType === 'content_block_delta') {
-                $delta = $inner['delta'] ?? [];
-                if (($delta['type'] ?? '') === 'text_delta' && ! empty($delta['text'])) {
-                    return $delta['text'];
-                }
-            }
-
-            return null;
-        }
-
-        // Claude Code stream-json: assistant message with text content blocks
-        if ($type === 'assistant') {
-            $content = $event['message']['content'] ?? [];
-            $texts = [];
-
-            foreach ($content as $block) {
-                if (($block['type'] ?? '') === 'text' && ! empty($block['text'])) {
-                    $texts[] = $block['text'];
-                }
-            }
-
-            return ! empty($texts) ? implode("\n", $texts) : null;
-        }
-
-        // Claude Code stream-json (pre-2.1): content_block_delta with incremental text
-        if ($type === 'content_block_delta') {
-            $delta = $event['delta'] ?? [];
-            if (($delta['type'] ?? '') === 'text_delta' && ! empty($delta['text'])) {
-                return $delta['text'];
-            }
-        }
-
-        // Codex: agent_message text from item.completed events
-        if ($type === 'item.completed'
-            && ($event['item']['type'] ?? '') === 'agent_message'
-            && isset($event['item']['text'])) {
-            return $event['item']['text'];
-        }
-
-        // Amp --stream-json: text content events
-        if ($type === 'text' && ! empty($event['content'])) {
-            return $event['content'];
-        }
-
-        // Gemini CLI stream-json: incremental text deltas
-        if ($type === 'text_delta' && ! empty($event['text'])) {
-            return $event['text'];
-        }
-
-        // Result events are handled by the done event — don't broadcast them as chunks
-        return null;
-    }
-
-    private function buildPrompt(AiRequestDTO $request): string
-    {
-        $parts = [];
-
-        if ($request->systemPrompt) {
-            $parts[] = $request->systemPrompt;
-        }
-
-        $parts[] = $request->userPrompt;
-
-        return implode("\n\n", $parts);
-    }
-
-    /**
-     * Check if the agent reads its prompt from stdin (true) or needs it as a CLI argument (false).
-     */
-    private function readsFromStdin(string $agentKey): bool
-    {
-        return in_array($agentKey, ['codex', 'claude-code', 'gemini-cli'], true);
-    }
-
-    private function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null, ?string $prompt = null): string
-    {
-        $modelFlag = $model ? ' --model '.escapeshellarg($model) : '';
-
-        // Unset CLAUDECODE to prevent "nested session" detection when spawning Claude Code
-        $preamble = 'unset CLAUDECODE; ';
-
-        $isAssistant = $purpose === 'platform_assistant';
-
-        // Codex assistant: enable --full-auto for MCP tool execution and
-        // connect to our FleetQ MCP server (replaces advisory mode).
-        // Non-assistant Codex: --full-auto, no MCP override.
-        if ($isAssistant) {
-            // Uses TOML dotted-key syntax (not JSON) — codex parses -c values as TOML.
-            $codexMcpFlag = ' -c '.escapeshellarg('mcp_servers.agent-fleet.command="php"')
-                .' -c '.escapeshellarg('mcp_servers.agent-fleet.args=["artisan","mcp:start","agent-fleet"]');
-        } else {
-            $codexMcpFlag = '';
-        }
-
-        $escapedPrompt = $prompt ? ' '.escapeshellarg($prompt) : '';
-
-        return match ($agentKey) {
-            'codex' => $preamble."{$binaryPath} exec --json --full-auto{$codexMcpFlag}{$modelFlag}",
-            'claude-code' => $preamble."{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config ".escapeshellarg('{"mcpServers":{}}').$modelFlag,
-            'gemini-cli' => "{$binaryPath} -p --output-format json".($model ? ' -m '.escapeshellarg($model) : ''),
-            'kiro' => "{$binaryPath} chat --no-interactive{$escapedPrompt}",
-            'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
-            'amp' => "{$binaryPath} -x --stream-json{$escapedPrompt}",
-            'opencode' => "{$binaryPath} run --format json".($model ? ' -m '.escapeshellarg($model) : '').$escapedPrompt,
-            'gemini-cli' => "{$binaryPath} -p --output-format json".($model ? ' -m '.escapeshellarg($model) : ''),
-            'kiro' => "{$binaryPath} chat --no-interactive{$escapedPrompt}",
-            'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
-            'amp' => "{$binaryPath} -x --stream-json{$escapedPrompt}",
-            'opencode' => "{$binaryPath} run --format json".($model ? ' -m '.escapeshellarg($model) : '').$escapedPrompt,
-            // -p is a boolean flag (print/headless mode); prompt is a positional argument appended at the end.
-            // --force skips file-write confirmations (equivalent to --dangerously-skip-permissions in Claude Code).
-            // --trust grants workspace access without interactive confirmation.
-            // --approve-mcps prevents hanging on MCP approval prompts.
-            // Skip --model when 'auto' (Cursor's default behavior routes to best available model).
-            'cursor' => "{$binaryPath} -p --output-format stream-json --force --trust --approve-mcps"
-                .($model && $model !== 'auto' ? ' --model '.escapeshellarg($model) : '')
-                .$escapedPrompt,
-            default => throw new RuntimeException("No command template for agent: {$agentKey}"),
-        };
-    }
-
-    /**
-     * Build Claude Code process arguments for assistant mode.
-     *
-     * Uses --system-prompt flag and --tools "" to ensure proper system/user
-     * prompt separation (avoids prompt injection detection) and disable
-     * built-in tools so the agent uses text-based <tool_call> format.
-     *
-     * @return array<string>
-     */
-    private function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null): array
-    {
-        $args = [
-            $binaryPath,
-            '--print',
-            '--output-format', 'json',
-            '--system-prompt', $systemPrompt,
-            '--tools', '',
-            '--dangerously-skip-permissions',
-            '--no-session-persistence',
-            '--strict-mcp-config',
-            '--mcp-config', '{"mcpServers":{}}',
-        ];
-
-        if ($model) {
-            $args[] = '--model';
-            $args[] = $model;
-        }
-
-        return $args;
-    }
-
-    /**
-     * Parse output from the local agent CLI.
-     *
-     * @return array{content: string, structured: array|null}
-     */
-    private function parseOutput(string $agentKey, string $rawOutput): array
-    {
-        $rawOutput = trim($rawOutput);
-
-        if (empty($rawOutput)) {
-            return ['content' => '', 'structured' => null];
-        }
-
-        // Try JSON parse first (single JSON object)
-        $json = json_decode($rawOutput, true);
-
-        if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
-            return $this->extractFromJson($agentKey, $json);
-        }
-
-        // JSONL: parse all lines and extract content from the event stream.
-        // Supports both Codex (`exec --json`) and Claude Code (`--output-format stream-json`).
-        $lines = explode("\n", $rawOutput);
-        $agentMessages = [];
-        $allEvents = [];
-        $usageEvent = null;
-        $resultEvent = null;
-
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line)) {
-                continue;
-            }
-
-            $decoded = json_decode($line, true);
-            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
-                continue;
-            }
-
-            $allEvents[] = $decoded;
-            $eventType = $decoded['type'] ?? '';
-
-            // Codex: collect agent_message text from item.completed events
-            if ($eventType === 'item.completed'
-                && ($decoded['item']['type'] ?? '') === 'agent_message'
-                && isset($decoded['item']['text'])) {
-                $agentMessages[] = $decoded['item']['text'];
-            }
-
-            // Claude Code stream-json: extract text from assistant messages
-            if ($eventType === 'assistant' && isset($decoded['message']['content'])) {
-                foreach ($decoded['message']['content'] as $block) {
-                    if (($block['type'] ?? '') === 'text' && ! empty($block['text'])) {
-                        $agentMessages[] = $block['text'];
-                    }
-                }
-            }
-
-            // Claude Code stream-json: result event with final content
-            if ($eventType === 'result' && isset($decoded['result'])) {
-                $resultEvent = $decoded;
-            }
-
-            // Codex: capture usage from turn.completed
-            if ($eventType === 'turn.completed') {
-                $usageEvent = $decoded;
-            }
-        }
-
-        // If we found a result event (Claude Code stream-json), prefer it
-        if ($resultEvent) {
-            $resultContent = is_string($resultEvent['result'])
-                ? $resultEvent['result']
-                : json_encode($resultEvent['result']);
-
-            return [
-                'content' => $resultContent,
-                'structured' => $resultEvent,
-            ];
-        }
-
-        // If we found agent messages in the event stream, use them
-        if (! empty($agentMessages)) {
-            $content = implode("\n\n", $agentMessages);
-
-            return [
-                'content' => $content,
-                'structured' => [
-                    'type' => 'result',
-                    'result' => $content,
-                    'usage' => $usageEvent['usage'] ?? null,
-                ],
-            ];
-        }
-
-        // Fallback: use the last valid JSON event (for Claude Code or other formats)
-        $lastEvent = end($allEvents) ?: null;
-
-        if ($lastEvent) {
-            return $this->extractFromJson($agentKey, $lastEvent);
-        }
-
-        // Raw text fallback
-        return ['content' => $rawOutput, 'structured' => null];
-    }
-
-    /**
-     * Extract content from a parsed JSON result.
-     *
-     * @return array{content: string, structured: array|null}
-     */
-    private function extractFromJson(string $agentKey, array $json): array
-    {
-        // Claude Code JSON output: { "result": "...", "cost_usd": 0.01, ... }
-        // Or it may be an array of message objects
-        if (isset($json['result'])) {
-            return [
-                'content' => is_string($json['result']) ? $json['result'] : json_encode($json['result']),
-                'structured' => $json,
-            ];
-        }
-
-        // Gemini CLI JSON output: { "response": { "text": "..." } } or { "text": "..." }
-        if (isset($json['response']['text'])) {
-            return [
-                'content' => $json['response']['text'],
-                'structured' => $json,
-            ];
-        }
-        if (isset($json['text']) && is_string($json['text'])) {
-            return [
-                'content' => $json['text'],
-                'structured' => $json,
-            ];
-        }
-
-        // Amp --stream-json: { "type": "assistant", "content": "..." }
-        // or final message with content field
-        if (isset($json['content'])) {
-            return [
-                'content' => is_string($json['content']) ? $json['content'] : json_encode($json['content']),
-                'structured' => $json,
-            ];
-        }
-
-        // OpenCode JSON output: { "output": "..." } or { "message": "..." }
-        if (isset($json['output']) && is_string($json['output'])) {
-            return [
-                'content' => $json['output'],
-                'structured' => $json,
-            ];
-        }
-        if (isset($json['message']) && is_string($json['message'])) {
-            return [
-                'content' => $json['message'],
-                'structured' => $json,
-            ];
-        }
-
-        // If it's an array of messages, get the last assistant message
-        if (isset($json[0]) && is_array($json[0])) {
-            $assistantMessages = array_filter($json, fn ($m) => ($m['role'] ?? '') === 'assistant');
-            $last = end($assistantMessages);
-
-            if ($last && isset($last['content'])) {
-                $content = is_array($last['content'])
-                    ? collect($last['content'])->where('type', 'text')->pluck('text')->implode("\n")
-                    : $last['content'];
-
-                return ['content' => $content, 'structured' => $json];
-            }
-        }
-
-        // Generic fallback: stringify the whole thing
-        return [
-            'content' => json_encode($json, JSON_PRETTY_PRINT),
-            'structured' => $json,
-        ];
     }
 
     /**
@@ -924,11 +875,6 @@ class LocalAgentGateway implements AiGatewayInterface
             $knownModels = [
                 'claude-code' => 'claude-code',
                 'codex' => 'codex',
-                'gemini-cli' => 'gemini-cli',
-                'kiro' => 'kiro',
-                'aider' => 'aider',
-                'amp' => 'amp',
-                'opencode' => 'opencode',
                 'gemini-cli' => 'gemini-cli',
                 'kiro' => 'kiro',
                 'aider' => 'aider',
@@ -952,14 +898,6 @@ class LocalAgentGateway implements AiGatewayInterface
         }
 
         return config("llm_providers.{$provider}.agent_key", $provider);
-    }
-
-    /**
-     * Rough token estimate (4 chars per token).
-     */
-    private function estimateTokens(string $text): int
-    {
-        return (int) ceil(strlen($text) / 4);
     }
 
     /**

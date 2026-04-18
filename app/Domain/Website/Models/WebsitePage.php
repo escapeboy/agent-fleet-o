@@ -27,42 +27,20 @@ class WebsitePage extends Model
         'meta',
         'sort_order',
         'published_at',
+        'form_id',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'page_type' => WebsitePageType::class,
-            'status' => WebsitePageStatus::class,
-            'grapes_json' => 'array',
-            'meta' => 'array',
-            'sort_order' => 'integer',
-            'published_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'page_type' => WebsitePageType::class,
+        'status' => WebsitePageStatus::class,
+        'grapes_json' => 'array',
+        'meta' => 'array',
+        'published_at' => 'datetime',
+        'sort_order' => 'integer',
+    ];
 
     public function website(): BelongsTo
     {
         return $this->belongsTo(Website::class);
-    }
-
-    public function isPublished(): bool
-    {
-        return $this->status === WebsitePageStatus::Published;
-    }
-
-    public function isDraft(): bool
-    {
-        return $this->status === WebsitePageStatus::Draft;
-    }
-
-    public function getMetaTitle(): string
-    {
-        return $this->meta['title'] ?? $this->title;
-    }
-
-    public function getMetaDescription(): string
-    {
-        return $this->meta['description'] ?? '';
     }
 }

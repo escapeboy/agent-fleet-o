@@ -5,10 +5,12 @@ namespace App\Mcp\Tools\Credential;
 use App\Domain\Credential\Actions\RollbackCredentialVersionAction;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Credential\Models\CredentialVersion;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * Rollback a credential to a previous version's secret_data.
@@ -16,6 +18,8 @@ use Laravel\Mcp\Server\Tool;
  * Append-only: the current value is snapshotted before the restore,
  * so no history is ever lost.
  */
+#[IsDestructive]
+#[AssistantTool('write')]
 class CredentialRollbackTool extends Tool
 {
     protected string $name = 'credential_rollback';

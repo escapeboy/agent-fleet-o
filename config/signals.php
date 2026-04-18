@@ -18,4 +18,28 @@ return [
 
     'storm_rate_limit' => (int) env('SIGNAL_STORM_RATE_LIMIT', 60),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Bug Report Structured Intake
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, every bug-report Signal triggers a Haiku call to extract
+    | structured fields (steps_to_reproduce, affected_user, component, etc.)
+    | into Signal->metadata.ai_extracted. Default OFF — flip per env after
+    | monitoring per-team Haiku spend.
+    |
+    */
+
+    'bug_report' => [
+        'structured_intake_enabled' => (bool) env('BUG_REPORT_STRUCTURED_INTAKE', false),
+        'structured_intake_min_chars' => (int) env('BUG_REPORT_STRUCTURED_INTAKE_MIN_CHARS', 20),
+
+        /*
+         * Bidirectional widget comments — when enabled, the bug-fix agent and the
+         * external reporter exchange messages through the widget. When false, the
+         * widget list endpoint returns empty and the create endpoint returns 403.
+         */
+        'widget_comments_enabled' => (bool) env('BUG_REPORT_WIDGET_COMMENTS', true),
+    ],
+
 ];

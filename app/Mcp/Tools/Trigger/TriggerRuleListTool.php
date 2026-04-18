@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Trigger;
 
 use App\Domain\Trigger\Models\TriggerRule;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class TriggerRuleListTool extends Tool
 {
     protected string $name = 'trigger_rule_list';

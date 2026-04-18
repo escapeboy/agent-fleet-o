@@ -1,82 +1,75 @@
-<div class="max-w-2xl">
-    {{-- Mode toggle --}}
-    <div class="mb-6 flex rounded-lg border border-gray-200 bg-white p-1 w-fit">
-        <button wire:click="$set('mode', 'manual')"
-            class="rounded-md px-4 py-2 text-sm font-medium transition
-                {{ $mode === 'manual' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:text-gray-900' }}">
-            <i class="fa-solid fa-pencil mr-1.5"></i>Manual
-        </button>
-        <button wire:click="$set('mode', 'ai')"
-            class="rounded-md px-4 py-2 text-sm font-medium transition
-                {{ $mode === 'ai' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:text-gray-900' }}">
-            <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Generate with AI
-        </button>
+<div class="mx-auto max-w-2xl">
+    <div class="mb-6">
+        <a href="{{ route('websites.index') }}" class="text-sm text-gray-400 hover:text-gray-600">← Websites</a>
     </div>
 
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        @if($mode === 'manual')
-            <form wire:submit="create">
-                <div class="space-y-4">
-                    <x-form-input
-                        wire:model.live="name"
-                        label="Website Name"
-                        placeholder="My Awesome Website"
-                        required
-                    />
+    <div class="rounded-xl border border-gray-200 bg-white p-6">
+        <h2 class="mb-6 text-lg font-semibold text-gray-900">New Website</h2>
 
-                    <x-form-input
-                        wire:model="slug"
-                        label="Slug"
-                        placeholder="my-awesome-website"
-                        hint="Used in the public URL. Only lowercase letters, numbers, and hyphens."
-                    />
-                </div>
+        {{-- Mode toggle --}}
+        <div class="mb-6 flex gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
+            <button type="button" wire:click="$set('mode', 'blank')"
+                class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition {{ $mode === 'blank' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
+                Blank Website
+            </button>
+            <button type="button" wire:click="$set('mode', 'generate')"
+                class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition {{ $mode === 'generate' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
+                ✨ Generate with AI
+            </button>
+        </div>
 
-                <div class="mt-6 flex items-center gap-3">
-                    <button type="submit"
-                        class="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-                        wire:loading.attr="disabled">
-                        <span wire:loading.remove>Create Website</span>
-                        <span wire:loading>Creating...</span>
+        <form wire:submit="submit" class="space-y-4">
+            <x-form-input
+                wire:model.live="name"
+                label="Name"
+                type="text"
+                placeholder="e.g. My Landing Page"
+                :error="$errors->first('name')"
+            />
+
+            @if($mode === 'blank')
+                <x-form-input
+                    wire:model="slug"
+                    label="Slug"
+                    type="text"
+                    placeholder="my-landing-page"
+                    hint="Auto-generated from name. Used in the website URL."
+                    :error="$errors->first('slug')"
+                />
+
+                <x-form-input
+                    wire:model="customDomain"
+                    label="Custom Domain"
+                    type="text"
+                    placeholder="example.com"
+                    hint="Optional. Leave blank to use the default subdomain."
+                />
+            @else
+                <x-form-textarea
+                    wire:model="prompt"
+                    label="Describe your website"
+                    placeholder="e.g. A SaaS landing page for a project management tool targeting remote teams. Include a hero section, features, pricing, and a contact form."
+                    rows="5"
+                    hint="The AI will generate a complete multi-page website with navigation and contact forms."
+                    :error="$errors->first('prompt')"
+                />
+            @endif
+
+            <div class="flex items-center gap-3 pt-2">
+                @if($mode === 'generate')
+                    <button type="submit" wire:loading.attr="disabled" wire:target="submit"
+                        class="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60">
+                        <span wire:loading.remove wire:target="submit">✨ Generate Website</span>
+                        <span wire:loading wire:target="submit">Generating… this may take a moment</span>
                     </button>
-                    <a href="{{ route('websites.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
-                </div>
-            </form>
-        @else
-            <form wire:submit="generate">
-                <div class="space-y-4">
-                    <x-form-textarea
-                        wire:model="prompt"
-                        label="Describe your website"
-                        placeholder="A modern SaaS landing page for a project management tool. Include a hero section, features, pricing (3 tiers), and a contact form."
-                        hint="Be specific about the type of site, industry, and key sections you need."
-                        rows="5"
-                        required
-                    />
-
-                </div>
-
-                <div class="mt-6 space-y-3">
-                    <div class="flex items-center gap-3">
-                        <button type="submit"
-                            class="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-                            wire:loading.attr="disabled"
-                            @if($generating) disabled @endif>
-                            <span wire:loading.remove wire:target="generate">
-                                <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Generate
-                            </span>
-                            <span wire:loading wire:target="generate">
-                                <i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Starting…
-                            </span>
-                        </button>
-                        <a href="{{ route('websites.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
-                    </div>
-                    <p class="text-xs text-gray-400">
-                        <i class="fa-solid fa-circle-info mr-1"></i>
-                        An AI crew will build your website in the background. You'll be redirected to track progress.
-                    </p>
-                </div>
-            </form>
-        @endif
+                @else
+                    <button type="submit"
+                        class="rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                        Create Website
+                    </button>
+                @endif
+                <a href="{{ route('websites.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
+            </div>
+        </form>
     </div>
 </div>

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Signal;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
 use App\Domain\Signal\Models\Entity;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
@@ -19,6 +20,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * by name — useful for agents building context about a specific person or company.
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class KgEntityFactsTool extends Tool
 {
     protected string $name = 'kg_entity_facts';

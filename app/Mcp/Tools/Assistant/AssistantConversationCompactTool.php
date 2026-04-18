@@ -4,14 +4,18 @@ namespace App\Mcp\Tools\Assistant;
 
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Services\ConversationCompactor;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
+#[IsDestructive]
+#[AssistantTool('write')]
 class AssistantConversationCompactTool extends Tool
 {
     protected string $name = 'assistant_conversation_compact';

@@ -6,6 +6,7 @@ use App\Domain\Integration\Actions\ConnectIntegrationAction;
 use App\Domain\Integration\Actions\DisconnectIntegrationAction;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
+use App\Domain\Integration\Jobs\ActivepiecesSyncJob;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Http\Controllers\Controller;
@@ -110,6 +111,23 @@ class IntegrationController extends Controller
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * Trigger an on-demand sync for integrations that support it (e.g. Activepieces).
+     *
+     * @response 202 {"success": true, "message": "Sync queued."}
+     * @response 422 {"message": "This integration does not support sync."}
+     */
+    public function sync(Integration $integration): JsonResponse
+    {
+        if ($integration->driver !== 'activepieces') {
+            return response()->json(['message' => 'This integration does not support sync.'], 422);
+        }
+
+        ActivepiecesSyncJob::dispatch($integration->id);
+
+        return response()->json(['success' => true, 'message' => 'Sync queued.'], 202);
     }
 
     /**

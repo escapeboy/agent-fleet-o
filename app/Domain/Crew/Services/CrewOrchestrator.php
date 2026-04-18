@@ -178,7 +178,9 @@ class CrewOrchestrator
 
         // Seed: dispatch one task per worker (they self-claim after each completion)
         foreach ($workers->take($pendingTasks->count()) as $workerConfig) {
-            $agent = Agent::withoutGlobalScopes()->find($workerConfig['id']);
+            $agent = Agent::withoutGlobalScopes()
+                ->where('team_id', $execution->team_id)
+                ->find($workerConfig['id']);
             if (! $agent) {
                 continue;
             }
@@ -195,7 +197,9 @@ class CrewOrchestrator
 
         // If no workers but tasks exist, seed with coordinator
         if ($workers->isEmpty() && $pendingTasks->isNotEmpty()) {
-            $coordinator = Agent::withoutGlobalScopes()->find($config['coordinator']['id']);
+            $coordinator = Agent::withoutGlobalScopes()
+                ->where('team_id', $execution->team_id)
+                ->find($config['coordinator']['id']);
             if ($coordinator) {
                 $claimed = app(ClaimNextTaskAction::class)->execute($execution, $coordinator);
                 if ($claimed) {
@@ -368,7 +372,9 @@ class CrewOrchestrator
     private function continueSelfClaim(CrewExecution $execution, CrewTaskExecution $completedTask): void
     {
         // The agent who just finished claims the next task
-        $agent = Agent::withoutGlobalScopes()->find($completedTask->agent_id);
+        $agent = Agent::withoutGlobalScopes()
+            ->where('team_id', $execution->team_id)
+            ->find($completedTask->agent_id);
 
         if ($agent) {
             $nextTask = app(ClaimNextTaskAction::class)->execute($execution, $agent);
@@ -426,7 +432,9 @@ class CrewOrchestrator
                     execution: $execution,
                     messageType: 'finding',
                     content: json_encode($task->output, JSON_UNESCAPED_UNICODE),
-                    sender: Agent::withoutGlobalScopes()->find($task->agent_id),
+                    sender: Agent::withoutGlobalScopes()
+                        ->where('team_id', $execution->team_id)
+                        ->find($task->agent_id),
                     round: $currentRound,
                 );
             }

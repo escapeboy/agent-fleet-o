@@ -35,6 +35,7 @@ class Memory extends Model
         'tags',
         'tier',
         'category',
+        'topic',
         'proposed_by',
         'source_url',
     ];

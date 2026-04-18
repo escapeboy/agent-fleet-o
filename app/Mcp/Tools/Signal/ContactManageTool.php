@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Services\ContactResolver;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('read')]
 class ContactManageTool extends Tool
 {
     protected string $name = 'contact_manage';

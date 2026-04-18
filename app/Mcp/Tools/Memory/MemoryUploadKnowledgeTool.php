@@ -3,12 +3,16 @@
 namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Models\Memory;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class MemoryUploadKnowledgeTool extends Tool
 {
     protected string $name = 'memory_upload_knowledge';

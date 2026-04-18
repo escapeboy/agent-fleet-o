@@ -189,6 +189,27 @@
                     </dl>
                 </div>
 
+                @if(! $tool->isPlatformTool() && ($tool->transport_config['kind'] ?? '') === 'browser')
+                    <div class="rounded-xl border border-gray-200 bg-white p-5">
+                        <h4 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">Proxy Configuration</h4>
+                        <p class="mb-3 text-xs text-gray-500">Route browser traffic through a proxy for residential IP access. Only this tool uses the selected proxy.</p>
+                        <div class="space-y-3">
+                            <x-form-select wire:model="proxyCredentialId" label="Proxy Credential">
+                                <option value="">None (direct connection)</option>
+                                @foreach($proxyCredentials as $pc)
+                                    <option value="{{ $pc->id }}">{{ $pc->name }} ({{ $pc->secret_data['protocol'] ?? 'socks5' }}://{{ $pc->secret_data['host'] ?? '?' }}:{{ $pc->secret_data['port'] ?? '?' }})</option>
+                                @endforeach
+                            </x-form-select>
+                            <div class="flex items-center justify-between">
+                                <a href="{{ route('credentials.create') }}" class="text-xs text-primary-600 hover:text-primary-800">+ Create proxy credential</a>
+                                <button wire:click="saveProxyCredential" class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
+                                    Save Proxy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="rounded-xl border border-gray-200 bg-white p-5">
                     <h4 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">Tool Functions</h4>
                     @if($tool->tool_definitions)

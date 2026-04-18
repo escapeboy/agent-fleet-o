@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\CompanyIntentScore;
 use App\Domain\Signal\Models\Signal;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -20,6 +21,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * entity across all sources (ClearCue, GitHub, webhooks, etc.).
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class IntentScoreTool extends Tool
 {
     protected string $name = 'intent_score_query';

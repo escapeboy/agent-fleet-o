@@ -72,10 +72,16 @@
                 <x-form-input wire:model.number="budgetCapCredits" label="Budget Cap (credits)" type="number" min="0" placeholder="Leave empty for unlimited" />
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <x-form-select wire:model="executionTier" label="Execution Tier">
                     @foreach(\App\Domain\Agent\Enums\ExecutionTier::cases() as $tier)
                         <option value="{{ $tier->value }}">{{ $tier->label() }}</option>
+                    @endforeach
+                </x-form-select>
+
+                <x-form-select wire:model="reasoningStrategy" label="Reasoning Strategy" hint="Shapes how the agent thinks before acting">
+                    @foreach(\App\Domain\Agent\Enums\AgentReasoningStrategy::cases() as $strategy)
+                        <option value="{{ $strategy->value }}">{{ $strategy->label() }}</option>
                     @endforeach
                 </x-form-select>
 

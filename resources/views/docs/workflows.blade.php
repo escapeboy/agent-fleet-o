@@ -96,6 +96,18 @@
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Render a Blade/Twig template with upstream variables to produce formatted text output.</td>
                 </tr>
                 <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">annotation</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Non-executing sticky note attached to the canvas. Use for design comments, TODOs, or reviewer guidance — skipped at runtime.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">iteration</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Flowise-style iteration block: runs an inner sub-graph once per item in an input collection with accumulated state. A simpler alternative to <code class="rounded bg-gray-100 px-1">dynamic_fork</code> + <code class="rounded bg-gray-100 px-1">merge</code> when you want strictly sequential per-item execution.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">workflow_ref</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Alias of <code class="rounded bg-gray-100 px-1">sub_workflow</code> using Flowise naming. Embeds a reusable child workflow as a single node.</td>
+                </tr>
+                <tr>
                     <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">end</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Terminal node. Triggers artifact collection and marks the experiment complete.</td>
                 </tr>
@@ -317,6 +329,41 @@
   "workflow_id": "wf_01jq...",
   "prompt": "Ingest a job application, extract candidate skills, score fit against the role, then send a human review request if score > 70"
 }</x-docs.code>
+
+    {{-- Observability --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Observability — LangFuse &amp; LangSmith</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Every workflow can be instrumented with an external LLM observability provider. Attach credentials
+        for <strong>LangFuse</strong> or <strong>LangSmith</strong> per workflow (or globally per team), and
+        FleetQ will stream traces, spans, and generations to that provider in real time. Use it to debug failing
+        runs, compare cost/latency across workflow revisions, and build dashboards across all AI activity in
+        your organisation.
+    </p>
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Provider</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">What gets sent</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">LangFuse</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Trace per experiment, span per node, generation per LLM call. Token counts, latency, cost, prompt/response bodies, and workflow metadata are included.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">LangSmith</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Run tree with the workflow as root and nodes as children. Inputs, outputs, and errors are attached.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="mt-3 text-sm text-gray-600">
+        Combine observability with the <a href="{{ route('docs.show', 'evaluation') }}" class="text-primary-600 hover:underline">Flow Evaluation Suite</a>
+        for a closed loop: run an evaluation, inspect per-row traces in LangFuse/LangSmith, fix the failing
+        node, re-run the evaluation, and compare deltas side-by-side.
+    </p>
 
     {{-- Cost estimation --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Estimating cost before you run</h2>

@@ -5,11 +5,16 @@ namespace App\Mcp\Tools\Tool;
 use App\Domain\Tool\Actions\CreateToolAction;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolType;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class ToolCreateTool extends Tool
 {
     protected string $name = 'tool_create';
@@ -25,6 +30,7 @@ built_in   — host capability. transport_config depends on kind:
   filesystem: {kind:"filesystem", allowed_paths:[], read_only:false}
   ssh: {kind:"ssh", host, port, username, credential_id, allowed_commands:[]}
   browser_relay: {kind:"browser_relay"}  — browser automation via bridge relay agent
+  browser_use_cloud: {kind:"browser_use_cloud"}  — autonomous browser task via cloud.browser-use.com. Store api_key in credentials or transport_config.env.api_key. Exposes a single browser_task(task, start_url?, max_steps?) tool.
 
 For mcp_bridge: the bridge_server_name must match a server name reported by the team's bridge daemon.
 For SSH tools: create an ssh_key Credential first, then reference its ID in credential_id.
@@ -60,19 +66,21 @@ DESC;
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::error('No current team.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'nullable|string|in:mcp_stdio,mcp_http,mcp_bridge,built_in',
             'transport_config' => 'nullable|array',
             'risk_level' => 'nullable|string|in:safe,read,write,destructive',
-            'credential_id' => 'nullable|uuid|exists:credentials,id',
+            'credential_id' => ['nullable', 'uuid',
+                Rule::exists('credentials', 'id')->where('team_id', $teamId)],
             'network_policy' => 'nullable|string',
         ]);
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-        if (! $teamId) {
-            return Response::error('No current team.');
-        }
 
         // Parse optional network_policy JSON string into an array
         $networkPolicy = null;

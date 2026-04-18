@@ -59,6 +59,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Summarizer API Key
+    |--------------------------------------------------------------------------
+    |
+    | Optional dedicated API key for the conversation compactor's LLM synthesis
+    | step. When set, this key is used instead of the platform's provider key.
+    | Useful when teams use BYOK and there is no platform-level provider key.
+    |
+    | Example: CONTEXT_COMPACTION_ANTHROPIC_API_KEY=sk-ant-api03-...
+    |
+    */
+
+    'summarizer_api_key' => env('CONTEXT_COMPACTION_ANTHROPIC_API_KEY'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Default Context Limit
     |--------------------------------------------------------------------------
     |

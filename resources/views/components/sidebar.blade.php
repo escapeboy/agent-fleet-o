@@ -1,8 +1,8 @@
 @php
     $activeRailGroup = match(true) {
-        request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'crews.*', 'approvals.*', 'chatbots.*', 'websites.*') => 'fleet',
-        request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'triggers.*', 'evolution.*') => 'build',
-        request()->routeIs('signals.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'metrics.*') => 'monitor',
+        request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'crews.*', 'approvals.*', 'chatbots.*') => 'fleet',
+        request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'evaluations.*', 'triggers.*', 'evolution.*', 'websites.*') => 'build',
+        request()->routeIs('signals.*', 'bug-reports.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'metrics.*') => 'monitor',
         request()->routeIs('app.marketplace.*', 'marketplace.*', 'plugins', 'telegram.*') => 'marketplace',
         request()->routeIs('tools.*', 'credentials.*', 'integrations.*', 'git-repositories.*', 'team.*', 'settings', 'profile', 'notifications.*') => 'settings',
         default => null,
@@ -125,7 +125,6 @@
                 @if(auth()->user()?->currentTeam?->settings['chatbot_enabled'] ?? false)
                     <x-sidebar-link href="{{ route('chatbots.index') }}" :active="request()->routeIs('chatbots.*')" icon="chat-bubble-left-right">Chatbots</x-sidebar-link>
                 @endif
-                <x-sidebar-link href="{{ route('websites.index') }}" :active="request()->routeIs('websites.*')" icon="globe-alt">Websites</x-sidebar-link>
             </nav>
         </div>
 
@@ -134,11 +133,14 @@
             <p class="mb-1 px-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Build</p>
             <nav class="flex-1 overflow-y-auto px-2">
                 <x-sidebar-link href="{{ route('workflows.index') }}" :active="request()->routeIs('workflows.*')" icon="arrow-path">Workflows</x-sidebar-link>
+                <x-sidebar-link href="{{ route('websites.index') }}" :active="request()->routeIs('websites.*')" icon="globe-alt">Websites</x-sidebar-link>
                 <x-sidebar-link href="{{ route('skills.index') }}" :active="request()->routeIs('skills.*')" icon="puzzle-piece">Skills</x-sidebar-link>
+                <x-sidebar-link href="{{ route('frameworks.index') }}" :active="request()->routeIs('frameworks.*')" icon="academic-cap">Frameworks</x-sidebar-link>
                 <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*') && !request()->routeIs('knowledge.*')" icon="circle-stack">Memory</x-sidebar-link>
                 <x-sidebar-link href="{{ route('knowledge.index') }}" :active="request()->routeIs('knowledge.*') && !request()->routeIs('knowledge-graph.*')" icon="book-open">Knowledge</x-sidebar-link>
                 <x-sidebar-link href="{{ route('knowledge-graph.index') }}" :active="request()->routeIs('knowledge-graph.*')" icon="share">Knowledge Graph</x-sidebar-link>
-                <x-sidebar-link href="{{ route('evaluation.index') }}" :active="request()->routeIs('evaluation.*')" icon="scale">Evaluation</x-sidebar-link>
+                <x-sidebar-link href="{{ route('evaluation.index') }}" :active="request()->routeIs('evaluation.index')" icon="scale">Evaluation</x-sidebar-link>
+                <x-sidebar-link href="{{ route('evaluations.index') }}" :active="request()->routeIs('evaluations.*')" icon="beaker">Flow Evals</x-sidebar-link>
                 <x-sidebar-link href="{{ route('triggers.index') }}" :active="request()->routeIs('triggers.*')" icon="bolt">Triggers</x-sidebar-link>
                 @if(Route::has('evolution.index'))
                     <x-sidebar-link href="{{ route('evolution.index') }}" :active="request()->routeIs('evolution.*')" icon="sparkles">
@@ -160,16 +162,22 @@
                 <x-sidebar-link href="{{ route('signals.subscriptions') }}" :active="request()->routeIs('signals.subscriptions')" icon="bell">Subscriptions</x-sidebar-link>
                 <x-sidebar-link href="{{ route('signals.entities') }}" :active="request()->routeIs('signals.entities')" icon="squares-2x2">Entities</x-sidebar-link>
                 <x-sidebar-link href="{{ route('signals.bindings') }}" :active="request()->routeIs('signals.bindings')" icon="link">Bindings</x-sidebar-link>
+                <x-sidebar-link href="{{ route('bug-reports.index') }}" :active="request()->routeIs('bug-reports.*')" icon="bug-ant">Bug Reports</x-sidebar-link>
                 <x-sidebar-link href="{{ route('contacts.index') }}" :active="request()->routeIs('contacts.*')" icon="identification">Contacts</x-sidebar-link>
                 <x-sidebar-link href="{{ route('email.templates.index') }}" :active="request()->routeIs('email.templates.*')" icon="document-text">Email Templates</x-sidebar-link>
                 <x-sidebar-link href="{{ route('email.themes.index') }}" :active="request()->routeIs('email.themes.*')" icon="envelope">Email Themes</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.email') }}" :active="request()->routeIs('outbound.email')" icon="envelope">Email Delivery</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.webhooks') }}" :active="request()->routeIs('outbound.webhooks')" icon="link">Webhooks</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.notifications') }}" :active="request()->routeIs('outbound.notifications')" icon="bell">Notifications</x-sidebar-link>
+                <x-sidebar-link href="{{ route('outbound.whatsapp') }}" :active="request()->routeIs('outbound.whatsapp')" icon="chat-bubble-left-right">WhatsApp</x-sidebar-link>
                 <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">Health</x-sidebar-link>
                 <x-sidebar-link href="{{ route('audit') }}" :active="request()->routeIs('audit')" icon="document-text">Audit Log</x-sidebar-link>
                 <x-sidebar-link href="{{ route('metrics.models') }}" :active="request()->routeIs('metrics.models')" icon="scale">Model Comparison</x-sidebar-link>
                 <x-sidebar-link href="{{ route('metrics.ai-routing') }}" :active="request()->routeIs('metrics.ai-routing')" icon="arrow-path">AI Routing</x-sidebar-link>
+                <x-sidebar-link href="{{ route('insights') }}" :active="request()->routeIs('insights')" icon="light-bulb">Insights</x-sidebar-link>
+                @if(auth()->user()?->is_super_admin)
+                    <x-sidebar-link href="{{ route('admin.ai') }}" :active="request()->routeIs('admin.ai')" icon="cpu-chip">AI Control Center</x-sidebar-link>
+                @endif
             </nav>
         </div>
 

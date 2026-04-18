@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Signal;
 use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Connectors\SearxngConnector;
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -24,6 +25,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * @see https://github.com/searxng/searxng
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class SearxngSearchTool extends Tool
 {
     protected string $name = 'searxng_search';

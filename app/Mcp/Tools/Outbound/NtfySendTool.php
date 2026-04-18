@@ -3,11 +3,13 @@
 namespace App\Mcp\Tools\Outbound;
 
 use App\Domain\Shared\Services\SsrfGuard;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for sending ad-hoc ntfy push notifications.
@@ -15,6 +17,8 @@ use Laravel\Mcp\Server\Tool;
  * Sends a message directly to any ntfy topic without requiring a saved
  * OutboundConnectorConfig. Useful for one-off notifications or testing.
  */
+#[IsDestructive]
+#[AssistantTool('write')]
 class NtfySendTool extends Tool
 {
     protected string $name = 'ntfy_send';

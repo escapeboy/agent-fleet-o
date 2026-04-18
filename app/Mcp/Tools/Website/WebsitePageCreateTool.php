@@ -8,70 +8,47 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class WebsitePageCreateTool extends Tool
 {
     protected string $name = 'website_page_create';
 
-    protected string $description = 'Create a new page in a website.';
+    protected string $description = 'Create a new page within a website.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'website_id' => $schema->string()
-                ->description('Website UUID')
-                ->required(),
-            'slug' => $schema->string()
-                ->description('Page URL slug (e.g. "about-us")')
-                ->required(),
-            'title' => $schema->string()
-                ->description('Page display title')
-                ->required(),
-            'page_type' => $schema->string()
-                ->description('Page type: page, post, product, landing')
-                ->enum(['page', 'post', 'product', 'landing']),
-            'exported_html' => $schema->string()
-                ->description('HTML content for the page'),
-            'exported_css' => $schema->string()
-                ->description('CSS styles for the page'),
+            'website_id' => $schema->string()->description('The website UUID (required)'),
+            'title' => $schema->string()->description('Page title (required)'),
+            'slug' => $schema->string()->description('Page URL slug (required)'),
+            'page_type' => $schema->string()->description('Page type (default: page)')->enum(['page', 'post', 'product', 'landing']),
         ];
     }
 
     public function handle(Request $request): Response
     {
         $website = Website::find($request->get('website_id'));
+
         if (! $website) {
-            return Response::error('Website not found.');
+            return Response::text(json_encode(['error' => 'Website not found'], JSON_PRETTY_PRINT));
         }
 
-        $validated = $request->validate([
-            'slug' => 'required|string|max:100|regex:/^[a-z0-9-]+$/',
-            'title' => 'required|string|max:255',
-            'page_type' => 'nullable|string|in:page,post,product,landing',
-            'exported_html' => 'nullable|string',
-            'exported_css' => 'nullable|string',
+        $page = app(CreateWebsitePageAction::class)->execute($website, [
+            'title' => $request->get('title'),
+            'slug' => $request->get('slug'),
+            'page_type' => $request->get('page_type') ?? 'page',
         ]);
 
-        try {
-            $page = app(CreateWebsitePageAction::class)->execute(
-                website: $website,
-                data: [
-                    'slug' => $validated['slug'],
-                    'title' => $validated['title'],
-                    'page_type' => $validated['page_type'] ?? 'page',
-                    'exported_html' => $validated['exported_html'] ?? null,
-                    'exported_css' => $validated['exported_css'] ?? null,
-                ],
-            );
-
-            return Response::text(json_encode([
-                'success' => true,
-                'page_id' => $page->id,
-                'slug' => $page->slug,
-                'title' => $page->title,
-            ]));
-        } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
-        }
+        return Response::text(json_encode([
+            'id' => $page->id,
+            'website_id' => $page->website_id,
+            'title' => $page->title,
+            'slug' => $page->slug,
+            'page_type' => $page->page_type instanceof \BackedEnum ? $page->page_type->value : $page->page_type,
+            'status' => $page->status instanceof \BackedEnum ? $page->status->value : $page->status,
+            'created_at' => $page->created_at?->toIso8601String(),
+        ], JSON_PRETTY_PRINT));
     }
 }

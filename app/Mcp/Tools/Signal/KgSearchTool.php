@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\KnowledgeGraph\Actions\SearchKgFactsAction;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * Useful for agents to find relevant context about entities before taking action.
  */
 #[IsReadOnly]
+#[AssistantTool('read')]
 class KgSearchTool extends Tool
 {
     protected string $name = 'kg_search';
@@ -37,7 +39,8 @@ class KgSearchTool extends Tool
             'include_history' => $schema->boolean()
                 ->description('Include invalidated historical facts (default: false — only current facts)'),
             'limit' => $schema->integer()
-                ->description('Maximum number of results (default: 10, max: 50)'),
+                ->description('Maximum number of results (default: 10, max: 50)')
+                ->default(10),
         ];
     }
 

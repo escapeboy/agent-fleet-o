@@ -2,12 +2,16 @@
 
 namespace App\Mcp\Tools\Tool;
 
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class ToolBashPolicyTool extends Tool
 {
     protected string $name = 'tool_bash_policy';

@@ -10,6 +10,7 @@ use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Website\Models\Website;
 use App\Domain\Workflow\Models\Workflow;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
@@ -31,6 +32,8 @@ class ListEntitiesTools
             self::listPendingApprovals(),
             self::listEmailTemplates(),
             self::listEmailThemes(),
+            self::listWebsites(),
+            self::listWebsitePages(),
         ];
     }
 
@@ -281,6 +284,77 @@ class ListEntitiesTools
                         'status' => $t->status->value,
                         'primary_color' => $t->primary_color,
                         'font_name' => $t->font_name,
+                    ])->toArray(),
+                ]);
+            });
+    }
+
+    private static function listWebsites(): PrismToolObject
+    {
+        return PrismTool::as('list_websites')
+            ->for('List websites for the current team with optional status filter')
+            ->withStringParameter('status', 'Filter by status: draft, published')
+            ->withNumberParameter('limit', 'Max results to return (default 10)')
+            ->using(function (?string $status = null, ?int $limit = null) {
+                $query = Website::query()->withCount('pages')->orderByDesc('updated_at');
+
+                if ($status) {
+                    $query->where('status', $status);
+                }
+
+                $websites = $query->limit($limit ?? 10)->get();
+
+                return json_encode([
+                    'count' => $websites->count(),
+                    'websites' => $websites->map(fn ($w) => [
+                        'id' => $w->id,
+                        'name' => $w->name,
+                        'slug' => $w->slug,
+                        'status' => $w->status->value,
+                        'pages_count' => $w->pages_count,
+                        'custom_domain' => $w->custom_domain,
+                        'updated' => $w->updated_at->diffForHumans(),
+                    ])->toArray(),
+                ]);
+            });
+    }
+
+    private static function listWebsitePages(): PrismToolObject
+    {
+        return PrismTool::as('list_website_pages')
+            ->for('List pages belonging to a specific website')
+            ->withStringParameter('website_id', 'The parent website UUID', required: true)
+            ->withStringParameter('status', 'Filter by status: draft, published')
+            ->withStringParameter('page_type', 'Filter by type: page, post, product, landing')
+            ->withNumberParameter('limit', 'Max results to return (default 20)')
+            ->using(function (string $website_id, ?string $status = null, ?string $page_type = null, ?int $limit = null) {
+                $website = Website::query()->find($website_id);
+                if (! $website) {
+                    return json_encode(['error' => 'Website not found']);
+                }
+
+                $query = $website->pages()->orderBy('sort_order');
+
+                if ($status) {
+                    $query->where('status', $status);
+                }
+                if ($page_type) {
+                    $query->where('page_type', $page_type);
+                }
+
+                $pages = $query->limit($limit ?? 20)->get();
+
+                return json_encode([
+                    'website_id' => $website->id,
+                    'count' => $pages->count(),
+                    'pages' => $pages->map(fn ($p) => [
+                        'id' => $p->id,
+                        'title' => $p->title,
+                        'slug' => $p->slug,
+                        'page_type' => $p->page_type->value,
+                        'status' => $p->status->value,
+                        'has_exported_html' => ! empty($p->exported_html),
+                        'published_at' => $p->published_at?->toIso8601String(),
                     ])->toArray(),
                 ]);
             });

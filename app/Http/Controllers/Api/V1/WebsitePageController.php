@@ -16,7 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * @tags Website Pages
+ * @tags Websites
  */
 class WebsitePageController extends Controller
 {
@@ -27,7 +27,7 @@ class WebsitePageController extends Controller
         return WebsitePageResource::collection($pages);
     }
 
-    public function show(Request $request, Website $website, WebsitePage $page): WebsitePageResource
+    public function show(Website $website, WebsitePage $page): WebsitePageResource
     {
         abort_if($page->website_id !== $website->id, 404);
 
@@ -36,24 +36,14 @@ class WebsitePageController extends Controller
 
     public function store(Request $request, Website $website, CreateWebsitePageAction $action): JsonResponse
     {
-        $request->validate([
-            'slug' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9-]+$/'],
-            'title' => ['required', 'string', 'max:255'],
-            'page_type' => ['sometimes', 'string', 'in:page,post,product,landing'],
-            'meta' => ['sometimes', 'array'],
-            'sort_order' => ['sometimes', 'integer', 'min:0'],
+        $data = $request->validate([
+            'slug' => ['required', 'string'],
+            'title' => ['required', 'string'],
+            'page_type' => ['sometimes', 'in:page,post,product,landing'],
+            'status' => ['sometimes', 'in:draft,published'],
         ]);
 
-        $page = $action->execute(
-            website: $website,
-            data: [
-                'slug' => $request->input('slug'),
-                'title' => $request->input('title'),
-                'page_type' => $request->input('page_type', 'page'),
-                'meta' => $request->input('meta', []),
-                'sort_order' => $request->input('sort_order'),
-            ],
-        );
+        $page = $action->execute($website, $data);
 
         return (new WebsitePageResource($page))
             ->response()
@@ -64,71 +54,50 @@ class WebsitePageController extends Controller
     {
         abort_if($page->website_id !== $website->id, 404);
 
-        $request->validate([
-            'slug' => ['sometimes', 'string', 'max:100', 'regex:/^[a-z0-9-]+$/'],
-            'title' => ['sometimes', 'string', 'max:255'],
-            'grapes_json' => ['sometimes', 'nullable', 'array'],
-            'exported_html' => ['sometimes', 'nullable', 'string'],
-            'exported_css' => ['sometimes', 'nullable', 'string'],
+        $data = $request->validate([
+            'slug' => ['sometimes', 'string'],
+            'title' => ['sometimes', 'string'],
+            'page_type' => ['sometimes', 'in:page,post,product,landing'],
+            'status' => ['sometimes', 'in:draft,published'],
+            'grapes_json' => ['sometimes', 'array'],
+            'exported_html' => ['sometimes', 'string'],
+            'exported_css' => ['sometimes', 'string'],
             'meta' => ['sometimes', 'array'],
-            'sort_order' => ['sometimes', 'integer', 'min:0'],
         ]);
 
-        $page = $action->execute(
-            page: $page,
-            data: array_filter([
-                'slug' => $request->input('slug'),
-                'title' => $request->input('title'),
-                'grapes_json' => $request->input('grapes_json'),
-                'exported_html' => $request->input('exported_html'),
-                'exported_css' => $request->input('exported_css'),
-                'meta' => $request->input('meta'),
-                'sort_order' => $request->input('sort_order'),
-            ], fn ($v) => $v !== null),
-        );
+        $page = $action->execute($page, $data);
 
         return new WebsitePageResource($page);
     }
 
-    /**
-     * @response 200 {"message": "Page deleted."}
-     */
+    public function publish(Website $website, WebsitePage $page, PublishWebsitePageAction $action): WebsitePageResource|JsonResponse
+    {
+        abort_if($page->website_id !== $website->id, 404);
+
+        try {
+            $page = $action->execute($page);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        return new WebsitePageResource($page);
+    }
+
+    public function unpublish(Website $website, WebsitePage $page, UnpublishWebsitePageAction $action): WebsitePageResource
+    {
+        abort_if($page->website_id !== $website->id, 404);
+
+        $page = $action->execute($page);
+
+        return new WebsitePageResource($page);
+    }
+
     public function destroy(Website $website, WebsitePage $page, DeleteWebsitePageAction $action): JsonResponse
     {
         abort_if($page->website_id !== $website->id, 404);
 
         $action->execute($page);
 
-        return response()->json(['message' => 'Page deleted.']);
-    }
-
-    /**
-     * @response 200 {"message": "Page published.", "data": {}}
-     */
-    public function publish(Website $website, WebsitePage $page, PublishWebsitePageAction $action): JsonResponse
-    {
-        abort_if($page->website_id !== $website->id, 404);
-
-        $page = $action->execute($page);
-
-        return response()->json([
-            'message' => 'Page published.',
-            'data' => new WebsitePageResource($page),
-        ]);
-    }
-
-    /**
-     * @response 200 {"message": "Page unpublished.", "data": {}}
-     */
-    public function unpublish(Website $website, WebsitePage $page, UnpublishWebsitePageAction $action): JsonResponse
-    {
-        abort_if($page->website_id !== $website->id, 404);
-
-        $page = $action->execute($page);
-
-        return response()->json([
-            'message' => 'Page unpublished.',
-            'data' => new WebsitePageResource($page),
-        ]);
+        return response()->json(null, 204);
     }
 }

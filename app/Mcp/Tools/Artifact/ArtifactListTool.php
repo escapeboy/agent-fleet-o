@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Artifact;
 
 use App\Domain\Experiment\Services\ArtifactContentResolver;
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\Artifact;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class ArtifactListTool extends Tool
 {
     protected string $name = 'artifact_list';
@@ -29,7 +31,8 @@ class ArtifactListTool extends Tool
             'project_run_id' => $schema->string()
                 ->description('Filter by project run UUID'),
             'limit' => $schema->integer()
-                ->description('Max results (default 20, max 100)'),
+                ->description('Max results (default 20, max 100)')
+                ->default(20),
         ];
     }
 

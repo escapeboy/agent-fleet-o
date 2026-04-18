@@ -6,6 +6,7 @@ use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Memory\Enums\WriteGateDecision;
+use App\Domain\Memory\Jobs\ClassifyMemoryTopicJob;
 use App\Domain\Memory\Models\Memory;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -51,6 +52,7 @@ PROMPT;
         MemoryTier $tier = MemoryTier::Working,
         ?string $proposedBy = null,
         ?MemoryCategory $category = null,
+        ?string $topic = null,
     ): array {
         if (! config('memory.enabled', true)) {
             return [];
@@ -71,11 +73,16 @@ PROMPT;
                 $memory = $this->storeChunk(
                     $teamId, $agentId, $chunk, $sourceType,
                     $projectId, $sourceId, $metadata, $confidence,
-                    $importance, $tags, $visibility, $tier, $proposedBy, $category,
+                    $importance, $tags, $visibility, $tier, $proposedBy, $category, $topic,
                 );
 
                 if ($memory) {
                     $memories[] = $memory;
+
+                    // Async topic classification when no topic was provided
+                    if ($topic === null && $memory->topic === null) {
+                        ClassifyMemoryTopicJob::dispatch($memory->id);
+                    }
                 }
             } catch (\Throwable $e) {
                 Log::warning('StoreMemoryAction: Failed to store memory chunk', [
@@ -106,6 +113,7 @@ PROMPT;
         MemoryTier $tier = MemoryTier::Working,
         ?string $proposedBy = null,
         ?MemoryCategory $category = null,
+        ?string $topic = null,
     ): ?Memory {
         $contentHash = hash('sha256', mb_strtolower(trim($chunk)));
         $embedding = $this->generateEmbedding($chunk);
@@ -122,7 +130,7 @@ PROMPT;
             WriteGateDecision::Add => $this->handleAdd(
                 $teamId, $agentId, $chunk, $embedding, $contentHash,
                 $sourceType, $projectId, $sourceId, $metadata,
-                $confidence, $importance, $tags, $visibility, $tier, $proposedBy, $category,
+                $confidence, $importance, $tags, $visibility, $tier, $proposedBy, $category, $topic,
             ),
         };
     }
@@ -266,6 +274,7 @@ PROMPT;
         MemoryTier $tier = MemoryTier::Working,
         ?string $proposedBy = null,
         ?MemoryCategory $category = null,
+        ?string $topic = null,
     ): Memory {
         return Memory::create([
             'team_id' => $teamId,
@@ -283,6 +292,7 @@ PROMPT;
             'visibility' => $visibility,
             'tier' => $tier,
             'category' => $category,
+            'topic' => $topic,
             'proposed_by' => $proposedBy,
         ]);
     }

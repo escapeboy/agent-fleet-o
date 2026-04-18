@@ -8,59 +8,56 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
 class WebsitePageUpdateTool extends Tool
 {
     protected string $name = 'website_page_update';
 
-    protected string $description = 'Update a page\'s content (HTML/CSS), title, slug, or meta. Use this to write HTML content for a page.';
+    protected string $description = 'Update a website page\'s content, metadata, or status.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'page_id' => $schema->string()
-                ->description('Page UUID')
-                ->required(),
-            'title' => $schema->string()
-                ->description('Page title'),
-            'slug' => $schema->string()
-                ->description('URL slug'),
-            'exported_html' => $schema->string()
-                ->description('HTML content (body HTML, not full document)'),
-            'exported_css' => $schema->string()
-                ->description('CSS styles'),
-            'meta' => $schema->object()
-                ->description('Page meta: title, description, og_image'),
+            'page_id' => $schema->string()->description('The page UUID (required)'),
+            'title' => $schema->string()->description('New page title'),
+            'slug' => $schema->string()->description('New URL slug'),
+            'page_type' => $schema->string()->description('Page type')->enum(['page', 'post', 'product', 'landing']),
+            'status' => $schema->string()->description('Page status')->enum(['draft', 'published']),
+            'exported_html' => $schema->string()->description('The full HTML content to set'),
+            'meta' => $schema->string()->description('JSON-encoded meta object (title, description, etc.)'),
         ];
     }
 
     public function handle(Request $request): Response
     {
         $page = WebsitePage::find($request->get('page_id'));
+
         if (! $page) {
-            return Response::error('Page not found.');
+            return Response::text(json_encode(['error' => 'Page not found'], JSON_PRETTY_PRINT));
         }
 
-        try {
-            $page = app(UpdateWebsitePageAction::class)->execute(
-                page: $page,
-                data: array_filter([
-                    'title' => $request->get('title'),
-                    'slug' => $request->get('slug'),
-                    'exported_html' => $request->get('exported_html'),
-                    'exported_css' => $request->get('exported_css'),
-                    'meta' => $request->get('meta'),
-                ], fn ($v) => $v !== null),
-            );
+        $data = [];
 
-            return Response::text(json_encode([
-                'success' => true,
-                'page_id' => $page->id,
-                'title' => $page->title,
-                'has_content' => ! empty($page->exported_html),
-            ]));
-        } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+        foreach (['title', 'slug', 'page_type', 'status', 'exported_html'] as $field) {
+            if ($request->get($field) !== null) {
+                $data[$field] = $request->get($field);
+            }
         }
+
+        if ($metaRaw = $request->get('meta')) {
+            $data['meta'] = json_decode($metaRaw, true) ?? [];
+        }
+
+        $page = app(UpdateWebsitePageAction::class)->execute($page, $data);
+
+        return Response::text(json_encode([
+            'id' => $page->id,
+            'title' => $page->title,
+            'slug' => $page->slug,
+            'status' => $page->status instanceof \BackedEnum ? $page->status->value : $page->status,
+            'updated_at' => $page->updated_at?->toIso8601String(),
+        ], JSON_PRETTY_PRINT));
     }
 }

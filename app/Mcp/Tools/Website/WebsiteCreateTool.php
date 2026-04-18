@@ -7,58 +7,43 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
+#[IsIdempotent]
+#[IsDestructive]
 class WebsiteCreateTool extends Tool
 {
     protected string $name = 'website_create';
 
-    protected string $description = 'Create a new blank website. Use website_generate to AI-generate a full site from a prompt instead.';
+    protected string $description = 'Create a new website for the current team.';
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'name' => $schema->string()
-                ->description('Website display name')
-                ->required(),
-            'slug' => $schema->string()
-                ->description('URL slug (lowercase letters, numbers, hyphens). Auto-generated from name if omitted.'),
-            'custom_domain' => $schema->string()
-                ->description('Custom domain (e.g. www.example.com)'),
+            'name' => $schema->string()->description('Website display name (required)'),
+            'slug' => $schema->string()->description('URL slug (auto-generated from name if omitted)'),
+            'custom_domain' => $schema->string()->description('Optional custom domain (e.g. example.com)'),
         ];
     }
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-        if (! $teamId) {
-            return Response::error('No current team.');
-        }
+        $team = auth()->user()->currentTeam;
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:100|regex:/^[a-z0-9-]*$/',
-            'custom_domain' => 'nullable|string|max:255',
+        $website = app(CreateWebsiteAction::class)->execute($team, [
+            'name' => $request->get('name'),
+            'slug' => $request->get('slug'),
+            'custom_domain' => $request->get('custom_domain'),
         ]);
 
-        try {
-            $website = app(CreateWebsiteAction::class)->execute(
-                teamId: $teamId,
-                name: $validated['name'],
-                data: [
-                    'slug' => $validated['slug'] ?? null,
-                    'custom_domain' => $validated['custom_domain'] ?? null,
-                ],
-            );
-
-            return Response::text(json_encode([
-                'success' => true,
-                'website_id' => $website->id,
-                'name' => $website->name,
-                'slug' => $website->slug,
-                'status' => $website->status->value,
-            ]));
-        } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
-        }
+        return Response::text(json_encode([
+            'id' => $website->id,
+            'name' => $website->name,
+            'slug' => $website->slug,
+            'status' => $website->status instanceof \BackedEnum ? $website->status->value : $website->status,
+            'custom_domain' => $website->custom_domain,
+            'created_at' => $website->created_at?->toIso8601String(),
+        ], JSON_PRETTY_PRINT));
     }
 }

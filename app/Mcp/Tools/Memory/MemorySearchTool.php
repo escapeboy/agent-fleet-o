@@ -6,6 +6,7 @@ use App\Domain\KnowledgeGraph\Services\KnowledgeGraphTraversal;
 use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Signal\Models\Entity;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
@@ -16,6 +17,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class MemorySearchTool extends Tool
 {
     protected string $name = 'memory_search';
@@ -44,6 +46,8 @@ class MemorySearchTool extends Tool
                 ->default('semantic'),
             'tags' => $schema->array()
                 ->description('Filter by tags — only return memories containing ANY of these tags. E.g. ["barsy:client", "barsy:shared"]. Omit to return all memories regardless of tags.'),
+            'topic' => $schema->string()
+                ->description('Namespace pre-filter by topic slug, e.g. "auth_migration". Narrows the search to a named context before the vector scan for higher precision.'),
         ];
     }
 
@@ -123,6 +127,10 @@ class MemorySearchTool extends Tool
         if (is_array($tags) && ! empty($tags)) {
             // PostgreSQL JSONB ?| operator: matches memories containing ANY of the given tags
             $query->whereRaw('tags ?| ?', ['{'.implode(',', $tags).'}']);
+        }
+
+        if ($topic = $request->get('topic')) {
+            $query->where('topic', $topic);
         }
 
         return $query->limit(100)->get();

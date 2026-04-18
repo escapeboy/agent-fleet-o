@@ -3,11 +3,13 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool for managing the Portkey AI Gateway integration.
@@ -23,6 +25,8 @@ use Laravel\Mcp\Server\Tool;
  *   configure  — store/update the Portkey API key (and optional virtual key)
  *   remove     — delete the Portkey credential (disables the gateway)
  */
+#[IsDestructive]
+#[AssistantTool('write')]
 class PortkeyGatewayTool extends Tool
 {
     protected string $name = 'portkey_gateway_manage';

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Shared\Models\ContactIdentity;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -10,6 +11,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[AssistantTool('read')]
 class GetContactRiskScoreTool extends Tool
 {
     protected string $name = 'contact_risk_score_get';

@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Signal;
 
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\Connector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -10,6 +11,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[AssistantTool('read')]
 class HttpMonitorTool extends Tool
 {
     protected string $name = 'http_monitor_manage';

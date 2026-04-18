@@ -2,12 +2,16 @@
 
 namespace App\Mcp\Tools\Credential;
 
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class CredentialOAuthFinalizeTool extends Tool
 {
     protected string $name = 'credential_oauth_finalize';

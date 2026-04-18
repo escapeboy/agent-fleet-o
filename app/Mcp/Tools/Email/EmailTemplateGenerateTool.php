@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Email;
 
 use App\Domain\Email\Actions\GenerateEmailTemplateAction;
 use App\Domain\Email\Models\EmailTheme;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('write')]
 class EmailTemplateGenerateTool extends Tool
 {
     protected string $name = 'email_template_generate';

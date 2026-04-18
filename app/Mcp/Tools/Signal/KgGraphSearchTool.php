@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Signal;
 use App\Domain\KnowledgeGraph\Services\KnowledgeGraphTraversal;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Signal\Models\Entity;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
@@ -26,6 +27,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  */
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class KgGraphSearchTool extends Tool
 {
     protected string $name = 'kg_graph_search';

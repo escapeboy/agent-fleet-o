@@ -2,22 +2,45 @@
 
 namespace App\Domain\Website\Actions;
 
+use App\Domain\Shared\Models\Team;
+use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CreateWebsiteAction
 {
-    public function execute(string $teamId, string $name, array $data = []): Website
+    public function execute(Team $team, array $data, ?User $user = null): Website
     {
-        $slug = $data['slug'] ?? Str::slug($name).'-'.Str::random(6);
+        $slug = isset($data['slug']) && $data['slug']
+            ? Str::slug($data['slug'])
+            : Str::slug($data['name']);
 
-        return Website::create([
-            'team_id' => $teamId,
-            'name' => $name,
+        $slug = $this->uniqueSlug($team->id, $slug);
+
+        $website = Website::create([
+            'team_id' => $team->id,
+            'user_id' => $user?->id,
+            'name' => $data['name'],
             'slug' => $slug,
-            'status' => $data['status'] ?? 'draft',
-            'custom_domain' => $data['custom_domain'] ?? null,
-            'settings' => $data['settings'] ?? [],
+            'status' => WebsiteStatus::Draft,
         ]);
+
+        Log::info('Website created', ['website_id' => $website->id, 'team_id' => $team->id]);
+
+        return $website;
+    }
+
+    private function uniqueSlug(string $teamId, string $base): string
+    {
+        $slug = $base;
+        $i = 2;
+
+        while (Website::where('team_id', $teamId)->where('slug', $slug)->exists()) {
+            $slug = $base.'-'.$i++;
+        }
+
+        return $slug;
     }
 }

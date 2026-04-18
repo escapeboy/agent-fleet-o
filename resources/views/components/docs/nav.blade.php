@@ -16,6 +16,7 @@ $sections = [
         ['slug' => 'workflows',    'label' => 'Workflows'],
         ['slug' => 'projects',     'label' => 'Projects'],
         ['slug' => 'approvals',    'label' => 'Approvals & Human Tasks'],
+        ['slug' => 'evaluation',   'label' => 'Evaluation'],
     ],
     'Signals & Automation' => [
         ['slug' => 'signals',       'label' => 'Signals'],
@@ -27,7 +28,9 @@ $sections = [
         ['slug' => 'marketplace',   'label' => 'Marketplace'],
         ['slug' => 'assistant',     'label' => 'AI Assistant'],
         ['slug' => 'chatbots',      'label' => 'Chatbots & Telegram'],
+        ['slug' => 'voice-agents',  'label' => 'Voice Agents'],
         ['slug' => 'email',         'label' => 'Email Templates'],
+        ['slug' => 'websites',      'label' => 'Website Builder'],
         ['slug' => 'memory',        'label' => 'Memory & Knowledge'],
         ['slug' => 'integrations',  'label' => 'Integrations'],
         ['slug' => 'evolution',     'label' => 'Evolution'],

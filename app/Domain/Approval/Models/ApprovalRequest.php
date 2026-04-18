@@ -2,6 +2,7 @@
 
 namespace App\Domain\Approval\Models;
 
+use App\Domain\Approval\Enums\ApprovalMode;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Credential\Models\Credential;
@@ -53,12 +54,18 @@ class ApprovalRequest extends Model
         'callback_status',
         'chatbot_message_id',
         'edited_content',
+        'mode',
+        'intervention_window_seconds',
+        'auto_approved_at',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => ApprovalStatus::class,
+            'mode' => ApprovalMode::class,
+            'intervention_window_seconds' => 'integer',
+            'auto_approved_at' => 'datetime',
             'context' => 'array',
             'form_schema' => 'array',
             'form_response' => 'array',

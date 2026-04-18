@@ -19,11 +19,8 @@ class WebsitePageResource extends JsonResource
             'meta' => $this->meta,
             'sort_order' => $this->sort_order,
             'published_at' => $this->published_at?->toISOString(),
-            'has_content' => ! empty($this->exported_html),
-            'grapes_json' => $this->when(
-                $request->boolean('with_editor'),
-                fn () => $this->grapes_json,
-            ),
+            'grapes_json' => $this->grapes_json,
+            'exported_html' => $this->exported_html,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];

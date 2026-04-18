@@ -4,10 +4,12 @@ namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Models\Memory;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool to promote a memory to a higher curation tier.
@@ -16,6 +18,8 @@ use Laravel\Mcp\Server\Tool;
  * has been reviewed and is now considered trusted knowledge.
  * Promoted memories receive a +0.10 retrieval score boost.
  */
+#[IsDestructive]
+#[AssistantTool('write')]
 class MemoryPromoteTool extends Tool
 {
     protected string $name = 'memory_promote';

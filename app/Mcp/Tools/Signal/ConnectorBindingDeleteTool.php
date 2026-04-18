@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\ConnectorBinding;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('read')]
 class ConnectorBindingDeleteTool extends Tool
 {
     protected string $name = 'connector_binding_delete';

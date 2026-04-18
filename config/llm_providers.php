@@ -132,6 +132,17 @@ return [
             'claude-haiku-4-5' => ['label' => 'Claude Haiku 4.5', 'input_cost' => 0, 'output_cost' => 0],
         ],
     ],
+    'claude-code-vps' => [
+        'name' => 'Claude Code (VPS — super-admin)',
+        'local' => true,
+        'vps' => true,
+        'agent_key' => 'claude-code-vps',
+        'models' => [
+            'claude-sonnet-4-5' => ['label' => 'Claude Sonnet 4.5', 'input_cost' => 0, 'output_cost' => 0],
+            'claude-opus-4-6' => ['label' => 'Claude Opus 4.6', 'input_cost' => 0, 'output_cost' => 0],
+            'claude-haiku-4-5' => ['label' => 'Claude Haiku 4.5', 'input_cost' => 0, 'output_cost' => 0],
+        ],
+    ],
     'gemini-cli' => [
         'name' => 'Gemini CLI (Local)',
         'local' => true,
@@ -201,6 +212,20 @@ return [
     ],
 
     // HTTP-based local LLM providers (Ollama, OpenAI-compatible endpoints)
+
+    // Mesh LLM — distributed llama.cpp inference across machines.
+    // Pools spare GPU capacity and exposes a single OpenAI-compatible API.
+    // Install: curl -fsSL https://raw.githubusercontent.com/michaelneale/mesh-llm/main/install.sh | bash
+    // Start:   mesh-llm serve --auto
+    // Models are discovered dynamically from GET /v1/models.
+    'mesh_llm' => [
+        'name' => 'Mesh LLM (Local/Distributed)',
+        'http_local' => true,
+        'default_url' => 'http://localhost:9337/v1',
+        'url_hint' => 'Mesh LLM API URL — default http://localhost:9337/v1',
+        'models' => [], // Populated dynamically from GET /v1/models
+    ],
+
     'ollama' => [
         'name' => 'Ollama',
         'http_local' => true,

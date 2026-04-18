@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Agent\Events\AgentExecuted;
+use App\Domain\Agent\Listeners\ProvisionPersonalAgentListener;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
@@ -12,7 +13,6 @@ use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Domain\Chatbot\Listeners\DeliverChatbotWorkflowResultListener;
 use App\Domain\Chatbot\Listeners\ExtractChatMemoriesListener;
 use App\Domain\Credential\Observers\SecretScanObserver;
-use App\Domain\Crew\Events\CrewExecuted;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Events\StuckPatternDetected;
 use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
@@ -20,10 +20,12 @@ use App\Domain\Experiment\Listeners\CollectWorkflowArtifactsOnCompletion;
 use App\Domain\Experiment\Listeners\DispatchNextStageJob;
 use App\Domain\Experiment\Listeners\HandleStuckPattern;
 use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
+use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
 use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
+use App\Domain\Memory\Listeners\FlushAgentMemoryOnCompletion;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
@@ -35,10 +37,13 @@ use App\Domain\Project\Listeners\LogProjectActivity;
 use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
+use App\Domain\Shared\Events\TeamMemberRemoved;
+use App\Domain\Shared\Listeners\RevokeTeamMemberAccess;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
 use App\Domain\Signal\Connectors\ApiPollingConnector;
+use App\Domain\Signal\Connectors\BugReportConnector;
 use App\Domain\Signal\Connectors\CalendarConnector;
 use App\Domain\Signal\Connectors\ClearCueConnector;
 use App\Domain\Signal\Connectors\ConfluenceConnector;
@@ -65,6 +70,11 @@ use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
+use App\Domain\Signal\Events\SignalIngested;
+use App\Domain\Signal\Events\SignalStatusChanged;
+use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
+use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
+use App\Domain\Signal\Listeners\SyncSignalStatusOnExperimentComplete;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
 use App\Domain\Skill\Models\Skill;
@@ -72,9 +82,13 @@ use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Tool\Services\McpHandleRegistry;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
-use App\Domain\Website\Listeners\MaterializeWebsiteOnCrewCompletedListener;
-use App\Domain\Website\Services\WebsiteBlockRegistry;
+use App\Domain\Website\Drivers\VercelDeploymentDriver;
+use App\Domain\Website\Drivers\WebsiteDeploymentDriverRegistry;
+use App\Domain\Website\Drivers\ZipDeploymentDriver;
+use App\Domain\Website\Models\WebsitePage;
+use App\Domain\Website\Observers\WebsitePageObserver;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
@@ -95,6 +109,7 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Dedoc\Scramble\Support\Generator\SecuritySchemes\OAuthFlow;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -134,9 +149,16 @@ class AppServiceProvider extends ServiceProvider
         // Plugin extension points
         $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);
         $this->app->singleton(NavigationRegistry::class, fn () => new NavigationRegistry);
-        $this->app->singleton(WebsiteBlockRegistry::class, fn () => new WebsiteBlockRegistry(
-            $this->app->make(PluginRegistry::class),
-        ));
+        $this->app->singleton(WorkflowNodeRegistry::class, fn () => new WorkflowNodeRegistry);
+
+        // Website deployment drivers — plugins register additional providers via the registry
+        $this->app->singleton(WebsiteDeploymentDriverRegistry::class, function ($app) {
+            $registry = new WebsiteDeploymentDriverRegistry;
+            $registry->register($app->make(ZipDeploymentDriver::class));
+            $registry->register($app->make(VercelDeploymentDriver::class));
+
+            return $registry;
+        });
 
         // Accumulator for plugin-contributed MCP tool class names
         $this->app->instance('fleet.mcp.tool_classes', []);
@@ -170,6 +192,7 @@ class AppServiceProvider extends ServiceProvider
             NotionConnector::class,
             ConfluenceConnector::class,
             GitHubWikiConnector::class,
+            BugReportConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors
@@ -272,6 +295,11 @@ class AppServiceProvider extends ServiceProvider
         Skill::observe(SecretScanObserver::class);
         WorkflowNode::observe(SecretScanObserver::class);
 
+        // Website widget cache invalidation: bump website.content_version
+        // whenever a page is saved or deleted so cached widget output becomes
+        // unreachable (old cache keys are abandoned, TTL sweeps them up).
+        WebsitePage::observe(WebsitePageObserver::class);
+
         // Community edition: all authenticated users have full access
         Gate::define('manage-team', fn ($user) => true);
         Gate::define('edit-content', fn ($user) => true);
@@ -299,6 +327,9 @@ class AppServiceProvider extends ServiceProvider
                 $this->app->register($providerClass);
             }
         }
+
+        // Auto-provision personal agent for new users
+        Event::listen(Registered::class, ProvisionPersonalAgentListener::class);
 
         // Apple Sign In via SocialiteProviders community package
         Event::listen(function (SocialiteWasCalled $event) {
@@ -343,11 +374,17 @@ class AppServiceProvider extends ServiceProvider
         // Memory: extract learnings from completed experiments
         Event::listen(ExperimentTransitioned::class, StoreExperimentLearnings::class);
 
+        // ReasoningBank: record strategy embeddings from completed experiments
+        Event::listen(ExperimentTransitioned::class, RecordReasoningBankEntry::class);
+
         // Memory: extract failure lesson when experiment enters a failed state
         Event::listen(ExperimentTransitioned::class, ExtractFailureLessonListener::class);
 
         // Memory: extract success pattern when experiment reaches Completed
         Event::listen(ExperimentTransitioned::class, ExtractSuccessPatternListener::class);
+
+        // Memory: flush agent memory on workflow experiment completion
+        Event::listen(ExperimentTransitioned::class, FlushAgentMemoryOnCompletion::class);
 
         // Stuck pattern detection: handle detected stuck patterns (notify/pause/kill)
         Event::listen(StuckPatternDetected::class, HandleStuckPattern::class);
@@ -361,11 +398,18 @@ class AppServiceProvider extends ServiceProvider
         // Barsy chatbot: extract durable facts from chat exchanges into proposed memories
         Event::listen(ChatMessageCompleted::class, ExtractChatMemoriesListener::class);
 
-        // Website: materialize pages from crew output when generation completes
-        Event::listen(CrewExecuted::class, MaterializeWebsiteOnCrewCompletedListener::class);
-
         // Skill evolution: analyze completed executions and auto-propose improvements
         Event::listen(AgentExecuted::class, DispatchEvolutionAnalysisListener::class);
+
+        // Bug report signals: notify on critical severity + on status transitions
+        Event::listen(SignalIngested::class, NotifyOnCriticalBugReport::class);
+        Event::listen(SignalStatusChanged::class, NotifyOnSignalStatusChange::class);
+
+        // Bug report delegation: advance signal to review when agent experiment completes
+        Event::listen(ExperimentTransitioned::class, SyncSignalStatusOnExperimentComplete::class);
+
+        // Team member removal: revoke tokens + pause active experiments
+        Event::listen(TeamMemberRemoved::class, RevokeTeamMemberAccess::class);
 
         // Agent memory: store execution output as memory after completion
         AgentExecution::created(function (AgentExecution $execution) {

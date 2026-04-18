@@ -8,6 +8,7 @@ use App\Domain\Shared\Enums\DataClassification;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Enums\ExecutionType;
+use App\Domain\Skill\Enums\Framework;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Enums\SkillType;
@@ -43,6 +44,7 @@ class Skill extends Model
         'slug',
         'description',
         'type',
+        'framework',
         'execution_type',
         'status',
         'evaluation_enabled',
@@ -75,6 +77,7 @@ class Skill extends Model
         return [
             'meta' => 'array',
             'type' => SkillType::class,
+            'framework' => Framework::class,
             'execution_type' => ExecutionType::class,
             'status' => SkillStatus::class,
             'risk_level' => RiskLevel::class,

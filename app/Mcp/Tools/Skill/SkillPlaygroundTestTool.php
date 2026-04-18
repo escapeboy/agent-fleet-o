@@ -9,6 +9,7 @@ use Laravel\Mcp\Attributes\IsIdempotent;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * MCP tool: skill_playground_test
@@ -17,6 +18,7 @@ use Laravel\Mcp\Server\Tool;
  * can be polled via Cache::get("skill_playground:{teamId}:{runId}:{modelId}").
  */
 #[IsIdempotent]
+#[IsDestructive]
 class SkillPlaygroundTestTool extends Tool
 {
     protected string $name = 'skill_playground_test';

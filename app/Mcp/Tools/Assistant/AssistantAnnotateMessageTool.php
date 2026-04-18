@@ -5,12 +5,16 @@ namespace App\Mcp\Tools\Assistant;
 use App\Domain\Assistant\Actions\AnnotateMessageAction;
 use App\Domain\Assistant\Enums\AnnotationRating;
 use App\Domain\Assistant\Models\AssistantMessage;
+use App\Mcp\Attributes\AssistantTool;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class AssistantAnnotateMessageTool extends Tool
 {
     protected string $name = 'assistant_annotate_message';

@@ -2,6 +2,8 @@
 
 namespace App\Domain\Agent\Models;
 
+use App\Domain\Agent\Enums\AgentReasoningStrategy;
+use App\Domain\Agent\Enums\AgentScope;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Knowledge\Models\KnowledgeBase;
@@ -12,7 +14,9 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
 use App\Infrastructure\AI\Models\LlmRequestLog;
+use App\Models\User;
 use Database\Factories\Domain\Agent\AgentFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -85,12 +89,17 @@ class Agent extends Model
         'data_classification',
         'sandbox_profile',
         'tool_profile',
+        'system_prompt_template',
+        'reasoning_strategy',
+        'scope',
+        'owner_user_id',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => AgentStatus::class,
+            'reasoning_strategy' => AgentReasoningStrategy::class,
             'meta' => 'array',
             'personality' => 'array',
             'config' => 'array',
@@ -110,6 +119,8 @@ class Agent extends Model
             'heartbeat_definition' => 'array',
             'data_classification' => DataClassification::class,
             'sandbox_profile' => 'array',
+            'system_prompt_template' => 'array',
+            'scope' => AgentScope::class,
         ];
     }
 
@@ -152,7 +163,7 @@ class Agent extends Model
     {
         return $this->belongsToMany(Tool::class, 'agent_tool')
             ->using(AgentToolPivot::class)
-            ->withPivot('priority', 'overrides')
+            ->withPivot('priority', 'overrides', 'approval_mode', 'approval_timeout_minutes', 'approval_timeout_action')
             ->withTimestamps()
             ->orderByPivot('priority');
     }
@@ -180,6 +191,35 @@ class Agent extends Model
     public function runtimeState(): HasOne
     {
         return $this->hasOne(AgentRuntimeState::class);
+    }
+
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    /**
+     * Scope to agents visible to a given user.
+     * Team agents are visible to all team members.
+     * Personal agents are visible to the owner and team admins/owners.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where('scope', AgentScope::Team->value)
+                ->orWhere(function ($q2) use ($user) {
+                    $q2->where('scope', AgentScope::Personal->value)
+                        ->where(function ($q3) use ($user) {
+                            $q3->where('owner_user_id', $user->id)
+                                ->orWhereHas('team', function ($teamQ) use ($user) {
+                                    $teamQ->whereHas('users', function ($uQ) use ($user) {
+                                        $uQ->where('users.id', $user->id)
+                                            ->whereIn('team_user.role', ['owner', 'admin']);
+                                    });
+                                });
+                        });
+                });
+        });
     }
 
     public function scopeNotChatbotAgent($query)

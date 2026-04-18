@@ -152,6 +152,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Memory Capacity Limits
+    |--------------------------------------------------------------------------
+    | Per-team memory capacity cap. When a team exceeds max_per_team, the
+    | memory:prune command removes the lowest effective_importance records
+    | in batches of prune_batch_size to avoid lock contention.
+    |
+    | Formula: effective_importance = min(importance + ln(1 + retrieval_count) * 0.15, 1.0)
+    */
+    'memory' => [
+        'max_per_team' => (int) env('AGENT_MEMORY_MAX_PER_TEAM', 10000),
+        'prune_batch_size' => (int) env('AGENT_MEMORY_PRUNE_BATCH_SIZE', 500),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pre-Execution Scout Phase
     |--------------------------------------------------------------------------
     | When enabled, a cheap Haiku call runs before memory/KG injection to

@@ -2,12 +2,17 @@
 
 namespace App\Mcp\Tools\Memory;
 
-use App\Domain\Memory\Models\Memory;
+use App\Domain\Memory\Actions\StoreMemoryAction;
+use App\Domain\Memory\Enums\MemoryCategory;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('write')]
 class MemoryAddTool extends Tool
 {
     protected string $name = 'memory_add';
@@ -35,46 +40,62 @@ class MemoryAddTool extends Tool
                 ->default(1.0),
             'metadata' => $schema->object()
                 ->description('Additional structured metadata (key-value pairs)'),
+            'topic' => $schema->string()
+                ->description('Named topic context, e.g. "auth_migration". Auto-classified via Haiku if omitted.'),
+            'category' => $schema->string()
+                ->description('Memory category: facts|events|discoveries|preferences|advice|knowledge|context|behavior|goal'),
         ];
     }
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::text(json_encode(['error' => 'No team context']));
+        }
+
         $validated = $request->validate([
             'content' => 'required|string',
             'source_type' => 'nullable|string|max:100',
-            'agent_id' => 'nullable|uuid|exists:agents,id',
-            'project_id' => 'nullable|uuid|exists:projects,id',
+            'agent_id' => "nullable|uuid|exists:agents,id,team_id,{$teamId}",
+            'project_id' => "nullable|uuid|exists:projects,id,team_id,{$teamId}",
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:100',
             'confidence' => 'nullable|numeric|min:0|max:1',
             'metadata' => 'nullable|array',
+            'topic' => 'nullable|string|max:100',
+            'category' => 'nullable|string',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $topic = isset($validated['topic']) && $validated['topic'] !== '' ? $validated['topic'] : null;
+        $category = isset($validated['category'])
+            ? MemoryCategory::tryFrom($validated['category'])
+            : null;
 
-        $content = $validated['content'];
+        $stored = app(StoreMemoryAction::class)->execute(
+            teamId: $teamId,
+            agentId: $validated['agent_id'] ?? null,
+            content: $validated['content'],
+            sourceType: $validated['source_type'] ?? 'manual',
+            projectId: $validated['project_id'] ?? null,
+            metadata: $validated['metadata'] ?? [],
+            confidence: $validated['confidence'] ?? 1.0,
+            tags: $validated['tags'] ?? [],
+            category: $category,
+            topic: $topic,
+        );
 
-        $memory = Memory::create([
-            'team_id' => $teamId,
-            'content' => $content,
-            'content_hash' => hash('sha256', mb_strtolower(trim($content))),
-            'source_type' => $validated['source_type'] ?? 'manual',
-            'agent_id' => $validated['agent_id'] ?? null,
-            'project_id' => $validated['project_id'] ?? null,
-            'tags' => $validated['tags'] ?? null,
-            'confidence' => $validated['confidence'] ?? 1.0,
-            'metadata' => $validated['metadata'] ?? null,
-        ]);
+        $memory = $stored[0] ?? null;
 
         return Response::text(json_encode([
             'success' => true,
-            'memory_id' => $memory->id,
-            'content' => mb_substr($memory->content, 0, 200),
-            'source_type' => $memory->source_type,
-            'tags' => $memory->tags ?? [],
-            'confidence' => $memory->confidence,
-            'created_at' => $memory->created_at?->toIso8601String(),
+            'memory_id' => $memory?->id,
+            'content' => mb_substr($validated['content'], 0, 200),
+            'source_type' => $validated['source_type'] ?? 'manual',
+            'tags' => $validated['tags'] ?? [],
+            'topic' => $topic,
+            'category' => $category?->value,
+            'confidence' => $validated['confidence'] ?? 1.0,
         ]));
     }
 }

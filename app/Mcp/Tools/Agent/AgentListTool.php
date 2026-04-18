@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Models\Agent;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class AgentListTool extends Tool
 {
     protected string $name = 'agent_list';
@@ -24,6 +26,9 @@ class AgentListTool extends Tool
             'status' => $schema->string()
                 ->description('Filter by status: active, disabled')
                 ->enum(['active', 'disabled']),
+            'scope' => $schema->string()
+                ->description('Filter by scope: team, personal')
+                ->enum(['team', 'personal']),
             'limit' => $schema->integer()
                 ->description('Max results to return (default 10, max 100)')
                 ->default(10),
@@ -38,9 +43,13 @@ class AgentListTool extends Tool
             $query->where('status', $status);
         }
 
+        if ($scope = $request->get('scope')) {
+            $query->where('scope', $scope);
+        }
+
         $limit = min((int) ($request->get('limit', 10)), 100);
 
-        $agents = $query->limit($limit)->get(['id', 'name', 'role', 'provider', 'model', 'status']);
+        $agents = $query->limit($limit)->get(['id', 'name', 'role', 'provider', 'model', 'status', 'scope', 'owner_user_id']);
 
         return Response::text(json_encode([
             'count' => $agents->count(),
@@ -51,6 +60,8 @@ class AgentListTool extends Tool
                 'provider' => $a->provider,
                 'model' => $a->model,
                 'status' => $a->status->value,
+                'scope' => $a->scope?->value,
+                'owner_user_id' => $a->owner_user_id,
             ])->toArray(),
         ]));
     }

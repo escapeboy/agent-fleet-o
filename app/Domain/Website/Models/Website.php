@@ -2,11 +2,9 @@
 
 namespace App\Domain\Website\Models;
 
-use App\Domain\Crew\Models\Crew;
-use App\Domain\Crew\Models\CrewExecution;
-use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Website\Enums\WebsiteStatus;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,26 +17,29 @@ class Website extends Model
 
     protected $fillable = [
         'team_id',
+        'user_id',
         'name',
         'slug',
         'status',
-        'custom_domain',
         'settings',
-        'crew_execution_id',
-        'managing_crew_id',
+        'custom_domain',
+        'content_version',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'status' => WebsiteStatus::class,
+        'settings' => 'array',
+        'content_version' => 'integer',
+    ];
+
+    public function user(): BelongsTo
     {
-        return [
-            'status' => WebsiteStatus::class,
-            'settings' => 'array',
-        ];
+        return $this->belongsTo(User::class);
     }
 
     public function pages(): HasMany
     {
-        return $this->hasMany(WebsitePage::class)->orderBy('sort_order');
+        return $this->hasMany(WebsitePage::class);
     }
 
     public function assets(): HasMany
@@ -46,38 +47,8 @@ class Website extends Model
         return $this->hasMany(WebsiteAsset::class);
     }
 
-    public function publishedPages(): HasMany
+    public function deployments(): HasMany
     {
-        return $this->pages()->where('status', 'published');
-    }
-
-    public function crewExecution(): BelongsTo
-    {
-        return $this->belongsTo(CrewExecution::class);
-    }
-
-    public function managingCrew(): BelongsTo
-    {
-        return $this->belongsTo(Crew::class, 'managing_crew_id');
-    }
-
-    public function projects(): HasMany
-    {
-        return $this->hasMany(Project::class);
-    }
-
-    public function isGenerating(): bool
-    {
-        return $this->status === WebsiteStatus::Generating;
-    }
-
-    public function isPublished(): bool
-    {
-        return $this->status === WebsiteStatus::Published;
-    }
-
-    public function isDraft(): bool
-    {
-        return $this->status === WebsiteStatus::Draft;
+        return $this->hasMany(WebsiteDeployment::class);
     }
 }

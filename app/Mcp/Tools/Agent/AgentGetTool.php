@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Models\Agent;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+#[AssistantTool('read')]
 class AgentGetTool extends Tool
 {
     protected string $name = 'agent_get';
@@ -54,6 +56,8 @@ class AgentGetTool extends Tool
             'status' => $agent->status->value,
             'budget_spent' => $agent->budget_spent_credits,
             'budget_cap' => $agent->budget_cap_credits,
+            'scope' => $agent->scope?->value,
+            'owner_user_id' => $agent->owner_user_id,
             'created' => $agent->created_at?->toIso8601String(),
             'runtime_state' => $state ? [
                 'total_executions' => $state->total_executions,

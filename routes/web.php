@@ -1,9 +1,5 @@
 <?php
 
-use App\Domain\Website\Models\Website;
-use App\Domain\Website\Models\WebsitePage;
-use App\Domain\Website\Services\GrapesJsExporter;
-use App\Domain\Website\Services\WebsiteZipBuilder;
 use App\Http\Controllers\AgentCardController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
@@ -13,10 +9,13 @@ use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
+use App\Http\Controllers\WebsiteDeploymentDownloadController;
+use App\Http\Controllers\WebsitePagePreviewController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
+use App\Livewire\Admin\AiControlCenterPage;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
@@ -49,10 +48,12 @@ use App\Livewire\Evaluation\EvaluationPage;
 use App\Livewire\Evolution\EvolutionListPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
 use App\Livewire\Experiments\ExperimentListPage;
+use App\Livewire\Frameworks\FrameworksBrowsePage;
 use App\Livewire\GitRepositories\CreateGitRepositoryForm;
 use App\Livewire\GitRepositories\GitRepositoryDetailPage;
 use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Health\HealthPage;
+use App\Livewire\Insights\InsightsPage;
 use App\Livewire\Integrations\IntegrationDetailPage;
 use App\Livewire\Integrations\IntegrationListPage;
 use App\Livewire\KnowledgeGraph\KnowledgeGraphBrowserPage;
@@ -78,11 +79,14 @@ use App\Livewire\Settings\PluginsPage;
 use App\Livewire\Setup\SetupPage;
 use App\Livewire\Shared\NotificationInboxPage;
 use App\Livewire\Shared\NotificationPreferencesPage;
+use App\Livewire\Signals\BugReportDetailPage;
+use App\Livewire\Signals\BugReportListPage;
 use App\Livewire\Signals\ConnectorBindingsPage;
 use App\Livewire\Signals\ConnectorSubscriptionsPage;
 use App\Livewire\Signals\ContactDetailPage;
 use App\Livewire\Signals\ContactsPage;
 use App\Livewire\Signals\EntityBrowserPage;
+use App\Livewire\Signals\ManualSignalForm;
 use App\Livewire\Signals\SignalBrowserPage;
 use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
@@ -102,6 +106,7 @@ use App\Livewire\Websites\CreateWebsiteForm;
 use App\Livewire\Websites\WebsiteBuilderPage;
 use App\Livewire\Websites\WebsiteDetailPage;
 use App\Livewire\Websites\WebsiteListPage;
+use App\Livewire\Workflows\EvaluationListPage as WorkflowEvaluationListPage;
 use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
@@ -231,6 +236,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/skills/create', CreateSkillForm::class)->name('skills.create');
     Route::get('/skills/{skill}', SkillDetailPage::class)->name('skills.show');
 
+    Route::get('/frameworks', FrameworksBrowsePage::class)->name('frameworks.index');
+
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
@@ -285,10 +292,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
 
     Route::get('/signals', SignalBrowserPage::class)->name('signals.index');
+    Route::get('/signals/new', ManualSignalForm::class)->name('signals.create');
     Route::get('/signals/entities', EntityBrowserPage::class)->name('signals.entities');
     Route::get('/signals/connectors', SignalConnectorsPage::class)->name('signals.connectors');
     Route::get('/signals/subscriptions', ConnectorSubscriptionsPage::class)->name('signals.subscriptions');
     Route::get('/signals/bindings', ConnectorBindingsPage::class)->name('signals.bindings');
+
+    Route::get('/bug-reports', BugReportListPage::class)->name('bug-reports.index');
+    Route::get('/bug-reports/{signal}', BugReportDetailPage::class)->name('bug-reports.show');
 
     Route::get('/contacts', ContactsPage::class)->name('contacts.index');
     Route::get('/contacts/{contact}', ContactDetailPage::class)->name('contacts.show');
@@ -298,11 +309,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
+    Route::get('/evaluations', WorkflowEvaluationListPage::class)->name('evaluations.index');
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
     Route::get('/health', HealthPage::class)->name('health');
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
+    Route::get('/admin/ai', AiControlCenterPage::class)->name('admin.ai');
+    Route::get('/insights', InsightsPage::class)->name('insights');
     Route::get('/plugins', PluginsPage::class)->name('plugins');
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
 
@@ -339,41 +353,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Websites
     Route::get('/websites', WebsiteListPage::class)->name('websites.index');
     Route::get('/websites/create', CreateWebsiteForm::class)->name('websites.create');
-    Route::get('/websites/{website}/export', function (Website $website, WebsiteZipBuilder $builder) {
-        $website->load('pages');
-        $zipPath = $builder->build($website);
-
-        return response()->download($zipPath, $website->slug.'.zip', ['Content-Type' => 'application/zip'])
-            ->deleteFileAfterSend();
-    })->name('websites.export');
     Route::get('/websites/{website}', WebsiteDetailPage::class)->name('websites.show');
-    Route::get('/websites/{website}/pages/{page}/builder', WebsiteBuilderPage::class)->name('websites.builder');
-    // Authenticated preview — serves current saved content (regardless of publish status).
-    // Opens in a new tab from the builder; Tailwind CDN is injected for AI-generated pages.
-    Route::get('/websites/{website}/pages/{page}/preview', function (
-        Website $website,
-        WebsitePage $page,
-        GrapesJsExporter $exporter,
-    ) {
-        $extraHead = [];
-        if (empty(trim($page->exported_css ?? ''))) {
-            $extraHead[] = '<script src="https://cdn.tailwindcss.com"></script>';
-        }
-
-        $html = $exporter->toStandaloneHtml(
-            html: $page->exported_html ?? '',
-            css: $page->exported_css ?? '',
-            title: $page->getMetaTitle(),
-            metaDescription: $page->getMetaDescription(),
-            extraHead: $extraHead,
-        );
-
-        return response($html, 200, [
-            'Content-Type'  => 'text/html; charset=utf-8',
-            'X-Frame-Options' => 'SAMEORIGIN',
-            'Cache-Control' => 'no-store',
-        ]);
-    })->name('websites.page.preview');
+    Route::get('/websites/{website}/pages/{page}/edit', WebsiteBuilderPage::class)->name('websites.pages.edit');
+    Route::get('/websites/{website}/pages/{page}/preview', WebsitePagePreviewController::class)->name('websites.pages.preview');
+    Route::get('/websites/deployments/{deployment}/download', WebsiteDeploymentDownloadController::class)
+        ->name('websites.deployment.download');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

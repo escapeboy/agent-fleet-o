@@ -17,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Validation\Rule;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -67,7 +68,8 @@ class ChatbotInstanceController extends Controller implements HasMiddleware
         $data = $request->validate([
             'name' => 'required|string|min:2|max:255',
             'type' => 'required|string|in:'.implode(',', array_column(ChatbotType::cases(), 'value')),
-            'agent_id' => 'nullable|uuid|exists:agents,id',
+            'agent_id' => ['nullable', 'uuid',
+                Rule::exists('agents', 'id')->where('team_id', $request->user()?->current_team_id)],
             'provider' => 'nullable|string',
             'model' => 'nullable|string',
             'system_prompt' => 'nullable|string',

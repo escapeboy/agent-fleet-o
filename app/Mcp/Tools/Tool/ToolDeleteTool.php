@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Actions\DeleteToolAction;
 use App\Domain\Tool\Models\Tool as ToolModel;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -11,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+#[AssistantTool('destructive')]
 class ToolDeleteTool extends Tool
 {
     protected string $name = 'tool_delete';

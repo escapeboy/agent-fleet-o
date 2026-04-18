@@ -3,6 +3,7 @@
 namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Enums\AgentHookPosition;
+use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Events\AgentExecuted;
@@ -20,8 +21,10 @@ use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
 use App\Domain\Agent\Pipeline\Middleware\PreExecutionScout;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
 use App\Domain\Agent\Services\AgentHookExecutor;
+use App\Domain\Agent\Services\AgentPromptCompiler;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Agent\Services\SandboxedWorkspace;
+use App\Domain\Agent\Services\ToolRecoveryOrchestrator;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
@@ -64,6 +67,8 @@ class ExecuteAgentAction
         private readonly ResolveTierConfigAction $resolveTierConfig,
         private readonly AgentRuntimeStateService $runtimeStateService,
         private readonly AgentHookExecutor $hookExecutor,
+        private readonly AgentPromptCompiler $promptCompiler,
+        private readonly ToolRecoveryOrchestrator $toolRecovery,
     ) {}
 
     /**
@@ -273,7 +278,19 @@ class ExecuteAgentAction
                 enablePromptCaching: true,
             );
 
-            $response = $this->gateway->complete($request);
+            [$response, $recoveryTier, $isPartial] = $this->toolRecovery->attempt(
+                request: $request,
+                agent: $agent,
+                team: $team,
+                experimentId: $experimentId,
+            );
+
+            if ($isPartial) {
+                Log::warning('Agent execution degraded — tool recovery reached tier 6', [
+                    'agent_id' => $agent->id,
+                    'experiment_id' => $experimentId,
+                ]);
+            }
 
             // Tool loop circuit breakers (BroodMind-inspired).
             // Warning threshold: log but continue. Critical threshold: fail fast.
@@ -529,7 +546,10 @@ class ExecuteAgentAction
             $parts[] = "Your goal: {$agent->goal}";
         }
 
-        if ($agent->backstory) {
+        $compiledIdentity = $this->promptCompiler->compile($agent);
+        if ($compiledIdentity !== '' && ! empty($agent->system_prompt_template)) {
+            $parts[] = $compiledIdentity;
+        } elseif ($agent->backstory) {
             $parts[] = "Background: {$agent->backstory}";
         }
 
@@ -585,12 +605,43 @@ class ExecuteAgentAction
             ]);
         }
 
+        // Reasoning strategy — shapes how the agent thinks and plans before acting
+        $strategySection = ($agent->reasoning_strategy ?? AgentReasoningStrategy::FunctionCalling)->systemPromptSection();
+        if ($strategySection !== '') {
+            $parts[] = $strategySection;
+        }
+
         // Explicit tool-selection chain-of-thought — improves traceability and reduces incorrect selections
         $parts[] = implode("\n", [
             '## Tool Selection',
             'Before each tool call, output one line:',
             '"I need [outcome] — calling [tool_name] because [reason]."',
         ]);
+
+        // Browser tool usage policy — inject only if agent has a browser tool
+        $hasBrowserTool = $agent->tools()
+            ->where('type', 'built_in')
+            ->get()
+            ->contains(fn ($t) => ($t->transport_config['kind'] ?? null) === 'browser');
+        if ($hasBrowserTool) {
+            $parts[] = implode("\n", [
+                '## Browser Tool Usage Policy',
+                'The `browser_task` tool supports two modes via the `headless` parameter:',
+                '',
+                '- **headless="true"** (DEFAULT, use for most tasks):',
+                '  - Fast (~3x faster than headful)',
+                '  - Lower memory footprint',
+                '  - Use for: scraping public pages, extracting data, navigating simple sites, fetching content.',
+                '',
+                '- **headless="false"** (use ONLY when needed):',
+                '  - Runs real Chrome in a virtual display (Xvfb) — bypasses anti-bot detection.',
+                '  - Slower and uses more memory.',
+                '  - Use for: Reddit, Twitter/X, Cloudflare-protected sites, any site showing a JS challenge or "checking your browser" page.',
+                '  - Also use when a previous headless attempt was blocked with a 403/captcha/security page.',
+                '',
+                'Rule of thumb: start with headless="true". If the page returns a bot-detection challenge, retry with headless="false". Do NOT use headless="false" preemptively for sites that work fine headless — it wastes time and memory.',
+            ]);
+        }
 
         // Include available credentials from project scope
         $credentials = $this->resolveCredentials->execute($project);
@@ -817,7 +868,7 @@ class ExecuteAgentAction
                         'original_input' => $ctx->input,
                         'experiment_title' => $experiment->title,
                     ],
-                    'form_schema' => [
+                    'form_schema' => $ctx->clarificationFormSchema ?? [
                         'fields' => [
                             [
                                 'name' => 'answer',

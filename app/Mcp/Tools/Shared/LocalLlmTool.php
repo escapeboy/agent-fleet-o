@@ -5,13 +5,17 @@ namespace App\Mcp\Tools\Shared;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
+#[IsDestructive]
+#[AssistantTool('read')]
 class LocalLlmTool extends Tool
 {
     protected string $name = 'local_llm_manage';

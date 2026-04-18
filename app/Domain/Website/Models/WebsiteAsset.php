@@ -22,20 +22,12 @@ class WebsiteAsset extends Model
         'size_bytes',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'size_bytes' => 'integer',
-        ];
-    }
+    protected $casts = [
+        'size_bytes' => 'integer',
+    ];
 
     public function website(): BelongsTo
     {
         return $this->belongsTo(Website::class);
-    }
-
-    public function isImage(): bool
-    {
-        return str_starts_with($this->mime_type, 'image/');
     }
 }
