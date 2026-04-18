@@ -16,7 +16,11 @@ enum ReasoningEffort: string
     /** ~32K token thinking budget — complex architecture, deep code analysis */
     case High = 'high';
 
-    /** Let BudgetPressureRouting pick based on classified complexity */
+    /**
+     * Let BudgetPressureRouting pick based on classified complexity.
+     * WARNING: incurs thinking-token cost (up to 8K tokens) for Heavy-classified requests
+     * when budget pressure is None. Suppressed automatically under budget pressure.
+     */
     case Auto = 'auto';
 
     /** Token budget for this effort level. Returns null for None and Auto (Auto is resolved at runtime). */
