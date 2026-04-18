@@ -24,6 +24,7 @@ class ResolveTierConfigAction
      *   planning_depth: int,
      *   tier: ExecutionTier,
      *   thinking_budget: int|null,
+     *   reasoning_effort: string|null,
      * }
      */
     public function execute(Agent $agent): array
@@ -38,6 +39,7 @@ class ResolveTierConfigAction
             'max_steps' => $config['max_steps'] ?? $tierDefaults['max_steps'],
             'temperature' => $config['temperature'] ?? $tierDefaults['temperature'],
             'thinking_budget' => isset($config['thinking_budget']) ? min((int) $config['thinking_budget'], 100_000) : null,
+            'reasoning_effort' => $config['reasoning_effort'] ?? null,
             'tier' => $tier,
         ]);
     }

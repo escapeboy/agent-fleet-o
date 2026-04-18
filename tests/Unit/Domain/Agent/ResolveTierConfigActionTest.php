@@ -90,4 +90,29 @@ class ResolveTierConfigActionTest extends TestCase
             $this->assertSame($tier, $result['tier']);
         }
     }
+
+    public function test_reasoning_effort_is_null_when_not_configured(): void
+    {
+        $agent = $this->makeAgent([]);
+        $result = $this->action->execute($agent);
+
+        $this->assertArrayHasKey('reasoning_effort', $result);
+        $this->assertNull($result['reasoning_effort']);
+    }
+
+    public function test_reasoning_effort_is_propagated_from_agent_config(): void
+    {
+        $agent = $this->makeAgent(['reasoning_effort' => 'auto']);
+        $result = $this->action->execute($agent);
+
+        $this->assertSame('auto', $result['reasoning_effort']);
+    }
+
+    public function test_thinking_budget_is_capped_at_100k(): void
+    {
+        $agent = $this->makeAgent(['thinking_budget' => 500_000]);
+        $result = $this->action->execute($agent);
+
+        $this->assertSame(100_000, $result['thinking_budget']);
+    }
 }

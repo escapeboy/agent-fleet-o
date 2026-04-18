@@ -8,7 +8,9 @@ use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class CreateAgentForm extends Component
@@ -47,6 +49,8 @@ class CreateAgentForm extends Component
     public string $executionTier = 'standard';
 
     public ?int $thinkingBudget = null;
+
+    public string $reasoningEffort = 'none';
 
     public bool $useFederation = false;
 
@@ -113,6 +117,7 @@ class CreateAgentForm extends Component
             'provider' => 'required|string|max:255',
             'model' => 'required|max:255',
             'thinkingBudget' => 'nullable|integer|min:0|max:100000',
+            'reasoningEffort' => ['nullable', Rule::enum(ReasoningEffort::class)],
         ];
     }
 
@@ -126,6 +131,10 @@ class CreateAgentForm extends Component
 
         if ($this->thinkingBudget !== null && $this->thinkingBudget > 0) {
             $config['thinking_budget'] = $this->thinkingBudget;
+        }
+
+        if ($this->reasoningEffort !== '' && $this->reasoningEffort !== ReasoningEffort::None->value) {
+            $config['reasoning_effort'] = $this->reasoningEffort;
         }
         $filteredChain = array_filter($this->fallbackChain, fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']));
         if (! empty($filteredChain)) {
