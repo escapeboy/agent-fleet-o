@@ -345,12 +345,15 @@ class PrismAiGateway implements AiGatewayInterface
             ->withClientOptions(['timeout' => 120])
             ->withClientRetry(2, 500);
 
-        // Extended thinking (Anthropic-only, budget > 0)
-        if ($request->thinkingBudget !== null && $request->thinkingBudget > 0 && $request->provider === 'anthropic') {
+        // Extended thinking (Anthropic-only): explicit budget takes precedence; otherwise derive from effort level
+        $effectiveBudget = $request->thinkingBudget
+            ?? ($request->effort !== null ? $request->effort->toBudgetTokens() : null);
+
+        if ($effectiveBudget !== null && $effectiveBudget > 0 && $request->provider === 'anthropic') {
             $builder->withProviderOptions([
                 'thinking' => [
                     'enabled' => true,
-                    'budgetTokens' => $request->thinkingBudget,
+                    'budgetTokens' => $effectiveBudget,
                 ],
             ]);
         }

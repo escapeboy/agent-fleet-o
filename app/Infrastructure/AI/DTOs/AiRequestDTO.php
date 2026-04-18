@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\DTOs;
 
 use App\Infrastructure\AI\Enums\BudgetPressureLevel;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Enums\RequestComplexity;
 use Prism\Prism\Schema\ObjectSchema;
 use Prism\Prism\Tool;
@@ -33,6 +34,8 @@ final readonly class AiRequestDTO
         public ?string $providerName = null,
         /** Anthropic extended thinking budget in tokens (null = disabled, only used when provider='anthropic') */
         public ?int $thinkingBudget = null,
+        /** High-level reasoning effort hint — Auto resolves at runtime via BudgetPressureRouting, others map to fixed token budgets */
+        public ?ReasoningEffort $effort = null,
         /** Per-call working directory override for local agent execution (e.g. a specific repo path) */
         public ?string $workingDirectory = null,
         /** Enable Anthropic prompt caching — marks system prompt and tool definitions with cache_control: ephemeral */
@@ -68,6 +71,7 @@ final readonly class AiRequestDTO
             $this->experimentStageId ?? '',
             $this->purpose ?? '',
             (string) ($this->thinkingBudget ?? ''),
+            $this->effort?->value ?? '',
         ]));
     }
 }
