@@ -108,6 +108,16 @@ class ResolveTierConfigActionTest extends TestCase
         $this->assertSame('auto', $result['reasoning_effort']);
     }
 
+    public function test_invalid_reasoning_effort_string_degrades_to_null(): void
+    {
+        // An invalid value (e.g. from a direct DB write or API path that bypassed
+        // Livewire enum validation) must not propagate downstream.
+        $agent = $this->makeAgent(['reasoning_effort' => 'EXTREME']);
+        $result = $this->action->execute($agent);
+
+        $this->assertNull($result['reasoning_effort']);
+    }
+
     public function test_thinking_budget_is_capped_at_100k(): void
     {
         $agent = $this->makeAgent(['thinking_budget' => 500_000]);
