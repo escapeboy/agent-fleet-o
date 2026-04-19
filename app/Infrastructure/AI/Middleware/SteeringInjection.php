@@ -46,16 +46,12 @@ class SteeringInjection implements AiMiddlewareInterface
 
         $queuedBy = $experiment->orchestration_config['steering_queued_by'] ?? null;
 
-        $this->clearSteeringMessage($experiment);
-
-        Log::info('SteeringInjection: injected steering into experiment LLM call', [
+        Log::info('SteeringInjection: injecting steering into experiment LLM call', [
             'experiment_id' => $experiment->id,
             'message_length' => mb_strlen($message),
         ]);
 
-        $this->logConsumed($experiment, $message, $queuedBy);
-
-        return $next(new AiRequestDTO(
+        $response = $next(new AiRequestDTO(
             provider: $request->provider,
             model: $request->model,
             systemPrompt: $augmentedPrompt,
@@ -83,7 +79,16 @@ class SteeringInjection implements AiMiddlewareInterface
             classifiedComplexity: $request->classifiedComplexity,
             budgetPressureLevel: $request->budgetPressureLevel,
             escalationAttempts: $request->escalationAttempts,
+            fastMode: $request->fastMode,
         ));
+
+        // Only clear + audit on successful delivery. If $next() throws, the
+        // steering message stays queued for the next retry so the operator's
+        // instruction is not silently lost on network/budget/provider failures.
+        $this->clearSteeringMessage($experiment);
+        $this->logConsumed($experiment, $message, $queuedBy);
+
+        return $response;
     }
 
     private function augmentSystemPrompt(string $original, string $steeringMessage): string

@@ -76,6 +76,15 @@ class FallbackAiGateway implements AiGatewayInterface
                         tools: $request->tools,
                         maxSteps: $request->maxSteps,
                         toolChoice: $request->toolChoice,
+                        thinkingBudget: $request->thinkingBudget,
+                        effort: $request->effort,
+                        workingDirectory: $request->workingDirectory,
+                        enablePromptCaching: $request->enablePromptCaching,
+                        complexity: $request->complexity,
+                        classifiedComplexity: $request->classifiedComplexity,
+                        budgetPressureLevel: $request->budgetPressureLevel,
+                        escalationAttempts: $request->escalationAttempts,
+                        fastMode: $request->fastMode,
                     );
 
                     return $this->bridgeGateway->complete($adjustedRequest);
@@ -209,6 +218,15 @@ class FallbackAiGateway implements AiGatewayInterface
                         tools: $request->tools,
                         maxSteps: $request->maxSteps,
                         toolChoice: $request->toolChoice,
+                        thinkingBudget: $request->thinkingBudget,
+                        effort: $request->effort,
+                        workingDirectory: $request->workingDirectory,
+                        enablePromptCaching: $request->enablePromptCaching,
+                        complexity: $request->complexity,
+                        classifiedComplexity: $request->classifiedComplexity,
+                        budgetPressureLevel: $request->budgetPressureLevel,
+                        escalationAttempts: $request->escalationAttempts,
+                        fastMode: $request->fastMode,
                     );
 
                     return $this->bridgeGateway->stream($adjustedRequest, $onChunk);

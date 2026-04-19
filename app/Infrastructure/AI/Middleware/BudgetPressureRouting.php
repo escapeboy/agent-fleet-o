@@ -68,6 +68,7 @@ class BudgetPressureRouting implements AiMiddlewareInterface
                 classifiedComplexity: $classified,
                 budgetPressureLevel: $pressure,
                 escalationAttempts: $request->escalationAttempts,
+                fastMode: $request->fastMode,
             ));
         }
 
@@ -112,6 +113,7 @@ class BudgetPressureRouting implements AiMiddlewareInterface
             classifiedComplexity: $classified,
             budgetPressureLevel: $pressure,
             escalationAttempts: $request->escalationAttempts,
+            fastMode: $request->fastMode,
         ));
     }
 

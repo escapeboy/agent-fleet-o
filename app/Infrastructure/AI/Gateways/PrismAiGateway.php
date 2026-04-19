@@ -754,6 +754,7 @@ class PrismAiGateway implements AiGatewayInterface
             classifiedComplexity: $request->classifiedComplexity,
             budgetPressureLevel: $request->budgetPressureLevel,
             escalationAttempts: $request->escalationAttempts,
+            fastMode: $request->fastMode,
         );
     }
 

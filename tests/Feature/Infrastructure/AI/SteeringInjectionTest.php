@@ -193,6 +193,72 @@ class SteeringInjectionTest extends TestCase
         $this->assertSame(16, $entry->properties['message_length'] ?? null);
     }
 
+    public function test_steering_message_stays_queued_when_next_throws(): void
+    {
+        $experiment = Experiment::create([
+            'team_id' => $this->team->id,
+            'title' => 'Retry Safe',
+            'status' => 'executing',
+            'track' => 'growth',
+            'description' => 't',
+            'user_id' => $this->user->id,
+            'initiated_by_user_id' => $this->user->id,
+            'orchestration_config' => [
+                'steering_message' => 'do not lose me',
+                'steering_queued_by' => $this->user->id,
+            ],
+        ]);
+
+        $middleware = new SteeringInjection;
+
+        try {
+            $middleware->handle($this->makeRequest($experiment->id), function () {
+                throw new \RuntimeException('provider failed');
+            });
+            $this->fail('Expected RuntimeException to propagate');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('provider failed', $e->getMessage());
+        }
+
+        $experiment->refresh();
+        $this->assertSame('do not lose me', $experiment->orchestration_config['steering_message'] ?? null);
+        $this->assertSame(0, AuditEntry::where('event', 'experiment.steering_consumed')->count());
+    }
+
+    public function test_preserves_fast_mode_flag_through_injection(): void
+    {
+        $experiment = Experiment::create([
+            'team_id' => $this->team->id,
+            'title' => 'Fast Mode Steering',
+            'status' => 'executing',
+            'track' => 'growth',
+            'description' => 't',
+            'user_id' => $this->user->id,
+            'initiated_by_user_id' => $this->user->id,
+            'orchestration_config' => ['steering_message' => 'hi'],
+        ]);
+
+        $request = new AiRequestDTO(
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-5',
+            systemPrompt: 'base',
+            userPrompt: 'u',
+            teamId: $this->team->id,
+            experimentId: $experiment->id,
+            fastMode: true,
+        );
+
+        $middleware = new SteeringInjection;
+        $received = null;
+        $middleware->handle($request, function (AiRequestDTO $r) use (&$received) {
+            $received = $r;
+
+            return $this->dummyResponse();
+        });
+
+        $this->assertTrue($received->fastMode);
+    }
+
     public function test_no_op_when_experiment_not_found(): void
     {
         $middleware = new SteeringInjection;
