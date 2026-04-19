@@ -5,6 +5,7 @@ namespace App\Livewire\Agents;
 use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
 use App\Domain\Agent\Actions\ExportAgentWorkspaceAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
+use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Jobs\ExecuteAgentHeartbeatJob;
@@ -21,8 +22,10 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Enums\ApprovalTimeoutAction;
 use App\Domain\Tool\Enums\ToolApprovalMode;
 use App\Domain\Tool\Models\Tool;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -73,6 +76,10 @@ class AgentDetailPage extends Component
     public string $editFederationGroupId = '';
 
     public string $editToolProfile = '';
+
+    public string $editEnvironment = '';
+
+    public string $editReasoningEffort = 'none';
 
     /** @var array<string> */
     public array $editKnowledgeBaseIds = [];
@@ -166,6 +173,8 @@ class AgentDetailPage extends Component
         $this->editFederationGroupId = $this->agent->config['tool_federation_group_id'] ?? '';
         $this->editGitRepositoryIds = $this->agent->config['git_repository_ids'] ?? [];
         $this->editToolProfile = $this->agent->tool_profile ?? '';
+        $this->editEnvironment = $this->agent->environment?->value ?? '';
+        $this->editReasoningEffort = $this->agent->config['reasoning_effort'] ?? 'none';
         $this->editKnowledgeBaseIds = $this->agent->knowledgeBases()->pluck('knowledge_bases.id')->map(fn ($id) => (string) $id)->toArray();
         $this->editEvaluationEnabled = (bool) $this->agent->evaluation_enabled;
         $this->editEvaluationSampleRate = $this->agent->evaluation_sample_rate;
@@ -225,6 +234,8 @@ class AgentDetailPage extends Component
             'editProvider' => 'required|string|max:255',
             'editModel' => 'required|max:255',
             'editEvaluationSampleRate' => 'nullable|numeric|min:0|max:1',
+            'editEnvironment' => ['nullable', Rule::enum(AgentEnvironment::class)],
+            'editReasoningEffort' => ['nullable', Rule::enum(ReasoningEffort::class)],
         ]);
 
         $config = $this->agent->config ?? [];
@@ -264,6 +275,12 @@ class AgentDetailPage extends Component
             unset($config['git_repository_ids']);
         }
 
+        if ($this->editReasoningEffort !== '' && $this->editReasoningEffort !== 'none') {
+            $config['reasoning_effort'] = $this->editReasoningEffort;
+        } else {
+            unset($config['reasoning_effort']);
+        }
+
         $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");
 
         // Build personality array
@@ -289,6 +306,7 @@ class AgentDetailPage extends Component
             'model' => $this->editModel,
             'budget_cap_credits' => $this->editBudgetCap,
             'tool_profile' => $this->editToolProfile ?: null,
+            'environment' => $this->editEnvironment ?: null,
             'evaluation_enabled' => $this->editEvaluationEnabled,
             'evaluation_sample_rate' => $this->editEvaluationEnabled ? ($this->editEvaluationSampleRate ?? 0.2) : 0.0,
             'config' => $config,

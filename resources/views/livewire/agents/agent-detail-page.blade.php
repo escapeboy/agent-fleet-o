@@ -80,6 +80,21 @@
                     </x-form-select>
                 </div>
 
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <x-form-select wire:model="editReasoningEffort" label="Reasoning Effort" hint="How much extended thinking the model should use (Anthropic only)">
+                        @foreach(\App\Infrastructure\AI\Enums\ReasoningEffort::cases() as $effort)
+                            <option value="{{ $effort->value }}">{{ $effort->label() }}</option>
+                        @endforeach
+                    </x-form-select>
+
+                    <x-form-select wire:model="editEnvironment" label="Environment" hint="Preset that auto-attaches a tool bundle">
+                        <option value="">No preset</option>
+                        @foreach(\App\Domain\Agent\Enums\AgentEnvironment::cases() as $env)
+                            <option value="{{ $env->value }}">{{ $env->label() }}</option>
+                        @endforeach
+                    </x-form-select>
+                </div>
+
                 @if(!empty($providers[$editProvider]['local']))
                     <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                         Local agent — executes on the host machine using its own CLI process. No per-request API costs.

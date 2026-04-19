@@ -194,4 +194,21 @@ class AgentControllerTest extends ApiTestCase
         $this->assertSame('browsing', $agent->environment?->value);
         $this->assertSame('high', $agent->config['reasoning_effort'] ?? null);
     }
+
+    public function test_resource_exposes_environment_and_tool_profile_fields(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent([
+            'environment' => 'coding',
+            'tool_profile' => 'researcher',
+            'config' => ['reasoning_effort' => 'auto'],
+        ]);
+
+        $response = $this->getJson("/api/v1/agents/{$agent->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.environment', 'coding')
+            ->assertJsonPath('data.tool_profile', 'researcher')
+            ->assertJsonPath('data.config.reasoning_effort', 'auto');
+    }
 }

@@ -22,6 +22,8 @@ class AgentResource extends JsonResource
             'config' => $this->config,
             'capabilities' => $this->capabilities,
             'constraints' => $this->constraints,
+            'tool_profile' => $this->tool_profile,
+            'environment' => $this->environment?->value,
             'budget_cap_credits' => $this->budget_cap_credits,
             'budget_spent_credits' => $this->budget_spent_credits,
             'last_health_check' => $this->last_health_check?->toISOString(),
