@@ -3,7 +3,8 @@
         <div>
             <h1 class="text-2xl font-semibold text-gray-900">Tool Search History</h1>
             <p class="mt-1 text-sm text-gray-500">
-                Auto-discovery events from agents with <code class="rounded bg-gray-100 px-1">use_tool_search</code> enabled.
+                Auto-discovery events from agents with <strong>Tool Search</strong> enabled
+                (the <code class="rounded bg-gray-100 px-1">use_tool_search</code> config flag).
                 Useful for tuning queries and verifying which tools are surfaced.
             </p>
         </div>

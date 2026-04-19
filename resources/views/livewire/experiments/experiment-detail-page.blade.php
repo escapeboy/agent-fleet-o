@@ -235,11 +235,14 @@
 
     {{-- Steer Modal --}}
     @if($showSteerModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            role="dialog" aria-modal="true" aria-labelledby="steer-modal-title"
+            @keydown.escape.window="$wire.closeSteerModal()">
+            <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+                @click.away="$wire.closeSteerModal()">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900">Steer Experiment</h3>
-                    <button wire:click="closeSteerModal" class="text-gray-400 hover:text-gray-600">✕</button>
+                    <h3 id="steer-modal-title" class="text-lg font-semibold text-gray-900">Steer Experiment</h3>
+                    <button wire:click="closeSteerModal" class="text-gray-400 hover:text-gray-600" aria-label="Close">✕</button>
                 </div>
 
                 <p class="mb-3 text-sm text-gray-600">
@@ -248,7 +251,7 @@
 
                 @if($queuedSteeringMessage = $experiment->orchestration_config['steering_message'] ?? null)
                     <div class="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
-                        <strong>Pending:</strong> a previous steering message is still queued. Submitting a new one will replace it.
+                        <strong>Queued:</strong> a previous steering message is still in the queue. Submitting a new one will replace it.
                         <div class="mt-1 italic">"{{ \Illuminate\Support\Str::limit($queuedSteeringMessage, 140) }}"</div>
                     </div>
                 @endif

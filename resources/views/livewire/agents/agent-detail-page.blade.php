@@ -515,11 +515,11 @@
                         <div>
                             <dt class="text-xs uppercase tracking-wide text-gray-500">Reasoning Effort</dt>
                             <dd class="mt-0.5 text-gray-900">
-                                @php($effort = $agent->config['reasoning_effort'] ?? null)
-                                @if($effort)
-                                    <span class="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">{{ \App\Infrastructure\AI\Enums\ReasoningEffort::from($effort)->label() }}</span>
+                                @php($effortEnum = \App\Infrastructure\AI\Enums\ReasoningEffort::tryFrom($agent->config['reasoning_effort'] ?? ''))
+                                @if($effortEnum)
+                                    <span class="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">{{ $effortEnum->label() }}</span>
                                 @else
-                                    <span class="text-xs text-gray-400">Not configured</span>
+                                    <span class="text-xs text-gray-400">Not set</span>
                                 @endif
                             </dd>
                         </div>
@@ -529,7 +529,7 @@
                                 @if($agent->environment)
                                     <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{{ $agent->environment->label() }}</span>
                                 @else
-                                    <span class="text-xs text-gray-400">No preset</span>
+                                    <span class="text-xs text-gray-400">Not set</span>
                                 @endif
                             </dd>
                         </div>
@@ -541,7 +541,7 @@
                                         Enabled · top {{ $agent->config['tool_search_top_k'] ?? 5 }}
                                     </span>
                                 @else
-                                    <span class="text-xs text-gray-400">Disabled</span>
+                                    <span class="text-xs text-gray-400">Not set</span>
                                 @endif
                             </dd>
                         </div>
