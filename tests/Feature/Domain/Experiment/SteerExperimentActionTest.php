@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Domain\Experiment;
 
+use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Experiment\Actions\SteerExperimentAction;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
@@ -112,5 +113,24 @@ class SteerExperimentActionTest extends TestCase
 
         $this->assertSame('keep_me', $result->orchestration_config['custom_setting']);
         $this->assertSame('steer', $result->orchestration_config['steering_message']);
+    }
+
+    public function test_writes_audit_entry_when_queued(): void
+    {
+        $experiment = $this->makeExperiment();
+
+        app(SteerExperimentAction::class)->execute(
+            experiment: $experiment,
+            message: 'audit-traced message',
+            userId: $this->user->id,
+        );
+
+        $entry = AuditEntry::where('event', 'experiment.steering_queued')
+            ->where('subject_id', $experiment->id)
+            ->first();
+
+        $this->assertNotNull($entry);
+        $this->assertSame($this->user->id, $entry->user_id);
+        $this->assertSame(20, $entry->properties['message_length'] ?? null);
     }
 }

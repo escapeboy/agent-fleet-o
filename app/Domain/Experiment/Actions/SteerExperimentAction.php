@@ -2,6 +2,8 @@
 
 namespace App\Domain\Experiment\Actions;
 
+use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Experiment\Models\Experiment;
 
 /**
@@ -30,6 +32,29 @@ class SteerExperimentAction
 
         $experiment->update(['orchestration_config' => $config]);
 
+        $this->logQueued($experiment, $trimmed, $userId);
+
         return $experiment->fresh();
+    }
+
+    private function logQueued(Experiment $experiment, string $message, ?string $userId): void
+    {
+        $ocsf = OcsfMapper::classify('experiment.steering_queued');
+
+        AuditEntry::create([
+            'user_id' => $userId,
+            'impersonator_id' => session('impersonating_from'),
+            'event' => 'experiment.steering_queued',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
+            'subject_type' => Experiment::class,
+            'subject_id' => $experiment->id,
+            'properties' => [
+                'experiment_id' => $experiment->id,
+                'team_id' => $experiment->team_id,
+                'message_length' => mb_strlen($message),
+            ],
+            'created_at' => now(),
+        ]);
     }
 }

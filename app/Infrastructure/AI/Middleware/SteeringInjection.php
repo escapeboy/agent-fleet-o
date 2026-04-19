@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\AI\Middleware;
 
+use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Experiment\Models\Experiment;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -42,12 +44,16 @@ class SteeringInjection implements AiMiddlewareInterface
 
         $augmentedPrompt = $this->augmentSystemPrompt($request->systemPrompt, $message);
 
+        $queuedBy = $experiment->orchestration_config['steering_queued_by'] ?? null;
+
         $this->clearSteeringMessage($experiment);
 
         Log::info('SteeringInjection: injected steering into experiment LLM call', [
             'experiment_id' => $experiment->id,
             'message_length' => mb_strlen($message),
         ]);
+
+        $this->logConsumed($experiment, $message, $queuedBy);
 
         return $next(new AiRequestDTO(
             provider: $request->provider,
@@ -94,5 +100,25 @@ class SteeringInjection implements AiMiddlewareInterface
         $config = $experiment->orchestration_config ?? [];
         unset($config['steering_message'], $config['steering_queued_at'], $config['steering_queued_by']);
         $experiment->update(['orchestration_config' => $config]);
+    }
+
+    private function logConsumed(Experiment $experiment, string $message, ?string $queuedBy): void
+    {
+        $ocsf = OcsfMapper::classify('experiment.steering_consumed');
+
+        AuditEntry::create([
+            'user_id' => $queuedBy,
+            'event' => 'experiment.steering_consumed',
+            'ocsf_class_uid' => $ocsf['class_uid'],
+            'ocsf_severity_id' => $ocsf['severity_id'],
+            'subject_type' => Experiment::class,
+            'subject_id' => $experiment->id,
+            'properties' => [
+                'experiment_id' => $experiment->id,
+                'team_id' => $experiment->team_id,
+                'message_length' => mb_strlen($message),
+            ],
+            'created_at' => now(),
+        ]);
     }
 }

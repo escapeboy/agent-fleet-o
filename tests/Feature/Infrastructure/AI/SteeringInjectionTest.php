@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Infrastructure\AI;
 
+use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -162,6 +163,34 @@ class SteeringInjectionTest extends TestCase
         });
 
         $this->assertStringNotContainsString('STEERING', $received->systemPrompt);
+    }
+
+    public function test_writes_audit_entry_when_steering_consumed(): void
+    {
+        $experiment = Experiment::create([
+            'team_id' => $this->team->id,
+            'title' => 'Audit Trail',
+            'status' => 'executing',
+            'track' => 'growth',
+            'description' => 't',
+            'user_id' => $this->user->id,
+            'initiated_by_user_id' => $this->user->id,
+            'orchestration_config' => [
+                'steering_message' => 'traced injection',
+                'steering_queued_by' => $this->user->id,
+            ],
+        ]);
+
+        $middleware = new SteeringInjection;
+        $middleware->handle($this->makeRequest($experiment->id), fn ($r) => $this->dummyResponse());
+
+        $entry = AuditEntry::where('event', 'experiment.steering_consumed')
+            ->where('subject_id', $experiment->id)
+            ->first();
+
+        $this->assertNotNull($entry);
+        $this->assertSame($this->user->id, $entry->user_id);
+        $this->assertSame(16, $entry->properties['message_length'] ?? null);
     }
 
     public function test_no_op_when_experiment_not_found(): void
