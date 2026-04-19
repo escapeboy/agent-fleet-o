@@ -664,6 +664,13 @@ class PrismAiGateway implements AiGatewayInterface
             ];
         }
 
+        // Anthropic Fast Mode — per-request beta header. Merged as the provider
+        // config 3rd arg to Prism::text()->using() → PrismManager forwards it to
+        // the Anthropic provider constructor which sets the anthropic-beta header.
+        if ($request->provider === 'anthropic' && $this->isEffectiveFastMode($request)) {
+            return ['anthropic_beta' => (string) config('ai_routing.fast_mode.beta_identifier')];
+        }
+
         // Local HTTP providers (ollama, openai_compatible, litellm_proxy)
         if (! in_array($request->provider, ['ollama', 'openai_compatible', 'litellm_proxy'], true)) {
             return [];
@@ -757,5 +764,34 @@ class PrismAiGateway implements AiGatewayInterface
             fn (Closure $next, AiMiddlewareInterface $middleware) => fn (AiRequestDTO $request) => $middleware->handle($request, $next),
             $handler,
         );
+    }
+
+    /**
+     * Resolve whether the request should run with Anthropic Fast Mode enabled.
+     * Requires the global kill-switch to be on; then triggers either on explicit
+     * DTO flag or when the request purpose matches a configured auto-enable prefix.
+     */
+    private function isEffectiveFastMode(AiRequestDTO $request): bool
+    {
+        if (! (bool) config('ai_routing.fast_mode.enabled', false)) {
+            return false;
+        }
+
+        if ($request->fastMode) {
+            return true;
+        }
+
+        $purpose = (string) ($request->purpose ?? '');
+        if ($purpose === '') {
+            return false;
+        }
+
+        foreach ((array) config('ai_routing.fast_mode.auto_enable_purpose_prefixes', []) as $prefix) {
+            if (is_string($prefix) && $prefix !== '' && str_starts_with($purpose, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

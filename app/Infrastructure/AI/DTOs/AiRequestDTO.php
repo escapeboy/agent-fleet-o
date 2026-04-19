@@ -48,6 +48,8 @@ final readonly class AiRequestDTO
         public ?BudgetPressureLevel $budgetPressureLevel = null,
         /** Number of model-tier escalation attempts made (set by FallbackAiGateway) */
         public int $escalationAttempts = 0,
+        /** Opt into Anthropic Fast Mode beta header for this call (ignored for non-Anthropic providers or if globally disabled) */
+        public bool $fastMode = false,
     ) {}
 
     public function isStructured(): bool

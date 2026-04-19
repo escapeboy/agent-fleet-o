@@ -97,4 +97,28 @@ return [
         'budget_drain_multiplier' => 3.0,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Anthropic Fast Mode
+    |--------------------------------------------------------------------------
+    |
+    | Opt-in per-request `anthropic-beta` header for Claude's Fast Mode
+    | research preview. Requires the team's Anthropic account to have the
+    | beta enabled. The identifier is env-configurable because Anthropic
+    | occasionally rotates it; defaults to a known recent value.
+    |
+    | Requests get Fast Mode when any of:
+    |   - AiRequestDTO::$fastMode is true (explicit caller opt-in)
+    |   - $request->purpose starts with one of auto_enable_purpose_prefixes
+    |
+    | The global `enabled` switch is an env kill-switch — if the beta
+    | identifier is invalid for your account, leave it off to avoid 400s.
+    |
+    */
+    'fast_mode' => [
+        'enabled' => (bool) env('ANTHROPIC_FAST_MODE_ENABLED', false),
+        'beta_identifier' => env('ANTHROPIC_FAST_MODE_BETA', 'fast-2025-05-01'),
+        'auto_enable_purpose_prefixes' => ['signal.', 'digest.'],
+    ],
+
 ];
