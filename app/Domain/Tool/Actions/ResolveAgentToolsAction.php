@@ -128,6 +128,11 @@ class ResolveAgentToolsAction
             $agentTools = $agentTools->merge($federatedTools)->unique('id');
         }
 
+        // Tool search: auto-discover team-wide tools via semantic match when enabled.
+        // Opt-in via use_tool_search config flag; requires a semanticQuery to be provided.
+        // Merges up to tool_search_top_k (default 5) new tools, deduplicated against existing.
+        $agentTools = $this->mergeSearchedTools($agent, $agentTools, $semanticQuery);
+
         // Filter by execution mode: watcher projects only get safe/read tools
         if ($project && $project->execution_mode === ProjectExecutionMode::Watcher) {
             $agentTools = $agentTools->filter(
@@ -297,6 +302,69 @@ class ResolveAgentToolsAction
         }
 
         return $existing->merge($envTools)->unique('id')->values();
+    }
+
+    /**
+     * Expand the tool pool by semantic match against team-wide tools.
+     * Runs only when the agent opts in via config.use_tool_search AND a
+     * semanticQuery is provided. Already-attached tools are excluded from
+     * the candidate pool so we only surface new discoveries.
+     *
+     * @param  Collection<int, Tool>  $existing
+     * @return Collection<int, Tool>
+     */
+    private function mergeSearchedTools(Agent $agent, Collection $existing, ?string $semanticQuery): Collection
+    {
+        if (! ($agent->config['use_tool_search'] ?? false)) {
+            return $existing;
+        }
+
+        if ($semanticQuery === null || trim($semanticQuery) === '' || $agent->team_id === null) {
+            return $existing;
+        }
+
+        $topK = max(1, min(20, (int) ($agent->config['tool_search_top_k'] ?? 5)));
+
+        $existingIds = $existing->pluck('id')->all();
+
+        $candidatePool = Tool::where('team_id', $agent->team_id)
+            ->where('status', ToolStatus::Active->value)
+            ->when(! empty($existingIds), fn ($q) => $q->whereNotIn('id', $existingIds))
+            ->get();
+
+        if ($candidatePool->isEmpty()) {
+            return $existing;
+        }
+
+        try {
+            $matched = $this->toolRagSelector->select(
+                $candidatePool,
+                $semanticQuery,
+                3,
+                $agent->team_id,
+                $candidatePool->pluck('id')->toArray(),
+            )->take($topK);
+        } catch (\Throwable $e) {
+            Log::warning('ResolveAgentTools: tool search failed, skipping', [
+                'agent_id' => $agent->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $existing;
+        }
+
+        if ($matched->isEmpty()) {
+            return $existing;
+        }
+
+        Log::info('ResolveAgentTools: tool search discovered additional tools', [
+            'agent_id' => $agent->id,
+            'query_length' => mb_strlen($semanticQuery),
+            'candidate_pool' => $candidatePool->count(),
+            'matched' => $matched->pluck('slug')->all(),
+        ]);
+
+        return $existing->merge($matched)->unique('id')->values();
     }
 
     /**
