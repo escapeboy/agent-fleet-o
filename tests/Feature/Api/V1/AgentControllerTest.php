@@ -126,4 +126,72 @@ class AgentControllerTest extends ApiTestCase
 
         $response->assertStatus(401);
     }
+
+    public function test_can_create_agent_with_environment_and_reasoning_effort(): void
+    {
+        $this->actingAsApiUser();
+
+        $response = $this->postJson('/api/v1/agents', [
+            'name' => 'Coder',
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+            'environment' => 'coding',
+            'config' => ['reasoning_effort' => 'auto'],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.name', 'Coder');
+
+        $agent = Agent::where('name', 'Coder')->first();
+        $this->assertNotNull($agent);
+        $this->assertSame('coding', $agent->environment?->value);
+        $this->assertSame('auto', $agent->config['reasoning_effort'] ?? null);
+    }
+
+    public function test_rejects_invalid_environment_value(): void
+    {
+        $this->actingAsApiUser();
+
+        $response = $this->postJson('/api/v1/agents', [
+            'name' => 'Bad',
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+            'environment' => 'EXTREME',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['environment']);
+    }
+
+    public function test_rejects_invalid_reasoning_effort_value(): void
+    {
+        $this->actingAsApiUser();
+
+        $response = $this->postJson('/api/v1/agents', [
+            'name' => 'Bad',
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+            'config' => ['reasoning_effort' => 'extreme'],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['config.reasoning_effort']);
+    }
+
+    public function test_can_update_environment_and_reasoning_effort(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+
+        $response = $this->putJson("/api/v1/agents/{$agent->id}", [
+            'environment' => 'browsing',
+            'config' => ['reasoning_effort' => 'high'],
+        ]);
+
+        $response->assertOk();
+
+        $agent->refresh();
+        $this->assertSame('browsing', $agent->environment?->value);
+        $this->assertSame('high', $agent->config['reasoning_effort'] ?? null);
+    }
 }

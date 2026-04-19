@@ -49,6 +49,12 @@ class AgentUpdateTool extends Tool
                 ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Pass "null" to remove. Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
             'tool_profile' => $schema->string()
                 ->description('Tool profile restricting tool access. Options: researcher, executor, communicator, analyst, admin, minimal. Pass empty string to remove.'),
+            'environment' => $schema->string()
+                ->description('Environment preset that auto-attaches a tool bundle. Options: minimal, coding, browsing, restricted. Pass empty string to remove.')
+                ->enum(['', 'minimal', 'coding', 'browsing', 'restricted']),
+            'reasoning_effort' => $schema->string()
+                ->description('Extended thinking effort (Anthropic). Options: none, low, medium, high, auto. Pass "none" to disable.')
+                ->enum(['none', 'low', 'medium', 'high', 'auto']),
             'thinking_budget' => $schema->integer()
                 ->description('Anthropic extended thinking budget in tokens (e.g. 1024, 4096, 8192). Only applies when agent provider is "anthropic". Set to 0 to disable. Enables chain-of-thought reasoning visible in experiment steps.'),
             'knowledge_base_id' => $schema->string()
@@ -76,6 +82,8 @@ class AgentUpdateTool extends Tool
             'budget_cap_credits' => 'nullable|integer|min:0',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'tool_profile' => 'nullable|string',
+            'environment' => 'nullable|string|in:,minimal,coding,browsing,restricted',
+            'reasoning_effort' => 'nullable|string|in:none,low,medium,high,auto',
             'sandbox_profile' => 'nullable|string',
             'thinking_budget' => 'nullable|integer|min:0|max:100000',
             'knowledge_base_id' => 'nullable|string',
@@ -122,6 +130,11 @@ class AgentUpdateTool extends Tool
             $data['tool_profile'] = $validated['tool_profile'] === '' ? null : $validated['tool_profile'];
         }
 
+        // environment: allow empty string to clear the preset
+        if (array_key_exists('environment', $validated) && $validated['environment'] !== null) {
+            $data['environment'] = $validated['environment'] === '' ? null : $validated['environment'];
+        }
+
         // budget_cap_credits: allow explicit 0 (removes cap) so we handle separately
         if (array_key_exists('budget_cap_credits', $validated) && $validated['budget_cap_credits'] !== null) {
             $data['budget_cap_credits'] = $validated['budget_cap_credits'] === 0 ? null : $validated['budget_cap_credits'];
@@ -142,11 +155,22 @@ class AgentUpdateTool extends Tool
 
         // thinking_budget: stored in agent.config JSONB, not as a top-level column
         if (array_key_exists('thinking_budget', $validated) && $validated['thinking_budget'] !== null) {
-            $currentConfig = $agent->config ?? [];
+            $currentConfig = $data['config'] ?? $agent->config ?? [];
             if ((int) $validated['thinking_budget'] === 0) {
                 unset($currentConfig['thinking_budget']);
             } else {
                 $currentConfig['thinking_budget'] = (int) $validated['thinking_budget'];
+            }
+            $data['config'] = $currentConfig;
+        }
+
+        // reasoning_effort: stored in agent.config JSONB; "none" unsets it
+        if (array_key_exists('reasoning_effort', $validated) && $validated['reasoning_effort'] !== null) {
+            $currentConfig = $data['config'] ?? $agent->config ?? [];
+            if ($validated['reasoning_effort'] === 'none') {
+                unset($currentConfig['reasoning_effort']);
+            } else {
+                $currentConfig['reasoning_effort'] = $validated['reasoning_effort'];
             }
             $data['config'] = $currentConfig;
         }
@@ -170,7 +194,7 @@ class AgentUpdateTool extends Tool
         }
 
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
+            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, reasoning_effort, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
         }
 
         app(RecordAgentConfigRevisionAction::class)->execute(

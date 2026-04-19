@@ -44,6 +44,12 @@ class AgentCreateTool extends Tool
                 ->enum(['public', 'internal', 'confidential', 'restricted']),
             'tool_profile' => $schema->string()
                 ->description('Tool profile restricting tool access. Options: researcher, executor, communicator, analyst, admin, minimal'),
+            'environment' => $schema->string()
+                ->description('Environment preset that auto-attaches a tool bundle. Options: minimal, coding, browsing, restricted.')
+                ->enum(['minimal', 'coding', 'browsing', 'restricted']),
+            'reasoning_effort' => $schema->string()
+                ->description('Extended thinking effort (Anthropic). Options: none, low, medium, high, auto. "auto" lets the platform pick by task complexity.')
+                ->enum(['none', 'low', 'medium', 'high', 'auto']),
             'sandbox_profile' => $schema->string()
                 ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
             'knowledge_base_id' => $schema->string()
@@ -69,6 +75,8 @@ class AgentCreateTool extends Tool
             'model' => 'nullable|string|max:100',
             'personality' => 'nullable|array',
             'tool_profile' => 'nullable|string',
+            'environment' => 'nullable|string|in:minimal,coding,browsing,restricted',
+            'reasoning_effort' => 'nullable|string|in:none,low,medium,high,auto',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'sandbox_profile' => 'nullable|string',
             'knowledge_base_id' => 'nullable|uuid',
@@ -119,6 +127,16 @@ class AgentCreateTool extends Tool
 
             if (! empty($validated['tool_profile'])) {
                 $agent->update(['tool_profile' => $validated['tool_profile']]);
+            }
+
+            if (! empty($validated['environment'])) {
+                $agent->update(['environment' => $validated['environment']]);
+            }
+
+            if (! empty($validated['reasoning_effort']) && $validated['reasoning_effort'] !== 'none') {
+                $config = $agent->config ?? [];
+                $config['reasoning_effort'] = $validated['reasoning_effort'];
+                $agent->update(['config' => $config]);
             }
 
             if ($sandboxProfile !== null) {
