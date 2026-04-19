@@ -740,6 +740,29 @@
             </div>
 
         @elseif($activeTab === 'tools')
+            @if($recentToolSearches->isNotEmpty())
+                <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                    <div class="mb-2 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-indigo-900">Recent tool search events</h3>
+                        <a href="{{ route('tools.search-history') }}?agentFilter={{ $agent->id }}"
+                            class="text-xs text-indigo-700 hover:underline">View all →</a>
+                    </div>
+                    <ul class="space-y-1.5 text-xs text-indigo-800">
+                        @foreach($recentToolSearches as $evt)
+                            <li class="flex items-start gap-2">
+                                <span class="text-indigo-500">{{ $evt->created_at->diffForHumans() }}</span>
+                                <span class="font-mono flex-1 truncate" title="{{ $evt->query }}">{{ \Illuminate\Support\Str::limit($evt->query, 80) }}</span>
+                                <span class="text-indigo-700 whitespace-nowrap">
+                                    {{ $evt->matched_count }}/{{ $evt->pool_size }} matched
+                                    @if(!empty($evt->matched_slugs))
+                                        → {{ implode(', ', array_slice($evt->matched_slugs, 0, 3)) }}{{ count($evt->matched_slugs) > 3 ? '…' : '' }}
+                                    @endif
+                                </span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
                 <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">

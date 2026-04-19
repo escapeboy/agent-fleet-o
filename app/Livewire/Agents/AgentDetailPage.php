@@ -22,6 +22,7 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Enums\ApprovalTimeoutAction;
 use App\Domain\Tool\Enums\ToolApprovalMode;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Models\ToolSearchLog;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Database\Eloquent\Collection;
@@ -655,6 +656,13 @@ class AgentDetailPage extends Component
             ->orderBy('priority')
             ->get();
 
+        $recentToolSearches = ($this->agent->config['use_tool_search'] ?? false)
+            ? ToolSearchLog::where('agent_id', $this->agent->id)
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get()
+            : collect();
+
         return view('livewire.agents.agent-detail-page', [
             'skills' => $skills,
             'tools' => $tools,
@@ -670,6 +678,7 @@ class AgentDetailPage extends Component
             'availableGitRepositories' => $availableGitRepositories,
             'availableKnowledgeBases' => $availableKnowledgeBases,
             'hooks' => $hooks,
+            'recentToolSearches' => $recentToolSearches,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }

@@ -9,6 +9,43 @@
         </div>
     </div>
 
+    @if($stats['total'] > 0)
+        <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="rounded-lg border border-gray-200 bg-white p-3 text-center">
+                <div class="text-xs uppercase tracking-wide text-gray-500">Total searches</div>
+                <div class="mt-1 text-2xl font-semibold text-gray-900">{{ $stats['total'] }}</div>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-white p-3 text-center">
+                <div class="text-xs uppercase tracking-wide text-gray-500">Avg matched</div>
+                <div class="mt-1 text-2xl font-semibold text-indigo-700">{{ $stats['avg_matched'] }}</div>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-white p-3 text-center">
+                <div class="text-xs uppercase tracking-wide text-gray-500">Avg pool</div>
+                <div class="mt-1 text-2xl font-semibold text-gray-900">{{ $stats['avg_pool'] }}</div>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-white p-3 text-center">
+                <div class="text-xs uppercase tracking-wide text-gray-500">Zero-match rate</div>
+                <div class="mt-1 text-2xl font-semibold {{ $stats['zero_match_rate'] > 0.3 ? 'text-amber-600' : 'text-green-700' }}">
+                    {{ round($stats['zero_match_rate'] * 100) }}%
+                </div>
+            </div>
+        </div>
+
+        @if(!empty($stats['top_slugs']))
+            <div class="mb-4 rounded-lg border border-gray-200 bg-white p-3">
+                <div class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Top surfaced tools (last 500 events)</div>
+                <div class="flex flex-wrap gap-2">
+                    @foreach($stats['top_slugs'] as $row)
+                        <span class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">
+                            {{ $row['slug'] }}
+                            <span class="rounded bg-indigo-200 px-1 text-indigo-900">{{ $row['count'] }}</span>
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+    @endif
+
     <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div class="sm:col-span-2">
             <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search queries…"

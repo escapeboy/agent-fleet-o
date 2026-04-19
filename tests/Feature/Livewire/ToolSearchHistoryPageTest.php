@@ -93,4 +93,22 @@ class ToolSearchHistoryPageTest extends TestCase
         Livewire::test(ToolSearchHistoryPage::class)
             ->assertSee('No tool search events yet');
     }
+
+    public function test_aggregates_stats_across_logs(): void
+    {
+        $this->makeLog(['pool_size' => 20, 'matched_count' => 5, 'matched_slugs' => ['github', 'slack']]);
+        $this->makeLog(['pool_size' => 30, 'matched_count' => 3, 'matched_slugs' => ['github']]);
+        $this->makeLog(['pool_size' => 10, 'matched_count' => 0, 'matched_slugs' => []]);
+
+        Livewire::test(ToolSearchHistoryPage::class)
+            // total
+            ->assertSee('3')
+            // avg matched = (5+3+0)/3 = 2.67
+            ->assertSee('2.67')
+            // avg pool = (20+30+10)/3 = 20
+            // zero-match rate = 1/3 ~ 33%
+            ->assertSee('33%')
+            // top surfaced slug (github appears 2x)
+            ->assertSee('github');
+    }
 }

@@ -56,9 +56,63 @@ class ToolSearchHistoryPage extends Component
             ->filter(fn ($a) => ! empty($a->config['use_tool_search'] ?? false))
             ->values();
 
+        $stats = $this->aggregateStats();
+
         return view('livewire.tools.tool-search-history-page', [
             'logs' => $logs,
             'agents' => $agents,
+            'stats' => $stats,
         ])->layout('layouts.app', ['header' => 'Tool Search History']);
+    }
+
+    /**
+     * Aggregate observability stats across all tool_search_logs for the current team.
+     *
+     * @return array{total: int, avg_matched: float, avg_pool: float, zero_match_rate: float, top_slugs: array<int, array{slug: string, count: int}>}
+     */
+    private function aggregateStats(): array
+    {
+        $base = ToolSearchLog::query();
+
+        $total = (clone $base)->count();
+        if ($total === 0) {
+            return [
+                'total' => 0,
+                'avg_matched' => 0.0,
+                'avg_pool' => 0.0,
+                'zero_match_rate' => 0.0,
+                'top_slugs' => [],
+            ];
+        }
+
+        $avgMatched = (float) (clone $base)->avg('matched_count');
+        $avgPool = (float) (clone $base)->avg('pool_size');
+        $zeroMatches = (clone $base)->where('matched_count', 0)->count();
+
+        // Count slug frequencies by unpacking the last 500 rows in-memory.
+        // Postgres-native jsonb_array_elements would be cleaner but the hybrid
+        // pgsql/sqlite test config rules it out. 500 rows is a sensible sample.
+        $slugCounts = [];
+        (clone $base)->orderBy('created_at', 'desc')->take(500)->get(['matched_slugs'])
+            ->each(function ($log) use (&$slugCounts) {
+                foreach (($log->matched_slugs ?? []) as $slug) {
+                    $slugCounts[$slug] = ($slugCounts[$slug] ?? 0) + 1;
+                }
+            });
+
+        arsort($slugCounts);
+        $topSlugs = array_slice(
+            array_map(fn ($count, $slug) => ['slug' => $slug, 'count' => $count],
+                array_values($slugCounts), array_keys($slugCounts)),
+            0, 10,
+        );
+
+        return [
+            'total' => $total,
+            'avg_matched' => round($avgMatched, 2),
+            'avg_pool' => round($avgPool, 2),
+            'zero_match_rate' => round($zeroMatches / $total, 3),
+            'top_slugs' => $topSlugs,
+        ];
     }
 }
