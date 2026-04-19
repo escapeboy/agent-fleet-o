@@ -99,6 +99,7 @@ use App\Livewire\Tools\FederationGroupsPage;
 use App\Livewire\Tools\McpMarketplacePage;
 use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
+use App\Livewire\Tools\ToolSearchHistoryPage;
 use App\Livewire\Tools\ToolTemplateCatalogPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
@@ -257,6 +258,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tools/templates', ToolTemplateCatalogPage::class)->name('tools.templates');
     Route::get('/tools/marketplace', McpMarketplacePage::class)->name('tools.marketplace');
     Route::get('/tools/federation-groups', FederationGroupsPage::class)->name('tools.federation-groups');
+    Route::get('/tools/search-history', ToolSearchHistoryPage::class)->name('tools.search-history');
     Route::get('/tools/{tool}', ToolDetailPage::class)->name('tools.show');
 
     Route::get('/credentials', CredentialListPage::class)->name('credentials.index');

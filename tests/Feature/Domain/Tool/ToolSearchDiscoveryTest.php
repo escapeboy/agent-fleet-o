@@ -8,6 +8,7 @@ use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Models\ToolSearchLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -192,5 +193,45 @@ class ToolSearchDiscoveryTest extends TestCase
         );
 
         $this->assertSame([], $resolved);
+    }
+
+    public function test_persists_tool_search_log_on_successful_match(): void
+    {
+        $this->makeTool('github', 'GitHub API');
+
+        $agent = Agent::factory()->create([
+            'team_id' => $this->team->id,
+            'config' => ['use_tool_search' => true],
+        ]);
+
+        app(ResolveAgentToolsAction::class)->execute(
+            agent: $agent,
+            semanticQuery: 'github api repository',
+        );
+
+        $log = ToolSearchLog::where('agent_id', $agent->id)->first();
+        $this->assertNotNull($log);
+        $this->assertSame($this->team->id, $log->team_id);
+        $this->assertSame('github api repository', $log->query);
+        $this->assertGreaterThan(0, $log->pool_size);
+        $this->assertGreaterThanOrEqual(0, $log->matched_count);
+        $this->assertIsArray($log->matched_slugs);
+    }
+
+    public function test_no_log_written_when_search_disabled(): void
+    {
+        $this->makeTool('github', 'GitHub API');
+
+        $agent = Agent::factory()->create([
+            'team_id' => $this->team->id,
+            'config' => [],
+        ]);
+
+        app(ResolveAgentToolsAction::class)->execute(
+            agent: $agent,
+            semanticQuery: 'anything',
+        );
+
+        $this->assertSame(0, ToolSearchLog::where('agent_id', $agent->id)->count());
     }
 }
