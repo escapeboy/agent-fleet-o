@@ -44,6 +44,13 @@
                     Pause
                 </button>
                 </form>
+
+                <form class="inline" onsubmit="return false" toolname="steer_experiment" tooldescription="Inject a mid-run steering message into the next LLM call">
+                <button type="button" wire:click="openSteerModal"
+                    class="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100">
+                    Steer
+                </button>
+                </form>
             @endif
 
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Paused)
@@ -218,6 +225,48 @@
             @endif
         @endforeach
     </div>
+
+    {{-- Steer Modal --}}
+    @if($showSteerModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Steer Experiment</h3>
+                    <button wire:click="closeSteerModal" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+
+                <p class="mb-3 text-sm text-gray-600">
+                    Inject a one-shot correction into the next LLM call for this experiment. The message is prepended to the system prompt and cleared after the first use.
+                </p>
+
+                @if($queuedSteeringMessage = $experiment->orchestration_config['steering_message'] ?? null)
+                    <div class="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                        <strong>Pending:</strong> a previous steering message is still queued. Submitting a new one will replace it.
+                        <div class="mt-1 italic">"{{ \Illuminate\Support\Str::limit($queuedSteeringMessage, 140) }}"</div>
+                    </div>
+                @endif
+
+                <label class="mb-1 block text-sm font-medium text-gray-700" for="steering-message">Steering message</label>
+                <textarea id="steering-message" wire:model="steeringMessage" rows="4" maxlength="2000"
+                    placeholder="e.g. Use the staging database, not production."
+                    class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-primary-500 focus:ring-primary-500"></textarea>
+                @error('steeringMessage')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+
+                <div class="mt-4 flex items-center justify-end gap-2">
+                    <button wire:click="closeSteerModal"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button wire:click="submitSteering"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                        Queue steering
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- Share Modal --}}
     @if($showShareModal)
