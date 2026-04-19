@@ -19,6 +19,7 @@ use App\Infrastructure\AI\Middleware\LangfuseExportMiddleware;
 use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
+use App\Infrastructure\AI\Middleware\SteeringInjection;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use App\Infrastructure\AI\Services\EscalationStrategy;
@@ -66,6 +67,10 @@ class AiServiceProvider extends ServiceProvider
                 $app->make(BudgetPressureRouting::class),
                 $app->make(BudgetEnforcement::class),
                 $app->make(IdempotencyCheck::class),
+                // SteeringInjection runs AFTER IdempotencyCheck so steering creates a new
+                // cache key (we want the steering-influenced response, not a stale cached one)
+                // but BEFORE SemanticCache for the same reason.
+                $app->make(SteeringInjection::class),
                 $app->make(SemanticCache::class),
                 $app->make(ContextCompaction::class),
                 $app->make(SchemaValidation::class),
