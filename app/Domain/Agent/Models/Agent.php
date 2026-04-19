@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Models;
 
+use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentScope;
 use App\Domain\Agent\Enums\AgentStatus;
@@ -89,6 +90,7 @@ class Agent extends Model
         'data_classification',
         'sandbox_profile',
         'tool_profile',
+        'environment',
         'system_prompt_template',
         'reasoning_strategy',
         'scope',
@@ -121,6 +123,7 @@ class Agent extends Model
             'sandbox_profile' => 'array',
             'system_prompt_template' => 'array',
             'scope' => AgentScope::class,
+            'environment' => AgentEnvironment::class,
         ];
     }
 

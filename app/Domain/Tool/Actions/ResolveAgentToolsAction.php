@@ -3,6 +3,7 @@
 namespace App\Domain\Tool\Actions;
 
 use App\Domain\Agent\Actions\ExecuteAgentAction;
+use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Services\SandboxedWorkspace;
@@ -18,6 +19,7 @@ use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Models\ToolSearchLog;
 use App\Domain\Tool\Services\SemanticToolSelector;
 use App\Domain\Tool\Services\ToolFederationResolver;
 use App\Domain\Tool\Services\ToolRagSelector;
@@ -28,6 +30,7 @@ use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Services\SynchronousWorkflowExecutor;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Schema\StringSchema;
@@ -65,6 +68,11 @@ class ResolveAgentToolsAction
         $agentTools = $agent->tools()
             ->where('status', ToolStatus::Active->value)
             ->get();
+
+        // Auto-attach tools declared by the agent's environment preset.
+        // Environment is a convenience dropdown: Coding → bash+filesystem, Browsing → browser+web_search, etc.
+        // Tools are matched by slug within the agent's team and merged uniquely by ID.
+        $agentTools = $this->mergeEnvironmentTools($agent, $agentTools);
 
         // Filter out tools with approval_mode = 'deny' on the pivot
         $agentTools = $agentTools->filter(function (Tool $tool) {
@@ -120,6 +128,11 @@ class ResolveAgentToolsAction
         if ($federatedTools->isNotEmpty()) {
             $agentTools = $agentTools->merge($federatedTools)->unique('id');
         }
+
+        // Tool search: auto-discover team-wide tools via semantic match when enabled.
+        // Opt-in via use_tool_search config flag; requires a semanticQuery to be provided.
+        // Merges up to tool_search_top_k (default 5) new tools, deduplicated against existing.
+        $agentTools = $this->mergeSearchedTools($agent, $agentTools, $semanticQuery, $executionId);
 
         // Filter by execution mode: watcher projects only get safe/read tools
         if ($project && $project->execution_mode === ProjectExecutionMode::Watcher) {
@@ -258,6 +271,131 @@ class ResolveAgentToolsAction
         }
 
         return $prismTools;
+    }
+
+    /**
+     * Look up tools matching the agent environment's declared slugs (team-scoped)
+     * and merge them with the explicit agent tool set, deduplicated by tool ID.
+     * A missing slug is a silent no-op — the team may not have the tool seeded yet.
+     *
+     * @param  Collection<int, Tool>  $existing
+     * @return Collection<int, Tool>
+     */
+    private function mergeEnvironmentTools(Agent $agent, Collection $existing): Collection
+    {
+        $environment = $agent->environment;
+        if (! $environment instanceof AgentEnvironment) {
+            return $existing;
+        }
+
+        $slugs = $environment->toolSlugs();
+        if (empty($slugs) || $agent->team_id === null) {
+            return $existing;
+        }
+
+        $envTools = Tool::where('team_id', $agent->team_id)
+            ->whereIn('slug', $slugs)
+            ->where('status', ToolStatus::Active->value)
+            ->get();
+
+        if ($envTools->isEmpty()) {
+            return $existing;
+        }
+
+        return $existing->merge($envTools)->unique('id')->values();
+    }
+
+    /**
+     * Expand the tool pool by semantic match against team-wide tools.
+     * Runs only when the agent opts in via config.use_tool_search AND a
+     * semanticQuery is provided. Already-attached tools are excluded from
+     * the candidate pool so we only surface new discoveries.
+     *
+     * @param  Collection<int, Tool>  $existing
+     * @return Collection<int, Tool>
+     */
+    private function mergeSearchedTools(Agent $agent, Collection $existing, ?string $semanticQuery, ?string $experimentId = null): Collection
+    {
+        if (! ($agent->config['use_tool_search'] ?? false)) {
+            return $existing;
+        }
+
+        if ($semanticQuery === null || trim($semanticQuery) === '' || $agent->team_id === null) {
+            return $existing;
+        }
+
+        $topK = max(1, min(20, (int) ($agent->config['tool_search_top_k'] ?? 5)));
+
+        $existingIds = $existing->pluck('id')->all();
+
+        $candidatePool = Tool::where('team_id', $agent->team_id)
+            ->where('status', ToolStatus::Active->value)
+            ->when(! empty($existingIds), fn ($q) => $q->whereNotIn('id', $existingIds))
+            ->get();
+
+        if ($candidatePool->isEmpty()) {
+            return $existing;
+        }
+
+        try {
+            $matched = $this->toolRagSelector->select(
+                $candidatePool,
+                $semanticQuery,
+                3,
+                $agent->team_id,
+                $candidatePool->pluck('id')->toArray(),
+            )->take($topK);
+        } catch (\Throwable $e) {
+            Log::warning('ResolveAgentTools: tool search failed, skipping', [
+                'agent_id' => $agent->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $existing;
+        }
+
+        if ($matched->isEmpty()) {
+            return $existing;
+        }
+
+        Log::info('ResolveAgentTools: tool search discovered additional tools', [
+            'agent_id' => $agent->id,
+            'query_length' => mb_strlen($semanticQuery),
+            'candidate_pool' => $candidatePool->count(),
+            'matched' => $matched->pluck('slug')->all(),
+        ]);
+
+        $this->logToolSearch($agent, $semanticQuery, $candidatePool->count(), $matched, $experimentId);
+
+        return $existing->merge($matched)->unique('id')->values();
+    }
+
+    /**
+     * Persist an append-only audit log of the tool search selection.
+     * Failure is non-fatal — the selection itself already succeeded.
+     *
+     * @param  Collection<int, Tool>  $matched
+     */
+    private function logToolSearch(Agent $agent, string $query, int $poolSize, Collection $matched, ?string $experimentId): void
+    {
+        try {
+            ToolSearchLog::create([
+                'team_id' => $agent->team_id,
+                'agent_id' => $agent->id,
+                'experiment_id' => $experimentId,
+                'query' => mb_substr($query, 0, 2000),
+                'pool_size' => $poolSize,
+                'matched_count' => $matched->count(),
+                'matched_slugs' => $matched->pluck('slug')->filter()->values()->all(),
+                'matched_ids' => $matched->pluck('id')->values()->all(),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('ResolveAgentTools: failed to persist tool search log', [
+                'agent_id' => $agent->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

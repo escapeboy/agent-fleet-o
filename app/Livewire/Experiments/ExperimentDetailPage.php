@@ -8,6 +8,7 @@ use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
 use App\Domain\Experiment\Actions\ResumeFromCheckpointAction;
 use App\Domain\Experiment\Actions\RetryExperimentAction;
+use App\Domain\Experiment\Actions\SteerExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
@@ -33,6 +34,10 @@ class ExperimentDetailPage extends Component
     public bool $showResumeCheckpointConfirm = false;
 
     public bool $showShareModal = false;
+
+    public bool $showSteerModal = false;
+
+    public string $steeringMessage = '';
 
     public bool $shareShowCosts = false;
 
@@ -94,6 +99,41 @@ class ExperimentDetailPage extends Component
         $action = app(ResumeExperimentAction::class);
         $action->execute($this->experiment, auth()->id());
         $this->experiment = $this->experiment->fresh();
+    }
+
+    public function openSteerModal(): void
+    {
+        $this->steeringMessage = '';
+        $this->showSteerModal = true;
+    }
+
+    public function closeSteerModal(): void
+    {
+        $this->showSteerModal = false;
+        $this->steeringMessage = '';
+        $this->resetValidation('steeringMessage');
+    }
+
+    public function submitSteering(): void
+    {
+        $this->validate([
+            'steeringMessage' => 'required|string|min:1|max:2000',
+        ], [], ['steeringMessage' => 'steering message']);
+
+        try {
+            app(SteerExperimentAction::class)->execute(
+                experiment: $this->experiment,
+                message: $this->steeringMessage,
+                userId: auth()->id(),
+            );
+
+            $this->experiment = $this->experiment->fresh();
+            $this->showSteerModal = false;
+            $this->steeringMessage = '';
+            session()->flash('message', 'Steering message queued — it will be injected on the next LLM call.');
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('steeringMessage', $e->getMessage());
+        }
     }
 
     public function retryExperiment(): void

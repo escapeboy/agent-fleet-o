@@ -3,13 +3,16 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
+use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class CreateAgentForm extends Component
@@ -49,6 +52,8 @@ class CreateAgentForm extends Component
 
     public ?int $thinkingBudget = null;
 
+    public string $reasoningEffort = 'none';
+
     public bool $useFederation = false;
 
     public string $federationGroupId = '';
@@ -63,6 +68,12 @@ class CreateAgentForm extends Component
     public string $reasoningStrategy = 'function_calling';
 
     public string $toolProfile = '';
+
+    public string $environment = '';
+
+    public bool $useToolSearch = false;
+
+    public int $toolSearchTopK = 5;
 
     public ?string $knowledgeBaseId = null;
 
@@ -118,6 +129,10 @@ class CreateAgentForm extends Component
             'provider' => 'required|string|max:255',
             'model' => 'required|max:255',
             'thinkingBudget' => 'nullable|integer|min:0|max:100000',
+            'reasoningEffort' => ['nullable', Rule::enum(ReasoningEffort::class)],
+            'environment' => ['nullable', Rule::enum(AgentEnvironment::class)],
+            'useToolSearch' => ['nullable', 'boolean'],
+            'toolSearchTopK' => ['nullable', 'integer', 'min:1', 'max:20'],
         ];
     }
 
@@ -131,6 +146,15 @@ class CreateAgentForm extends Component
 
         if ($this->thinkingBudget !== null && $this->thinkingBudget > 0) {
             $config['thinking_budget'] = $this->thinkingBudget;
+        }
+
+        if ($this->reasoningEffort !== '' && $this->reasoningEffort !== ReasoningEffort::None->value) {
+            $config['reasoning_effort'] = $this->reasoningEffort;
+        }
+
+        if ($this->useToolSearch) {
+            $config['use_tool_search'] = true;
+            $config['tool_search_top_k'] = max(1, min(20, $this->toolSearchTopK));
         }
         $filteredChain = array_filter($this->fallbackChain, fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']));
         if (! empty($filteredChain)) {
@@ -194,6 +218,10 @@ class CreateAgentForm extends Component
 
         if ($this->toolProfile !== '') {
             $agent->update(['tool_profile' => $this->toolProfile]);
+        }
+
+        if ($this->environment !== '') {
+            $agent->update(['environment' => $this->environment]);
         }
 
         if ($this->knowledgeBaseId) {

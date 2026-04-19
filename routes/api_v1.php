@@ -99,6 +99,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/experiments/{experiment}/transition', [ExperimentController::class, 'transition']);
     Route::post('/experiments/{experiment}/pause', [ExperimentController::class, 'pause']);
     Route::post('/experiments/{experiment}/resume', [ExperimentController::class, 'resume']);
+    Route::post('/experiments/{experiment}/steer', [ExperimentController::class, 'steer']);
     Route::post('/experiments/{experiment}/retry', [ExperimentController::class, 'retry']);
     Route::post('/experiments/{experiment}/kill', [ExperimentController::class, 'kill']);
     Route::post('/experiments/{experiment}/retry-from-step', [ExperimentController::class, 'retryFromStep']);

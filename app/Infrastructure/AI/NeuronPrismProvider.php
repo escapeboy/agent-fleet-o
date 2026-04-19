@@ -42,6 +42,7 @@ class NeuronPrismProvider implements AIProviderInterface
         private readonly string $purpose = 'neuron.chat',
         private readonly float $temperature = 0.7,
         private readonly int $maxTokens = 4096,
+        private readonly ?int $thinkingBudget = null,
     ) {}
 
     public function systemPrompt(?string $prompt): AIProviderInterface
@@ -100,6 +101,7 @@ class NeuronPrismProvider implements AIProviderInterface
             agentId: $this->agentId,
             purpose: $this->purpose,
             temperature: $this->temperature,
+            thinkingBudget: $this->thinkingBudget,
         ));
 
         $message = AssistantMessage::make($response->content);
@@ -135,6 +137,7 @@ class NeuronPrismProvider implements AIProviderInterface
             agentId: $this->agentId,
             purpose: $this->purpose.'.stream',
             temperature: $this->temperature,
+            thinkingBudget: $this->thinkingBudget,
         ));
 
         // Emit content word-by-word to simulate streaming output through Neuron's pipeline
@@ -181,6 +184,7 @@ class NeuronPrismProvider implements AIProviderInterface
             agentId: $this->agentId,
             purpose: $this->purpose.'.structured',
             temperature: 0.1, // Low temperature for deterministic JSON
+            thinkingBudget: $this->thinkingBudget,
         ));
 
         $message = AssistantMessage::make($response->content);

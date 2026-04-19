@@ -42,6 +42,7 @@ use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Services\BashSidecarClient;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\DB;
@@ -274,6 +275,7 @@ class ExecuteAgentAction
                 tools: $tools,
                 maxSteps: $effectiveMaxSteps,
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
+                effort: ReasoningEffort::tryFrom($tierConfig['reasoning_effort'] ?? ''),
                 workingDirectory: $agent->config['working_directory'] ?? null,
                 enablePromptCaching: true,
             );
@@ -472,6 +474,7 @@ class ExecuteAgentAction
                 purpose: 'agent.workflow_step',
                 temperature: $tierConfig['temperature'],
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
+                effort: ReasoningEffort::tryFrom($tierConfig['reasoning_effort'] ?? ''),
                 workingDirectory: $agent->config['working_directory'] ?? null,
             );
 

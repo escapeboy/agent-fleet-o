@@ -69,6 +69,7 @@ class AgentController extends Controller
 
         $extraFields = array_filter([
             'tool_profile' => $request->input('tool_profile'),
+            'environment' => $request->input('environment'),
             'knowledge_base_id' => $request->input('knowledge_base_id'),
             'evaluation_enabled' => $request->input('evaluation_enabled'),
             'evaluation_sample_rate' => $request->input('evaluation_sample_rate'),

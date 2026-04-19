@@ -10,6 +10,7 @@ use App\Domain\Experiment\Actions\ResumeExperimentAction;
 use App\Domain\Experiment\Actions\ResumeFromCheckpointAction;
 use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\RetryFromStepAction;
+use App\Domain\Experiment\Actions\SteerExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
@@ -103,6 +104,21 @@ class ExperimentController extends Controller
         $experiment = $action->execute(
             experiment: $experiment,
             actorId: $request->user()->id,
+        );
+
+        return new ExperimentResource($experiment);
+    }
+
+    public function steer(Request $request, Experiment $experiment, SteerExperimentAction $action): ExperimentResource
+    {
+        $request->validate([
+            'message' => 'required|string|min:1|max:2000',
+        ]);
+
+        $experiment = $action->execute(
+            experiment: $experiment,
+            message: $request->input('message'),
+            userId: $request->user()?->id,
         );
 
         return new ExperimentResource($experiment);
