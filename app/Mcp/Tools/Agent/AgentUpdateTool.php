@@ -55,6 +55,10 @@ class AgentUpdateTool extends Tool
             'reasoning_effort' => $schema->string()
                 ->description('Extended thinking effort (Anthropic). Options: none, low, medium, high, auto. Pass "none" to disable.')
                 ->enum(['none', 'low', 'medium', 'high', 'auto']),
+            'use_tool_search' => $schema->boolean()
+                ->description('Enable or disable semantic tool auto-discovery. When true, up to tool_search_top_k matching team tools are auto-attached per run.'),
+            'tool_search_top_k' => $schema->integer()
+                ->description('Maximum tools tool_search will surface per run (1–20). Only applies when use_tool_search=true.'),
             'thinking_budget' => $schema->integer()
                 ->description('Anthropic extended thinking budget in tokens (e.g. 1024, 4096, 8192). Only applies when agent provider is "anthropic". Set to 0 to disable. Enables chain-of-thought reasoning visible in experiment steps.'),
             'knowledge_base_id' => $schema->string()
@@ -84,6 +88,8 @@ class AgentUpdateTool extends Tool
             'tool_profile' => 'nullable|string',
             'environment' => 'nullable|string|in:,minimal,coding,browsing,restricted',
             'reasoning_effort' => 'nullable|string|in:none,low,medium,high,auto',
+            'use_tool_search' => 'nullable|boolean',
+            'tool_search_top_k' => 'nullable|integer|min:1|max:20',
             'sandbox_profile' => 'nullable|string',
             'thinking_budget' => 'nullable|integer|min:0|max:100000',
             'knowledge_base_id' => 'nullable|string',
@@ -175,6 +181,26 @@ class AgentUpdateTool extends Tool
             $data['config'] = $currentConfig;
         }
 
+        // use_tool_search + tool_search_top_k: stored in agent.config JSONB; false clears both
+        if (array_key_exists('use_tool_search', $validated) && $validated['use_tool_search'] !== null) {
+            $currentConfig = $data['config'] ?? $agent->config ?? [];
+            if ($validated['use_tool_search']) {
+                $currentConfig['use_tool_search'] = true;
+                $topK = (int) ($validated['tool_search_top_k'] ?? $currentConfig['tool_search_top_k'] ?? 5);
+                $currentConfig['tool_search_top_k'] = max(1, min(20, $topK));
+            } else {
+                unset($currentConfig['use_tool_search'], $currentConfig['tool_search_top_k']);
+            }
+            $data['config'] = $currentConfig;
+        } elseif (array_key_exists('tool_search_top_k', $validated) && $validated['tool_search_top_k'] !== null) {
+            // top_k alone (without toggling flag): only honor if already enabled
+            $currentConfig = $data['config'] ?? $agent->config ?? [];
+            if (! empty($currentConfig['use_tool_search'])) {
+                $currentConfig['tool_search_top_k'] = max(1, min(20, (int) $validated['tool_search_top_k']));
+                $data['config'] = $currentConfig;
+            }
+        }
+
         // knowledge_base_id: allow empty string to unlink
         if (array_key_exists('knowledge_base_id', $validated) && $validated['knowledge_base_id'] !== null) {
             $data['knowledge_base_id'] = $validated['knowledge_base_id'] === '' ? null : $validated['knowledge_base_id'];
@@ -194,7 +220,7 @@ class AgentUpdateTool extends Tool
         }
 
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, reasoning_effort, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
+            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, reasoning_effort, use_tool_search, tool_search_top_k, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
         }
 
         app(RecordAgentConfigRevisionAction::class)->execute(

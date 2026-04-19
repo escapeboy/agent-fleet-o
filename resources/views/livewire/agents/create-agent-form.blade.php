@@ -108,6 +108,19 @@
                 </x-form-select>
             </div>
 
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <input type="checkbox" wire:model.live="useToolSearch" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                    Use tool search
+                </label>
+                <p class="mt-1 text-xs text-gray-500">Auto-discover relevant tools from the team pool by matching the user prompt against tool descriptions.</p>
+                @if($useToolSearch)
+                    <div class="mt-3">
+                        <x-form-input wire:model="toolSearchTopK" label="Top K" type="number" min="1" max="20" hint="Maximum tools the search will surface per run (1–20)." />
+                    </div>
+                @endif
+            </div>
+
             @if(!empty($providers[$this->provider]['local']))
                 <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                     Local agent — executes on the host machine using its own CLI process. No per-request API costs.

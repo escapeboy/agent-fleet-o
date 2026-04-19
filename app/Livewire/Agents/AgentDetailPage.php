@@ -81,6 +81,10 @@ class AgentDetailPage extends Component
 
     public string $editReasoningEffort = 'none';
 
+    public bool $editUseToolSearch = false;
+
+    public int $editToolSearchTopK = 5;
+
     /** @var array<string> */
     public array $editKnowledgeBaseIds = [];
 
@@ -175,6 +179,8 @@ class AgentDetailPage extends Component
         $this->editToolProfile = $this->agent->tool_profile ?? '';
         $this->editEnvironment = $this->agent->environment?->value ?? '';
         $this->editReasoningEffort = $this->agent->config['reasoning_effort'] ?? 'none';
+        $this->editUseToolSearch = (bool) ($this->agent->config['use_tool_search'] ?? false);
+        $this->editToolSearchTopK = (int) ($this->agent->config['tool_search_top_k'] ?? 5);
         $this->editKnowledgeBaseIds = $this->agent->knowledgeBases()->pluck('knowledge_bases.id')->map(fn ($id) => (string) $id)->toArray();
         $this->editEvaluationEnabled = (bool) $this->agent->evaluation_enabled;
         $this->editEvaluationSampleRate = $this->agent->evaluation_sample_rate;
@@ -236,6 +242,8 @@ class AgentDetailPage extends Component
             'editEvaluationSampleRate' => 'nullable|numeric|min:0|max:1',
             'editEnvironment' => ['nullable', Rule::enum(AgentEnvironment::class)],
             'editReasoningEffort' => ['nullable', Rule::enum(ReasoningEffort::class)],
+            'editUseToolSearch' => ['nullable', 'boolean'],
+            'editToolSearchTopK' => ['nullable', 'integer', 'min:1', 'max:20'],
         ]);
 
         $config = $this->agent->config ?? [];
@@ -279,6 +287,13 @@ class AgentDetailPage extends Component
             $config['reasoning_effort'] = $this->editReasoningEffort;
         } else {
             unset($config['reasoning_effort']);
+        }
+
+        if ($this->editUseToolSearch) {
+            $config['use_tool_search'] = true;
+            $config['tool_search_top_k'] = max(1, min(20, $this->editToolSearchTopK));
+        } else {
+            unset($config['use_tool_search'], $config['tool_search_top_k']);
         }
 
         $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");

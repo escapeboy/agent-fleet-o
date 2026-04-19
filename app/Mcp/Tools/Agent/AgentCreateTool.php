@@ -50,6 +50,10 @@ class AgentCreateTool extends Tool
             'reasoning_effort' => $schema->string()
                 ->description('Extended thinking effort (Anthropic). Options: none, low, medium, high, auto. "auto" lets the platform pick by task complexity.')
                 ->enum(['none', 'low', 'medium', 'high', 'auto']),
+            'use_tool_search' => $schema->boolean()
+                ->description('Enable semantic tool auto-discovery — at run time, up to tool_search_top_k matching tools from the team pool are auto-attached based on the user prompt.'),
+            'tool_search_top_k' => $schema->integer()
+                ->description('Maximum tools tool_search will surface per run (1–20, default 5). Only applies when use_tool_search=true.'),
             'sandbox_profile' => $schema->string()
                 ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
             'knowledge_base_id' => $schema->string()
@@ -77,6 +81,8 @@ class AgentCreateTool extends Tool
             'tool_profile' => 'nullable|string',
             'environment' => 'nullable|string|in:minimal,coding,browsing,restricted',
             'reasoning_effort' => 'nullable|string|in:none,low,medium,high,auto',
+            'use_tool_search' => 'nullable|boolean',
+            'tool_search_top_k' => 'nullable|integer|min:1|max:20',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'sandbox_profile' => 'nullable|string',
             'knowledge_base_id' => 'nullable|uuid',
@@ -136,6 +142,13 @@ class AgentCreateTool extends Tool
             if (! empty($validated['reasoning_effort']) && $validated['reasoning_effort'] !== 'none') {
                 $config = $agent->config ?? [];
                 $config['reasoning_effort'] = $validated['reasoning_effort'];
+                $agent->update(['config' => $config]);
+            }
+
+            if (! empty($validated['use_tool_search'])) {
+                $config = $agent->fresh()->config ?? [];
+                $config['use_tool_search'] = true;
+                $config['tool_search_top_k'] = max(1, min(20, (int) ($validated['tool_search_top_k'] ?? 5)));
                 $agent->update(['config' => $config]);
             }
 

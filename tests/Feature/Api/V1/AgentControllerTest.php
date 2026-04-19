@@ -195,6 +195,42 @@ class AgentControllerTest extends ApiTestCase
         $this->assertSame('high', $agent->config['reasoning_effort'] ?? null);
     }
 
+    public function test_can_create_agent_with_tool_search_config(): void
+    {
+        $this->actingAsApiUser();
+
+        $response = $this->postJson('/api/v1/agents', [
+            'name' => 'Auto-Tool Agent',
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+            'config' => [
+                'use_tool_search' => true,
+                'tool_search_top_k' => 8,
+            ],
+        ]);
+
+        $response->assertStatus(201);
+
+        $agent = Agent::where('name', 'Auto-Tool Agent')->first();
+        $this->assertTrue($agent->config['use_tool_search'] ?? false);
+        $this->assertSame(8, $agent->config['tool_search_top_k'] ?? null);
+    }
+
+    public function test_rejects_tool_search_top_k_out_of_range(): void
+    {
+        $this->actingAsApiUser();
+
+        $response = $this->postJson('/api/v1/agents', [
+            'name' => 'Bad K',
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+            'config' => ['tool_search_top_k' => 999],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['config.tool_search_top_k']);
+    }
+
     public function test_resource_exposes_environment_and_tool_profile_fields(): void
     {
         $this->actingAsApiUser();

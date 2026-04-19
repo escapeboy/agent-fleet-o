@@ -66,6 +66,10 @@ class CreateAgentForm extends Component
 
     public string $environment = '';
 
+    public bool $useToolSearch = false;
+
+    public int $toolSearchTopK = 5;
+
     public ?string $knowledgeBaseId = null;
 
     public bool $evaluationEnabled = false;
@@ -122,6 +126,8 @@ class CreateAgentForm extends Component
             'thinkingBudget' => 'nullable|integer|min:0|max:100000',
             'reasoningEffort' => ['nullable', Rule::enum(ReasoningEffort::class)],
             'environment' => ['nullable', Rule::enum(AgentEnvironment::class)],
+            'useToolSearch' => ['nullable', 'boolean'],
+            'toolSearchTopK' => ['nullable', 'integer', 'min:1', 'max:20'],
         ];
     }
 
@@ -139,6 +145,11 @@ class CreateAgentForm extends Component
 
         if ($this->reasoningEffort !== '' && $this->reasoningEffort !== ReasoningEffort::None->value) {
             $config['reasoning_effort'] = $this->reasoningEffort;
+        }
+
+        if ($this->useToolSearch) {
+            $config['use_tool_search'] = true;
+            $config['tool_search_top_k'] = max(1, min(20, $this->toolSearchTopK));
         }
         $filteredChain = array_filter($this->fallbackChain, fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']));
         if (! empty($filteredChain)) {
