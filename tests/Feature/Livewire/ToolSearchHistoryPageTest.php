@@ -94,6 +94,16 @@ class ToolSearchHistoryPageTest extends TestCase
             ->assertSee('No tool search events yet');
     }
 
+    public function test_invalid_agent_filter_uuid_is_silently_reset(): void
+    {
+        $this->makeLog(['query' => 'should still appear']);
+
+        Livewire::test(ToolSearchHistoryPage::class)
+            ->set('agentFilter', 'not-a-uuid')
+            ->assertSet('agentFilter', '')
+            ->assertSee('should still appear');
+    }
+
     public function test_aggregates_stats_across_logs(): void
     {
         $this->makeLog(['pool_size' => 20, 'matched_count' => 5, 'matched_slugs' => ['github', 'slack']]);

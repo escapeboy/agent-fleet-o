@@ -667,8 +667,12 @@ class PrismAiGateway implements AiGatewayInterface
         // Anthropic Fast Mode — per-request beta header. Merged as the provider
         // config 3rd arg to Prism::text()->using() → PrismManager forwards it to
         // the Anthropic provider constructor which sets the anthropic-beta header.
+        // CRLF is stripped to prevent HTTP response splitting if the env value is
+        // ever misconfigured with stray line terminators.
         if ($request->provider === 'anthropic' && $this->isEffectiveFastMode($request)) {
-            return ['anthropic_beta' => (string) config('ai_routing.fast_mode.beta_identifier')];
+            $betaId = preg_replace('/[\r\n]/', '', (string) config('ai_routing.fast_mode.beta_identifier'));
+
+            return ['anthropic_beta' => $betaId];
         }
 
         // Local HTTP providers (ollama, openai_compatible, litellm_proxy)

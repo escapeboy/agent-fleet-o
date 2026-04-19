@@ -118,6 +118,25 @@ class FastModeTest extends TestCase
         $this->assertArrayNotHasKey('anthropic_beta', $config);
     }
 
+    public function test_crlf_injection_in_beta_identifier_is_stripped(): void
+    {
+        config([
+            'ai_routing.fast_mode.enabled' => true,
+            // Misconfigured env value with injected CRLF — would allow HTTP
+            // response splitting if forwarded unsanitised.
+            'ai_routing.fast_mode.beta_identifier' => "fast-safe\r\nX-Injected: evil",
+        ]);
+
+        $gateway = $this->makeGateway();
+        $request = $this->makeRequest(['fastMode' => true]);
+
+        $config = $this->invokePrivate($gateway, 'getPerRequestProviderConfig', [$request]);
+
+        $this->assertSame('fast-safeX-Injected: evil', $config['anthropic_beta']);
+        $this->assertStringNotContainsString("\r", $config['anthropic_beta']);
+        $this->assertStringNotContainsString("\n", $config['anthropic_beta']);
+    }
+
     public function test_non_matching_purpose_does_not_auto_enable(): void
     {
         config([

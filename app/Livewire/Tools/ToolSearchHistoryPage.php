@@ -43,8 +43,15 @@ class ToolSearchHistoryPage extends Component
             }
         }
 
+        // UUID guard on the filter param — user-controlled via #[Url]. A non-UUID
+        // would produce a PostgreSQL 22P02 and a 500; silently reset so the page
+        // still renders with no filter applied.
         if ($this->agentFilter !== '') {
-            $query->where('agent_id', $this->agentFilter);
+            if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $this->agentFilter)) {
+                $query->where('agent_id', $this->agentFilter);
+            } else {
+                $this->agentFilter = '';
+            }
         }
 
         $query->orderBy('created_at', 'desc');
