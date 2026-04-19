@@ -94,7 +94,7 @@
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <x-form-select wire:model="reasoningEffort" label="Reasoning Effort" hint="How much extended thinking the model should use (Anthropic only)">
+                <x-form-select wire:model="reasoningEffort" label="Reasoning Effort" hint="Extended thinking budget for the model. Anthropic Claude only; ignored on OpenAI and Google.">
                     @foreach(\App\Infrastructure\AI\Enums\ReasoningEffort::cases() as $effort)
                         <option value="{{ $effort->value }}">{{ $effort->label() }}</option>
                     @endforeach
@@ -111,12 +111,12 @@
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
                 <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
                     <input type="checkbox" wire:model.live="useToolSearch" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                    Use tool search
+                    Enable Tool Search
                 </label>
                 <p class="mt-1 text-xs text-gray-500">Auto-discover relevant tools from the team pool by matching the user prompt against tool descriptions.</p>
                 @if($useToolSearch)
                     <div class="mt-3">
-                        <x-form-input wire:model="toolSearchTopK" label="Top K" type="number" min="1" max="20" hint="Maximum tools the search will surface per run (1–20)." />
+                        <x-form-input wire:model="toolSearchTopK" label="Top K" type="number" min="1" max="20" hint="Maximum tools surfaced per agent invocation (1–20)." />
                     </div>
                 @endif
             </div>

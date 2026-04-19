@@ -48,7 +48,7 @@ enum ReasoningEffort: string
     public function label(): string
     {
         return match ($this) {
-            self::None => 'None (disabled)',
+            self::None => 'None (no extended thinking)',
             self::Low => 'Low (~2K tokens)',
             self::Medium => 'Medium (~8K tokens)',
             self::High => 'High (~32K tokens)',

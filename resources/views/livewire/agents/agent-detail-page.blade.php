@@ -81,7 +81,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <x-form-select wire:model="editReasoningEffort" label="Reasoning Effort" hint="How much extended thinking the model should use (Anthropic only)">
+                    <x-form-select wire:model="editReasoningEffort" label="Reasoning Effort" hint="Extended thinking budget for the model. Anthropic Claude only; ignored on OpenAI and Google.">
                         @foreach(\App\Infrastructure\AI\Enums\ReasoningEffort::cases() as $effort)
                             <option value="{{ $effort->value }}">{{ $effort->label() }}</option>
                         @endforeach
@@ -98,12 +98,12 @@
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
                         <input type="checkbox" wire:model.live="editUseToolSearch" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                        Use tool search
+                        Enable Tool Search
                     </label>
                     <p class="mt-1 text-xs text-gray-500">Auto-discover relevant tools from the team pool by matching the user prompt against tool descriptions.</p>
                     @if($editUseToolSearch)
                         <div class="mt-3">
-                            <x-form-input wire:model="editToolSearchTopK" label="Top K" type="number" min="1" max="20" hint="Maximum tools the search will surface per run (1–20)." />
+                            <x-form-input wire:model="editToolSearchTopK" label="Top K" type="number" min="1" max="20" hint="Maximum tools surfaced per agent invocation (1–20)." />
                         </div>
                     @endif
                 </div>
@@ -506,6 +506,56 @@
                             <p class="text-xs italic text-gray-400">None defined</p>
                         @endif
                     </div>
+                </div>
+
+                {{-- Execution settings summary (read-only, edit via startEdit) --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">Execution Settings</h3>
+                    <dl class="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500">Reasoning Effort</dt>
+                            <dd class="mt-0.5 text-gray-900">
+                                @php($effort = $agent->config['reasoning_effort'] ?? null)
+                                @if($effort)
+                                    <span class="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">{{ \App\Infrastructure\AI\Enums\ReasoningEffort::from($effort)->label() }}</span>
+                                @else
+                                    <span class="text-xs text-gray-400">Not configured</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500">Environment</dt>
+                            <dd class="mt-0.5 text-gray-900">
+                                @if($agent->environment)
+                                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{{ $agent->environment->label() }}</span>
+                                @else
+                                    <span class="text-xs text-gray-400">No preset</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500">Tool Search</dt>
+                            <dd class="mt-0.5 text-gray-900">
+                                @if($agent->config['use_tool_search'] ?? false)
+                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                                        Enabled · top {{ $agent->config['tool_search_top_k'] ?? 5 }}
+                                    </span>
+                                @else
+                                    <span class="text-xs text-gray-400">Disabled</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500">Thinking Budget</dt>
+                            <dd class="mt-0.5 text-gray-900">
+                                @if(!empty($agent->config['thinking_budget']))
+                                    <span class="font-mono text-xs">{{ number_format($agent->config['thinking_budget']) }} tokens</span>
+                                @else
+                                    <span class="text-xs text-gray-400">Not set</span>
+                                @endif
+                            </dd>
+                        </div>
+                    </dl>
                 </div>
             </div>
 

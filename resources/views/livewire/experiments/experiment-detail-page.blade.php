@@ -47,8 +47,15 @@
 
                 <form class="inline" onsubmit="return false" toolname="steer_experiment" tooldescription="Inject a mid-run steering message into the next LLM call">
                 <button type="button" wire:click="openSteerModal"
-                    class="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100">
+                    title="Inject a one-shot correction into the next LLM call"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100">
                     Steer
+                    @if(!empty($experiment->orchestration_config['steering_message'] ?? null))
+                        <span class="inline-flex items-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                            title="A steering message is queued — will inject on the next LLM call">
+                            queued
+                        </span>
+                    @endif
                 </button>
                 </form>
             @endif
@@ -250,6 +257,7 @@
                 <textarea id="steering-message" wire:model="steeringMessage" rows="4" maxlength="2000"
                     placeholder="e.g. Use the staging database, not production."
                     class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-primary-500 focus:ring-primary-500"></textarea>
+                <p class="mt-1 text-xs text-gray-500">Up to 2000 characters. Prepended to the system prompt once, then cleared.</p>
                 @error('steeringMessage')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                 @enderror

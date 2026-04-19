@@ -32,7 +32,7 @@ enum AgentEnvironment: string
             self::Minimal => 'No tools attached — pure LLM reasoning only.',
             self::Coding => 'Auto-attaches bash and filesystem tools for code editing tasks.',
             self::Browsing => 'Auto-attaches browser and web search tools for research.',
-            self::Restricted => 'Only list/search/get operations — safe for discovery agents.',
+            self::Restricted => 'Read-only operations (list/search/get/read) — safe for discovery and audit agents.',
         };
     }
 

@@ -66,9 +66,7 @@
         <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
             <p class="text-sm text-gray-600">
                 No tool search events yet.
-                @if($agents->isEmpty())
-                    Enable <code class="rounded bg-gray-100 px-1">use_tool_search</code> on an agent's config first.
-                @endif
+                Enable <strong>Tool Search</strong> on an agent, then run it to generate events.
             </p>
         </div>
     @else
