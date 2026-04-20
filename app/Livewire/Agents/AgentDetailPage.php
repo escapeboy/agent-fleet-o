@@ -499,7 +499,7 @@ class AgentDetailPage extends Component
         AgentHook::where('id', $hookId)->delete();
     }
 
-    private function resetHookForm(): void
+    public function resetHookForm(): void
     {
         $this->showHookForm = false;
         $this->editingHookId = null;

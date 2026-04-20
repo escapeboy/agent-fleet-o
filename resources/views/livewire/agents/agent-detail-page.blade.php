@@ -943,7 +943,7 @@
                         </div>
                         <x-form-textarea wire:model="hookConfigJson" label="Config (JSON)" mono="true" hint="Hook-specific configuration" />
                         <div class="flex justify-end gap-2">
-                            <button wire:click="$call('resetHookForm')" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+                            <button wire:click="resetHookForm" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
                             <button wire:click="saveHook" class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">Save</button>
                         </div>
                     </div>
