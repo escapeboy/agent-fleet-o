@@ -531,7 +531,7 @@
                         <div>
                             <dt class="text-xs uppercase tracking-wide text-gray-500">Reasoning Effort</dt>
                             <dd class="mt-0.5 text-gray-900">
-                                @php($effortEnum = \App\Infrastructure\AI\Enums\ReasoningEffort::tryFrom($agent->config['reasoning_effort'] ?? ''))
+                                @php $effortEnum = \App\Infrastructure\AI\Enums\ReasoningEffort::tryFrom($agent->config['reasoning_effort'] ?? ''); @endphp
                                 @if($effortEnum)
                                     <span class="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">{{ $effortEnum->label() }}</span>
                                 @else
