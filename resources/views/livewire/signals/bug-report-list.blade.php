@@ -117,7 +117,16 @@
         </table>
     </div>
 
-    <div class="mt-4">
-        {{ $reports->links() }}
+    <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <p class="text-sm text-gray-600">
+            @if ($reports->total() > 0)
+                Showing <span class="font-medium">{{ $reports->firstItem() }}</span>–<span class="font-medium">{{ $reports->lastItem() }}</span>
+                of <span class="font-medium">{{ $reports->total() }}</span>
+                {{ Str::plural('bug report', $reports->total()) }}
+            @else
+                No bug reports yet
+            @endif
+        </p>
+        <div>{{ $reports->links() }}</div>
     </div>
 </div>
