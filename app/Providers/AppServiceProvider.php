@@ -99,7 +99,10 @@ use App\Infrastructure\Auth\CompatibleSanctumGuard;
 use App\Infrastructure\Auth\ScopedPersonalAccessToken;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
+use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use App\Livewire\Hooks\PluginDispatchHook;
+use App\Mcp\DeadlineContext;
+use App\Mcp\ErrorClassifier;
 use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Models\User;
 use Barsy\Events\ChatMessageCompleted;
@@ -145,6 +148,20 @@ class AppServiceProvider extends ServiceProvider
 
         // Lazy MCP stdio handle registry — one instance per request/job lifecycle
         $this->app->singleton(McpHandleRegistry::class);
+
+        // MCP structured error classifier (singleton so plugins can register custom mappings)
+        $this->app->singleton(ErrorClassifier::class);
+
+        // MCP deadline context — request-scoped; nested tool calls inherit the same instance
+        $this->app->singleton(DeadlineContext::class);
+
+        // OpenTelemetry tracer provider — no-op tracer when OTEL_ENABLED=false (zero overhead)
+        $this->app->singleton(FleetTracerProvider::class);
+        $this->app->terminating(function () {
+            if (app()->resolved(FleetTracerProvider::class)) {
+                app(FleetTracerProvider::class)->shutdown();
+            }
+        });
 
         // Plugin extension points
         $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);

@@ -6,6 +6,7 @@ use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use App\Domain\Chatbot\Services\ChatbotResponseService;
 use App\Domain\Shared\Models\Team;
+use App\Exceptions\ClientDisconnectedException;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -160,6 +161,9 @@ class ChatController extends Controller
 
         return response()->stream(function () use ($chatbot, $session, $userText, $actorUserId) {
             $sendEvent = function (string $type, array $data = []) {
+                if (connection_aborted()) {
+                    throw new ClientDisconnectedException;
+                }
                 echo 'data: '.json_encode(['type' => $type, ...$data])."\n\n";
                 if (ob_get_level()) {
                     ob_flush();
@@ -167,15 +171,18 @@ class ChatController extends Controller
                 flush();
             };
 
-            $sendEvent('start', ['session_id' => $session->id]);
-
             try {
+                $sendEvent('start', ['session_id' => $session->id]);
+
                 $message = $this->responseService->handleStream(
                     chatbot: $chatbot,
                     session: $session,
                     userText: $userText,
                     actorUserId: $actorUserId,
                     onChunk: function (string $chunk) {
+                        if (connection_aborted()) {
+                            throw new ClientDisconnectedException;
+                        }
                         echo 'data: '.json_encode(['type' => 'chunk', 'text' => $chunk])."\n\n";
                         if (ob_get_level()) {
                             ob_flush();
@@ -188,6 +195,9 @@ class ChatController extends Controller
                     'id' => $message->id,
                     'confidence' => $message->confidence,
                 ]);
+            } catch (ClientDisconnectedException) {
+                // Client closed the tab / network; exit stream cleanly.
+                // Any gateway stream() will unwind via the thrown callback.
             } catch (\Throwable $e) {
                 $sendEvent('error', ['message' => 'An error occurred. Please try again.']);
             }

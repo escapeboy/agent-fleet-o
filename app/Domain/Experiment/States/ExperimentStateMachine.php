@@ -4,12 +4,17 @@ namespace App\Domain\Experiment\States;
 
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\DeadlineContext;
 use InvalidArgumentException;
 
 class ExperimentStateMachine
 {
     public function validate(Experiment $experiment, ExperimentStatus $toState): void
     {
+        // Honor MCP-propagated deadline on synchronous transition paths
+        // (e.g. experiment_kill / experiment_pause called via MCP tools).
+        app(DeadlineContext::class)->assertNotExpired();
+
         $fromState = $experiment->status;
 
         if (! ExperimentTransitionMap::canTransition($fromState, $toState)) {

@@ -6,6 +6,7 @@ use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
 use App\Domain\Crew\Models\Crew;
+use App\Exceptions\ClientDisconnectedException;
 use App\Http\Controllers\Controller;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Translators\OpenAiRequestTranslator;
@@ -270,29 +271,36 @@ class OpenAiCompatibleController extends Controller
             });
 
             return $this->buildStreamedResponse(function () use ($streamId, $modelId, $chunks, $response, $includeUsage) {
-                echo $this->responseTranslator->formatStreamStart($streamId, $modelId);
-                ob_flush();
-                flush();
-
-                foreach ($chunks as $chunk) {
-                    echo $this->responseTranslator->formatStreamDelta($streamId, $modelId, $chunk);
+                try {
+                    echo $this->responseTranslator->formatStreamStart($streamId, $modelId);
                     ob_flush();
                     flush();
-                }
 
-                echo $this->responseTranslator->formatStreamEnd($streamId, $modelId);
-                ob_flush();
-                flush();
+                    foreach ($chunks as $chunk) {
+                        if (connection_aborted()) {
+                            throw new ClientDisconnectedException;
+                        }
+                        echo $this->responseTranslator->formatStreamDelta($streamId, $modelId, $chunk);
+                        ob_flush();
+                        flush();
+                    }
 
-                if ($includeUsage) {
-                    echo $this->responseTranslator->formatStreamUsage($streamId, $modelId, $response);
+                    echo $this->responseTranslator->formatStreamEnd($streamId, $modelId);
                     ob_flush();
                     flush();
-                }
 
-                echo $this->responseTranslator->formatStreamDone();
-                ob_flush();
-                flush();
+                    if ($includeUsage) {
+                        echo $this->responseTranslator->formatStreamUsage($streamId, $modelId, $response);
+                        ob_flush();
+                        flush();
+                    }
+
+                    echo $this->responseTranslator->formatStreamDone();
+                    ob_flush();
+                    flush();
+                } catch (ClientDisconnectedException) {
+                    // Client closed the connection; exit stream cleanly.
+                }
             });
         }
 
@@ -309,46 +317,53 @@ class OpenAiCompatibleController extends Controller
         $streamId = 'chatcmpl-'.Str::ulid();
 
         return $this->buildStreamedResponse(function () use ($streamId, $modelId, $content, $includeUsage, $execution) {
-            echo $this->responseTranslator->formatStreamStart($streamId, $modelId);
-            ob_flush();
-            flush();
+            try {
+                echo $this->responseTranslator->formatStreamStart($streamId, $modelId);
+                ob_flush();
+                flush();
 
-            // Stream in word-sized chunks for natural pacing
-            $words = preg_split('/(\s+)/', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
-            foreach ($words as $word) {
-                if ($word === '') {
-                    continue;
+                // Stream in word-sized chunks for natural pacing
+                $words = preg_split('/(\s+)/', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
+                foreach ($words as $word) {
+                    if ($word === '') {
+                        continue;
+                    }
+                    if (connection_aborted()) {
+                        throw new ClientDisconnectedException;
+                    }
+                    echo $this->responseTranslator->formatStreamDelta($streamId, $modelId, $word);
+                    ob_flush();
+                    flush();
                 }
-                echo $this->responseTranslator->formatStreamDelta($streamId, $modelId, $word);
+
+                echo $this->responseTranslator->formatStreamEnd($streamId, $modelId);
                 ob_flush();
                 flush();
-            }
 
-            echo $this->responseTranslator->formatStreamEnd($streamId, $modelId);
-            ob_flush();
-            flush();
+                if ($includeUsage) {
+                    $usageChunk = [
+                        'id' => $streamId,
+                        'object' => 'chat.completion.chunk',
+                        'created' => time(),
+                        'model' => $modelId,
+                        'choices' => [],
+                        'usage' => [
+                            'prompt_tokens' => $execution->input_tokens ?? 0,
+                            'completion_tokens' => $execution->output_tokens ?? 0,
+                            'total_tokens' => ($execution->input_tokens ?? 0) + ($execution->output_tokens ?? 0),
+                        ],
+                    ];
+                    echo 'data: '.json_encode($usageChunk)."\n\n";
+                    ob_flush();
+                    flush();
+                }
 
-            if ($includeUsage) {
-                $usageChunk = [
-                    'id' => $streamId,
-                    'object' => 'chat.completion.chunk',
-                    'created' => time(),
-                    'model' => $modelId,
-                    'choices' => [],
-                    'usage' => [
-                        'prompt_tokens' => $execution->input_tokens ?? 0,
-                        'completion_tokens' => $execution->output_tokens ?? 0,
-                        'total_tokens' => ($execution->input_tokens ?? 0) + ($execution->output_tokens ?? 0),
-                    ],
-                ];
-                echo 'data: '.json_encode($usageChunk)."\n\n";
+                echo $this->responseTranslator->formatStreamDone();
                 ob_flush();
                 flush();
+            } catch (ClientDisconnectedException) {
+                // Client closed the connection; exit stream cleanly.
             }
-
-            echo $this->responseTranslator->formatStreamDone();
-            ob_flush();
-            flush();
         });
     }
 

@@ -14,6 +14,7 @@ use App\Domain\Workflow\Actions\ExecuteSubWorkflowAction;
 use App\Domain\Workflow\Actions\RunCompensationChainAction;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\DeadlineContext;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -880,6 +881,9 @@ class WorkflowGraphExecutor
             return;
         }
         $visited[$nodeId] = true;
+
+        // Honor MCP-propagated deadline if present (synchronous inline execution path).
+        app(DeadlineContext::class)->assertNotExpired();
 
         $node = $nodeMap[$nodeId] ?? null;
         if (! $node) {

@@ -7,7 +7,11 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use App\Infrastructure\AI\Services\EscalationStrategy;
+use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use Illuminate\Support\Facades\Log;
+use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\StatusCode;
 use Prism\Prism\Exceptions\PrismRateLimitedException;
 use Throwable;
 
@@ -27,6 +31,33 @@ class FallbackAiGateway implements AiGatewayInterface
 
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
+        $tracer = app(FleetTracerProvider::class)->tracer('fleetq.ai');
+        $span = $tracer->spanBuilder('ai.gateway.complete')
+            ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setAttribute('ai.gateway.requested_provider', $request->provider)
+            ->setAttribute('ai.gateway.requested_model', $request->model)
+            ->setAttribute('ai.gateway.team_id', (string) ($request->teamId ?? 'unknown'))
+            ->setAttribute('ai.gateway.purpose', (string) ($request->purpose ?? 'unknown'))
+            ->startSpan();
+        $scope = $span->activate();
+
+        try {
+            $result = $this->completeWithFallback($request, $span);
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $result;
+        } catch (Throwable $e) {
+            $span->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            throw $e;
+        } finally {
+            $scope->detach();
+            $span->end();
+        }
+    }
+
+    private function completeWithFallback(AiRequestDTO $request, SpanInterface $span): AiResponseDTO
+    {
         // Route local agent requests directly — no fallback chain
         if ($this->isLocalProvider($request->provider)) {
             if (! $this->localGateway) {
@@ -35,6 +66,8 @@ class FallbackAiGateway implements AiGatewayInterface
                     .'Enable local agents (LOCAL_AGENTS_ENABLED=true) and ensure the agent binary is installed.',
                 );
             }
+
+            $span->setAttribute('ai.gateway.route', 'local');
 
             return $this->localGateway->complete($request);
         }
@@ -87,6 +120,10 @@ class FallbackAiGateway implements AiGatewayInterface
                         fastMode: $request->fastMode,
                     );
 
+                    $span->setAttribute('ai.gateway.route', 'bridge');
+                    $span->setAttribute('ai.gateway.final_provider', $providerName);
+                    $span->setAttribute('ai.gateway.final_model', $modelName);
+
                     return $this->bridgeGateway->complete($adjustedRequest);
                 } catch (Throwable $e) {
                     $firstException ??= $e;
@@ -131,6 +168,10 @@ class FallbackAiGateway implements AiGatewayInterface
 
                 $this->circuitBreaker->recordSuccess($providerName);
 
+                $span->setAttribute('ai.gateway.final_provider', $providerName);
+                $span->setAttribute('ai.gateway.final_model', $modelName);
+                $span->setAttribute('ai.gateway.fallback_used', $providerName !== $request->provider);
+
                 return $response;
             } catch (PrismRateLimitedException $e) {
                 // Rate limits are temporary — don't break the circuit
@@ -170,6 +211,33 @@ class FallbackAiGateway implements AiGatewayInterface
 
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
+        $tracer = app(FleetTracerProvider::class)->tracer('fleetq.ai');
+        $span = $tracer->spanBuilder('ai.gateway.stream')
+            ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setAttribute('ai.gateway.requested_provider', $request->provider)
+            ->setAttribute('ai.gateway.requested_model', $request->model)
+            ->setAttribute('ai.gateway.team_id', (string) ($request->teamId ?? 'unknown'))
+            ->setAttribute('ai.gateway.purpose', (string) ($request->purpose ?? 'unknown'))
+            ->startSpan();
+        $scope = $span->activate();
+
+        try {
+            $result = $this->streamWithFallback($request, $onChunk, $span);
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $result;
+        } catch (Throwable $e) {
+            $span->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            throw $e;
+        } finally {
+            $scope->detach();
+            $span->end();
+        }
+    }
+
+    private function streamWithFallback(AiRequestDTO $request, ?callable $onChunk, SpanInterface $span): AiResponseDTO
+    {
         // Route local agent requests directly — no fallback chain
         if ($this->isLocalProvider($request->provider)) {
             if (! $this->localGateway) {
@@ -178,6 +246,8 @@ class FallbackAiGateway implements AiGatewayInterface
                     .'Enable local agents (LOCAL_AGENTS_ENABLED=true) and ensure the agent binary is installed.',
                 );
             }
+
+            $span->setAttribute('ai.gateway.route', 'local');
 
             return $this->localGateway->stream($request, $onChunk);
         }
@@ -229,6 +299,10 @@ class FallbackAiGateway implements AiGatewayInterface
                         fastMode: $request->fastMode,
                     );
 
+                    $span->setAttribute('ai.gateway.route', 'bridge');
+                    $span->setAttribute('ai.gateway.final_provider', $providerName);
+                    $span->setAttribute('ai.gateway.final_model', $modelName);
+
                     return $this->bridgeGateway->stream($adjustedRequest, $onChunk);
                 } catch (Throwable $e) {
                     $firstException ??= $e;
@@ -269,6 +343,10 @@ class FallbackAiGateway implements AiGatewayInterface
 
                 $response = $this->gateway->stream($adjustedRequest, $onChunk);
                 $this->circuitBreaker->recordSuccess($providerName);
+
+                $span->setAttribute('ai.gateway.final_provider', $providerName);
+                $span->setAttribute('ai.gateway.final_model', $modelName);
+                $span->setAttribute('ai.gateway.fallback_used', $providerName !== $request->provider);
 
                 return $response;
             } catch (\RuntimeException $e) {

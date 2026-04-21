@@ -12,8 +12,11 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\Encryption\CredentialEncryption;
+use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use Closure;
 use Illuminate\Support\Collection;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\StatusCode;
 use Prism\Prism\Enums\Provider;
 use Prism\Prism\Enums\ToolChoice;
 use Prism\Prism\Exceptions\PrismException;
@@ -58,11 +61,37 @@ class PrismAiGateway implements AiGatewayInterface
             app()->instance('ai.current_agent_id', $request->agentId);
         }
 
+        $tracer = app(FleetTracerProvider::class)->tracer('fleetq.llm');
+        $span = $tracer->spanBuilder('llm.provider.'.$request->provider)
+            ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setAttribute('llm.provider', $request->provider)
+            ->setAttribute('llm.model', $request->model)
+            ->setAttribute('llm.operation', 'complete')
+            ->setAttribute('llm.max_tokens', $request->maxTokens)
+            ->setAttribute('llm.has_tools', $request->hasTools())
+            ->startSpan();
+        $scope = $span->activate();
+
         $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeRequest($req));
 
         try {
-            return $pipeline($request);
+            $response = $pipeline($request);
+
+            $span->setAttribute('llm.usage.input_tokens', $response->usage->promptTokens);
+            $span->setAttribute('llm.usage.output_tokens', $response->usage->completionTokens);
+            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens);
+            $span->setAttribute('llm.latency_ms', $response->latencyMs);
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $response;
+        } catch (\Throwable $e) {
+            $span->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            throw $e;
         } finally {
+            $scope->detach();
+            $span->end();
+
             // Clear per-call context bindings so stale values don't leak across
             // Horizon jobs that share the same worker process/container instance.
             app()->forgetInstance('ai.current_experiment_id');
@@ -83,17 +112,43 @@ class PrismAiGateway implements AiGatewayInterface
             app()->instance('ai.current_team_id', $request->teamId);
         }
 
-        // Tool calling: run tool loop via complete(), then stream the final text.
-        // This gives progressive visibility into tool calls while streaming the answer.
-        if ($request->hasTools()) {
-            $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeToolThenStreamRequest($req, $onChunk));
+        $tracer = app(FleetTracerProvider::class)->tracer('fleetq.llm');
+        $span = $tracer->spanBuilder('llm.provider.'.$request->provider)
+            ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setAttribute('llm.provider', $request->provider)
+            ->setAttribute('llm.model', $request->model)
+            ->setAttribute('llm.operation', 'stream')
+            ->setAttribute('llm.max_tokens', $request->maxTokens)
+            ->setAttribute('llm.has_tools', $request->hasTools())
+            ->startSpan();
+        $scope = $span->activate();
 
-            return $pipeline($request);
+        try {
+            // Tool calling: run tool loop via complete(), then stream the final text.
+            // This gives progressive visibility into tool calls while streaming the answer.
+            if ($request->hasTools()) {
+                $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeToolThenStreamRequest($req, $onChunk));
+                $response = $pipeline($request);
+            } else {
+                $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeStreamRequest($req, $onChunk));
+                $response = $pipeline($request);
+            }
+
+            $span->setAttribute('llm.usage.input_tokens', $response->usage->promptTokens);
+            $span->setAttribute('llm.usage.output_tokens', $response->usage->completionTokens);
+            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens);
+            $span->setAttribute('llm.latency_ms', $response->latencyMs);
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $response;
+        } catch (\Throwable $e) {
+            $span->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            throw $e;
+        } finally {
+            $scope->detach();
+            $span->end();
         }
-
-        $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeStreamRequest($req, $onChunk));
-
-        return $pipeline($request);
     }
 
     public function estimateCost(AiRequestDTO $request): int

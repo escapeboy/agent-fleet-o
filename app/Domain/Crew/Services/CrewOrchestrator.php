@@ -20,6 +20,7 @@ use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Shared\Services\NotificationService;
 use App\Domain\Workflow\Services\ConditionEvaluator;
+use App\Mcp\DeadlineContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +44,10 @@ class CrewOrchestrator
     public function run(CrewExecution $execution): void
     {
         try {
+            // Honor MCP-propagated deadline if the orchestrator was invoked
+            // synchronously via an MCP tool (e.g., crew_execute).
+            app(DeadlineContext::class)->assertNotExpired();
+
             $processType = CrewProcessType::from($execution->config_snapshot['process_type']);
 
             // Fanout and ChatRoom manage their own task creation — skip decomposition
