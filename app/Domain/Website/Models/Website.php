@@ -2,6 +2,7 @@
 
 namespace App\Domain\Website\Models;
 
+use App\Domain\Crew\Models\Crew;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Models\User;
@@ -24,6 +25,7 @@ class Website extends Model
         'settings',
         'custom_domain',
         'content_version',
+        'managing_crew_id',
     ];
 
     protected $casts = [
@@ -50,5 +52,10 @@ class Website extends Model
     public function deployments(): HasMany
     {
         return $this->hasMany(WebsiteDeployment::class);
+    }
+
+    public function managingCrew(): BelongsTo
+    {
+        return $this->belongsTo(Crew::class, 'managing_crew_id');
     }
 }
