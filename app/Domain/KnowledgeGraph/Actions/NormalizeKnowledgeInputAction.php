@@ -7,6 +7,7 @@ use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Signal\Models\Entity;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -54,8 +55,8 @@ class NormalizeKnowledgeInputAction
         $existingRelationsJson = json_encode($existingRelationTypes, JSON_UNESCAPED_UNICODE);
 
         $request = new AiRequestDTO(
-            provider: config('llm_providers.default_provider', 'anthropic'),
-            model: config('llm_providers.default_model', 'claude-haiku-4-5-20251001'),
+            provider: LlmDefaults::provider(),
+            model: LlmDefaults::model(),
             systemPrompt: <<<PROMPT
 You are a knowledge graph data quality assistant. Given raw input for a knowledge graph fact, normalize it for consistency.
 

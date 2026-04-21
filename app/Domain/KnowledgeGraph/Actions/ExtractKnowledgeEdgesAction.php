@@ -8,6 +8,7 @@ use App\Domain\Signal\Models\Entity;
 use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -73,8 +74,8 @@ class ExtractKnowledgeEdgesAction
         $entityTypes = implode(', ', EntityType::values());
 
         $request = new AiRequestDTO(
-            provider: config('llm_providers.default_provider', 'anthropic'),
-            model: config('llm_providers.default_model', 'claude-haiku-4-5-20251001'),
+            provider: LlmDefaults::provider(),
+            model: LlmDefaults::model(),
             systemPrompt: "Extract relationships between named entities from the text. Return ONLY a valid JSON array (no markdown) of objects with: source_entity (string), source_type (one of: {$entityTypes}), relation (snake_case verb like works_at, has_price, has_status, acquired_by, founded_by, located_in, has_title, has_funding, supports, uses, depends_on), target_entity (string), target_type (same enum), fact (human-readable sentence describing the relationship), valid_at (ISO date if explicitly stated in the text, else null), confidence (0.0–1.0). Choose specific entity types over 'topic' when possible (e.g. use 'technology' for frameworks/languages, 'event' for conferences/releases, 'organization' for non-profit entities). Only extract relationships that are clearly stated. Maximum 10 edges.",
             userPrompt: "Entities found: {$entityJson}\n\nText:\n".mb_substr($text, 0, 6000),
             maxTokens: 1024,

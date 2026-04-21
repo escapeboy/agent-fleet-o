@@ -6,6 +6,7 @@ use App\Domain\Signal\Models\Entity;
 use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -74,8 +75,8 @@ class ExtractEntitiesAction
     private function resolveLlm(string $teamId): array
     {
         // Use a cost-effective model for entity extraction, preferring whatever provider has a key configured
-        $provider = config('llm_providers.default_provider', 'anthropic');
-        $model = config('llm_providers.default_model', 'claude-haiku-4-5-20251001');
+        $provider = LlmDefaults::provider();
+        $model = LlmDefaults::model();
 
         // Fallback: if the default provider has no API key, try alternatives
         $providerKeyMap = [

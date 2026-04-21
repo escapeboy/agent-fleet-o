@@ -5,6 +5,7 @@ namespace App\Domain\KnowledgeGraph\Actions;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -110,8 +111,8 @@ class DetectContradictionAction
         $existingJson = json_encode($existingFacts, JSON_UNESCAPED_UNICODE);
 
         $request = new AiRequestDTO(
-            provider: config('llm_providers.default_provider', 'anthropic'),
-            model: config('llm_providers.default_model', 'claude-haiku-4-5-20251001'),
+            provider: LlmDefaults::provider(),
+            model: LlmDefaults::model(),
             systemPrompt: 'You are a knowledge graph contradiction detector. Given a new fact and a list of existing facts, return ONLY a valid JSON array of IDs of existing facts that are directly contradicted or superseded by the new fact. Return an empty array [] if none are contradicted. Do not include facts that are compatible with the new fact.',
             userPrompt: "New fact: \"{$newFact}\"\n\nExisting facts:\n{$existingJson}\n\nReturn a JSON array of IDs to invalidate:",
             maxTokens: 256,
