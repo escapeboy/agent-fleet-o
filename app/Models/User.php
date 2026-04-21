@@ -32,6 +32,7 @@ class User extends Authenticatable implements OAuthenticatable
         'email',
         'email_verified_at',
         'password',
+        'is_super_admin',
         'current_team_id',
         'theme',
         'notification_preferences',
@@ -52,6 +53,7 @@ class User extends Authenticatable implements OAuthenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted',
             'notification_preferences' => 'array',
