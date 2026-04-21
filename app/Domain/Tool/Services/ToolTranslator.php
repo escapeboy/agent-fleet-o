@@ -518,6 +518,18 @@ class ToolTranslator
                         $options['start_url'] = $start_url;
                     }
 
+                    // Network policy — restrict browser to an allowlist of hosts.
+                    // Stored per-tool as tools.network_policy.allowed_domains (JSONB).
+                    // Enforced at the browser-use level by the Python sidecar and the
+                    // browser-use Cloud API. Null/empty = no restriction (backward-compat).
+                    $allowedDomains = $toolModel->network_policy['allowed_domains'] ?? null;
+                    if (is_array($allowedDomains) && ! empty($allowedDomains)) {
+                        $options['allowed_domains'] = array_values(array_filter(
+                            $allowedDomains,
+                            fn ($d) => is_string($d) && $d !== '',
+                        ));
+                    }
+
                     // Resolve API key from tool credentials or env fallback.
                     /** @var array<string, mixed> $credentials */
                     $credentials = (array) $toolModel->credentials;
@@ -672,6 +684,15 @@ class ToolTranslator
 
                     if ($start_url) {
                         $options['start_url'] = $start_url;
+                    }
+
+                    // Network policy — see buildBrowserTools() for rationale.
+                    $allowedDomains = $toolModel->network_policy['allowed_domains'] ?? null;
+                    if (is_array($allowedDomains) && ! empty($allowedDomains)) {
+                        $options['allowed_domains'] = array_values(array_filter(
+                            $allowedDomains,
+                            fn ($d) => is_string($d) && $d !== '',
+                        ));
                     }
 
                     // API key resolution order:

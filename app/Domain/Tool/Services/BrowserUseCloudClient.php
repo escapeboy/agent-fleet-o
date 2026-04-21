@@ -169,6 +169,10 @@ class BrowserUseCloudClient
             $payload['llm'] = $options['llm'];
         }
 
+        if (! empty($options['allowed_domains']) && is_array($options['allowed_domains'])) {
+            $payload['allowedDomains'] = array_values($options['allowed_domains']);
+        }
+
         try {
             $response = $this->client()->post('/tasks', $payload);
 
