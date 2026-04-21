@@ -56,8 +56,8 @@ class RunScoringStage extends BaseStageJob
         }
 
         // Build user prompt with optional dependency context
-        $safeTitle = preg_replace('/[^\x20-\x7E]/', '', mb_substr($experiment->title ?? '', 0, 200)) ?? '';
-        $safeThesis = preg_replace('/[^\x20-\x7E\n\r\t]/', '', $experiment->thesis ?? '') ?? '';
+        $safeTitle = preg_replace('/[\x00-\x1F\x7F]/u', '', mb_substr($experiment->title ?? '', 0, 200)) ?? '';
+        $safeThesis = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $experiment->thesis ?? '') ?? '';
         $userPrompt = "Score this experiment thesis:\n\nTitle: {$safeTitle}\nThesis: {$safeThesis}\nSignal: ".json_encode($signalPayload, JSON_UNESCAPED_UNICODE).$memoryContext;
 
         $dependencyContext = $experiment->constraints['dependency_context'] ?? [];

@@ -130,4 +130,48 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
         // Printable content still present
         $this->assertStringContainsString('Safe text', $thesis);
     }
+
+    public function test_sanitize_preserves_cyrillic(): void
+    {
+        $action = app(DelegateBugReportToAgentAction::class);
+        $ref = new \ReflectionMethod($action, 'sanitize');
+        $ref->setAccessible(true);
+
+        $input = 'Не е активен линка към системата на клиента';
+        $this->assertSame($input, $ref->invoke($action, $input, 120));
+    }
+
+    public function test_sanitize_strips_control_chars(): void
+    {
+        $action = app(DelegateBugReportToAgentAction::class);
+        $ref = new \ReflectionMethod($action, 'sanitize');
+        $ref->setAccessible(true);
+
+        $this->assertSame('hello world', $ref->invoke($action, "hello\x01 world\x07", 120));
+        $this->assertSame('abc', $ref->invoke($action, "a\x7Fb\x1Bc", 120));
+    }
+
+    public function test_sanitize_truncates_by_chars_not_bytes(): void
+    {
+        $action = app(DelegateBugReportToAgentAction::class);
+        $ref = new \ReflectionMethod($action, 'sanitize');
+        $ref->setAccessible(true);
+
+        $this->assertSame('абвгд', $ref->invoke($action, 'абвгдеж', 5));
+    }
+
+    public function test_cyrillic_title_and_description_survive_into_thesis(): void
+    {
+        $signal = $this->makeSignal([
+            'title' => 'Не е активен линка към системата',
+            'description' => 'При клик върху "Систем на клиента" нищо не се случва.',
+        ]);
+
+        $thesis = null;
+        $action = $this->actionWithThesisCapture($thesis);
+        $action->execute($signal, $this->user);
+
+        $this->assertStringContainsString('Не е активен линка към системата', $thesis);
+        $this->assertStringContainsString('При клик върху', $thesis);
+    }
 }

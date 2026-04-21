@@ -47,7 +47,7 @@ class SuspectFilesAnalyzer
 
                 if (! empty($routeEntry['controller'])) {
                     $controllerFile = $this->controllerToPath($routeEntry['controller']);
-                    $safeUrl = preg_replace('/[^\x20-\x7E]/', '', mb_substr($url, 0, 150));
+                    $safeUrl = preg_replace('/[\x00-\x1F\x7F]/u', '', mb_substr($url, 0, 150));
                     $this->addCandidate($candidates, $controllerFile, 0.85, 'Route controller for '.$safeUrl);
 
                     // Blade view from controller convention
@@ -79,7 +79,7 @@ class SuspectFilesAnalyzer
             $routeEntry = $this->lookupRoute($teamId, $projectKey, $failedUrl);
             if ($routeEntry && ! empty($routeEntry['controller'])) {
                 $controllerFile = $this->controllerToPath($routeEntry['controller']);
-                $safeFailedUrl = preg_replace('/[^\x20-\x7E]/', '', mb_substr($failedUrl, 0, 150));
+                $safeFailedUrl = preg_replace('/[\x00-\x1F\x7F]/u', '', mb_substr($failedUrl, 0, 150));
                 $this->addCandidate($candidates, $controllerFile, 0.8, 'Controller for failed API request: '.$safeFailedUrl);
             }
         }

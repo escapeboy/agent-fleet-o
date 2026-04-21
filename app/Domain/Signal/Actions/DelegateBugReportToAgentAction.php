@@ -192,7 +192,7 @@ class DelegateBugReportToAgentAction
 
     private function sanitize(string $text, int $maxLen): string
     {
-        return preg_replace('/[^\x20-\x7E]/', '', mb_substr($text, 0, $maxLen)) ?? '';
+        return preg_replace('/[\x00-\x1F\x7F]/u', '', mb_substr($text, 0, $maxLen)) ?? '';
     }
 
     private function fileToTestPath(string $path): ?string
