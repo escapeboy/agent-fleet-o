@@ -26,6 +26,17 @@ class ToolTranslatorBrowserPolicyTest extends TestCase
 
         config(['agent.browser_sandbox_url' => 'http://browser_sidecar:8090']);
         config(['agent.browser_sandbox_secret' => 'test-secret']);
+
+        // When running from the cloud parent harness, CloudServiceProvider binds
+        // browser.plan_gate, browser.max_steps_gate, and browser.timeout_gate to
+        // real PlanEnforcer callbacks. For these unit tests we want the translator
+        // to act as if no cloud gates are wired — flush any container bindings so
+        // the app()->bound() checks in ToolTranslator take the "no gate" branch.
+        foreach (['browser.plan_gate', 'browser.max_steps_gate', 'browser.timeout_gate'] as $binding) {
+            if ($this->app->bound($binding)) {
+                $this->app->offsetUnset($binding);
+            }
+        }
     }
 
     public function test_build_browser_tools_forwards_allowed_domains_when_policy_set(): void
