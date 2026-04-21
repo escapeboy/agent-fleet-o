@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "16bae917fd498332ef637935291b3758",
+    "content-hash": "bde96596aaaeb3bc66026cf7b3427b24",
     "packages": [
         {
             "name": "asbiin/laravel-webauthn",
@@ -1393,6 +1393,46 @@
                 "source": "https://github.com/firebase/php-jwt/tree/v7.0.3"
             },
             "time": "2026-02-25T22:16:40+00:00"
+        },
+        {
+            "name": "fleetq/plugin-sdk",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/FleetQ/plugin-sdk.git",
+                "reference": "2f098b8a1bb05eba14572d8f96dd6bb3e5c2d7c6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/FleetQ/plugin-sdk/zipball/2f098b8a1bb05eba14572d8f96dd6bb3e5c2d7c6",
+                "reference": "2f098b8a1bb05eba14572d8f96dd6bb3e5c2d7c6",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "FleetQ\\PluginSdk\\": "src/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "FleetQ Plugin SDK — contracts, DTOs, and payment driver interfaces for building FleetQ plugins",
+            "homepage": "https://github.com/FleetQ/plugin-sdk",
+            "keywords": [
+                "contracts",
+                "fleetq",
+                "plugin",
+                "sdk"
+            ],
+            "support": {
+                "source": "https://github.com/FleetQ/plugin-sdk/tree/v1.0.0",
+                "issues": "https://github.com/FleetQ/plugin-sdk/issues"
+            },
+            "time": "2026-04-05T07:02:41+00:00"
         },
         {
             "name": "fruitcake/php-cors",

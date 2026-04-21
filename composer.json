@@ -6,45 +6,16 @@
     "keywords": ["ai", "agents", "experiments", "laravel"],
     "license": "AGPL-3.0-or-later",
     "repositories": [
-        {
-            "type": "path",
-            "url": "/Users/katsarov/htdocs/fleetq-plugin-sdk",
-            "options": { "symlink": true }
-        },
-        {
-            "type": "path",
-            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-core",
-            "options": { "symlink": true }
-        },
-        {
-            "type": "path",
-            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-blog",
-            "options": { "symlink": true }
-        },
-        {
-            "type": "path",
-            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-forms",
-            "options": { "symlink": true }
-        },
-        {
-            "type": "path",
-            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-chatbot",
-            "options": { "symlink": true }
-        },
-        {
-            "type": "path",
-            "url": "/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce",
-            "options": { "symlink": true }
-        }
+        { "type": "vcs", "url": "https://github.com/FleetQ/plugin-sdk.git" },
+        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-core.git" },
+        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-blog.git" },
+        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-forms.git" },
+        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-chatbot.git" },
+        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-ecommerce.git" }
     ],
     "require": {
         "php": "^8.2",
         "fleetq/plugin-sdk": "^1.0",
-        "fleetq/website-plugin-core": "^1.0",
-        "fleetq/website-plugin-blog": "^1.0",
-        "fleetq/website-plugin-forms": "^1.0",
-        "fleetq/website-plugin-chatbot": "^1.0",
-        "fleetq/website-plugin-ecommerce": "^1.0",
         "asbiin/laravel-webauthn": "^5.4",
         "dedoc/scramble": "^0.13.12",
         "ezyang/htmlpurifier": "^4.19",
@@ -147,6 +118,13 @@
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ]
+    },
+    "suggest": {
+        "fleetq/website-plugin-core": "Core website builder plugin (block registry, sandboxed preview).",
+        "fleetq/website-plugin-blog": "Blog authoring plugin for the website builder.",
+        "fleetq/website-plugin-forms": "Form builder plugin for the website builder.",
+        "fleetq/website-plugin-chatbot": "Embeddable chatbot widget plugin for the website builder.",
+        "fleetq/website-plugin-ecommerce": "E-commerce storefront plugin for the website builder."
     },
     "extra": {
         "laravel": {
