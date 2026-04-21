@@ -21,6 +21,17 @@ class ScanListingRiskTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // ScanListingRiskAction::resolveLlm() picks the first provider with a
+        // configured api_key in the order anthropic → openai → google. Pin
+        // anthropic so the test assertions against claude-haiku-4-5-20251001
+        // are deterministic regardless of which keys happen to be set in env.
+        config(['prism.providers.anthropic.api_key' => 'test-anthropic-key']);
+    }
+
     private function makeGateway(string $responseJson): AiGatewayInterface
     {
         $gateway = Mockery::mock(AiGatewayInterface::class);
