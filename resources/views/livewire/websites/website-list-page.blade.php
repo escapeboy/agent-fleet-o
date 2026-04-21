@@ -59,6 +59,7 @@
                                 @php
                                     $badgeColor = match($website->status) {
                                         \App\Domain\Website\Enums\WebsiteStatus::Draft => 'gray',
+                                        \App\Domain\Website\Enums\WebsiteStatus::Generating => 'blue',
                                         \App\Domain\Website\Enums\WebsiteStatus::Published => 'green',
                                         \App\Domain\Website\Enums\WebsiteStatus::Archived => 'yellow',
                                     };
