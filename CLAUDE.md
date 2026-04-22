@@ -1,6 +1,8 @@
 # FleetQ - Community Edition
 
 > **Coding agents**: Before implementing anything, read [`docs/capabilities.md`](docs/capabilities.md) — it lists all existing features (signal connectors, outbound channels, MCP tools, optional Docker services) to prevent duplicating work that already exists.
+>
+> **MCP observability Phase 3 is deferred** — see [`docs/mcp-observability-phase3-todo.md`](docs/mcp-observability-phase3-todo.md) for queue-job deadline propagation, expanded OTel spans, and SSE buffer caps. Serena memory: `mcp/phase3-deferred-work`. Do not start a new "MCP errors/deadlines/tracing" sprint without reading that TODO first — you will duplicate work already shipped.
 
 ## Stack
 
