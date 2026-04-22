@@ -136,6 +136,17 @@ class ErrorClassifierTest extends TestCase
         $this->assertArrayHasKey('name', $result['details']);
     }
 
+    public function test_classifies_plain_invalid_argument_exception(): void
+    {
+        // SSRF guards and other validators throw plain \InvalidArgumentException.
+        // Must classify as INVALID_ARGUMENT, not fall back to retryable INTERNAL,
+        // otherwise agents retry with malicious URLs. Fix from Phase 2 security review.
+        $result = $this->classifier->classify(new \InvalidArgumentException('URL resolves to a private address.'));
+
+        $this->assertSame('INVALID_ARGUMENT', $result['code']);
+        $this->assertFalse($result['retryable']);
+    }
+
     public function test_classifies_blacklisted_as_failed_precondition(): void
     {
         $result = $this->classifier->classify(new BlacklistedException('blocked'));

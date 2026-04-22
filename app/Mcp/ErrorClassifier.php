@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
@@ -55,6 +56,7 @@ class ErrorClassifier
         GitFileNotFoundException::class => ErrorCode::NotFound,
 
         ValidationException::class => ErrorCode::InvalidArgument,
+        InvalidArgumentException::class => ErrorCode::InvalidArgument,
 
         OutboundBlacklistedException::class => ErrorCode::FailedPrecondition,
         InvalidSignalTransitionException::class => ErrorCode::FailedPrecondition,

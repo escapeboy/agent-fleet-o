@@ -79,9 +79,9 @@ class EmailReplyTool extends Tool
                     : 'Reply queued as OutboundProposal (approved, pending send).',
             ]));
         } catch (\InvalidArgumentException $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         } catch (\Throwable $e) {
-            return Response::error('Failed to create reply: '.$e->getMessage());
+            throw $e;
         }
     }
 }

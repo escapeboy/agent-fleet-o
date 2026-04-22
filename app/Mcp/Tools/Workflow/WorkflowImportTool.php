@@ -48,16 +48,12 @@ class WorkflowImportTool extends Tool
             return $this->permissionDeniedError('No team context available.');
         }
 
-        try {
-            $action = app(ImportWorkflowAction::class);
-            $result = $action->execute(
-                data: $validated['content'],
-                teamId: $teamId,
-                userId: $user->id,
-            );
-        } catch (\InvalidArgumentException $e) {
-            throw $e;
-        }
+        $action = app(ImportWorkflowAction::class);
+        $result = $action->execute(
+            data: $validated['content'],
+            teamId: $teamId,
+            userId: $user->id,
+        );
 
         $workflow = $result['workflow'];
 

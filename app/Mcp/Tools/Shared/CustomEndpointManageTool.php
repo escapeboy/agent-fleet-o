@@ -96,11 +96,7 @@ class CustomEndpointManageTool extends Tool
             return $this->invalidArgumentError('Name must be lowercase letters, numbers, hyphens, and underscores only.');
         }
 
-        try {
-            app(SsrfGuard::class)->assertPublicUrl($baseUrl);
-        } catch (\InvalidArgumentException $e) {
-            throw $e;
-        }
+        app(SsrfGuard::class)->assertPublicUrl($baseUrl);
 
         $modelList = array_filter(array_map('trim', explode(',', $models)));
 
@@ -153,11 +149,7 @@ class CustomEndpointManageTool extends Tool
         $creds = $endpoint->credentials;
 
         if ($request->get('base_url')) {
-            try {
-                app(SsrfGuard::class)->assertPublicUrl($request->get('base_url'));
-            } catch (\InvalidArgumentException $e) {
-                throw $e;
-            }
+            app(SsrfGuard::class)->assertPublicUrl($request->get('base_url'));
             $creds['base_url'] = rtrim($request->get('base_url'), '/');
         }
 

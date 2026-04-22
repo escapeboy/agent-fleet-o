@@ -99,11 +99,7 @@ class LocalLlmTool extends Tool
             return $this->invalidArgumentError('base_url is required for configure_ollama');
         }
 
-        try {
-            app(LocalLlmUrlValidator::class)->validate($baseUrl);
-        } catch (\InvalidArgumentException $e) {
-            throw $e;
-        }
+        app(LocalLlmUrlValidator::class)->validate($baseUrl);
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
@@ -125,11 +121,7 @@ class LocalLlmTool extends Tool
             return $this->invalidArgumentError('base_url is required for configure_openai_compatible');
         }
 
-        try {
-            app(LocalLlmUrlValidator::class)->validate($baseUrl);
-        } catch (\InvalidArgumentException $e) {
-            throw $e;
-        }
+        app(LocalLlmUrlValidator::class)->validate($baseUrl);
 
         $models = array_filter(array_map('trim', explode(',', $request->get('models', ''))));
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
