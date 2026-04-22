@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Workflow;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class WorkflowDeactivateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_deactivate';
 
     protected string $description = 'Deactivate a workflow, returning it to draft status.';
@@ -30,12 +33,12 @@ class WorkflowDeactivateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $workflow = Workflow::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('workflow_id'));
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         $workflow->status = WorkflowStatus::Draft;

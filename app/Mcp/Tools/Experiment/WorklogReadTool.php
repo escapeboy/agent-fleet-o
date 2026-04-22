@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Experiment;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\WorklogEntry;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class WorklogReadTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'worklog_read';
 
     protected string $description = 'Read worklog entries for an experiment stage or crew task execution. Returns last 50 entries ordered by creation time, optionally filtered by type.';
@@ -42,7 +45,7 @@ class WorklogReadTool extends Tool
 
         $teamId = app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $morphTypeMap = [
@@ -61,7 +64,7 @@ class WorklogReadTool extends Tool
 
         if (! empty($validated['type_filter'])) {
             if (! in_array($validated['type_filter'], WorklogEntry::validTypes())) {
-                return Response::error('Invalid type_filter. Must be one of: '.implode(', ', WorklogEntry::validTypes()));
+                return $this->invalidArgumentError('Invalid type_filter. Must be one of: '.implode(', ', WorklogEntry::validTypes()));
             }
             $query->where('type', $validated['type_filter']);
         }

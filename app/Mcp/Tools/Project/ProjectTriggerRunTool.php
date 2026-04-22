@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Models\Project;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ProjectTriggerRunTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_trigger_run';
 
     protected string $description = 'Trigger a new run for a project. Creates an experiment and starts the pipeline.';
@@ -34,12 +37,12 @@ class ProjectTriggerRunTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $project = Project::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['project_id']);
 
         if (! $project) {
-            return Response::error('Project not found.');
+            return $this->notFoundError('project');
         }
 
         try {
@@ -51,7 +54,7 @@ class ProjectTriggerRunTool extends Tool
                 'status' => $run->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

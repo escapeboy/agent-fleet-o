@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class CrewExecutionStatusTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_execution_status';
 
     protected string $description = 'Poll the status of a crew execution. Returns execution details including status, goal, and result preview.';
@@ -47,7 +50,7 @@ class CrewExecutionStatusTool extends Tool
             ->find($validated['execution_id']);
 
         if (! $execution) {
-            return Response::error('Crew execution not found.');
+            return $this->notFoundError('crew execution');
         }
 
         $result = $execution->final_output;

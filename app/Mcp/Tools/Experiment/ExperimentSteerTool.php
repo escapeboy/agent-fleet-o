@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Experiment;
 use App\Domain\Experiment\Actions\SteerExperimentAction;
 use App\Domain\Experiment\Models\Experiment;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ExperimentSteerTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_steer';
 
     protected string $description = 'Queue a one-shot steering message for a running experiment. The message is prepended to the system prompt of the next LLM call and then cleared. Useful for mid-run corrections like "use staging DB, not prod".';
@@ -40,7 +43,7 @@ class ExperimentSteerTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $experiment = Experiment::withoutGlobalScopes()
@@ -48,7 +51,7 @@ class ExperimentSteerTool extends Tool
             ->find($validated['experiment_id']);
 
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         try {
@@ -64,7 +67,7 @@ class ExperimentSteerTool extends Tool
                 'queued_at' => $result->orchestration_config['steering_queued_at'] ?? null,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

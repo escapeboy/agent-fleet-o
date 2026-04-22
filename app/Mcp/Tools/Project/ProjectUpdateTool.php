@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Actions\UpdateProjectAction;
 use App\Domain\Project\Models\Project;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ProjectUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_update';
 
     protected string $description = 'Update an existing project. Only provided fields will be changed.';
@@ -81,12 +84,12 @@ class ProjectUpdateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $project = Project::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['project_id']);
 
         if (! $project) {
-            return Response::error('Project not found.');
+            return $this->notFoundError('project');
         }
 
         $data = array_filter([
@@ -112,7 +115,7 @@ class ProjectUpdateTool extends Tool
         }
 
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: title, description, goal, execution_mode, workflow_id, crew_id, allowed_tool_ids, allowed_credential_ids, schedule.');
+            return $this->invalidArgumentError('No fields to update. Provide at least one of: title, description, goal, execution_mode, workflow_id, crew_id, allowed_tool_ids, allowed_credential_ids, schedule.');
         }
 
         try {
@@ -144,7 +147,7 @@ class ProjectUpdateTool extends Tool
 
             return Response::text(json_encode($response));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

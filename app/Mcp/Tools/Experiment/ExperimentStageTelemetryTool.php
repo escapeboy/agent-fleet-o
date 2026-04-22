@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class ExperimentStageTelemetryTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_stage_telemetry';
 
     protected string $description = 'Get per-node telemetry for an experiment\'s pipeline stages: token usage, latency, retry rounds, and LLM call counts per stage.';
@@ -34,7 +37,7 @@ class ExperimentStageTelemetryTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $experiment = Experiment::withoutGlobalScopes()
@@ -42,7 +45,7 @@ class ExperimentStageTelemetryTool extends Tool
             ->find($validated['experiment_id']);
 
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         $stages = ExperimentStage::withoutGlobalScopes()

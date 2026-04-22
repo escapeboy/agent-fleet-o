@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Models\Project;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ProjectGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_get';
 
     protected string $description = 'Get detailed information about a specific project including description, goal, and recent runs.';
@@ -34,7 +37,7 @@ class ProjectGetTool extends Tool
         $project = Project::with('runs')->find($validated['project_id']);
 
         if (! $project) {
-            return Response::error('Project not found.');
+            return $this->notFoundError('project');
         }
 
         return Response::text(json_encode([

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowNodeAddTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_node_add';
 
     protected string $description = <<<'DESC'
@@ -88,7 +91,7 @@ DESC;
         $workflow = Workflow::where('team_id', $teamId)->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         $maxOrder = $workflow->nodes()->max('order') ?? -1;

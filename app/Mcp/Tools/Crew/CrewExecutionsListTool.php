@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class CrewExecutionsListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_executions_list';
 
     protected string $description = 'List executions for a crew ordered by most recent. Returns id, status, goal, duration_ms, cost_credits, and started_at.';
@@ -39,12 +42,12 @@ class CrewExecutionsListTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $crew = Crew::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['crew_id']);
 
         if (! $crew) {
-            return Response::error('Crew not found.');
+            return $this->notFoundError('crew');
         }
 
         $limit = min((int) ($request->get('limit', 10)), 50);

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Workflow;
 use App\Domain\Experiment\Actions\CreateExperimentAction;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Services\SynchronousWorkflowExecutor;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowGatewayTool extends Tool
 {
+    use HasStructuredErrors;
+
     public function __construct(
         private readonly Workflow $workflow,
         private readonly SynchronousWorkflowExecutor $executor,
@@ -66,7 +69,7 @@ class WorkflowGatewayTool extends Tool
         $userId = auth()->id() ?? $this->workflow->user_id;
 
         if (! $teamId) {
-            return Response::error('No current team context.');
+            return $this->permissionDeniedError('No current team context.');
         }
 
         // Verify the workflow still belongs to this team and is still exposed
@@ -76,7 +79,7 @@ class WorkflowGatewayTool extends Tool
             ->find($this->workflow->id);
 
         if (! $workflow) {
-            return Response::error('Workflow not found or gateway has been disabled.');
+            return $this->notFoundError('workflow (or gateway disabled)');
         }
 
         $input = $request->all();
@@ -108,7 +111,7 @@ class WorkflowGatewayTool extends Tool
                 'message' => "Workflow '{$workflow->name}' has been dispatched. Use experiment_get to check status.",
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Workflow execution failed: '.$e->getMessage());
+            throw $e;
         }
     }
 }

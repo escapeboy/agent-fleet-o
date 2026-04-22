@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowEnableGatewayTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_enable_gateway';
 
     protected string $description = 'Expose a workflow as a named MCP tool via the gateway. The tool_name must be unique across all teams (snake_case, 3-64 chars). Use mcp_execution_mode=sync for workflows without human_task nodes.';
@@ -41,7 +44,7 @@ class WorkflowEnableGatewayTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $workflow = Workflow::withoutGlobalScopes()
@@ -49,7 +52,7 @@ class WorkflowEnableGatewayTool extends Tool
             ->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         // Check tool_name uniqueness across all teams
@@ -60,7 +63,7 @@ class WorkflowEnableGatewayTool extends Tool
             ->exists();
 
         if ($conflict) {
-            return Response::error("The tool name '{$toolName}' is already in use by another workflow. Choose a different name.");
+            return $this->failedPreconditionError("The tool name '{$toolName}' is already in use by another workflow. Choose a different name.");
         }
 
         $workflow->update([

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class TeamUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'team_update';
 
     protected string $description = 'Update the current team name or settings.';
@@ -35,7 +38,7 @@ class TeamUpdateTool extends Tool
         $team = Team::find($teamId);
 
         if (! $team) {
-            return Response::error('Team not found.');
+            return $this->notFoundError('team');
         }
 
         $updates = array_filter([
@@ -44,7 +47,7 @@ class TeamUpdateTool extends Tool
         ], fn ($v) => $v !== null);
 
         if (empty($updates)) {
-            return Response::error('No fields to update. Provide name or settings.');
+            return $this->invalidArgumentError('No fields to update. Provide name or settings.');
         }
 
         $team->update($updates);

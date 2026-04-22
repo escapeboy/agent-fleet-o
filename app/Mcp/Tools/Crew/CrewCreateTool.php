@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Actions\CreateCrewAction;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_create';
 
     protected string $description = 'Create a new crew (multi-agent team). Requires a name, coordinator agent, and QA agent. '
@@ -60,7 +63,7 @@ class CrewCreateTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         try {
@@ -90,7 +93,7 @@ class CrewCreateTool extends Tool
                 'status' => $crew->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

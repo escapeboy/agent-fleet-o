@@ -49,7 +49,7 @@ class CrewGenerateFromPromptTool extends Tool
                 'next_step' => 'Review the design above. To create this crew, use crew_create and agent_create with the suggested configuration.',
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

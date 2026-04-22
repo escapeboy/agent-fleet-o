@@ -6,6 +6,7 @@ use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_update';
 
     protected string $description = 'Update an existing AI agent. Only provided fields will be changed.';
@@ -100,12 +103,12 @@ class AgentUpdateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['agent_id']);
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         // IDOR guard: verify knowledge_base_id belongs to the team
@@ -116,7 +119,7 @@ class AgentUpdateTool extends Tool
                 ->where('team_id', $teamId)
                 ->exists();
             if (! $kbExists) {
-                return Response::error('Knowledge base not found or does not belong to this team.');
+                return $this->notFoundError('knowledge base');
             }
         }
 
@@ -153,7 +156,7 @@ class AgentUpdateTool extends Tool
             } else {
                 $sandboxProfile = json_decode($validated['sandbox_profile'], true);
                 if (! is_array($sandboxProfile)) {
-                    return Response::error('sandbox_profile must be a valid JSON object or "null" to clear.');
+                    return $this->invalidArgumentError('sandbox_profile must be a valid JSON object or "null" to clear.');
                 }
                 $data['sandbox_profile'] = $sandboxProfile;
             }
@@ -220,7 +223,7 @@ class AgentUpdateTool extends Tool
         }
 
         if (empty($data)) {
-            return Response::error('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, reasoning_effort, use_tool_search, tool_search_top_k, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
+            return $this->invalidArgumentError('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, reasoning_effort, use_tool_search, tool_search_top_k, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
         }
 
         app(RecordAgentConfigRevisionAction::class)->execute(

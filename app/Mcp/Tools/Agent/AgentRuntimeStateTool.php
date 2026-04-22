@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AgentRuntimeStateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_runtime_state_get';
 
     protected string $description = 'Get the persistent runtime state for an agent, including lifetime token usage, total cost, execution count, and last session ID.';
@@ -36,12 +39,12 @@ class AgentRuntimeStateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['agent_id']);
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         $state = AgentRuntimeState::withoutGlobalScopes()

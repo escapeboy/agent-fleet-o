@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class TeamModelAllowlistTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'team_model_allowlist_update';
 
     protected string $description = 'Update the team model allowlist. Pass an empty array to allow all models. Pass an array of "provider/model" strings (e.g. "anthropic/claude-sonnet-4-5") to restrict.';
@@ -32,12 +35,12 @@ class TeamModelAllowlistTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $team = Team::withoutGlobalScopes()->find($teamId);
         if (! $team) {
-            return Response::error('Team not found.');
+            return $this->notFoundError('team');
         }
 
         $user = auth()->user();
@@ -45,7 +48,7 @@ class TeamModelAllowlistTool extends Tool
             $member = $team->users()->where('users.id', $user->id)->first();
             $role = $member?->pivot?->role;
             if (! in_array($role, ['owner', 'admin'], true)) {
-                return Response::error('Only team owners and admins can update the model allowlist.');
+                return $this->permissionDeniedError('Only team owners and admins can update the model allowlist.');
             }
         }
 

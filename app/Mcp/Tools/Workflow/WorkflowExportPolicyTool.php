@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Actions\ExportWorkflowPolicyAction;
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class WorkflowExportPolicyTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_export_policy';
 
     protected string $description = 'Export a workflow\'s governance policy as a structured JSON document. Returns policy including approval gates, budget limits, and tool restrictions.';
@@ -34,12 +37,12 @@ class WorkflowExportPolicyTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $workflow = Workflow::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         $policy = app(ExportWorkflowPolicyAction::class)->execute($workflow);

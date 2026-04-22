@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowSetCompensationNodeTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_set_compensation_node';
 
     protected string $description = 'Set or clear the compensation node for a workflow node (Saga pattern). The compensation node runs automatically when the workflow fails, in reverse completion order. Pass null to compensation_node_id to clear.';
@@ -41,7 +44,7 @@ class WorkflowSetCompensationNodeTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $workflow = Workflow::withoutGlobalScopes()
@@ -49,14 +52,14 @@ class WorkflowSetCompensationNodeTool extends Tool
             ->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         $node = WorkflowNode::where('workflow_id', $workflow->id)
             ->find($validated['node_id']);
 
         if (! $node) {
-            return Response::error('Node not found in workflow.');
+            return $this->notFoundError('node');
         }
 
         $compensationNodeId = $validated['compensation_node_id'] ?? null;
@@ -66,15 +69,15 @@ class WorkflowSetCompensationNodeTool extends Tool
                 ->find($compensationNodeId);
 
             if (! $compensationNode) {
-                return Response::error('Compensation node not found in the same workflow.');
+                return $this->notFoundError('compensation node');
             }
 
             if ($compensationNode->compensation_node_id !== null) {
-                return Response::error('Compensation nodes cannot themselves have a compensation node (no recursive saga).');
+                return $this->failedPreconditionError('Compensation nodes cannot themselves have a compensation node (no recursive saga).');
             }
 
             if ($compensationNodeId === $validated['node_id']) {
-                return Response::error('A node cannot be its own compensation node.');
+                return $this->invalidArgumentError('A node cannot be its own compensation node.');
             }
         }
 

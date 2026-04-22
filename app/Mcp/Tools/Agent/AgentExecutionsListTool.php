@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Models\AiRun;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AgentExecutionsListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_executions_list';
 
     protected string $description = 'List recent AI runs/executions for a specific agent.';
@@ -32,7 +35,7 @@ class AgentExecutionsListTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $limit = min((int) ($request->get('limit', 20)), 100);

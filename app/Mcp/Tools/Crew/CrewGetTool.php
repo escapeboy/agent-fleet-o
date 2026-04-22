@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Crew;
 
 use App\Domain\Crew\Models\Crew;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class CrewGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_get';
 
     protected string $description = 'Get detailed information about a specific crew including members and their agents.';
@@ -36,7 +39,7 @@ class CrewGetTool extends Tool
         $crew = Crew::with('members.agent')->find($validated['crew_id']);
 
         if (! $crew) {
-            return Response::error('Crew not found.');
+            return $this->notFoundError('crew');
         }
 
         return Response::text(json_encode([

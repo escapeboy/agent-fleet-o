@@ -6,6 +6,7 @@ use App\Domain\Agent\DTOs\AgentHeartbeatTask;
 use App\Domain\Agent\Jobs\ExecuteAgentHeartbeatJob;
 use App\Domain\Agent\Models\Agent;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -22,6 +23,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentHeartbeatRunNowTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_heartbeat_run_now';
 
     protected string $description = 'Immediately dispatch the agent\'s heartbeat task, ignoring the cron schedule. '
@@ -44,7 +47,7 @@ class AgentHeartbeatRunNowTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $agent = Agent::withoutGlobalScopes()
@@ -52,17 +55,17 @@ class AgentHeartbeatRunNowTool extends Tool
             ->find($validated['agent_id']);
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         if (empty($agent->heartbeat_definition)) {
-            return Response::error('Agent has no heartbeat_definition configured. Use agent_heartbeat_update to set one first.');
+            return $this->failedPreconditionError('Agent has no heartbeat_definition configured. Use agent_heartbeat_update to set one first.');
         }
 
         $task = AgentHeartbeatTask::fromArray($agent->heartbeat_definition);
 
         if (empty($task->prompt)) {
-            return Response::error('Heartbeat prompt is empty. Update the heartbeat definition with a non-empty prompt.');
+            return $this->failedPreconditionError('Heartbeat prompt is empty. Update the heartbeat definition with a non-empty prompt.');
         }
 
         ExecuteAgentHeartbeatJob::dispatch(

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class TeamGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'team_get';
 
     protected string $description = 'Get the current team details including name, slug, owner, settings, and member count.';
@@ -32,7 +35,7 @@ class TeamGetTool extends Tool
         $team = Team::withCount('users')->find($teamId);
 
         if (! $team) {
-            return Response::error('Team not found.');
+            return $this->notFoundError('team');
         }
 
         return Response::text(json_encode([

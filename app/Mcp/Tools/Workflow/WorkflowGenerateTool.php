@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Actions\GenerateWorkflowFromPromptAction;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowGenerateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_generate';
 
     protected string $description = 'Generate a workflow from a natural language prompt. Uses AI to decompose the description into a workflow graph with nodes and edges. Returns the created workflow with any validation warnings.';
@@ -41,7 +44,7 @@ class WorkflowGenerateTool extends Tool
             $workflow = $result['workflow'];
 
             if (! $workflow) {
-                return Response::error('Failed to generate workflow: '.implode(', ', $result['errors']));
+                return $this->invalidArgumentError('Failed to generate workflow: '.implode(', ', $result['errors']));
             }
 
             $workflow->load(['nodes', 'edges']);
@@ -57,7 +60,7 @@ class WorkflowGenerateTool extends Tool
                 'validation_warnings' => $result['errors'],
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Models\Agent;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AgentGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_get';
 
     protected string $description = 'Get detailed information about a specific AI agent including role, goal, backstory, provider, model, and budget.';
@@ -35,12 +38,12 @@ class AgentGetTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['agent_id']);
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent', $validated['agent_id']);
         }
 
         $state = $agent->runtimeState;

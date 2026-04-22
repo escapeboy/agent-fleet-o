@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Services\AgentSandboxOrchestrator;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentSandboxTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_sandbox_run';
 
     protected string $description = 'Run a shell command inside a dedicated Docker sandbox container for the given agent (enterprise plan only). Requires sandbox_profile to be configured on the agent.';
@@ -43,7 +46,7 @@ class AgentSandboxTool extends Tool
             try {
                 $planEnforcer = app('App\Domain\Shared\Services\PlanEnforcer');
                 if (! $planEnforcer->hasFeature('agent_process_isolation')) {
-                    return Response::error('agent_process_isolation is not available on your current plan. Upgrade to the Enterprise plan to use Docker-based per-execution agent process isolation.');
+                    return $this->failedPreconditionError('agent_process_isolation is not available on your current plan. Upgrade to the Enterprise plan to use Docker-based per-execution agent process isolation.');
                 }
             } catch (\Throwable) {
                 // Silently allow if enforcer fails — base/community edition has no PlanEnforcer
@@ -52,18 +55,18 @@ class AgentSandboxTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['agent_id']);
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         $orchestrator = app(AgentSandboxOrchestrator::class);
 
         if (! $orchestrator->isEnabled($agent)) {
-            return Response::error("Agent '{$agent->name}' does not have a sandbox_profile configured. Set sandbox_profile via agent_update before running sandbox commands.");
+            return $this->failedPreconditionError("Agent '{$agent->name}' does not have a sandbox_profile configured. Set sandbox_profile via agent_update before running sandbox commands.");
         }
 
         try {
@@ -78,7 +81,7 @@ class AgentSandboxTool extends Tool
                 'stderr' => $result['stderr'],
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Sandbox execution failed: '.$e->getMessage());
+            throw $e;
         }
     }
 }

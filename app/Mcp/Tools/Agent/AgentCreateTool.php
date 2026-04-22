@@ -7,6 +7,7 @@ use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_create';
 
     protected string $description = 'Create a new AI agent. Specify name, role, goal, backstory, and optionally provider/model.';
@@ -92,7 +95,7 @@ class AgentCreateTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         // IDOR guard: verify knowledge_base_id belongs to the team
@@ -102,7 +105,7 @@ class AgentCreateTool extends Tool
                 ->where('team_id', $teamId)
                 ->exists();
             if (! $kbExists) {
-                return Response::error('Knowledge base not found or does not belong to this team.');
+                return $this->notFoundError('knowledge base');
             }
         }
 
@@ -111,7 +114,7 @@ class AgentCreateTool extends Tool
         if (! empty($validated['sandbox_profile'])) {
             $sandboxProfile = json_decode($validated['sandbox_profile'], true);
             if (! is_array($sandboxProfile)) {
-                return Response::error('sandbox_profile must be a valid JSON object.');
+                return $this->invalidArgumentError('sandbox_profile must be a valid JSON object.');
             }
         }
 
@@ -174,7 +177,7 @@ class AgentCreateTool extends Tool
                 'status' => $agent->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

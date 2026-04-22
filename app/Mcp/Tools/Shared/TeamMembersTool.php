@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class TeamMembersTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'team_members';
 
     protected string $description = 'List all members of the current team with their roles and join dates.';
@@ -33,7 +36,7 @@ class TeamMembersTool extends Tool
         $team = Team::with('users')->find($teamId);
 
         if (! $team) {
-            return Response::error('Team not found.');
+            return $this->notFoundError('team');
         }
 
         $members = $team->users->map(function ($user) {

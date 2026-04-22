@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Experiment;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ExperimentStartTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_start';
 
     protected string $description = 'Start a draft experiment, kicking off the AI pipeline (scoring → planning → building → executing). The experiment must be in draft status.';
@@ -32,16 +35,16 @@ class ExperimentStartTool extends Tool
         $experimentId = $request->get('experiment_id');
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($experimentId);
 
         if (! $experiment) {
-            return Response::error("Experiment {$experimentId} not found. Use experiment_list to discover valid experiment IDs.");
+            return $this->notFoundError('experiment', $experimentId);
         }
 
         if ($experiment->status !== ExperimentStatus::Draft) {
-            return Response::error("Cannot start experiment in '{$experiment->status->value}' status. Only draft experiments can be started. Use experiment_resume for paused experiments.");
+            return $this->failedPreconditionError("Cannot start experiment in '{$experiment->status->value}' status. Only draft experiments can be started. Use experiment_resume for paused experiments.");
         }
 
         try {
@@ -61,7 +64,7 @@ class ExperimentStartTool extends Tool
                 'message' => "Experiment '{$result->title}' has been started and is now in the scoring pipeline.",
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

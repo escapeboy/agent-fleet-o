@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -29,6 +30,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class PortkeyGatewayTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'portkey_gateway_manage';
 
     protected string $description = 'Manage the Portkey AI Gateway for the team. '
@@ -56,7 +59,7 @@ class PortkeyGatewayTool extends Tool
         $teamId = app('mcp.team_id') ?? Auth::user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $action = $request->get('action');
@@ -65,7 +68,7 @@ class PortkeyGatewayTool extends Tool
             'status' => $this->handleStatus($teamId),
             'configure' => $this->handleConfigure($teamId, $request),
             'remove' => $this->handleRemove($teamId),
-            default => Response::error("Unknown action '{$action}'. Valid: status, configure, remove"),
+            default => $this->invalidArgumentError("Unknown action '{$action}'. Valid: status, configure, remove"),
         };
     }
 
@@ -103,12 +106,12 @@ class PortkeyGatewayTool extends Tool
         $apiKey = $request->get('api_key');
 
         if (! $apiKey) {
-            return Response::error('api_key is required for configure action. Get your key at https://app.portkey.ai/api-keys');
+            return $this->invalidArgumentError('api_key is required for configure action. Get your key at https://app.portkey.ai/api-keys');
         }
 
         // Basic format validation — Portkey keys start with "pk-"
         if (! str_starts_with((string) $apiKey, 'pk-')) {
-            return Response::error('Invalid Portkey API key format. Keys must start with "pk-". Get your key at https://app.portkey.ai/api-keys');
+            return $this->invalidArgumentError('Invalid Portkey API key format. Keys must start with "pk-". Get your key at https://app.portkey.ai/api-keys');
         }
 
         $virtualKey = $request->get('virtual_key');
@@ -147,7 +150,7 @@ class PortkeyGatewayTool extends Tool
             ->delete();
 
         if (! $deleted) {
-            return Response::error('No Portkey credential found for this team.');
+            return $this->notFoundError('Portkey credential');
         }
 
         return Response::text(json_encode([

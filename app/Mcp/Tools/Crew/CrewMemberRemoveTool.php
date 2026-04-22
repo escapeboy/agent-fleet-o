@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewMember;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class CrewMemberRemoveTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_member_remove';
 
     protected string $description = 'Remove an agent from a crew.';
@@ -31,12 +34,12 @@ class CrewMemberRemoveTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $crew = Crew::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('crew_id'));
         if (! $crew) {
-            return Response::error('Crew not found.');
+            return $this->notFoundError('crew');
         }
 
         $member = CrewMember::where('crew_id', $crew->id)
@@ -44,7 +47,7 @@ class CrewMemberRemoveTool extends Tool
             ->first();
 
         if (! $member) {
-            return Response::error('Agent is not a member of this crew.');
+            return $this->failedPreconditionError('Agent is not a member of this crew.');
         }
 
         $member->delete();

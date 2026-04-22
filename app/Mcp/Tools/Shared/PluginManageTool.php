@@ -6,6 +6,7 @@ use App\Contracts\HasHealthCheck;
 use App\Domain\Shared\Models\PluginState;
 use App\Domain\Shared\Services\PluginRegistry;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class PluginManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'plugin_manage';
 
     protected string $description = 'List and toggle installed FleetQ plugins. Operations: list, enable, disable.';
@@ -42,7 +45,7 @@ class PluginManageTool extends Tool
             'list' => $this->listPlugins(),
             'enable' => $this->setEnabled($request, true),
             'disable' => $this->setEnabled($request, false),
-            default => Response::error("Unknown operation '{$operation}'. Valid: list, enable, disable"),
+            default => $this->invalidArgumentError("Unknown operation '{$operation}'. Valid: list, enable, disable"),
         };
     }
 
@@ -84,20 +87,20 @@ class PluginManageTool extends Tool
         $pluginId = $request->get('plugin_id');
 
         if (empty($pluginId)) {
-            return Response::error('plugin_id is required.');
+            return $this->invalidArgumentError('plugin_id is required.');
         }
 
         $registry = app(PluginRegistry::class);
         $plugin = $registry->find($pluginId);
 
         if (! $plugin) {
-            return Response::error("Plugin '{$pluginId}' not found.");
+            return $this->notFoundError('plugin', $pluginId);
         }
 
         $state = PluginState::where('plugin_id', $pluginId)->first();
 
         if (! $state) {
-            return Response::error("Plugin '{$pluginId}' has no state record. It may not be installed.");
+            return $this->failedPreconditionError("Plugin '{$pluginId}' has no state record. It may not be installed.");
         }
 
         $state->update(['enabled' => $enabled]);

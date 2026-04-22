@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\DTOs\AgentHeartbeatTask;
 use App\Domain\Agent\Models\Agent;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Cron\CronExpression;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -23,6 +24,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentHeartbeatUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_heartbeat_update';
 
     protected string $description = 'Set or update the recurring heartbeat schedule for an agent. '
@@ -57,7 +60,7 @@ class AgentHeartbeatUpdateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $agent = Agent::withoutGlobalScopes()
@@ -65,14 +68,14 @@ class AgentHeartbeatUpdateTool extends Tool
             ->find($validated['agent_id']);
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         // Validate the cron expression and enforce a minimum 5-minute interval
         try {
             $expr = new CronExpression($validated['cron']);
         } catch (\InvalidArgumentException $e) {
-            return Response::error('Invalid cron expression: '.$e->getMessage());
+            return $this->invalidArgumentError('Invalid cron expression: '.$e->getMessage());
         }
 
         // Prevent scheduling more frequently than every 5 minutes to protect the queue
@@ -80,7 +83,7 @@ class AgentHeartbeatUpdateTool extends Tool
         $next = $expr->getNextRunDate($now);
         $afterNext = $expr->getNextRunDate($next);
         if ($afterNext->getTimestamp() - $next->getTimestamp() < 300) {
-            return Response::error('Heartbeat schedule must fire no more than once every 5 minutes.');
+            return $this->invalidArgumentError('Heartbeat schedule must fire no more than once every 5 minutes.');
         }
 
         $task = new AgentHeartbeatTask(

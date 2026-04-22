@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_update';
 
     protected string $description = 'Update an existing workflow metadata. Only provided fields will be changed.';
@@ -50,12 +53,12 @@ class WorkflowUpdateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $workflow = Workflow::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         $hasUpdates = ($validated['name'] ?? null) !== null
@@ -65,7 +68,7 @@ class WorkflowUpdateTool extends Tool
             || ($validated['observability_config'] ?? null) !== null;
 
         if (! $hasUpdates) {
-            return Response::error('No fields to update. Provide at least one of: name, description, checkpoint_mode.');
+            return $this->invalidArgumentError('No fields to update. Provide at least one of: name, description, checkpoint_mode.');
         }
 
         try {
@@ -102,7 +105,7 @@ class WorkflowUpdateTool extends Tool
                 ], fn ($v) => $v !== null)),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

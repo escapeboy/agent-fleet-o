@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ExperimentGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_get';
 
     protected string $description = 'Get detailed information about a specific experiment including stages, thesis, budget, and iteration info.';
@@ -34,7 +37,7 @@ class ExperimentGetTool extends Tool
         $experiment = Experiment::with('stages')->find($validated['experiment_id']);
 
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         return Response::text(json_encode([

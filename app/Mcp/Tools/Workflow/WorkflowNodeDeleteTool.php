@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowNodeDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_node_delete';
 
     protected string $description = 'Delete a workflow node. All edges connected to this node are automatically removed. Cannot delete start or end nodes.';
@@ -35,11 +38,11 @@ class WorkflowNodeDeleteTool extends Tool
             ->find($validated['node_id']);
 
         if (! $node) {
-            return Response::error('Node not found.');
+            return $this->notFoundError('node');
         }
 
         if ($node->isStart() || $node->isEnd()) {
-            return Response::error('Cannot delete start or end nodes. Use workflow_save_graph to replace the entire graph if needed.');
+            return $this->failedPreconditionError('Cannot delete start or end nodes. Use workflow_save_graph to replace the entire graph if needed.');
         }
 
         $workflowId = $node->workflow_id;

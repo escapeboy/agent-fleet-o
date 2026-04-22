@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Workflow;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowEdgeAddTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_edge_add';
 
     protected string $description = 'Add an edge (connection) between two nodes in a workflow. Both nodes must belong to the same workflow.';
@@ -64,22 +67,22 @@ class WorkflowEdgeAddTool extends Tool
         $workflow = Workflow::where('team_id', $teamId)->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         // Validate both nodes exist and belong to this workflow
         $sourceNode = WorkflowNode::where('workflow_id', $workflow->id)->find($validated['source_node_id']);
         if (! $sourceNode) {
-            return Response::error('Source node not found in this workflow.');
+            return $this->notFoundError('source node');
         }
 
         $targetNode = WorkflowNode::where('workflow_id', $workflow->id)->find($validated['target_node_id']);
         if (! $targetNode) {
-            return Response::error('Target node not found in this workflow.');
+            return $this->notFoundError('target node');
         }
 
         if ($validated['source_node_id'] === $validated['target_node_id']) {
-            return Response::error('Source and target nodes must be different.');
+            return $this->invalidArgumentError('Source and target nodes must be different.');
         }
 
         $edge = WorkflowEdge::create([

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Models\Experiment;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class AgentDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_delete';
 
     protected string $description = 'Soft-delete an AI agent. The agent must not have any active experiments. Set confirm=true to proceed.';
@@ -37,16 +40,16 @@ class AgentDeleteTool extends Tool
         $confirm = $request->get('confirm', false);
 
         if (! $confirm) {
-            return Response::error('confirm must be set to true to delete an agent. This action is irreversible.');
+            return $this->invalidArgumentError('confirm must be set to true to delete an agent. This action is irreversible.');
         }
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($agentId);
         if (! $agent) {
-            return Response::error("Agent {$agentId} not found.");
+            return $this->notFoundError('agent', $agentId);
         }
 
         // Guard: check for active experiments using this agent
@@ -55,7 +58,7 @@ class AgentDeleteTool extends Tool
         })->whereNotIn('status', ['completed', 'killed', 'discarded', 'expired'])->count();
 
         if ($activeExperimentCount > 0) {
-            return Response::error("Cannot delete agent '{$agent->name}': it is used by {$activeExperimentCount} active experiment(s). Pause or complete those experiments first.");
+            return $this->failedPreconditionError("Cannot delete agent '{$agent->name}': it is used by {$activeExperimentCount} active experiment(s). Pause or complete those experiments first.");
         }
 
         try {
@@ -70,7 +73,7 @@ class AgentDeleteTool extends Tool
                 'message' => "Agent '{$agentName}' has been soft-deleted and can be restored by an administrator.",
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

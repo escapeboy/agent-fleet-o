@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Skill\Models\Skill;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class AgentSkillSyncTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_skill_sync';
 
     protected string $description = 'Attach, detach, or replace skills on an agent. Mode "sync" replaces all skills, "attach" adds the given skills, "detach" removes them.';
@@ -44,22 +47,22 @@ class AgentSkillSyncTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($agentId);
         if (! $agent) {
-            return Response::error("Agent {$agentId} not found.");
+            return $this->notFoundError('agent', $agentId);
         }
 
         if (! is_array($skillIds)) {
-            return Response::error('skill_ids must be an array of UUIDs.');
+            return $this->invalidArgumentError('skill_ids must be an array of UUIDs.');
         }
 
         // Validate that all skill IDs exist
         $validSkills = Skill::whereIn('id', $skillIds)->pluck('id')->toArray();
         $invalidIds = array_diff($skillIds, $validSkills);
         if (! empty($invalidIds)) {
-            return Response::error('Invalid skill IDs: '.implode(', ', $invalidIds).'. Use skill_list to discover valid skill IDs.');
+            return $this->invalidArgumentError('Invalid skill IDs: '.implode(', ', $invalidIds).'. Use skill_list to discover valid skill IDs.');
         }
 
         try {
@@ -79,7 +82,7 @@ class AgentSkillSyncTool extends Tool
                 'attached_skill_ids' => $agent->skills->pluck('id')->toArray(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

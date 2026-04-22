@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Tool\Models\Tool;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentToolApprovalConfigureTool extends McpTool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_tool_approval_configure';
 
     protected string $description = 'Configure tool-level execution approval settings on the agent-tool pivot. Controls whether a tool auto-executes, requires approval, or is denied.';
@@ -52,19 +55,19 @@ class AgentToolApprovalConfigureTool extends McpTool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['agent_id']);
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         $tool = Tool::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['tool_id']);
         if (! $tool) {
             $tool = Tool::withoutGlobalScopes()->whereNull('team_id')->find($validated['tool_id']);
             if (! $tool) {
-                return Response::error('Tool not found.');
+                return $this->notFoundError('tool');
             }
         }
 
@@ -74,7 +77,7 @@ class AgentToolApprovalConfigureTool extends McpTool
             ->exists();
 
         if (! $pivotExists) {
-            return Response::error('Tool is not attached to this agent.');
+            return $this->failedPreconditionError('Tool is not attached to this agent.');
         }
 
         $update = [];
@@ -89,7 +92,7 @@ class AgentToolApprovalConfigureTool extends McpTool
         }
 
         if (empty($update)) {
-            return Response::error('No fields to update. Provide at least one of: approval_mode, approval_timeout_minutes, approval_timeout_action.');
+            return $this->invalidArgumentError('No fields to update. Provide at least one of: approval_mode, approval_timeout_minutes, approval_timeout_action.');
         }
 
         DB::table('agent_tool')

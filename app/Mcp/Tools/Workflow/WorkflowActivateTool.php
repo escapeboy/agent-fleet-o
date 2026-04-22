@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowActivateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_activate';
 
     protected string $description = 'Validate and activate a workflow. The workflow graph must be valid (has start/end nodes, no orphaned nodes) before it can be used in experiments.';
@@ -32,19 +35,19 @@ class WorkflowActivateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $workflow = Workflow::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         try {
             $result = app(ValidateWorkflowGraphAction::class)->execute($workflow, activateIfValid: true);
 
             if (! $result['valid']) {
-                return Response::error('Workflow graph is invalid: '.implode(', ', $result['errors']));
+                return $this->invalidArgumentError('Workflow graph is invalid: '.implode(', ', $result['errors']));
             }
 
             $workflow->refresh();
@@ -57,7 +60,7 @@ class WorkflowActivateTool extends Tool
                 'status' => $workflow->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

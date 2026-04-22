@@ -6,6 +6,7 @@ use App\Domain\Crew\Actions\UpdateCrewAction;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Models\Crew;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_update';
 
     protected string $description = 'Update an existing crew. Only provided fields will be changed. Cannot change coordinator/QA/process_type while executions are active.';
@@ -60,12 +63,12 @@ class CrewUpdateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $crew = Crew::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['crew_id']);
 
         if (! $crew) {
-            return Response::error('Crew not found.');
+            return $this->notFoundError('crew');
         }
 
         try {
@@ -112,7 +115,7 @@ class CrewUpdateTool extends Tool
                 ], fn ($v) => $v !== null)),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -6,6 +6,7 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Throwable;
 #[AssistantTool('write')]
 class ExperimentSkipStageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_skip_stage';
 
     protected string $description = 'Skip the current stage of an experiment and attempt to advance to the Executing state. Use with caution — not all state transitions are valid.';
@@ -32,12 +35,12 @@ class ExperimentSkipStageTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('experiment_id'));
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         try {
@@ -53,7 +56,7 @@ class ExperimentSkipStageTool extends Tool
                 'status' => $updated->status->value,
             ]));
         } catch (Throwable $e) {
-            return Response::error('Cannot skip stage from current state ('.$experiment->status->value.'): '.$e->getMessage());
+            return $this->failedPreconditionError('Cannot skip stage from current state ('.$experiment->status->value.'): '.$e->getMessage());
         }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ExperimentStepsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_steps';
 
     protected string $description = 'List all playbook steps for a workflow experiment in execution order. Returns step id, order, status, skill_id, cost_credits, duration_ms, and timestamps.';
@@ -34,12 +37,12 @@ class ExperimentStepsTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['experiment_id']);
 
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         $steps = PlaybookStep::where('experiment_id', $experiment->id)

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Crew;
 
 use App\Domain\Crew\Models\CrewExecution;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Redis;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewBlackboardPostTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_blackboard_post';
 
     protected string $description = 'Post a message to the crew execution blackboard — a shared ephemeral board visible to all agents in the crew. Use to broadcast STATUS updates, QUESTIONs to coordinators/other agents, or FINDING discoveries.';
@@ -47,7 +50,7 @@ class CrewBlackboardPostTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $execution = CrewExecution::withoutGlobalScopes()
@@ -55,7 +58,7 @@ class CrewBlackboardPostTool extends Tool
             ->find($validated['execution_id']);
 
         if (! $execution) {
-            return Response::error('Crew execution not found.');
+            return $this->notFoundError('crew execution');
         }
 
         $key = 'crew:blackboard:'.$validated['execution_id'];

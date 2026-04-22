@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class WorkflowValidateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_validate';
 
     protected string $description = 'Validate a workflow graph structure. Returns whether the graph is valid and any errors found.';
@@ -34,12 +37,12 @@ class WorkflowValidateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $workflow = Workflow::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         $action = app(ValidateWorkflowGraphAction::class);

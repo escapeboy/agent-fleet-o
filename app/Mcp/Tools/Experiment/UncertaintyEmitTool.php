@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\UncertaintySignal;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class UncertaintyEmitTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'emit_uncertainty';
 
     protected string $description = 'Emit a structured uncertainty signal during agent execution when ambiguity is encountered. Lighter than a full approval request. Auto-escalates after TTL expires.';
@@ -43,14 +46,14 @@ class UncertaintyEmitTool extends Tool
 
         $teamId = app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $context = null;
         if (! empty($validated['context_json'])) {
             $context = json_decode($validated['context_json'], true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                return Response::error('Invalid JSON in context_json: '.json_last_error_msg());
+                return $this->invalidArgumentError('Invalid JSON in context_json: '.json_last_error_msg());
             }
         }
 
@@ -63,7 +66,7 @@ class UncertaintyEmitTool extends Tool
                 ->exists();
 
             if (! $stageExists) {
-                return Response::error('Experiment stage not found or access denied.');
+                return $this->notFoundError('experiment stage');
             }
         }
 

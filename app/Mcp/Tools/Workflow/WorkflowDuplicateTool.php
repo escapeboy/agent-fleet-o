@@ -6,6 +6,7 @@ use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowDuplicateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_duplicate';
 
     protected string $description = 'Duplicate an existing workflow. Creates a new draft workflow with all nodes and edges copied. Optionally override the name.';
@@ -38,7 +41,7 @@ class WorkflowDuplicateTool extends Tool
         $workflow = Workflow::with(['nodes', 'edges'])->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         try {
@@ -83,7 +86,7 @@ class WorkflowDuplicateTool extends Tool
                 'node_count' => $newWorkflow->nodes()->count(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Models\ProjectRun;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ProjectRunGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_run_get';
 
     protected string $description = 'Get full details of a specific project run including output summary, error message, and links to the underlying experiment or crew execution.';
@@ -38,7 +41,7 @@ class ProjectRunGetTool extends Tool
             ->find($validated['run_id']);
 
         if (! $run) {
-            return Response::error('Project run not found.');
+            return $this->notFoundError('project run');
         }
 
         $result = [

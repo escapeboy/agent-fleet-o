@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Shared;
 
 use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ApiTokenManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'api_token_manage';
 
     protected string $description = 'Manage Sanctum API tokens for the current user. List active tokens, create a new token (returned ONCE, never again), or revoke a token by ID.';
@@ -38,7 +41,7 @@ class ApiTokenManageTool extends Tool
         $user = Auth::user();
 
         if (! $user) {
-            return Response::error('Not authenticated.');
+            return $this->permissionDeniedError('Not authenticated.');
         }
 
         $action = $request->get('action');
@@ -47,7 +50,7 @@ class ApiTokenManageTool extends Tool
             'list' => $this->listTokens($user),
             'create' => $this->createToken($user, $request),
             'revoke' => $this->revokeToken($user, $request),
-            default => Response::error("Unknown action: {$action}"),
+            default => $this->invalidArgumentError("Unknown action: {$action}"),
         };
     }
 
@@ -74,7 +77,7 @@ class ApiTokenManageTool extends Tool
         $name = $request->get('name');
 
         if (! $name) {
-            return Response::error('name is required for create action.');
+            return $this->invalidArgumentError('name is required for create action.');
         }
 
         $abilities = $user->is_super_admin ? ['*'] : ['team:'.$user->current_team_id];
@@ -97,13 +100,13 @@ class ApiTokenManageTool extends Tool
         $tokenId = $request->get('token_id');
 
         if (! $tokenId) {
-            return Response::error('token_id is required for revoke action. Use the list action to find token IDs.');
+            return $this->invalidArgumentError('token_id is required for revoke action. Use the list action to find token IDs.');
         }
 
         $deleted = $user->sanctumTokens()->where('id', $tokenId)->delete();
 
         if (! $deleted) {
-            return Response::error("Token {$tokenId} not found or does not belong to the current user.");
+            return $this->notFoundError('token', $tokenId);
         }
 
         return Response::text(json_encode([

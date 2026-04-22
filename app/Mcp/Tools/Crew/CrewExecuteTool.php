@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Actions\ExecuteCrewAction;
 use App\Domain\Crew\Models\Crew;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewExecuteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_execute';
 
     protected string $description = 'Execute a crew with a given goal. The crew must be active. Returns immediately (async execution).';
@@ -40,12 +43,12 @@ class CrewExecuteTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $crew = Crew::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['crew_id']);
 
         if (! $crew) {
-            return Response::error('Crew not found.');
+            return $this->notFoundError('crew');
         }
 
         try {
@@ -61,7 +64,7 @@ class CrewExecuteTool extends Tool
                 'status' => $execution->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -44,7 +44,7 @@ class ProjectScheduleNlpTool extends Tool
                 ],
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }
