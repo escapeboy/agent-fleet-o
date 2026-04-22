@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\System;
 
 use App\Livewire\Settings\SecurityPolicyPanel;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Gate;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class SecurityPolicyManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'security_policy_manage';
 
     protected string $description = 'Read or update the organization security policy (blocked commands, allowed paths, approval requirements, timeouts). Operations: get, update, reset.';
@@ -46,7 +49,7 @@ class SecurityPolicyManageTool extends Tool
         $operation = $request->get('operation');
 
         if (! $operation || ! in_array($operation, ['get', 'update', 'reset'], true)) {
-            return Response::error('operation must be one of: get, update, reset');
+            return $this->invalidArgumentError('operation must be one of: get, update, reset');
         }
 
         return match ($operation) {
@@ -75,13 +78,13 @@ class SecurityPolicyManageTool extends Tool
     private function updatePolicy(Request $request): Response
     {
         if (! Gate::check('feature.security_policy')) {
-            return Response::error('Security policy management is not available on your current plan.');
+            return $this->failedPreconditionError('Security policy management is not available on your current plan.');
         }
 
         $policyInput = $request->get('policy');
 
         if (empty($policyInput) || ! is_array($policyInput)) {
-            return Response::error('policy object is required for update operation.');
+            return $this->invalidArgumentError('policy object is required for update operation.');
         }
 
         $existing = SecurityPolicyPanel::getOrgPolicy();
@@ -107,7 +110,7 @@ class SecurityPolicyManageTool extends Tool
     private function resetPolicy(): Response
     {
         if (! Gate::check('feature.security_policy')) {
-            return Response::error('Security policy management is not available on your current plan.');
+            return $this->failedPreconditionError('Security policy management is not available on your current plan.');
         }
 
         GlobalSetting::set('org_security_policy', []);

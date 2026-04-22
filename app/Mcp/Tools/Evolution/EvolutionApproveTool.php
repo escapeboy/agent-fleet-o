@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Evolution;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class EvolutionApproveTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'evolution_approve';
 
     protected string $description = 'Approve a pending evolution proposal without immediately applying it. After approval, use evolution_apply to apply the changes to the agent, or evolution_reject to dismiss. This enables human-in-the-loop review: analyze → approve → apply.';
@@ -38,20 +41,20 @@ class EvolutionApproveTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $proposal = EvolutionProposal::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['proposal_id']);
 
         if (! $proposal) {
-            return Response::error('Evolution proposal not found.');
+            return $this->notFoundError('evolution proposal');
         }
 
         if ($proposal->status === EvolutionProposalStatus::Applied) {
-            return Response::error('This proposal has already been applied and cannot be re-approved.');
+            return $this->failedPreconditionError('This proposal has already been applied and cannot be re-approved.');
         }
 
         if ($proposal->status === EvolutionProposalStatus::Rejected) {
-            return Response::error('This proposal has been rejected. Analyze a new execution to generate a fresh proposal.');
+            return $this->failedPreconditionError('This proposal has been rejected. Analyze a new execution to generate a fresh proposal.');
         }
 
         if ($proposal->status === EvolutionProposalStatus::Approved) {

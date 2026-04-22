@@ -7,6 +7,7 @@ use App\Domain\Trigger\Actions\EvaluateTriggerRulesAction;
 use App\Domain\Trigger\Actions\ExecuteTriggerRuleAction;
 use App\Domain\Trigger\Models\TriggerRule;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class TriggerRuleTestTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'trigger_rule_test';
 
     protected string $description = 'Test a trigger rule against a synthetic signal payload without actually triggering a project run. Returns whether the rule would match and which conditions pass/fail.';
@@ -44,7 +47,7 @@ class TriggerRuleTestTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $payload = $request->get('payload', []);
@@ -63,7 +66,7 @@ class TriggerRuleTestTool extends Tool
         if ($ruleId = $request->get('rule_id')) {
             $rule = TriggerRule::withoutGlobalScopes()->where('team_id', $teamId)->find($ruleId);
             if (! $rule) {
-                return Response::error('Trigger rule not found.');
+                return $this->notFoundError('trigger rule');
             }
 
             $rules = collect([$rule]);

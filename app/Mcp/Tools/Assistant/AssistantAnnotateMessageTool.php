@@ -6,6 +6,7 @@ use App\Domain\Assistant\Actions\AnnotateMessageAction;
 use App\Domain\Assistant\Enums\AnnotationRating;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AssistantAnnotateMessageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'assistant_annotate_message';
 
     protected string $description = 'Rate an assistant message as positive or negative, with an optional corrected response. Used to provide feedback on AI quality.';
@@ -44,20 +47,20 @@ class AssistantAnnotateMessageTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $messageId = $request->get('message_id');
         $ratingValue = $request->get('rating');
 
         if (! $messageId || ! $ratingValue) {
-            return Response::error('message_id and rating are required.');
+            return $this->invalidArgumentError('message_id and rating are required.');
         }
 
         $rating = AnnotationRating::tryFrom($ratingValue);
 
         if (! $rating) {
-            return Response::error('rating must be "positive" or "negative".');
+            return $this->invalidArgumentError('rating must be "positive" or "negative".');
         }
 
         $message = AssistantMessage::withoutGlobalScopes()
@@ -66,7 +69,7 @@ class AssistantAnnotateMessageTool extends Tool
             ->first();
 
         if (! $message) {
-            return Response::error('Message not found.');
+            return $this->notFoundError('message');
         }
 
         // Use team owner as acting user in MCP context.
@@ -75,7 +78,7 @@ class AssistantAnnotateMessageTool extends Tool
         )->value('id');
 
         if (! $userId) {
-            return Response::error('Could not resolve team owner.');
+            return $this->permissionDeniedError('Could not resolve team owner.');
         }
 
         $annotation = $this->action->execute(

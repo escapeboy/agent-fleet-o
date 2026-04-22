@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Budget;
 
 use App\Domain\Budget\Models\CreditLedger;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class BudgetCostBreakdownTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'budget_cost_breakdown';
 
     protected string $description = 'Get cost breakdown by agent for the team over a given number of days.';
@@ -31,7 +34,7 @@ class BudgetCostBreakdownTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $days = max(1, (int) ($request->get('days', 30)));

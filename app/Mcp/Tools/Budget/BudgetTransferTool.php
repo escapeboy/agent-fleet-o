@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Budget;
 use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class BudgetTransferTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'budget_transfer';
 
     protected string $description = 'Reserve credits for a specific agent or experiment by creating a debit/reservation entry in the credit ledger.';
@@ -34,12 +37,12 @@ class BudgetTransferTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $amount = (float) $request->get('amount');
         if ($amount <= 0) {
-            return Response::error('Amount must be greater than zero.');
+            return $this->invalidArgumentError('Amount must be greater than zero.');
         }
 
         $entry = DB::transaction(function () use ($teamId, $amount, $request) {

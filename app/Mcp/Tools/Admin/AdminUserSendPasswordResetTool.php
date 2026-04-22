@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Admin;
 
 use App\Domain\Shared\Services\DeploymentMode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Password;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class AdminUserSendPasswordResetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'admin_user_send_password_reset';
 
     protected string $description = 'Send a password reset email to a specific user. Super admin only.';
@@ -30,7 +33,7 @@ class AdminUserSendPasswordResetTool extends Tool
     public function handle(Request $request): Response
     {
         if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
-            return Response::error('Access denied: super admin privileges required.');
+            return $this->permissionDeniedError('Access denied: super admin privileges required.');
         }
 
         $user = User::findOrFail($request->get('user_id'));

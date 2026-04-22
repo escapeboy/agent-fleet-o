@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Assistant;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AssistantConversationGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'assistant_conversation_get';
 
     protected string $description = 'Get messages in an assistant conversation.';
@@ -38,7 +41,7 @@ class AssistantConversationGetTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $conversation = AssistantConversation::withoutGlobalScopes()
@@ -47,7 +50,7 @@ class AssistantConversationGetTool extends Tool
             ->first();
 
         if (! $conversation) {
-            return Response::error('Conversation not found.');
+            return $this->notFoundError('conversation');
         }
 
         $limit = min((int) ($request->get('limit') ?? 50), 200);

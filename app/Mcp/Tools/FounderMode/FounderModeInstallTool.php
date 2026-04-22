@@ -9,6 +9,7 @@ use App\Domain\Marketplace\Models\MarketplaceInstallation;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Shared\Exceptions\PlanLimitExceededException;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -20,6 +21,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class FounderModeInstallTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'founder_mode_install';
 
     protected string $description = 'Install the Founder Mode marketplace pack for the current team. Clones 6 persona agents, 20 framework-tagged skills, and 5 workflow templates. Idempotent: returns existing installation if already installed.';
@@ -35,7 +38,7 @@ class FounderModeInstallTool extends Tool
         $userId = Auth::user()?->id;
 
         if ($teamId === null || $userId === null) {
-            return Response::error('Authenticated team + user context required.');
+            return $this->permissionDeniedError('Authenticated team + user context required.');
         }
 
         $listing = MarketplaceListing::withoutGlobalScopes()
@@ -43,7 +46,7 @@ class FounderModeInstallTool extends Tool
             ->first();
 
         if (! $listing) {
-            return Response::error('Founder Mode pack has not been seeded on this instance.');
+            return $this->failedPreconditionError('Founder Mode pack has not been seeded on this instance.');
         }
 
         $existing = MarketplaceInstallation::withoutGlobalScopes()
@@ -64,7 +67,7 @@ class FounderModeInstallTool extends Tool
         try {
             $installation = app(InstallFromMarketplaceAction::class)->execute($listing, $teamId, $userId);
         } catch (PlanLimitExceededException $e) {
-            return Response::error('Plan limit exceeded: '.$e->getMessage());
+            return $this->resourceExhaustedError('Plan limit exceeded: '.$e->getMessage());
         }
 
         return Response::text(json_encode([

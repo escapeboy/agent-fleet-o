@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\GitRepository;
 use App\Domain\GitRepository\Models\GitPullRequest;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class GitPullRequestMergeTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'git_pr_merge';
 
     protected string $description = 'Merge a pull request in a git repository. Supports squash, merge, and rebase strategies. By default validates CI status before merging.';
@@ -43,12 +46,12 @@ class GitPullRequestMergeTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         try {
@@ -61,11 +64,11 @@ class GitPullRequestMergeTool extends Tool
                 $status = $client->getPullRequestStatus($prNumber);
 
                 if ($status['mergeable'] === false) {
-                    return Response::error("PR #{$prNumber} is not mergeable (conflicts or state mismatch). Use force=true to bypass.");
+                    return $this->failedPreconditionError("PR #{$prNumber} is not mergeable (conflicts or state mismatch). Use force=true to bypass.");
                 }
 
                 if (! $status['ci_passing'] && $status['mergeable'] !== null) {
-                    return Response::error("PR #{$prNumber} has failing or pending CI checks. Use force=true to merge anyway.");
+                    return $this->failedPreconditionError("PR #{$prNumber} has failing or pending CI checks. Use force=true to merge anyway.");
                 }
             }
 
@@ -89,7 +92,7 @@ class GitPullRequestMergeTool extends Tool
                 'message' => $result['message'],
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Evaluation;
 
 use App\Domain\Evaluation\Actions\CreateFlowEvaluationDatasetAction;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class FlowEvaluationDatasetCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'flow_evaluation_dataset_create';
 
     protected string $description = 'Create a workflow evaluation dataset with test rows. Each row has an input (JSON) and optional expected_output for LLM judge scoring.';
@@ -39,7 +42,7 @@ class FlowEvaluationDatasetCreateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         try {
@@ -58,7 +61,7 @@ class FlowEvaluationDatasetCreateTool extends Tool
                 'row_count' => $dataset->row_count,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

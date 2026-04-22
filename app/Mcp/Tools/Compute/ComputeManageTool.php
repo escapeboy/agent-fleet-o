@@ -7,6 +7,7 @@ use App\Infrastructure\Compute\ComputeProviderManager;
 use App\Infrastructure\Compute\DTOs\ComputeJobDTO;
 use App\Infrastructure\Compute\Services\ComputeCredentialResolver;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -28,6 +29,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ComputeManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'compute_manage';
 
     protected string $description = 'Manage pluggable GPU compute providers (RunPod, Replicate, Fal.ai, Vast.ai). Actions: provider_list, credential_save, credential_check, credential_remove, health_check, run.';
@@ -70,7 +73,7 @@ class ComputeManageTool extends Tool
             'credential_remove' => $this->removeCredential($request, $teamId),
             'health_check' => $this->healthCheck($request, $teamId),
             'run' => $this->runJob($request, $teamId),
-            default => Response::error("Unknown action: {$action}. Valid: provider_list, credential_save, credential_check, credential_remove, health_check, run"),
+            default => $this->invalidArgumentError("Unknown action: {$action}. Valid: provider_list, credential_save, credential_check, credential_remove, health_check, run"),
         };
     }
 
@@ -100,15 +103,15 @@ class ComputeManageTool extends Tool
         $apiKey = $request->get('api_key');
 
         if (! $provider) {
-            return Response::error('provider is required for credential_save');
+            return $this->invalidArgumentError('provider is required for credential_save');
         }
 
         if (! $apiKey) {
-            return Response::error('api_key is required for credential_save');
+            return $this->invalidArgumentError('api_key is required for credential_save');
         }
 
         if (! array_key_exists($provider, config('compute_providers.providers', []))) {
-            return Response::error("Unknown provider '{$provider}'. Available: ".implode(', ', array_keys(config('compute_providers.providers', []))));
+            return $this->invalidArgumentError("Unknown provider '{$provider}'. Available: ".implode(', ', array_keys(config('compute_providers.providers', []))));
         }
 
         // Validate credentials via the provider driver
@@ -116,11 +119,11 @@ class ComputeManageTool extends Tool
             $providerInstance = $this->manager->driver($provider);
             $valid = $providerInstance->validateCredentials(['api_key' => $apiKey]);
         } catch (\Throwable $e) {
-            return Response::error("Provider '{$provider}' is not yet available: ".$e->getMessage());
+            throw $e;
         }
 
         if (! $valid) {
-            return Response::error("Credential validation failed for provider '{$provider}'. Check your API key.");
+            return $this->failedPreconditionError("Credential validation failed for provider '{$provider}'. Check your API key.");
         }
 
         TeamProviderCredential::withoutGlobalScopes()->updateOrCreate(
@@ -140,7 +143,7 @@ class ComputeManageTool extends Tool
         $provider = $request->get('provider');
 
         if (! $provider) {
-            return Response::error('provider is required for credential_check');
+            return $this->invalidArgumentError('provider is required for credential_check');
         }
 
         $credentials = $teamId ? $this->credentialResolver->resolve($teamId, $provider) : null;
@@ -158,7 +161,7 @@ class ComputeManageTool extends Tool
             $providerInstance = $this->manager->driver($provider);
             $valid = $providerInstance->validateCredentials($credentials);
         } catch (\Throwable $e) {
-            return Response::error('Credential check failed: '.$e->getMessage());
+            throw $e;
         }
 
         return Response::text(json_encode([
@@ -176,7 +179,7 @@ class ComputeManageTool extends Tool
         $provider = $request->get('provider');
 
         if (! $provider) {
-            return Response::error('provider is required for credential_remove');
+            return $this->invalidArgumentError('provider is required for credential_remove');
         }
 
         $deleted = TeamProviderCredential::withoutGlobalScopes()
@@ -199,7 +202,7 @@ class ComputeManageTool extends Tool
         $endpointId = $request->get('endpoint_id');
 
         if (! $provider || ! $endpointId) {
-            return Response::error('provider and endpoint_id are required for health_check');
+            return $this->invalidArgumentError('provider and endpoint_id are required for health_check');
         }
 
         $credentials = $teamId ? ($this->credentialResolver->resolve($teamId, $provider) ?? []) : [];
@@ -216,7 +219,7 @@ class ComputeManageTool extends Tool
 
             $health = $providerInstance->health($job);
         } catch (\Throwable $e) {
-            return Response::error('Health check failed: '.$e->getMessage());
+            throw $e;
         }
 
         return Response::text(json_encode([
@@ -236,17 +239,17 @@ class ComputeManageTool extends Tool
         $endpointId = $request->get('endpoint_id');
 
         if (! $endpointId) {
-            return Response::error('endpoint_id is required for run');
+            return $this->invalidArgumentError('endpoint_id is required for run');
         }
 
         if (! $teamId) {
-            return Response::error('Team context is required to resolve credentials.');
+            return $this->permissionDeniedError('Team context is required to resolve credentials.');
         }
 
         try {
             $credentials = $this->credentialResolver->resolveOrFail($teamId, $provider);
         } catch (\RuntimeException $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
 
         $useSync = (bool) ($request->get('use_sync', true));
@@ -266,7 +269,7 @@ class ComputeManageTool extends Tool
             $providerInstance = $this->manager->driver($provider);
             $result = $providerInstance->runSync($job);
         } catch (\Throwable $e) {
-            return Response::error('Compute run failed: '.$e->getMessage());
+            throw $e;
         }
 
         return Response::text(json_encode([

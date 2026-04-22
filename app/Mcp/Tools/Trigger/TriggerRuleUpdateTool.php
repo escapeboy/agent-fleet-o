@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Trigger;
 use App\Domain\Trigger\Actions\UpdateTriggerRuleAction;
 use App\Domain\Trigger\Models\TriggerRule;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class TriggerRuleUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'trigger_rule_update';
 
     protected string $description = 'Update a trigger rule. Only provided fields are changed.';
@@ -49,11 +52,11 @@ class TriggerRuleUpdateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $rule = TriggerRule::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('rule_id'));
         if (! $rule) {
-            return Response::error('Trigger rule not found.');
+            return $this->notFoundError('trigger rule');
         }
 
         $attributes = array_filter([

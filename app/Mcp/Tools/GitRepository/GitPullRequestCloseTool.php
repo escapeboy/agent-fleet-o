@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\GitRepository;
 use App\Domain\GitRepository\Models\GitPullRequest;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class GitPullRequestCloseTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'git_pr_close';
 
     protected string $description = 'Close (abandon) a pull request without merging it. The branch is not deleted.';
@@ -34,12 +37,12 @@ class GitPullRequestCloseTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         try {
@@ -59,7 +62,7 @@ class GitPullRequestCloseTool extends Tool
                 'status' => 'closed',
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

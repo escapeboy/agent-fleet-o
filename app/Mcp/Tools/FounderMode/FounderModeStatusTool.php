@@ -7,6 +7,7 @@ namespace App\Mcp\Tools\FounderMode;
 use App\Domain\Marketplace\Models\MarketplaceInstallation;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -20,6 +21,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class FounderModeStatusTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'founder_mode_status';
 
     protected string $description = 'Report whether the Founder Mode marketplace pack is installed for the current team. Returns listing availability + installation timestamps + installed entity ids.';
@@ -34,7 +37,7 @@ class FounderModeStatusTool extends Tool
         $teamId = app('mcp.team_id') ?? Auth::user()?->current_team_id;
 
         if ($teamId === null) {
-            return Response::error('No team context available.');
+            return $this->permissionDeniedError('No team context available.');
         }
 
         $listing = MarketplaceListing::withoutGlobalScopes()

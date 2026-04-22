@@ -9,6 +9,7 @@ use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -19,6 +20,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class MarketplacePublishTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'marketplace_publish';
 
     protected string $description = 'Publish a skill, agent, workflow, or bundle to the marketplace.';
@@ -66,7 +69,7 @@ class MarketplacePublishTool extends Tool
             if ($validated['entity_type'] === 'bundle') {
                 $items = $validated['bundle_items'] ?? [];
                 if (count($items) < 2) {
-                    return Response::error('A bundle requires at least 2 items.');
+                    return $this->invalidArgumentError('A bundle requires at least 2 items.');
                 }
 
                 $listing = app(PublishBundleAction::class)->execute(
@@ -85,7 +88,7 @@ class MarketplacePublishTool extends Tool
                 };
 
                 if (! $entity) {
-                    return Response::error(ucfirst($validated['entity_type']).' not found.');
+                    return $this->notFoundError($validated['entity_type']);
                 }
 
                 $listing = app(PublishToMarketplaceAction::class)->execute(
@@ -106,7 +109,7 @@ class MarketplacePublishTool extends Tool
                 'type' => $listing->type,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

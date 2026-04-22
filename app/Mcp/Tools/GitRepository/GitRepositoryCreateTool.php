@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\GitRepository;
 use App\Domain\GitRepository\Actions\CreateGitRepositoryAction;
 use App\Domain\GitRepository\Enums\GitProvider;
 use App\Domain\GitRepository\Enums\GitRepoMode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class GitRepositoryCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'git_repository_create';
 
     protected string $description = <<<'DESC'
@@ -57,7 +60,7 @@ DESC;
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $validated = $request->validate([
@@ -91,7 +94,7 @@ DESC;
                 'mode' => $repo->mode->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

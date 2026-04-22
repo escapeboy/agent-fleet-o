@@ -7,6 +7,7 @@ use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -23,6 +24,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class BorunaRunTool extends McpTool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'boruna_run';
 
     protected string $description = 'Execute a Boruna deterministic .ax script. Runs in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call, etc.). Use inline mode for ad-hoc scripts or skill mode for saved reusable scripts.';
@@ -74,13 +77,13 @@ class BorunaRunTool extends McpTool
         $script = $validated['script'] ?? null;
 
         if (! $script) {
-            return Response::error('script is required in inline mode.');
+            return $this->invalidArgumentError('script is required in inline mode.');
         }
 
         $tool = $this->resolveBorунaTool($teamId, $validated['boruna_tool_id'] ?? null);
 
         if (! $tool) {
-            return Response::error('No active Boruna tool found. Create an mcp_stdio Tool pointing to the Boruna binary.');
+            return $this->failedPreconditionError('No active Boruna tool found. Create an mcp_stdio Tool pointing to the Boruna binary.');
         }
 
         $policy = $validated['policy'] ?? 'deny-all';
@@ -100,7 +103,7 @@ class BorunaRunTool extends McpTool
                 'output' => $output,
             ]));
         } catch (\Throwable $e) {
-            return Response::error("Boruna execution failed: {$e->getMessage()}");
+            throw $e;
         }
     }
 
@@ -109,7 +112,7 @@ class BorunaRunTool extends McpTool
         $skillId = $validated['skill_id'] ?? null;
 
         if (! $skillId) {
-            return Response::error('skill_id is required in skill mode.');
+            return $this->invalidArgumentError('skill_id is required in skill mode.');
         }
 
         $skill = Skill::where('id', $skillId)
@@ -118,7 +121,7 @@ class BorunaRunTool extends McpTool
             ->first();
 
         if (! $skill) {
-            return Response::error('Boruna skill not found.');
+            return $this->notFoundError('Boruna skill');
         }
 
         try {
@@ -139,7 +142,7 @@ class BorunaRunTool extends McpTool
                 'duration_ms' => $result['execution']->duration_ms,
             ]));
         } catch (\Throwable $e) {
-            return Response::error("Boruna skill execution failed: {$e->getMessage()}");
+            throw $e;
         }
     }
 

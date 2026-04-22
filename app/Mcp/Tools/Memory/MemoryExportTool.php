@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Models\Memory;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class MemoryExportTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'memory_export';
 
     protected string $description = 'Export all memory entries for the team as a JSON array (for backup).';
@@ -32,7 +35,7 @@ class MemoryExportTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $limit = min((int) ($request->get('limit', 500)), 1000);

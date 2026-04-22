@@ -6,6 +6,7 @@ namespace App\Mcp\Tools\GitRepository;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\CodeSkimmingService;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -25,6 +26,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class CodeSkimFileTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'code_skim_file';
 
     protected string $description = 'Get a signatures-only view of a file — quickly see what\'s in a file without reading full content.';
@@ -47,7 +50,7 @@ class CodeSkimFileTool extends Tool
         $repo = GitRepository::where('team_id', $teamId)->find($request->get('git_repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         $filePath = (string) $request->get('file_path');

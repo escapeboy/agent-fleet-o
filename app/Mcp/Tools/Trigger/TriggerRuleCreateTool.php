@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Trigger;
 
 use App\Domain\Trigger\Actions\CreateTriggerRuleAction;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class TriggerRuleCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'trigger_rule_create';
 
     protected string $description = 'Create a trigger rule that automatically runs a project when a matching signal arrives.';
@@ -46,7 +49,7 @@ class TriggerRuleCreateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $rule = app(CreateTriggerRuleAction::class)->execute(

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Website;
 
 use App\Domain\Website\Actions\ExecuteWebsiteCommandAction;
 use App\Domain\Website\Models\Website;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use InvalidArgumentException;
 use Laravel\Mcp\Request;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WebsiteExecuteCommandTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'website_execute_command';
 
     protected string $description = 'Execute a management command on a website using its assigned managing crew.';
@@ -37,7 +40,7 @@ class WebsiteExecuteCommandTool extends Tool
         $website = Website::with('pages')->find($request->get('website_id'));
 
         if (! $website) {
-            return Response::error('Website not found.');
+            return $this->notFoundError('website');
         }
 
         try {
@@ -47,7 +50,7 @@ class WebsiteExecuteCommandTool extends Tool
                 pageId: $request->get('page_id') ?: null,
             );
         } catch (InvalidArgumentException $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
 
         return Response::text(json_encode([

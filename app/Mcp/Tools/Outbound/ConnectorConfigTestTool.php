@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Outbound;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ConnectorConfigTestTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'connector_config_test';
 
     protected string $description = 'Test an outbound connector config connection. Sends a real test message/request. Updates last_tested_at and last_test_status.';
@@ -33,19 +36,19 @@ class ConnectorConfigTestTool extends Tool
         $channel = $request->get('channel');
 
         if (! $id && ! $channel) {
-            return Response::error('Provide either id or channel');
+            return $this->invalidArgumentError('Provide either id or channel');
         }
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $config = $id
             ? OutboundConnectorConfig::withoutGlobalScopes()->where('team_id', $teamId)->find($id)
             : OutboundConnectorConfig::withoutGlobalScopes()->where('team_id', $teamId)->where('channel', $channel)->first();
 
         if (! $config) {
-            return Response::error('Connector config not found');
+            return $this->notFoundError('connector config');
         }
 
         $creds = $config->credentials ?? [];

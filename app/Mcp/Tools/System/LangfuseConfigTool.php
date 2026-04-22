@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\System;
 
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('write')]
 class LangfuseConfigTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'langfuse_config';
 
     protected string $description = 'Get or update Langfuse LLMOps trace export configuration. Langfuse receives a trace for every LLM gateway call (fire-and-forget). Actions: get — read current config; update — write new values (admin/owner only).';
@@ -53,7 +56,7 @@ class LangfuseConfigTool extends Tool
             return $this->handleUpdate($request);
         }
 
-        return Response::error("Unknown action: {$action}");
+        return $this->invalidArgumentError("Unknown action: {$action}");
     }
 
     #[IsReadOnly]
@@ -84,7 +87,7 @@ class LangfuseConfigTool extends Tool
     private function handleUpdate(Request $request): Response
     {
         if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
-            return Response::error('Access denied: super admin privileges required.');
+            return $this->permissionDeniedError('Access denied: super admin privileges required.');
         }
 
         /** @var array<string, mixed> $current */
@@ -97,7 +100,7 @@ class LangfuseConfigTool extends Tool
         if ($request->has('host')) {
             $host = (string) $request->input('host');
             if (parse_url($host, PHP_URL_SCHEME) !== 'https') {
-                return Response::error('host must use https.');
+                return $this->invalidArgumentError('host must use https.');
             }
             $current['host'] = $host;
         }

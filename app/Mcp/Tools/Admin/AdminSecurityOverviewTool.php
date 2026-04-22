@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Admin;
 
 use App\Domain\Shared\Services\DeploymentMode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class AdminSecurityOverviewTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'admin_security_overview';
 
     protected string $description = 'Get security overview: failed login counts per hour over the last 24 hours, total failed logins, and top offending IPs. Super admin only.';
@@ -27,7 +30,7 @@ class AdminSecurityOverviewTool extends Tool
     public function handle(Request $request): Response
     {
         if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
-            return Response::error('Access denied: super admin privileges required.');
+            return $this->permissionDeniedError('Access denied: super admin privileges required.');
         }
 
         $now = now();

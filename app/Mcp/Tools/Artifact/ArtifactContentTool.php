@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Artifact;
 
 use App\Domain\Experiment\Services\ArtifactContentResolver;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\Artifact;
 use App\Models\ArtifactVersion;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ArtifactContentTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'artifact_content';
 
     protected string $description = 'Get the raw content of an artifact version. Content is truncated at 100KB for MCP transport. For large artifacts use artifact_download_info instead.';
@@ -42,12 +45,12 @@ class ArtifactContentTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $artifact = Artifact::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['artifact_id']);
 
         if (! $artifact) {
-            return Response::error('Artifact not found.');
+            return $this->notFoundError('artifact');
         }
 
         /** @var ArtifactVersion|null $version */
@@ -56,7 +59,7 @@ class ArtifactContentTool extends Tool
             : $artifact->versions()->orderByDesc('version')->first();
 
         if (! $version) {
-            return Response::error('Artifact has no versions.');
+            return $this->failedPreconditionError('Artifact has no versions.');
         }
 
         $content = (string) $version->content;

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\System;
 
 use App\Domain\Metrics\Models\MetricAggregation;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class MetricsAggregationsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'system_metrics_aggregations';
 
     protected string $description = 'Query aggregated metric summaries per period. Supports filtering by period (hourly/daily/weekly/monthly), metric_type, experiment_id, and date range.';
@@ -37,7 +40,7 @@ class MetricsAggregationsTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if ($teamId === null) {
-            return Response::error('Authentication required.');
+            return $this->permissionDeniedError('Authentication required.');
         }
 
         $period = $request->input('period');
@@ -48,11 +51,11 @@ class MetricsAggregationsTool extends Tool
         $limit = min((int) ($request->input('limit') ?? 100), 500);
 
         if ($from !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $from)) {
-            return Response::error('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');
+            return $this->invalidArgumentError('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');
         }
 
         if ($to !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $to)) {
-            return Response::error('Invalid date format for "to". Use ISO 8601 (YYYY-MM-DD).');
+            return $this->invalidArgumentError('Invalid date format for "to". Use ISO 8601 (YYYY-MM-DD).');
         }
 
         $aggregations = MetricAggregation::withoutGlobalScopes()

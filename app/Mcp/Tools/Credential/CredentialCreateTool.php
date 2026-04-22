@@ -7,6 +7,7 @@ use App\Domain\Credential\Actions\CreateCredentialAction;
 use App\Domain\Credential\Enums\CredentialSource;
 use App\Domain\Credential\Enums\CredentialType;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CredentialCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'credential_create';
 
     protected string $description = 'Creates a credential. Pass agent_id when an agent is the creator — the credential will start as pending_review and require human approval before use. WARNING: secret_data is stored encrypted but flows through the current session.';
@@ -55,7 +58,7 @@ class CredentialCreateTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         try {
@@ -69,7 +72,7 @@ class CredentialCreateTool extends Tool
                     ->find($validated['agent_id']);
 
                 if (! $agent) {
-                    return Response::error('Agent not found.');
+                    return $this->notFoundError('agent');
                 }
 
                 $creatorSource = CredentialSource::Agent;
@@ -101,7 +104,7 @@ class CredentialCreateTool extends Tool
                     : null,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

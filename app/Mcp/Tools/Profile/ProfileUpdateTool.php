@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Profile;
 
 use App\Actions\Fortify\UpdateUserProfileInformation;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ProfileUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'profile_update';
 
     protected string $description = 'Update the current user\'s name and/or email address.';
@@ -30,7 +33,7 @@ class ProfileUpdateTool extends Tool
         $user = auth()->user();
 
         if (! $user) {
-            return Response::error('Not authenticated.');
+            return $this->permissionDeniedError('Not authenticated.');
         }
 
         $input = [
@@ -41,7 +44,7 @@ class ProfileUpdateTool extends Tool
         try {
             app(UpdateUserProfileInformation::class)->update($user, $input);
         } catch (ValidationException $e) {
-            return Response::error('Validation failed: '.implode(', ', array_merge(...array_values($e->errors()))));
+            return $this->invalidArgumentError('Validation failed: '.implode(', ', array_merge(...array_values($e->errors()))));
         }
 
         return Response::text(json_encode([

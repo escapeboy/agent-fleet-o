@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Artifact;
 
 use App\Domain\Experiment\Services\ArtifactContentResolver;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\Artifact;
 use App\Models\ArtifactVersion;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -19,6 +20,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ArtifactDownloadTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'artifact_download_info';
 
     protected string $description = 'Get download metadata for an artifact: filename, MIME type, size, and the REST API download URL. Use this for large artifacts that exceed the MCP content limit.';
@@ -43,12 +46,12 @@ class ArtifactDownloadTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $artifact = Artifact::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['artifact_id']);
 
         if (! $artifact) {
-            return Response::error('Artifact not found.');
+            return $this->notFoundError('artifact');
         }
 
         /** @var ArtifactVersion|null $version */
@@ -57,7 +60,7 @@ class ArtifactDownloadTool extends Tool
             : $artifact->versions()->orderByDesc('version')->first();
 
         if (! $version) {
-            return Response::error('Artifact has no versions.');
+            return $this->failedPreconditionError('Artifact has no versions.');
         }
 
         $content = (string) $version->content;

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\GitRepository;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -19,6 +20,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class GitChangelogTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'git_changelog_generate';
 
     protected string $description = 'Generate a changelog entry from git commit history between two refs. Groups commits by conventional commit type (feat, fix, chore, docs, etc.) and formats a Markdown changelog.';
@@ -45,12 +48,12 @@ class GitChangelogTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         $version = $request->get('version');
@@ -85,7 +88,7 @@ class GitChangelogTool extends Tool
                 'groups' => $groups,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 

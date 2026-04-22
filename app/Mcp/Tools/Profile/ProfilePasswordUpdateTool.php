@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Profile;
 
 use App\Actions\Fortify\UpdateUserPassword;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ProfilePasswordUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'profile_password_update';
 
     protected string $description = 'Update the current user\'s password. Provide current_password if the user already has a password set; omit it to set a password for the first time (social-only accounts).';
@@ -34,7 +37,7 @@ class ProfilePasswordUpdateTool extends Tool
         $user = auth()->user();
 
         if (! $user) {
-            return Response::error('Not authenticated.');
+            return $this->permissionDeniedError('Not authenticated.');
         }
 
         $newPassword = $request->get('password');
@@ -43,7 +46,7 @@ class ProfilePasswordUpdateTool extends Tool
         if ($user->password !== null) {
             // Change existing password — use Fortify action (validates current_password)
             if (! $request->get('current_password')) {
-                return Response::error('current_password is required to change an existing password.');
+                return $this->invalidArgumentError('current_password is required to change an existing password.');
             }
 
             try {
@@ -53,7 +56,7 @@ class ProfilePasswordUpdateTool extends Tool
                     'password_confirmation' => $confirmation,
                 ]);
             } catch (ValidationException $e) {
-                return Response::error('Validation failed: '.implode(', ', array_merge(...array_values($e->errors()))));
+                return $this->invalidArgumentError('Validation failed: '.implode(', ', array_merge(...array_values($e->errors()))));
             }
         } else {
             // Set initial password (social-only account)
@@ -65,7 +68,7 @@ class ProfilePasswordUpdateTool extends Tool
                     'password' => ['required', 'string', Password::default(), 'confirmed'],
                 ])->validate();
             } catch (ValidationException $e) {
-                return Response::error('Validation failed: '.implode(', ', array_merge(...array_values($e->errors()))));
+                return $this->invalidArgumentError('Validation failed: '.implode(', ', array_merge(...array_values($e->errors()))));
             }
 
             $user->forceFill(['password' => Hash::make($newPassword)])->save();

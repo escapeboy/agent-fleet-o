@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Marketplace;
 use App\Domain\Marketplace\Actions\InstallFromMarketplaceAction;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class MarketplaceInstallTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'marketplace_install';
 
     protected string $description = 'Install a marketplace listing into your team workspace. Clones the skill/agent/workflow/bundle with your team ownership.';
@@ -35,13 +38,13 @@ class MarketplaceInstallTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $listing = MarketplaceListing::where('slug', $validated['listing_slug'])->first();
 
         if (! $listing) {
-            return Response::error('Marketplace listing not found.');
+            return $this->notFoundError('marketplace listing');
         }
 
         try {
@@ -58,7 +61,7 @@ class MarketplaceInstallTool extends Tool
                 'installed_version' => $installation->installed_version,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

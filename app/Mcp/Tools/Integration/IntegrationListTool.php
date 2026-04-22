@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Integration;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class IntegrationListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'integration_list';
 
     protected string $description = 'List connected integrations and available drivers (GitHub, Slack, Notion, Linear, etc.).';
@@ -39,7 +42,7 @@ class IntegrationListTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $query = Integration::withoutGlobalScopes()->where('team_id', $teamId);

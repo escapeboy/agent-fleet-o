@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\GitRepository;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\RepoMapGenerator;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Mcp\Request;
@@ -18,6 +19,8 @@ use Symfony\Component\Process\Process;
 #[IsIdempotent]
 class ExperimentRepoMapTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_get_repo_map';
 
     protected string $description = 'Returns the current repository map (file tree + key signatures) for all git repositories linked to the agent running the given experiment. The map is cached per HEAD commit SHA and refreshed automatically on new commits.';
@@ -35,7 +38,7 @@ class ExperimentRepoMapTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $experiment = Experiment::withoutGlobalScopes()
@@ -43,12 +46,12 @@ class ExperimentRepoMapTool extends Tool
             ->find($request->get('experiment_id'));
 
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         $agentId = $experiment->agent_id ?? null;
         if (! $agentId) {
-            return Response::error('Experiment has no linked agent.');
+            return $this->failedPreconditionError('Experiment has no linked agent.');
         }
 
         // Load agent to get git_repository_ids

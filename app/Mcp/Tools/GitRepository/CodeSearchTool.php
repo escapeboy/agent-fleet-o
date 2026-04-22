@@ -6,6 +6,7 @@ namespace App\Mcp\Tools\GitRepository;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\CodeRetriever;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
@@ -23,6 +24,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class CodeSearchTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'code_search';
 
     protected string $description = 'Search code elements (classes, functions, methods) in a Git repository using hybrid semantic + keyword search.';
@@ -53,7 +56,7 @@ class CodeSearchTool extends Tool
         $repo = GitRepository::where('team_id', $teamId)->find($request->get('git_repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         $limit = (int) ($request->get('limit') ?? 5);

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Testing;
 
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class LintTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'lint_run';
 
     protected string $description = 'Run linting and static analysis on a repository. Supports PHP Pint, PHPStan, ESLint, Prettier, flake8, black, mypy, and custom commands. Returns issues and violations.';
@@ -46,12 +49,12 @@ class LintTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         $linter = $request->get('linter', 'pint');
@@ -80,7 +83,7 @@ class LintTool extends Tool
                 'fixed' => $fix && $this->detectFilesFixed($result['output'], $linter),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 

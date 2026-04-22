@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Profile;
 
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ProfileGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'profile_get';
 
     protected string $description = 'Get the current authenticated user\'s profile information including name, email, 2FA status, and connected social providers.';
@@ -27,7 +30,7 @@ class ProfileGetTool extends Tool
         $user = auth()->user();
 
         if (! $user) {
-            return Response::error('Not authenticated.');
+            return $this->permissionDeniedError('Not authenticated.');
         }
 
         $twoFactorEnabled = $user->two_factor_secret && $user->two_factor_confirmed_at;

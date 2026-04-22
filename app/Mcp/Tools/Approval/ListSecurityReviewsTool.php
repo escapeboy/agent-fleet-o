@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Approval;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ListSecurityReviewsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'approval_security_reviews_list';
 
     protected string $description = 'List pending security review approval requests for high-risk contacts.';
@@ -36,7 +39,7 @@ class ListSecurityReviewsTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $includeResolved = (bool) $request->get('include_resolved', false);

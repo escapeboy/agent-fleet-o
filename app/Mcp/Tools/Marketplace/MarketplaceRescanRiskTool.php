@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Marketplace;
 use App\Domain\Marketplace\Jobs\ScanListingRiskJob;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class MarketplaceRescanRiskTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'marketplace_rescan_risk';
 
     protected string $description = 'Trigger an AI security rescan for a marketplace listing. The scan runs asynchronously and updates the listing\'s risk_scan field.';
@@ -39,11 +42,11 @@ class MarketplaceRescanRiskTool extends Tool
         $listing = MarketplaceListing::withoutGlobalScopes()->find($validated['listing_id']);
 
         if (! $listing) {
-            return Response::error('Listing not found.');
+            return $this->notFoundError('listing');
         }
 
         if (! in_array($listing->type, ['skill', 'agent', 'workflow'], true)) {
-            return Response::error("Risk scanning is not supported for listing type: {$listing->type}");
+            return $this->failedPreconditionError("Risk scanning is not supported for listing type: {$listing->type}");
         }
 
         ScanListingRiskJob::dispatch($listing->id)->onQueue('default');

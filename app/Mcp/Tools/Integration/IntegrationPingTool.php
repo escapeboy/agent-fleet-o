@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Integration;
 use App\Domain\Integration\Actions\PingIntegrationAction;
 use App\Domain\Integration\Models\Integration;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class IntegrationPingTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'integration_ping';
 
     protected string $description = 'Health-check a connected integration to verify credentials are still valid.';
@@ -37,7 +40,7 @@ class IntegrationPingTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $integration = Integration::withoutGlobalScopes()
@@ -46,7 +49,7 @@ class IntegrationPingTool extends Tool
             ->first();
 
         if (! $integration) {
-            return Response::error('Integration not found.');
+            return $this->notFoundError('integration');
         }
 
         $result = $this->action->execute($integration);

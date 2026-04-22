@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Testing;
 
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class TestRunnerTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'test_run';
 
     protected string $description = 'Run the test suite for a repository. Supports PHPUnit, Pest, Jest, pytest, Go test, and custom commands. Returns pass/fail counts and failure details.';
@@ -44,12 +47,12 @@ class TestRunnerTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         $framework = $request->get('framework', 'phpunit');
@@ -77,7 +80,7 @@ class TestRunnerTool extends Tool
                 'duration_seconds' => $result['duration'],
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Credential;
 use App\Domain\Credential\Actions\UpdateCredentialAction;
 use App\Domain\Credential\Models\Credential;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CredentialUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'credential_update';
 
     protected string $description = 'Update an existing credential metadata. Only provided fields will be changed. Use credential rotation to change secrets.';
@@ -42,18 +45,18 @@ class CredentialUpdateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $credential = Credential::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['credential_id']);
 
         if (! $credential) {
-            return Response::error('Credential not found.');
+            return $this->notFoundError('credential');
         }
 
         $hasUpdates = ($validated['name'] ?? null) !== null || ($validated['description'] ?? null) !== null;
 
         if (! $hasUpdates) {
-            return Response::error('No fields to update. Provide at least one of: name, description.');
+            return $this->invalidArgumentError('No fields to update. Provide at least one of: name, description.');
         }
 
         try {
@@ -73,7 +76,7 @@ class CredentialUpdateTool extends Tool
                 ], fn ($v) => $v !== null)),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

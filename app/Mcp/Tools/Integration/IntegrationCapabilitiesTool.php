@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Integration;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class IntegrationCapabilitiesTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'integration_capabilities';
 
     protected string $description = 'List available actions and triggers for a connected integration driver.';
@@ -47,14 +50,14 @@ class IntegrationCapabilitiesTool extends Tool
                 ->first();
 
             if (! $integration) {
-                return Response::error('Integration not found.');
+                return $this->notFoundError('integration');
             }
 
             $driverSlug = $integration->driver;
         }
 
         if (! $driverSlug) {
-            return Response::error('Provide integration_id or driver.');
+            return $this->invalidArgumentError('Provide integration_id or driver.');
         }
 
         try {
@@ -75,7 +78,7 @@ class IntegrationCapabilitiesTool extends Tool
                 ], $driver->triggers()),
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Driver not found: '.$e->getMessage());
+            return $this->notFoundError('driver');
         }
     }
 }

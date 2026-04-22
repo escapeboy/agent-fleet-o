@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Admin;
 
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Services\DeploymentMode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class AdminBillingApplyCreditTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'admin_billing_apply_credit';
 
     protected string $description = 'Apply a Stripe balance credit (in cents) to a team. Negative amounts add credit. Super admin only.';
@@ -35,7 +38,7 @@ class AdminBillingApplyCreditTool extends Tool
     public function handle(Request $request): Response
     {
         if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
-            return Response::error('Access denied: super admin privileges required.');
+            return $this->permissionDeniedError('Access denied: super admin privileges required.');
         }
 
         $team = Team::withoutGlobalScopes()->findOrFail($request->get('team_id'));

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Admin;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Shared\Services\DeploymentMode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class AdminUserRevokeSessionsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'admin_user_revoke_sessions';
 
     protected string $description = 'Revoke all API tokens for a user, effectively forcing them to re-authenticate. Super admin only.';
@@ -31,7 +34,7 @@ class AdminUserRevokeSessionsTool extends Tool
     public function handle(Request $request): Response
     {
         if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
-            return Response::error('Access denied: super admin privileges required.');
+            return $this->permissionDeniedError('Access denied: super admin privileges required.');
         }
 
         $user = User::findOrFail($request->get('user_id'));

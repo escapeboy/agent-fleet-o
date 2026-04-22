@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Budget;
 
 use App\Domain\Budget\Models\CreditLedger;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class BudgetLedgerTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'budget_ledger';
 
     protected string $description = 'Get detailed credit ledger entries for the team.';
@@ -33,7 +36,7 @@ class BudgetLedgerTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $limit = min((int) ($request->get('limit', 50)), 200);

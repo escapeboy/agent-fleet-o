@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Integration;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Models\Integration;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class IntegrationExecuteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'integration_execute';
 
     protected string $description = 'Execute an action on a connected integration, e.g. create_issue on GitHub, send_message on Slack.';
@@ -40,7 +43,7 @@ class IntegrationExecuteTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $integration = Integration::withoutGlobalScopes()
@@ -49,14 +52,14 @@ class IntegrationExecuteTool extends Tool
             ->first();
 
         if (! $integration) {
-            return Response::error('Integration not found.');
+            return $this->notFoundError('integration');
         }
 
         // Use integration_action (not action, which is consumed by the CompactTool dispatcher)
         $actionKey = $request->get('integration_action') ?? $request->get('action');
 
         if (! $actionKey || $actionKey === 'execute') {
-            return Response::error('integration_action is required (e.g. post_tweet, create_issue).');
+            return $this->invalidArgumentError('integration_action is required (e.g. post_tweet, create_issue).');
         }
 
         try {
@@ -68,7 +71,7 @@ class IntegrationExecuteTool extends Tool
 
             return Response::text(json_encode(['success' => true, 'result' => $result]));
         } catch (\Throwable $e) {
-            return Response::error('Execute failed: '.$e->getMessage());
+            throw $e;
         }
     }
 }

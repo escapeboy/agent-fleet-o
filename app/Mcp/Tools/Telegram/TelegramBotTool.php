@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Telegram;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('write')]
 class TelegramBotTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'telegram_bot_manage';
 
     protected string $description = 'Get status, configure, or disconnect the Telegram bot for the current team.';
@@ -44,7 +47,7 @@ class TelegramBotTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $action = $request->get('action', 'status');
@@ -72,7 +75,7 @@ class TelegramBotTool extends Tool
         if ($action === 'register') {
             $botToken = $request->get('bot_token');
             if (! $botToken) {
-                return Response::error('bot_token is required for register action.');
+                return $this->invalidArgumentError('bot_token is required for register action.');
             }
 
             $bot = app(RegisterTelegramBotAction::class)->execute(
@@ -95,6 +98,6 @@ class TelegramBotTool extends Tool
             return Response::text('Telegram bot disconnected.');
         }
 
-        return Response::error("Unknown action: {$action}");
+        return $this->invalidArgumentError("Unknown action: {$action}");
     }
 }

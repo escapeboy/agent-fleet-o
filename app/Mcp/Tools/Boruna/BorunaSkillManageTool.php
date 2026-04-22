@@ -6,6 +6,7 @@ use App\Domain\Skill\Actions\CreateSkillAction;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class BorunaSkillManageTool extends McpTool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'boruna_skill_manage';
 
     protected string $description = 'Manage Boruna script skills. Create new boruna_script skills with inline .ax code, list existing Boruna skills, get skill details, or list recent execution history.';
@@ -73,7 +76,7 @@ class BorunaSkillManageTool extends McpTool
     private function create(array $validated, string $teamId): Response
     {
         if (empty($validated['name']) || empty($validated['script'])) {
-            return Response::error('name and script are required for create action.');
+            return $this->invalidArgumentError('name and script are required for create action.');
         }
 
         $policy = $validated['policy'] ?? 'deny-all';
@@ -102,7 +105,7 @@ class BorunaSkillManageTool extends McpTool
                 'policy' => $policy,
             ]));
         } catch (\Throwable $e) {
-            return Response::error("Failed to create Boruna skill: {$e->getMessage()}");
+            throw $e;
         }
     }
 
@@ -137,7 +140,7 @@ class BorunaSkillManageTool extends McpTool
     private function get(?string $skillId, string $teamId): Response
     {
         if (! $skillId) {
-            return Response::error('skill_id is required for get action.');
+            return $this->invalidArgumentError('skill_id is required for get action.');
         }
 
         $skill = Skill::where('id', $skillId)
@@ -146,7 +149,7 @@ class BorunaSkillManageTool extends McpTool
             ->first();
 
         if (! $skill) {
-            return Response::error('Boruna skill not found.');
+            return $this->notFoundError('Boruna skill');
         }
 
         $cfg = is_array($skill->configuration) ? $skill->configuration : [];

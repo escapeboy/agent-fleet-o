@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Evaluation;
 
 use App\Domain\Evaluation\Models\EvaluationRun;
 use App\Domain\Evaluation\Models\EvaluationRunResult;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class FlowEvaluationResultsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'flow_evaluation_results';
 
     protected string $description = 'Read results of a workflow evaluation run. Returns the summary (mean score, pass rate, latency) and per-row results.';
@@ -32,13 +35,13 @@ class FlowEvaluationResultsTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $run = EvaluationRun::with(['dataset', 'workflow'])->find($request->get('run_id'));
 
         if (! $run || $run->team_id !== $teamId) {
-            return Response::error('Evaluation run not found.');
+            return $this->notFoundError('evaluation run');
         }
 
         $payload = [

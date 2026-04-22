@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Credential;
 use App\Domain\Credential\Actions\RotateCredentialSecretAction;
 use App\Domain\Credential\Models\Credential;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CredentialRotateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'credential_rotate';
 
     protected string $description = 'Rotate the secret data for a credential. Replaces the stored secret with new values and updates last_rotated_at.';
@@ -40,12 +43,12 @@ class CredentialRotateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $credential = Credential::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['credential_id']);
 
         if (! $credential) {
-            return Response::error('Credential not found.');
+            return $this->notFoundError('credential');
         }
 
         try {
@@ -63,7 +66,7 @@ class CredentialRotateTool extends Tool
                 'updated_at' => $credential->updated_at->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Webhook;
 use App\Domain\Webhook\Enums\WebhookEvent;
 use App\Domain\Webhook\Models\WebhookEndpoint;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class WebhookUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'webhook_update';
 
     protected string $description = 'Update a webhook endpoint. You can change name, URL, subscribed events, active status, or headers.';
@@ -43,12 +46,12 @@ class WebhookUpdateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $endpoint = WebhookEndpoint::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['webhook_id']);
 
         if (! $endpoint) {
-            return Response::error('Webhook endpoint not found.');
+            return $this->notFoundError('webhook endpoint');
         }
 
         $updates = array_filter([
@@ -59,7 +62,7 @@ class WebhookUpdateTool extends Tool
         ], fn ($v) => $v !== null);
 
         if (empty($updates)) {
-            return Response::error('No fields to update. Provide name, url, events, or is_active.');
+            return $this->invalidArgumentError('No fields to update. Provide name, url, events, or is_active.');
         }
 
         // Validate event values if provided
@@ -67,7 +70,7 @@ class WebhookUpdateTool extends Tool
             $validEvents = array_column(WebhookEvent::cases(), 'value');
             foreach ($updates['events'] as $event) {
                 if ($event !== '*' && ! in_array($event, $validEvents)) {
-                    return Response::error("Invalid event: {$event}. Valid events: ".implode(', ', $validEvents).', *');
+                    return $this->invalidArgumentError("Invalid event: {$event}. Valid events: ".implode(', ', $validEvents).', *');
                 }
             }
         }

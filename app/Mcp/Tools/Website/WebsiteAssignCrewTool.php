@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Website;
 
 use App\Domain\Website\Actions\AssignWebsiteCrewAction;
 use App\Domain\Website\Models\Website;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use InvalidArgumentException;
 use Laravel\Mcp\Request;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WebsiteAssignCrewTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'website_assign_crew';
 
     protected string $description = 'Assign or unassign a managing crew to a website.';
@@ -34,13 +37,13 @@ class WebsiteAssignCrewTool extends Tool
         $website = Website::find($request->get('website_id'));
 
         if (! $website) {
-            return Response::error('Website not found.');
+            return $this->notFoundError('website');
         }
 
         try {
             app(AssignWebsiteCrewAction::class)->execute($website, $request->get('crew_id') ?: null);
         } catch (InvalidArgumentException $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
 
         $website->refresh()->load('managingCrew');
