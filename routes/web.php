@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgentCardController;
+use App\Http\Controllers\WellKnownFleetQController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
@@ -119,6 +120,13 @@ use Illuminate\Support\Facades\Route;
 // A2A Agent Card — public discovery endpoint (RFC 8615 well-known URI, no auth required)
 Route::get('/.well-known/agent.json', AgentCardController::class)
     ->name('a2a.agent-card')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+// FleetQ discovery — public, unauthenticated. Returns auth + endpoints so MCP-compatible
+// clients (OpenCode, Claude Code, Codex) can self-configure with a single URL.
+Route::get('/.well-known/fleetq', WellKnownFleetQController::class)
+    ->name('well-known.fleetq')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
 

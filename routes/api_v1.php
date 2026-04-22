@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AssistantController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BootstrapController;
 use App\Http\Controllers\Api\V1\BridgeController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\BugReportProjectConfigController;
@@ -89,6 +90,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Current user
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/me', [AuthController::class, 'updateMe']);
+    Route::get('/me/bootstrap', BootstrapController::class)->name('api.v1.me.bootstrap');
     Route::get('/me/social-accounts', [AuthController::class, 'socialAccounts']);
     Route::delete('/me/social-accounts/{provider}', [AuthController::class, 'unlinkSocialAccount']);
 
