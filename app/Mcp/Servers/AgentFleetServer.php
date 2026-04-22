@@ -6,6 +6,8 @@ use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Resources\ApprovalsResource;
 use App\Mcp\Tools\A2ui\A2uiComponentCatalogTool;
+use App\Mcp\Tools\Codemode\CodemodeExecuteTool;
+use App\Mcp\Tools\Codemode\CodemodeSearchTool;
 use App\Mcp\Tools\A2ui\A2uiRenderSurfaceTool;
 use App\Mcp\Tools\A2ui\A2uiValidateSurfaceTool;
 use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
@@ -1088,6 +1090,11 @@ class AgentFleetServer extends Server
         WebsiteAnalyticsTool::class,
         WebsiteDeployTool::class,
         WebsiteDeploymentListTool::class,
+
+        // Code Mode (2) — lazy tool discovery + dispatch for agents that want to
+        // avoid loading every tool schema upfront. Pair search + execute.
+        CodemodeSearchTool::class,
+        CodemodeExecuteTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */
