@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Chatbot;
 
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ChatbotListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'chatbot_list';
 
     protected string $description = 'List chatbots for the current team. Returns id, name, slug, type, status, channel count.';
@@ -35,7 +38,7 @@ class ChatbotListTool extends Tool
     public function handle(Request $request): Response
     {
         if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
-            return Response::error('Chatbot feature is not enabled for this team.');
+            return $this->failedPreconditionError('Chatbot feature is not enabled for this team.');
         }
 
         $query = Chatbot::withCount(['channels', 'sessions'])

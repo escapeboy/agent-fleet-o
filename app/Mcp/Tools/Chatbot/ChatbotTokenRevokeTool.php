@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Chatbot;
 use App\Domain\Chatbot\Actions\RevokeChatbotTokenAction;
 use App\Domain\Chatbot\Models\ChatbotToken;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class ChatbotTokenRevokeTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'chatbot_token_revoke';
 
     protected string $description = 'Immediately revoke a chatbot API token. The token will be invalidated and any active integrations using it will stop working.';
@@ -37,7 +40,7 @@ class ChatbotTokenRevokeTool extends Tool
         $token = ChatbotToken::find($validated['token_id']);
 
         if (! $token) {
-            return Response::error('Chatbot token not found.');
+            return $this->notFoundError('chatbot token');
         }
 
         if ($token->revoked_at !== null) {
@@ -58,7 +61,7 @@ class ChatbotTokenRevokeTool extends Tool
                 'revoked' => true,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

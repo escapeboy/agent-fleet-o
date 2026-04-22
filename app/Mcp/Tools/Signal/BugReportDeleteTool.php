@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\Signal;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class BugReportDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'bug_report_delete';
 
     protected string $description = 'Permanently delete a bug report signal. Only deletes signals with source_type=bug_report scoped to the current team.';
@@ -39,7 +42,7 @@ class BugReportDeleteTool extends Tool
             ->find($validated['signal_id']);
 
         if (! $report) {
-            return Response::error('Bug report not found.');
+            return $this->notFoundError('bug report');
         }
 
         $report->delete();

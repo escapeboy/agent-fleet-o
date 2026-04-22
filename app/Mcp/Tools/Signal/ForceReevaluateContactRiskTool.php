@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Signal;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Signal\Jobs\EvaluateContactRiskJob;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('read')]
 class ForceReevaluateContactRiskTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'contact_risk_reevaluate';
 
     protected string $description = 'Force a fresh risk score evaluation for a contact identity by dispatching EvaluateContactRiskJob.';
@@ -33,7 +36,7 @@ class ForceReevaluateContactRiskTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $contact = ContactIdentity::withoutGlobalScopes()
@@ -41,7 +44,7 @@ class ForceReevaluateContactRiskTool extends Tool
             ->find($request->get('contact_id'));
 
         if (! $contact) {
-            return Response::error('Contact not found.');
+            return $this->notFoundError('contact');
         }
 
         EvaluateContactRiskJob::dispatch($contact->id);

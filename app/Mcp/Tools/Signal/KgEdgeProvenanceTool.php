@@ -103,7 +103,7 @@ class KgEdgeProvenanceTool extends Tool
                 ])->values()->toArray(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 

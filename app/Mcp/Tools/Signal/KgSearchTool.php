@@ -86,7 +86,7 @@ class KgSearchTool extends Tool
                 'query' => $validated['query'],
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

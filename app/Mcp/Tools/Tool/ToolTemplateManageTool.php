@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Tool;
 use App\Domain\Tool\Actions\DeployToolTemplateAction;
 use App\Domain\Tool\Models\ToolTemplate;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -23,6 +24,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ToolTemplateManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_template_manage';
 
     protected string $description = 'Browse and deploy pre-configured GPU tool templates (OCR, STT, TTS, image generation). Actions: list, get, deploy.';
@@ -52,7 +55,7 @@ class ToolTemplateManageTool extends Tool
             'list' => $this->listTemplates($request),
             'get' => $this->getTemplate($request),
             'deploy' => $this->deployTemplate($request),
-            default => Response::error("Unknown action: {$action}. Valid: list, get, deploy"),
+            default => $this->invalidArgumentError("Unknown action: {$action}. Valid: list, get, deploy"),
         };
     }
 
@@ -85,13 +88,13 @@ class ToolTemplateManageTool extends Tool
         $slug = $request->get('slug');
 
         if (! $slug) {
-            return Response::error('slug is required for get');
+            return $this->invalidArgumentError('slug is required for get');
         }
 
         $template = ToolTemplate::where('slug', $slug)->first();
 
         if (! $template) {
-            return Response::error("Template '{$slug}' not found.");
+            return $this->notFoundError('template', $slug);
         }
 
         return Response::text(json_encode([
@@ -118,19 +121,19 @@ class ToolTemplateManageTool extends Tool
         $slug = $request->get('slug');
 
         if (! $slug) {
-            return Response::error('slug is required for deploy');
+            return $this->invalidArgumentError('slug is required for deploy');
         }
 
         $template = ToolTemplate::where('slug', $slug)->first();
 
         if (! $template) {
-            return Response::error("Template '{$slug}' not found.");
+            return $this->notFoundError('template', $slug);
         }
 
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('Team context required to deploy a template.');
+            return $this->permissionDeniedError('Team context required to deploy a template.');
         }
 
         $tool = app(DeployToolTemplateAction::class)->execute(

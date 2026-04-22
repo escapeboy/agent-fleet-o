@@ -6,6 +6,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool as ToolModel;
 use App\Domain\Tool\Models\ToolFederationGroup;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ToolPoolListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_pool_list';
 
     protected string $description = "List all active tools available in the team's federation pool. Optionally filter by a federation group.";
@@ -35,7 +38,7 @@ class ToolPoolListTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $query = ToolModel::withoutGlobalScopes()

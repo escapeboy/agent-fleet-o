@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Actions\DeleteSkillAction;
 use App\Domain\Skill\Models\Skill;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class SkillDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_delete';
 
     protected string $description = 'Delete a skill (soft delete). Cannot delete skills with active executions.';
@@ -34,12 +37,12 @@ class SkillDeleteTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $skill = Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['skill_id']);
 
         if (! $skill) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         try {
@@ -51,7 +54,7 @@ class SkillDeleteTool extends Tool
                 'deleted' => true,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

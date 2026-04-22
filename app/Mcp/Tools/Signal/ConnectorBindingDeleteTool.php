@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\ConnectorBinding;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('read')]
 class ConnectorBindingDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'connector_binding_delete';
 
     protected string $description = 'Delete a connector binding (DM pairing / sender approval) by UUID. This will prevent the sender from communicating with the platform via this channel.';
@@ -34,7 +37,7 @@ class ConnectorBindingDeleteTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $bindingId = $request->get('binding_id');
@@ -44,7 +47,7 @@ class ConnectorBindingDeleteTool extends Tool
             ->find($bindingId);
 
         if (! $binding) {
-            return Response::error("Connector binding {$bindingId} not found. Use connector_binding_manage with action=list to discover binding IDs.");
+            return $this->notFoundError('connector binding', $bindingId);
         }
 
         try {
@@ -61,7 +64,7 @@ class ConnectorBindingDeleteTool extends Tool
                 'message' => "Binding for '{$externalName}' on {$channel} has been deleted.",
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

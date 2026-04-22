@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Chatbot;
 use App\Domain\Chatbot\Actions\DeleteChatbotAction;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class ChatbotDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'chatbot_delete';
 
     protected string $description = 'Delete a chatbot. Revokes all active API tokens, deactivates all channels, and soft-deletes the backing agent if it was auto-created.';
@@ -36,12 +39,12 @@ class ChatbotDeleteTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $chatbot = Chatbot::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['chatbot_id']);
 
         if (! $chatbot) {
-            return Response::error('Chatbot not found.');
+            return $this->notFoundError('chatbot');
         }
 
         try {
@@ -53,7 +56,7 @@ class ChatbotDeleteTool extends Tool
                 'deleted' => true,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

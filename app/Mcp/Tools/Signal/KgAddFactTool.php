@@ -96,7 +96,7 @@ class KgAddFactTool extends Tool
                 'message' => 'Fact added to the knowledge graph. Any conflicting current facts have been invalidated.',
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

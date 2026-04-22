@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Models\SkillBenchmark;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class SkillBenchmarkListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_benchmark_list';
 
     protected string $description = 'List skill benchmarks for the current team, optionally filtered by skill or status.';
@@ -42,7 +45,7 @@ class SkillBenchmarkListTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $query = SkillBenchmark::withoutGlobalScopes()

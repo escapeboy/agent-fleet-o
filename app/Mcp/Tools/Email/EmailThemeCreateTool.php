@@ -69,7 +69,7 @@ class EmailThemeCreateTool extends Tool
                 'font_name' => $theme->font_name,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

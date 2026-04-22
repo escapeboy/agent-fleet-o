@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Email;
 use App\Domain\Email\Actions\UpdateEmailThemeAction;
 use App\Domain\Email\Models\EmailTheme;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class EmailThemeUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'email_theme_update';
 
     protected string $description = 'Update an existing email theme. Only supply fields you want to change — omitted fields are preserved.';
@@ -53,12 +56,12 @@ class EmailThemeUpdateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $theme = EmailTheme::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('id'));
 
         if (! $theme) {
-            return Response::error('Email theme not found.');
+            return $this->notFoundError('email theme');
         }
 
         try {
@@ -98,7 +101,7 @@ class EmailThemeUpdateTool extends Tool
                 'updated_at' => $theme->updated_at?->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

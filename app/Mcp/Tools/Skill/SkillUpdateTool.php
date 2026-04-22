@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Actions\UpdateSkillAction;
 use App\Domain\Skill\Models\Skill;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class SkillUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_update';
 
     protected string $description = 'Update an existing skill. Only provided fields will be changed.';
@@ -47,12 +50,12 @@ class SkillUpdateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $skill = Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['skill_id']);
 
         if (! $skill) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         $attributes = array_filter([
@@ -63,7 +66,7 @@ class SkillUpdateTool extends Tool
         ], fn ($v) => $v !== null);
 
         if (empty($attributes)) {
-            return Response::error('No fields to update. Provide at least one of: name, description, prompt_template.');
+            return $this->invalidArgumentError('No fields to update. Provide at least one of: name, description, prompt_template.');
         }
 
         try {
@@ -79,7 +82,7 @@ class SkillUpdateTool extends Tool
                 'updated_fields' => array_keys($attributes),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

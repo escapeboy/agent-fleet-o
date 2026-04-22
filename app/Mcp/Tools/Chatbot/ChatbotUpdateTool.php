@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Chatbot;
 use App\Domain\Chatbot\Actions\UpdateChatbotAction;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ChatbotUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'chatbot_update';
 
     protected string $description = 'Update chatbot name, description, config, widget_config, escalation settings, workflow, or LLM parameters.';
@@ -55,14 +58,14 @@ class ChatbotUpdateTool extends Tool
     public function handle(Request $request): Response
     {
         if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
-            return Response::error('Chatbot feature is not enabled for this team.');
+            return $this->failedPreconditionError('Chatbot feature is not enabled for this team.');
         }
 
         $idOrSlug = $request->get('id');
         $chatbot = Chatbot::where('id', $idOrSlug)->orWhere('slug', $idOrSlug)->first();
 
         if (! $chatbot) {
-            return Response::error("Chatbot not found: {$idOrSlug}");
+            return $this->notFoundError('chatbot', $idOrSlug);
         }
 
         $validated = $request->validate([
@@ -104,7 +107,7 @@ class ChatbotUpdateTool extends Tool
                 'status' => $updated->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

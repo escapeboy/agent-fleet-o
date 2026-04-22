@@ -102,7 +102,7 @@ class KgEntityFactsTool extends Tool
                 'last_seen' => $entity->last_seen_at?->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -6,6 +6,7 @@ use App\Domain\Tool\Actions\CreateToolAction;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolType;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ToolCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_create';
 
     protected string $description = <<<'DESC'
@@ -68,7 +71,7 @@ DESC;
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $validated = $request->validate([
@@ -87,7 +90,7 @@ DESC;
         if (! empty($validated['network_policy'])) {
             $networkPolicy = json_decode($validated['network_policy'], true);
             if (! is_array($networkPolicy)) {
-                return Response::error('network_policy must be a valid JSON object.');
+                return $this->invalidArgumentError('network_policy must be a valid JSON object.');
             }
         }
 
@@ -117,7 +120,7 @@ DESC;
                 'risk_level' => $tool->risk_level?->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

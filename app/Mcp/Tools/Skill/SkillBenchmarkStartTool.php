@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Skill;
 use App\Domain\Skill\Actions\StartSkillBenchmarkAction;
 use App\Domain\Skill\Exceptions\BenchmarkAlreadyRunningException;
 use App\Domain\Skill\Models\Skill;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class SkillBenchmarkStartTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_benchmark_start';
 
     protected string $description = 'Start an autonomous metric-gated improvement loop for a skill. The loop generates candidate versions, measures the metric, and keeps or discards changes automatically until the time budget or iteration limit is reached.';
@@ -62,7 +65,7 @@ class SkillBenchmarkStartTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $skill = Skill::withoutGlobalScopes()
@@ -70,7 +73,7 @@ class SkillBenchmarkStartTool extends Tool
             ->find($validated['skill_id']);
 
         if (! $skill) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         $userId = auth()->id() ?? $skill->team?->owner?->id ?? '';
@@ -89,7 +92,7 @@ class SkillBenchmarkStartTool extends Tool
                 improvementThreshold: $validated['improvement_threshold'] ?? 0.0,
             );
         } catch (BenchmarkAlreadyRunningException $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
 
         return Response::text(json_encode([

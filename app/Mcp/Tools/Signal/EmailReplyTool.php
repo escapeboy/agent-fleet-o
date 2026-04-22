@@ -7,6 +7,7 @@ namespace App\Mcp\Tools\Signal;
 use App\Domain\Outbound\Actions\ReplyToEmailSignalAction;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('read')]
 class EmailReplyTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'email_reply';
 
     protected string $description = 'Reply to an email-sourced signal, preserving the email thread '
@@ -45,17 +48,17 @@ class EmailReplyTool extends Tool
         $body = $request->get('body');
 
         if (! $signalId) {
-            return Response::error('signal_id is required');
+            return $this->invalidArgumentError('signal_id is required');
         }
 
         if (empty($body)) {
-            return Response::error('body is required');
+            return $this->invalidArgumentError('body is required');
         }
 
         $teamId = auth()->user()?->current_team_id
             ?? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         if (! $teamId) {
-            return Response::error('No active team context. Ensure you are authenticated with a team.');
+            return $this->permissionDeniedError('No active team context. Ensure you are authenticated with a team.');
         }
 
         try {

@@ -6,6 +6,7 @@ use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class GuardrailTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'guardrail_manage';
 
     protected string $description = 'List guardrail skills, get guardrail results for a playbook step, or configure a guardrail on a workflow node.';
@@ -52,7 +55,7 @@ class GuardrailTool extends Tool
                 $validated['guardrail_skill_id'] ?? null,
             ),
             'remove_node_guardrail' => $this->removeNodeGuardrail($validated['workflow_node_id'] ?? null),
-            default => Response::error('Unknown action.'),
+            default => $this->invalidArgumentError('Unknown action.'),
         };
     }
 
@@ -77,13 +80,13 @@ class GuardrailTool extends Tool
     private function getResult(?string $stepId): Response
     {
         if (! $stepId) {
-            return Response::error('step_id is required for get_result action.');
+            return $this->invalidArgumentError('step_id is required for get_result action.');
         }
 
         $step = PlaybookStep::find($stepId);
 
         if (! $step) {
-            return Response::error('Playbook step not found.');
+            return $this->notFoundError('playbook step');
         }
 
         return Response::text(json_encode([
@@ -95,17 +98,17 @@ class GuardrailTool extends Tool
     private function setNodeGuardrail(?string $nodeId, ?string $guardrailSkillId): Response
     {
         if (! $nodeId || ! $guardrailSkillId) {
-            return Response::error('workflow_node_id and guardrail_skill_id are required for set_node_guardrail.');
+            return $this->invalidArgumentError('workflow_node_id and guardrail_skill_id are required for set_node_guardrail.');
         }
 
         $node = WorkflowNode::find($nodeId);
         if (! $node) {
-            return Response::error('Workflow node not found.');
+            return $this->notFoundError('workflow node');
         }
 
         $skill = Skill::find($guardrailSkillId);
         if (! $skill || $skill->type->value !== SkillType::Guardrail->value) {
-            return Response::error('Skill not found or is not a guardrail type.');
+            return $this->notFoundError('guardrail skill');
         }
 
         $node->update(['guardrail_skill_id' => $guardrailSkillId]);
@@ -121,12 +124,12 @@ class GuardrailTool extends Tool
     private function removeNodeGuardrail(?string $nodeId): Response
     {
         if (! $nodeId) {
-            return Response::error('workflow_node_id is required for remove_node_guardrail.');
+            return $this->invalidArgumentError('workflow_node_id is required for remove_node_guardrail.');
         }
 
         $node = WorkflowNode::find($nodeId);
         if (! $node) {
-            return Response::error('Workflow node not found.');
+            return $this->notFoundError('workflow node');
         }
 
         $node->update(['guardrail_skill_id' => null]);

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class SignalIngestTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'signal_ingest';
 
     protected string $description = 'Ingest a signal into the platform. Signals are deduplicated by content hash and checked against the blacklist.';
@@ -49,7 +52,7 @@ class SignalIngestTool extends Tool
                 ?? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
             if (! $teamId) {
-                return Response::error('Unauthorized: no active team context.');
+                return $this->permissionDeniedError('Unauthorized: no active team context.');
             }
 
             $signal = app(IngestSignalAction::class)->execute(
@@ -71,7 +74,7 @@ class SignalIngestTool extends Tool
                 'signal_id' => $signal->id,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

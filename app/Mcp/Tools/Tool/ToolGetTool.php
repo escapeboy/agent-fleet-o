@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\Tool as ToolModel;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ToolGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_get';
 
     protected string $description = 'Get detailed information about a specific tool including type, status, description, and sanitized transport config.';
@@ -35,12 +38,12 @@ class ToolGetTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $tool = ToolModel::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['tool_id']);
 
         if (! $tool) {
-            return Response::error('Tool not found.');
+            return $this->notFoundError('tool');
         }
 
         $transportConfig = $tool->transport_config;

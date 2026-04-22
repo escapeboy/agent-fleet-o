@@ -39,7 +39,7 @@ class SupabaseConnectorTool extends Tool
                 'get_setup_instructions' => $this->getSetupInstructions(),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 

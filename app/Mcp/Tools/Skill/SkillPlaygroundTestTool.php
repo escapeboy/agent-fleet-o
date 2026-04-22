@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Actions\SkillPlaygroundRunAction;
 use App\Domain\Skill\Models\Skill;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Attributes\IsIdempotent;
 use Laravel\Mcp\Request;
@@ -21,6 +22,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class SkillPlaygroundTestTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_playground_test';
 
     protected string $description = 'Run a skill prompt against one or more models for comparison. Returns a run_id; results are stored in cache for 300 seconds keyed as skill_playground:{teamId}:{runId}:{modelId}.';
@@ -51,12 +54,12 @@ class SkillPlaygroundTestTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $skill = Skill::find($validated['skill_id']);
         if (! $skill || $skill->team_id !== $teamId) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         try {
@@ -75,7 +78,7 @@ class SkillPlaygroundTestTool extends Tool
                 'cache_key_pattern' => "skill_playground:{$teamId}:{$runId}:{modelId}",
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

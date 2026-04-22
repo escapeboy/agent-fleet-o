@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Skill;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class MultiModelConsensusTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'multi_model_consensus_manage';
 
     protected string $description = 'Manage multi-model consensus skills. List available consensus skills, inspect a past execution result, or get configuration schema for the models/judge setup.';
@@ -44,7 +47,7 @@ class MultiModelConsensusTool extends Tool
             'list' => $this->listConsensusSkills(),
             'get_execution' => $this->getExecution($validated['execution_id'] ?? null),
             'get_config_schema' => $this->getConfigSchema($validated['skill_id'] ?? null),
-            default => Response::error('Unknown action.'),
+            default => $this->invalidArgumentError('Unknown action.'),
         };
     }
 
@@ -75,13 +78,13 @@ class MultiModelConsensusTool extends Tool
     private function getExecution(?string $executionId): Response
     {
         if (! $executionId) {
-            return Response::error('execution_id is required for get_execution action.');
+            return $this->invalidArgumentError('execution_id is required for get_execution action.');
         }
 
         $execution = SkillExecution::find($executionId);
 
         if (! $execution) {
-            return Response::error('Execution not found.');
+            return $this->notFoundError('execution');
         }
 
         return Response::text(json_encode([

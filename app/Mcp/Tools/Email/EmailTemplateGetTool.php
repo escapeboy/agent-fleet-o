@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Email;
 
 use App\Domain\Email\Models\EmailTemplate;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class EmailTemplateGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'email_template_get';
 
     protected string $description = 'Get full details of a specific email template by ID, including rendered HTML cache.';
@@ -31,7 +34,7 @@ class EmailTemplateGetTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $template = EmailTemplate::withoutGlobalScopes()->where('team_id', $teamId)->findOrFail($request->get('id'));
 

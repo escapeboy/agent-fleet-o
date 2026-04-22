@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Tool;
 use App\Domain\Tool\Actions\ActivatePlatformToolAction;
 use App\Domain\Tool\Models\Tool as ToolModel;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ToolActivateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_activate';
 
     protected string $description = 'Activate a platform tool for the current team with optional credential overrides. Only works for platform tools (is_platform = true).';
@@ -40,16 +43,16 @@ class ToolActivateTool extends Tool
         $tool = ToolModel::withoutGlobalScopes()->find($validated['tool_id']);
 
         if (! $tool) {
-            return Response::error('Tool not found.');
+            return $this->notFoundError('tool');
         }
 
         if (! $tool->isPlatformTool()) {
-            return Response::error('Only platform tools can be activated this way.');
+            return $this->failedPreconditionError('Only platform tools can be activated this way.');
         }
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No active team context.');
+            return $this->permissionDeniedError('No active team context.');
         }
 
         $activation = app(ActivatePlatformToolAction::class)->execute(

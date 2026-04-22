@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillVersion;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class SkillVersionsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_versions';
 
     protected string $description = 'List all versions of a skill ordered by most recent. Returns version number, changelog, and created_at.';
@@ -35,12 +38,12 @@ class SkillVersionsTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $skill = Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['skill_id']);
 
         if (! $skill) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         $versions = $skill->versions()->orderByDesc('version')->get();

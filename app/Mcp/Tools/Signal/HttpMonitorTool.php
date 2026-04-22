@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\Connector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class HttpMonitorTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'http_monitor_manage';
 
     protected string $description = 'Manage HTTP/URL health monitors. List configured monitors, add a new URL to monitor for availability or content changes, and remove monitors.';
@@ -52,7 +55,7 @@ class HttpMonitorTool extends Tool
             'add' => $this->add($request),
             'remove' => $this->remove($request),
             'status' => $this->status(),
-            default => Response::error("Unknown action: {$action}"),
+            default => $this->invalidArgumentError("Unknown action: {$action}"),
         };
     }
 
@@ -81,11 +84,11 @@ class HttpMonitorTool extends Tool
         $url = $request->get('url');
 
         if (! $url) {
-            return Response::error('url is required for add action.');
+            return $this->invalidArgumentError('url is required for add action.');
         }
 
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            return Response::error("Invalid URL: {$url}");
+            return $this->invalidArgumentError("Invalid URL: {$url}");
         }
 
         $monitorType = $request->get('monitor_type', 'availability');
@@ -127,7 +130,7 @@ class HttpMonitorTool extends Tool
         $connectorId = $request->get('connector_id');
 
         if (! $connectorId) {
-            return Response::error('connector_id is required for remove action.');
+            return $this->invalidArgumentError('connector_id is required for remove action.');
         }
 
         $connector = Connector::where('id', $connectorId)
@@ -135,7 +138,7 @@ class HttpMonitorTool extends Tool
             ->first();
 
         if (! $connector) {
-            return Response::error("HTTP monitor connector {$connectorId} not found.");
+            return $this->notFoundError('HTTP monitor connector', $connectorId);
         }
 
         $url = $connector->config['url'] ?? 'unknown';

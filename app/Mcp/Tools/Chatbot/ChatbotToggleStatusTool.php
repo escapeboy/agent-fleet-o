@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Chatbot;
 use App\Domain\Chatbot\Actions\ToggleChatbotStatusAction;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ChatbotToggleStatusTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'chatbot_toggle_status';
 
     protected string $description = 'Activate or deactivate a chatbot. Inactive chatbots return the fallback message to visitors.';
@@ -31,14 +34,14 @@ class ChatbotToggleStatusTool extends Tool
     public function handle(Request $request): Response
     {
         if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
-            return Response::error('Chatbot feature is not enabled for this team.');
+            return $this->failedPreconditionError('Chatbot feature is not enabled for this team.');
         }
 
         $idOrSlug = $request->get('id');
         $chatbot = Chatbot::where('id', $idOrSlug)->orWhere('slug', $idOrSlug)->first();
 
         if (! $chatbot) {
-            return Response::error("Chatbot not found: {$idOrSlug}");
+            return $this->notFoundError('chatbot', $idOrSlug);
         }
 
         try {
@@ -50,7 +53,7 @@ class ChatbotToggleStatusTool extends Tool
                 'new_status' => $updated->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

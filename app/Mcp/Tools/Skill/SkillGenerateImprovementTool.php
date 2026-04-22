@@ -6,6 +6,7 @@ use App\Domain\Skill\Actions\GenerateImprovedSkillVersionAction;
 use App\Domain\Skill\Exceptions\InsufficientAnnotationsException;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillVersion;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -22,6 +23,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class SkillGenerateImprovementTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_generate_improvement';
 
     protected string $description = 'Generate an improved skill version using annotations as few-shot examples. Requires at least 1 good and 1 bad annotation for the specified version.';
@@ -47,17 +50,17 @@ class SkillGenerateImprovementTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $skill = Skill::find($validated['skill_id']);
         if (! $skill || $skill->team_id !== $teamId) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         $version = SkillVersion::find($validated['version_id']);
         if (! $version || $version->skill_id !== $skill->id) {
-            return Response::error('Skill version not found.');
+            return $this->notFoundError('skill version');
         }
 
         try {
@@ -75,9 +78,9 @@ class SkillGenerateImprovementTool extends Tool
                 'changelog' => $newVersion->changelog,
             ]));
         } catch (InsufficientAnnotationsException $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         } catch (\Throwable $e) {
-            return Response::error('Improvement failed: '.$e->getMessage());
+            throw $e;
         }
     }
 }

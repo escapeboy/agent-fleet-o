@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\SshHostFingerprint;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ToolSshFingerprintsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_ssh_fingerprints';
 
     protected string $description = 'Manage trusted SSH host fingerprints (TOFU store). '
@@ -41,7 +44,7 @@ class ToolSshFingerprintsTool extends Tool
         return match ($validated['action']) {
             'list' => $this->list(),
             'delete' => $this->delete($validated['fingerprint_id'] ?? null),
-            default => Response::error('Unknown action'),
+            default => $this->invalidArgumentError('Unknown action'),
         };
     }
 
@@ -69,13 +72,13 @@ class ToolSshFingerprintsTool extends Tool
     private function delete(?string $fingerprintId): Response
     {
         if (! $fingerprintId) {
-            return Response::error('fingerprint_id is required for delete action');
+            return $this->invalidArgumentError('fingerprint_id is required for delete action');
         }
 
         $fingerprint = SshHostFingerprint::find($fingerprintId);
 
         if (! $fingerprint) {
-            return Response::error("Fingerprint {$fingerprintId} not found.");
+            return $this->notFoundError('fingerprint', $fingerprintId);
         }
 
         $label = "{$fingerprint->host}:{$fingerprint->port}";

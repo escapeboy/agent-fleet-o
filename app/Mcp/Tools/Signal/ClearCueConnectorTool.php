@@ -47,7 +47,7 @@ class ClearCueConnectorTool extends Tool
                 'list_recent_signals' => $this->listRecentSignals(),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 

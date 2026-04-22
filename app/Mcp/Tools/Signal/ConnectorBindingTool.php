@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Signal;
 use App\Domain\Signal\Enums\ConnectorBindingStatus;
 use App\Domain\Signal\Models\ConnectorBinding;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('read')]
 class ConnectorBindingTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'connector_binding_manage';
 
     protected string $description = 'Manage inbound sender approvals (DM pairing). List pending bindings and approve or block senders.';
@@ -43,7 +46,7 @@ class ConnectorBindingTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $action = $request->get('action', 'list');
@@ -79,7 +82,7 @@ class ConnectorBindingTool extends Tool
         if ($action === 'get') {
             $bindingId = $request->get('binding_id');
             if (! $bindingId) {
-                return Response::error('binding_id is required for get action.');
+                return $this->invalidArgumentError('binding_id is required for get action.');
             }
 
             $binding = ConnectorBinding::withoutGlobalScopes()
@@ -103,7 +106,7 @@ class ConnectorBindingTool extends Tool
         if ($action === 'approve') {
             $bindingId = $request->get('binding_id');
             if (! $bindingId) {
-                return Response::error('binding_id is required for approve action.');
+                return $this->invalidArgumentError('binding_id is required for approve action.');
             }
 
             $binding = ConnectorBinding::withoutGlobalScopes()
@@ -122,7 +125,7 @@ class ConnectorBindingTool extends Tool
         if ($action === 'block') {
             $bindingId = $request->get('binding_id');
             if (! $bindingId) {
-                return Response::error('binding_id is required for block action.');
+                return $this->invalidArgumentError('binding_id is required for block action.');
             }
 
             $binding = ConnectorBinding::withoutGlobalScopes()
@@ -134,6 +137,6 @@ class ConnectorBindingTool extends Tool
             return Response::text("Sender {$binding->external_id} on {$binding->channel} blocked.");
         }
 
-        return Response::error("Unknown action: {$action}");
+        return $this->invalidArgumentError("Unknown action: {$action}");
     }
 }

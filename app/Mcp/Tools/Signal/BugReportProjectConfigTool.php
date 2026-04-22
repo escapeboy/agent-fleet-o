@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\BugReportProjectConfig;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class BugReportProjectConfigTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'bug_report_project_config';
 
     protected string $description = 'Get or update agent processing instructions for a bug report project. Pass config to update, omit to retrieve the current config.';
@@ -41,7 +44,7 @@ class BugReportProjectConfigTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         if (isset($validated['config'])) {

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ListHighRiskContactsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'contact_high_risk_list';
 
     protected string $description = 'List contact identities whose risk score is at or above a threshold, ordered by highest score first.';
@@ -35,7 +38,7 @@ class ListHighRiskContactsTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $threshold = min(max((int) $request->get('threshold', 30), 0), 1000);

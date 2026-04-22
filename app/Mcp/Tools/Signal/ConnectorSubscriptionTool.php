@@ -7,6 +7,7 @@ use App\Domain\Signal\Actions\CreateConnectorSubscriptionAction;
 use App\Domain\Signal\Actions\DeleteConnectorSubscriptionAction;
 use App\Domain\Signal\Models\ConnectorSignalSubscription;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -24,6 +25,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('read')]
 class ConnectorSubscriptionTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'connector_subscription_manage';
 
     protected string $description = 'Manage per-source webhook subscriptions backed by OAuth integrations (GitHub repos, Linear teams, Jira projects). Each subscription gets a unique webhook URL.';
@@ -61,7 +64,7 @@ class ConnectorSubscriptionTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $action = $request->get('action', 'list');
@@ -72,7 +75,7 @@ class ConnectorSubscriptionTool extends Tool
             'create' => $this->createSubscription($request, $teamId),
             'toggle' => $this->toggleSubscription($request, $teamId),
             'delete' => $this->deleteSubscription($request, $teamId),
-            default => Response::error("Unknown action: {$action}"),
+            default => $this->invalidArgumentError("Unknown action: {$action}"),
         };
     }
 
@@ -92,7 +95,7 @@ class ConnectorSubscriptionTool extends Tool
     {
         $id = $request->get('subscription_id');
         if (! $id) {
-            return Response::error('subscription_id is required');
+            return $this->invalidArgumentError('subscription_id is required');
         }
 
         $sub = ConnectorSignalSubscription::withoutGlobalScopes()
@@ -101,7 +104,7 @@ class ConnectorSubscriptionTool extends Tool
             ->find($id);
 
         if (! $sub) {
-            return Response::error('Subscription not found.');
+            return $this->notFoundError('subscription');
         }
 
         return Response::text(json_encode($this->formatSubscription($sub), JSON_PRETTY_PRINT));
@@ -113,7 +116,7 @@ class ConnectorSubscriptionTool extends Tool
         $name = $request->get('name');
 
         if (! $integrationId || ! $name) {
-            return Response::error('integration_id and name are required');
+            return $this->invalidArgumentError('integration_id and name are required');
         }
 
         $integration = Integration::withoutGlobalScopes()
@@ -121,7 +124,7 @@ class ConnectorSubscriptionTool extends Tool
             ->find($integrationId);
 
         if (! $integration) {
-            return Response::error('Integration not found.');
+            return $this->notFoundError('integration');
         }
 
         $filterConfig = (array) ($request->get('filter_config') ?? []);
@@ -142,7 +145,7 @@ class ConnectorSubscriptionTool extends Tool
                 'message' => 'Subscription created. Webhook registration is queued.',
             ], JSON_PRETTY_PRINT));
         } catch (\Throwable $e) {
-            return Response::error('Failed to create subscription: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -150,7 +153,7 @@ class ConnectorSubscriptionTool extends Tool
     {
         $id = $request->get('subscription_id');
         if (! $id) {
-            return Response::error('subscription_id is required');
+            return $this->invalidArgumentError('subscription_id is required');
         }
 
         $sub = ConnectorSignalSubscription::withoutGlobalScopes()
@@ -158,7 +161,7 @@ class ConnectorSubscriptionTool extends Tool
             ->find($id);
 
         if (! $sub) {
-            return Response::error('Subscription not found.');
+            return $this->notFoundError('subscription');
         }
 
         $sub->update(['is_active' => ! $sub->is_active]);
@@ -173,7 +176,7 @@ class ConnectorSubscriptionTool extends Tool
     {
         $id = $request->get('subscription_id');
         if (! $id) {
-            return Response::error('subscription_id is required');
+            return $this->invalidArgumentError('subscription_id is required');
         }
 
         $sub = ConnectorSignalSubscription::withoutGlobalScopes()
@@ -181,7 +184,7 @@ class ConnectorSubscriptionTool extends Tool
             ->find($id);
 
         if (! $sub) {
-            return Response::error('Subscription not found.');
+            return $this->notFoundError('subscription');
         }
 
         $action = app(DeleteConnectorSubscriptionAction::class);

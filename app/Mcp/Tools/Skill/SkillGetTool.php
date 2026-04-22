@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Models\Skill;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class SkillGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_get';
 
     protected string $description = 'Get detailed information about a specific skill including description, prompt template, risk level, and execution type.';
@@ -33,12 +36,12 @@ class SkillGetTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $skill = Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['skill_id']);
 
         if (! $skill) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         $promptTemplate = $skill->configuration['prompt_template'] ?? $skill->system_prompt;

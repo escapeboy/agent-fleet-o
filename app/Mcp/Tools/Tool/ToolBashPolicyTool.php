@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Tool;
 
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ToolBashPolicyTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_bash_policy';
 
     protected string $description = 'View or update the organization-level command security policy for Bash/shell tools. '
@@ -58,7 +61,7 @@ class ToolBashPolicyTool extends Tool
             'get' => $this->get(),
             'set' => $this->set($validated),
             'reset' => $this->reset(),
-            default => Response::error('Unknown action'),
+            default => $this->invalidArgumentError('Unknown action'),
         };
     }
 

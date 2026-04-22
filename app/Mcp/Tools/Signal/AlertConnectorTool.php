@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AlertConnectorTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'alert_connector_manage';
 
     protected string $description = 'Manage alert connectors (Sentry, Datadog, PagerDuty). List supported drivers and get webhook setup instructions for connecting error tracking and incident management tools.';
@@ -45,7 +48,7 @@ class AlertConnectorTool extends Tool
                 'get_setup_instructions' => $this->getSetupInstructions($validated['driver'] ?? null),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 
@@ -90,7 +93,7 @@ class AlertConnectorTool extends Tool
     private function getSetupInstructions(?string $driver): Response
     {
         if (! $driver) {
-            return Response::error('driver parameter required for get_setup_instructions');
+            return $this->invalidArgumentError('driver parameter required for get_setup_instructions');
         }
 
         $instructions = match ($driver) {

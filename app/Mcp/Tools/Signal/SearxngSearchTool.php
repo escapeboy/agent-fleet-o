@@ -6,6 +6,7 @@ use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Connectors\SearxngConnector;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -28,6 +29,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class SearxngSearchTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'searxng_search';
 
     protected string $description = 'Search the web using a self-hosted Searxng meta-search instance. Returns titles, URLs, and snippets. Requires a Searxng instance configured via SEARXNG_URL env var or platform settings.';
@@ -55,7 +58,7 @@ class SearxngSearchTool extends Tool
             try {
                 $planEnforcer = app('App\Domain\Shared\Services\PlanEnforcer');
                 if (! $planEnforcer->hasFeature('searxng_access')) {
-                    return Response::error('Searxng search requires a paid plan. Upgrade at /billing.');
+                    return $this->failedPreconditionError('Searxng search requires a paid plan. Upgrade at /billing.');
                 }
             } catch (\Throwable) {
                 // Silently allow if enforcer fails — base/community edition has no PlanEnforcer
@@ -65,7 +68,7 @@ class SearxngSearchTool extends Tool
         $query = $request->get('query');
 
         if (empty($query)) {
-            return Response::error('query is required.');
+            return $this->invalidArgumentError('query is required.');
         }
 
         // URL is operator-configured only — never agent-supplied — to prevent SSRF.
@@ -73,7 +76,7 @@ class SearxngSearchTool extends Tool
             ?? config('services.searxng.url');
 
         if (! $instanceUrl) {
-            return Response::error(
+            return $this->failedPreconditionError(
                 'No Searxng instance configured. Set SEARXNG_URL in your environment or configure it in platform settings (searxng_url).',
             );
         }
