@@ -2,6 +2,43 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.22.0] - 2026-04-22
+
+### Added
+
+- **Structured MCP error codes** — every MCP tool now returns gRPC-canonical error codes (`UNAVAILABLE`, `PERMISSION_DENIED`, `RESOURCE_EXHAUSTED`, `DEADLINE_EXCEEDED`, `INVALID_ARGUMENT`, `FAILED_PRECONDITION`, `NOT_FOUND`, `INTERNAL`) with `retryable` hint and optional `retry_after_ms`. Agents (Claude, Codex, Cursor) now know exactly when to retry vs. fail fast, eliminating blind retry loops that burn budget.
+  - New `App\Mcp\ErrorCode` enum with `isRetryable()` + `httpStatus()` helpers
+  - New `App\Mcp\ErrorClassifier` service maps 15+ exception classes to canonical codes; includes `classNameHint()` substring fallback for cloud-only exceptions without a hard dependency
+  - New `App\Mcp\Concerns\HasStructuredErrors` trait with 8 typed helpers (`notFoundError`, `permissionDeniedError`, `invalidArgumentError`, `failedPreconditionError`, `resourceExhaustedError`, `unavailableError`, `deadlineExceededError`, `errorResponse`)
+  - **321 of 464 non-Compact MCP tool files retrofitted** across 32 domains (Agent, Experiment, Project, Workflow, Crew, Shared, Skill, Tool, Email, Chatbot, Signal, Admin, Approval, Artifact, Assistant, Auth, Boruna, Bridge, Budget, Compute, Credential, Evaluation, Evolution, FounderMode, GitRepository, Integration, Marketplace, Memory, Outbound, Profile, RunPod, System, Telegram, Testing, Trigger, Webhook, Website). Remaining 143 files had no `Response::error()` calls to retrofit.
+  - Central wrapper in `CompactTool::handle()` catches any unhandled exception and classifies via `ErrorClassifier` — so even non-retrofitted tools get structured responses.
+- **MCP tool deadlines** — every MCP tool schema gains an optional `deadline_ms` parameter. Agents can bound wall-clock time per call. Enforcement checkpoints in `WorkflowGraphExecutor`, `CrewOrchestrator`, `ExperimentStateMachine`, and `LocalToolLoopExecutor`. New `App\Mcp\DeadlineContext` singleton (request-scoped, nested calls inherit). Minimum 100ms clamp, maximum 10-minute cap (security hardening from review).
+- **OpenTelemetry distributed tracing** — opt-in via `OTEL_ENABLED=true`. OTLP HTTP exporter, zero overhead when disabled (NoOp tracer). Three span layers: `mcp.tool.{name}` (server) → `ai.gateway.{complete,stream}` (client) → `llm.provider.{name}` (client) with token/latency/fallback attributes. Graceful fallback when exporter unreachable.
+  - New `observability` Docker Compose profile — `docker compose --profile observability up -d` starts Jaeger all-in-one (UI on :16686, OTLP HTTP on :4318)
+  - New `config/telemetry.php` with `redacted_attributes` list + `AttributeRedactor` service for future span-attribute sanitization
+  - Packages: `open-telemetry/sdk` ^1.14, `open-telemetry/exporter-otlp` ^1.4
+- **SSE client-disconnect handling** — `ChatController::sendMessageStream` and `OpenAiCompatibleController` streaming paths now throw `App\Exceptions\ClientDisconnectedException` when `connection_aborted()` detects a closed socket. Gateway `stream()` unwinds cleanly — no more wasted LLM tokens after a user closes their tab.
+
+### Fixed
+
+- **SECURITY — SSRF validation misclassified as retryable INTERNAL.** `SsrfGuard`, `LocalLlmUrlValidator`, and cron validators throw plain `\InvalidArgumentException`, which was falling through to `ErrorCode::Internal` with `retryable=true`. Agents would retry with malicious URLs, silently hiding SSRF attack signals from auditing. Fix: added `\InvalidArgumentException` to `ErrorClassifier::EXCEPTION_MAP` → `ErrorCode::InvalidArgument` (retryable=false). Removed 5 no-op `catch (\InvalidArgumentException $e) { throw $e; }` blocks (central wrapper now classifies directly).
+- **ConnectionException + ModelNotFoundException message scrubbing.** Previously `$e->getMessage()` leaked internal topology (host:port, DNS names, FQN + primary-key shape) in error responses. Now both exception types return generic safe strings while preserving the canonical error code for retry logic.
+
+### Infrastructure
+
+- `AppServiceProvider` now registers `ErrorClassifier`, `DeadlineContext`, `TracerProvider`, and `AttributeRedactor` as singletons. Terminating callback clears `DeadlineContext` so Horizon workers don't inherit stale deadlines from exception paths.
+- `docker-compose.yml` gains `observability` profile with Jaeger all-in-one (opt-in).
+
+### Phase 3 work documented for continuity
+
+Queue-job deadline propagation, expanded OTel spans (DB/cache/outbound/semantic-cache + W3C traceparent through Redis), and SSE explicit buffer caps are deferred to a future release. See `docs/mcp-observability-phase3-todo.md` (canonical), `CLAUDE.md` banner, and Serena memory `mcp/phase3-deferred-work`.
+
+### Stats
+
+- 175 MCP tests (Unit + Feature) pass — zero regressions introduced
+- Full suite: 2001 passed across 4 refactor phases (Phase 1/2/2b/2c)
+- Security review: 1 blocker + 3 NEEDS_WORK items identified and fixed before merge
+
 ## [1.21.0] - 2026-04-18
 
 ### Added

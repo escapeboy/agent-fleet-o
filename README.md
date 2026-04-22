@@ -1,16 +1,66 @@
-# FleetQ - Community Edition
+# FleetQ — Open-Source AI Agent Orchestration Platform
 
-Self-hosted AI Agent Mission Control platform. Build, orchestrate, and monitor AI agent experiments with a visual pipeline, human-in-the-loop approvals, and full audit trail.
+> **Self-hosted mission control for AI agents.** Build, run, and monitor autonomous multi-agent systems with a visual DAG builder, human-in-the-loop approvals, MCP server integration, and full audit trail. Works with Claude, GPT-4o, Gemini, Ollama, Codex, Claude Code, and any OpenAI-compatible LLM.
 
 [![CI](https://github.com/escapeboy/agent-fleet-o/actions/workflows/ci.yml/badge.svg)](https://github.com/escapeboy/agent-fleet-o/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.4-purple)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/Laravel-12-red)](https://laravel.com/)
-[![agent-fleet-o MCP server](https://glama.ai/mcp/servers/escapeboy/agent-fleet-o/badges/score.svg)](https://glama.ai/mcp/servers/escapeboy/agent-fleet-o)
+[![MCP Server](https://glama.ai/mcp/servers/escapeboy/agent-fleet-o/badges/score.svg)](https://glama.ai/mcp/servers/escapeboy/agent-fleet-o)
 
-## Cloud Version
+**Keywords:** AI agents · agent orchestration · MCP server · Model Context Protocol · LangGraph alternative · CrewAI alternative · n8n for AI · Claude agents · LLM workflow · autonomous agents · agent framework · AI automation · self-hosted
 
-Prefer not to self-host? **[FleetQ Cloud](https://fleetq.net)** is the fully managed version — no setup, no infrastructure, free to try.
+☁️ **Prefer managed?** Try **[FleetQ Cloud](https://fleetq.net)** — zero setup, free tier.
+⭐ **Like the project?** Give it a star on GitHub — it helps others find FleetQ.
+
+---
+
+## Table of Contents
+
+- [Why FleetQ?](#why-fleetq)
+- [Key Concepts](#key-concepts)
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Use Cases](#use-cases)
+- [How FleetQ compares](#how-fleetq-compares)
+- [Quick Start](#quick-start-docker)
+- [Authentication](#authentication)
+- [Configuration](#configuration)
+- [SSH Host Access](#ssh-host-access)
+- [Architecture](#architecture)
+- [MCP Server (450+ tools)](#mcp-server)
+- [Tech Stack](#tech-stack)
+- [Contributing](#contributing)
+- [Changelog](CHANGELOG.md)
+
+---
+
+## Why FleetQ?
+
+Most agent frameworks give you a Python notebook. FleetQ gives you a **production platform**.
+
+- 🧩 **450+ MCP tools across 45 domains** — every feature is exposed via Model Context Protocol, so any LLM (Claude Desktop, Cursor, ChatGPT, local agents) can drive the platform programmatically.
+- 🔁 **Visual DAG workflows** with 8 node types (agent, conditional, human-task, switch, dynamic-fork, do-while) — no Python glue code.
+- 👥 **Multi-agent crews** with coordinator/worker/reviewer roles, weighted QA scoring, and cross-validation.
+- 💰 **Budget controls** with a real credit ledger, pessimistic locking, and auto-pause on overspend — not just token counters.
+- 🧠 **Agent evolution** — LLM analyzes execution history and proposes config changes you approve with one click.
+- ⚙️ **BYOK + Local LLMs** — Anthropic, OpenAI, Google, plus Ollama, LM Studio, vLLM, Codex, Claude Code. Zero vendor lock-in.
+- 🔒 **Production-grade** — tenant isolation, encrypted credential vault, HMAC webhooks, SSRF guards, circuit breakers, audit trail.
+- 📊 **OpenTelemetry observability** — structured error codes (gRPC-canonical), deadline propagation, distributed tracing. Jaeger UI one-command away.
+- 🏠 **Self-host or cloud** — MIT-friendly AGPLv3 license, runs on Docker Compose, or use [FleetQ Cloud](https://fleetq.net).
+
+## Key Concepts
+
+| Concept | What it is | When to use |
+|---|---|---|
+| **Agent** | A configured AI personality with role, goal, backstory, skills, and tool access | The basic unit — one agent per specialized task |
+| **Skill** | A reusable LLM prompt, rule, connector, or GPU compute call | When multiple agents need the same capability |
+| **Experiment** | A stateful run through a 20-stage pipeline (scoring → planning → building → executing → evaluating) | Any non-trivial agent task with lifecycle |
+| **Crew** | A team of agents working on one goal (sequential, parallel, hierarchical, adversarial, fanout, chat-room) | Multi-perspective tasks or when you need review/QA |
+| **Workflow** | A visual DAG template (reusable across experiments) with branching, loops, human-tasks | Recurring processes — CI/CD, content pipelines, QA flows |
+| **Project** | A continuous (cron-scheduled) or one-shot container for experiments, with budget + milestones | Long-running initiatives, scheduled agent work |
+| **Signal** | An inbound event (webhook, RSS, email, bug report, GitHub issue) that can trigger agents | Event-driven automation |
+| **MCP Tool** | A programmatic action any LLM can call to query or mutate the platform | Expose FleetQ to external agents (Claude, Cursor, etc.) |
 
 ## Screenshots
 
@@ -127,38 +177,95 @@ Failed tasks display detailed error information including provider, error type, 
 
 ## Features
 
-- **Experiment Pipeline** -- 20-state machine with automatic stage progression (scoring, planning, building, approval, execution, metrics collection)
-- **AI Agents** -- Configure agents with roles, goals, backstories, personality traits, and skill assignments
-- **Agent Templates** -- 14 pre-built templates across 5 categories (engineering, content, business, design, research)
-- **Agent Evolution** -- AI-driven self-improvement: analyze execution history, propose config changes, and apply improvements
-- **Agent Crews** -- Multi-agent teams with coordinator, QA, and worker roles; domain-specific evaluation rubrics; weighted QA scoring per task type
-- **Pre-Execution Scout Phase** -- Optional cheap LLM pre-call before memory retrieval that identifies what knowledge the agent needs, enabling targeted semantic search instead of generic recall
-- **Step Budget Awareness** -- Agents receive an execution budget section in their system prompt, targeting 80% of allowed steps for core work and reserving the rest for synthesis
-- **Skills** -- Reusable AI skill definitions (LLM, connector, rule, hybrid, browser, RunPod, GPU compute) with versioning and cost tracking
-- **RunPod GPU Integration** -- Invoke RunPod serverless endpoints or manage full GPU pod lifecycles as skills; BYOK API key; spot pricing; cost tracking
-- **Pluggable Compute Providers** -- `gpu_compute` skill type backed by RunPod, Replicate, Fal.ai, and Vast.ai; configure via `compute_manage` MCP tool; zero platform credits
-- **Local LLM Support** -- Run Ollama or any OpenAI-compatible server (LM Studio, vLLM, llama.cpp) as a provider; 17 preset Ollama models; zero cost; SSRF protection
-- **Integrations** -- Connect GitHub, Slack, Notion, Airtable, Linear, Stripe, Vercel, Netlify, and generic webhooks/polling sources via unified driver interface with OAuth 2.0 support
-- **Autonomous Web Dev Pipeline** -- Agents can open PRs, merge, dispatch CI workflows, create releases, and trigger Vercel/Netlify/SSH deploys through MCP tools and integration drivers
-- **Per-Call Working Directory** -- Local and bridge agents can operate in a configured working directory per-agent, enabling isolated project contexts
-- **Playbooks** -- Sequential or parallel multi-step workflows combining skills
-- **Workflows** -- Visual DAG builder with 8 node types: agent, conditional, human task, switch, dynamic fork, do-while loops; pre-built Web Dev Cycle template
-- **Projects** -- One-shot and continuous long-running agent projects with cron scheduling, budget caps, milestones, and overlap policies
-- **Human-in-the-Loop** -- Approval queue and human task forms with SLA enforcement and escalation
-- **Multi-Channel Outbound** -- Email (SMTP), Telegram, Slack, and webhook delivery with rate limiting
-- **Webhooks** -- Inbound signal ingestion (HMAC-SHA256) and outbound webhook delivery with retry and event filtering
-- **Budget Controls** -- Per-experiment and per-project credit ledger with pessimistic locking and auto-pause on overspend
-- **Marketplace** -- Browse, publish, and install shared skills, agents, and workflows
-- **REST API** -- 175+ endpoints under `/api/v1/` with Sanctum auth, cursor pagination, and auto-generated OpenAPI 3.1 docs at `/docs/api`
-- **MCP Server** -- 316+ Model Context Protocol tools across 38 domains for LLM/agent access (stdio + HTTP/SSE)
-- **Tool Management** -- MCP servers (stdio/HTTP), built-in tools (bash/filesystem/browser), risk classification, per-agent assignment
-- **Credentials** -- Encrypted credential vault for external services with rotation, expiry tracking, and per-project injection
-- **Testing** -- Regression test suites for agent outputs with automated evaluation
-- **Local Agents** -- Run Codex and Claude Code as local execution backends (auto-detected, zero cost)
-- **Audit Trail** -- Full activity logging with searchable, filterable audit log
-- **AI Gateway** -- Provider-agnostic LLM access via PrismPHP with circuit breakers and fallback chains
-- **BYOK** -- Bring your own API keys for Anthropic, OpenAI, or Google
-- **Queue Management** -- Laravel Horizon with 6 priority queues and auto-scaling
+### Agents, crews, and workflows
+- **AI Agents** — role, goal, backstory, personality traits, skill assignments, per-agent provider/model fallback chains
+- **Agent Templates** — 14 pre-built templates across 5 categories (engineering, content, business, design, research)
+- **Agent Evolution** — LLM analyzes execution history, proposes config changes, one-click approval
+- **Agent Crews** — Multi-agent teams with coordinator/QA/worker roles, 7 process types (sequential, parallel, hierarchical, self-claim, adversarial, fanout, chat-room), weighted QA scoring
+- **Pre-Execution Scout Phase** — cheap LLM pre-call identifies what knowledge the agent needs → targeted semantic search instead of generic recall
+- **Step Budget Awareness** — agent system prompt targets 80% of allowed steps for core work, reserves the rest for synthesis
+- **Experiment Pipeline** — 20-state machine with automatic stage progression (scoring → planning → building → approval → executing → metrics → evaluating)
+- **Visual Workflow DAG** — 8 node types (agent, conditional, human-task, switch, dynamic-fork, do-while, compensation, sub-workflow). Pre-built Web Dev Cycle template. NL → workflow generator.
+- **Projects** — one-shot and continuous projects with cron scheduling, budget caps, milestones, overlap policies
+
+### LLMs and compute
+- **BYOK** — bring your own keys for Anthropic (Claude), OpenAI (GPT-4o), Google (Gemini)
+- **Local LLMs** — Ollama, LM Studio, vLLM, llama.cpp via OpenAI-compatible endpoints; 17 preset Ollama models; SSRF protection
+- **Local Agents** — Codex and Claude Code as execution backends (auto-detected, zero cost)
+- **Portkey Gateway** — optional drop-in that unlocks 250+ LLM providers with semantic caching and fallbacks
+- **RunPod GPU Integration** — invoke RunPod serverless endpoints or manage full GPU pod lifecycles as skills; BYOK API key; spot pricing
+- **Pluggable Compute Providers** — `gpu_compute` skills backed by RunPod, Replicate, Fal.ai, Vast.ai
+- **AI Gateway** — provider-agnostic via PrismPHP with 6-layer middleware (rate-limit, budget, idempotency, semantic-cache, schema-validation, usage-tracking), circuit breakers, fallback chains
+- **Semantic Cache** — pgvector-backed cosine similarity (threshold 0.92) cross-team cache — cuts LLM spend on repeat prompts
+
+### Signals, triggers, outbound
+- **Signal connectors** — 20+ drivers: webhook, RSS, IMAP, Slack, Discord, WhatsApp, GitHub, Linear, Jira, PagerDuty, Sentry, Datadog, ClearCue, Telegram, Matrix, Notion, Confluence, Screenpipe, Searxng, more
+- **Bug Report signals** — lightweight QA pipeline with public JS widget, screenshot + console + network + action log capture, threaded comments (reporter + agent + support), agent delegation, SLA escalation
+- **Trigger rules** — event-driven automation with condition evaluator, dry-run testing
+- **Multi-Channel Outbound** — Email (SMTP), Telegram, Slack, Webhook, ntfy with rate limiting and blacklist
+- **Webhooks** — inbound (HMAC-SHA256) + outbound (retry, event filtering)
+
+### Human-in-the-loop, budgets, security
+- **Approvals** — inbox with SLA enforcement + escalation
+- **Human Tasks** — embedded form schemas on workflow nodes
+- **Credit Ledger** — per-experiment and per-project with pessimistic locking and auto-pause on overspend
+- **Credential Vault** — encrypted external service credentials with rotation, OAuth2, expiry tracking, per-project injection
+- **SSH tools** — TOFU (Trust On First Use) fingerprint verification, per-tool allowed-commands whitelist, multi-layer command security policy
+- **Audit Trail** — full activity log (spatie/activitylog), searchable + filterable
+- **Tenant Isolation** — multi-layer `TeamScope` + `BelongsToTeam` + `withoutGlobalScopes()` discipline
+
+### Integrations & web dev pipeline
+- **Integrations** — GitHub, Slack, Notion, Airtable, Linear, Stripe, Vercel, Netlify, generic webhook/polling with OAuth 2.0
+- **Autonomous Web Dev Pipeline** — agents can open PRs, merge, dispatch CI workflows, create releases, trigger Vercel/Netlify/SSH deploys through MCP tools
+- **Website Builder** — AI-generated static sites with 8 widget types, Vercel + ZIP deployment drivers, form submissions, blog/navigation/contact widgets
+- **Founder Mode pack** — marketplace bundle of 6 persona agents (Strategist, Product Lead, Growth Hacker, Finance Advisor, Ops Manager, Risk Officer), 20 framework skills (RICE, SPIN, BANT, MEDDIC, OKRs, Shape Up, Unit Economics, Kano, TAM-SAM-SOM, K-Factor, NPV-IRR, RACI, A/B Testing, OWASP), 5 pre-built workflows
+- **Marketplace** — browse, publish, install shared skills, agents, workflows, and bundles with AI risk scanning
+
+### API & MCP surface
+- **REST API** — 175+ endpoints under `/api/v1/` with Sanctum auth, cursor pagination, auto-generated OpenAPI 3.1 at `/docs/api`
+- **MCP Server** — **450+ Model Context Protocol tools across 45 domains** (stdio + HTTP/SSE + OAuth2/PKCE)
+- **Structured MCP errors** — canonical gRPC-style error codes (`UNAVAILABLE`, `PERMISSION_DENIED`, `RESOURCE_EXHAUSTED`, `DEADLINE_EXCEEDED`, `INVALID_ARGUMENT`, `FAILED_PRECONDITION`, `NOT_FOUND`, `INTERNAL`) with retryable hints — agents know when to retry vs. fail fast
+- **Per-tool deadlines** — optional `deadline_ms` parameter on every MCP tool; agents can bound wall-clock time per call
+- **OpenTelemetry tracing** — OTLP HTTP exporter, Jaeger all-in-one via `docker compose --profile observability up`, spans for MCP tool → AI gateway → LLM provider
+- **Tool Management** — MCP servers (stdio/HTTP), built-in tools (bash/filesystem/browser), risk classification, per-agent assignment
+- **MCP client compatibility** — Claude Desktop, Claude.ai, ChatGPT Apps, Cursor, Codex, Claude Code, Gemini CLI, any OAuth2 client
+
+### Infrastructure
+- **Queue Management** — Laravel Horizon with 6 priority queues and auto-scaling
+- **Testing** — regression test suites for agent outputs with automated evaluation
+- **Per-Call Working Directory** — local/bridge agents can operate in a configured working directory per-agent, isolated project contexts
+
+## Use Cases
+
+FleetQ is built for teams running AI agents in production, not toy demos.
+
+- **Autonomous dev pipelines** — agent opens PR → CI runs → reviewer agent approves → merge → deploy. Human approves only on risk signals.
+- **Customer support triage** — bug report widget → agent extracts reproduction steps from console/network log → experiment runs → notifies reporter with fix or agent-generated workaround.
+- **Multi-agent research** — crew of Strategist + Researcher + Writer with QA reviewer. Each step weighted by domain rubric.
+- **Scheduled content ops** — continuous project runs daily, each run executes a DAG: draft → review → SEO-check → publish → schedule social.
+- **Incident response** — PagerDuty/Sentry signal → trigger rule → diagnosis agent → human approval on runbook action → Slack notify.
+- **GPU workloads** — agent calls `gpu_compute` skill on RunPod serverless (Whisper, FLUX, Bark) as part of a larger workflow, with cost accounting.
+- **Local-first agent dev** — Ollama + Codex + Claude Code auto-detected, zero API cost for prototyping; switch to cloud providers for production.
+- **Bring FleetQ into Claude** — expose your internal data + tools as MCP server, Claude Desktop/ChatGPT/Cursor can drive the platform programmatically.
+
+## How FleetQ compares
+
+| | FleetQ | n8n | CrewAI | LangGraph | Make.com |
+|---|---|---|---|---|---|
+| **Open source** | ✅ AGPLv3 | ✅ Sustainable Use | ✅ MIT | ✅ MIT | ❌ Proprietary |
+| **Visual DAG builder** | ✅ 8 node types | ✅ (not AI-first) | ❌ | ❌ | ✅ |
+| **Multi-agent crews** | ✅ 7 process types | ❌ | ✅ | ✅ (build-your-own) | ❌ |
+| **MCP server (native)** | ✅ 450+ tools | ❌ | ❌ | ❌ | ❌ |
+| **Human-in-the-loop** | ✅ native | ⚠️ workaround | ⚠️ code | ⚠️ code | ⚠️ approve-node |
+| **Budget ledger + locks** | ✅ pessimistic | ❌ | ❌ | ❌ | ❌ |
+| **Audit trail** | ✅ every action | ✅ | ❌ | ❌ | ✅ |
+| **BYOK + local LLMs** | ✅ both | ⚠️ BYOK only | ⚠️ depends | ⚠️ BYOK | ❌ |
+| **Self-hosted** | ✅ Docker Compose | ✅ | n/a (library) | n/a (library) | ❌ |
+| **Agent evolution (self-improve)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **OpenTelemetry tracing** | ✅ native | ❌ | ❌ | ⚠️ partial | ❌ |
+| **Credit/usage metering** | ✅ per-team/project | ❌ | ❌ | ❌ | per-workspace |
+
+*TL;DR — if you're building production agent systems with LLMs and want visual workflows + MCP + human oversight, FleetQ is the only platform that bundles all of it.*
 
 ## Quick Start (Docker)
 
@@ -358,7 +465,7 @@ Remove a fingerprint when a host's SSH key is legitimately rotated — the next 
 
 ## Architecture
 
-Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 16 bounded contexts:
+Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 33 bounded contexts — table below shows the 17 primary domains:
 
 | Domain | Purpose |
 |--------|---------|
@@ -442,6 +549,21 @@ Contributions are welcome. Please open an issue first to discuss proposed change
 4. Run `php artisan test` to verify
 5. Submit a pull request
 
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for coding conventions, commit style, and PR checklist.
+
+## Community & Support
+
+- **Issues** — [Bug reports + feature requests](https://github.com/escapeboy/agent-fleet-o/issues)
+- **Discussions** — [Ask a question or share what you built](https://github.com/escapeboy/agent-fleet-o/discussions)
+- **Changelog** — [What changed in each release](CHANGELOG.md)
+- **Cloud version** — [fleetq.net](https://fleetq.net) (free tier, no credit card)
+
+## Star History
+
+If FleetQ saves you time, a ⭐ helps others find it. GitHub ranks repos by star velocity.
+
 ## License
 
 FleetQ Community Edition is open-source software licensed under the [GNU Affero General Public License v3.0](LICENSE).
+
+**TL;DR of AGPLv3:** You can self-host, modify, and run FleetQ for free — including commercial use. If you offer FleetQ as a hosted service to others, you must open-source your modifications. Questions? See [our AGPLv3 FAQ](https://www.gnu.org/licenses/agpl-3.0-faq.html).
