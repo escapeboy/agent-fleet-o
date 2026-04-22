@@ -99,6 +99,7 @@ use App\Infrastructure\Auth\CompatibleSanctumGuard;
 use App\Infrastructure\Auth\ScopedPersonalAccessToken;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
+use App\Infrastructure\Telemetry\AttributeRedactor;
 use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use App\Livewire\Hooks\PluginDispatchHook;
 use App\Mcp\DeadlineContext;
@@ -157,9 +158,15 @@ class AppServiceProvider extends ServiceProvider
 
         // OpenTelemetry tracer provider — no-op tracer when OTEL_ENABLED=false (zero overhead)
         $this->app->singleton(FleetTracerProvider::class);
+        $this->app->singleton(AttributeRedactor::class);
         $this->app->terminating(function () {
             if (app()->resolved(FleetTracerProvider::class)) {
                 app(FleetTracerProvider::class)->shutdown();
+            }
+            // Clear request-scoped MCP deadline so Horizon workers don't inherit
+            // a stale deadline from a prior job's exception path.
+            if (app()->resolved(DeadlineContext::class)) {
+                app(DeadlineContext::class)->clear();
             }
         });
 

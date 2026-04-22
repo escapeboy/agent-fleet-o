@@ -26,6 +26,12 @@ use Throwable;
  * - When telemetry.enabled=false → returns a NoopTracer (zero overhead).
  * - When enabled but exporter initialization fails → logs and falls back to noop.
  * - Shutdown method should be called on terminate to flush pending spans.
+ *
+ * IMPORTANT: Span attributes are exported verbatim. If an attribute value may
+ * contain user input, credentials, tokens, or other secrets, pass it through
+ * `app(AttributeRedactor::class)->sanitize($key, $value)` before calling
+ * `setAttribute()`. The redactor strips values whose keys match the
+ * `telemetry.redacted_attributes` list (authorization, cookie, api_key, etc.).
  */
 class TracerProvider
 {

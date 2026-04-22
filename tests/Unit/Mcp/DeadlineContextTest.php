@@ -57,6 +57,17 @@ class DeadlineContextTest extends TestCase
         $this->assertGreaterThanOrEqual(50, $ctx->remaining() ?? 0);
     }
 
+    public function test_excessive_deadline_is_capped_at_10_minutes(): void
+    {
+        $ctx = new DeadlineContext;
+        $ctx->set(3_600_000); // 1 hour
+
+        $remaining = $ctx->remaining();
+        $this->assertNotNull($remaining);
+        $this->assertLessThanOrEqual(600_000, $remaining);
+        $this->assertGreaterThan(599_000, $remaining);
+    }
+
     public function test_expired_after_clamped_minimum_elapsed(): void
     {
         $ctx = new DeadlineContext;

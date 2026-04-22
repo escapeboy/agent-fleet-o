@@ -156,12 +156,23 @@ class ErrorClassifier
 
     /**
      * Returns a message safe to surface to the MCP client.
-     * Internal errors get a generic message to avoid leaking stack trace hints.
+     *
+     * Internal errors AND connection failures use a generic message to avoid
+     * leaking stack trace hints or internal topology (host:port, service names).
+     * ModelNotFoundException is scrubbed to hide FQN + primary-key shape.
      */
     private function safeMessage(Throwable $e, ErrorCode $code): string
     {
         if ($code === ErrorCode::Internal) {
             return 'An internal error occurred. Check server logs for details.';
+        }
+
+        if ($e instanceof ConnectionException) {
+            return 'Upstream service unavailable.';
+        }
+
+        if ($e instanceof ModelNotFoundException) {
+            return 'The requested resource was not found.';
         }
 
         $message = $e->getMessage();

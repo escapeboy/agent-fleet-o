@@ -17,6 +17,15 @@ class DeadlineContext
 {
     private const MIN_DEADLINE_MS = 100;
 
+    /**
+     * Upper cap — prevents client-supplied deadlines from exceeding what the
+     * infrastructure can reasonably honor. 10 minutes matches the longest
+     * Horizon queue timeout (experiments supervisor: 300s → doubled for safety
+     * margin) and keeps synchronous MCP calls below common proxy/nginx
+     * fastcgi_read_timeout (default 600s).
+     */
+    private const MAX_DEADLINE_MS = 600_000;
+
     private ?float $expiresAtMicroSeconds = null;
 
     private ?int $originalDeadlineMs = null;
@@ -29,6 +38,14 @@ class DeadlineContext
                 'clamped_ms' => self::MIN_DEADLINE_MS,
             ]);
             $deadlineMs = self::MIN_DEADLINE_MS;
+        }
+
+        if ($deadlineMs > self::MAX_DEADLINE_MS) {
+            Log::warning('DeadlineContext: deadline_ms above maximum, clamping', [
+                'requested_ms' => $deadlineMs,
+                'clamped_ms' => self::MAX_DEADLINE_MS,
+            ]);
+            $deadlineMs = self::MAX_DEADLINE_MS;
         }
 
         $this->expiresAtMicroSeconds = microtime(true) + ($deadlineMs / 1000);

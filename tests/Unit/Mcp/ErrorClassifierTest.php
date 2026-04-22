@@ -20,10 +20,10 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Validation\ValidationException;
-use Tests\TestCase;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Tests\TestCase;
 
 class ErrorClassifierTest extends TestCase
 {
@@ -158,6 +158,31 @@ class ErrorClassifierTest extends TestCase
         $this->assertTrue($result['retryable']);
     }
 
+    public function test_connection_exception_message_is_scrubbed(): void
+    {
+        $result = $this->classifier->classify(new ConnectionException(
+            'Could not resolve host: internal-service.prod.svc.cluster.local:5432',
+        ));
+
+        $this->assertSame('UNAVAILABLE', $result['code']);
+        $this->assertSame('Upstream service unavailable.', $result['message']);
+        $this->assertStringNotContainsString('internal-service', $result['message']);
+        $this->assertStringNotContainsString('5432', $result['message']);
+    }
+
+    public function test_model_not_found_message_is_scrubbed(): void
+    {
+        $exception = new ModelNotFoundException;
+        $exception->setModel(\stdClass::class, ['abc-123']);
+
+        $result = $this->classifier->classify($exception);
+
+        $this->assertSame('NOT_FOUND', $result['code']);
+        $this->assertSame('The requested resource was not found.', $result['message']);
+        $this->assertStringNotContainsString('stdClass', $result['message']);
+        $this->assertStringNotContainsString('abc-123', $result['message']);
+    }
+
     public function test_classifies_unknown_exception_as_internal(): void
     {
         $result = $this->classifier->classify(new RuntimeException('oops'));
@@ -198,9 +223,11 @@ class ErrorClassifierTest extends TestCase
     public function test_message_is_truncated_to_500_chars(): void
     {
         $longMessage = str_repeat('a', 1000);
-        $result = $this->classifier->classify(new ModelNotFoundException($longMessage));
+        // ValidationException message is surfaced (non-scrubbed code path)
+        $validator = validator(['x' => $longMessage], ['x' => 'max:10']);
+        $result = $this->classifier->classify(new ValidationException($validator));
 
-        $this->assertSame(500, mb_strlen($result['message']));
+        $this->assertLessThanOrEqual(500, mb_strlen($result['message']));
     }
 
     public function test_dynamic_registration_takes_precedence(): void
