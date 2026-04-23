@@ -552,6 +552,21 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
+        // Agent Chat Protocol (13) — peer-to-peer agent interop (ASI1-compatible)
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentListTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentGetTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentCreateTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentDeleteTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentPingTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatSendTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatStructuredTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatManifestPublishTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatManifestRevokeTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatSessionsListTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatSessionGetTool::class,
+
         // Agent (23)
         AgentListTool::class,
         AgentGetTool::class,
