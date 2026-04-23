@@ -27,6 +27,7 @@ enum WorkflowNodeType: string
     case Iteration = 'iteration';
     case WorkflowRef = 'workflow_ref';
     case SignalRoute = 'signal_route';
+    case ExternalAgent = 'external_agent';
 
     public function label(): string
     {
@@ -54,6 +55,7 @@ enum WorkflowNodeType: string
             self::Iteration => 'Iteration',
             self::WorkflowRef => 'Workflow Reference',
             self::SignalRoute => 'Signal Route',
+            self::ExternalAgent => 'External Agent',
         };
     }
 
@@ -83,6 +85,7 @@ enum WorkflowNodeType: string
             self::Iteration => 'arrows-pointing-in',
             self::WorkflowRef => 'arrow-top-right-on-square',
             self::SignalRoute => 'signal',
+            self::ExternalAgent => 'link',
         };
     }
 
@@ -198,6 +201,10 @@ enum WorkflowNodeType: string
                 'inputs' => [['name' => 'signal_data', 'type' => 'structured']],
                 'outputs' => [['name' => 'route', 'type' => 'passthrough']],
             ],
+            self::ExternalAgent => [
+                'inputs' => [['name' => 'context', 'type' => 'text|structured']],
+                'outputs' => [['name' => 'result', 'type' => 'text|structured'], ['name' => 'session_id', 'type' => 'string']],
+            ],
             default => [
                 'inputs' => [['name' => 'data', 'type' => 'any']],
                 'outputs' => [['name' => 'data', 'type' => 'any']],
@@ -240,6 +247,7 @@ enum WorkflowNodeType: string
             self::TemplateTransform,
             self::KnowledgeRetrieval,
             self::WorkflowRef,
+            self::ExternalAgent,
         ]);
     }
 }
