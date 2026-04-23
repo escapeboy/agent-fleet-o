@@ -130,6 +130,17 @@ Route::get('/.well-known/fleetq', WellKnownFleetQController::class)
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
 
+// Agent Chat Protocol — public manifest discovery (no auth)
+Route::get('/.well-known/agents', [\App\Http\Controllers\Api\V1\AgentManifestController::class, 'index'])
+    ->name('agent-chat.manifest.list')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+Route::get('/.well-known/agents/{slug}', [\App\Http\Controllers\Api\V1\AgentManifestController::class, 'show'])
+    ->name('agent-chat.manifest.show')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:120,1');
+
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 

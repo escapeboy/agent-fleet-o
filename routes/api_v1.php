@@ -78,6 +78,19 @@ Route::prefix('marketplace')
         Route::get('/categories', [MarketplaceController::class, 'categories']);
     });
 
+// Agent Chat Protocol — inbound endpoints (auth handled inside controller:
+// Sanctum for private/team visibility, JWT HS256 for marketplace/public visibility)
+Route::prefix('agents')
+    ->middleware('throttle:60,1')
+    ->group(function () {
+        Route::post('/{agent}/chat', [\App\Http\Controllers\Api\V1\AgentChatController::class, 'chat'])
+            ->name('agent-chat.inbound.chat');
+        Route::post('/{agent}/structured', [\App\Http\Controllers\Api\V1\AgentChatController::class, 'structured'])
+            ->name('agent-chat.inbound.structured');
+        Route::post('/{agent}/ack', [\App\Http\Controllers\Api\V1\AgentChatController::class, 'ack'])
+            ->name('agent-chat.inbound.ack');
+    });
+
 // Authenticated routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
@@ -120,6 +133,18 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/agents/{agent}/feedback', [AgentController::class, 'submitFeedback']);
     Route::get('/agents/{agent}/feedback', [AgentController::class, 'listFeedback']);
     Route::get('/agents/{agent}/feedback/stats', [AgentController::class, 'feedbackStats']);
+
+    // External Agents CRUD + dispatch (Sanctum-authenticated)
+    Route::apiResource('external-agents', \App\Http\Controllers\Api\V1\ExternalAgentController::class)->parameters(['external-agents' => 'externalAgent']);
+    Route::post('/external-agents/{externalAgent}/refresh', [\App\Http\Controllers\Api\V1\ExternalAgentController::class, 'refresh']);
+    Route::post('/external-agents/{externalAgent}/ping', [\App\Http\Controllers\Api\V1\ExternalAgentController::class, 'ping']);
+    Route::post('/external-agents/{externalAgent}/chat', [\App\Http\Controllers\Api\V1\ExternalAgentController::class, 'sendChat']);
+    Route::post('/external-agents/{externalAgent}/structured', [\App\Http\Controllers\Api\V1\ExternalAgentController::class, 'sendStructured']);
+
+    // Chat sessions (Sanctum-authenticated read endpoints)
+    Route::get('/agent-chat/sessions', [\App\Http\Controllers\Api\V1\AgentChatSessionController::class, 'index']);
+    Route::get('/agent-chat/sessions/{session}', [\App\Http\Controllers\Api\V1\AgentChatSessionController::class, 'show']);
+    Route::get('/agent-chat/sessions/{session}/messages', [\App\Http\Controllers\Api\V1\AgentChatSessionController::class, 'messages']);
 
     // Skills
     Route::apiResource('skills', SkillController::class);
