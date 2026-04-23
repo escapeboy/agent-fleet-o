@@ -48,7 +48,7 @@ class AgentChatStructuredTool extends Tool
 
         $decoded = json_decode($validated['schema_json'], true);
         if (! is_array($decoded) || $decoded === []) {
-            return $this->invalidInputError('schema_json must be a non-empty JSON object');
+            return $this->invalidArgumentError('schema_json must be a non-empty JSON object');
         }
 
         $agent = ExternalAgent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['external_agent_id']);
@@ -64,7 +64,7 @@ class AgentChatStructuredTool extends Tool
                 sessionToken: $validated['session_token'] ?? null,
             );
         } catch (\Throwable $e) {
-            return $this->upstreamError($e->getMessage());
+            return $this->unavailableError($e->getMessage());
         }
 
         return Response::text(json_encode($result));

@@ -57,7 +57,7 @@ class ExternalAgentCreateTool extends Tool
                 description: $validated['description'] ?? null,
             );
         } catch (\Throwable $e) {
-            return $this->invalidInputError($e->getMessage());
+            return $this->invalidArgumentError($e->getMessage());
         }
 
         return Response::text(json_encode([

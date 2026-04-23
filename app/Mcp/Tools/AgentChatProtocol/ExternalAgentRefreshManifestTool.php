@@ -46,7 +46,7 @@ class ExternalAgentRefreshManifestTool extends Tool
         try {
             $agent = $action->execute($agent);
         } catch (\Throwable $e) {
-            return $this->upstreamError($e->getMessage());
+            return $this->unavailableError($e->getMessage());
         }
 
         return Response::text(json_encode([
