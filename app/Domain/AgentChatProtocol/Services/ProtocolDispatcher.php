@@ -6,6 +6,7 @@ namespace App\Domain\AgentChatProtocol\Services;
 
 use App\Domain\AgentChatProtocol\DTOs\ChatMessageDTO;
 use App\Domain\AgentChatProtocol\DTOs\StructuredRequestDTO;
+use App\Domain\AgentChatProtocol\Enums\AdapterKind;
 use App\Domain\AgentChatProtocol\Enums\ExternalAgentStatus;
 use App\Domain\AgentChatProtocol\Exceptions\RemoteAgentTimeoutException;
 use App\Domain\AgentChatProtocol\Models\ExternalAgent;
@@ -19,16 +20,84 @@ use Illuminate\Support\Facades\Log;
 
 class ProtocolDispatcher
 {
-    public function __construct(private readonly SsrfGuard $ssrfGuard) {}
+    public function __construct(
+        private readonly SsrfGuard $ssrfGuard,
+        private readonly AgentverseEnvelopeMapper $envelopeMapper,
+    ) {}
 
     public function sendChat(ExternalAgent $externalAgent, ChatMessageDTO $message): array
     {
+        if ($this->adapterKind($externalAgent)->isAgentverse()) {
+            return $this->dispatchAgentverse($externalAgent, $message);
+        }
+
         return $this->dispatch($externalAgent, 'chat', $message->toArray());
     }
 
     public function sendStructuredRequest(ExternalAgent $externalAgent, StructuredRequestDTO $request): array
     {
+        if ($this->adapterKind($externalAgent)->isAgentverse()) {
+            return $this->dispatchAgentverse($externalAgent, $request);
+        }
+
         return $this->dispatch($externalAgent, 'structured', $request->toArray());
+    }
+
+    private function adapterKind(ExternalAgent $externalAgent): AdapterKind
+    {
+        if ($externalAgent->adapter_kind instanceof AdapterKind) {
+            return $externalAgent->adapter_kind;
+        }
+
+        return AdapterKind::tryFrom((string) $externalAgent->adapter_kind) ?? AdapterKind::Http;
+    }
+
+    /**
+     * Dispatch through an Agentverse adapter — wrap the ACP payload in the
+     * Agentverse envelope and POST to mailbox/submit (or proxy/submit).
+     */
+    private function dispatchAgentverse(ExternalAgent $externalAgent, ChatMessageDTO|StructuredRequestDTO $dto): array
+    {
+        if (! $externalAgent->status->isCallable()) {
+            throw new \RuntimeException("External agent {$externalAgent->id} is not callable (status: {$externalAgent->status->value})");
+        }
+
+        if ($this->isCircuitOpen($externalAgent)) {
+            $this->recordFailure($externalAgent, 'circuit breaker open');
+            throw new \RuntimeException("Circuit breaker open for external agent {$externalAgent->id}");
+        }
+
+        $targetAddress = (string) ($externalAgent->agent_address ?? '');
+        if ($targetAddress === '') {
+            throw new \RuntimeException("Agentverse external agent {$externalAgent->id} has no agent_address set");
+        }
+
+        $client = AgentverseClient::forTeam((string) $externalAgent->team_id);
+        if ($client === null) {
+            throw new \RuntimeException('Team has no active Agentverse credential configured');
+        }
+
+        $callerAddress = 'fleetq:team:'.$externalAgent->team_id;
+        $envelope = $this->envelopeMapper->wrap($dto, $callerAddress, $targetAddress);
+
+        $start = microtime(true);
+        try {
+            $response = $this->adapterKind($externalAgent) === AdapterKind::AgentverseProxy
+                ? $client->submitProxy($targetAddress, $envelope)
+                : $client->submitMailbox($envelope);
+
+            $this->recordSuccess($externalAgent, (int) ((microtime(true) - $start) * 1000));
+
+            // Agentverse responses may themselves be envelopes; unwrap and return the payload.
+            if (isset($response['payload']) && is_array($response['payload'])) {
+                return $response['payload'];
+            }
+
+            return $response;
+        } catch (\Throwable $e) {
+            $this->recordFailure($externalAgent, $e->getMessage());
+            throw $e;
+        }
     }
 
     public function sendRaw(ExternalAgent $externalAgent, string $path, array $payload): array

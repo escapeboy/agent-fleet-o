@@ -6,10 +6,16 @@
                 Remote agents registered via the <span class="font-mono text-xs">Agent Chat Protocol</span>. Callable from workflows, crews, and the assistant.
             </p>
         </div>
-        <button type="button" wire:click="openRegister"
-                class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
-            Register remote agent
-        </button>
+        <div class="flex gap-2">
+            <a href="{{ route('external-agents.agentverse') }}"
+               class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50">
+                Browse Agentverse →
+            </a>
+            <button type="button" wire:click="openRegister"
+                    class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                Register remote agent
+            </button>
+        </div>
     </div>
 
     @if (session('success'))

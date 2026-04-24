@@ -11,12 +11,12 @@ use ReflectionClass;
 
 class AssistantBridgeTest extends TestCase
 {
-    public function test_all_13_agent_chat_protocol_tools_are_registered_on_server(): void
+    public function test_all_15_agent_chat_protocol_tools_are_registered_on_server(): void
     {
         $tools = (new ReflectionClass(AgentFleetServer::class))->getDefaultProperties()['tools'] ?? [];
         $acp = array_filter($tools, fn (string $class) => str_contains($class, 'AgentChatProtocol'));
 
-        $this->assertCount(13, $acp, 'Expected 13 Agent Chat Protocol MCP tools registered on the server.');
+        $this->assertCount(15, $acp, 'Expected 15 Agent Chat Protocol MCP tools registered on the server.');
     }
 
     public function test_agent_chat_protocol_tools_are_tier_annotated(): void
@@ -33,8 +33,8 @@ class AssistantBridgeTest extends TestCase
             $buckets[$tier]++;
         }
 
-        $this->assertSame(5, $buckets['read'], 'Expected 5 read-tier ACP tools.');
-        $this->assertSame(6, $buckets['write'], 'Expected 6 write-tier ACP tools.');
+        $this->assertSame(6, $buckets['read'], 'Expected 6 read-tier ACP tools (added agentverse_search).');
+        $this->assertSame(7, $buckets['write'], 'Expected 7 write-tier ACP tools (added agentverse_install).');
         $this->assertSame(2, $buckets['destructive'], 'Expected 2 destructive-tier ACP tools.');
     }
 }

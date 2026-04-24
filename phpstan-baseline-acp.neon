@@ -163,14 +163,50 @@ parameters:
 			path: app/Domain/AgentChatProtocol/Services/AgentManifestCache.php
 
 		-
+			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
+
+		-
+			message: '#^Offset ''api_key'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between \*NEVER\* and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 1
+			count: 2
 			path: app/Domain/AgentChatProtocol/Services/ProtocolDispatcher.php
 
 		-
 			message: '#^Cannot call method isCallable\(\) on string\.$#'
 			identifier: method.nonObject
+			count: 2
+			path: app/Domain/AgentChatProtocol/Services/ProtocolDispatcher.php
+
+		-
+			message: '#^Instanceof between string and App\\Domain\\AgentChatProtocol\\Enums\\AdapterKind will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
 			count: 1
 			path: app/Domain/AgentChatProtocol/Services/ProtocolDispatcher.php
 
@@ -245,6 +281,18 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/AgentChatProtocol/AgentChatSessionsListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/AgentChatProtocol/AgentverseInstallTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/AgentChatProtocol/AgentverseInstallTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'

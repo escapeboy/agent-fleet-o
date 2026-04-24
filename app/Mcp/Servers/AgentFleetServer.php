@@ -566,6 +566,8 @@ class AgentFleetServer extends Server
         \App\Mcp\Tools\AgentChatProtocol\AgentChatManifestRevokeTool::class,
         \App\Mcp\Tools\AgentChatProtocol\AgentChatSessionsListTool::class,
         \App\Mcp\Tools\AgentChatProtocol\AgentChatSessionGetTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentverseSearchTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentverseInstallTool::class,
 
         // Agent (23)
         AgentListTool::class,

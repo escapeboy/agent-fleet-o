@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\AgentChatProtocol\Models;
 
+use App\Domain\AgentChatProtocol\Enums\AdapterKind;
 use App\Domain\AgentChatProtocol\Enums\ExternalAgentStatus;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Shared\Scopes\TeamScope;
@@ -33,6 +34,7 @@ class ExternalAgent extends Model
     {
         return [
             'status' => ExternalAgentStatus::class,
+            'adapter_kind' => AdapterKind::class,
             'manifest_cached' => 'array',
             'capabilities' => 'array',
             'metadata' => 'array',
