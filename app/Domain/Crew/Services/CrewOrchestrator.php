@@ -245,20 +245,28 @@ class CrewOrchestrator
             return;
         }
 
-        // Create one task per member, all with the same goal as input
+        // Create one task per member, all with the same goal as input.
+        // External members get external_agent_id set (and agent_id left null); the
+        // orchestrator branches on that in dispatchTask().
         $taskExecutions = [];
         foreach ($members as $index => $member) {
+            $memberName = $member->isExternal()
+                ? (string) $member->externalAgent?->name
+                : (string) $member->agent?->name;
+
             $taskExecutions[] = CrewTaskExecution::create([
                 'crew_execution_id' => $execution->id,
-                'agent_id' => $member->agent_id,
-                'title' => "Fanout: {$member->agent->name}",
+                'agent_id' => $member->isExternal() ? null : $member->agent_id,
+                'external_agent_id' => $member->isExternal() ? $member->external_agent_id : null,
+                'title' => "Fanout: {$memberName}",
                 'description' => $execution->goal,
                 'status' => CrewTaskStatus::Pending,
                 'input_context' => [
                     'fanout_mode' => true,
                     'original_goal' => $execution->goal,
                     'expected_output' => 'Provide your independent analysis or solution.',
-                    'assigned_to' => $member->agent->name,
+                    'assigned_to' => $memberName,
+                    'external' => $member->isExternal(),
                 ],
                 'depends_on' => [],
                 'attempt_number' => 1,
@@ -271,21 +279,33 @@ class CrewOrchestrator
             'task_plan' => collect($taskExecutions)->map(fn ($t) => [
                 'id' => $t->id,
                 'title' => $t->title,
-                'agent' => $t->agent?->name,
+                'agent' => $t->isExternal()
+                    ? $t->externalAgent?->name
+                    : $t->agent?->name,
             ])->toArray(),
         ]);
 
-        // Dispatch all in parallel
-        $jobs = collect($taskExecutions)->map(fn (CrewTaskExecution $task) => new ExecuteCrewTaskJob(
+        // Dispatch all in parallel. Route external tasks through the protocol dispatcher
+        // instead of ExecuteCrewTaskJob (which assumes internal agent skill resolution).
+        $internalTasks = collect($taskExecutions)->filter(fn (CrewTaskExecution $t) => ! $t->isExternal());
+        $externalTasks = collect($taskExecutions)->filter(fn (CrewTaskExecution $t) => $t->isExternal());
+
+        foreach ($externalTasks as $task) {
+            app(CrewExternalMemberDispatcher::class)->dispatch($task, $execution);
+        }
+
+        $jobs = $internalTasks->map(fn (CrewTaskExecution $task) => new ExecuteCrewTaskJob(
             crewExecutionId: $execution->id,
             taskExecutionId: $task->id,
             teamId: $execution->team_id,
         ))->toArray();
 
-        Bus::batch($jobs)
-            ->name("crew-fanout:{$execution->id}")
-            ->onQueue('ai-calls')
-            ->dispatch();
+        if (! empty($jobs)) {
+            Bus::batch($jobs)
+                ->name("crew-fanout:{$execution->id}")
+                ->onQueue('ai-calls')
+                ->dispatch();
+        }
     }
 
     /**
@@ -527,6 +547,15 @@ class CrewOrchestrator
 
             // Task is not skipped — dispatch it
             $currentTask->update(['status' => CrewTaskStatus::Assigned]);
+
+            if ($currentTask->external_agent_id !== null) {
+                // Route external members through the Agent Chat Protocol (synchronous dispatch;
+                // the protocol's own retries + circuit breaker handle reliability).
+                app(CrewExternalMemberDispatcher::class)
+                    ->dispatch($currentTask, $execution);
+
+                return;
+            }
 
             ExecuteCrewTaskJob::dispatch(
                 crewExecutionId: $execution->id,

@@ -115,6 +115,7 @@
                 <x-sidebar-link href="{{ route('projects.index') }}" :active="request()->routeIs('projects.*')" icon="folder">Projects</x-sidebar-link>
                 <x-sidebar-link href="{{ route('experiments.index') }}" :active="request()->routeIs('experiments.*')" icon="play">Runs</x-sidebar-link>
                 <x-sidebar-link href="{{ route('agents.index') }}" :active="request()->routeIs('agents.*')" icon="cpu-chip">Agents</x-sidebar-link>
+                <x-sidebar-link href="{{ route('external-agents.index') }}" :active="request()->routeIs('external-agents.*')" icon="link">External Agents</x-sidebar-link>
                 <x-sidebar-link href="{{ route('crews.index') }}" :active="request()->routeIs('crews.*')" icon="user-group">Crews</x-sidebar-link>
                 <x-sidebar-link href="{{ route('approvals.index') }}" :active="request()->routeIs('approvals.*')" icon="check-circle">
                     Approvals

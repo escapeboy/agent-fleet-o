@@ -265,6 +265,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents/{agent}/voice', VoiceSessionPage::class)->name('agents.voice');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
 
+    Route::get('/external-agents', \App\Livewire\AgentChat\ExternalAgentListPage::class)->name('external-agents.index');
+    Route::get('/external-agents/{externalAgent}', \App\Livewire\AgentChat\ExternalAgentDetailPage::class)->name('external-agents.show');
+
     Route::get('/chatbots', ChatbotListPage::class)->name('chatbots.index');
     Route::get('/chatbots/create', CreateChatbotForm::class)->name('chatbots.create');
     Route::get('/chatbots/{chatbot}/analytics', ChatbotAnalyticsPage::class)->name('chatbots.analytics');
