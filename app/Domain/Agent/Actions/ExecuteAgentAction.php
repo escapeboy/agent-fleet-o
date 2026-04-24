@@ -101,6 +101,52 @@ class ExecuteAgentAction
     }
 
     /**
+     * Build the retry user prompt that teaches the model what was wrong and
+     * how to fix it. Kept deliberately terse — one paragraph of feedback,
+     * followed by the JSON Schema the model must conform to.
+     *
+     * @param  array{valid: bool, errors: list<string>}  $eval
+     */
+    private function buildSchemaRetryPrompt(string $previousOutput, array $eval, array $schema): string
+    {
+        $errors = implode("\n- ", $eval['errors']);
+        $schemaJson = json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        return <<<PROMPT
+        Your previous response failed output-schema validation.
+
+        Previous response (first 500 chars):
+        {$previousOutput}
+
+        Schema errors:
+        - {$errors}
+
+        Return a JSON object that matches this schema exactly. No prose, no
+        code fences — just the JSON:
+
+        ```json
+        {$schemaJson}
+        ```
+        PROMPT;
+    }
+
+    /**
+     * Resolve the max-retries count for this agent. Nullable column → fall
+     * back to `config('agent.output_schema.max_retries_default', 2)`. 0 is a
+     * legitimate opt-out that preserves Sprint 8's validate-but-don't-retry
+     * behavior.
+     */
+    private function resolveMaxRetries(\App\Domain\Agent\Models\Agent $agent): int
+    {
+        $value = $agent->output_schema_max_retries;
+        if ($value === null) {
+            $value = (int) config('agent.output_schema.max_retries_default', 2);
+        }
+
+        return max(0, min(5, (int) $value));
+    }
+
+    /**
      * Execute an agent by running its assigned tools (agentic loop)
      * or skills (sequential chain) depending on configuration.
      *
@@ -520,18 +566,73 @@ class ExecuteAgentAction
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
             $costCredits = $response->usage->costCredits;
 
+            // Optional typed output — validate + auto-retry on failure.
+            $schemaEval = $this->validateAgentOutput($agent, $response->content);
+            $retryAttempts = 0;
+            $retryTrail = [];
+
+            if ($schemaEval !== null && ! $schemaEval['valid']) {
+                $maxRetries = $this->resolveMaxRetries($agent);
+
+                while (! $schemaEval['valid'] && $retryAttempts < $maxRetries) {
+                    $retryAttempts++;
+                    $retryTrail[] = [
+                        'attempt' => $retryAttempts,
+                        'errors' => array_slice($schemaEval['errors'], 0, 5),
+                    ];
+
+                    $retryPrompt = $this->buildSchemaRetryPrompt(
+                        previousOutput: mb_strimwidth((string) $response->content, 0, 500, '…'),
+                        eval: $schemaEval,
+                        schema: $agent->output_schema ?? [],
+                    );
+
+                    $retryRequest = new AiRequestDTO(
+                        provider: $resolved['provider'],
+                        model: $model,
+                        systemPrompt: $systemPrompt,
+                        userPrompt: implode("\n\n", $userPromptParts)."\n\n".$retryPrompt,
+                        maxTokens: $tierConfig['max_tokens'],
+                        teamId: $teamId,
+                        agentId: $agent->id,
+                        experimentId: $experimentId,
+                        purpose: 'agent.workflow_step.schema_retry',
+                        temperature: 0.1, // lower temp on retry for determinism
+                        thinkingBudget: $tierConfig['thinking_budget'] ?? null,
+                        workingDirectory: $agent->config['working_directory'] ?? null,
+                    );
+
+                    try {
+                        $retryResponse = $this->gateway->complete($retryRequest);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('ExecuteAgentAction: schema retry failed', [
+                            'agent_id' => $agent->id,
+                            'attempt' => $retryAttempts,
+                            'error' => $e->getMessage(),
+                        ]);
+                        break;
+                    }
+
+                    $response = $retryResponse;
+                    $costCredits += $retryResponse->usage->costCredits;
+                    $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+                    $schemaEval = $this->validateAgentOutput($agent, $response->content);
+                }
+            }
+
             DB::transaction(function () use ($agent, $costCredits) {
                 $locked = Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
                 $locked->increment('budget_spent_credits', $costCredits);
             });
 
-            // Optional typed output — validate against agent.output_schema if set.
-            $schemaEval = $this->validateAgentOutput($agent, $response->content);
-
             $qualityDetails = ['tier' => $tierConfig['tier']->value];
             if ($schemaEval !== null) {
                 $qualityDetails['output_schema_valid'] = $schemaEval['valid'];
                 $qualityDetails['output_schema_errors'] = array_slice($schemaEval['errors'], 0, 10);
+                if ($retryAttempts > 0) {
+                    $qualityDetails['output_schema_retries'] = $retryAttempts;
+                    $qualityDetails['output_schema_retry_trail'] = $retryTrail;
+                }
             }
 
             $execution = AgentExecution::create([
