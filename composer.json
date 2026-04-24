@@ -19,6 +19,7 @@
         "dedoc/scramble": "^0.13.12",
         "ezyang/htmlpurifier": "^4.19",
         "fleetq/plugin-sdk": "^1.0",
+        "intervention/image": "^4.0",
         "laravel-notification-channels/webpush": "*",
         "laravel/ai": "*",
         "laravel/fortify": "^1.34",

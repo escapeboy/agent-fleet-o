@@ -11,12 +11,14 @@ use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Models\SignalComment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class BugReportWidgetCommentsTest extends TestCase
@@ -36,6 +38,7 @@ class BugReportWidgetCommentsTest extends TestCase
         Cache::store('array')->flush();
         RateLimiter::clear('widget-comments-list:');
         RateLimiter::clear('widget-comments-create:');
+        RateLimiter::clear('widget-comments-create-media:');
         RateLimiter::clear('widget-bug-report-confirm:');
         RateLimiter::clear('widget-bug-reports-list:');
 
@@ -457,5 +460,171 @@ class BugReportWidgetCommentsTest extends TestCase
         $this->assertFalse($human->widget_visible);
         $this->assertTrue($reporter->widget_visible);
         $this->assertTrue($support->widget_visible);
+    }
+
+    public function test_create_accepts_comment_with_single_image_attachment(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+        $signal = $this->createBugReport();
+
+        $response = $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => 'See attached',
+            'reporter_name' => 'Alice',
+            'images' => [UploadedFile::fake()->image('screenshot.png', 400, 300)],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonCount(1, 'attachments')
+            ->assertJsonPath('attachments.0.mime', 'image/png');
+
+        $comment = SignalComment::where('signal_id', $signal->id)->sole();
+        $this->assertCount(1, $comment->getMedia('attachments'));
+    }
+
+    public function test_create_accepts_image_only_comment_with_empty_body(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+        $signal = $this->createBugReport();
+
+        $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => '',
+            'images' => [UploadedFile::fake()->image('only.png', 200, 200)],
+        ])->assertStatus(201)->assertJsonCount(1, 'attachments');
+
+        $comment = SignalComment::where('signal_id', $signal->id)->sole();
+        $this->assertSame('', $comment->body);
+        $this->assertCount(1, $comment->getMedia('attachments'));
+    }
+
+    public function test_create_rejects_comment_with_neither_body_nor_images(): void
+    {
+        $signal = $this->createBugReport();
+
+        $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => '   ',
+        ])->assertStatus(422)->assertJsonPath('error', 'empty_comment');
+
+        $this->assertDatabaseCount('signal_comments', 0);
+    }
+
+    public function test_create_rejects_non_image_file(): void
+    {
+        $signal = $this->createBugReport();
+
+        $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => 'payload',
+            'images' => [
+                UploadedFile::fake()->create('malware.exe', 10, 'application/octet-stream'),
+            ],
+        ])->assertStatus(422);
+
+        $this->assertDatabaseCount('signal_comments', 0);
+    }
+
+    public function test_create_rejects_more_than_max_images(): void
+    {
+        $signal = $this->createBugReport();
+
+        $response = $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => 'too many',
+            'images' => array_fill(0, 5, UploadedFile::fake()->image('x.png', 100, 100)),
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('signal_comments', 0);
+    }
+
+    public function test_create_rejects_image_larger_than_max_size(): void
+    {
+        $signal = $this->createBugReport();
+
+        // 6 MB fake file with image/png MIME — fails the `image` rule or `max` rule, both → 422.
+        $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => 'big',
+            'images' => [UploadedFile::fake()->create('huge.png', 6144, 'image/png')],
+        ])->assertStatus(422);
+
+        $this->assertDatabaseCount('signal_comments', 0);
+    }
+
+    public function test_list_endpoint_returns_attachments(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+        $signal = $this->createBugReport();
+
+        $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => 'with image',
+            'images' => [UploadedFile::fake()->image('s.png', 300, 200)],
+        ])->assertStatus(201);
+
+        $response = $this->getJson(sprintf(
+            '/api/public/widget/bug-report/%s/comments?team_public_key=%s',
+            $signal->id,
+            $this->team->widget_public_key,
+        ));
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'comments')
+            ->assertJsonCount(1, 'comments.0.attachments')
+            ->assertJsonPath('comments.0.attachments.0.mime', 'image/png');
+
+        $attachment = $response->json('comments.0.attachments.0');
+        $this->assertArrayHasKey('url', $attachment);
+        $this->assertArrayHasKey('thumb_url', $attachment);
+        $this->assertArrayHasKey('size', $attachment);
+    }
+
+    public function test_create_rejects_images_when_attachments_flag_disabled_but_keeps_text(): void
+    {
+        config()->set('signals.bug_report.widget_comment_attachments_enabled', false);
+        Storage::fake(config('media-library.disk_name'));
+        $signal = $this->createBugReport();
+
+        // Text-only still works.
+        $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => 'plain text',
+        ])->assertStatus(201);
+
+        // Attempt with images is rejected.
+        $this->post(sprintf(
+            '/api/public/widget/bug-report/%s/comments',
+            $signal->id,
+        ), [
+            'team_public_key' => $this->team->widget_public_key,
+            'body' => 'with image',
+            'images' => [UploadedFile::fake()->image('a.png', 100, 100)],
+        ])->assertStatus(422)->assertJsonPath('error', 'attachments_disabled');
     }
 }
