@@ -334,35 +334,129 @@
                                         @endif
                                         <span class="text-xs text-gray-400">{{ $comment->created_at?->diffForHumans() }}</span>
                                     </div>
-                                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $comment->body }}</p>
+                                    @if($comment->body !== '')
+                                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $comment->body }}</p>
+                                    @endif
+                                    @php $attachments = $comment->getMedia('attachments'); @endphp
+                                    @if($attachments->isNotEmpty())
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            @foreach($attachments as $media)
+                                                <a
+                                                    href="{{ $media->getFullUrl() }}"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="block w-24 h-24 rounded border border-gray-200 overflow-hidden hover:ring-2 hover:ring-primary-300 transition"
+                                                    title="{{ $media->file_name }}"
+                                                >
+                                                    <img
+                                                        src="{{ $media->hasGeneratedConversion('thumb') ? $media->getFullUrl('thumb') : $media->getFullUrl() }}"
+                                                        alt=""
+                                                        loading="lazy"
+                                                        class="w-full h-full object-cover"
+                                                    />
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
                     </div>
                 @endif
 
-                <div class="space-y-2">
-                    <div class="flex gap-2 items-start">
-                        <div class="flex-1">
-                            <x-form-textarea
-                                wire:model="commentText"
-                                rows="2"
-                                placeholder="Add a comment..."
-                                :error="$errors->first('commentText')"
-                            />
-                        </div>
-                        <button
-                            wire:click="addComment"
-                            class="px-3 py-2.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700"
-                        >
-                            Post
-                        </button>
+                <form
+                    wire:submit.prevent="addComment"
+                    class="space-y-2"
+                    x-data="{
+                        handlePaste(event) {
+                            const items = event.clipboardData?.items || [];
+                            const files = [];
+                            for (const it of items) if (it.kind === 'file') { const f = it.getAsFile(); if (f) files.push(f); }
+                            if (files.length) {
+                                event.preventDefault();
+                                $wire.uploadMultiple('commentImages', files, () => {}, () => {}, () => {});
+                            }
+                        }
+                    }"
+                >
+                    <div
+                        x-on:dragover.prevent="$el.classList.add('ring-2','ring-primary-300')"
+                        x-on:dragleave="$el.classList.remove('ring-2','ring-primary-300')"
+                        x-on:drop.prevent="
+                            $el.classList.remove('ring-2','ring-primary-300');
+                            if ($event.dataTransfer.files.length) {
+                                $wire.uploadMultiple('commentImages', Array.from($event.dataTransfer.files), () => {}, () => {}, () => {});
+                            }
+                        "
+                        class="rounded-lg transition-all"
+                    >
+                        <x-form-textarea
+                            wire:model="commentText"
+                            rows="2"
+                            placeholder="Add a comment or drop/paste an image..."
+                            x-on:paste="handlePaste($event)"
+                            :error="$errors->first('commentText')"
+                        />
                     </div>
-                    <label class="flex items-center gap-2 text-xs text-gray-600 select-none">
-                        <input type="checkbox" wire:model.live="commentVisibleToReporter" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-                        Visible to reporter (sent to widget). Uncheck to keep as an internal note.
-                    </label>
-                </div>
+
+                    @error('commentImages.*')
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('commentImages')
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+
+                    @if(count($commentImages) > 0)
+                        <div
+                            class="flex flex-wrap gap-2"
+                            wire:loading.class="opacity-50"
+                            wire:target="commentImages"
+                        >
+                            @foreach($commentImages as $idx => $upload)
+                                @if(is_object($upload) && method_exists($upload, 'temporaryUrl') && method_exists($upload, 'isPreviewable') && $upload->isPreviewable())
+                                    <div class="relative w-16 h-16 rounded border border-gray-200 overflow-hidden group">
+                                        <img src="{{ $upload->temporaryUrl() }}" class="w-full h-full object-cover" alt="">
+                                        <button
+                                            type="button"
+                                            wire:click="removeCommentImage({{ $idx }})"
+                                            class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-gray-900/75 text-white text-xs leading-none flex items-center justify-center"
+                                            title="Remove"
+                                        >&times;</button>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="flex items-center gap-2">
+                        <label
+                            class="cursor-pointer px-2.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 select-none"
+                            title="Attach image"
+                        >
+                            <span aria-hidden="true">📎</span>
+                            <input
+                                type="file"
+                                wire:model="commentImages"
+                                multiple
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                class="hidden"
+                            >
+                        </label>
+                        <button
+                            type="submit"
+                            class="px-3 py-2.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700"
+                            wire:loading.attr="disabled"
+                            wire:target="addComment,commentImages"
+                        >
+                            <span wire:loading.remove wire:target="addComment,commentImages">Post</span>
+                            <span wire:loading wire:target="addComment,commentImages">Saving…</span>
+                        </button>
+                        <label class="text-xs text-gray-600 flex items-center gap-2 ml-auto select-none">
+                            <input type="checkbox" wire:model.live="commentVisibleToReporter" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                            Visible to reporter (sent to widget). Uncheck to keep as an internal note.
+                        </label>
+                    </div>
+                </form>
             </div>
         </div>
 
