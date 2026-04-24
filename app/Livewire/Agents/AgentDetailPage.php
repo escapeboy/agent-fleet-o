@@ -15,6 +15,10 @@ use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Models\AgentHook;
 use App\Domain\Agent\Models\AgentRuntimeState;
+use App\Domain\AgentChatProtocol\Actions\PublishAgentManifestAction;
+use App\Domain\AgentChatProtocol\Actions\RevokeAgentManifestAction;
+use App\Domain\AgentChatProtocol\Actions\RotateAgentChatSecretAction;
+use App\Domain\AgentChatProtocol\Enums\AgentChatVisibility;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Memory\Models\Memory;
@@ -409,6 +413,43 @@ class AgentDetailPage extends Component
 
         session()->flash('message', 'Agent deleted.');
         $this->redirect(route('agents.index'));
+    }
+
+    // ── Agent Chat Protocol tab actions ──────────────────────────────────────
+
+    public function publishChatProtocol(string $visibility): void
+    {
+        $enum = AgentChatVisibility::tryFrom($visibility);
+        if ($enum === null) {
+            session()->flash('error', 'Invalid visibility value.');
+
+            return;
+        }
+
+        app(PublishAgentManifestAction::class)
+            ->execute(agent: $this->agent, visibility: $enum);
+
+        $this->agent->refresh();
+        session()->flash('message', 'Chat protocol published for this agent.');
+    }
+
+    public function revokeChatProtocol(): void
+    {
+        app(RevokeAgentManifestAction::class)
+            ->execute($this->agent);
+
+        $this->agent->refresh();
+        session()->flash('message', 'Chat protocol disabled for this agent.');
+    }
+
+    public function rotateChatProtocolSecret(): void
+    {
+        $secret = app(RotateAgentChatSecretAction::class)
+            ->execute($this->agent);
+
+        $this->agent->refresh();
+        session()->flash('chat_protocol_new_secret', $secret);
+        session()->flash('message', 'New secret generated — copy it now; it is only shown once.');
     }
 
     /**

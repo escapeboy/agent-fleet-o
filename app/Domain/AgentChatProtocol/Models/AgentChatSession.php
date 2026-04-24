@@ -50,7 +50,7 @@ class AgentChatSession extends Model
         return $this->hasMany(AgentChatMessage::class, 'session_id')->orderBy('created_at');
     }
 
-    public function touch($attribute = null): bool
+    public function touchActivity(): bool
     {
         $this->last_activity_at = now();
         $this->message_count = (int) $this->message_count + 1;
