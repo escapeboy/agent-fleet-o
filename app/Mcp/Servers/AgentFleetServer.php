@@ -305,6 +305,7 @@ use App\Mcp\Tools\Shared\TeamInviteMemberTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamModelAllowlistTool;
 use App\Mcp\Tools\Shared\TeamObservabilityGetTool;
+use App\Mcp\Tools\Shared\TeamObservabilityTestTool;
 use App\Mcp\Tools\Shared\TeamObservabilityUpdateTool;
 use App\Mcp\Tools\Shared\TeamRemoveMemberTool;
 use App\Mcp\Tools\Shared\TeamUpdateMemberRoleTool;
@@ -953,6 +954,7 @@ class AgentFleetServer extends Server
         TeamModelAllowlistTool::class,
         TeamObservabilityGetTool::class,
         TeamObservabilityUpdateTool::class,
+        TeamObservabilityTestTool::class,
         LocalLlmTool::class,
         TeamByokCredentialManageTool::class,
         TeamClaudeCodeVpsAccessTool::class,

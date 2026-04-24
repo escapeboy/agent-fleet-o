@@ -1019,9 +1019,20 @@
             @endif
         </div>
 
-        <button wire:click="saveObservability" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-            Save Observability
-        </button>
+        <div class="mt-4 flex items-center gap-2">
+            <button wire:click="saveObservability" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                Save Observability
+            </button>
+            @if($observabilityEnabled)
+                <button wire:click="testObservability"
+                        wire:loading.attr="disabled"
+                        wire:target="testObservability"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
+                    <span wire:loading.remove wire:target="testObservability">Test connection</span>
+                    <span wire:loading wire:target="testObservability">Testing…</span>
+                </button>
+            @endif
+        </div>
     </div>
 
     {{-- Chatbot Feature --}}
