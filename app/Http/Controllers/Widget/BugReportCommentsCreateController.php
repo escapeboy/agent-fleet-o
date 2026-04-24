@@ -4,24 +4,23 @@ namespace App\Http\Controllers\Widget;
 
 use App\Domain\Signal\Actions\AddSignalCommentAction;
 use App\Domain\Signal\Enums\CommentAuthorType;
-use App\Domain\Signal\Models\SignalComment;
+use App\Domain\Signal\Services\CommentAttachmentIngester;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Widget\Concerns\ResolvesWidgetAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\ImageManager;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use Throwable;
 
 class BugReportCommentsCreateController extends Controller
 {
     use ResolvesWidgetAccess;
 
-    public function __invoke(Request $request, string $signal, AddSignalCommentAction $action): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        string $signal,
+        AddSignalCommentAction $action,
+        CommentAttachmentIngester $ingester,
+    ): JsonResponse {
         $maxAttachments = (int) config('signals.bug_report.widget_comment_max_attachments', 4);
         $maxMb = (int) config('signals.bug_report.widget_comment_max_attachment_mb', 5);
         $attachmentsEnabled = (bool) config('signals.bug_report.widget_comment_attachments_enabled', true);
@@ -72,7 +71,11 @@ class BugReportCommentsCreateController extends Controller
         );
 
         foreach ($images as $file) {
-            $this->attachReencodedImage($comment, $file);
+            $ingester->attachReencodedImage(
+                $comment,
+                $file->getRealPath(),
+                $file->getClientOriginalName(),
+            );
         }
 
         return $this->withCors(response()->json([
@@ -82,48 +85,6 @@ class BugReportCommentsCreateController extends Controller
             'created_at' => $comment->created_at?->toISOString(),
             'attachments' => $this->serializeAttachments($comment->fresh()->getMedia('attachments')),
         ], 201));
-    }
-
-    /**
-     * Re-encode the uploaded image via Intervention to strip EXIF and any
-     * non-image payloads, then hand the clean copy to Media Library.
-     */
-    private function attachReencodedImage(SignalComment $comment, UploadedFile $file): void
-    {
-        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension());
-        $normalizedExt = $extension === 'jpeg' ? 'jpg' : $extension;
-
-        $tmpPath = tempnam(sys_get_temp_dir(), 'fleetq_img_').'.'.$normalizedExt;
-
-        try {
-            $manager = new ImageManager(new Driver());
-            $image = $manager->decodePath($file->getRealPath());
-            // save() encodes using the path's extension; GD re-encodes on write
-            // which strips EXIF/metadata from the stored copy.
-            $image->save($tmpPath);
-
-            $comment->addMedia($tmpPath)
-                ->usingFileName($this->safeFileName($file->getClientOriginalName(), $normalizedExt))
-                ->toMediaCollection('attachments');
-        } catch (Throwable $e) {
-            // Re-encode failures (decompression bomb, malformed file) are swallowed —
-            // the comment body still persists; caller sees fewer attachments back.
-            @unlink($tmpPath);
-            Log::warning('widget comment attachment re-encode failed', [
-                'comment_id' => $comment->id,
-                'signal_id' => $comment->signal_id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    private function safeFileName(string $originalName, string $extension): string
-    {
-        $base = pathinfo($originalName, PATHINFO_FILENAME);
-        $slug = preg_replace('/[^A-Za-z0-9_-]+/', '-', $base);
-        $slug = trim((string) $slug, '-') ?: 'attachment';
-
-        return mb_substr($slug, 0, 80).'.'.$extension;
     }
 
     /**
