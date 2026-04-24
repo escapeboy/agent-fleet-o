@@ -947,6 +947,83 @@
         </div>
     </div>
 
+    {{-- Observability (per-team OTLP export) --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h2 class="mb-1 text-lg font-semibold text-gray-900">Observability</h2>
+                <p class="mb-4 text-sm text-gray-500">
+                    Stream this team's OpenTelemetry traces (LLM calls, agent runs, MCP tools) to your own
+                    OTLP-compatible backend — Pydantic Logfire, Honeycomb, Grafana Tempo, SigNoz, etc.
+                    Leave disabled to keep spans on the platform default.
+                </p>
+            </div>
+            <a href="https://fleetq.net/docs/observability" target="_blank" rel="noopener"
+               class="shrink-0 text-xs font-medium text-primary-600 hover:text-primary-700">
+                Setup guide →
+            </a>
+        </div>
+
+        <div class="space-y-4">
+            <x-form-checkbox wire:model="observabilityEnabled" label="Enable OTLP export for this team" />
+
+            @if($observabilityEnabled)
+                <x-form-input
+                    wire:model="observabilityEndpoint"
+                    label="OTLP HTTP endpoint"
+                    placeholder="https://logfire-api.pydantic.dev"
+                    hint="Root URL. FleetQ automatically appends /v1/traces."
+                />
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Auth token / bearer</label>
+                    @if($observabilityTokenIsSet && $observabilityToken === '')
+                        <div class="mt-1 flex items-center gap-3">
+                            <span class="inline-flex items-center gap-1.5 rounded-md bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+                                <i class="fa-solid fa-check"></i> Token stored (encrypted)
+                            </span>
+                            <button wire:click="clearObservabilityToken"
+                                    class="text-xs font-medium text-red-600 hover:text-red-700">
+                                Clear
+                            </button>
+                        </div>
+                        <x-form-input wire:model="observabilityToken"
+                                      type="password"
+                                      placeholder="Paste a new token to replace"
+                                      hint="Leave blank to keep the existing token."
+                                      class="mt-2" />
+                    @else
+                        <x-form-input wire:model="observabilityToken"
+                                      type="password"
+                                      placeholder="Bearer xxx or just the raw token"
+                                      hint="Stored encrypted. Sent as Authorization header on every export." />
+                    @endif
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <x-form-input
+                        wire:model="observabilitySampleRate"
+                        type="number"
+                        label="Sample rate"
+                        hint="0.0–1.0 — 1.0 exports every span."
+                        compact
+                    />
+                    <x-form-input
+                        wire:model="observabilityServiceName"
+                        label="Service name (optional)"
+                        placeholder="fleetq-myteam"
+                        hint="Shown in traces — helps distinguish teams in shared dashboards."
+                        compact
+                    />
+                </div>
+            @endif
+        </div>
+
+        <button wire:click="saveObservability" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            Save Observability
+        </button>
+    </div>
+
     {{-- Chatbot Feature --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Chatbot Feature</h2>
