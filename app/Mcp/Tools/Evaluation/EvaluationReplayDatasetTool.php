@@ -27,7 +27,9 @@ class EvaluationReplayDatasetTool extends Tool
             'target_provider' => $schema->string()->description('Provider to test, e.g. anthropic, openai, google')->required(),
             'target_model' => $schema->string()->description('Model name to test, e.g. claude-haiku-4-5-20251001')->required(),
             'system_prompt' => $schema->string()->description('Optional system prompt override. If omitted, uses a generic "helpful assistant" baseline.'),
-            'criteria' => $schema->array(items: $schema->string())->description('Criteria list: correctness, relevance, faithfulness, completeness. Default: [correctness, relevance]'),
+            'criteria' => $schema->array()
+                ->description('Criteria list: correctness, relevance, faithfulness, completeness. Default: [correctness, relevance]')
+                ->items($schema->string()),
             'judge_model' => $schema->string()->description('Judge model override (default: anthropic/claude-sonnet-4-5)'),
             'max_cases' => $schema->integer()->description('Max cases to replay (default 100, hard cap 500)'),
             'sync' => $schema->boolean()->description('Run inline (blocks) instead of queueing. Use only for <=10 cases. Default false.')->default(false),
