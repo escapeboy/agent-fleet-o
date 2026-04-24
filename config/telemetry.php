@@ -15,6 +15,11 @@ return [
         'protocol' => env('OTEL_EXPORTER_OTLP_PROTOCOL', 'http/protobuf'),
         'timeout_seconds' => (float) env('OTEL_EXPORTER_OTLP_TIMEOUT', 5.0),
         'compression' => env('OTEL_EXPORTER_OTLP_COMPRESSION', 'gzip'),
+
+        // Comma-separated "key1=value1,key2=value2" — OTel SDK convention. Used
+        // for bearer tokens on managed collectors (Logfire, Honeycomb, etc.).
+        //   OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer xxx"
+        'headers' => env('OTEL_EXPORTER_OTLP_HEADERS', ''),
     ],
 
     // 0.0..1.0 — 1.0 exports every span, 0.1 samples 10%.

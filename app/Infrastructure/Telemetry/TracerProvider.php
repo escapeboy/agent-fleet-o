@@ -106,15 +106,48 @@ class TracerProvider
         return new FallbackNoopTracer;
     }
 
+    /**
+     * Parse the OTel SDK-standard `key=value,key2=value2` header format.
+     * Silently drops malformed entries — a bad header line shouldn't crash
+     * tracing, just reduce auth headers sent.
+     *
+     * @return array<string, string>
+     */
+    private function parseHeaders(string $raw): array
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return [];
+        }
+
+        $result = [];
+        foreach (explode(',', $raw) as $pair) {
+            $pair = trim($pair);
+            if ($pair === '' || ! str_contains($pair, '=')) {
+                continue;
+            }
+            [$key, $value] = explode('=', $pair, 2);
+            $key = trim($key);
+            $value = trim($value);
+            if ($key !== '') {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
+    }
+
     private function buildSdkProvider(): OtelTracerProvider
     {
         $endpoint = rtrim((string) config('telemetry.exporter.endpoint'), '/').'/v1/traces';
         $timeout = (float) config('telemetry.exporter.timeout_seconds', 5.0);
         $compression = (string) config('telemetry.exporter.compression', 'gzip');
+        $headers = $this->parseHeaders((string) config('telemetry.exporter.headers', ''));
 
         $transport = (new OtlpHttpTransportFactory)->create(
             endpoint: $endpoint,
             contentType: 'application/x-protobuf',
+            headers: $headers,
             compression: $compression === 'none' ? null : $compression,
             timeout: $timeout,
         );
