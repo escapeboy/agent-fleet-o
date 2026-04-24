@@ -159,6 +159,9 @@ class AppServiceProvider extends ServiceProvider
 
         // OpenTelemetry tracer provider — no-op tracer when OTEL_ENABLED=false (zero overhead)
         $this->app->singleton(FleetTracerProvider::class);
+        // Per-team tracer factory — in-process cache of tenant-scoped providers so
+        // changes to team.settings.observability take effect via forget() without a worker restart.
+        $this->app->singleton(\App\Infrastructure\Telemetry\TenantTracerProviderFactory::class);
         $this->app->singleton(AttributeRedactor::class);
         $this->app->terminating(function () {
             if (app()->resolved(FleetTracerProvider::class)) {

@@ -24,6 +24,7 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\ContextHealthService;
 use App\Jobs\Middleware\CheckBudgetAvailable;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\CheckKmsAvailable;
 use App\Jobs\Middleware\EnforceConcurrencyLimit;
@@ -92,6 +93,7 @@ abstract class BaseStageJob implements ShouldQueue
     {
         return [
             new EnforceTenantContext,
+            new ApplyTenantTracer,
             new CheckKillSwitch,
             new CheckBudgetAvailable,
             new CheckKmsAvailable,

@@ -25,6 +25,17 @@ class ExecuteMigrationJob implements ShouldQueue
 
     public function __construct(public readonly string $runId) {}
 
+    public function middleware(): array
+    {
+        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+    }
+
+    /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */
+    public function teamId(): ?string
+    {
+        return MigrationRun::withoutGlobalScopes()->where('id', $this->runId)->value('team_id');
+    }
+
     public function handle(CsvParser $csvParser, ImporterRegistry $registry): void
     {
         /** @var MigrationRun|null $run */

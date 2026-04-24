@@ -41,13 +41,41 @@ class TracerProvider
 
     private bool $initialized = false;
 
+    /**
+     * Optional per-team overrides. When set, `buildSdkProvider()` uses these
+     * values instead of the global `config('telemetry.*')`. Consumed by
+     * `TenantTracerProviderFactory` for cloud multi-tenant routing.
+     *
+     * Supported keys: enabled (bool), endpoint, headers, sample_rate,
+     * service_name, service_version, deployment_environment.
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $overrides = null;
+
+    /**
+     * Return a fresh TracerProvider instance whose `buildSdkProvider()` uses
+     * the given overrides instead of reading global config. Used by
+     * TenantTracerProviderFactory to build per-team providers without leaking
+     * state between tenants.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    public function withOverrides(array $overrides): self
+    {
+        $clone = new self;
+        $clone->overrides = $overrides;
+
+        return $clone;
+    }
+
     public function tracer(string $name = 'fleetq'): TracerInterface
     {
         if ($this->cachedTracer !== null) {
             return $this->cachedTracer;
         }
 
-        if (! config('telemetry.enabled')) {
+        if (! $this->configValue('enabled', (bool) config('telemetry.enabled'))) {
             return $this->cachedTracer = $this->makeNoopTracer();
         }
 
@@ -55,7 +83,7 @@ class TracerProvider
             $this->sdkProvider = $this->buildSdkProvider();
             $this->cachedTracer = $this->sdkProvider->getTracer(
                 $name,
-                (string) config('telemetry.service_version', '1.0.0'),
+                (string) $this->configValue('service_version', (string) config('telemetry.service_version', '1.0.0')),
             );
         } catch (Throwable $e) {
             report($e);
@@ -65,6 +93,20 @@ class TracerProvider
         $this->initialized = true;
 
         return $this->cachedTracer;
+    }
+
+    /**
+     * Read a config value, preferring per-team override when set. Accepts both
+     * flat keys (`enabled`, `endpoint`, `headers`, `sample_rate`) and namespaced
+     * fallbacks to `telemetry.*`.
+     */
+    private function configValue(string $key, mixed $default): mixed
+    {
+        if ($this->overrides !== null && array_key_exists($key, $this->overrides)) {
+            return $this->overrides[$key];
+        }
+
+        return $default;
     }
 
     public function shutdown(): void
@@ -106,15 +148,50 @@ class TracerProvider
         return new FallbackNoopTracer;
     }
 
+    /**
+     * Parse the OTel SDK-standard `key=value,key2=value2` header format.
+     * Silently drops malformed entries — a bad header line shouldn't crash
+     * tracing, just reduce auth headers sent.
+     *
+     * @return array<string, string>
+     */
+    private function parseHeaders(string $raw): array
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return [];
+        }
+
+        $result = [];
+        foreach (explode(',', $raw) as $pair) {
+            $pair = trim($pair);
+            if ($pair === '' || ! str_contains($pair, '=')) {
+                continue;
+            }
+            [$key, $value] = explode('=', $pair, 2);
+            $key = trim($key);
+            $value = trim($value);
+            if ($key !== '') {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
+    }
+
     private function buildSdkProvider(): OtelTracerProvider
     {
-        $endpoint = rtrim((string) config('telemetry.exporter.endpoint'), '/').'/v1/traces';
-        $timeout = (float) config('telemetry.exporter.timeout_seconds', 5.0);
-        $compression = (string) config('telemetry.exporter.compression', 'gzip');
+        $endpoint = rtrim((string) $this->configValue('endpoint', (string) config('telemetry.exporter.endpoint')), '/').'/v1/traces';
+        $timeout = (float) $this->configValue('timeout_seconds', (float) config('telemetry.exporter.timeout_seconds', 5.0));
+        $compression = (string) $this->configValue('compression', (string) config('telemetry.exporter.compression', 'gzip'));
+
+        $rawHeaders = $this->configValue('headers', config('telemetry.exporter.headers', ''));
+        $headers = is_array($rawHeaders) ? $rawHeaders : $this->parseHeaders((string) $rawHeaders);
 
         $transport = (new OtlpHttpTransportFactory)->create(
             endpoint: $endpoint,
             contentType: 'application/x-protobuf',
+            headers: $headers,
             compression: $compression === 'none' ? null : $compression,
             timeout: $timeout,
         );
@@ -123,13 +200,13 @@ class TracerProvider
 
         $resource = ResourceInfoFactory::emptyResource()->merge(
             ResourceInfo::create(Attributes::create([
-                ResourceAttributes::SERVICE_NAME => (string) config('telemetry.service_name', 'fleetq'),
-                ResourceAttributes::SERVICE_VERSION => (string) config('telemetry.service_version', '1.0.0'),
-                ResourceAttributes::DEPLOYMENT_ENVIRONMENT => (string) config('telemetry.deployment_environment', 'production'),
+                ResourceAttributes::SERVICE_NAME => (string) $this->configValue('service_name', (string) config('telemetry.service_name', 'fleetq')),
+                ResourceAttributes::SERVICE_VERSION => (string) $this->configValue('service_version', (string) config('telemetry.service_version', '1.0.0')),
+                ResourceAttributes::DEPLOYMENT_ENVIRONMENT => (string) $this->configValue('deployment_environment', (string) config('telemetry.deployment_environment', 'production')),
             ])),
         );
 
-        $sampleRate = (float) config('telemetry.sample_rate', 1.0);
+        $sampleRate = (float) $this->configValue('sample_rate', (float) config('telemetry.sample_rate', 1.0));
         $sampler = $sampleRate <= 0
             ? new ParentBased(new AlwaysOffSampler)
             : new ParentBased(new TraceIdRatioBasedSampler($sampleRate));

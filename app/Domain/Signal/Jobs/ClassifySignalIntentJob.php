@@ -20,6 +20,17 @@ class ClassifySignalIntentJob implements ShouldQueue
 
     public function __construct(public readonly string $signalId) {}
 
+    public function middleware(): array
+    {
+        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+    }
+
+    /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */
+    public function teamId(): ?string
+    {
+        return Signal::withoutGlobalScopes()->where('id', $this->signalId)->value('team_id');
+    }
+
     public function handle(ClassifySignalIntentAction $action): void
     {
         $signal = Signal::withoutGlobalScopes()->find($this->signalId);

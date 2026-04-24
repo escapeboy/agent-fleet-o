@@ -25,6 +25,17 @@ class ExecuteProjectRunJob implements ShouldQueue
         $this->onQueue('experiments');
     }
 
+    public function middleware(): array
+    {
+        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+    }
+
+    /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */
+    public function teamId(): ?string
+    {
+        return Project::withoutGlobalScopes()->where('id', $this->projectId)->value('team_id');
+    }
+
     public function handle(TriggerProjectRunAction $triggerAction): void
     {
         // Guard: projectId must be a valid UUID, not a serialized model or JSON blob
