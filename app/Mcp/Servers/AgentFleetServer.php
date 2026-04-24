@@ -245,6 +245,10 @@ use App\Mcp\Tools\Memory\MemoryUnifiedSearchTool;
 use App\Mcp\Tools\Memory\MemoryUpdateTool;
 use App\Mcp\Tools\Memory\MemoryUploadKnowledgeTool;
 use App\Mcp\Tools\Memory\SupabaseProvisionMemoryTool;
+use App\Mcp\Tools\Migration\MigrationDetectSchemaTool;
+use App\Mcp\Tools\Migration\MigrationExecuteTool;
+use App\Mcp\Tools\Migration\MigrationListTool;
+use App\Mcp\Tools\Migration\MigrationStatusTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
@@ -892,6 +896,12 @@ class AgentFleetServer extends Server
         // Knowledge Ingestion (2)
         KnowledgeListSourcesTool::class,
         KnowledgeSyncNowTool::class,
+
+        // Data Migration (4)
+        MigrationDetectSchemaTool::class,
+        MigrationExecuteTool::class,
+        MigrationStatusTool::class,
+        MigrationListTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,

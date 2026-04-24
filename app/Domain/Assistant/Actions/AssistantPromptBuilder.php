@@ -276,6 +276,8 @@ final class AssistantPromptBuilder
             - `get_memory_stats` — Memory statistics per agent and source type
             - `list_email_templates` — List email templates with optional status/visibility filter
             - `list_email_themes` — List email themes for the team
+            - `migration_status` — Get status and stats for a data-migration run
+            - `migration_list` — List recent data-migration runs
             READ,
         ];
 
@@ -318,6 +320,8 @@ final class AssistantPromptBuilder
             - `create_email_theme` — Create a new email theme (name, colors, fonts, logo, footer)
             - `update_email_theme` — Update an existing email theme
             - `update_global_settings` — Update platform-wide settings (super admin only)
+            - `migration_detect_schema` — When the user asks to import a CSV/JSON export (from Salesforce, HubSpot, Intercom, etc.), call this FIRST to let the system propose a column mapping. Show the proposal to the user before continuing.
+            - `migration_execute` — Run the import after the user confirms the proposed mapping. Polls via `migration_status`.
             WRITE;
         }
 
