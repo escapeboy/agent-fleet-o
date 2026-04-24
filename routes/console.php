@@ -27,6 +27,7 @@ Schedule::command('connectors:poll --driver=signal_protocol')->everyMinute()->wi
 Schedule::command('connectors:poll --driver=matrix')->everyMinute()->withoutOverlapping(2);
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
 Schedule::command('audit:cleanup')->dailyAt('02:00');
+Schedule::command('worldmodel:rebuild')->dailyAt('02:15')->withoutOverlapping(60)->onOneServer();
 Schedule::command('signals:cleanup-bug-reports')->dailyAt('03:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();

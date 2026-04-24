@@ -75,6 +75,7 @@ final class AssistantPromptBuilder
             GUIDE;
 
         $artifactInstructions = $uiArtifactsEnabled ? self::buildArtifactInstructions() : '';
+        $citationInstructions = $canExecuteTools ? self::buildCitationInstructions() : '';
 
         return <<<PROMPT
         You are the **FleetQ Platform Assistant** — an AI-powered helper embedded in the FleetQ platform.
@@ -115,6 +116,39 @@ final class AssistantPromptBuilder
         {$guidelines}
 
         {$artifactInstructions}
+
+        {$citationInstructions}
+        PROMPT;
+    }
+
+    /**
+     * Grounded Q&A: encourages the model to cite entities with inline markers.
+     * CitationExtractor validates each marker against the turn's tool results
+     * and strips any hallucinated IDs before the message is saved, so there is
+     * no downside to emitting markers — bad ones vanish silently.
+     */
+    private static function buildCitationInstructions(): string
+    {
+        return <<<'PROMPT'
+        ## Citations
+
+        When your answer references a specific entity returned by a tool this turn,
+        cite it inline using `[[kind:uuid]]` immediately after the claim.
+
+        Kinds: `experiment`, `project`, `agent`, `workflow`, `crew`, `skill`, `signal`, `memory`.
+
+        Example: "Your last 2 experiments failed: [[experiment:01jefc...]] and [[experiment:01jefd...]] — both ran on workflow [[workflow:01jex...]]."
+
+        Rules:
+        - Only cite UUIDs that actually appeared in your tool results this turn.
+          Unknown IDs are silently stripped by the system. Never guess or invent an ID.
+        - Place the marker immediately after the claim it supports (not at the end of the reply).
+        - Don't cite trivia like status enums, counts, or dates — only cite when pointing
+          at a specific record helps the user verify the claim.
+        - If a tool returned many records and your answer summarises them, cite the 2–3
+          most relevant, not every single ID.
+        - Omit markers entirely for conversational answers (how-to, planning, explanations)
+          that don't lean on a specific record.
         PROMPT;
     }
 
@@ -242,6 +276,8 @@ final class AssistantPromptBuilder
             - `get_memory_stats` — Memory statistics per agent and source type
             - `list_email_templates` — List email templates with optional status/visibility filter
             - `list_email_themes` — List email themes for the team
+            - `migration_status` — Get status and stats for a data-migration run
+            - `migration_list` — List recent data-migration runs
             READ,
         ];
 
@@ -284,6 +320,8 @@ final class AssistantPromptBuilder
             - `create_email_theme` — Create a new email theme (name, colors, fonts, logo, footer)
             - `update_email_theme` — Update an existing email theme
             - `update_global_settings` — Update platform-wide settings (super admin only)
+            - `migration_detect_schema` — When the user asks to import a CSV/JSON export (from Salesforce, HubSpot, Intercom, etc.), call this FIRST to let the system propose a column mapping. Show the proposal to the user before continuing.
+            - `migration_execute` — Run the import after the user confirms the proposed mapping. Polls via `migration_status`.
             WRITE;
         }
 

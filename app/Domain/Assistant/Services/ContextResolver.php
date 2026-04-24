@@ -22,8 +22,40 @@ class ContextResolver
             'agent' => $this->agentContext($id),
             'crew' => $this->crewContext($id),
             'workflow' => $this->workflowContext($id),
+            'selection' => $this->selectionContext($id),
             default => "The user is viewing a {$type} page.",
         };
+    }
+
+    /**
+     * `$id` is a JSON-encoded `{kind: string, ids: string[]}` payload written by
+     * AssistantPanel when an index page hands a multi-select bundle to the chat.
+     * Agents can then call list/get/mutation MCP tools for the selected IDs.
+     */
+    private function selectionContext(string $id): string
+    {
+        $decoded = json_decode($id, true);
+        if (! is_array($decoded)) {
+            return 'The user has selected items on a list page.';
+        }
+
+        $kind = (string) ($decoded['kind'] ?? 'item');
+        $ids = array_values(array_filter((array) ($decoded['ids'] ?? []), 'is_string'));
+        $ids = array_slice($ids, 0, 50);
+        $count = count($ids);
+        if ($count === 0) {
+            return 'The user cleared their selection.';
+        }
+
+        $list = implode(', ', array_map(fn ($i) => "`{$i}`", $ids));
+
+        return sprintf(
+            "The user has multi-selected %d %s record%s on a list page. IDs: %s. When asked to 'do X to these', iterate over the list and call the appropriate MCP tool per ID. Be concise in your summary.",
+            $count,
+            $kind,
+            $count === 1 ? '' : 's',
+            $list,
+        );
     }
 
     private function experimentContext(string $id): string

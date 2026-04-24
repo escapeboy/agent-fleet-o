@@ -245,6 +245,12 @@ use App\Mcp\Tools\Memory\MemoryUnifiedSearchTool;
 use App\Mcp\Tools\Memory\MemoryUpdateTool;
 use App\Mcp\Tools\Memory\MemoryUploadKnowledgeTool;
 use App\Mcp\Tools\Memory\SupabaseProvisionMemoryTool;
+use App\Mcp\Tools\Migration\MigrationDetectSchemaTool;
+use App\Mcp\Tools\Migration\MigrationExecuteTool;
+use App\Mcp\Tools\Migration\MigrationListTool;
+use App\Mcp\Tools\Migration\MigrationStatusTool;
+use App\Mcp\Tools\WorldModel\WorldModelGetTool;
+use App\Mcp\Tools\WorldModel\WorldModelRebuildTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
@@ -333,6 +339,7 @@ use App\Mcp\Tools\Signal\RouteMapLookupTool;
 use App\Mcp\Tools\Signal\SearxngSearchTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
+use App\Mcp\Tools\Signal\SignalIntentReclassifyTool;
 use App\Mcp\Tools\Signal\SignalListTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SourceMapUploadTool;
@@ -783,10 +790,11 @@ class AgentFleetServer extends Server
         ListSecurityReviewsTool::class,
         ResolveSecurityReviewTool::class,
 
-        // Signal (20)
+        // Signal (21)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
+        SignalIntentReclassifyTool::class,
         TicketConnectorTool::class,
         AlertConnectorTool::class,
         SlackConnectorTool::class,
@@ -892,6 +900,16 @@ class AgentFleetServer extends Server
         // Knowledge Ingestion (2)
         KnowledgeListSourcesTool::class,
         KnowledgeSyncNowTool::class,
+
+        // Data Migration (4)
+        MigrationDetectSchemaTool::class,
+        MigrationExecuteTool::class,
+        MigrationStatusTool::class,
+        MigrationListTool::class,
+
+        // World Model (2)
+        WorldModelGetTool::class,
+        WorldModelRebuildTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,
