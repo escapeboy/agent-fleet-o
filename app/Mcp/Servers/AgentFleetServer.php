@@ -303,6 +303,8 @@ use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamInviteMemberTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamModelAllowlistTool;
+use App\Mcp\Tools\Shared\TeamObservabilityGetTool;
+use App\Mcp\Tools\Shared\TeamObservabilityUpdateTool;
 use App\Mcp\Tools\Shared\TeamRemoveMemberTool;
 use App\Mcp\Tools\Shared\TeamUpdateMemberRoleTool;
 use App\Mcp\Tools\Shared\TeamUpdateTool;
@@ -947,6 +949,8 @@ class AgentFleetServer extends Server
         TeamAiFeaturesGetTool::class,
         TeamAiFeaturesUpdateTool::class,
         TeamModelAllowlistTool::class,
+        TeamObservabilityGetTool::class,
+        TeamObservabilityUpdateTool::class,
         LocalLlmTool::class,
         TeamByokCredentialManageTool::class,
         TeamClaudeCodeVpsAccessTool::class,

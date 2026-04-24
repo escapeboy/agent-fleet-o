@@ -1,11 +1,36 @@
 # Observability — OpenTelemetry setup
 
 FleetQ emits OpenTelemetry spans for LLM calls, MCP tool invocations, pipeline
-stages, and queue jobs. The tracer is **off by default**. Flip `OTEL_ENABLED=true`
-and point `OTEL_EXPORTER_OTLP_ENDPOINT` at any OTLP HTTP/protobuf collector —
-no code changes required.
+stages, and queue jobs. Two routes to configure it:
 
-## Env vars
+- **Cloud tenants** (fleetq.net customers) → per-team settings page at
+  `/team` → _Observability_ section. No `.env` access required.
+- **Self-hosted installs** → env vars below.
+
+The tracer is **off by default**.
+
+## Cloud tenant setup (per-team)
+
+Navigate to `/team` → **Observability**, then:
+
+1. Toggle **Enable OTLP export for this team**.
+2. Paste the **OTLP HTTP endpoint** (root URL only — `/v1/traces` is appended).
+3. Paste the **auth token / bearer**. It's stored encrypted; after save, only
+   a `Token stored (encrypted)` confirmation is shown. Use **Clear** to revoke.
+4. Set **sample rate** (0.0–1.0, default 1.0) and optional **service name**.
+5. Save. Spans start routing to your backend on the next request (in-process
+   tracer cache is invalidated automatically).
+
+Per-team settings override platform defaults. If the team hasn't configured a
+backend, spans go to the platform default (or noop when disabled).
+
+Same provider recipes apply — just drop the `OTEL_*=` prefix from the env var
+values and paste them into the corresponding UI fields.
+
+MCP: `team_observability_get` / `team_observability_update` / with `reset: true`
+to disable. Both require `manage-team` role.
+
+## Self-hosted — env vars
 
 ```ini
 OTEL_ENABLED=true

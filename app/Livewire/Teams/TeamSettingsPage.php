@@ -112,6 +112,19 @@ class TeamSettingsPage extends Component
 
     public array $mcpToolsEnabled = [];
 
+    // Observability (per-team OTLP export)
+    public bool $observabilityEnabled = false;
+
+    public string $observabilityEndpoint = '';
+
+    public string $observabilityToken = '';
+
+    public bool $observabilityTokenIsSet = false;
+
+    public float $observabilitySampleRate = 1.0;
+
+    public string $observabilityServiceName = '';
+
     // API token form
     public string $tokenName = '';
 
@@ -177,6 +190,15 @@ class TeamSettingsPage extends Component
             $profileTools = config("mcp_profiles.{$this->mcpToolProfile}");
             $this->mcpToolsEnabled = $profileTools ?? array_keys($this->getAllCatalogToolNames());
         }
+
+        // Observability (per-team OTLP export)
+        $observability = $settings['observability'] ?? [];
+        $this->observabilityEnabled = (bool) ($observability['enabled'] ?? false);
+        $this->observabilityEndpoint = (string) ($observability['endpoint'] ?? '');
+        $this->observabilitySampleRate = (float) ($observability['sample_rate'] ?? 1.0);
+        $this->observabilityServiceName = (string) ($observability['service_name'] ?? '');
+        $this->observabilityTokenIsSet = ! empty($observability['otlp_token_encrypted']);
+        $this->observabilityToken = '';
     }
 
     public function saveTeamSettings(): void
@@ -208,6 +230,66 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Default LLM provider saved.');
+    }
+
+    public function saveObservability(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $this->validate([
+            'observabilityEnabled' => 'boolean',
+            'observabilityEndpoint' => 'nullable|string|url:http,https|max:512',
+            'observabilityToken' => 'nullable|string|max:2048',
+            'observabilitySampleRate' => 'numeric|min:0|max:1',
+            'observabilityServiceName' => 'nullable|string|max:64|regex:/^[a-z0-9_\-\.]*$/i',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $current = $settings['observability'] ?? [];
+
+        $next = [
+            'enabled' => $this->observabilityEnabled,
+            'endpoint' => trim($this->observabilityEndpoint),
+            'sample_rate' => $this->observabilitySampleRate,
+            'service_name' => trim($this->observabilityServiceName),
+            // Keep existing encrypted token unless user supplied a new one.
+            'otlp_token_encrypted' => $current['otlp_token_encrypted'] ?? '',
+        ];
+
+        if ($this->observabilityToken !== '') {
+            $next['otlp_token_encrypted'] = \Illuminate\Support\Facades\Crypt::encryptString($this->observabilityToken);
+        }
+
+        $settings['observability'] = $next;
+        $team->update(['settings' => $settings]);
+
+        // Drop the in-process tracer cache so the next request picks up the
+        // new endpoint/token without a process restart.
+        app(\App\Infrastructure\Telemetry\TenantTracerProviderFactory::class)->forget($team->id);
+
+        $this->observabilityTokenIsSet = $next['otlp_token_encrypted'] !== '';
+        $this->observabilityToken = '';
+
+        session()->flash('message', 'Observability settings saved.');
+    }
+
+    public function clearObservabilityToken(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        if (isset($settings['observability'])) {
+            $settings['observability']['otlp_token_encrypted'] = '';
+            $team->update(['settings' => $settings]);
+            app(\App\Infrastructure\Telemetry\TenantTracerProviderFactory::class)->forget($team->id);
+        }
+
+        $this->observabilityTokenIsSet = false;
+        $this->observabilityToken = '';
+
+        session()->flash('message', 'Observability token cleared.');
     }
 
     public function saveAssistantLlm(): void
