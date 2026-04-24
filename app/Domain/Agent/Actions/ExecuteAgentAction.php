@@ -38,6 +38,7 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Services\SchemaValidator;
 use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Services\BashSidecarClient;
@@ -72,7 +73,32 @@ class ExecuteAgentAction
         private readonly AgentHookExecutor $hookExecutor,
         private readonly AgentPromptCompiler $promptCompiler,
         private readonly ToolRecoveryOrchestrator $toolRecovery,
+        private readonly SchemaValidator $schemaValidator,
     ) {}
+
+    /**
+     * Validate an agent's final output against its `output_schema` JSONB, if
+     * one is defined. Returns null when no schema is present so the caller can
+     * cheaply skip persistence.
+     *
+     * Best-effort: tries JSON-decode of the content first, falls back to
+     * validating a `{ "result": string }` shape so free-form replies still
+     * get a deterministic pass/fail.
+     *
+     * @return array{valid: bool, errors: list<string>}|null
+     */
+    private function validateAgentOutput(\App\Domain\Agent\Models\Agent $agent, ?string $content): ?array
+    {
+        $schema = $agent->output_schema ?? null;
+        if (! is_array($schema) || $schema === []) {
+            return null;
+        }
+
+        $decoded = is_string($content) ? json_decode($content, true) : null;
+        $payload = is_array($decoded) ? $decoded : ['result' => (string) $content];
+
+        return $this->schemaValidator->validate($payload, $schema);
+    }
 
     /**
      * Execute an agent by running its assigned tools (agentic loop)
@@ -499,6 +525,15 @@ class ExecuteAgentAction
                 $locked->increment('budget_spent_credits', $costCredits);
             });
 
+            // Optional typed output — validate against agent.output_schema if set.
+            $schemaEval = $this->validateAgentOutput($agent, $response->content);
+
+            $qualityDetails = ['tier' => $tierConfig['tier']->value];
+            if ($schemaEval !== null) {
+                $qualityDetails['output_schema_valid'] = $schemaEval['valid'];
+                $qualityDetails['output_schema_errors'] = array_slice($schemaEval['errors'], 0, 10);
+            }
+
             $execution = AgentExecution::create([
                 'agent_id' => $agent->id,
                 'team_id' => $teamId,
@@ -508,7 +543,7 @@ class ExecuteAgentAction
                 'output' => ['result' => $response->content],
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
-                'quality_details' => ['tier' => $tierConfig['tier']->value],
+                'quality_details' => $qualityDetails,
             ]);
 
             $this->runtimeStateService->recordExecution($agent, $response->usage);
