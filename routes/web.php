@@ -313,6 +313,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
+    Route::get('/world-model', \App\Livewire\WorldModel\WorldModelPage::class)->name('world-model.index');
     Route::get('/knowledge', KnowledgeSourcesPage::class)->name('knowledge.index');
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
 
@@ -334,6 +335,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
+    Route::get('/evaluation/compare', \App\Livewire\Evaluation\EvaluationCompareRunsPage::class)->name('evaluation.compare');
     Route::get('/evaluations', WorkflowEvaluationListPage::class)->name('evaluations.index');
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');

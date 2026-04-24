@@ -88,6 +88,13 @@ class AgentDetailPage extends Component
 
     public string $editEnvironment = '';
 
+    // Output schema editor (Sprint 8 + 12 + 16)
+    public string $editOutputSchemaJson = '';
+
+    public ?int $editOutputSchemaMaxRetries = null;
+
+    public string $outputSchemaSaveMessage = '';
+
     public string $editReasoningEffort = 'none';
 
     public bool $editUseToolSearch = false;
@@ -150,6 +157,66 @@ class AgentDetailPage extends Component
             $this->templateContextInjection = $template['context_injection'] ?? '';
             $this->templateOutputFormat = $template['output_format'] ?? '';
         }
+
+        // Output schema editor — pretty-print the existing JSONB for the textarea.
+        if (! empty($this->agent->output_schema)) {
+            $this->editOutputSchemaJson = json_encode($this->agent->output_schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        }
+        $this->editOutputSchemaMaxRetries = $this->agent->output_schema_max_retries;
+    }
+
+    /**
+     * Save or clear the agent's output_schema + max-retries. The schema must
+     * be valid JSON and decode to an object (or be empty to clear).
+     */
+    public function saveOutputSchema(): void
+    {
+        $this->authorize('edit-content');
+
+        $trimmed = trim($this->editOutputSchemaJson);
+        if ($trimmed === '') {
+            $this->agent->update([
+                'output_schema' => null,
+                'output_schema_max_retries' => null,
+            ]);
+            $this->outputSchemaSaveMessage = 'Schema cleared.';
+            $this->agent->refresh();
+
+            return;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->addError('editOutputSchemaJson', 'Invalid JSON: '.json_last_error_msg());
+
+            return;
+        }
+        if (! is_array($decoded) || array_is_list($decoded)) {
+            $this->addError('editOutputSchemaJson', 'Schema must be a JSON object, not an array or scalar.');
+
+            return;
+        }
+
+        $retries = $this->editOutputSchemaMaxRetries;
+        if ($retries !== null && ($retries < 0 || $retries > 5)) {
+            $this->addError('editOutputSchemaMaxRetries', 'Max retries must be between 0 and 5.');
+
+            return;
+        }
+
+        $this->agent->update([
+            'output_schema' => $decoded,
+            'output_schema_max_retries' => $retries,
+        ]);
+        $this->agent->refresh();
+        $this->outputSchemaSaveMessage = 'Output schema saved.';
+    }
+
+    public function clearOutputSchema(): void
+    {
+        $this->editOutputSchemaJson = '';
+        $this->editOutputSchemaMaxRetries = null;
+        $this->saveOutputSchema();
     }
 
     public function toggleStatus(): void

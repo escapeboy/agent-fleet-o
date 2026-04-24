@@ -573,6 +573,61 @@
                         </div>
                     </dl>
                 </div>
+
+                {{-- Output schema (Sprint 16) --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mb-3 flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Output Schema</h3>
+                            <p class="mt-0.5 text-xs text-gray-500">
+                                Optional JSON Schema the agent's final reply must match. Runtime validates + auto-retries
+                                on failure (up to max_retries). Leave empty to skip validation entirely.
+                            </p>
+                        </div>
+                    </div>
+
+                    @if($outputSchemaSaveMessage)
+                        <div class="mb-3 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                            {{ $outputSchemaSaveMessage }}
+                        </div>
+                    @endif
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">JSON Schema</label>
+                            <textarea wire:model.defer="editOutputSchemaJson"
+                                      rows="10"
+                                      spellcheck="false"
+                                      placeholder='{"type":"object","properties":{"summary":{"type":"string","required":true}}}'
+                                      class="mt-1 block w-full rounded-md border-gray-300 font-mono text-xs focus:border-primary-500 focus:ring-primary-500"></textarea>
+                            @error('editOutputSchemaJson')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700">Max retries on validation failure</label>
+                                <input wire:model.defer="editOutputSchemaMaxRetries"
+                                       type="number" min="0" max="5"
+                                       placeholder="Default: 2"
+                                       class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                @error('editOutputSchemaMaxRetries')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button wire:click="saveOutputSchema"
+                                    class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
+                                Save schema
+                            </button>
+                            @if(!empty($agent->output_schema))
+                                <button wire:click="clearOutputSchema"
+                                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                    Clear
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
             </div>
 
         @elseif($activeTab === 'identity')

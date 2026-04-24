@@ -14,7 +14,13 @@ use Livewire\WithPagination;
 
 class ProjectListPage extends Component
 {
+    use \App\Livewire\Concerns\HasAssistantSelection;
     use WithPagination;
+
+    public function mount(): void
+    {
+        $this->selectionKind = 'project';
+    }
 
     #[Url]
     public string $search = '';

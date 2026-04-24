@@ -42,6 +42,10 @@
         @endif
     </form>
 
+    @if(count($selectedIds) > 0)
+        <x-assistant-select-toolbar :count="count($selectedIds)" />
+    @endif
+
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div class="overflow-x-auto">
@@ -53,6 +57,7 @@
                             ? ($sortDirection === 'asc' ? '&#9650;' : '&#9660;')
                             : '<span class="text-gray-300">&#9650;</span>';
                     @endphp
+                    <th class="w-10 px-3 py-2 md:px-6"></th>
                     <th wire:click="sortBy('title')" class="cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Title {!! $sortIcon('title') !!}
                     </th>
@@ -69,7 +74,13 @@
             </thead>
             <tbody class="divide-y divide-gray-200">
                 @forelse($projects as $project)
-                    <tr class="transition hover:bg-gray-50">
+                    <tr class="transition hover:bg-gray-50 {{ $this->isSelected($project->id) ? 'bg-indigo-50/50' : '' }}">
+                        <td class="px-3 py-3 md:px-6 md:py-4" wire:click.stop="toggleSelection('{{ $project->id }}')">
+                            <input type="checkbox"
+                                   @checked($this->isSelected($project->id))
+                                   wire:click.stop="toggleSelection('{{ $project->id }}')"
+                                   class="h-4 w-4 cursor-pointer rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        </td>
                         <td class="px-3 py-3 md:px-6 md:py-4">
                             <a href="{{ route('projects.show', $project) }}" class="font-medium text-primary-600 hover:text-primary-800">
                                 {{ $project->title }}
