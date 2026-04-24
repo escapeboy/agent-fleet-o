@@ -17,6 +17,7 @@ use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
 use App\Domain\Agent\Pipeline\Middleware\InjectKnowledgeGraphContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
+use App\Domain\Agent\Pipeline\Middleware\InjectWorldModel;
 use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
 use App\Domain\Agent\Pipeline\Middleware\PreExecutionScout;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
@@ -62,6 +63,7 @@ class ExecuteAgentAction
         private readonly PreExecutionScout $preExecutionScout,
         private readonly InjectMemoryContext $injectMemoryContext,
         private readonly InjectKnowledgeGraphContext $injectKgContext,
+        private readonly InjectWorldModel $injectWorldModel,
         private readonly InjectRepoMapContext $injectRepoMapContext,
         private readonly SummarizeContext $summarizeContext,
         private readonly DetectClarificationNeeded $detectClarification,
@@ -150,6 +152,7 @@ class ExecuteAgentAction
                 $this->preExecutionScout,
                 $this->injectMemoryContext,
                 $this->injectKgContext,
+                $this->injectWorldModel,
                 $this->injectRepoMapContext,
                 $this->summarizeContext,
                 $this->detectClarification,

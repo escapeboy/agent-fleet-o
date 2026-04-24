@@ -249,6 +249,8 @@ use App\Mcp\Tools\Migration\MigrationDetectSchemaTool;
 use App\Mcp\Tools\Migration\MigrationExecuteTool;
 use App\Mcp\Tools\Migration\MigrationListTool;
 use App\Mcp\Tools\Migration\MigrationStatusTool;
+use App\Mcp\Tools\WorldModel\WorldModelGetTool;
+use App\Mcp\Tools\WorldModel\WorldModelRebuildTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
@@ -902,6 +904,10 @@ class AgentFleetServer extends Server
         MigrationExecuteTool::class,
         MigrationStatusTool::class,
         MigrationListTool::class,
+
+        // World Model (2)
+        WorldModelGetTool::class,
+        WorldModelRebuildTool::class,
 
         // Artifact (4)
         ArtifactListTool::class,
