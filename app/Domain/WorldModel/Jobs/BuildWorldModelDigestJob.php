@@ -21,6 +21,11 @@ class BuildWorldModelDigestJob implements ShouldQueue
 
     public function __construct(public readonly string $teamId) {}
 
+    public function middleware(): array
+    {
+        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+    }
+
     public function handle(BuildWorldModelDigestAction $action): void
     {
         /** @var Team|null $team */

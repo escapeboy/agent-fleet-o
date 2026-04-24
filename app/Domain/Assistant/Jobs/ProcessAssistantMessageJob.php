@@ -45,6 +45,11 @@ class ProcessAssistantMessageJob implements ShouldQueue
         $this->onQueue('ai-calls');
     }
 
+    public function middleware(): array
+    {
+        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+    }
+
     public function handle(SendAssistantMessageAction $action): void
     {
         $conversation = AssistantConversation::withoutGlobalScopes()->find($this->conversationId);
