@@ -64,19 +64,19 @@ class TeamObservabilitySettingsTest extends TestCase
         $existingCt = Crypt::encryptString('existing-token');
         $team->update(['settings' => ['observability' => [
             'enabled' => true,
-            'endpoint' => 'https://a.example',
+            'endpoint' => 'https://example.com',
             'otlp_token_encrypted' => $existingCt,
         ]]]);
 
         Livewire::test(class_exists(CloudTeamSettingsPage::class) ? CloudTeamSettingsPage::class : TeamSettingsPage::class)
-            ->set('observabilityEndpoint', 'https://b.example')
+            ->set('observabilityEndpoint', 'https://example.net')
             ->set('observabilityToken', '') // blank: keep existing
             ->call('saveObservability')
             ->assertHasNoErrors();
 
         $fresh = $team->fresh()->settings['observability'];
         $this->assertSame($existingCt, $fresh['otlp_token_encrypted']);
-        $this->assertSame('https://b.example', $fresh['endpoint']);
+        $this->assertSame('https://example.net', $fresh['endpoint']);
     }
 
     public function test_clear_observability_token_removes_secret_only(): void
@@ -85,7 +85,7 @@ class TeamObservabilitySettingsTest extends TestCase
         $team = $user->currentTeam;
         $team->update(['settings' => ['observability' => [
             'enabled' => true,
-            'endpoint' => 'https://x.example',
+            'endpoint' => 'https://example.com',
             'otlp_token_encrypted' => Crypt::encryptString('old'),
             'sample_rate' => 0.3,
         ]]]);
@@ -97,7 +97,7 @@ class TeamObservabilitySettingsTest extends TestCase
 
         $fresh = $team->fresh()->settings['observability'];
         $this->assertSame('', $fresh['otlp_token_encrypted']);
-        $this->assertSame('https://x.example', $fresh['endpoint']);
+        $this->assertSame('https://example.com', $fresh['endpoint']);
         $this->assertSame(0.3, $fresh['sample_rate']);
     }
 
@@ -118,7 +118,7 @@ class TeamObservabilitySettingsTest extends TestCase
 
         Livewire::test(class_exists(CloudTeamSettingsPage::class) ? CloudTeamSettingsPage::class : TeamSettingsPage::class)
             ->set('observabilityEnabled', true)
-            ->set('observabilityEndpoint', 'https://a.example')
+            ->set('observabilityEndpoint', 'https://example.com')
             ->set('observabilitySampleRate', 2.0)
             ->call('saveObservability')
             ->assertHasErrors(['observabilitySampleRate']);
@@ -133,7 +133,7 @@ class TeamObservabilitySettingsTest extends TestCase
 
         Livewire::test(class_exists(CloudTeamSettingsPage::class) ? CloudTeamSettingsPage::class : TeamSettingsPage::class)
             ->set('observabilityEnabled', true)
-            ->set('observabilityEndpoint', 'https://new.example')
+            ->set('observabilityEndpoint', 'https://example.org')
             ->call('saveObservability')
             ->assertHasNoErrors();
 
@@ -142,6 +142,6 @@ class TeamObservabilitySettingsTest extends TestCase
         $ref = new \ReflectionClass($provider);
         $prop = $ref->getProperty('overrides');
         $prop->setAccessible(true);
-        $this->assertSame('https://new.example', $prop->getValue($provider)['endpoint']);
+        $this->assertSame('https://example.org', $prop->getValue($provider)['endpoint']);
     }
 }

@@ -244,13 +244,24 @@ class TeamSettingsPage extends Component
             'observabilityServiceName' => 'nullable|string|max:64|regex:/^[a-z0-9_\-\.]*$/i',
         ]);
 
+        $endpoint = trim($this->observabilityEndpoint);
+        if ($this->observabilityEnabled && $endpoint !== '') {
+            try {
+                app(SsrfGuard::class)->assertPublicUrl($endpoint);
+            } catch (\InvalidArgumentException $e) {
+                $this->addError('observabilityEndpoint', 'Endpoint rejected: '.$e->getMessage());
+
+                return;
+            }
+        }
+
         $team = auth()->user()->currentTeam;
         $settings = $team->settings ?? [];
         $current = $settings['observability'] ?? [];
 
         $next = [
             'enabled' => $this->observabilityEnabled,
-            'endpoint' => trim($this->observabilityEndpoint),
+            'endpoint' => $endpoint,
             'sample_rate' => $this->observabilitySampleRate,
             'service_name' => trim($this->observabilityServiceName),
             // Keep existing encrypted token unless user supplied a new one.

@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Shared;
 
+use App\Domain\Shared\Services\SsrfGuard;
 use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
 use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -31,7 +32,7 @@ class TeamObservabilityUpdateTool extends Tool
         ];
     }
 
-    public function handle(Request $request, TenantTracerProviderFactory $factory): Response
+    public function handle(Request $request, TenantTracerProviderFactory $factory, SsrfGuard $ssrfGuard): Response
     {
         $user = auth()->user();
         if (! $user || ! $user->currentTeam) {
@@ -72,6 +73,21 @@ class TeamObservabilityUpdateTool extends Tool
 
         if ($next['enabled'] && $next['endpoint'] === '') {
             return Response::error('endpoint is required when enabled=true');
+        }
+
+        if ($next['endpoint'] !== '') {
+            if (! filter_var($next['endpoint'], FILTER_VALIDATE_URL)) {
+                return Response::error('endpoint must be a valid URL');
+            }
+            $scheme = parse_url($next['endpoint'], PHP_URL_SCHEME);
+            if (! in_array($scheme, ['http', 'https'], true)) {
+                return Response::error('endpoint scheme must be http or https');
+            }
+            try {
+                $ssrfGuard->assertPublicUrl($next['endpoint']);
+            } catch (\InvalidArgumentException $e) {
+                return Response::error('endpoint rejected: '.$e->getMessage());
+            }
         }
 
         $settings['observability'] = $next;
