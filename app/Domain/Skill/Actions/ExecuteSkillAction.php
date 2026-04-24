@@ -159,13 +159,58 @@ class ExecuteSkillAction
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
-            // 5. Validate output if schema defined
+            // 5. Validate output if schema defined — with retry-on-failure
+            //    for LLM-backed skill types (Sprint 14, mirrors Agent Sprint 12).
             $output = $response->parsedOutput ?? json_decode($response->content, true);
             $schemaValid = true;
+            $schemaRetryAttempts = 0;
+            $schemaRetryTrail = [];
 
             if (! empty($skill->output_schema) && is_array($output)) {
                 $outputValidation = $this->schemaValidator->validate($output, $skill->output_schema);
                 $schemaValid = $outputValidation['valid'];
+
+                if (! $schemaValid && $this->skillSupportsLlmRetry($skill)) {
+                    $maxRetries = $this->resolveMaxRetries($skill);
+                    while (! $schemaValid && $schemaRetryAttempts < $maxRetries) {
+                        $schemaRetryAttempts++;
+                        $schemaRetryTrail[] = [
+                            'attempt' => $schemaRetryAttempts,
+                            'errors' => array_slice($outputValidation['errors'], 0, 5),
+                        ];
+
+                        try {
+                            $retryResponse = $this->executeLlmRetry(
+                                skill: $skill,
+                                input: $input,
+                                provider: $resolvedProvider,
+                                model: $resolvedModel,
+                                teamId: $teamId,
+                                userId: $userId,
+                                agentId: $agentId,
+                                experimentId: $experimentId,
+                                previousOutput: (string) $response->content,
+                                errors: $outputValidation['errors'],
+                            );
+                        } catch (\Throwable $e) {
+                            \Illuminate\Support\Facades\Log::warning('ExecuteSkillAction: schema retry failed', [
+                                'skill_id' => $skill->id,
+                                'attempt' => $schemaRetryAttempts,
+                                'error' => $e->getMessage(),
+                            ]);
+                            break;
+                        }
+
+                        $response = $retryResponse;
+                        $output = $response->parsedOutput ?? json_decode($response->content, true);
+                        if (! is_array($output)) {
+                            break;
+                        }
+                        $outputValidation = $this->schemaValidator->validate($output, $skill->output_schema);
+                        $schemaValid = $outputValidation['valid'];
+                    }
+                    $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+                }
             }
 
             // 6. Create execution record
@@ -195,6 +240,16 @@ class ExecuteSkillAction
                     'answer' => $output['answer'] ?? $response->content,
                     'dissenting_view' => $output['dissenting_view'] ?? null,
                 ];
+            }
+
+            // Record schema retry trail so operators can see which outputs
+            // required self-correction (Sprint 14, mirrors Agent Sprint 12).
+            if ($schemaRetryAttempts > 0) {
+                $executionData['quality_details'] = array_merge($executionData['quality_details'] ?? [], [
+                    'output_schema_valid' => $schemaValid,
+                    'output_schema_retries' => $schemaRetryAttempts,
+                    'output_schema_retry_trail' => $schemaRetryTrail,
+                ]);
             }
 
             $execution = SkillExecution::create($executionData);
@@ -245,6 +300,101 @@ class ExecuteSkillAction
 
             return $failResult;
         }
+    }
+
+    /**
+     * Only LLM-backed skill types benefit from retry-on-schema-failure.
+     * Connector/Rule/CodeExecution/Browser/etc. don't produce LLM output
+     * so retrying them wouldn't change the validation outcome.
+     */
+    private function skillSupportsLlmRetry(Skill $skill): bool
+    {
+        return in_array($skill->type, [
+            SkillType::Llm,
+            SkillType::Hybrid,
+            SkillType::Guardrail,
+        ], true);
+    }
+
+    /**
+     * Resolve max-retries: per-skill override → config default → 0-5 clamp.
+     * Reuses the same `agent.output_schema.max_retries_default` config key
+     * from Sprint 12 so operators tune one knob for both Agents and Skills.
+     */
+    private function resolveMaxRetries(Skill $skill): int
+    {
+        $value = $skill->output_schema_max_retries;
+        if ($value === null) {
+            $value = (int) config('agent.output_schema.max_retries_default', 2);
+        }
+
+        return max(0, min(5, (int) $value));
+    }
+
+    /**
+     * Re-run the LLM skill with a correction hint + the JSON Schema the
+     * output must match. Temperature is lowered to 0.1 for determinism.
+     *
+     * @param  list<string>  $errors
+     */
+    private function executeLlmRetry(
+        Skill $skill,
+        array $input,
+        string $provider,
+        string $model,
+        string $teamId,
+        string $userId,
+        ?string $agentId,
+        ?string $experimentId,
+        string $previousOutput,
+        array $errors,
+    ): AiResponseDTO {
+        $errorLines = implode("\n- ", $errors);
+        $schemaJson = json_encode($skill->output_schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        $systemPrompt = $skill->system_prompt ?? 'You are a helpful assistant.';
+        $userPrompt = $this->buildUserPrompt($skill, $input);
+        $retryHint = <<<PROMPT
+
+
+        --- Retry ---
+        Your previous response failed output-schema validation.
+
+        Previous response (first 500 chars):
+        {$this->truncate($previousOutput, 500)}
+
+        Schema errors:
+        - {$errorLines}
+
+        Return a JSON object that matches this schema exactly. No prose, no
+        code fences — just the JSON:
+
+        ```json
+        {$schemaJson}
+        ```
+        PROMPT;
+
+        $request = new AiRequestDTO(
+            provider: $provider,
+            model: $model,
+            systemPrompt: $systemPrompt,
+            userPrompt: $userPrompt.$retryHint,
+            maxTokens: $skill->configuration['max_tokens'] ?? 4096,
+            outputSchema: null,
+            userId: $userId,
+            teamId: $teamId,
+            experimentId: $experimentId,
+            agentId: $agentId,
+            purpose: "skill:{$skill->slug}:schema_retry",
+            temperature: 0.1,
+        );
+
+        return $this->gateway->complete($request);
+    }
+
+    private function truncate(string $s, int $len): string
+    {
+        return mb_strimwidth($s, 0, $len, '…');
     }
 
     private function executeByType(
