@@ -11,7 +11,13 @@ use Livewire\WithPagination;
 
 class ExperimentListPage extends Component
 {
+    use \App\Livewire\Concerns\HasAssistantSelection;
     use WithPagination;
+
+    public function mount(): void
+    {
+        $this->selectionKind = 'experiment';
+    }
 
     #[Url]
     public string $search = '';
