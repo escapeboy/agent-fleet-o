@@ -285,6 +285,31 @@ class TeamSettingsPage extends Component
         session()->flash('message', 'Observability settings saved.');
     }
 
+    /**
+     * "Test connection" button handler. Uses either the already-saved config
+     * OR the currently-typed form values (if a new token is in the input),
+     * so users can verify a token BEFORE saving it.
+     */
+    public function testObservability(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $team = auth()->user()->currentTeam;
+        $saved = $team->settings['observability'] ?? [];
+
+        $candidate = [
+            'endpoint' => trim($this->observabilityEndpoint) ?: ($saved['endpoint'] ?? ''),
+            'otlp_token_encrypted' => $this->observabilityToken !== ''
+                ? \Illuminate\Support\Facades\Crypt::encryptString($this->observabilityToken)
+                : ($saved['otlp_token_encrypted'] ?? ''),
+        ];
+
+        $result = app(\App\Infrastructure\Telemetry\TenantTracerTester::class)->test($candidate);
+
+        $key = $result['ok'] ? 'message' : 'error';
+        session()->flash($key, 'Observability test: '.$result['message']);
+    }
+
     public function clearObservabilityToken(): void
     {
         $this->authorize('manage-team', auth()->user()->currentTeam);

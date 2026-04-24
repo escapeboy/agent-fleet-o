@@ -147,6 +147,7 @@ use App\Mcp\Tools\Email\EmailThemeListTool;
 use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evaluation\EvaluationCurateFromAnnotationsTool;
 use App\Mcp\Tools\Evaluation\EvaluationDatasetManageTool;
+use App\Mcp\Tools\Evaluation\EvaluationReplayDatasetTool;
 use App\Mcp\Tools\Evaluation\EvaluationRunTool;
 use App\Mcp\Tools\Evaluation\FlowEvaluationDatasetCreateTool;
 use App\Mcp\Tools\Evaluation\FlowEvaluationResultsTool;
@@ -304,6 +305,7 @@ use App\Mcp\Tools\Shared\TeamInviteMemberTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamModelAllowlistTool;
 use App\Mcp\Tools\Shared\TeamObservabilityGetTool;
+use App\Mcp\Tools\Shared\TeamObservabilityTestTool;
 use App\Mcp\Tools\Shared\TeamObservabilityUpdateTool;
 use App\Mcp\Tools\Shared\TeamRemoveMemberTool;
 use App\Mcp\Tools\Shared\TeamUpdateMemberRoleTool;
@@ -850,6 +852,7 @@ class AgentFleetServer extends Server
         EvaluationDatasetManageTool::class,
         EvaluationRunTool::class,
         EvaluationCurateFromAnnotationsTool::class,
+        EvaluationReplayDatasetTool::class,
         FlowEvaluationDatasetCreateTool::class,
         FlowEvaluationRunStartTool::class,
         FlowEvaluationResultsTool::class,
@@ -951,6 +954,7 @@ class AgentFleetServer extends Server
         TeamModelAllowlistTool::class,
         TeamObservabilityGetTool::class,
         TeamObservabilityUpdateTool::class,
+        TeamObservabilityTestTool::class,
         LocalLlmTool::class,
         TeamByokCredentialManageTool::class,
         TeamClaudeCodeVpsAccessTool::class,
