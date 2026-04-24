@@ -171,6 +171,8 @@ class AgentDetailPage extends Component
      */
     public function saveOutputSchema(): void
     {
+        $this->authorize('edit-content');
+
         $trimmed = trim($this->editOutputSchemaJson);
         if ($trimmed === '') {
             $this->agent->update([
