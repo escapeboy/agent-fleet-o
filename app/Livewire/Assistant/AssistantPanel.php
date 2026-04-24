@@ -11,6 +11,7 @@ use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class AssistantPanel extends Component
@@ -394,6 +395,34 @@ class AssistantPanel extends Component
     {
         $this->contextType = $type;
         $this->contextId = $id;
+    }
+
+    /**
+     * Listener for `assistant-set-selection` — any index page can dispatch
+     *
+     *     $this->dispatch('assistant-set-selection', kind: 'experiment', ids: [...]);
+     *
+     * to bundle a multi-select into the assistant's conversation context. The
+     * chat auto-opens so the user can immediately type "pause all of these" or
+     * "summarise them" and the model will call the right MCP tools per ID.
+     *
+     * @param  list<string>  $ids
+     */
+    #[On('assistant-set-selection')]
+    public function applySelection(string $kind = '', array $ids = []): void
+    {
+        $kind = trim($kind);
+        $ids = array_values(array_filter(array_map('strval', $ids), fn ($v) => $v !== ''));
+        if ($kind === '' || $ids === []) {
+            $this->contextType = '';
+            $this->contextId = '';
+
+            return;
+        }
+
+        $this->contextType = 'selection';
+        $this->contextId = json_encode(['kind' => $kind, 'ids' => array_slice($ids, 0, 50)]);
+        $this->dispatch('assistant-open');
     }
 
     public function toggleHistory(): void
