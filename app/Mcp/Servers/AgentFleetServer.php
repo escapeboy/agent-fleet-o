@@ -147,6 +147,7 @@ use App\Mcp\Tools\Email\EmailThemeListTool;
 use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\Evaluation\EvaluationCurateFromAnnotationsTool;
 use App\Mcp\Tools\Evaluation\EvaluationDatasetManageTool;
+use App\Mcp\Tools\Evaluation\EvaluationReplayDatasetTool;
 use App\Mcp\Tools\Evaluation\EvaluationRunTool;
 use App\Mcp\Tools\Evaluation\FlowEvaluationDatasetCreateTool;
 use App\Mcp\Tools\Evaluation\FlowEvaluationResultsTool;
@@ -850,6 +851,7 @@ class AgentFleetServer extends Server
         EvaluationDatasetManageTool::class,
         EvaluationRunTool::class,
         EvaluationCurateFromAnnotationsTool::class,
+        EvaluationReplayDatasetTool::class,
         FlowEvaluationDatasetCreateTool::class,
         FlowEvaluationRunStartTool::class,
         FlowEvaluationResultsTool::class,
