@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgentCardController;
+use App\Http\Controllers\WellKnownFleetQController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
@@ -121,6 +122,24 @@ Route::get('/.well-known/agent.json', AgentCardController::class)
     ->name('a2a.agent-card')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
+
+// FleetQ discovery — public, unauthenticated. Returns auth + endpoints so MCP-compatible
+// clients (OpenCode, Claude Code, Codex) can self-configure with a single URL.
+Route::get('/.well-known/fleetq', WellKnownFleetQController::class)
+    ->name('well-known.fleetq')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+// Agent Chat Protocol — public manifest discovery (no auth)
+Route::get('/.well-known/agents', [\App\Http\Controllers\Api\V1\AgentManifestController::class, 'index'])
+    ->name('agent-chat.manifest.list')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+Route::get('/.well-known/agents/{slug}', [\App\Http\Controllers\Api\V1\AgentManifestController::class, 'show'])
+    ->name('agent-chat.manifest.show')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:120,1');
 
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
@@ -245,6 +264,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents/quick', QuickAgentForm::class)->name('agents.quick');
     Route::get('/agents/{agent}/voice', VoiceSessionPage::class)->name('agents.voice');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
+
+    Route::get('/external-agents', \App\Livewire\AgentChat\ExternalAgentListPage::class)->name('external-agents.index');
+    Route::get('/external-agents/agentverse', \App\Livewire\AgentChat\AgentverseBrowsePage::class)->name('external-agents.agentverse');
+    Route::get('/external-agents/{externalAgent}', \App\Livewire\AgentChat\ExternalAgentDetailPage::class)->name('external-agents.show');
 
     Route::get('/chatbots', ChatbotListPage::class)->name('chatbots.index');
     Route::get('/chatbots/create', CreateChatbotForm::class)->name('chatbots.create');

@@ -6,6 +6,8 @@ use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Resources\ApprovalsResource;
 use App\Mcp\Tools\A2ui\A2uiComponentCatalogTool;
+use App\Mcp\Tools\Codemode\CodemodeExecuteTool;
+use App\Mcp\Tools\Codemode\CodemodeSearchTool;
 use App\Mcp\Tools\A2ui\A2uiRenderSurfaceTool;
 use App\Mcp\Tools\A2ui\A2uiValidateSurfaceTool;
 use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
@@ -550,6 +552,23 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
+        // Agent Chat Protocol (13) — peer-to-peer agent interop (ASI1-compatible)
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentListTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentGetTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentCreateTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentDeleteTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentPingTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatSendTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatStructuredTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatManifestPublishTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatManifestRevokeTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatSessionsListTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentChatSessionGetTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentverseSearchTool::class,
+        \App\Mcp\Tools\AgentChatProtocol\AgentverseInstallTool::class,
+
         // Agent (23)
         AgentListTool::class,
         AgentGetTool::class,
@@ -1088,6 +1107,11 @@ class AgentFleetServer extends Server
         WebsiteAnalyticsTool::class,
         WebsiteDeployTool::class,
         WebsiteDeploymentListTool::class,
+
+        // Code Mode (2) — lazy tool discovery + dispatch for agents that want to
+        // avoid loading every tool schema upfront. Pair search + execute.
+        CodemodeSearchTool::class,
+        CodemodeExecuteTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */

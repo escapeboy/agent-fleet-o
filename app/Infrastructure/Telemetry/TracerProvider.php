@@ -48,7 +48,7 @@ class TracerProvider
         }
 
         if (! config('telemetry.enabled')) {
-            return $this->cachedTracer = new NoopTracer;
+            return $this->cachedTracer = $this->makeNoopTracer();
         }
 
         try {
@@ -59,7 +59,7 @@ class TracerProvider
             );
         } catch (Throwable $e) {
             report($e);
-            $this->cachedTracer = new NoopTracer;
+            $this->cachedTracer = $this->makeNoopTracer();
         }
 
         $this->initialized = true;
@@ -80,7 +80,30 @@ class TracerProvider
 
     public function isActive(): bool
     {
-        return $this->initialized && ! ($this->cachedTracer instanceof NoopTracer);
+        if (! $this->initialized) {
+            return false;
+        }
+
+        return ! ($this->cachedTracer instanceof NoopTracer)
+            && ! ($this->cachedTracer instanceof FallbackNoopTracer);
+    }
+
+    /**
+     * Return a NoopTracer when telemetry is disabled or OTel isn't installed.
+     *
+     * Prod's composer install runs against the PARENT composer.json (not base),
+     * so the open-telemetry/* packages listed only in base/composer.json are
+     * sometimes missing from the shared vendor volume. When that happens, we
+     * substitute a minimal in-codebase implementation of TracerInterface so
+     * AI code paths don't blow up with "Class NoopTracer not found".
+     */
+    private function makeNoopTracer(): TracerInterface
+    {
+        if (class_exists(NoopTracer::class)) {
+            return new NoopTracer;
+        }
+
+        return new FallbackNoopTracer;
     }
 
     private function buildSdkProvider(): OtelTracerProvider

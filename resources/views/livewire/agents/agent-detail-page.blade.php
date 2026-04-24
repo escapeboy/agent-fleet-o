@@ -486,7 +486,7 @@
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'identity' => 'System Prompt', 'memory' => 'Memory', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'hooks' => 'Hooks', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'identity' => 'System Prompt', 'memory' => 'Memory', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'hooks' => 'Hooks', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat', 'chat_protocol' => 'Chat Protocol'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -1362,6 +1362,88 @@
                             <p class="mt-1 text-xs text-gray-400">Use the MCP tool <code class="font-mono">agent_heartbeat_update</code> to set a schedule.</p>
                         </div>
                     @endif
+                </div>
+            </div>
+
+        @elseif($activeTab === 'chat_protocol')
+            <div class="space-y-6">
+                <div class="rounded-lg bg-white p-6 shadow">
+                    <h3 class="text-lg font-semibold text-gray-900">Agent Chat Protocol</h3>
+                    <p class="mt-1 text-sm text-gray-600">
+                        Expose this agent to external callers via the <span class="font-mono">ASI1 Agent Chat Protocol</span>. Other FleetQ instances, Agentverse agents, and any client speaking the same protocol can reach this agent as a conversational peer.
+                    </p>
+
+                    @if (session('chat_protocol_new_secret'))
+                        <div class="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4">
+                            <p class="text-sm font-medium text-yellow-900">New secret generated — copy it now; it is only shown once.</p>
+                            <pre class="mt-2 overflow-x-auto rounded bg-white p-2 font-mono text-xs text-gray-800">{{ session('chat_protocol_new_secret') }}</pre>
+                        </div>
+                    @endif
+
+                    <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Status</p>
+                            <p class="mt-1 text-sm">
+                                @if ($agent->chat_protocol_enabled)
+                                    <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Enabled</span>
+                                    <span class="ml-2 text-xs font-mono text-gray-500">
+                                        {{ is_object($agent->chat_protocol_visibility) ? $agent->chat_protocol_visibility->value : $agent->chat_protocol_visibility }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Disabled</span>
+                                @endif
+                            </p>
+                        </div>
+
+                        @if ($agent->chat_protocol_enabled && $agent->chat_protocol_slug)
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Slug</p>
+                                <p class="mt-1 font-mono text-xs text-gray-600">{{ $agent->chat_protocol_slug }}</p>
+                            </div>
+                        @endif
+                    </div>
+
+                    @if ($agent->chat_protocol_enabled
+                        && (($agent->chat_protocol_visibility->value ?? $agent->chat_protocol_visibility) === 'marketplace'
+                            || ($agent->chat_protocol_visibility->value ?? $agent->chat_protocol_visibility) === 'public'))
+                        <div class="mt-4">
+                            <p class="text-sm font-medium text-gray-700">Public manifest URL</p>
+                            <pre class="mt-1 overflow-x-auto rounded bg-gray-50 p-2 font-mono text-xs text-gray-700">{{ url('/.well-known/agents/' . $agent->chat_protocol_slug) }}</pre>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="rounded-lg bg-white p-6 shadow">
+                    <h4 class="text-sm font-semibold text-gray-900">Publish visibility</h4>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <strong>Private:</strong> Sanctum-authenticated callers within this team only.<br>
+                        <strong>Team:</strong> Same as private for MVP; reserved for future cross-team controls.<br>
+                        <strong>Marketplace / Public:</strong> Discoverable via <code class="font-mono">/.well-known/agents</code>. Requires HMAC-signed JWT for inbound calls.
+                    </p>
+
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        @foreach (['private', 'team', 'marketplace', 'public'] as $vis)
+                            <button wire:click="publishChatProtocol('{{ $vis }}')"
+                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                Publish as {{ $vis }}
+                            </button>
+                        @endforeach
+
+                        @if ($agent->chat_protocol_enabled)
+                            <button wire:click="revokeChatProtocol" wire:confirm="Disable the chat protocol? Active inbound calls will start returning 404."
+                                    class="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100">
+                                Disable
+                            </button>
+                        @endif
+
+                        @if ($agent->chat_protocol_enabled
+                            && in_array(($agent->chat_protocol_visibility->value ?? $agent->chat_protocol_visibility), ['marketplace', 'public']))
+                            <button wire:click="rotateChatProtocolSecret"
+                                    class="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 hover:bg-yellow-100">
+                                Rotate secret
+                            </button>
+                        @endif
+                    </div>
                 </div>
             </div>
         @endif

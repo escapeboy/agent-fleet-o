@@ -95,12 +95,20 @@ class Agent extends Model
         'reasoning_strategy',
         'scope',
         'owner_user_id',
+        'chat_protocol_enabled',
+        'chat_protocol_visibility',
+        'chat_protocol_slug',
+        'chat_protocol_config',
+        'chat_protocol_secret',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => AgentStatus::class,
+            'chat_protocol_enabled' => 'boolean',
+            'chat_protocol_visibility' => \App\Domain\AgentChatProtocol\Enums\AgentChatVisibility::class,
+            'chat_protocol_config' => 'array',
             'reasoning_strategy' => AgentReasoningStrategy::class,
             'meta' => 'array',
             'personality' => 'array',

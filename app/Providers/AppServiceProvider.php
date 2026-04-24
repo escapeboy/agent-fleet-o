@@ -392,6 +392,20 @@ class AppServiceProvider extends ServiceProvider
         // Sub-experiment orchestration: check parent when child reaches terminal state
         Event::listen(ExperimentTransitioned::class, CheckParentExperimentCompletion::class);
 
+        // Agent Chat Protocol: execute agent on inbound chat + log protocol transactions
+        Event::listen(
+            \App\Domain\AgentChatProtocol\Events\ChatMessageReceived::class,
+            \App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage::class,
+        );
+        Event::listen(
+            \App\Domain\AgentChatProtocol\Events\ChatMessageReceived::class,
+            [\App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction::class, 'handleReceived'],
+        );
+        Event::listen(
+            \App\Domain\AgentChatProtocol\Events\ChatMessageDispatched::class,
+            [\App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction::class, 'handleDispatched'],
+        );
+
         // Sub-workflow node: resume parent workflow step when sub-workflow experiment completes
         Event::listen(ExperimentTransitioned::class, ResumeParentOnSubWorkflowComplete::class);
 

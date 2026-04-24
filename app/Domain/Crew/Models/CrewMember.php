@@ -3,6 +3,7 @@
 namespace App\Domain\Crew\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\AgentChatProtocol\Models\ExternalAgent;
 use App\Domain\Crew\Enums\CrewMemberRole;
 use Database\Factories\Domain\Crew\CrewMemberFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -22,6 +23,8 @@ class CrewMember extends Model
     protected $fillable = [
         'crew_id',
         'agent_id',
+        'external_agent_id',
+        'member_kind',
         'role',
         'sort_order',
         'config',
@@ -46,6 +49,16 @@ class CrewMember extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    public function externalAgent(): BelongsTo
+    {
+        return $this->belongsTo(ExternalAgent::class);
+    }
+
+    public function isExternal(): bool
+    {
+        return ($this->member_kind ?? 'internal') === 'external' || $this->external_agent_id !== null;
     }
 
     /**

@@ -13,6 +13,7 @@ use App\Domain\Workflow\Executors\ParameterExtractorNodeExecutor;
 use App\Domain\Workflow\Executors\TemplateTransformNodeExecutor;
 use App\Domain\Workflow\Executors\VariableAggregatorNodeExecutor;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Domain\Workflow\Services\NodeExecutors\ExternalAgentNodeExecutor;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -160,6 +161,7 @@ class ExecuteWorkflowNodeJob implements ShouldQueue
             WorkflowNodeType::VariableAggregator => app(VariableAggregatorNodeExecutor::class),
             WorkflowNodeType::TemplateTransform => app(TemplateTransformNodeExecutor::class),
             WorkflowNodeType::KnowledgeRetrieval => app(KnowledgeRetrievalNodeExecutor::class),
+            WorkflowNodeType::ExternalAgent => app(ExternalAgentNodeExecutor::class),
             default => throw new \InvalidArgumentException("No executor for node type: {$type->value}"),
         };
     }
