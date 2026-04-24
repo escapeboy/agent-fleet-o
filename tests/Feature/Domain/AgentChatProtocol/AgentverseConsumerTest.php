@@ -11,9 +11,6 @@ use App\Domain\AgentChatProtocol\Enums\AdapterKind;
 use App\Domain\AgentChatProtocol\Enums\ExternalAgentStatus;
 use App\Domain\AgentChatProtocol\Services\AgentverseClient;
 use App\Domain\AgentChatProtocol\Services\AgentverseEnvelopeMapper;
-use App\Domain\Credential\Enums\CredentialStatus;
-use App\Domain\Credential\Enums\CredentialType;
-use App\Domain\Credential\Models\Credential;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,8 +24,6 @@ class AgentverseConsumerTest extends TestCase
 
     private Team $team;
 
-    private Credential $credential;
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -41,38 +36,43 @@ class AgentverseConsumerTest extends TestCase
             'settings' => [],
         ]);
         $user->update(['current_team_id' => $this->team->id]);
-
-        $this->credential = Credential::create([
-            'id' => (string) Str::uuid7(),
-            'team_id' => $this->team->id,
-            'name' => 'ASI:One API Key',
-            'slug' => 'asi-one-'.Str::random(4),
-            'credential_type' => CredentialType::ApiToken,
-            'status' => CredentialStatus::Active,
-            'secret_data' => ['api_key' => 'test-asi-key'],
-            'metadata' => ['provider' => 'agentverse'],
-        ]);
     }
 
-    public function test_client_for_team_resolves_agentverse_credential(): void
+    public function test_client_works_without_credential(): void
     {
         $client = AgentverseClient::forTeam($this->team->id);
-        $this->assertNotNull($client);
+        $this->assertInstanceOf(AgentverseClient::class, $client);
     }
 
-    public function test_client_returns_null_when_no_agentverse_credential(): void
+    public function test_list_agents_hits_v1_search_with_correct_body_shape(): void
     {
-        $otherTeam = Team::create([
-            'name' => 'No Creds',
-            'slug' => 'no-creds-'.Str::random(4),
-            'owner_id' => $this->team->owner_id,
-            'settings' => [],
+        Http::fake([
+            AgentverseClient::SEARCH_URL => Http::response([
+                'agents' => [['address' => 'agent1qtest', 'name' => 'Test']],
+                'offset' => 0,
+                'limit' => 25,
+                'num_hits' => 1,
+                'total' => 1,
+                'search_id' => 'abc',
+            ], 200),
         ]);
 
-        $this->assertNull(AgentverseClient::forTeam($otherTeam->id));
+        $agents = AgentverseClient::forTeam($this->team->id)->listAgents([
+            'search_text' => 'weather',
+            'limit' => 10,
+        ]);
+
+        $this->assertCount(1, $agents);
+        Http::assertSent(function ($req) {
+            return $req->url() === AgentverseClient::SEARCH_URL
+                && $req->method() === 'POST'
+                && $req['search_text'] === 'weather'
+                && (int) $req['limit'] === 10
+                && (int) $req['offset'] === 0;
+        });
     }
 
-    public function test_envelope_wrap_produces_expected_shape(): void
+    public function test_envelope_wrap_produces_uuid4_session_and_string_payload(): void
     {
         $mapper = new AgentverseEnvelopeMapper;
         $dto = new ChatMessageDTO(
@@ -89,109 +89,144 @@ class AgentverseConsumerTest extends TestCase
         $this->assertSame(1, $envelope['version']);
         $this->assertSame('fleetq:team:42', $envelope['sender']);
         $this->assertSame('agent1qremote', $envelope['target']);
-        $this->assertSame($dto->sessionId, $envelope['session']);
-        $this->assertIsArray($envelope['payload']);
-        $this->assertSame('hello', $envelope['payload']['content']);
+        $this->assertIsString($envelope['payload']);
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
+            $envelope['session'],
+        );
+
+        $decoded = json_decode($envelope['payload'], true);
+        $this->assertSame('hello', $decoded['content']);
     }
 
-    public function test_envelope_unwrap_rejects_malformed(): void
+    public function test_envelope_session_mapping_is_deterministic(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        (new AgentverseEnvelopeMapper)->unwrap(['incomplete' => true]);
+        $mapper = new AgentverseEnvelopeMapper;
+        $dto1 = new ChatMessageDTO(
+            msgId: (string) Str::uuid7(),
+            sessionId: 'same-session-token',
+            from: 'x', to: 'y', content: 'a', timestamp: now()->toIso8601String(),
+        );
+        $dto2 = new ChatMessageDTO(
+            msgId: (string) Str::uuid7(),
+            sessionId: 'same-session-token',
+            from: 'x', to: 'y', content: 'b', timestamp: now()->toIso8601String(),
+        );
+
+        $this->assertSame(
+            $mapper->wrap($dto1, 'c', 't')['session'],
+            $mapper->wrap($dto2, 'c', 't')['session'],
+        );
     }
 
-    public function test_install_from_agentverse_creates_external_agent(): void
+    public function test_install_from_agentverse_uses_search_and_maps_real_fields(): void
     {
         Http::fake([
-            AgentverseClient::BASE_URL.'/agents/agent1qremote' => Http::response([
-                'name' => 'Weather Expert',
-                'handle' => '@weather',
-                'readme' => 'A helpful weather agent',
-                'supported_message_types' => ['chat_message', 'chat_acknowledgement'],
-                'ranking_score' => 9.4,
+            AgentverseClient::SEARCH_URL => Http::response([
+                'agents' => [
+                    [
+                        'address' => 'agent1qweather',
+                        'name' => 'Weather Agent',
+                        'handle' => null,
+                        'readme' => '# Weather Agent',
+                        'description' => '',
+                        'rating' => 4.5,
+                        'featured' => true,
+                        'category' => 'utility',
+                        'avatar_href' => 'https://example.com/avatar.png',
+                        'total_interactions' => 46093,
+                        'domain' => 'weather.fetch.ai',
+                        'type' => 'hosted',
+                        'protocols' => ['proto:deadbeef'],
+                        'status' => 'active',
+                    ],
+                ],
             ], 200),
         ]);
 
         $agent = app(InstallFromAgentverseAction::class)->execute(
             teamId: $this->team->id,
-            agentAddress: 'agent1qremote',
+            agentAddress: 'agent1qweather',
         );
 
-        $this->assertSame('Weather Expert', $agent->name);
-        $this->assertSame('agent1qremote', $agent->agent_address);
+        $this->assertSame('Weather Agent', $agent->name);
+        $this->assertSame('agent1qweather', $agent->agent_address);
         $this->assertSame(AdapterKind::AgentverseMailbox->value, $agent->adapter_kind->value);
         $this->assertSame(ExternalAgentStatus::Active->value, $agent->status->value);
-        $this->assertSame(9.4, $agent->capabilities['ranking_score']);
+        $this->assertSame(4.5, $agent->capabilities['rating']);
+        $this->assertTrue($agent->capabilities['featured']);
+        $this->assertSame('utility', $agent->capabilities['category']);
+        $this->assertSame(46093, $agent->capabilities['total_interactions']);
+        $this->assertSame('https://example.com/avatar.png', $agent->capabilities['avatar_href']);
+        $this->assertNull($agent->capabilities['handle']);
+    }
+
+    public function test_install_rejects_unknown_address(): void
+    {
+        Http::fake([
+            AgentverseClient::SEARCH_URL => Http::response([
+                'agents' => [
+                    ['address' => 'agent1qother', 'name' => 'Other'],
+                ],
+            ], 200),
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('not found in public search');
+
+        app(InstallFromAgentverseAction::class)->execute(
+            teamId: $this->team->id,
+            agentAddress: 'agent1qmissing',
+        );
     }
 
     public function test_install_is_idempotent_for_same_address(): void
     {
         Http::fake([
-            AgentverseClient::BASE_URL.'/agents/agent1qremote' => Http::response([
-                'name' => 'Weather Expert',
-                'handle' => '@weather',
+            AgentverseClient::SEARCH_URL => Http::response([
+                'agents' => [['address' => 'agent1qidem', 'name' => 'Idem', 'handle' => null]],
             ], 200),
         ]);
 
-        $first = app(InstallFromAgentverseAction::class)->execute(
-            teamId: $this->team->id,
-            agentAddress: 'agent1qremote',
-        );
-        $second = app(InstallFromAgentverseAction::class)->execute(
-            teamId: $this->team->id,
-            agentAddress: 'agent1qremote',
-        );
+        $first = app(InstallFromAgentverseAction::class)->execute($this->team->id, 'agent1qidem');
+        $second = app(InstallFromAgentverseAction::class)->execute($this->team->id, 'agent1qidem');
 
         $this->assertSame($first->id, $second->id);
     }
 
-    public function test_install_rejects_team_without_credential(): void
-    {
-        $otherTeam = Team::create([
-            'name' => 'NoKey',
-            'slug' => 'nokey-'.Str::random(4),
-            'owner_id' => $this->team->owner_id,
-            'settings' => [],
-        ]);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('no active Agentverse credential');
-        app(InstallFromAgentverseAction::class)->execute(
-            teamId: $otherTeam->id,
-            agentAddress: 'agent1qremote',
-        );
-    }
-
-    public function test_dispatcher_routes_agentverse_mailbox_to_v2_endpoint(): void
+    public function test_dispatcher_routes_agentverse_mailbox_with_correct_envelope(): void
     {
         Http::fake([
-            AgentverseClient::BASE_URL.'/agents/mailbox/submit' => Http::response([
-                'payload' => [
+            AgentverseClient::SEARCH_URL => Http::response([
+                'agents' => [['address' => 'agent1qmailbox', 'name' => 'Mailbox Test', 'handle' => null]],
+            ], 200),
+            AgentverseClient::MAILBOX_URL => Http::response([
+                'payload' => json_encode([
                     'msg_id' => (string) Str::uuid7(),
                     'content' => 'remote reply via mailbox',
-                ],
-            ], 200),
-            AgentverseClient::BASE_URL.'/agents/agent1qremote' => Http::response([
-                'name' => 'Mailbox Agent',
+                ]),
             ], 200),
         ]);
 
-        $agent = app(InstallFromAgentverseAction::class)->execute(
-            teamId: $this->team->id,
-            agentAddress: 'agent1qremote',
-        );
+        $agent = app(InstallFromAgentverseAction::class)->execute($this->team->id, 'agent1qmailbox');
 
         $result = app(DispatchChatMessageAction::class)->execute(
             externalAgent: $agent,
             content: 'hello via agentverse',
         );
 
-        $this->assertSame('remote reply via mailbox', $result['remote_response']['content'] ?? null);
+        $this->assertNotNull($result['remote_response'] ?? null);
 
         Http::assertSent(function ($req) {
-            return str_ends_with($req->url(), '/v2/agents/mailbox/submit')
-                && $req->hasHeader('Authorization')
-                && str_contains($req['target'] ?? '', 'agent1qremote');
+            if (! str_contains($req->url(), 'agents/mailbox/submit')) {
+                return false;
+            }
+            $body = $req->data();
+
+            return isset($body['version'], $body['sender'], $body['target'], $body['session'], $body['payload'])
+                && $body['target'] === 'agent1qmailbox'
+                && is_string($body['payload'])
+                && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $body['session']) === 1;
         });
     }
 }

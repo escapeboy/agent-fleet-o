@@ -169,26 +169,20 @@ parameters:
 			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
 
 		-
-			message: '#^Offset ''api_key'' on string on left side of \?\? does not exist\.$#'
+			message: '#^Offset ''api_key'' on array\{string\} on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
 
 		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
 			count: 1
 			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
 
 		-
-			message: '#^Strict comparison using \=\=\= between \*NEVER\* and '''' will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
+			message: '#^Strict comparison using \!\=\= between \*NEVER\* and '''' will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Domain/AgentChatProtocol/Services/AgentverseClient.php
 
@@ -293,6 +287,12 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/AgentChatProtocol/AgentverseInstallTool.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Domain\\AgentChatProtocol\\Services\\AgentverseClient and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Mcp/Tools/AgentChatProtocol/AgentverseSearchTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'

@@ -72,10 +72,9 @@ class ProtocolDispatcher
             throw new \RuntimeException("Agentverse external agent {$externalAgent->id} has no agent_address set");
         }
 
+        // AgentverseClient::forTeam() always returns a client — Agentverse public
+        // browse + mailbox submit work without auth; credential is optional.
         $client = AgentverseClient::forTeam((string) $externalAgent->team_id);
-        if ($client === null) {
-            throw new \RuntimeException('Team has no active Agentverse credential configured');
-        }
 
         $callerAddress = 'fleetq:team:'.$externalAgent->team_id;
         $envelope = $this->envelopeMapper->wrap($dto, $callerAddress, $targetAddress);
@@ -83,7 +82,7 @@ class ProtocolDispatcher
         $start = microtime(true);
         try {
             $response = $this->adapterKind($externalAgent) === AdapterKind::AgentverseProxy
-                ? $client->submitProxy($targetAddress, $envelope)
+                ? $client->submitProxy($envelope)
                 : $client->submitMailbox($envelope);
 
             $this->recordSuccess($externalAgent, (int) ((microtime(true) - $start) * 1000));

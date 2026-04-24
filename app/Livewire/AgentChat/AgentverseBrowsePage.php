@@ -17,14 +17,11 @@ class AgentverseBrowsePage extends Component
     #[Url]
     public string $search = '';
 
-    #[Url]
-    public string $category = '';
-
     public ?array $agents = null;
 
     public ?string $errorMessage = null;
 
-    public bool $credentialMissing = false;
+    public bool $loading = false;
 
     public function mount(): void
     {
@@ -36,36 +33,25 @@ class AgentverseBrowsePage extends Component
         $this->refreshAgents();
     }
 
-    public function updatedCategory(): void
-    {
-        $this->refreshAgents();
-    }
-
     public function refreshAgents(): void
     {
         $teamId = (string) auth()->user()?->current_team_id;
         $client = AgentverseClient::forTeam($teamId);
 
-        if ($client === null) {
-            $this->credentialMissing = true;
-            $this->agents = null;
-
-            return;
-        }
-
-        $this->credentialMissing = false;
+        $this->loading = true;
         $this->errorMessage = null;
 
         try {
-            $filters = array_filter([
-                'search' => $this->search,
-                'category' => $this->category,
-                'limit' => 50,
+            $this->agents = $client->listAgents([
+                'search_text' => $this->search,
+                'limit' => 30,
+                'offset' => 0,
             ]);
-            $this->agents = $client->listAgents($filters);
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
             $this->agents = [];
+        } finally {
+            $this->loading = false;
         }
     }
 
