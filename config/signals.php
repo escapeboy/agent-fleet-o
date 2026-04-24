@@ -40,6 +40,16 @@ return [
          * widget list endpoint returns empty and the create endpoint returns 403.
          */
         'widget_comments_enabled' => (bool) env('BUG_REPORT_WIDGET_COMMENTS', true),
+
+        /*
+         * Widget comment image attachments. Reporters can attach up to
+         * `max_attachments` images per comment (jpg/png/webp/gif),
+         * each up to `max_attachment_mb` megabytes. Uploaded images are
+         * re-encoded via Intervention to strip EXIF before storage.
+         */
+        'widget_comment_attachments_enabled' => (bool) env('BUG_REPORT_WIDGET_COMMENT_ATTACHMENTS', true),
+        'widget_comment_max_attachments' => (int) env('BUG_REPORT_WIDGET_COMMENT_MAX_ATTACHMENTS', 4),
+        'widget_comment_max_attachment_mb' => (int) env('BUG_REPORT_WIDGET_COMMENT_MAX_ATTACHMENT_MB', 5),
     ],
 
 ];

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Widget\Concerns\ResolvesWidgetAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class BugReportCommentsListController extends Controller
 {
@@ -30,13 +31,22 @@ class BugReportCommentsListController extends Controller
         $comments = SignalComment::query()
             ->where('signal_id', $signalModel->id)
             ->where('widget_visible', true)
+            ->with('media')
             ->orderBy('created_at')
-            ->get(['id', 'body', 'author_type', 'created_at'])
+            ->get()
             ->map(fn (SignalComment $c) => [
                 'id' => $c->id,
                 'body' => $c->body,
                 'author_type' => $c->author_type,
                 'created_at' => $c->created_at?->toISOString(),
+                'attachments' => $c->getMedia('attachments')
+                    ->map(fn (Media $m) => [
+                        'url' => $m->getFullUrl(),
+                        'thumb_url' => $m->hasGeneratedConversion('thumb') ? $m->getFullUrl('thumb') : $m->getFullUrl(),
+                        'mime' => $m->mime_type,
+                        'size' => (int) $m->size,
+                    ])
+                    ->values(),
             ]);
 
         return $this->withCors(response()->json(['comments' => $comments]));
