@@ -480,6 +480,21 @@
                                         @endforeach
                                     </div>
                                 @endif
+                                @if(!empty($msg['citations']))
+                                    <div class="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                                        <span class="font-medium text-gray-500">Sources:</span>
+                                        @foreach($msg['citations'] as $c)
+                                            <a href="{{ $c['url'] }}"
+                                               target="_blank"
+                                               rel="noopener"
+                                               class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+                                               title="{{ ucfirst($c['kind']) }} · {{ $c['id'] }}">
+                                                <span class="text-[10px] text-indigo-500">[{{ $c['n'] }}]</span>
+                                                <span class="max-w-[200px] truncate">{{ $c['title'] }}</span>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @endif
                                 @if(!empty($msg['tool_calls_count']))
                                     <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
                                         <i class="fa-solid fa-screwdriver-wrench text-xs"></i>

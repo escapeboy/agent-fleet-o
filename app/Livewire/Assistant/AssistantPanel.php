@@ -339,6 +339,7 @@ class AssistantPanel extends Component
                     'tool_calls_count' => count($msg->tool_calls ?? []),
                     'cost_credits' => $msg->token_usage['cost_credits'] ?? 0,
                     'a2ui_surfaces' => $metadata['a2ui_surfaces'] ?? [],
+                    'citations' => $metadata['citations'] ?? [],
                 ];
             }
 
@@ -380,6 +381,7 @@ class AssistantPanel extends Component
                 'tool_calls_count' => $m->tool_calls ? count($m->tool_calls) : 0,
                 'cost_credits' => $m->token_usage['cost_credits'] ?? 0,
                 'a2ui_surfaces' => $m->metadata['a2ui_surfaces'] ?? [],
+                'citations' => $m->metadata['citations'] ?? [],
             ])
             ->toArray();
 

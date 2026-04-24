@@ -9,6 +9,7 @@ use App\Domain\Assistant\Services\AssistantIntentClassifier;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\Assistant\Services\AssistantUiArtifactParser;
 use App\Domain\Assistant\Services\AssistantUiArtifactPersister;
+use App\Domain\Assistant\Services\CitationExtractor;
 use App\Domain\Assistant\Services\ContextResolver;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Assistant\Services\ToolUsageTracker;
@@ -39,6 +40,7 @@ class SendAssistantMessageAction
         private readonly AssistantArtifactsFeatureFlag $artifactsFeatureFlag,
         private readonly AssistantUiArtifactParser $artifactParser,
         private readonly AssistantUiArtifactPersister $artifactPersister,
+        private readonly CitationExtractor $citationExtractor,
     ) {}
 
     /**
@@ -454,6 +456,16 @@ class SendAssistantMessageAction
             $parsed = $this->artifactParser->parse($finalContent, $response->toolResults ?? []);
             $finalContent = $parsed['text'];
             $extractedArtifacts = $parsed['artifacts'];
+        }
+
+        // Grounded citations — scan [[kind:uuid]] markers, validate against tool
+        // results, replace valid ones with footnote refs, attach list to metadata.
+        if ($finalContent !== '' && $finalStatus === 'completed') {
+            $cited = $this->citationExtractor->extract($finalContent, $response->toolResults ?? []);
+            $finalContent = $cited['text'];
+            if ($cited['citations'] !== []) {
+                $metadata['citations'] = $cited['citations'];
+            }
         }
 
         // Save assistant response — update existing placeholder (async mode) or create new message

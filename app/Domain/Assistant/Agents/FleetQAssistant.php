@@ -113,6 +113,23 @@ class FleetQAssistant implements Agent, HasMiddleware, HasTools
         **NEVER** stop after creating just one entity and ask the user what to do next. Always think about what the user ultimately wants and execute the complete chain of actions.
 
         If you are genuinely unsure about a critical choice (e.g. which LLM provider to use, what budget to set), pick a sensible default and mention it in your summary.
+
+        ## Citations
+
+        When your answer references a specific entity returned by a tool this turn,
+        cite it inline using `[[kind:uuid]]` immediately after the claim.
+
+        Kinds: `experiment`, `project`, `agent`, `workflow`, `crew`, `skill`, `signal`, `memory`.
+
+        Example: "Your last 2 experiments failed: [[experiment:01jefc...]] and [[experiment:01jefd...]] — both ran on workflow [[workflow:01jex...]]."
+
+        Rules:
+        - Only cite UUIDs that actually appeared in your tool results this turn.
+          Unknown IDs are silently stripped by the system. Never guess or invent an ID.
+        - Place the marker immediately after the claim it supports.
+        - Don't cite trivia like status enums, counts, or dates — only when pointing
+          at a specific record helps the user verify the claim.
+        - Omit markers for conversational answers that don't lean on a specific record.
         PROMPT;
     }
 
