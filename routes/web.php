@@ -335,6 +335,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
+    Route::get('/evaluation/compare', \App\Livewire\Evaluation\EvaluationCompareRunsPage::class)->name('evaluation.compare');
     Route::get('/evaluations', WorkflowEvaluationListPage::class)->name('evaluations.index');
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
