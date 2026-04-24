@@ -125,6 +125,15 @@ class TeamSettingsPage extends Component
 
     public string $observabilityServiceName = '';
 
+    // Sprint 18 — last probe outcome surfaced as a badge
+    public ?string $lastProbeAt = null;
+
+    public ?string $lastProbeStatus = null;
+
+    public ?bool $lastProbeOk = null;
+
+    public ?string $lastProbeMessage = null;
+
     // API token form
     public string $tokenName = '';
 
@@ -199,6 +208,10 @@ class TeamSettingsPage extends Component
         $this->observabilityServiceName = (string) ($observability['service_name'] ?? '');
         $this->observabilityTokenIsSet = ! empty($observability['otlp_token_encrypted']);
         $this->observabilityToken = '';
+        $this->lastProbeAt = $observability['last_probe_at'] ?? null;
+        $this->lastProbeStatus = $observability['last_probe_status'] ?? null;
+        $this->lastProbeOk = isset($observability['last_probe_ok']) ? (bool) $observability['last_probe_ok'] : null;
+        $this->lastProbeMessage = $observability['last_probe_message'] ?? null;
     }
 
     public function saveTeamSettings(): void
@@ -305,6 +318,18 @@ class TeamSettingsPage extends Component
         ];
 
         $result = app(\App\Infrastructure\Telemetry\TenantTracerTester::class)->test($candidate);
+
+        // Sprint 18: persist probe result so the UI can show a stable
+        // "Last tested N min ago" badge between sessions.
+        $settings = $team->settings ?? [];
+        $settings['observability'] = array_merge($settings['observability'] ?? [], [
+            'last_probe_at' => now()->toIso8601String(),
+            'last_probe_status' => $result['status'],
+            'last_probe_ok' => (bool) $result['ok'],
+            'last_probe_message' => $result['message'],
+            'last_probe_latency_ms' => $result['latency_ms'],
+        ]);
+        $team->update(['settings' => $settings]);
 
         $key = $result['ok'] ? 'message' : 'error';
         session()->flash($key, 'Observability test: '.$result['message']);

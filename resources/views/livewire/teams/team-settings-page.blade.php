@@ -1031,6 +1031,14 @@
                     <span wire:loading.remove wire:target="testObservability">Test connection</span>
                     <span wire:loading wire:target="testObservability">Testing…</span>
                 </button>
+                @if($lastProbeAt)
+                    <span class="ml-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium
+                        {{ $lastProbeOk ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700' }}"
+                          title="{{ $lastProbeMessage }}">
+                        <span class="inline-block h-1.5 w-1.5 rounded-full {{ $lastProbeOk ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
+                        Last tested {{ \Carbon\Carbon::parse($lastProbeAt)->diffForHumans() }}
+                    </span>
+                @endif
             @endif
         </div>
     </div>
