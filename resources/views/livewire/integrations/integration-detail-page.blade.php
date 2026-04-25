@@ -54,9 +54,17 @@
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-primary-700">Connected account</p>
+                    @php
+                        // Defense-in-depth: drivers fetch identity URLs from external API
+                        // responses, so we only render the link when the scheme is a safe
+                        // http(s) URL — never javascript:, data:, or other risky schemes.
+                        $accountUrl = !empty($account['url']) && preg_match('#^https?://#i', $account['url'])
+                            ? $account['url']
+                            : null;
+                    @endphp
                     <p class="mt-1 text-xl font-semibold text-gray-900">
-                        @if(!empty($account['url']))
-                            <a href="{{ $account['url'] }}" target="_blank" rel="noopener noreferrer"
+                        @if($accountUrl)
+                            <a href="{{ $accountUrl }}" target="_blank" rel="noopener noreferrer"
                                class="text-primary-700 hover:underline">
                                 {{ $account['label'] ?? $account['identifier'] ?? 'Connected' }}
                                 <span class="text-xs">↗</span>
