@@ -176,7 +176,7 @@
                         Boruna Script — executes a deterministic <code class="font-mono">.ax</code> script in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call). Requires an active <code class="font-mono">mcp_stdio</code> Tool pointing to the Boruna binary.
                     </div>
                     <x-form-textarea wire:model="borunaScript" label="Script" rows="10" :mono="true"
-                        placeholder="# .ax — deterministic, capability-safe&#10;fn run(input) {&#10;  return { result: input };&#10;}" />
+                        placeholder="// .ax — deterministic, capability-safe (Rust-like syntax, immutable values, explicit types)&#10;fn main() -&gt; Int {&#10;    42&#10;}" />
                     <x-form-input wire:model.number="borunaScriptTimeout" label="Timeout (seconds)" type="number" min="5" max="300" />
                 </div>
             @elseif($type === 'supabase_edge_function')

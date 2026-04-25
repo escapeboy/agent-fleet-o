@@ -102,15 +102,18 @@ class ExecuteBorunaScriptSkillAction
             return ['execution' => $execution, 'output' => $cached];
         }
 
-        // Merge skill input into the script call so scripts can reference $input.
+        // Boruna v0.2.0 boruna_run upstream contract:
+        //   - parameter is named `source` (not `script`)
+        //   - accepts policy (string|object), optional max_steps, optional trace
+        //   - does NOT accept an `input` parameter — `.ax` scripts read inputs
+        //     by interpolating literals into the source string before submission.
+        //     We still record $input on SkillExecution for audit; the script
+        //     author is responsible for any templating.
+        // See https://github.com/escapeboy/boruna/blob/v0.2.0/crates/boruna-mcp/src/server.rs
         $arguments = [
-            'script' => $script,
+            'source' => $script,
             'policy' => $policy,
-            'input' => empty($input) ? null : json_encode($input),
         ];
-
-        // Remove null values — Boruna MCP does not accept null parameters
-        $arguments = array_filter($arguments, fn ($v) => $v !== null);
 
         try {
             $rawOutput = $this->client->callTool($borунaTool, 'boruna_run', $arguments);

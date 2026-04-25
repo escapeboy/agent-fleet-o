@@ -96,10 +96,12 @@ class BorunaRunTool extends McpTool
             ?? $validated['policy']
             ?? 'deny-all';
 
+        // Boruna v0.2.0 boruna_run accepts `source` (renamed from `script` in
+        // earlier integration drafts). It does not accept an `input` param —
+        // see ExecuteBorunaScriptSkillAction for the rationale.
         $arguments = array_filter([
-            'script' => $script,
+            'source' => $script,
             'policy' => $policy,
-            'input' => isset($validated['input']) ? json_encode($validated['input']) : null,
         ], fn ($v) => $v !== null);
 
         try {

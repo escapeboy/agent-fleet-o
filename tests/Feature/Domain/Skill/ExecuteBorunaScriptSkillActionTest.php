@@ -79,7 +79,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
             'type' => SkillType::BorunaScript->value,
             'status' => 'active',
             'configuration' => array_merge([
-                'script' => 'fn run(input) { return { result: input }; }',
+                'script' => "fn main() -> Int { 42 }",
             ], $config),
         ]);
     }
@@ -95,8 +95,8 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
                 'boruna_run',
                 Mockery::on(function (array $args) {
                     return $args['policy'] === 'deny-all'
-                        && str_contains($args['script'], 'fn run')
-                        && ! array_key_exists('input', $args); // empty input is filtered out
+                        && str_contains($args['source'], 'fn main') // Boruna v0.2.0 expects `source`, not `script`
+                        && ! array_key_exists('input', $args); // boruna_run does not accept an input param
                 }),
             )
             ->andReturn(json_encode(['ok' => true, 'value' => 42]));
@@ -119,15 +119,20 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         $this->assertEquals($skill->id, $result['execution']->skill_id);
     }
 
-    public function test_passes_input_as_json_string_when_provided(): void
+    public function test_input_is_recorded_but_not_forwarded_to_boruna(): void
     {
         $tool = $this->makeBorunaTool();
 
+        // Boruna v0.2.0 boruna_run does NOT accept an `input` parameter. Our
+        // contract is to record the caller's input on SkillExecution for
+        // audit purposes but not forward it. Authors who need runtime input
+        // are expected to interpolate literals into the .ax source.
         $this->mcpClient->shouldReceive('callTool')
             ->once()
             ->withArgs(function ($_t, string $name, array $args): bool {
                 return $name === 'boruna_run'
-                    && $args['input'] === json_encode(['k' => 'v']);
+                    && ! array_key_exists('input', $args)
+                    && array_key_exists('source', $args);
             })
             ->andReturn('{"output": "done"}');
 
@@ -141,6 +146,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         );
 
         $this->assertEquals('completed', $result['execution']->status);
+        $this->assertEquals(['k' => 'v'], $result['execution']->input);
     }
 
     public function test_falls_back_to_raw_string_output_when_response_is_not_json(): void
@@ -508,7 +514,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
             'type' => SkillType::BorunaScript->value,
             'status' => 'active',
             'configuration' => [
-                'script' => 'fn run(input) { return { result: input }; }', // identical to skillA
+                'script' => "fn main() -> Int { 42 }", // identical to skillA
                 'boruna_tool_id' => $toolB->id,
             ],
         ]);
@@ -617,7 +623,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
             'type' => SkillType::BorunaScript->value,
             'status' => 'active',
             'configuration' => [
-                'script' => 'fn run(input) { return { result: input }; }',
+                'script' => "fn main() -> Int { 42 }",
                 'boruna_tool_id' => $tool->id,
                 'policy' => ['default_allow' => false],
             ],
