@@ -4,6 +4,7 @@ namespace App\Domain\Skill\Actions;
 
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Domain\Skill\Services\BorunaResultCache;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +29,7 @@ class ExecuteBorunaScriptSkillAction
 {
     public function __construct(
         private readonly McpStdioClient $client,
+        private readonly BorunaResultCache $cache,
     ) {}
 
     /**
@@ -68,6 +70,38 @@ class ExecuteBorunaScriptSkillAction
             $policy = 'deny-all';
         }
 
+        $startTime = hrtime(true);
+
+        // Cache hit short-circuit — Boruna runs are deterministic, so identical
+        // inputs against the same Tool produce identical outputs. We still
+        // record a SkillExecution so the call site sees the same shape.
+        $cached = $this->cache->get($borунaTool, $skill, $input, $policy);
+        if ($cached !== null) {
+            $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+            $execution = SkillExecution::create([
+                'skill_id' => $skill->id,
+                'agent_id' => $agentId,
+                'experiment_id' => $experimentId,
+                'team_id' => $teamId,
+                'status' => 'completed',
+                'input' => $input,
+                'output' => $cached,
+                'duration_ms' => $durationMs,
+                'cost_credits' => 0,
+            ]);
+
+            $skill->recordExecution(true, $durationMs);
+
+            Log::debug('Boruna result cache hit', [
+                'skill_id' => $skill->id,
+                'tool_id' => $borунaTool->id,
+                'duration_ms' => $durationMs,
+            ]);
+
+            return ['execution' => $execution, 'output' => $cached];
+        }
+
         // Merge skill input into the script call so scripts can reference $input.
         $arguments = [
             'script' => $script,
@@ -77,8 +111,6 @@ class ExecuteBorunaScriptSkillAction
 
         // Remove null values — Boruna MCP does not accept null parameters
         $arguments = array_filter($arguments, fn ($v) => $v !== null);
-
-        $startTime = hrtime(true);
 
         try {
             $rawOutput = $this->client->callTool($borунaTool, 'boruna_run', $arguments);
@@ -105,6 +137,10 @@ class ExecuteBorunaScriptSkillAction
 
             $skill->recordExecution(true, $durationMs);
 
+            // Store in cache only on success — failures are not cached, so the
+            // next call will re-execute and either succeed (and cache) or fail again.
+            $this->cache->put($borунaTool, $skill, $input, $policy, $output);
+
             return ['execution' => $execution, 'output' => $output];
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
@@ -129,17 +165,14 @@ class ExecuteBorunaScriptSkillAction
                 ->where('team_id', $teamId)
                 ->where('type', 'mcp_stdio')
                 ->where('status', 'active')
+                ->where('subkind', 'boruna')
                 ->first();
         }
 
-        // Find the first active Boruna tool for the team by checking the binary name.
         return Tool::where('team_id', $teamId)
             ->where('type', 'mcp_stdio')
             ->where('status', 'active')
-            ->where(function ($q) {
-                $q->whereRaw("transport_config->>'command' ILIKE '%boruna%'")
-                    ->orWhereRaw("transport_config->>'command' ILIKE '%boruna-mcp%'");
-            })
+            ->where('subkind', 'boruna')
             ->first();
     }
 

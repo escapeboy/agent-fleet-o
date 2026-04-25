@@ -80,7 +80,7 @@ class BorunaRunTool extends McpTool
             return $this->invalidArgumentError('script is required in inline mode.');
         }
 
-        $tool = $this->resolveBorунaTool($teamId, $validated['boruna_tool_id'] ?? null);
+        $tool = $this->resolveBorunaTool($teamId, $validated['boruna_tool_id'] ?? null);
 
         if (! $tool) {
             return $this->failedPreconditionError('No active Boruna tool found. Create an mcp_stdio Tool pointing to the Boruna binary.');
@@ -146,23 +146,21 @@ class BorunaRunTool extends McpTool
         }
     }
 
-    private function resolveBorунaTool(string $teamId, ?string $toolId): ?Tool
+    private function resolveBorunaTool(string $teamId, ?string $toolId): ?Tool
     {
         if ($toolId) {
             return Tool::where('id', $toolId)
                 ->where('team_id', $teamId)
                 ->where('type', 'mcp_stdio')
                 ->where('status', 'active')
+                ->where('subkind', 'boruna')
                 ->first();
         }
 
         return Tool::where('team_id', $teamId)
             ->where('type', 'mcp_stdio')
             ->where('status', 'active')
-            ->where(function ($q) {
-                $q->whereRaw("transport_config->>'command' ILIKE '%boruna%'")
-                    ->orWhereRaw("transport_config->>'command' ILIKE '%boruna-mcp%'");
-            })
+            ->where('subkind', 'boruna')
             ->first();
     }
 }

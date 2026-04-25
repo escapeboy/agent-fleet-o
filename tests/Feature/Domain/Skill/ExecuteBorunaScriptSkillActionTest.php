@@ -6,14 +6,14 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteBorunaScriptSkillAction;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
 use App\Models\User;
-use Illuminate\Database\PostgresConnection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -45,6 +45,9 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
 
         $this->mcpClient = Mockery::mock(McpStdioClient::class);
         $this->app->instance(McpStdioClient::class, $this->mcpClient);
+
+        // Each test starts with an empty result cache.
+        Cache::flush();
     }
 
     protected function tearDown(): void
@@ -319,19 +322,15 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         $this->assertStringContainsString('Boruna tool', $result['execution']->error_message);
     }
 
-    public function test_auto_detects_boruna_tool_by_command_substring(): void
+    public function test_auto_detects_boruna_tool_via_subkind(): void
     {
-        if (! DB::connection() instanceof PostgresConnection) {
-            $this->markTestSkipped('Auto-detect uses PostgreSQL JSONB ->> operator; SQLite test DB cannot exercise this path.');
-        }
-
         $this->makeBorunaTool($this->team->id, 'boruna-mcp');
 
         $this->mcpClient->shouldReceive('callTool')
             ->once()
             ->andReturn('{}');
 
-        $skill = $this->makeSkill(); // no explicit boruna_tool_id — auto-detect required
+        $skill = $this->makeSkill(); // no explicit boruna_tool_id — subkind='boruna' resolution required
 
         $result = app(ExecuteBorunaScriptSkillAction::class)->execute(
             skill: $skill,
@@ -341,5 +340,203 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         );
 
         $this->assertEquals('completed', $result['execution']->status);
+    }
+
+    public function test_saving_hook_auto_tags_subkind_for_boruna_command(): void
+    {
+        $tool = Tool::create([
+            'team_id' => $this->team->id,
+            'name' => 'Boruna Auto-Tag',
+            'slug' => 'boruna-auto-'.uniqid(),
+            'type' => ToolType::McpStdio,
+            'status' => ToolStatus::Active,
+            'transport_config' => ['command' => '/usr/local/bin/boruna-mcp'],
+            'tool_definitions' => [],
+            'settings' => [],
+        ]);
+
+        $this->assertEquals('boruna', $tool->subkind);
+    }
+
+    public function test_saving_hook_does_not_tag_unrelated_mcp_stdio_tool(): void
+    {
+        $tool = Tool::create([
+            'team_id' => $this->team->id,
+            'name' => 'Unrelated Tool',
+            'slug' => 'unrelated-'.uniqid(),
+            'type' => ToolType::McpStdio,
+            'status' => ToolStatus::Active,
+            'transport_config' => ['command' => '/usr/local/bin/some-other-tool'],
+            'tool_definitions' => [],
+            'settings' => [],
+        ]);
+
+        $this->assertNull($tool->subkind);
+    }
+
+    public function test_cache_hit_skips_mcp_call_and_returns_stored_output(): void
+    {
+        $tool = $this->makeBorunaTool();
+
+        // First call hits the MCP server once and primes the cache.
+        $this->mcpClient->shouldReceive('callTool')
+            ->once()
+            ->andReturn(json_encode(['ok' => true, 'value' => 7]));
+
+        $skill = $this->makeSkill(['boruna_tool_id' => $tool->id]);
+
+        $action = app(ExecuteBorunaScriptSkillAction::class);
+
+        $first = $action->execute(
+            skill: $skill,
+            input: ['k' => 'v'],
+            teamId: $this->team->id,
+            userId: $this->user->id,
+        );
+        $this->assertEquals(['ok' => true, 'value' => 7], $first['output']);
+
+        // Second call with identical inputs MUST not invoke the MCP client.
+        // The Mockery `once()` expectation above already enforces this — a
+        // second invocation would fail the test.
+        $second = $action->execute(
+            skill: $skill,
+            input: ['k' => 'v'],
+            teamId: $this->team->id,
+            userId: $this->user->id,
+        );
+        $this->assertEquals(['ok' => true, 'value' => 7], $second['output']);
+        $this->assertEquals('completed', $second['execution']->status);
+        $this->assertEquals(0, $second['execution']->cost_credits);
+
+        // Two execution records exist — one fresh, one from cache.
+        $this->assertEquals(
+            2,
+            SkillExecution::where('skill_id', $skill->id)->count(),
+        );
+    }
+
+    public function test_cache_miss_for_different_input(): void
+    {
+        $tool = $this->makeBorunaTool();
+
+        // Two different inputs MUST result in two MCP calls.
+        $this->mcpClient->shouldReceive('callTool')
+            ->twice()
+            ->andReturn(json_encode(['n' => 1]), json_encode(['n' => 2]));
+
+        $skill = $this->makeSkill(['boruna_tool_id' => $tool->id]);
+        $action = app(ExecuteBorunaScriptSkillAction::class);
+
+        $r1 = $action->execute(
+            skill: $skill,
+            input: ['k' => 'a'],
+            teamId: $this->team->id,
+            userId: $this->user->id,
+        );
+        $r2 = $action->execute(
+            skill: $skill,
+            input: ['k' => 'b'],
+            teamId: $this->team->id,
+            userId: $this->user->id,
+        );
+
+        $this->assertEquals(['n' => 1], $r1['output']);
+        $this->assertEquals(['n' => 2], $r2['output']);
+    }
+
+    public function test_failures_are_not_cached(): void
+    {
+        $tool = $this->makeBorunaTool();
+
+        // First call throws; second call must hit the MCP client again
+        // (i.e. failures are not memoised) and succeeds.
+        $this->mcpClient->shouldReceive('callTool')
+            ->twice()
+            ->andReturnUsing(
+                function () { throw new \RuntimeException('binary crashed'); },
+                fn () => json_encode(['ok' => true]),
+            );
+
+        $skill = $this->makeSkill(['boruna_tool_id' => $tool->id]);
+        $action = app(ExecuteBorunaScriptSkillAction::class);
+
+        $first = $action->execute(
+            skill: $skill,
+            input: [],
+            teamId: $this->team->id,
+            userId: $this->user->id,
+        );
+        $this->assertEquals('failed', $first['execution']->status);
+
+        $second = $action->execute(
+            skill: $skill,
+            input: [],
+            teamId: $this->team->id,
+            userId: $this->user->id,
+        );
+        $this->assertEquals('completed', $second['execution']->status);
+        $this->assertEquals(['ok' => true], $second['output']);
+    }
+
+    public function test_cache_key_is_isolated_per_team(): void
+    {
+        // Same script + same input + same policy in two teams MUST hit the
+        // MCP server twice (no cross-tenant leak through the cache layer).
+        $toolA = $this->makeBorunaTool($this->team->id);
+
+        $userB = User::factory()->create();
+        $teamB = Team::create([
+            'name' => 'Team B',
+            'slug' => 'team-b-'.uniqid(),
+            'owner_id' => $userB->id,
+            'settings' => [],
+        ]);
+        $userB->update(['current_team_id' => $teamB->id]);
+        $teamB->users()->attach($userB, ['role' => 'owner']);
+        $toolB = $this->makeBorunaTool($teamB->id);
+
+        $this->mcpClient->shouldReceive('callTool')
+            ->twice()
+            ->andReturn(json_encode(['team' => 'A']), json_encode(['team' => 'B']));
+
+        $skillA = $this->makeSkill(['boruna_tool_id' => $toolA->id]);
+
+        $skillB = Skill::create([
+            'team_id' => $teamB->id,
+            'slug' => 'boruna-skill-b-'.uniqid(),
+            'name' => 'Boruna Skill B',
+            'type' => SkillType::BorunaScript->value,
+            'status' => 'active',
+            'configuration' => [
+                'script' => 'fn run(input) { return { result: input }; }', // identical to skillA
+                'boruna_tool_id' => $toolB->id,
+            ],
+        ]);
+
+        $action = app(ExecuteBorunaScriptSkillAction::class);
+
+        $rA = $action->execute(skill: $skillA, input: [], teamId: $this->team->id, userId: $this->user->id);
+        $rB = $action->execute(skill: $skillB, input: [], teamId: $teamB->id, userId: $userB->id);
+
+        $this->assertEquals(['team' => 'A'], $rA['output']);
+        $this->assertEquals(['team' => 'B'], $rB['output']);
+    }
+
+    public function test_saving_hook_respects_existing_subkind(): void
+    {
+        $tool = Tool::create([
+            'team_id' => $this->team->id,
+            'name' => 'Manually Tagged',
+            'slug' => 'manual-'.uniqid(),
+            'type' => ToolType::McpStdio,
+            'status' => ToolStatus::Active,
+            'subkind' => 'custom-tag',
+            'transport_config' => ['command' => '/usr/local/bin/boruna-mcp'],
+            'tool_definitions' => [],
+            'settings' => [],
+        ]);
+
+        // Explicit subkind is not overwritten even when the command would auto-tag.
+        $this->assertEquals('custom-tag', $tool->subkind);
     }
 }
