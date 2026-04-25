@@ -109,8 +109,22 @@ class TwitterIntegrationDriver implements IntegrationDriverInterface
 
             if ($response->successful()) {
                 $username = $response->json('data.username', 'unknown');
+                $userId = $response->json('data.id');
+                $name = $response->json('data.name');
 
-                return HealthResult::ok($latency, "Connected as @{$username}");
+                return HealthResult::ok(
+                    latencyMs: $latency,
+                    message: "Connected as @{$username}",
+                    identity: [
+                        'label' => '@'.$username,
+                        'identifier' => $userId,
+                        'url' => 'https://twitter.com/'.$username,
+                        'metadata' => array_filter([
+                            'display_name' => $name,
+                            'user_id' => $userId,
+                        ]),
+                    ],
+                );
             }
 
             return HealthResult::fail($response->json('detail') ?? $response->json('error_description') ?? 'Authentication failed');

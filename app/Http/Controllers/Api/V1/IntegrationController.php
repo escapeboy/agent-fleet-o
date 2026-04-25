@@ -6,6 +6,7 @@ use App\Domain\Integration\Actions\ConnectIntegrationAction;
 use App\Domain\Integration\Actions\DisconnectIntegrationAction;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
+use App\Domain\Integration\Actions\UpdateIntegrationAction;
 use App\Domain\Integration\Jobs\ActivepiecesSyncJob;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
@@ -63,6 +64,38 @@ class IntegrationController extends Controller
             return (new IntegrationResource($integration))
                 ->response()
                 ->setStatusCode(201);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Update an integration's name, credentials, and/or config.
+     * Only fields you provide are changed; omitted fields are preserved.
+     * Empty-string credential values are treated as "leave existing untouched".
+     *
+     * @response 200 {"data": {"id": "...", "name": "...", ...}}
+     * @response 422 {"message": "Credential validation failed — please double-check the values you entered."}
+     */
+    public function update(Request $request, Integration $integration, UpdateIntegrationAction $action): JsonResponse
+    {
+        $request->validate([
+            'name' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'credentials' => ['sometimes', 'array'],
+            'config' => ['sometimes', 'array'],
+            'reping' => ['sometimes', 'boolean'],
+        ]);
+
+        try {
+            $updated = $action->execute(
+                integration: $integration,
+                name: $request->input('name'),
+                credentials: $request->has('credentials') ? $request->input('credentials') : null,
+                config: $request->has('config') ? $request->input('config') : null,
+                reping: (bool) $request->input('reping', true),
+            );
+
+            return (new IntegrationResource($updated))->response();
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

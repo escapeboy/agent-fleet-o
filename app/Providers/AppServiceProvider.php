@@ -6,7 +6,12 @@ use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Listeners\ProvisionPersonalAgentListener;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\AgentChatProtocol\Events\ChatMessageDispatched;
+use App\Domain\AgentChatProtocol\Events\ChatMessageReceived;
+use App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage;
+use App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
+use App\Domain\Audit\Listeners\LogIntegrationExecution;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
@@ -23,6 +28,7 @@ use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
+use App\Domain\Integration\Events\IntegrationActionExecuted;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
 use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
 use App\Domain\Memory\Listeners\FlushAgentMemoryOnCompletion;
@@ -101,6 +107,7 @@ use App\Infrastructure\Auth\ScopedPersonalAccessToken;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
 use App\Infrastructure\Telemetry\AttributeRedactor;
+use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
 use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use App\Livewire\Hooks\PluginDispatchHook;
 use App\Mcp\DeadlineContext;
@@ -161,7 +168,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(FleetTracerProvider::class);
         // Per-team tracer factory — in-process cache of tenant-scoped providers so
         // changes to team.settings.observability take effect via forget() without a worker restart.
-        $this->app->singleton(\App\Infrastructure\Telemetry\TenantTracerProviderFactory::class);
+        $this->app->singleton(TenantTracerProviderFactory::class);
         $this->app->singleton(AttributeRedactor::class);
         $this->app->terminating(function () {
             if (app()->resolved(FleetTracerProvider::class)) {
@@ -370,6 +377,12 @@ class AppServiceProvider extends ServiceProvider
         // MCP Apps: record per-session capability flag on initialize handshake
         Event::listen(SessionInitialized::class, McpAppsCapabilityListener::class);
 
+        // Integration audit trail: log every executed driver action
+        Event::listen(
+            IntegrationActionExecuted::class,
+            LogIntegrationExecution::class,
+        );
+
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
         Event::listen(ExperimentTransitioned::class, RecordTransitionMetrics::class);
@@ -398,16 +411,16 @@ class AppServiceProvider extends ServiceProvider
 
         // Agent Chat Protocol: execute agent on inbound chat + log protocol transactions
         Event::listen(
-            \App\Domain\AgentChatProtocol\Events\ChatMessageReceived::class,
-            \App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage::class,
+            ChatMessageReceived::class,
+            ExecuteAgentOnChatMessage::class,
         );
         Event::listen(
-            \App\Domain\AgentChatProtocol\Events\ChatMessageReceived::class,
-            [\App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction::class, 'handleReceived'],
+            ChatMessageReceived::class,
+            [LogProtocolTransaction::class, 'handleReceived'],
         );
         Event::listen(
-            \App\Domain\AgentChatProtocol\Events\ChatMessageDispatched::class,
-            [\App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction::class, 'handleDispatched'],
+            ChatMessageDispatched::class,
+            [LogProtocolTransaction::class, 'handleDispatched'],
         );
 
         // Sub-workflow node: resume parent workflow step when sub-workflow experiment completes

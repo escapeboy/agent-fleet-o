@@ -79,8 +79,22 @@ class DiscordIntegrationDriver implements IntegrationDriverInterface
 
             if ($response->successful()) {
                 $username = $response->json('username', 'Bot');
+                $userId = $response->json('id');
+                $discriminator = $response->json('discriminator');
 
-                return HealthResult::ok($latency, "Connected as {$username}");
+                return HealthResult::ok(
+                    latencyMs: $latency,
+                    message: "Connected as {$username}",
+                    identity: [
+                        'label' => $username.($discriminator && $discriminator !== '0' ? '#'.$discriminator : ''),
+                        'identifier' => $userId,
+                        'url' => null,
+                        'metadata' => array_filter([
+                            'user_id' => $userId,
+                            'global_name' => $response->json('global_name'),
+                        ]),
+                    ],
+                );
             }
 
             return HealthResult::fail($response->json('message') ?? 'Authentication failed');
