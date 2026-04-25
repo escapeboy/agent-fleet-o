@@ -36,6 +36,7 @@ class Tool extends Model
         'slug',
         'description',
         'type',
+        'subkind',
         'status',
         'risk_level',
         'transport_config',
@@ -124,5 +125,26 @@ class Tool extends Model
     public function functionCount(): int
     {
         return count($this->tool_definitions ?? []);
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Tool $tool): void {
+            // Auto-tag Boruna MCP stdio tools so the resolver can match by
+            // subkind instead of brittle JSONB substring search.
+            if ($tool->subkind !== null) {
+                return;
+            }
+
+            $type = $tool->type instanceof ToolType ? $tool->type : ToolType::tryFrom((string) $tool->type);
+            if ($type !== ToolType::McpStdio) {
+                return;
+            }
+
+            $command = (string) ($tool->transport_config['command'] ?? '');
+            if ($command !== '' && stripos($command, 'boruna') !== false) {
+                $tool->subkind = 'boruna';
+            }
+        });
     }
 }

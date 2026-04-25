@@ -4,6 +4,7 @@ namespace App\Domain\Skill\Actions;
 
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Domain\Skill\Services\BorunaResultCache;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
 use Illuminate\Support\Facades\Log;
@@ -17,7 +18,12 @@ use Illuminate\Support\Facades\Log;
  *
  * Skill configuration keys:
  *   - script          (string, required) Inline .ax script source code
- *   - policy          (string, default 'deny-all') Capability policy: 'allow-all' | 'deny-all'
+ *   - policy          (mixed, default 'deny-all') Capability policy. Accepts:
+ *                       * legacy shorthand string: 'allow-all' | 'deny-all'
+ *                       * Boruna v0.2.0+ structured Policy object (array) with
+ *                         required `default_allow` (bool), optional `rules`
+ *                         (per-capability {allow, budget}), optional `net_policy`.
+ *                         See https://github.com/escapeboy/boruna/blob/v0.2.0/docs/reference/policy-schema.md
  *   - boruna_tool_id  (uuid, optional) ID of the mcp_stdio Tool pointing to the Boruna binary.
  *                     Falls back to the first active Boruna tool in the team.
  *   - timeout         (int, default 30) Execution timeout in seconds
@@ -28,6 +34,7 @@ class ExecuteBorunaScriptSkillAction
 {
     public function __construct(
         private readonly McpStdioClient $client,
+        private readonly BorunaResultCache $cache,
     ) {}
 
     /**
@@ -61,24 +68,52 @@ class ExecuteBorunaScriptSkillAction
             );
         }
 
-        $policy = $config['policy'] ?? 'deny-all';
-
-        // Boruna's MCP server only supports 'allow-all' or 'deny-all' via the run tool.
-        if (! in_array($policy, ['allow-all', 'deny-all'], true)) {
-            $policy = 'deny-all';
-        }
-
-        // Merge skill input into the script call so scripts can reference $input.
-        $arguments = [
-            'script' => $script,
-            'policy' => $policy,
-            'input' => empty($input) ? null : json_encode($input),
-        ];
-
-        // Remove null values — Boruna MCP does not accept null parameters
-        $arguments = array_filter($arguments, fn ($v) => $v !== null);
+        $policy = $this->normalisePolicy($config['policy'] ?? null);
 
         $startTime = hrtime(true);
+
+        // Cache hit short-circuit — Boruna runs are deterministic, so identical
+        // inputs against the same Tool produce identical outputs. We still
+        // record a SkillExecution so the call site sees the same shape.
+        $cached = $this->cache->get($borунaTool, $skill, $input, $policy);
+        if ($cached !== null) {
+            $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+            $execution = SkillExecution::create([
+                'skill_id' => $skill->id,
+                'agent_id' => $agentId,
+                'experiment_id' => $experimentId,
+                'team_id' => $teamId,
+                'status' => 'completed',
+                'input' => $input,
+                'output' => $cached,
+                'duration_ms' => $durationMs,
+                'cost_credits' => 0,
+            ]);
+
+            $skill->recordExecution(true, $durationMs);
+
+            Log::debug('Boruna result cache hit', [
+                'skill_id' => $skill->id,
+                'tool_id' => $borунaTool->id,
+                'duration_ms' => $durationMs,
+            ]);
+
+            return ['execution' => $execution, 'output' => $cached];
+        }
+
+        // Boruna v0.2.0 boruna_run upstream contract:
+        //   - parameter is named `source` (not `script`)
+        //   - accepts policy (string|object), optional max_steps, optional trace
+        //   - does NOT accept an `input` parameter — `.ax` scripts read inputs
+        //     by interpolating literals into the source string before submission.
+        //     We still record $input on SkillExecution for audit; the script
+        //     author is responsible for any templating.
+        // See https://github.com/escapeboy/boruna/blob/v0.2.0/crates/boruna-mcp/src/server.rs
+        $arguments = [
+            'source' => $script,
+            'policy' => $policy,
+        ];
 
         try {
             $rawOutput = $this->client->callTool($borунaTool, 'boruna_run', $arguments);
@@ -105,6 +140,10 @@ class ExecuteBorunaScriptSkillAction
 
             $skill->recordExecution(true, $durationMs);
 
+            // Store in cache only on success — failures are not cached, so the
+            // next call will re-execute and either succeed (and cache) or fail again.
+            $this->cache->put($borунaTool, $skill, $input, $policy, $output);
+
             return ['execution' => $execution, 'output' => $output];
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
@@ -122,6 +161,31 @@ class ExecuteBorunaScriptSkillAction
         }
     }
 
+    /**
+     * Normalise skill-config policy into the shape Boruna's MCP server accepts.
+     *
+     * Accepts:
+     *   - null / missing            → 'deny-all' (safe default)
+     *   - 'allow-all' | 'deny-all'  → passed through verbatim (legacy shorthand)
+     *   - structured array with `default_allow` boolean → passed through verbatim
+     *     (Boruna v0.2.0+ Capability Policy object)
+     *   - anything else             → 'deny-all' (defensive — never silently widen access)
+     *
+     * @return string|array<string,mixed>
+     */
+    private function normalisePolicy(mixed $policy): string|array
+    {
+        if (is_array($policy) && array_key_exists('default_allow', $policy) && is_bool($policy['default_allow'])) {
+            return $policy;
+        }
+
+        if (is_string($policy) && in_array($policy, ['allow-all', 'deny-all'], true)) {
+            return $policy;
+        }
+
+        return 'deny-all';
+    }
+
     private function resolveTool(string $teamId, ?string $toolId): ?Tool
     {
         if ($toolId) {
@@ -129,17 +193,14 @@ class ExecuteBorunaScriptSkillAction
                 ->where('team_id', $teamId)
                 ->where('type', 'mcp_stdio')
                 ->where('status', 'active')
+                ->where('subkind', 'boruna')
                 ->first();
         }
 
-        // Find the first active Boruna tool for the team by checking the binary name.
         return Tool::where('team_id', $teamId)
             ->where('type', 'mcp_stdio')
             ->where('status', 'active')
-            ->where(function ($q) {
-                $q->whereRaw("transport_config->>'command' ILIKE '%boruna%'")
-                    ->orWhereRaw("transport_config->>'command' ILIKE '%boruna-mcp%'");
-            })
+            ->where('subkind', 'boruna')
             ->first();
     }
 

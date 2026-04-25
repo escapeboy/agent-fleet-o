@@ -173,10 +173,10 @@
             @elseif($type === 'boruna_script')
                 <div class="space-y-4">
                     <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                        Boruna Script — executes a custom Python/JS pipeline script inside a sandboxed environment.
+                        Boruna Script — executes a deterministic <code class="font-mono">.ax</code> script in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call). Requires an active <code class="font-mono">mcp_stdio</code> Tool pointing to the Boruna binary.
                     </div>
                     <x-form-textarea wire:model="borunaScript" label="Script" rows="10" :mono="true"
-                        placeholder="# Python script&#10;def run(input_data):&#10;    # Process input&#10;    return {'result': input_data}" />
+                        placeholder="// .ax — deterministic, capability-safe (Rust-like syntax, immutable values, explicit types)&#10;fn main() -&gt; Int {&#10;    42&#10;}" />
                     <x-form-input wire:model.number="borunaScriptTimeout" label="Timeout (seconds)" type="number" min="5" max="300" />
                 </div>
             @elseif($type === 'supabase_edge_function')
