@@ -3,10 +3,13 @@
 namespace App\Livewire\Skills;
 
 use App\Domain\Skill\Actions\CreateSkillAction;
+use App\Domain\Skill\Actions\RegisterBorunaToolAction;
 use App\Domain\Skill\Enums\ExecutionType;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillType;
+use App\Domain\Skill\Services\BorunaPlatformService;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateSkillForm extends Component
@@ -100,6 +103,29 @@ class CreateSkillForm extends Component
     public float $consensusThreshold = 0.5;
 
     public string $consensusAggregation = 'majority';
+
+    /**
+     * Self-serve registration of the bundled Boruna mcp_stdio binary as a Tool
+     * for the current team. Invoked from the boruna_script panel banner when
+     * the platform reports `ready_to_enable` status.
+     */
+    public function enableBoruna(RegisterBorunaToolAction $action): void
+    {
+        if (! Gate::allows('manage-team', auth()->user()->currentTeam)) {
+            $this->addError('borunaScript', 'You do not have permission to enable Boruna for this team. Ask a team admin or owner.');
+
+            return;
+        }
+
+        try {
+            $result = $action->execute(teamId: (string) auth()->user()->current_team_id);
+
+            session()->flash('boruna_enable_message', $result['message']);
+            $this->dispatch('boruna-enabled');
+        } catch (\RuntimeException $e) {
+            $this->addError('borunaScript', $e->getMessage());
+        }
+    }
 
     public function nextStep(): void
     {
@@ -324,6 +350,9 @@ class CreateSkillForm extends Component
         }
         unset($providerData);
 
+        $borunaPlatform = app(BorunaPlatformService::class);
+        $borunaStatus = $borunaPlatform->statusForTeam((string) auth()->user()->current_team_id);
+
         return view('livewire.skills.create-skill-form', [
             'types' => SkillType::cases(),
             'riskLevels' => RiskLevel::cases(),
@@ -331,6 +360,8 @@ class CreateSkillForm extends Component
             'computeProviders' => config('compute_providers.providers', []),
             'canCreate' => true,
             'browserSkillEnabled' => config('browser.enabled', false),
+            'borunaStatus' => $borunaStatus,
+            'canManageTeam' => Gate::allows('manage-team', $team),
         ])->layout('layouts.app', ['header' => 'Create Skill']);
     }
 }

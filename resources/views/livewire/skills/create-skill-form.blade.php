@@ -172,9 +172,41 @@
                 </div>
             @elseif($type === 'boruna_script')
                 <div class="space-y-4">
-                    <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                        Boruna Script — executes a deterministic <code class="font-mono">.ax</code> script in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call). Requires an active <code class="font-mono">mcp_stdio</code> Tool pointing to the Boruna binary.
-                    </div>
+                    {{-- Platform-status banner: drives self-serve enable. --}}
+                    @if($borunaStatus === 'enabled')
+                        <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                            <span class="font-medium">✓ Boruna ready.</span>
+                            Executes a deterministic <code class="font-mono">.ax</code> script in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call).
+                        </div>
+                    @elseif($borunaStatus === 'ready_to_enable')
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            <p class="font-medium">Boruna runtime is bundled — not yet enabled for your team.</p>
+                            <p class="mt-1">One click registers the bundled <code class="font-mono">boruna-mcp</code> binary as a Tool with <code class="font-mono">subkind=boruna</code>. Skills of this type then execute deterministically with capability gating.</p>
+                            @if($canManageTeam)
+                                <button type="button" wire:click="enableBoruna" wire:loading.attr="disabled"
+                                    class="mt-3 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50">
+                                    <span wire:loading.remove wire:target="enableBoruna">Enable Boruna for this team</span>
+                                    <span wire:loading wire:target="enableBoruna">Enabling…</span>
+                                </button>
+                            @else
+                                <p class="mt-2 text-xs text-amber-700">You need the <code class="font-mono">manage-team</code> permission. Ask a team admin or owner.</p>
+                            @endif
+                            @if(session()->has('boruna_enable_message'))
+                                <p class="mt-2 text-xs text-green-700">{{ session('boruna_enable_message') }}</p>
+                            @endif
+                        </div>
+                    @elseif($borunaStatus === 'not_allowlisted')
+                        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                            <p class="font-medium">Boruna binary present but not allowlisted.</p>
+                            <p class="mt-1">Operator action required: add <code class="font-mono">/usr/local/bin/boruna-mcp</code> to <code class="font-mono">MCP_STDIO_BINARY_ALLOWLIST</code> in the host <code class="font-mono">.env</code>, then restart the app/horizon containers.</p>
+                        </div>
+                    @else {{-- binary_missing --}}
+                        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                            <p class="font-medium">Boruna runtime not bundled in this image.</p>
+                            <p class="mt-1">Operator action required: rebuild the Docker image with <code class="font-mono">--build-arg BORUNA_VERSION=0.2.0</code> (see <code class="font-mono">docker/php/Dockerfile</code>).</p>
+                        </div>
+                    @endif
+
                     <x-form-textarea wire:model="borunaScript" label="Script" rows="10" :mono="true"
                         placeholder="// .ax — deterministic, capability-safe (Rust-like syntax, immutable values, explicit types)&#10;fn main() -&gt; Int {&#10;    42&#10;}" />
                     <x-form-input wire:model.number="borunaScriptTimeout" label="Timeout (seconds)" type="number" min="5" max="300" />
