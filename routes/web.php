@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgentCardController;
-use App\Http\Controllers\WellKnownFleetQController;
+use App\Http\Controllers\Api\V1\AgentManifestController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
@@ -12,11 +12,15 @@ use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Controllers\WebsiteDeploymentDownloadController;
 use App\Http\Controllers\WebsitePagePreviewController;
+use App\Http\Controllers\WellKnownFleetQController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use App\Livewire\Admin\AiControlCenterPage;
+use App\Livewire\AgentChat\AgentverseBrowsePage;
+use App\Livewire\AgentChat\ExternalAgentDetailPage;
+use App\Livewire\AgentChat\ExternalAgentListPage;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
@@ -45,6 +49,7 @@ use App\Livewire\Email\EmailTemplateBuilderPage;
 use App\Livewire\Email\EmailTemplateListPage;
 use App\Livewire\Email\EmailThemeDetailPage;
 use App\Livewire\Email\EmailThemeListPage;
+use App\Livewire\Evaluation\EvaluationCompareRunsPage;
 use App\Livewire\Evaluation\EvaluationPage;
 use App\Livewire\Evolution\EvolutionListPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
@@ -55,6 +60,7 @@ use App\Livewire\GitRepositories\GitRepositoryDetailPage;
 use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Health\HealthPage;
 use App\Livewire\Insights\InsightsPage;
+use App\Livewire\Integrations\EditIntegrationForm;
 use App\Livewire\Integrations\IntegrationDetailPage;
 use App\Livewire\Integrations\IntegrationListPage;
 use App\Livewire\KnowledgeGraph\KnowledgeGraphBrowserPage;
@@ -113,6 +119,7 @@ use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
+use App\Livewire\WorldModel\WorldModelPage;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
@@ -131,12 +138,12 @@ Route::get('/.well-known/fleetq', WellKnownFleetQController::class)
     ->middleware('throttle:60,1');
 
 // Agent Chat Protocol — public manifest discovery (no auth)
-Route::get('/.well-known/agents', [\App\Http\Controllers\Api\V1\AgentManifestController::class, 'index'])
+Route::get('/.well-known/agents', [AgentManifestController::class, 'index'])
     ->name('agent-chat.manifest.list')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
 
-Route::get('/.well-known/agents/{slug}', [\App\Http\Controllers\Api\V1\AgentManifestController::class, 'show'])
+Route::get('/.well-known/agents/{slug}', [AgentManifestController::class, 'show'])
     ->name('agent-chat.manifest.show')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:120,1');
@@ -265,9 +272,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents/{agent}/voice', VoiceSessionPage::class)->name('agents.voice');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
 
-    Route::get('/external-agents', \App\Livewire\AgentChat\ExternalAgentListPage::class)->name('external-agents.index');
-    Route::get('/external-agents/agentverse', \App\Livewire\AgentChat\AgentverseBrowsePage::class)->name('external-agents.agentverse');
-    Route::get('/external-agents/{externalAgent}', \App\Livewire\AgentChat\ExternalAgentDetailPage::class)->name('external-agents.show');
+    Route::get('/external-agents', ExternalAgentListPage::class)->name('external-agents.index');
+    Route::get('/external-agents/agentverse', AgentverseBrowsePage::class)->name('external-agents.agentverse');
+    Route::get('/external-agents/{externalAgent}', ExternalAgentDetailPage::class)->name('external-agents.show');
 
     Route::get('/chatbots', ChatbotListPage::class)->name('chatbots.index');
     Route::get('/chatbots/create', CreateChatbotForm::class)->name('chatbots.create');
@@ -291,6 +298,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/integrations', IntegrationListPage::class)->name('integrations.index');
     Route::get('/integrations/oauth/{driver}', [IntegrationOAuthController::class, 'redirect'])->where('driver', '[a-z0-9_-]+')->name('integrations.oauth.redirect');
     Route::get('/integrations/oauth/{driver}/callback', [IntegrationOAuthController::class, 'callback'])->where('driver', '[a-z0-9_-]+')->name('integrations.oauth.callback');
+    Route::get('/integrations/{integration}/edit', EditIntegrationForm::class)->name('integrations.edit');
     Route::get('/integrations/{integration}', IntegrationDetailPage::class)->name('integrations.show');
 
     Route::get('/crews', CrewListPage::class)->name('crews.index');
@@ -313,7 +321,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
-    Route::get('/world-model', \App\Livewire\WorldModel\WorldModelPage::class)->name('world-model.index');
+    Route::get('/world-model', WorldModelPage::class)->name('world-model.index');
     Route::get('/knowledge', KnowledgeSourcesPage::class)->name('knowledge.index');
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
 
@@ -335,7 +343,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
-    Route::get('/evaluation/compare', \App\Livewire\Evaluation\EvaluationCompareRunsPage::class)->name('evaluation.compare');
+    Route::get('/evaluation/compare', EvaluationCompareRunsPage::class)->name('evaluation.compare');
     Route::get('/evaluations', WorkflowEvaluationListPage::class)->name('evaluations.index');
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');

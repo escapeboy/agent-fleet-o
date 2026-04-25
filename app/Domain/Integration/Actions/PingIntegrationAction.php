@@ -18,6 +18,13 @@ class PingIntegrationAction
         $driver = $this->manager->driver($integration->getAttribute('driver'));
         $result = $driver->ping($integration);
 
+        $meta = $integration->getAttribute('meta') ?? [];
+        if ($result->healthy && $result->identity !== null) {
+            $meta['account'] = array_merge($result->identity, [
+                'verified_at' => now()->toIso8601String(),
+            ]);
+        }
+
         $integration->update([
             'last_pinged_at' => now(),
             'last_ping_status' => $result->healthy ? 'ok' : 'error',
@@ -28,6 +35,7 @@ class PingIntegrationAction
                 : ($integration->error_count + 1 >= config('integrations.health.error_threshold', 5)
                     ? IntegrationStatus::Error
                     : $integration->status),
+            'meta' => $meta,
         ]);
 
         return $result;

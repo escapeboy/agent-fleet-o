@@ -82,7 +82,20 @@ class PagerDutyIntegrationDriver implements IntegrationDriverInterface
             if ($response->successful()) {
                 $name = $response->json('user.name', 'PagerDuty');
 
-                return HealthResult::ok($latency, "Connected as {$name}");
+                return HealthResult::ok(
+                    latencyMs: $latency,
+                    message: "Connected as {$name}",
+                    identity: [
+                        'label' => $name,
+                        'identifier' => $response->json('user.id'),
+                        'url' => $response->json('user.html_url'),
+                        'metadata' => array_filter([
+                            'email' => $response->json('user.email'),
+                            'role' => $response->json('user.role'),
+                            'time_zone' => $response->json('user.time_zone'),
+                        ]),
+                    ],
+                );
             }
 
             return HealthResult::fail($response->json('error.message') ?? 'Authentication failed');

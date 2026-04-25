@@ -98,7 +98,22 @@ class GitLabIntegrationDriver implements IntegrationDriverInterface, Subscribabl
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
-                return HealthResult::ok($latency);
+                $username = $response->json('username');
+
+                return HealthResult::ok(
+                    latencyMs: $latency,
+                    message: $username ? "Connected as @{$username}" : null,
+                    identity: $username ? [
+                        'label' => '@'.$username,
+                        'identifier' => (string) $response->json('id'),
+                        'url' => $response->json('web_url'),
+                        'metadata' => array_filter([
+                            'name' => $response->json('name'),
+                            'email' => $response->json('email'),
+                            'avatar_url' => $response->json('avatar_url'),
+                        ]),
+                    ] : null,
+                );
             }
 
             return HealthResult::fail($response->json('message') ?? 'Authentication failed');

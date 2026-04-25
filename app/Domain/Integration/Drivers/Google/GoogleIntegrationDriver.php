@@ -94,7 +94,20 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
             if ($response->successful()) {
                 $email = $response->json('email', 'Google Account');
 
-                return HealthResult::ok($latency, "Connected as {$email}");
+                return HealthResult::ok(
+                    latencyMs: $latency,
+                    message: "Connected as {$email}",
+                    identity: [
+                        'label' => $email,
+                        'identifier' => $response->json('sub'),
+                        'url' => null,
+                        'metadata' => array_filter([
+                            'name' => $response->json('name'),
+                            'picture' => $response->json('picture'),
+                            'email_verified' => $response->json('email_verified'),
+                        ]),
+                    ],
+                );
             }
 
             return HealthResult::fail($response->json('error.message') ?? 'Authentication failed');

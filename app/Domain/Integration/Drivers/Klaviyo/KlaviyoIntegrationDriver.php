@@ -85,7 +85,19 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
             if ($response->successful()) {
                 $name = $response->json('data.0.attributes.contact_information.organization_name', 'Klaviyo');
 
-                return HealthResult::ok($latency, "Connected as {$name}");
+                return HealthResult::ok(
+                    latencyMs: $latency,
+                    message: "Connected as {$name}",
+                    identity: [
+                        'label' => $name,
+                        'identifier' => $response->json('data.0.id'),
+                        'url' => null,
+                        'metadata' => array_filter([
+                            'account_id' => $response->json('data.0.id'),
+                            'industry' => $response->json('data.0.attributes.industry'),
+                        ]),
+                    ],
+                );
             }
 
             return HealthResult::fail($response->json('errors.0.detail') ?? 'Authentication failed');

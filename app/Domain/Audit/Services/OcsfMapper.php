@@ -55,6 +55,7 @@ class OcsfMapper
         return match (true) {
             str_starts_with($event, 'experiment.') => 3002,  // API Activity
             str_starts_with($event, 'agent.') => 3002,       // API Activity
+            str_starts_with($event, 'integration.') => 3002, // API Activity
             str_starts_with($event, 'approval.') => 3001,    // Account Change
             str_starts_with($event, 'budget.') => 3006,      // Financial Activity
             str_starts_with($event, 'credential.') => 3001,  // Account Change
@@ -77,6 +78,7 @@ class OcsfMapper
         return match (true) {
             str_starts_with($event, 'experiment.') => 1,
             str_starts_with($event, 'agent.') => 1,
+            str_starts_with($event, 'integration.') => 1,
             str_starts_with($event, 'approval.') => 2,
             str_starts_with($event, 'budget.') => 3,
             str_starts_with($event, 'credential.') => 3,

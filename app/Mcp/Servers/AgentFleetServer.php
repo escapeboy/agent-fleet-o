@@ -6,8 +6,6 @@ use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Resources\ApprovalsResource;
 use App\Mcp\Tools\A2ui\A2uiComponentCatalogTool;
-use App\Mcp\Tools\Codemode\CodemodeExecuteTool;
-use App\Mcp\Tools\Codemode\CodemodeSearchTool;
 use App\Mcp\Tools\A2ui\A2uiRenderSurfaceTool;
 use App\Mcp\Tools\A2ui\A2uiValidateSurfaceTool;
 use App\Mcp\Tools\Admin\AdminBillingApplyCreditTool;
@@ -49,6 +47,21 @@ use App\Mcp\Tools\Agent\AgentUpdateIdentityTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceExportTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceImportTool;
+use App\Mcp\Tools\AgentChatProtocol\AgentChatManifestPublishTool;
+use App\Mcp\Tools\AgentChatProtocol\AgentChatManifestRevokeTool;
+use App\Mcp\Tools\AgentChatProtocol\AgentChatSendTool;
+use App\Mcp\Tools\AgentChatProtocol\AgentChatSessionGetTool;
+use App\Mcp\Tools\AgentChatProtocol\AgentChatSessionsListTool;
+use App\Mcp\Tools\AgentChatProtocol\AgentChatStructuredTool;
+use App\Mcp\Tools\AgentChatProtocol\AgentverseInstallTool;
+use App\Mcp\Tools\AgentChatProtocol\AgentverseSearchTool;
+use App\Mcp\Tools\AgentChatProtocol\ExternalAgentCreateTool;
+use App\Mcp\Tools\AgentChatProtocol\ExternalAgentDeleteTool;
+use App\Mcp\Tools\AgentChatProtocol\ExternalAgentGetTool;
+use App\Mcp\Tools\AgentChatProtocol\ExternalAgentListTool;
+use App\Mcp\Tools\AgentChatProtocol\ExternalAgentPingTool;
+use App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool;
+use App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
@@ -104,6 +117,8 @@ use App\Mcp\Tools\Chatbot\ChatbotToggleStatusTool;
 use App\Mcp\Tools\Chatbot\ChatbotTokenCreateTool;
 use App\Mcp\Tools\Chatbot\ChatbotTokenRevokeTool;
 use App\Mcp\Tools\Chatbot\ChatbotUpdateTool;
+use App\Mcp\Tools\Codemode\CodemodeExecuteTool;
+use App\Mcp\Tools\Codemode\CodemodeSearchTool;
 use App\Mcp\Tools\Compute\ComputeManageTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialDeleteTool;
@@ -217,6 +232,7 @@ use App\Mcp\Tools\Integration\IntegrationDisconnectTool;
 use App\Mcp\Tools\Integration\IntegrationExecuteTool;
 use App\Mcp\Tools\Integration\IntegrationListTool;
 use App\Mcp\Tools\Integration\IntegrationPingTool;
+use App\Mcp\Tools\Integration\IntegrationUpdateTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseCreateTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseDeleteTool;
 use App\Mcp\Tools\Knowledge\KnowledgeBaseIngestTool;
@@ -251,8 +267,6 @@ use App\Mcp\Tools\Migration\MigrationDetectSchemaTool;
 use App\Mcp\Tools\Migration\MigrationExecuteTool;
 use App\Mcp\Tools\Migration\MigrationListTool;
 use App\Mcp\Tools\Migration\MigrationStatusTool;
-use App\Mcp\Tools\WorldModel\WorldModelGetTool;
-use App\Mcp\Tools\WorldModel\WorldModelRebuildTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
@@ -467,6 +481,8 @@ use App\Mcp\Tools\Workflow\WorkflowSuggestionTool;
 use App\Mcp\Tools\Workflow\WorkflowTimeGateTool;
 use App\Mcp\Tools\Workflow\WorkflowUpdateTool;
 use App\Mcp\Tools\Workflow\WorkflowValidateTool;
+use App\Mcp\Tools\WorldModel\WorldModelGetTool;
+use App\Mcp\Tools\WorldModel\WorldModelRebuildTool;
 use Laravel\Mcp\Server;
 
 class AgentFleetServer extends Server
@@ -565,21 +581,21 @@ class AgentFleetServer extends Server
 
     protected array $tools = [
         // Agent Chat Protocol (13) — peer-to-peer agent interop (ASI1-compatible)
-        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentListTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentGetTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentCreateTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentDeleteTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\ExternalAgentPingTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\AgentChatSendTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\AgentChatStructuredTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\AgentChatManifestPublishTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\AgentChatManifestRevokeTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\AgentChatSessionsListTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\AgentChatSessionGetTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\AgentverseSearchTool::class,
-        \App\Mcp\Tools\AgentChatProtocol\AgentverseInstallTool::class,
+        ExternalAgentListTool::class,
+        ExternalAgentGetTool::class,
+        ExternalAgentCreateTool::class,
+        ExternalAgentUpdateTool::class,
+        ExternalAgentDeleteTool::class,
+        ExternalAgentRefreshManifestTool::class,
+        ExternalAgentPingTool::class,
+        AgentChatSendTool::class,
+        AgentChatStructuredTool::class,
+        AgentChatManifestPublishTool::class,
+        AgentChatManifestRevokeTool::class,
+        AgentChatSessionsListTool::class,
+        AgentChatSessionGetTool::class,
+        AgentverseSearchTool::class,
+        AgentverseInstallTool::class,
 
         // Agent (23)
         AgentListTool::class,
@@ -979,9 +995,10 @@ class AgentFleetServer extends Server
         TriggerRuleDeleteTool::class,
         TriggerRuleTestTool::class,
 
-        // Integration (8)
+        // Integration (9)
         IntegrationListTool::class,
         IntegrationConnectTool::class,
+        IntegrationUpdateTool::class,
         IntegrationDisconnectTool::class,
         IntegrationPingTool::class,
         IntegrationExecuteTool::class,

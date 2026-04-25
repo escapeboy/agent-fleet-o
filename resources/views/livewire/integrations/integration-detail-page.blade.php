@@ -34,12 +34,61 @@
                     class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Ping
             </button>
+            @can('edit-content')
+                <a href="{{ route('integrations.edit', $integration) }}"
+                   wire:navigate
+                   class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Edit
+                </a>
+            @endcan
             <button wire:click="disconnect" wire:confirm="Disconnect this integration?"
                     class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
                 Disconnect
             </button>
         </div>
     </div>
+
+    {{-- Identity Card --}}
+    @if($account)
+        <div class="rounded-lg border border-primary-200 bg-primary-50 p-6">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-primary-700">Connected account</p>
+                    <p class="mt-1 text-xl font-semibold text-gray-900">
+                        @if(!empty($account['url']))
+                            <a href="{{ $account['url'] }}" target="_blank" rel="noopener noreferrer"
+                               class="text-primary-700 hover:underline">
+                                {{ $account['label'] ?? $account['identifier'] ?? 'Connected' }}
+                                <span class="text-xs">↗</span>
+                            </a>
+                        @else
+                            {{ $account['label'] ?? $account['identifier'] ?? 'Connected' }}
+                        @endif
+                    </p>
+                    @if(!empty($account['identifier']) && ($account['label'] ?? null) !== $account['identifier'])
+                        <p class="mt-1 text-xs text-gray-500 font-mono">ID: {{ $account['identifier'] }}</p>
+                    @endif
+                    @if(!empty($account['metadata']))
+                        <dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
+                            @foreach($account['metadata'] as $k => $v)
+                                @if(is_scalar($v) && $v !== '' && $v !== null)
+                                    <div>
+                                        <dt class="text-gray-500 uppercase tracking-wide">{{ str_replace('_', ' ', $k) }}</dt>
+                                        <dd class="text-gray-900 break-all">{{ (string) $v }}</dd>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </dl>
+                    @endif
+                </div>
+                @if(!empty($account['verified_at']))
+                    <p class="shrink-0 text-xs text-gray-500">
+                        Verified {{ \Carbon\Carbon::parse($account['verified_at'])->diffForHumans() }}
+                    </p>
+                @endif
+            </div>
+        </div>
+    @endif
 
     {{-- Status Card --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
@@ -72,6 +121,62 @@
             <p class="mt-4 text-sm text-gray-500">Last message: {{ $integration->last_ping_message }}</p>
         @endif
     </div>
+
+    {{-- Recent Actions (audit trail) --}}
+    @if($auditEntries->isNotEmpty())
+        <div class="rounded-lg border border-gray-200 bg-white p-6">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Recent Actions</h2>
+                <a href="{{ route('audit') }}?subject_type={{ urlencode(\App\Domain\Integration\Models\Integration::class) }}&subject_id={{ $integration->id }}"
+                   class="text-xs text-primary-600 hover:underline">View full audit log →</a>
+            </div>
+            <div class="overflow-hidden rounded-lg border border-gray-100">
+                <table class="min-w-full divide-y divide-gray-100 text-sm">
+                    <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                        <tr>
+                            <th class="px-4 py-2 text-left">When</th>
+                            <th class="px-4 py-2 text-left">Action</th>
+                            <th class="px-4 py-2 text-left">Outcome</th>
+                            <th class="px-4 py-2 text-left">Latency</th>
+                            <th class="px-4 py-2 text-left">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($auditEntries as $entry)
+                            @php
+                                $props = $entry->properties ?? [];
+                                $success = $props['success'] ?? null;
+                                $action = $props['action'] ?? '—';
+                                $latency = $props['latency_ms'] ?? null;
+                                $error = $props['error'] ?? null;
+                            @endphp
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $entry->created_at->diffForHumans() }}</td>
+                                <td class="px-4 py-2 font-mono text-gray-900">{{ $action }}</td>
+                                <td class="px-4 py-2">
+                                    @if($success === true)
+                                        <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">success</span>
+                                    @elseif($success === false)
+                                        <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">failed</span>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2 text-gray-500">{{ $latency !== null ? $latency.'ms' : '—' }}</td>
+                                <td class="px-4 py-2 text-xs text-gray-500">
+                                    @if($error)
+                                        <span class="text-red-600">{{ \Illuminate\Support\Str::limit($error, 80) }}</span>
+                                    @elseif(!empty($props['params_keys']))
+                                        params: {{ implode(', ', $props['params_keys']) }}
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
 
     {{-- Webhook Routes --}}
     @if($webhookRoutes->isNotEmpty())

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AgentChatController;
+use App\Http\Controllers\Api\V1\AgentChatSessionController;
 use App\Http\Controllers\Api\V1\AgentController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\ArtifactController;
@@ -20,6 +22,7 @@ use App\Http\Controllers\Api\V1\EmailThemeController;
 use App\Http\Controllers\Api\V1\EvolutionController;
 use App\Http\Controllers\Api\V1\ExperimentController;
 use App\Http\Controllers\Api\V1\ExportWebsiteController;
+use App\Http\Controllers\Api\V1\ExternalAgentController;
 use App\Http\Controllers\Api\V1\FlowEvaluationController;
 use App\Http\Controllers\Api\V1\GitRepositoryController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -83,11 +86,11 @@ Route::prefix('marketplace')
 Route::prefix('agents')
     ->middleware('throttle:60,1')
     ->group(function () {
-        Route::post('/{agent}/chat', [\App\Http\Controllers\Api\V1\AgentChatController::class, 'chat'])
+        Route::post('/{agent}/chat', [AgentChatController::class, 'chat'])
             ->name('agent-chat.inbound.chat');
-        Route::post('/{agent}/structured', [\App\Http\Controllers\Api\V1\AgentChatController::class, 'structured'])
+        Route::post('/{agent}/structured', [AgentChatController::class, 'structured'])
             ->name('agent-chat.inbound.structured');
-        Route::post('/{agent}/ack', [\App\Http\Controllers\Api\V1\AgentChatController::class, 'ack'])
+        Route::post('/{agent}/ack', [AgentChatController::class, 'ack'])
             ->name('agent-chat.inbound.ack');
     });
 
@@ -135,16 +138,16 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/agents/{agent}/feedback/stats', [AgentController::class, 'feedbackStats']);
 
     // External Agents CRUD + dispatch (Sanctum-authenticated)
-    Route::apiResource('external-agents', \App\Http\Controllers\Api\V1\ExternalAgentController::class)->parameters(['external-agents' => 'externalAgent']);
-    Route::post('/external-agents/{externalAgent}/refresh', [\App\Http\Controllers\Api\V1\ExternalAgentController::class, 'refresh']);
-    Route::post('/external-agents/{externalAgent}/ping', [\App\Http\Controllers\Api\V1\ExternalAgentController::class, 'ping']);
-    Route::post('/external-agents/{externalAgent}/chat', [\App\Http\Controllers\Api\V1\ExternalAgentController::class, 'sendChat']);
-    Route::post('/external-agents/{externalAgent}/structured', [\App\Http\Controllers\Api\V1\ExternalAgentController::class, 'sendStructured']);
+    Route::apiResource('external-agents', ExternalAgentController::class)->parameters(['external-agents' => 'externalAgent']);
+    Route::post('/external-agents/{externalAgent}/refresh', [ExternalAgentController::class, 'refresh']);
+    Route::post('/external-agents/{externalAgent}/ping', [ExternalAgentController::class, 'ping']);
+    Route::post('/external-agents/{externalAgent}/chat', [ExternalAgentController::class, 'sendChat']);
+    Route::post('/external-agents/{externalAgent}/structured', [ExternalAgentController::class, 'sendStructured']);
 
     // Chat sessions (Sanctum-authenticated read endpoints)
-    Route::get('/agent-chat/sessions', [\App\Http\Controllers\Api\V1\AgentChatSessionController::class, 'index']);
-    Route::get('/agent-chat/sessions/{session}', [\App\Http\Controllers\Api\V1\AgentChatSessionController::class, 'show']);
-    Route::get('/agent-chat/sessions/{session}/messages', [\App\Http\Controllers\Api\V1\AgentChatSessionController::class, 'messages']);
+    Route::get('/agent-chat/sessions', [AgentChatSessionController::class, 'index']);
+    Route::get('/agent-chat/sessions/{session}', [AgentChatSessionController::class, 'show']);
+    Route::get('/agent-chat/sessions/{session}/messages', [AgentChatSessionController::class, 'messages']);
 
     // Skills
     Route::apiResource('skills', SkillController::class);
@@ -287,6 +290,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Integrations
     Route::get('/integrations', [IntegrationController::class, 'index']);
     Route::get('/integrations/{integration}', [IntegrationController::class, 'show']);
+    Route::put('/integrations/{integration}', [IntegrationController::class, 'update']);
+    Route::patch('/integrations/{integration}', [IntegrationController::class, 'update']);
     Route::post('/integrations/connect', [IntegrationController::class, 'connect']);
     Route::post('/integrations/{integration}/disconnect', [IntegrationController::class, 'disconnect']);
     Route::post('/integrations/{integration}/ping', [IntegrationController::class, 'ping']);

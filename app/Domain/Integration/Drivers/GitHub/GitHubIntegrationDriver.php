@@ -92,7 +92,23 @@ class GitHubIntegrationDriver implements IntegrationDriverInterface, Subscribabl
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful()) {
-                return HealthResult::ok($latency);
+                $login = $response->json('login');
+
+                return HealthResult::ok(
+                    latencyMs: $latency,
+                    message: $login ? "Connected as @{$login}" : null,
+                    identity: $login ? [
+                        'label' => '@'.$login,
+                        'identifier' => (string) $response->json('id'),
+                        'url' => $response->json('html_url'),
+                        'metadata' => array_filter([
+                            'name' => $response->json('name'),
+                            'email' => $response->json('email'),
+                            'company' => $response->json('company'),
+                            'avatar_url' => $response->json('avatar_url'),
+                        ]),
+                    ] : null,
+                );
             }
 
             return HealthResult::fail("HTTP {$response->status()}");
