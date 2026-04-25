@@ -14,7 +14,7 @@ class BorunaManageTool extends CompactTool
 {
     protected string $name = 'boruna_manage';
 
-    protected string $description = 'Manage Boruna evaluation framework. Actions: run (agent_id, benchmark), validate (run_id — validate results), evidence (run_id — get evidence details), capability_list (list evaluation capabilities), skill_manage (manage Boruna skills).';
+    protected string $description = 'Boruna deterministic-script runtime — execute and manage capability-safe .ax scripts. Actions: run (execute an inline .ax script or saved boruna_script skill), validate (validate a script before execution), evidence (capability/effect evidence for a completed run), capability_list (list capabilities supported by the configured Boruna binary), skill_manage (CRUD on boruna_script skills). Requires an active mcp_stdio Tool pointing to the Boruna binary.';
 
     protected function toolMap(): array
     {
