@@ -18,7 +18,12 @@ use Illuminate\Support\Facades\Log;
  *
  * Skill configuration keys:
  *   - script          (string, required) Inline .ax script source code
- *   - policy          (string, default 'deny-all') Capability policy: 'allow-all' | 'deny-all'
+ *   - policy          (mixed, default 'deny-all') Capability policy. Accepts:
+ *                       * legacy shorthand string: 'allow-all' | 'deny-all'
+ *                       * Boruna v0.2.0+ structured Policy object (array) with
+ *                         required `default_allow` (bool), optional `rules`
+ *                         (per-capability {allow, budget}), optional `net_policy`.
+ *                         See https://github.com/escapeboy/boruna/blob/v0.2.0/docs/reference/policy-schema.md
  *   - boruna_tool_id  (uuid, optional) ID of the mcp_stdio Tool pointing to the Boruna binary.
  *                     Falls back to the first active Boruna tool in the team.
  *   - timeout         (int, default 30) Execution timeout in seconds
@@ -63,12 +68,7 @@ class ExecuteBorunaScriptSkillAction
             );
         }
 
-        $policy = $config['policy'] ?? 'deny-all';
-
-        // Boruna's MCP server only supports 'allow-all' or 'deny-all' via the run tool.
-        if (! in_array($policy, ['allow-all', 'deny-all'], true)) {
-            $policy = 'deny-all';
-        }
+        $policy = $this->normalisePolicy($config['policy'] ?? null);
 
         $startTime = hrtime(true);
 
@@ -156,6 +156,31 @@ class ExecuteBorunaScriptSkillAction
                 $e->getMessage(), $durationMs,
             );
         }
+    }
+
+    /**
+     * Normalise skill-config policy into the shape Boruna's MCP server accepts.
+     *
+     * Accepts:
+     *   - null / missing            → 'deny-all' (safe default)
+     *   - 'allow-all' | 'deny-all'  → passed through verbatim (legacy shorthand)
+     *   - structured array with `default_allow` boolean → passed through verbatim
+     *     (Boruna v0.2.0+ Capability Policy object)
+     *   - anything else             → 'deny-all' (defensive — never silently widen access)
+     *
+     * @return string|array<string,mixed>
+     */
+    private function normalisePolicy(mixed $policy): string|array
+    {
+        if (is_array($policy) && array_key_exists('default_allow', $policy) && is_bool($policy['default_allow'])) {
+            return $policy;
+        }
+
+        if (is_string($policy) && in_array($policy, ['allow-all', 'deny-all'], true)) {
+            return $policy;
+        }
+
+        return 'deny-all';
     }
 
     private function resolveTool(string $teamId, ?string $toolId): ?Tool

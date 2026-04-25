@@ -39,14 +39,21 @@ class BorunaResultCache
 
     public function __construct(private readonly CacheRepository $cache) {}
 
-    public function get(Tool $tool, Skill $skill, array $input, string $policy): ?array
+    /**
+     * @param  string|array<string,mixed>  $policy  Either the legacy shorthand or
+     *                                              a Boruna v0.2.0 Capability Policy.
+     */
+    public function get(Tool $tool, Skill $skill, array $input, string|array $policy): ?array
     {
         $cached = $this->cache->get($this->key($tool, $skill, $input, $policy));
 
         return is_array($cached) ? $cached : null;
     }
 
-    public function put(Tool $tool, Skill $skill, array $input, string $policy, array $output): void
+    /**
+     * @param  string|array<string,mixed>  $policy
+     */
+    public function put(Tool $tool, Skill $skill, array $input, string|array $policy, array $output): void
     {
         $this->cache->put(
             $this->key($tool, $skill, $input, $policy),
@@ -55,16 +62,26 @@ class BorunaResultCache
         );
     }
 
-    private function key(Tool $tool, Skill $skill, array $input, string $policy): string
+    /**
+     * @param  string|array<string,mixed>  $policy
+     */
+    private function key(Tool $tool, Skill $skill, array $input, string|array $policy): string
     {
         $script = (string) ($skill->configuration['script'] ?? '');
+
+        // Serialize structured policies so two different shapes can't share a
+        // cache slot. JSON-encoded arrays get a leading "{" / "[" which
+        // can never collide with the literal strings 'allow-all' / 'deny-all'.
+        $policyMaterial = is_array($policy)
+            ? (string) json_encode($policy, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            : $policy;
 
         $material = implode('|', [
             (string) $tool->id,
             $tool->updated_at?->toISOString() ?? '',
             $script,
             (string) json_encode($input, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            $policy,
+            $policyMaterial,
         ]);
 
         return sprintf(

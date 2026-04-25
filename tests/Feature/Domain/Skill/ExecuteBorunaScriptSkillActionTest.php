@@ -522,6 +522,114 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         $this->assertEquals(['team' => 'B'], $rB['output']);
     }
 
+    public function test_passes_structured_policy_through_unchanged(): void
+    {
+        $tool = $this->makeBorunaTool();
+
+        $structuredPolicy = [
+            'schema_version' => 1,
+            'default_allow' => false,
+            'rules' => [
+                'net.fetch' => ['allow' => true, 'budget' => 0],
+                'fs.write' => ['allow' => false, 'budget' => 0],
+            ],
+            'net_policy' => [
+                'allowed_domains' => ['api.openai.com'],
+            ],
+        ];
+
+        $this->mcpClient->shouldReceive('callTool')
+            ->once()
+            ->withArgs(function ($_t, string $name, array $args) use ($structuredPolicy): bool {
+                // The structured policy must reach the Boruna MCP server verbatim
+                // — no string coercion, no key reordering through array_filter etc.
+                return $name === 'boruna_run'
+                    && $args['policy'] === $structuredPolicy;
+            })
+            ->andReturn(json_encode(['ok' => true]));
+
+        $skill = $this->makeSkill([
+            'boruna_tool_id' => $tool->id,
+            'policy' => $structuredPolicy,
+        ]);
+
+        $result = app(ExecuteBorunaScriptSkillAction::class)->execute(
+            skill: $skill,
+            input: [],
+            teamId: $this->team->id,
+            userId: $this->user->id,
+        );
+
+        $this->assertEquals('completed', $result['execution']->status);
+    }
+
+    public function test_invalid_structured_policy_falls_back_to_deny_all(): void
+    {
+        $tool = $this->makeBorunaTool();
+
+        // Missing the required `default_allow` key — must be rejected and
+        // collapsed to the safe shorthand 'deny-all'.
+        $brokenPolicy = ['rules' => ['net.fetch' => ['allow' => true, 'budget' => 0]]];
+
+        $this->mcpClient->shouldReceive('callTool')
+            ->once()
+            ->withArgs(function ($_t, $_n, array $args): bool {
+                return $args['policy'] === 'deny-all';
+            })
+            ->andReturn('{}');
+
+        $skill = $this->makeSkill([
+            'boruna_tool_id' => $tool->id,
+            'policy' => $brokenPolicy,
+        ]);
+
+        $result = app(ExecuteBorunaScriptSkillAction::class)->execute(
+            skill: $skill,
+            input: [],
+            teamId: $this->team->id,
+            userId: $this->user->id,
+        );
+
+        $this->assertEquals('completed', $result['execution']->status);
+    }
+
+    public function test_cache_key_distinguishes_structured_from_legacy_policy(): void
+    {
+        $tool = $this->makeBorunaTool();
+
+        // Two different policy shapes (legacy 'deny-all' vs. structured Policy
+        // with default_allow=false) MUST produce two cache misses, even though
+        // they're semantically similar — different shapes are different keys.
+        $this->mcpClient->shouldReceive('callTool')
+            ->twice()
+            ->andReturn(json_encode(['legacy' => true]), json_encode(['structured' => true]));
+
+        $action = app(ExecuteBorunaScriptSkillAction::class);
+
+        $legacy = $this->makeSkill([
+            'boruna_tool_id' => $tool->id,
+            'policy' => 'deny-all',
+        ]);
+        $structured = Skill::create([
+            'team_id' => $this->team->id,
+            'slug' => 'boruna-structured-'.uniqid(),
+            'name' => 'Structured policy',
+            'type' => SkillType::BorunaScript->value,
+            'status' => 'active',
+            'configuration' => [
+                'script' => 'fn run(input) { return { result: input }; }',
+                'boruna_tool_id' => $tool->id,
+                'policy' => ['default_allow' => false],
+            ],
+        ]);
+
+        $r1 = $action->execute(skill: $legacy, input: [], teamId: $this->team->id, userId: $this->user->id);
+        $r2 = $action->execute(skill: $structured, input: [], teamId: $this->team->id, userId: $this->user->id);
+
+        $this->assertEquals(['legacy' => true], $r1['output']);
+        $this->assertEquals(['structured' => true], $r2['output']);
+    }
+
     public function test_saving_hook_respects_existing_subkind(): void
     {
         $tool = Tool::create([
