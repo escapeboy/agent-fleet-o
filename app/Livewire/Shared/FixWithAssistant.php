@@ -8,6 +8,9 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Models\Project;
+use App\Domain\Shared\Services\ErrorTranslator;
+use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Models\SkillExecution;
 use App\Mcp\Tools\Experiment\ExperimentDiagnoseTool;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
@@ -29,7 +32,7 @@ use Livewire\Component;
  */
 class FixWithAssistant extends Component
 {
-    /** Supported entity types: 'experiment', 'project', 'agent'. */
+    /** Supported entity types: 'experiment', 'project', 'agent', 'skill'. */
     #[Locked]
     public string $entityType = '';
 
@@ -68,6 +71,7 @@ class FixWithAssistant extends Component
                 'experiment' => $this->diagnoseExperiment(),
                 'project' => $this->diagnoseProject(),
                 'agent' => $this->diagnoseAgent(),
+                'skill' => $this->diagnoseSkill(),
                 default => null,
             };
         } catch (\Throwable $e) {
@@ -168,6 +172,84 @@ class FixWithAssistant extends Component
         }
 
         return null;
+    }
+
+    /**
+     * Skill diagnosis routes the latest failed SkillExecution's error_message
+     * through ErrorTranslator so the customer gets the same dictionary-driven
+     * recovery options as for experiment failures, scoped to skill context.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function diagnoseSkill(): ?array
+    {
+        $skill = Skill::find($this->entityId);
+        if (! $skill) {
+            return null;
+        }
+
+        $latestFailure = SkillExecution::withoutGlobalScopes()
+            ->where('team_id', $skill->team_id)
+            ->where('skill_id', $skill->id)
+            ->where('status', 'failed')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $latestFailure) {
+            return null;
+        }
+
+        $isBg = str_starts_with(app()->getLocale(), 'bg');
+        $errorMessage = (string) ($latestFailure->error_message ?? '');
+
+        if ($errorMessage === '') {
+            return [
+                'skill_id' => $skill->id,
+                'root_cause' => 'skill_failure_no_message',
+                'summary' => $isBg
+                    ? 'Последното изпълнение на скила е failed без записано съобщение. Прегледай Executions таб-а за повече детайли.'
+                    : 'The latest skill execution failed with no recorded error message. Review the Executions tab for context.',
+                'evidence' => [
+                    [
+                        'kind' => 'skill_execution',
+                        'execution_id' => $latestFailure->id,
+                        'created_at' => $latestFailure->created_at?->toIso8601String(),
+                    ],
+                ],
+                'recommended_actions' => [],
+                'confidence' => 0.4,
+                'retryable' => false,
+            ];
+        }
+
+        $translation = app(ErrorTranslator::class)->translate(
+            technicalMessage: $errorMessage,
+            locale: app()->getLocale(),
+            placeholders: [
+                'team_id' => (string) $skill->team_id,
+                'skill_id' => $skill->id,
+            ],
+        );
+
+        return [
+            'skill_id' => $skill->id,
+            'root_cause' => $translation->matched ? $translation->code : 'skill_unknown_failure',
+            'summary' => $translation->message,
+            'evidence' => [
+                [
+                    'kind' => 'skill_execution',
+                    'execution_id' => $latestFailure->id,
+                    'duration_ms' => $latestFailure->duration_ms,
+                    'created_at' => $latestFailure->created_at?->toIso8601String(),
+                ],
+            ],
+            'recommended_actions' => array_map(fn ($a) => $a->toArray(), $translation->actions),
+            'confidence' => $translation->matched ? 0.85 : 0.4,
+            'retryable' => $translation->retryable,
+            'mcp_error_code' => $translation->mcpErrorCode->value,
+            'matched_dictionary' => $translation->matched,
+        ];
     }
 
     /**
@@ -376,8 +458,24 @@ class FixWithAssistant extends Component
             'experiment' => $this->experimentEligible(),
             'project' => $this->projectEligible(),
             'agent' => $this->agentEligible(),
+            'skill' => $this->skillEligible(),
             default => false,
         };
+    }
+
+    private function skillEligible(): bool
+    {
+        $skill = Skill::find($this->entityId);
+        if (! $skill) {
+            return false;
+        }
+
+        return SkillExecution::withoutGlobalScopes()
+            ->where('team_id', $skill->team_id)
+            ->where('skill_id', $skill->id)
+            ->where('status', 'failed')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->exists();
     }
 
     private function experimentEligible(): bool

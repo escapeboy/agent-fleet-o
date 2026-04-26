@@ -124,6 +124,11 @@
             </div>
         </div>
 
+        {{-- Fix-with-assistant card (renders when the skill has had a failed execution in the last 7d) --}}
+        <div class="mb-4">
+            <x-fix-with-assistant entity-type="skill" :entity-id="$skill->id" />
+        </div>
+
         {{-- Stats --}}
         <div class="mb-6 grid grid-cols-4 gap-4">
             <div class="rounded-xl border border-gray-200 bg-white p-4">

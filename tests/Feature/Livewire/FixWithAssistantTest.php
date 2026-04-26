@@ -15,11 +15,12 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use Tests\Concerns\MakesFailedExperiments;
 use Tests\TestCase;
 
 class FixWithAssistantTest extends TestCase
 {
-    use RefreshDatabase;
+    use MakesFailedExperiments, RefreshDatabase;
 
     private User $user;
 
@@ -39,23 +40,6 @@ class FixWithAssistantTest extends TestCase
         $this->user->update(['current_team_id' => $this->team->id]);
         $this->team->users()->attach($this->user, ['role' => 'owner']);
         $this->actingAs($this->user);
-    }
-
-    private function makeFailedExperiment(array $overrides = []): Experiment
-    {
-        return Experiment::create(array_merge([
-            'team_id' => $this->team->id,
-            'user_id' => $this->user->id,
-            'title' => 'Failed Test',
-            'thesis' => 't',
-            'status' => ExperimentStatus::BuildingFailed,
-            'track' => 'growth',
-            'budget_cap_credits' => 5000,
-            'max_iterations' => 3,
-            'current_iteration' => 1,
-            'max_outbound_count' => 100,
-            'outbound_count' => 0,
-        ], $overrides));
     }
 
     public function test_renders_for_failed_experiment(): void
@@ -197,6 +181,123 @@ class FixWithAssistantTest extends TestCase
             'entityType' => 'agent',
             'entityId' => $agent->id,
         ])->assertSet('eligible', false);
+    }
+
+    public function test_renders_for_skill_with_recent_failed_execution(): void
+    {
+        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
+        \App\Domain\Skill\Models\SkillExecution::create([
+            'team_id' => $this->team->id,
+            'skill_id' => $skill->id,
+            'status' => 'failed',
+            'input' => [],
+            'output' => null,
+            'duration_ms' => 1000,
+            'cost_credits' => 0,
+            'error_message' => 'PrismException: HTTP 429 rate limit',
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'skill',
+            'entityId' => $skill->id,
+        ])->assertSet('eligible', true);
+    }
+
+    public function test_does_not_render_for_skill_with_no_recent_failures(): void
+    {
+        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
+        // Only completed executions
+        \App\Domain\Skill\Models\SkillExecution::create([
+            'team_id' => $this->team->id,
+            'skill_id' => $skill->id,
+            'status' => 'completed',
+            'input' => [],
+            'output' => ['result' => 'ok'],
+            'duration_ms' => 500,
+            'cost_credits' => 0,
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'skill',
+            'entityId' => $skill->id,
+        ])->assertSet('eligible', false);
+    }
+
+    public function test_does_not_render_for_skill_with_old_failures(): void
+    {
+        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
+        $old = \App\Domain\Skill\Models\SkillExecution::create([
+            'team_id' => $this->team->id,
+            'skill_id' => $skill->id,
+            'status' => 'failed',
+            'input' => [],
+            'output' => null,
+            'duration_ms' => 0,
+            'cost_credits' => 0,
+            'error_message' => 'Old failure',
+        ]);
+        // Push it >7 days back
+        $old->created_at = now()->subDays(10);
+        $old->saveQuietly();
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'skill',
+            'entityId' => $skill->id,
+        ])->assertSet('eligible', false);
+    }
+
+    public function test_diagnose_skill_uses_error_translator(): void
+    {
+        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
+        \App\Domain\Skill\Models\SkillExecution::create([
+            'team_id' => $this->team->id,
+            'skill_id' => $skill->id,
+            'status' => 'failed',
+            'input' => [],
+            'output' => null,
+            'duration_ms' => 1000,
+            'cost_credits' => 0,
+            'error_message' => 'PrismException: HTTP 429 rate limit',
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'skill',
+            'entityId' => $skill->id,
+        ])
+            ->call('diagnose')
+            ->tap(function ($component) {
+                $diagnosis = $component->get('diagnosis');
+                $this->assertIsArray($diagnosis);
+                $this->assertSame('rate_limit', $diagnosis['root_cause']);
+                $this->assertNotEmpty($diagnosis['recommended_actions']);
+                $this->assertSame(true, $diagnosis['matched_dictionary']);
+            });
+    }
+
+    public function test_diagnose_skill_with_empty_error_message_returns_no_message_branch(): void
+    {
+        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
+        \App\Domain\Skill\Models\SkillExecution::create([
+            'team_id' => $this->team->id,
+            'skill_id' => $skill->id,
+            'status' => 'failed',
+            'input' => [],
+            'output' => null,
+            'duration_ms' => 0,
+            'cost_credits' => 0,
+            'error_message' => null,
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'skill',
+            'entityId' => $skill->id,
+        ])
+            ->call('diagnose')
+            ->tap(function ($component) {
+                $diagnosis = $component->get('diagnosis');
+                $this->assertIsArray($diagnosis);
+                $this->assertSame('skill_failure_no_message', $diagnosis['root_cause']);
+            });
     }
 
     public function test_diagnose_agent_with_circuit_breaker_returns_summary(): void
