@@ -33,6 +33,12 @@ return [
         'replay_history_cap' => (int) env('SELF_SERVICE_REPLAY_HISTORY_CAP', 5),
     ],
 
+    'dry_run' => [
+        // Per-team daily dry-run cap. Counter is keyed by team_id and the UTC
+        // date; rolls over at 00:00 UTC. Set to 0 to disable the cap entirely.
+        'daily_cap' => (int) env('SELF_SERVICE_DRY_RUN_DAILY_CAP', 200),
+    ],
+
     'dashboard' => [
         // Cache TTL for the dashboard health-summary tile (per team).
         'tile_cache_seconds' => (int) env('SELF_SERVICE_HEALTH_TILE_CACHE_SECONDS', 30),

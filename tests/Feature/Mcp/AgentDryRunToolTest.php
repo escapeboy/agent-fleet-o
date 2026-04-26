@@ -176,6 +176,90 @@ class AgentDryRunToolTest extends TestCase
         $this->assertSame('YOU ARE A PIRATE', $capturing->lastSystemPrompt);
     }
 
+    public function test_model_override_passes_through_to_gateway(): void
+    {
+        $capturing = new class implements AiGatewayInterface
+        {
+            public ?string $lastModel = null;
+
+            public function complete(AiRequestDTO $request): AiResponseDTO
+            {
+                $this->lastModel = $request->model;
+
+                return new AiResponseDTO(
+                    content: 'ok',
+                    parsedOutput: null,
+                    usage: new AiUsageDTO(0, 0, 0),
+                    provider: $request->provider,
+                    model: $request->model,
+                    latencyMs: 0,
+                );
+            }
+
+            public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
+            {
+                return $this->complete($request);
+            }
+
+            public function estimateCost(AiRequestDTO $request): int
+            {
+                return 0;
+            }
+        };
+        $this->app->instance(AiGatewayInterface::class, $capturing);
+
+        $tool = new AgentDryRunTool;
+        $tool->handle(new Request([
+            'agent_id' => $this->agent->id,
+            'input_message' => 'hi',
+            'model_override' => 'claude-opus-4-6',
+        ]));
+
+        $this->assertSame('claude-opus-4-6', $capturing->lastModel);
+    }
+
+    public function test_temperature_override_clamps_and_passes_through(): void
+    {
+        $capturing = new class implements AiGatewayInterface
+        {
+            public ?float $lastTemperature = null;
+
+            public function complete(AiRequestDTO $request): AiResponseDTO
+            {
+                $this->lastTemperature = $request->temperature;
+
+                return new AiResponseDTO(
+                    content: 'ok',
+                    parsedOutput: null,
+                    usage: new AiUsageDTO(0, 0, 0),
+                    provider: $request->provider,
+                    model: $request->model,
+                    latencyMs: 0,
+                );
+            }
+
+            public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
+            {
+                return $this->complete($request);
+            }
+
+            public function estimateCost(AiRequestDTO $request): int
+            {
+                return 0;
+            }
+        };
+        $this->app->instance(AiGatewayInterface::class, $capturing);
+
+        $tool = new AgentDryRunTool;
+        $tool->handle(new Request([
+            'agent_id' => $this->agent->id,
+            'input_message' => 'hi',
+            'temperature_override' => 1.4,
+        ]));
+
+        $this->assertEqualsWithDelta(1.4, $capturing->lastTemperature, 0.001);
+    }
+
     public function test_dry_run_writes_audit_entry(): void
     {
         $tool = new AgentDryRunTool;
@@ -189,6 +273,47 @@ class AgentDryRunToolTest extends TestCase
             'subject_id' => $this->agent->id,
             'team_id' => $this->team->id,
         ]);
+    }
+
+    public function test_daily_quota_blocks_after_cap(): void
+    {
+        config()->set('self-service.dry_run.daily_cap', 2);
+        \Illuminate\Support\Facades\Cache::flush();
+
+        $tool = new AgentDryRunTool;
+        // first 2 succeed
+        for ($i = 0; $i < 2; $i++) {
+            $resp = $tool->handle(new Request([
+                'agent_id' => $this->agent->id,
+                'input_message' => "ok {$i}",
+            ]));
+            $this->assertFalse($resp->isError());
+        }
+
+        // 3rd hits the cap
+        $resp = $tool->handle(new Request([
+            'agent_id' => $this->agent->id,
+            'input_message' => 'over the cap',
+        ]));
+        $this->assertTrue($resp->isError());
+        $payload = json_decode((string) $resp->content(), true);
+        $this->assertSame('RESOURCE_EXHAUSTED', $payload['error']['code']);
+        $this->assertStringContainsString('Daily dry-run cap', $payload['error']['message']);
+    }
+
+    public function test_quota_zero_disables_the_cap(): void
+    {
+        config()->set('self-service.dry_run.daily_cap', 0);
+        \Illuminate\Support\Facades\Cache::flush();
+
+        $tool = new AgentDryRunTool;
+        for ($i = 0; $i < 5; $i++) {
+            $resp = $tool->handle(new Request([
+                'agent_id' => $this->agent->id,
+                'input_message' => "ok {$i}",
+            ]));
+            $this->assertFalse($resp->isError());
+        }
     }
 
     public function test_empty_input_message_validation_fails(): void

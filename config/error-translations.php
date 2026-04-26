@@ -388,6 +388,238 @@ return [
         'actions' => [],
     ],
 
+    // ── OAuth / token scope ────────────────────────────────────────────
+    'oauth_scope_missing' => [
+        'patterns' => [
+            '/insufficient[\s_-]?scope/i',
+            '/missing[\s_-]?scope/i',
+            '/scope.{0,10}(not\s+granted|denied|required)/i',
+            '/HTTP\s*403.*scope/i',
+        ],
+        'mcp_code' => 'PERMISSION_DENIED',
+        'retryable' => false,
+        'message' => [
+            'en' => 'The connected integration is missing a required scope. Reconnect it and approve the additional permissions.',
+            'bg' => 'На свързаната интеграция ѝ липсва нужно scope разрешение. Свържи я отново и одобри допълнителните права.',
+        ],
+        'actions' => [
+            [
+                'kind' => 'route',
+                'label' => ['en' => 'Reconnect integration', 'bg' => 'Свържи отново'],
+                'target' => 'integrations.index',
+                'tier' => 'config',
+                'icon' => 'fa-link-slash',
+            ],
+        ],
+    ],
+
+    // ── JSON / parse errors ────────────────────────────────────────────
+    'json_parse_failed' => [
+        'patterns' => [
+            '/Syntax\s+error.{0,30}JSON/i',
+            '/Unexpected\s+token.{0,15}in\s+JSON/i',
+            '/json_decode.{0,30}(failed|error)/i',
+            '/Malformed\s+JSON/i',
+        ],
+        'mcp_code' => 'INVALID_ARGUMENT',
+        'retryable' => true,
+        'message' => [
+            'en' => 'The model returned text that could not be parsed as JSON. Tightening the system prompt or adding a JSON output schema usually fixes this.',
+            'bg' => 'Моделът върна текст, който не може да се парсне като JSON. Затягане на системния prompt или добавяне на JSON output schema обикновено помагат.',
+        ],
+        'actions' => [
+            [
+                'kind' => 'tool',
+                'label' => ['en' => 'Retry now', 'bg' => 'Опитай пак'],
+                'target' => 'experiment_retry',
+                'params' => ['experiment_id' => '{experiment_id}'],
+                'tier' => 'safe',
+                'icon' => 'fa-rotate-right',
+            ],
+            [
+                'kind' => 'route',
+                'label' => ['en' => 'Edit agent output schema', 'bg' => 'Редактирай output schema'],
+                'target' => 'agents.index',
+                'tier' => 'config',
+                'icon' => 'fa-code',
+            ],
+        ],
+    ],
+
+    // ── Network / connection refused ───────────────────────────────────
+    'network_connect_refused' => [
+        'patterns' => [
+            '/Connection\s+refused/i',
+            '/cURL.{0,5}error\s*7/i',
+            '/Failed\s+to\s+connect\s+to/i',
+            '/getaddrinfo\s+failed/i',
+        ],
+        'mcp_code' => 'UNAVAILABLE',
+        'retryable' => true,
+        'message' => [
+            'en' => 'A downstream service refused the connection. Retry usually works for transient outages; if it persists, the target host may be down.',
+            'bg' => 'Свързан сервиз отказа връзката. Опит за повторение обикновено помага за временни проблеми; ако продължава, целевият хост може да е недостъпен.',
+        ],
+        'actions' => [
+            [
+                'kind' => 'tool',
+                'label' => ['en' => 'Retry now', 'bg' => 'Опитай пак'],
+                'target' => 'experiment_retry',
+                'params' => ['experiment_id' => '{experiment_id}'],
+                'tier' => 'safe',
+                'icon' => 'fa-rotate-right',
+            ],
+        ],
+    ],
+
+    // ── Out of memory ──────────────────────────────────────────────────
+    'oom_killed' => [
+        'patterns' => [
+            '/Allowed\s+memory\s+size\s+of/i',
+            '/Out\s+of\s+memory/i',
+            '/OOMKilled/i',
+            '/Killed:\s*9/',
+        ],
+        'mcp_code' => 'RESOURCE_EXHAUSTED',
+        'retryable' => false,
+        'message' => [
+            'en' => 'The job ran out of memory. The input may be too large for the current configuration; try chunking the work or reducing the prompt size.',
+            'bg' => 'Job-ът остана без памет. Вход-ът може да е твърде голям за текущата конфигурация; опитай да разделиш работата или намалиш prompt-а.',
+        ],
+        'actions' => [
+            [
+                'kind' => 'assistant',
+                'label' => ['en' => 'Ask assistant for help', 'bg' => 'Питай асистента'],
+                'target' => 'My experiment {experiment_id} hit an out-of-memory error. Suggest how to reduce input size or split the work.',
+                'tier' => 'safe',
+                'icon' => 'fa-magnifying-glass',
+            ],
+        ],
+    ],
+
+    // ── Model context length exceeded ──────────────────────────────────
+    'model_context_length' => [
+        'patterns' => [
+            '/context[\s_-]?length.{0,20}exceed/i',
+            '/maximum\s+context\s+length/i',
+            '/prompt\s+is\s+too\s+long/i',
+            '/token\s+count.{0,15}exceed/i',
+        ],
+        'mcp_code' => 'INVALID_ARGUMENT',
+        'retryable' => false,
+        'message' => [
+            'en' => 'The prompt + context exceeded the model\'s context window. Switch to a larger-context model or shorten the prompt.',
+            'bg' => 'Prompt-ът + контекстът надвишиха context window на модела. Премини към по-голям модел или съкрати prompt-а.',
+        ],
+        'actions' => [
+            [
+                'kind' => 'route',
+                'label' => ['en' => 'Switch model', 'bg' => 'Смени модела'],
+                'target' => 'agents.index',
+                'tier' => 'config',
+                'icon' => 'fa-shuffle',
+            ],
+        ],
+    ],
+
+    // ── Content policy / safety block ──────────────────────────────────
+    'content_policy_block' => [
+        'patterns' => [
+            '/content\s+policy/i',
+            '/safety\s+(filter|block|policy)/i',
+            '/refused\s+to\s+respond/i',
+            '/violates\s+(usage|content)\s+policy/i',
+        ],
+        'mcp_code' => 'FAILED_PRECONDITION',
+        'retryable' => false,
+        'message' => [
+            'en' => 'The model refused to respond because the prompt or expected output triggered its safety filter. Reword the prompt to clarify intent.',
+            'bg' => 'Моделът отказа да отговори защото prompt-ът или очаквания изход тригернаха safety филтъра. Преформулирай prompt-а, за да изясниш намерението.',
+        ],
+        'actions' => [
+            [
+                'kind' => 'assistant',
+                'label' => ['en' => 'Ask assistant to rephrase', 'bg' => 'Помоли асистента за преформулиране'],
+                'target' => 'My experiment {experiment_id} was blocked by a content-policy filter. Help me rephrase the prompt to clarify the legitimate use case.',
+                'tier' => 'safe',
+                'icon' => 'fa-pen-to-square',
+            ],
+        ],
+    ],
+
+    // ── Validation failed (server-side schema/rules) ───────────────────
+    'validation_failed' => [
+        'patterns' => [
+            '/ValidationException/',
+            '/The\s+given\s+data\s+was\s+invalid/i',
+            '/HTTP\s*422\s+Unprocessable/i',
+        ],
+        'mcp_code' => 'INVALID_ARGUMENT',
+        'retryable' => false,
+        'message' => [
+            'en' => 'A required field was missing or malformed. Review the agent\'s input parameters.',
+            'bg' => 'Задължително поле липсва или е лошо форматирано. Прегледай входните параметри на агента.',
+        ],
+        'actions' => [],
+    ],
+
+    // ── Custom endpoint unreachable ────────────────────────────────────
+    'custom_endpoint_unreachable' => [
+        'patterns' => [
+            '/custom[\s_-]?endpoint.{0,15}(unreachable|down|failed)/i',
+            '/Could\s+not\s+resolve\s+host/i',
+            '/cURL.{0,5}error\s*6/i',
+        ],
+        'mcp_code' => 'UNAVAILABLE',
+        'retryable' => true,
+        'message' => [
+            'en' => 'The configured custom endpoint did not respond. Check its URL and that the host is reachable from FleetQ.',
+            'bg' => 'Конфигурираният custom endpoint не отговори. Провери URL-а и че хоста е достъпен от FleetQ.',
+        ],
+        'actions' => [
+            [
+                'kind' => 'route',
+                'label' => ['en' => 'Open team settings', 'bg' => 'Отвори team настройките'],
+                'target' => 'team.settings',
+                'tier' => 'config',
+                'icon' => 'fa-server',
+            ],
+        ],
+    ],
+
+    // ── File not found / artifact missing ──────────────────────────────
+    'file_not_found' => [
+        'patterns' => [
+            '/(File|Artifact)\s+not\s+found/i',
+            '/No\s+such\s+file\s+or\s+directory/i',
+            '/HTTP\s*404.*artifact/i',
+        ],
+        'mcp_code' => 'NOT_FOUND',
+        'retryable' => false,
+        'message' => [
+            'en' => 'A file the agent expected was not found. It may have been deleted, never created, or its path is wrong.',
+            'bg' => 'Файл, който агентът очакваше, не беше намерен. Може да е изтрит, никога не създаван, или пътя е грешен.',
+        ],
+        'actions' => [],
+    ],
+
+    // ── SSL / TLS certificate issue ────────────────────────────────────
+    'ssl_certificate_invalid' => [
+        'patterns' => [
+            '/SSL\s+certificate/i',
+            '/TLS\s+handshake/i',
+            '/certificate\s+(verify\s+failed|has\s+expired|is\s+invalid)/i',
+            '/cURL.{0,5}error\s*60/i',
+        ],
+        'mcp_code' => 'FAILED_PRECONDITION',
+        'retryable' => false,
+        'message' => [
+            'en' => 'The remote server\'s SSL certificate is invalid or expired. Contact the integration owner to renew it.',
+            'bg' => 'SSL сертификатът на отдалечения сервиз е невалиден или изтекъл. Свържи се с собственика на интеграцията за подновяване.',
+        ],
+        'actions' => [],
+    ],
+
     // ── Unknown / fallback ─────────────────────────────────────────────
     // No pattern key — handled by ErrorTranslator::FALLBACK_CODE constant.
     'unknown' => [

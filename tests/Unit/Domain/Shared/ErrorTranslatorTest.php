@@ -202,6 +202,66 @@ class ErrorTranslatorTest extends TestCase
         $this->assertSame(ErrorCode::Internal, $result->mcpErrorCode);
     }
 
+    public function test_dictionary_expansion_oauth_scope(): void
+    {
+        $r = $this->translator->translateUncached('Insufficient scope: read:repo required', 'en');
+        $this->assertSame('oauth_scope_missing', $r->code);
+    }
+
+    public function test_dictionary_expansion_json_parse(): void
+    {
+        $r = $this->translator->translateUncached('Unexpected token } in JSON at position 42', 'en');
+        $this->assertSame('json_parse_failed', $r->code);
+    }
+
+    public function test_dictionary_expansion_network_refused(): void
+    {
+        $r = $this->translator->translateUncached('cURL error 7: Failed to connect to example.com', 'en');
+        $this->assertSame('network_connect_refused', $r->code);
+    }
+
+    public function test_dictionary_expansion_oom(): void
+    {
+        $r = $this->translator->translateUncached('Allowed memory size of 134217728 bytes exhausted', 'en');
+        $this->assertSame('oom_killed', $r->code);
+    }
+
+    public function test_dictionary_expansion_context_length(): void
+    {
+        $r = $this->translator->translateUncached('This model maximum context length is 200000 tokens', 'en');
+        $this->assertSame('model_context_length', $r->code);
+    }
+
+    public function test_dictionary_expansion_content_policy(): void
+    {
+        $r = $this->translator->translateUncached('Refused to respond: content policy violation', 'en');
+        $this->assertSame('content_policy_block', $r->code);
+    }
+
+    public function test_dictionary_expansion_validation(): void
+    {
+        $r = $this->translator->translateUncached('ValidationException: The given data was invalid', 'en');
+        $this->assertSame('validation_failed', $r->code);
+    }
+
+    public function test_dictionary_expansion_custom_endpoint(): void
+    {
+        $r = $this->translator->translateUncached('Could not resolve host: my-custom.example.com', 'en');
+        $this->assertSame('custom_endpoint_unreachable', $r->code);
+    }
+
+    public function test_dictionary_expansion_file_not_found(): void
+    {
+        $r = $this->translator->translateUncached('Artifact not found at /tmp/output.json', 'en');
+        $this->assertSame('file_not_found', $r->code);
+    }
+
+    public function test_dictionary_expansion_ssl(): void
+    {
+        $r = $this->translator->translateUncached('SSL certificate has expired', 'en');
+        $this->assertSame('ssl_certificate_invalid', $r->code);
+    }
+
     public function test_telemetry_entry_does_not_match_as_dictionary_pattern(): void
     {
         // Sanity: the 'telemetry' top-level config key must NOT be treated as

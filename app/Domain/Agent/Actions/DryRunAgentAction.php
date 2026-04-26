@@ -59,6 +59,8 @@ final class DryRunAgentAction
         string $userMessage,
         string $userId,
         ?string $systemPromptOverride = null,
+        ?string $modelOverride = null,
+        ?float $temperatureOverride = null,
     ): array {
         if ($userMessage === '') {
             throw new InvalidArgumentException('Dry-run input message cannot be empty.');
@@ -71,7 +73,14 @@ final class DryRunAgentAction
             : $this->promptCompiler->compile($agent);
 
         $provider = (string) ($agent->provider ?? config('llm.default_provider', 'anthropic'));
-        $model = (string) ($agent->model ?? config('llm.default_model', 'claude-haiku-4-5'));
+        $model = $modelOverride !== null && $modelOverride !== ''
+            ? $modelOverride
+            : (string) ($agent->model ?? config('llm.default_model', 'claude-haiku-4-5'));
+
+        // Clamp temperature to a defensible range; 0.0–2.0 covers every supported provider.
+        $temperature = $temperatureOverride !== null
+            ? max(0.0, min(2.0, $temperatureOverride))
+            : (float) (config('agent.default_temperature', 0.7));
 
         $request = new AiRequestDTO(
             provider: $provider,
@@ -83,7 +92,7 @@ final class DryRunAgentAction
             teamId: (string) $agent->team_id,
             agentId: $agent->id,
             purpose: 'agent.dry_run',
-            temperature: 0.7,
+            temperature: $temperature,
         );
 
         $response = $this->gateway->complete($request);

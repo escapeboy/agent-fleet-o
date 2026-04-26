@@ -158,15 +158,42 @@
                         <button type="button" @click="open = !open" class="text-xs text-gray-600 hover:text-gray-900">
                             <i class="fa-solid fa-caret-right" x-show="!open"></i>
                             <i class="fa-solid fa-caret-down" x-show="open"></i>
-                            {{ __('System prompt override (optional)') }}
+                            {{ __('Advanced overrides (optional)') }}
                         </button>
-                        <textarea
-                            x-show="open"
-                            wire:model.live="replaySystemPromptOverride"
-                            rows="6"
-                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white p-2 font-mono text-xs focus:border-primary-500 focus:ring-primary-500"
-                            placeholder="Leave blank to use the agent's saved system prompt."
-                        ></textarea>
+                        <div x-show="open" class="mt-2 space-y-2">
+                            <div>
+                                <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">{{ __('System prompt') }}</label>
+                                <textarea
+                                    wire:model.live="replaySystemPromptOverride"
+                                    rows="5"
+                                    class="block w-full rounded-lg border border-gray-300 bg-white p-2 font-mono text-xs focus:border-primary-500 focus:ring-primary-500"
+                                    placeholder="Leave blank to use the agent's saved system prompt."
+                                ></textarea>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">{{ __('Model') }}</label>
+                                    <input
+                                        type="text"
+                                        wire:model.live="replayModelOverride"
+                                        class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-xs focus:border-primary-500 focus:ring-primary-500"
+                                        placeholder="agent default"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">{{ __('Temperature (0–2)') }}</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        max="2"
+                                        wire:model.live="replayTemperatureOverride"
+                                        class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-xs focus:border-primary-500 focus:ring-primary-500"
+                                        placeholder="0.7"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     @if($replayError !== '')
@@ -176,6 +203,22 @@
                     @endif
 
                     @if($replayResult)
+                        @php
+                            $allReplays = ($selectedSnapshot['metadata'] ?? [])['replays'] ?? [];
+                            // Find the most recent prior replay whose output differs from the current
+                            $diffBaseline = null;
+                            foreach ($allReplays as $r) {
+                                $candidate = (string) ($r['output'] ?? '');
+                                if ($candidate !== '' && $candidate !== ($replayResult['output'] ?? '')) {
+                                    $diffBaseline = $candidate;
+                                    break;
+                                }
+                            }
+                            $currentOutput = (string) ($replayResult['output'] ?? '');
+                            $charDelta = $diffBaseline !== null
+                                ? mb_strlen($currentOutput) - mb_strlen($diffBaseline)
+                                : null;
+                        @endphp
                         <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                             <div class="mb-2 flex items-center justify-between text-xs text-emerald-800">
                                 <span>
@@ -183,9 +226,32 @@
                                     {{ ($replayResult['tokens_input'] ?? 0) }}+{{ ($replayResult['tokens_output'] ?? 0) }} tokens ·
                                     {{ ($replayResult['cost_credits'] ?? 0) }} credits
                                 </span>
+                                @if($charDelta !== null)
+                                    <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium">
+                                        {{ $charDelta >= 0 ? '+' : '' }}{{ $charDelta }} chars vs prior
+                                    </span>
+                                @endif
                             </div>
                             <pre class="max-h-64 overflow-auto whitespace-pre-wrap text-sm text-emerald-900">{{ $replayResult['output'] ?? '' }}</pre>
                         </div>
+
+                        @if($diffBaseline !== null)
+                            <details class="mt-2 rounded-lg border border-gray-200 bg-white text-xs">
+                                <summary class="cursor-pointer px-3 py-2 text-gray-700 hover:bg-gray-50">
+                                    {{ __('Compare side-by-side with last differing replay') }}
+                                </summary>
+                                <div class="grid grid-cols-2 gap-0 border-t border-gray-200">
+                                    <div class="border-r border-gray-200 p-2">
+                                        <div class="mb-1 text-[10px] font-medium uppercase tracking-wider text-gray-500">{{ __('Prior') }}</div>
+                                        <pre class="max-h-48 overflow-auto whitespace-pre-wrap text-xs text-gray-800">{{ $diffBaseline }}</pre>
+                                    </div>
+                                    <div class="p-2">
+                                        <div class="mb-1 text-[10px] font-medium uppercase tracking-wider text-emerald-600">{{ __('Current') }}</div>
+                                        <pre class="max-h-48 overflow-auto whitespace-pre-wrap text-xs text-emerald-900">{{ $currentOutput }}</pre>
+                                    </div>
+                                </div>
+                            </details>
+                        @endif
                     @endif
 
                     @php

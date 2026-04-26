@@ -9,6 +9,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -44,6 +45,10 @@ class AgentDryRunTool extends Tool
                 ->required(),
             'system_prompt_override' => $schema->string()
                 ->description('Optional override for the system prompt — useful for testing prompt changes without saving them to the agent.'),
+            'model_override' => $schema->string()
+                ->description('Optional override for the model (e.g. "claude-opus-4-6"). Defaults to the agent\'s saved model. Provider stays the same.'),
+            'temperature_override' => $schema->number()
+                ->description('Optional temperature override (0.0–2.0). Defaults to agent.default_temperature config (0.7).'),
         ];
     }
 
@@ -53,6 +58,8 @@ class AgentDryRunTool extends Tool
             'agent_id' => 'required|string',
             'input_message' => 'required|string|min:1|max:10000',
             'system_prompt_override' => 'nullable|string|max:50000',
+            'model_override' => 'nullable|string|max:200',
+            'temperature_override' => 'nullable|numeric|min:0|max:2',
         ]);
 
         $teamId = app()->bound('mcp.team_id')
@@ -77,12 +84,40 @@ class AgentDryRunTool extends Tool
             return $this->notFoundError('agent', $validated['agent_id']);
         }
 
+        // Per-team daily quota (config/self-service.dry_run.daily_cap).
+        // Counter keyed by UTC date; ttl 26h covers timezone overhang.
+        $dailyCap = (int) config('self-service.dry_run.daily_cap', 200);
+        if ($dailyCap > 0) {
+            $key = sprintf(
+                'self_service:dry_run:count:%s:%s',
+                $teamId,
+                now()->utc()->toDateString(),
+            );
+            $current = (int) (Cache::get($key) ?? 0);
+            if ($current >= $dailyCap) {
+                return $this->errorResponse(
+                    \App\Mcp\ErrorCode::ResourceExhausted,
+                    sprintf(
+                        'Daily dry-run cap reached (%d/%d). The counter resets at 00:00 UTC.',
+                        $current,
+                        $dailyCap,
+                    ),
+                );
+            }
+            // Increment with a 26h TTL (handles timezone-overhang refresh).
+            Cache::put($key, $current + 1, now()->addHours(26));
+        }
+
         try {
             $result = app(DryRunAgentAction::class)->execute(
                 agent: $agent,
                 userMessage: $validated['input_message'],
                 userId: (string) $userId,
                 systemPromptOverride: $validated['system_prompt_override'] ?? null,
+                modelOverride: $validated['model_override'] ?? null,
+                temperatureOverride: isset($validated['temperature_override'])
+                    ? (float) $validated['temperature_override']
+                    : null,
             );
         } catch (\InvalidArgumentException $e) {
             return $this->errorResponse(

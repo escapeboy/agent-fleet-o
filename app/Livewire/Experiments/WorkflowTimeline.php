@@ -28,6 +28,10 @@ class WorkflowTimeline extends Component
 
     public string $replaySystemPromptOverride = '';
 
+    public string $replayModelOverride = '';
+
+    public ?float $replayTemperatureOverride = null;
+
     /** @var array<string, mixed>|null */
     public ?array $replayResult = null;
 
@@ -96,6 +100,8 @@ class WorkflowTimeline extends Component
         $this->replayAgentId = $step->agent_id;
         $this->replayInput = $this->derivePrefilledInput($this->selectedSnapshot['step_input'] ?? []);
         $this->replaySystemPromptOverride = '';
+        $this->replayModelOverride = '';
+        $this->replayTemperatureOverride = null;
         $this->replayResult = null;
         $this->replayError = '';
         $this->replayInFlight = false;
@@ -107,6 +113,8 @@ class WorkflowTimeline extends Component
         $this->replayAgentId = null;
         $this->replayInput = '';
         $this->replaySystemPromptOverride = '';
+        $this->replayModelOverride = '';
+        $this->replayTemperatureOverride = null;
         $this->replayResult = null;
         $this->replayError = '';
         $this->replayInFlight = false;
@@ -143,6 +151,13 @@ class WorkflowTimeline extends Component
             $override = trim($this->replaySystemPromptOverride);
             if ($override !== '') {
                 $args['system_prompt_override'] = $override;
+            }
+            $modelOverride = trim($this->replayModelOverride);
+            if ($modelOverride !== '') {
+                $args['model_override'] = $modelOverride;
+            }
+            if ($this->replayTemperatureOverride !== null) {
+                $args['temperature_override'] = $this->replayTemperatureOverride;
             }
 
             $response = $tool->handle(new Request($args));
