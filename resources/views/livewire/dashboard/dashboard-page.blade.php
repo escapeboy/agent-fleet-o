@@ -21,6 +21,11 @@
         </div>
     </div>
 
+    {{-- Health Summary — surfaces failed/stuck/circuit-open before user has to dig --}}
+    <div class="mb-4">
+        <livewire:dashboard.health-summary-tile />
+    </div>
+
     {{-- Bento KPI Grid --}}
     <div class="grid grid-cols-12 gap-4">
 
