@@ -4,6 +4,8 @@ namespace App\Domain\Assistant\Tools\Mutations;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Shared\Models\Team;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
 
@@ -35,23 +37,41 @@ final class AgentMutationTools
     public static function createAgent(): PrismToolObject
     {
         return PrismTool::as('create_agent')
-            ->for('Create a new AI agent')
+            ->for('Create a new AI agent. Provider/model default to the team\'s configured default — only pass them when the user explicitly asks for a specific provider AND that provider has credentials configured.')
             ->withStringParameter('name', 'Agent name', required: true)
             ->withStringParameter('role', 'Agent role description')
             ->withStringParameter('goal', 'Agent goal')
             ->withStringParameter('backstory', 'Agent backstory')
-            ->withStringParameter('provider', 'LLM provider (anthropic, openai, google). Default: anthropic')
-            ->withStringParameter('model', 'LLM model name. Default: claude-sonnet-4-5')
+            ->withStringParameter('provider', 'LLM provider key (e.g. anthropic, openai, google). Defaults to the team\'s configured provider. If passed but the team has no credentials for it, the team default is used instead.')
+            ->withStringParameter('model', 'LLM model name. Defaults to the team\'s configured model.')
             ->using(function (string $name, ?string $role = null, ?string $goal = null, ?string $backstory = null, ?string $provider = null, ?string $model = null) {
                 try {
+                    $teamId = auth()->user()->current_team_id;
+                    $team = Team::find($teamId);
+                    $resolver = app(ProviderResolver::class);
+                    $resolved = $resolver->resolve(team: $team);
+
+                    // Honor explicit provider only if the team actually has credentials for it.
+                    $useProvider = $resolved['provider'];
+                    $useModel = $resolved['model'];
+                    if ($provider !== null) {
+                        $available = $resolver->availableProviders($team);
+                        if (array_key_exists($provider, $available)) {
+                            $useProvider = $provider;
+                            $useModel = $model ?? $resolved['model'];
+                        }
+                    } elseif ($model !== null) {
+                        $useModel = $model;
+                    }
+
                     $agent = app(CreateAgentAction::class)->execute(
                         name: $name,
-                        provider: $provider ?? 'anthropic',
-                        model: $model ?? 'claude-sonnet-4-5',
+                        provider: $useProvider,
+                        model: $useModel,
                         role: $role,
                         goal: $goal,
                         backstory: $backstory,
-                        teamId: auth()->user()->current_team_id,
+                        teamId: $teamId,
                     );
 
                     return json_encode([
