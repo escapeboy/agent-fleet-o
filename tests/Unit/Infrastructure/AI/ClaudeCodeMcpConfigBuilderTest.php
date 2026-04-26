@@ -30,8 +30,11 @@ class ClaudeCodeMcpConfigBuilderTest extends TestCase
         $this->assertSame([], $this->builder->build(new Collection));
     }
 
-    public function test_mcp_http_with_full_transport_config_is_translated(): void
+    public function test_mcp_http_with_root_url_appends_mcp_endpoint(): void
     {
+        // Tool records store the MCP server's BASE URL; cloud-side McpHttpClient
+        // appends `/mcp` per request. The bridge must do the same so Claude Code
+        // can reach the actual endpoint.
         $tool = Tool::factory()->create([
             'team_id' => $this->team->id,
             'slug' => 'fleetq_platform',
@@ -48,16 +51,33 @@ class ClaudeCodeMcpConfigBuilderTest extends TestCase
 
         $config = $this->builder->build(collect([$tool]));
 
-        $this->assertArrayHasKey('mcpServers', $config);
-        $this->assertArrayHasKey('fleetq_platform', $config['mcpServers']);
-        $this->assertSame([
-            'type' => 'http',
-            'url' => 'http://nginx',
-            'headers' => [
-                'Host' => 'fleetq.net',
-                'Authorization' => 'Bearer token-123',
-            ],
-        ], $config['mcpServers']['fleetq_platform']);
+        $this->assertSame('http://nginx/mcp', $config['mcpServers']['fleetq_platform']['url']);
+    }
+
+    public function test_mcp_http_strips_trailing_slash_before_appending_mcp(): void
+    {
+        $tool = Tool::factory()->create([
+            'team_id' => $this->team->id,
+            'slug' => 'with_slash',
+            'type' => ToolType::McpHttp,
+            'transport_config' => ['url' => 'http://nginx/'],
+        ]);
+
+        $entry = $this->builder->build(collect([$tool]))['mcpServers']['with_slash'];
+        $this->assertSame('http://nginx/mcp', $entry['url']);
+    }
+
+    public function test_mcp_http_with_explicit_path_is_left_alone(): void
+    {
+        $tool = Tool::factory()->create([
+            'team_id' => $this->team->id,
+            'slug' => 'with_path',
+            'type' => ToolType::McpHttp,
+            'transport_config' => ['url' => 'https://api.example.com/v1/mcp'],
+        ]);
+
+        $entry = $this->builder->build(collect([$tool]))['mcpServers']['with_path'];
+        $this->assertSame('https://api.example.com/v1/mcp', $entry['url']);
     }
 
     public function test_mcp_http_with_inline_credentials_adds_authorization_header(): void

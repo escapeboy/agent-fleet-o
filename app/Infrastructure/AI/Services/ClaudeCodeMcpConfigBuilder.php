@@ -67,7 +67,7 @@ class ClaudeCodeMcpConfigBuilder
 
         $entry = [
             'type' => 'http',
-            'url' => $url,
+            'url' => $this->normalizeMcpUrl($url),
         ];
 
         if ($headers !== []) {
@@ -75,6 +75,29 @@ class ClaudeCodeMcpConfigBuilder
         }
 
         return $entry;
+    }
+
+    /**
+     * Mirror McpHttpClient::callTool's URL convention. Tool records store
+     * the MCP server's base URL; the actual Streamable HTTP endpoint lives
+     * at `/mcp` on that base. Cloud-side McpHttpClient appends `/mcp` for
+     * every request — Claude Code's MCP client doesn't, so the bridge must
+     * supply the full endpoint URL up front.
+     *
+     * Heuristic: if the URL already has a path component beyond `/`, leave
+     * it alone (caller intentionally pointed at a specific endpoint, e.g.
+     * `https://api.example.com/v1/mcp`). Otherwise append `/mcp`.
+     */
+    private function normalizeMcpUrl(string $url): string
+    {
+        $parsed = parse_url($url);
+        $path = $parsed['path'] ?? '';
+
+        if ($path === '' || $path === '/') {
+            return rtrim($url, '/').'/mcp';
+        }
+
+        return $url;
     }
 
     /**
