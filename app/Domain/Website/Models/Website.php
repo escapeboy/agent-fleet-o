@@ -3,6 +3,7 @@
 namespace App\Domain\Website\Models;
 
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Models\User;
@@ -26,6 +27,7 @@ class Website extends Model
         'custom_domain',
         'content_version',
         'managing_crew_id',
+        'crew_execution_id',
     ];
 
     protected $casts = [
@@ -57,5 +59,10 @@ class Website extends Model
     public function managingCrew(): BelongsTo
     {
         return $this->belongsTo(Crew::class, 'managing_crew_id');
+    }
+
+    public function crewExecution(): BelongsTo
+    {
+        return $this->belongsTo(CrewExecution::class);
     }
 }
