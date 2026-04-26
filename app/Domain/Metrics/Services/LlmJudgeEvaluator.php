@@ -28,6 +28,7 @@ class LlmJudgeEvaluator
         ?string $sourceModel = null,
         array $criteria = ['relevance', 'accuracy', 'completeness'],
         ?string $overrideJudgeModel = null,
+        ?string $userId = null,
     ): ?QualityEvaluationDTO {
         $judgeConfig = $this->resolveJudgeModel($teamId, $sourceModel, $overrideJudgeModel);
 
@@ -45,6 +46,7 @@ class LlmJudgeEvaluator
             systemPrompt: 'You are a quality evaluation judge. Evaluate the given AI output against the original prompt. Score each dimension from 0.0 to 1.0 and provide brief feedback. Return ONLY valid JSON (no markdown, no code fences) with: overall_score (float 0.0-1.0), dimensions (object mapping each criterion to a float score), feedback (string, max 3 sentences summarizing quality).',
             userPrompt: "Evaluate this output on the following criteria: {$criteriaList}\n\n--- ORIGINAL PROMPT ---\n{$prompt}\n\n--- AI OUTPUT ---\n{$output}",
             maxTokens: 512,
+            userId: $userId ?? Team::ownerIdFor($teamId),
             teamId: $teamId,
             purpose: 'quality_evaluation',
             temperature: 0.1,

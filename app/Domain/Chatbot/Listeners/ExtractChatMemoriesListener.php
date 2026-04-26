@@ -102,12 +102,21 @@ PROMPT;
                 systemPrompt: self::SYSTEM_PROMPT,
                 userPrompt: $prompt,
                 maxTokens: 512,
+                userId: Team::ownerIdFor($team->id),
                 teamId: $team->id,
                 purpose: 'barsy.chat.memory.extract',
                 temperature: 0.1,
             ));
 
-            $result = json_decode($response->content, true);
+            // Strip markdown code fences if present — same defensive parsing as
+            // ExtractAndStoreMemoriesAction.
+            $content = trim($response->content);
+            if (str_starts_with($content, '```')) {
+                $content = preg_replace('/^```(?:json)?\s*\n?/', '', $content);
+                $content = preg_replace('/\n?```\s*$/', '', $content);
+            }
+
+            $result = json_decode((string) $content, true);
 
             if (! is_array($result) || ! isset($result['facts']) || ! is_array($result['facts'])) {
                 Log::warning('ExtractChatMemoriesListener: invalid response format', [

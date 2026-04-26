@@ -84,6 +84,7 @@ PROMPT;
             userPrompt: $userPrompt,
             maxTokens: 8192,
             purpose: 'website_generation',
+            userId: Team::ownerIdFor($team->id),
             teamId: $team->id,
         ));
 
