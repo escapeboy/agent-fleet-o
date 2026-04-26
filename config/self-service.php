@@ -27,6 +27,10 @@ return [
         // by (experiment, status, updated_at). Short by design — state changes
         // invalidate via the composite key.
         'cache_seconds' => (int) env('SELF_SERVICE_DIAGNOSE_CACHE_SECONDS', 60),
+
+        // Replay history cap — last N replay results stored on the
+        // WorkflowSnapshot.metadata.replays array. JSONB-safe upper bound.
+        'replay_history_cap' => (int) env('SELF_SERVICE_REPLAY_HISTORY_CAP', 5),
     ],
 
     'dashboard' => [

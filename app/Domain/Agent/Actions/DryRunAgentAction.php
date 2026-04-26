@@ -6,6 +6,8 @@ namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Services\AgentPromptCompiler;
+use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -99,6 +101,32 @@ final class DryRunAgentAction
             'tokens_output' => $response->usage->completionTokens,
             'override_used' => $systemPromptOverride !== null,
         ]);
+
+        try {
+            $ocsf = OcsfMapper::classify('agent.dry_run');
+            AuditEntry::create([
+                'team_id' => $agent->team_id,
+                'user_id' => $userId,
+                'event' => 'agent.dry_run',
+                'ocsf_class_uid' => $ocsf['class_uid'],
+                'ocsf_severity_id' => $ocsf['severity_id'],
+                'subject_type' => Agent::class,
+                'subject_id' => $agent->id,
+                'properties' => [
+                    'provider' => $response->provider,
+                    'model' => $response->model,
+                    'latency_ms' => $latencyMs,
+                    'cost_credits' => $response->usage->costCredits,
+                    'tokens_input' => $response->usage->promptTokens,
+                    'tokens_output' => $response->usage->completionTokens,
+                    'override_used' => $systemPromptOverride !== null,
+                    'input_length' => mb_strlen($userMessage),
+                ],
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable) {
+            // Audit logging failures must not break the dry-run response.
+        }
 
         return [
             'agent_id' => $agent->id,

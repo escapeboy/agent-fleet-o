@@ -187,6 +187,41 @@
                             <pre class="max-h-64 overflow-auto whitespace-pre-wrap text-sm text-emerald-900">{{ $replayResult['output'] ?? '' }}</pre>
                         </div>
                     @endif
+
+                    @php
+                        $priorReplays = collect(($selectedSnapshot['metadata'] ?? [])['replays'] ?? []);
+                        // Drop the most recent if it matches the current $replayResult
+                        // to avoid showing the same output twice in the modal.
+                        if ($replayResult && $priorReplays->isNotEmpty()) {
+                            $latest = $priorReplays->first();
+                            if (($latest['output'] ?? '') === ($replayResult['output'] ?? '')) {
+                                $priorReplays = $priorReplays->slice(1);
+                            }
+                        }
+                    @endphp
+                    @if($priorReplays->isNotEmpty())
+                        <div x-data="{ open: false }" class="text-xs">
+                            <button type="button" @click="open = !open" class="text-gray-600 hover:text-gray-900">
+                                <i class="fa-solid fa-caret-right" x-show="!open"></i>
+                                <i class="fa-solid fa-caret-down" x-show="open"></i>
+                                {{ __('Prior replays') }} ({{ $priorReplays->count() }})
+                            </button>
+                            <div x-show="open" class="mt-2 space-y-2">
+                                @foreach($priorReplays as $prior)
+                                    <div class="rounded-lg border border-gray-200 bg-white p-2">
+                                        <div class="mb-1 text-[10px] uppercase tracking-wide text-gray-400">
+                                            {{ $prior['at'] ?? '' }} · {{ $prior['model'] ?? '' }} ·
+                                            {{ $prior['latency_ms'] ?? 0 }}ms · {{ $prior['cost_credits'] ?? 0 }}cr
+                                            @if($prior['override_used'] ?? false)
+                                                · {{ __('override') }}
+                                            @endif
+                                        </div>
+                                        <pre class="max-h-40 overflow-auto whitespace-pre-wrap text-xs text-gray-800">{{ $prior['output'] ?? '' }}</pre>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-3">

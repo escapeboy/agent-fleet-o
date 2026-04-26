@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Mcp\Tools\Experiment;
 
+use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
@@ -81,7 +83,37 @@ class ExperimentDiagnoseTool extends Tool
             $validated['locale'] ?? null,
         ));
 
+        $this->recordAudit($experiment, $payload);
+
         return Response::text(json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function recordAudit(Experiment $experiment, array $payload): void
+    {
+        try {
+            $ocsf = OcsfMapper::classify('experiment.diagnose');
+            AuditEntry::create([
+                'team_id' => $experiment->team_id,
+                'user_id' => optional(auth()->user())->id,
+                'event' => 'experiment.diagnose',
+                'ocsf_class_uid' => $ocsf['class_uid'],
+                'ocsf_severity_id' => $ocsf['severity_id'],
+                'subject_type' => Experiment::class,
+                'subject_id' => $experiment->id,
+                'properties' => [
+                    'root_cause' => $payload['root_cause'] ?? null,
+                    'matched_dictionary' => $payload['matched_dictionary'] ?? null,
+                    'confidence' => $payload['confidence'] ?? null,
+                    'experiment_status' => $experiment->status->value,
+                ],
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable) {
+            // Audit logging failures must not break the diagnose response.
+        }
     }
 
     /** @return array<string, mixed> */

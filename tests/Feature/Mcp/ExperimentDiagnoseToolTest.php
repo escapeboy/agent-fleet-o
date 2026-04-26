@@ -239,6 +239,33 @@ class ExperimentDiagnoseToolTest extends TestCase
         $this->assertNotEmpty($payload['recommended_actions']);
     }
 
+    public function test_diagnose_writes_audit_entry(): void
+    {
+        $experiment = Experiment::factory()
+            ->for($this->team)
+            ->for($this->user)
+            ->create(['status' => ExperimentStatus::BuildingFailed]);
+
+        ExperimentStage::factory()
+            ->for($this->team)
+            ->for($experiment)
+            ->create([
+                'stage' => StageType::Building,
+                'status' => StageStatus::Failed,
+                'output_snapshot' => ['error' => 'PrismException: HTTP 429'],
+                'completed_at' => now(),
+            ]);
+
+        $tool = new ExperimentDiagnoseTool;
+        $tool->handle(new Request(['experiment_id' => $experiment->id]));
+
+        $this->assertDatabaseHas('audit_entries', [
+            'event' => 'experiment.diagnose',
+            'subject_id' => $experiment->id,
+            'team_id' => $this->team->id,
+        ]);
+    }
+
     public function test_locale_parameter_changes_message_language(): void
     {
         $experiment = Experiment::factory()

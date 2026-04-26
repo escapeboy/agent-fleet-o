@@ -176,6 +176,21 @@ class AgentDryRunToolTest extends TestCase
         $this->assertSame('YOU ARE A PIRATE', $capturing->lastSystemPrompt);
     }
 
+    public function test_dry_run_writes_audit_entry(): void
+    {
+        $tool = new AgentDryRunTool;
+        $tool->handle(new Request([
+            'agent_id' => $this->agent->id,
+            'input_message' => 'Hello world',
+        ]));
+
+        $this->assertDatabaseHas('audit_entries', [
+            'event' => 'agent.dry_run',
+            'subject_id' => $this->agent->id,
+            'team_id' => $this->team->id,
+        ]);
+    }
+
     public function test_empty_input_message_validation_fails(): void
     {
         $tool = new AgentDryRunTool;

@@ -155,6 +155,52 @@ class WorkflowTimelineReplayTest extends TestCase
             ->assertSet('replayResult', null);
     }
 
+    public function test_successful_replay_writes_audit_entry(): void
+    {
+        $snapshot = $this->makeStepAndSnapshot($this->agent->id, ['user_message' => 'hi']);
+
+        Livewire::test(WorkflowTimeline::class, ['experimentId' => $this->experiment->id])
+            ->call('openReplay', $snapshot->id)
+            ->call('executeReplay');
+
+        $this->assertDatabaseHas('audit_entries', [
+            'event' => 'experiment.replay',
+            'subject_type' => \App\Domain\Experiment\Models\WorkflowSnapshot::class,
+            'subject_id' => $snapshot->id,
+            'team_id' => $this->team->id,
+        ]);
+    }
+
+    public function test_successful_replay_persists_history_on_snapshot(): void
+    {
+        $snapshot = $this->makeStepAndSnapshot($this->agent->id, ['user_message' => 'hi']);
+
+        Livewire::test(WorkflowTimeline::class, ['experimentId' => $this->experiment->id])
+            ->call('openReplay', $snapshot->id)
+            ->call('executeReplay');
+
+        $snapshot->refresh();
+        $this->assertIsArray($snapshot->metadata['replays'] ?? null);
+        $this->assertCount(1, $snapshot->metadata['replays']);
+        $this->assertStringContainsString('stub-replay', $snapshot->metadata['replays'][0]['output']);
+    }
+
+    public function test_replay_history_caps_at_configured_limit(): void
+    {
+        config()->set('self-service.diagnose.replay_history_cap', 3);
+
+        $snapshot = $this->makeStepAndSnapshot($this->agent->id, ['user_message' => 'hi']);
+
+        for ($i = 0; $i < 5; $i++) {
+            Livewire::test(WorkflowTimeline::class, ['experimentId' => $this->experiment->id])
+                ->call('openReplay', $snapshot->id)
+                ->call('executeReplay');
+        }
+
+        $snapshot->refresh();
+        $this->assertCount(3, $snapshot->metadata['replays']);
+    }
+
     public function test_replay_uses_system_prompt_override_when_provided(): void
     {
         $snapshot = $this->makeStepAndSnapshot($this->agent->id, ['user_message' => 'hi']);

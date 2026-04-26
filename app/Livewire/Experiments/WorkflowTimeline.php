@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Experiments;
 
+use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\OcsfMapper;
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Models\WorkflowSnapshot;
 use App\Mcp\Tools\Agent\AgentDryRunTool;
@@ -154,6 +157,9 @@ class WorkflowTimeline extends Component
             }
 
             $this->replayResult = is_array($payload) ? $payload : null;
+
+            $this->recordReplayAudit();
+            $this->persistReplayHistory();
         } catch (\Throwable $e) {
             Log::warning('WorkflowTimeline: replay failed', [
                 'experiment_id' => $this->experimentId,
@@ -165,6 +171,97 @@ class WorkflowTimeline extends Component
             $this->replayError = 'Replay threw '.class_basename($e).'.';
         } finally {
             $this->replayInFlight = false;
+        }
+    }
+
+    /**
+     * Record the replay invocation in the team-scoped audit log so support
+     * can trace who replayed which snapshot and what the model returned.
+     */
+    private function recordReplayAudit(): void
+    {
+        try {
+            $experiment = Experiment::find($this->experimentId);
+            if (! $experiment) {
+                return;
+            }
+            $ocsf = OcsfMapper::classify('experiment.replay');
+            AuditEntry::create([
+                'team_id' => $experiment->team_id,
+                'user_id' => optional(auth()->user())->id,
+                'event' => 'experiment.replay',
+                'ocsf_class_uid' => $ocsf['class_uid'],
+                'ocsf_severity_id' => $ocsf['severity_id'],
+                'subject_type' => WorkflowSnapshot::class,
+                'subject_id' => $this->replayingFor,
+                'properties' => [
+                    'experiment_id' => $this->experimentId,
+                    'agent_id' => $this->replayAgentId,
+                    'override_used' => trim($this->replaySystemPromptOverride) !== '',
+                    'input_length' => mb_strlen($this->replayInput),
+                    'cost_credits' => $this->replayResult['cost_credits'] ?? null,
+                    'latency_ms' => $this->replayResult['latency_ms'] ?? null,
+                ],
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable) {
+            // Audit failures must not break the replay flow.
+        }
+    }
+
+    /**
+     * Append the latest replay result to WorkflowSnapshot.metadata.replays
+     * (capped at the last N entries so the JSONB cell doesn't grow without
+     * bound). Lets users see prior replays when re-opening the modal.
+     */
+    private function persistReplayHistory(): void
+    {
+        if ($this->replayingFor === '' || ! is_array($this->replayResult)) {
+            return;
+        }
+
+        try {
+            $snapshot = WorkflowSnapshot::find($this->replayingFor);
+            if (! $snapshot || $snapshot->experiment_id !== $this->experimentId) {
+                return;
+            }
+
+            $metadata = is_array($snapshot->metadata) ? $snapshot->metadata : [];
+            $history = $metadata['replays'] ?? [];
+            if (! is_array($history)) {
+                $history = [];
+            }
+
+            array_unshift($history, [
+                'at' => now()->toIso8601String(),
+                'user_id' => optional(auth()->user())->id,
+                'agent_id' => $this->replayAgentId,
+                'override_used' => trim($this->replaySystemPromptOverride) !== '',
+                'output' => mb_substr((string) ($this->replayResult['output'] ?? ''), 0, 2000),
+                'cost_credits' => $this->replayResult['cost_credits'] ?? null,
+                'latency_ms' => $this->replayResult['latency_ms'] ?? null,
+                'tokens_input' => $this->replayResult['tokens_input'] ?? null,
+                'tokens_output' => $this->replayResult['tokens_output'] ?? null,
+                'model' => $this->replayResult['model'] ?? null,
+                'provider' => $this->replayResult['provider'] ?? null,
+            ]);
+
+            $cap = (int) config('self-service.diagnose.replay_history_cap', 5);
+            $history = array_slice($history, 0, max(1, $cap));
+
+            $metadata['replays'] = $history;
+            $snapshot->update(['metadata' => $metadata]);
+
+            // Refresh the in-memory selectedSnapshot so the modal can render
+            // the updated history without a full page reload.
+            if ($this->selectedSnapshot && ($this->selectedSnapshot['id'] ?? null) === $snapshot->id) {
+                $this->selectedSnapshot['metadata'] = $metadata;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('WorkflowTimeline: failed to persist replay history', [
+                'snapshot_id' => $this->replayingFor,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
