@@ -56,6 +56,7 @@ class ValidateTaskOutputAction
             systemPrompt: $systemPrompt,
             userPrompt: $userPrompt,
             maxTokens: 2048,
+            userId: $execution->resolveUserId(),
             teamId: $execution->team_id,
             agentId: $qaAgent->id,
             purpose: 'crew.validate_task',

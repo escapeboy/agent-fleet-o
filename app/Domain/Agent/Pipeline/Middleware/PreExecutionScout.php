@@ -101,6 +101,7 @@ class PreExecutionScout
             systemPrompt: $systemPrompt,
             userPrompt: "Task:\n".mb_substr($inputText, 0, 2000),
             maxTokens: 256,
+            userId: $ctx->userId,
             teamId: $ctx->teamId,
             agentId: $ctx->agent->id,
             purpose: 'agent.scout_phase',

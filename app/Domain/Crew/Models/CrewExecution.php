@@ -97,4 +97,27 @@ class CrewExecution extends Model
     {
         return $this->total_cost_credits;
     }
+
+    /**
+     * Derive the originating user for this run. Required by AiRequestDTO::userId
+     * so claude-code-vps gateways can find the user via User::find(). Prefers
+     * the linked experiment's owner; falls back to the team's owner for
+     * standalone crew runs.
+     */
+    public function resolveUserId(): ?string
+    {
+        if ($this->experiment_id) {
+            $userId = Experiment::withoutGlobalScopes()
+                ->where('id', $this->experiment_id)
+                ->value('user_id');
+
+            if ($userId) {
+                return $userId;
+            }
+        }
+
+        return \App\Domain\Shared\Models\Team::withoutGlobalScopes()
+            ->where('id', $this->team_id)
+            ->value('owner_id');
+    }
 }
