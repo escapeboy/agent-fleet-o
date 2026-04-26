@@ -98,11 +98,31 @@
                                             {{ $action['label'] ?? '' }}
                                         </button>
 
+                                    @elseif(($action['kind'] ?? '') === 'tool' && $tierGate === 'safe')
+                                        {{-- P1 inline recovery: safe-tier tool actions execute directly,
+                                             bypassing the assistant for one-click retry. The Livewire method
+                                             enforces an explicit allowlist of tools that may run this way. --}}
+                                        <button
+                                            wire:click="executeRecoveryAction(@js($action['target'] ?? ''), @js($action['params'] ?? []))"
+                                            wire:loading.attr="disabled"
+                                            wire:target="executeRecoveryAction"
+                                            class="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                                        >
+                                            <span wire:loading.remove wire:target="executeRecoveryAction">
+                                                @if(!empty($action['icon']))
+                                                    <i class="fa-solid {{ $action['icon'] }}"></i>
+                                                @endif
+                                                {{ $action['label'] ?? '' }}
+                                            </span>
+                                            <span wire:loading wire:target="executeRecoveryAction">
+                                                <i class="fa-solid fa-spinner fa-spin"></i>
+                                                {{ __('Running...') }}
+                                            </span>
+                                        </button>
+
                                     @elseif(($action['kind'] ?? '') === 'tool')
-                                        {{-- For P0, tool-kind buttons funnel into the assistant with a clear ask
-                                             describing the desired tool + params. The assistant has all MCP tools
-                                             and the right authorization gating. Direct tool execution from this
-                                             card is deferred to P1 to avoid bypassing the role tiers. --}}
+                                        {{-- config / destructive tool actions still funnel into the assistant
+                                             so the existing role-tier ladder gates execution. --}}
                                         @php
                                             $toolPrompt = sprintf(
                                                 'Please call the %s MCP tool with these arguments: %s',

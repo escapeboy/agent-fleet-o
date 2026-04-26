@@ -483,6 +483,11 @@
             </div>
         </div>
 
+        {{-- SLA Panel — last 7 days success / latency / cost / health score --}}
+        <div class="mb-4">
+            <livewire:agents.agent-sla-panel :agent="$agent" :key="'sla-'.$agent->id" />
+        </div>
+
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">

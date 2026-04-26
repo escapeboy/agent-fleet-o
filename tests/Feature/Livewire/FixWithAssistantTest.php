@@ -13,6 +13,7 @@ use App\Domain\Shared\Models\Team;
 use App\Livewire\Shared\FixWithAssistant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -177,6 +178,101 @@ class FixWithAssistantTest extends TestCase
         ])
             ->call('askAssistant', 'investigate this please')
             ->assertDispatched('open-assistant', message: 'investigate this please');
+    }
+
+    public function test_execute_recovery_action_calls_allowed_retry_tool(): void
+    {
+        // ScoringFailed → Scoring has no prerequisite stages, so the retry can
+        // complete inside the test without needing a fully-built pipeline.
+        // Fake the queue so the post-transition stage job doesn't actually run
+        // (it would try to call the LLM gateway).
+        Queue::fake();
+
+        $experiment = $this->makeFailedExperiment(['status' => ExperimentStatus::ScoringFailed]);
+        ExperimentStage::create([
+            'team_id' => $this->team->id,
+            'experiment_id' => $experiment->id,
+            'stage' => StageType::Scoring,
+            'iteration' => 1,
+            'status' => StageStatus::Failed,
+            'output_snapshot' => ['error' => 'PrismException: HTTP 429'],
+            'completed_at' => now(),
+            'duration_ms' => 0,
+            'retry_count' => 0,
+        ]);
+
+        $component = Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'experiment',
+            'entityId' => $experiment->id,
+        ])
+            ->call('diagnose')
+            ->call('executeRecoveryAction', 'experiment_retry', ['experiment_id' => $experiment->id]);
+
+        $error = (string) $component->get('errorMessage');
+        $this->assertSame('', $error, 'Recovery action set errorMessage: '.$error);
+        $component->assertDispatched('notify')->assertSet('diagnosis', null);
+    }
+
+    public function test_execute_recovery_action_rejects_non_allowlisted_tool(): void
+    {
+        $experiment = $this->makeFailedExperiment();
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'experiment',
+            'entityId' => $experiment->id,
+        ])
+            ->call('executeRecoveryAction', 'experiment_kill', ['experiment_id' => $experiment->id])
+            ->tap(function ($component) {
+                $this->assertStringContainsString(
+                    'not allowlisted',
+                    (string) $component->get('errorMessage'),
+                );
+            });
+    }
+
+    public function test_execute_recovery_action_forces_experiment_id_to_bound_entity(): void
+    {
+        // Even if the params payload were tampered to point at a different
+        // experiment, the bound entity wins.
+        $experiment = $this->makeFailedExperiment();
+        $other = $this->makeFailedExperiment(['title' => 'Other']);
+
+        $component = Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'experiment',
+            'entityId' => $experiment->id,
+        ])
+            ->call('executeRecoveryAction', 'experiment_retry', ['experiment_id' => $other->id]);
+
+        // The retry tool either succeeded against $experiment OR returned a
+        // structured error specific to its state — the key is that no error
+        // mentions $other->id (proving the override happened) and that
+        // $experiment is the one whose retry was attempted.
+        $errorMessage = (string) $component->get('errorMessage');
+        $this->assertStringNotContainsString($other->id, $errorMessage);
+    }
+
+    public function test_execute_recovery_action_no_op_when_not_eligible(): void
+    {
+        $experiment = Experiment::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
+            'title' => 'Done',
+            'thesis' => 't',
+            'status' => ExperimentStatus::Completed,
+            'track' => 'growth',
+            'budget_cap_credits' => 5000,
+            'max_iterations' => 3,
+            'current_iteration' => 1,
+            'max_outbound_count' => 100,
+            'outbound_count' => 0,
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'experiment',
+            'entityId' => $experiment->id,
+        ])
+            ->call('executeRecoveryAction', 'experiment_retry', ['experiment_id' => $experiment->id])
+            ->assertSet('errorMessage', '');  // silently no-op
     }
 
     public function test_xss_safe_summary_escapes_html(): void

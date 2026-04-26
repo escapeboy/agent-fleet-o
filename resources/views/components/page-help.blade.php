@@ -1,6 +1,8 @@
 @php
     $routeName = Route::currentRouteName();
-    $help = config("page-help.{$routeName}");
+    $routeParams = Route::current()?->parameters() ?? [];
+    $help = app(\App\Domain\Shared\Services\PageHelpResolver::class)
+        ->resolve((string) $routeName, $routeParams);
 @endphp
 
 @if($help)
