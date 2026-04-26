@@ -483,6 +483,11 @@
             </div>
         </div>
 
+        {{-- Fix-with-assistant card (renders when circuit breaker is open or agent is disabled) --}}
+        <div class="mb-4">
+            <x-fix-with-assistant entity-type="agent" :entity-id="$agent->id" />
+        </div>
+
         {{-- SLA Panel — last 7 days success / latency / cost / health score --}}
         <div class="mb-4">
             <livewire:agents.agent-sla-panel :agent="$agent" :key="'sla-'.$agent->id" />

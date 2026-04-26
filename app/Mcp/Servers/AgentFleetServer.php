@@ -21,6 +21,7 @@ use App\Mcp\Tools\Agent\AgentConstraintTemplatesTool;
 use App\Mcp\Tools\Agent\AgentCostsTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
+use App\Mcp\Tools\Agent\AgentDryRunTool;
 use App\Mcp\Tools\Agent\AgentExecutionsListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
@@ -613,6 +614,7 @@ class AgentFleetServer extends Server
         AgentFeedbackListTool::class,
         AgentFeedbackStatsTool::class,
         AgentDeleteTool::class,
+        AgentDryRunTool::class,
         AgentConfigHistoryTool::class,
         AgentRollbackConfigTool::class,
         AgentRuntimeStateTool::class,

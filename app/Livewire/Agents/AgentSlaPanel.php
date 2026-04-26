@@ -61,9 +61,11 @@ class AgentSlaPanel extends Component
             return;
         }
 
+        $ttl = (int) config('agent-sla.cache_ttl_seconds', 300);
+
         $this->sla = Cache::remember(
             "agent_sla:{$this->agentId}:{$teamId}",
-            300,
+            $ttl,
             fn () => $this->compute($teamId),
         );
     }
@@ -85,7 +87,8 @@ class AgentSlaPanel extends Component
      */
     private function compute(string $teamId): array
     {
-        $cutoff = now()->subDays(7);
+        $periodDays = (int) config('agent-sla.period_days', 7);
+        $cutoff = now()->subDays(max(1, $periodDays));
 
         $executions = AgentExecution::withoutGlobalScopes()
             ->where('agent_id', $this->agentId)
@@ -102,7 +105,7 @@ class AgentSlaPanel extends Component
                 'latency_p95_ms' => null,
                 'avg_cost_credits' => null,
                 'health_score' => null,
-                'period_days' => 7,
+                'period_days' => $periodDays,
             ];
         }
 
@@ -128,30 +131,45 @@ class AgentSlaPanel extends Component
             'latency_p95_ms' => $latencyP95,
             'avg_cost_credits' => $avgCost,
             'health_score' => $healthScore,
-            'period_days' => 7,
+            'period_days' => $periodDays,
         ];
     }
 
     /**
-     * 0-1 health score blending success rate (60%), latency (20%), cost (20%).
+     * 0-1 health score blending success rate, latency, and cost. Weights and
+     * thresholds are externalised in config/agent-sla.php; defaults reflect
+     * the P1 hand-tuned heuristics.
      *
-     * Latency: 100% under 5s, linearly degrading to 0% at 60s.
-     * Cost: 100% under 50 credits, linearly degrading to 0% at 1000 credits.
-     * These are P1 heuristic thresholds, revisit with real baselines.
+     * Linear degradation: between healthy_threshold and degraded_threshold a
+     * component scores 1.0 down to 0.0, clamped at the bounds.
      */
     private function scoreHealth(float $successPct, ?int $latencyP95Ms, ?int $avgCost): float
     {
+        $weights = [
+            'success' => (float) config('agent-sla.weights.success', 0.6),
+            'latency' => (float) config('agent-sla.weights.latency', 0.2),
+            'cost' => (float) config('agent-sla.weights.cost', 0.2),
+        ];
+
+        $latencyHealthy = (int) config('agent-sla.latency.healthy_ms', 5000);
+        $latencyDegraded = max($latencyHealthy + 1, (int) config('agent-sla.latency.degraded_ms', 60000));
+
+        $costHealthy = (int) config('agent-sla.cost.healthy_credits', 50);
+        $costDegraded = max($costHealthy + 1, (int) config('agent-sla.cost.degraded_credits', 1000));
+
         $successScore = $successPct / 100.0;
 
         $latencyScore = $latencyP95Ms === null
             ? 1.0
-            : max(0.0, min(1.0, 1 - (($latencyP95Ms - 5000) / 55000)));
+            : max(0.0, min(1.0, 1 - (($latencyP95Ms - $latencyHealthy) / ($latencyDegraded - $latencyHealthy))));
 
         $costScore = $avgCost === null
             ? 1.0
-            : max(0.0, min(1.0, 1 - (($avgCost - 50) / 950)));
+            : max(0.0, min(1.0, 1 - (($avgCost - $costHealthy) / ($costDegraded - $costHealthy))));
 
-        $weighted = ($successScore * 0.6) + ($latencyScore * 0.2) + ($costScore * 0.2);
+        $weighted = ($successScore * $weights['success'])
+            + ($latencyScore * $weights['latency'])
+            + ($costScore * $weights['cost']);
 
         return round($weighted, 2);
     }

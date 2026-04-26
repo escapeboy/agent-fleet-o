@@ -6,6 +6,8 @@ namespace App\Domain\Shared\Services;
 
 use App\Mcp\ErrorCode;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 
 /**
  * Translates technical exception strings into customer-readable diagnoses
@@ -74,6 +76,10 @@ final class ErrorTranslator
 
         [$code, $entry, $matched] = $this->matchDictionary($technicalMessage, $dictionary);
 
+        if (! $matched) {
+            $this->recordUnmatched($technicalMessage, $placeholders);
+        }
+
         $mcpCode = $this->resolveMcpCode($entry['mcp_code'] ?? null);
         $message = $this->localizedString($entry['message'] ?? null, $locale, $technicalMessage);
         $actions = $this->buildActions($entry['actions'] ?? [], $locale, $placeholders);
@@ -87,6 +93,51 @@ final class ErrorTranslator
             mcpErrorCode: $mcpCode,
             retryable: $entry['retryable'] ?? $mcpCode->isRetryable(),
         );
+    }
+
+    /**
+     * Record a dictionary miss so future sprints can harvest the most common
+     * unmatched patterns from prod and expand the dictionary.
+     *
+     * Two surfaces:
+     *   - Structured log entry (always): channel-controllable via Laravel logging.
+     *   - Redis hash counter (when 'error-translations.telemetry.enabled' is true,
+     *     default ON): per-team `error_translator:unmatched:{teamId}` HASH where
+     *     the field is a stable hash of the technical message and the value is a
+     *     hit count. A 30-day TTL keeps the set bounded.
+     *
+     * @param  array<string, string>  $placeholders
+     */
+    private function recordUnmatched(string $technicalMessage, array $placeholders): void
+    {
+        try {
+            Log::info('error_translator.unmatched', [
+                'technical_message' => mb_substr($technicalMessage, 0, 500),
+                'team_id' => $placeholders['team_id'] ?? null,
+                'experiment_id' => $placeholders['experiment_id'] ?? null,
+            ]);
+        } catch (\Throwable) {
+            // Telemetry must never break translation.
+        }
+
+        if (! (bool) config('error-translations.telemetry.enabled', true)) {
+            return;
+        }
+
+        try {
+            $teamId = (string) ($placeholders['team_id'] ?? 'unknown');
+            $field = sha1(mb_substr($technicalMessage, 0, 200));
+            $key = 'error_translator:unmatched:'.$teamId;
+
+            $connection = (string) config('error-translations.telemetry.redis_connection', 'cache');
+            $redis = Redis::connection($connection);
+
+            $redis->hincrby($key, $field, 1);
+            // 30-day TTL keeps the set bounded; refreshed on every hit.
+            $redis->expire($key, 60 * 60 * 24 * 30);
+        } catch (\Throwable) {
+            // Redis unavailable / not configured — skip silently.
+        }
     }
 
     /**

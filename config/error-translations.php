@@ -34,6 +34,22 @@ declare(strict_types=1);
 
 return [
 
+    /*
+    |--------------------------------------------------------------------------
+    | Telemetry
+    |--------------------------------------------------------------------------
+    |
+    | When ErrorTranslator falls back to the 'unknown' bucket, it logs and
+    | (if enabled) increments a per-team Redis hash counter keyed by a hash
+    | of the technical message. Lets future sprints harvest the most common
+    | unmatched patterns from prod and expand the dictionary.
+    |
+    */
+    'telemetry' => [
+        'enabled' => env('ERROR_TRANSLATOR_TELEMETRY', true),
+        'redis_connection' => env('ERROR_TRANSLATOR_REDIS_CONNECTION', 'cache'),
+    ],
+
     // ── Rate limit / resource exhaustion ───────────────────────────────
     'rate_limit' => [
         'patterns' => [

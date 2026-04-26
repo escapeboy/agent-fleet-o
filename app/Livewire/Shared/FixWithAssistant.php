@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Livewire\Shared;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Project\Enums\ProjectStatus;
+use App\Domain\Project\Models\Project;
 use App\Mcp\Tools\Experiment\ExperimentDiagnoseTool;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +29,7 @@ use Livewire\Component;
  */
 class FixWithAssistant extends Component
 {
-    /** Currently only 'experiment' supported in P0. */
+    /** Supported entity types: 'experiment', 'project', 'agent'. */
     #[Locked]
     public string $entityType = '';
 
@@ -61,23 +64,12 @@ class FixWithAssistant extends Component
         $this->diagnosed = true;
 
         try {
-            $tool = app(ExperimentDiagnoseTool::class);
-            $response = $tool->handle(new Request([
-                'experiment_id' => $this->entityId,
-                'locale' => app()->getLocale(),
-            ]));
-
-            $payload = json_decode((string) $response->content(), true);
-
-            if ($response->isError()) {
-                $this->errorMessage = is_array($payload) && isset($payload['error']['message'])
-                    ? (string) $payload['error']['message']
-                    : 'Diagnosis failed.';
-
-                return;
-            }
-
-            $this->diagnosis = is_array($payload) ? $payload : null;
+            $this->diagnosis = match ($this->entityType) {
+                'experiment' => $this->diagnoseExperiment(),
+                'project' => $this->diagnoseProject(),
+                'agent' => $this->diagnoseAgent(),
+                default => null,
+            };
         } catch (\Throwable $e) {
             Log::warning('FixWithAssistant: diagnose failed', [
                 'entity_type' => $this->entityType,
@@ -86,6 +78,190 @@ class FixWithAssistant extends Component
             ]);
             $this->errorMessage = 'We could not diagnose this issue right now. Please try again or open the assistant manually.';
         }
+    }
+
+    /** @return array<string, mixed>|null */
+    private function diagnoseExperiment(): ?array
+    {
+        $tool = app(ExperimentDiagnoseTool::class);
+        $response = $tool->handle(new Request([
+            'experiment_id' => $this->entityId,
+            'locale' => app()->getLocale(),
+        ]));
+
+        $payload = json_decode((string) $response->content(), true);
+
+        if ($response->isError()) {
+            $this->errorMessage = is_array($payload) && isset($payload['error']['message'])
+                ? (string) $payload['error']['message']
+                : 'Diagnosis failed.';
+
+            return null;
+        }
+
+        return is_array($payload) ? $payload : null;
+    }
+
+    /**
+     * Lightweight project diagnosis. Project failures are state-driven (paused
+     * for budget, archived) rather than exception-driven, so we don't need
+     * ErrorTranslator — a small switch on status produces the right summary
+     * and recommended actions.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function diagnoseProject(): ?array
+    {
+        $project = Project::find($this->entityId);
+        if (! $project) {
+            return null;
+        }
+
+        $isBg = str_starts_with(app()->getLocale(), 'bg');
+
+        if ($project->status === ProjectStatus::Paused) {
+            return [
+                'project_id' => $project->id,
+                'root_cause' => 'project_paused',
+                'summary' => $isBg
+                    ? 'Проектът е на пауза — планираните runs са спрени, докато не го стартираш отново.'
+                    : 'This project is paused — scheduled runs are blocked until you resume it.',
+                'evidence' => [
+                    ['kind' => 'project_status', 'status' => $project->status->value],
+                ],
+                'recommended_actions' => [
+                    [
+                        'kind' => 'route',
+                        'label' => $isBg ? 'Отвори проекта' : 'Open project',
+                        'target' => 'projects.show',
+                        'tier' => 'safe',
+                        'icon' => 'fa-arrow-up-right-from-square',
+                        'params' => ['project' => $project->id],
+                    ],
+                    [
+                        'kind' => 'route',
+                        'label' => $isBg ? 'Зареди кредити' : 'Top up credits',
+                        'target' => 'billing',
+                        'tier' => 'config',
+                        'icon' => 'fa-credit-card',
+                    ],
+                ],
+                'confidence' => 0.85,
+                'retryable' => true,
+            ];
+        }
+
+        if ($project->status === ProjectStatus::Archived) {
+            return [
+                'project_id' => $project->id,
+                'root_cause' => 'project_archived',
+                'summary' => $isBg
+                    ? 'Проектът е архивиран — само за четене, не може да се реактивира.'
+                    : 'This project is archived — read-only and cannot be reactivated.',
+                'evidence' => [
+                    ['kind' => 'project_status', 'status' => $project->status->value],
+                ],
+                'recommended_actions' => [],
+                'confidence' => 1.0,
+                'retryable' => false,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Lightweight agent diagnosis. Surfaces circuit-breaker state and
+     * disabled-status with relevant recovery suggestions.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function diagnoseAgent(): ?array
+    {
+        $agent = Agent::with('circuitBreakerState')->find($this->entityId);
+        if (! $agent) {
+            return null;
+        }
+
+        $isBg = str_starts_with(app()->getLocale(), 'bg');
+        $cb = $agent->circuitBreakerState;
+
+        if ($cb !== null && in_array($cb->state, ['open', 'half_open'], true)) {
+            return [
+                'agent_id' => $agent->id,
+                'root_cause' => 'circuit_breaker_'.$cb->state,
+                'summary' => $isBg
+                    ? sprintf(
+                        'Circuit breaker за този агент е %s след %d поредни грешки. Новите runs са блокирани докато cooldown-ът изтече.',
+                        $cb->state === 'open' ? 'отворен' : 'полу-отворен',
+                        (int) ($cb->failure_count ?? 0),
+                    )
+                    : sprintf(
+                        'Circuit breaker for this agent is %s after %d consecutive failures. New runs are blocked until the cooldown expires.',
+                        $cb->state,
+                        (int) ($cb->failure_count ?? 0),
+                    ),
+                'evidence' => [
+                    [
+                        'kind' => 'circuit_breaker',
+                        'state' => $cb->state,
+                        'failure_count' => $cb->failure_count,
+                        'opened_at' => $cb->opened_at?->toIso8601String(),
+                    ],
+                ],
+                'recommended_actions' => [
+                    [
+                        'kind' => 'assistant',
+                        'label' => $isBg ? 'Питай асистента' : 'Investigate with assistant',
+                        'target' => sprintf(
+                            'Agent %s has its circuit breaker %s after %d failures. Investigate the recent failed experiments and recommend a fix.',
+                            $agent->id,
+                            $cb->state,
+                            (int) ($cb->failure_count ?? 0),
+                        ),
+                        'tier' => 'safe',
+                        'icon' => 'fa-magnifying-glass',
+                    ],
+                    [
+                        'kind' => 'route',
+                        'label' => $isBg ? 'Настройки на агента' : 'Agent settings',
+                        'target' => 'agents.show',
+                        'tier' => 'config',
+                        'icon' => 'fa-gear',
+                        'params' => ['agent' => $agent->id],
+                    ],
+                ],
+                'confidence' => 0.9,
+                'retryable' => true,
+            ];
+        }
+
+        if (method_exists($agent, 'isDisabled') && $agent->isDisabled()) {
+            return [
+                'agent_id' => $agent->id,
+                'root_cause' => 'agent_disabled',
+                'summary' => $isBg
+                    ? 'Агентът е изключен и няма да поеме нови задачи. Включи го отново когато си готов.'
+                    : 'This agent is disabled and will not pick up new work. Re-enable it when ready.',
+                'evidence' => [
+                    ['kind' => 'agent_status', 'status' => 'disabled'],
+                ],
+                'recommended_actions' => [
+                    [
+                        'kind' => 'route',
+                        'label' => $isBg ? 'Отвори агента' : 'Open agent',
+                        'target' => 'agents.show',
+                        'tier' => 'safe',
+                        'icon' => 'fa-arrow-up-right-from-square',
+                        'params' => ['agent' => $agent->id],
+                    ],
+                ],
+                'confidence' => 1.0,
+                'retryable' => false,
+            ];
+        }
+
+        return null;
     }
 
     /**
@@ -192,18 +368,51 @@ class FixWithAssistant extends Component
      */
     private function resolveEligibility(): bool
     {
-        if ($this->entityType !== 'experiment' || $this->entityId === '') {
+        if ($this->entityId === '') {
             return false;
         }
 
-        // TeamScope active in web context — find() respects tenant isolation.
+        return match ($this->entityType) {
+            'experiment' => $this->experimentEligible(),
+            'project' => $this->projectEligible(),
+            'agent' => $this->agentEligible(),
+            default => false,
+        };
+    }
+
+    private function experimentEligible(): bool
+    {
         $experiment = Experiment::find($this->entityId);
         if (! $experiment) {
             return false;
         }
-
         $status = $experiment->status;
 
         return $status->isFailed() || $status->value === 'paused';
+    }
+
+    private function projectEligible(): bool
+    {
+        $project = Project::find($this->entityId);
+        if (! $project) {
+            return false;
+        }
+
+        return in_array($project->status, [ProjectStatus::Paused, ProjectStatus::Archived], true);
+    }
+
+    private function agentEligible(): bool
+    {
+        $agent = Agent::with('circuitBreakerState')->find($this->entityId);
+        if (! $agent) {
+            return false;
+        }
+
+        $cb = $agent->circuitBreakerState;
+        if ($cb !== null && in_array($cb->state, ['open', 'half_open'], true)) {
+            return true;
+        }
+
+        return method_exists($agent, 'isDisabled') && $agent->isDisabled();
     }
 }

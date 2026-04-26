@@ -108,10 +108,122 @@ class FixWithAssistantTest extends TestCase
         $experiment = $this->makeFailedExperiment();
 
         Livewire::test(FixWithAssistant::class, [
-            'entityType' => 'project',  // not supported in P0
+            'entityType' => 'workflow',  // not supported
             'entityId' => $experiment->id,
         ])
             ->assertSet('eligible', false);
+    }
+
+    public function test_renders_for_paused_project(): void
+    {
+        $project = \App\Domain\Project\Models\Project::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
+            'title' => 'Paused',
+            'status' => \App\Domain\Project\Enums\ProjectStatus::Paused,
+            'project_type' => 'one_shot',
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'project',
+            'entityId' => $project->id,
+        ])->assertSet('eligible', true);
+    }
+
+    public function test_does_not_render_for_active_project(): void
+    {
+        $project = \App\Domain\Project\Models\Project::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
+            'title' => 'Active',
+            'status' => \App\Domain\Project\Enums\ProjectStatus::Active,
+            'project_type' => 'one_shot',
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'project',
+            'entityId' => $project->id,
+        ])->assertSet('eligible', false);
+    }
+
+    public function test_diagnose_paused_project_returns_state_driven_summary(): void
+    {
+        $project = \App\Domain\Project\Models\Project::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
+            'title' => 'Paused',
+            'status' => \App\Domain\Project\Enums\ProjectStatus::Paused,
+            'project_type' => 'one_shot',
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'project',
+            'entityId' => $project->id,
+        ])
+            ->call('diagnose')
+            ->tap(function ($component) {
+                $diagnosis = $component->get('diagnosis');
+                $this->assertIsArray($diagnosis);
+                $this->assertSame('project_paused', $diagnosis['root_cause']);
+                $this->assertNotEmpty($diagnosis['recommended_actions']);
+            });
+    }
+
+    public function test_renders_for_agent_with_open_circuit_breaker(): void
+    {
+        $agent = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
+        \App\Infrastructure\AI\Models\CircuitBreakerState::create([
+            'team_id' => $this->team->id,
+            'agent_id' => $agent->id,
+            'state' => 'open',
+            'failure_count' => 5,
+            'success_count' => 0,
+            'cooldown_seconds' => 60,
+            'failure_threshold' => 5,
+            'opened_at' => now(),
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'agent',
+            'entityId' => $agent->id,
+        ])->assertSet('eligible', true);
+    }
+
+    public function test_does_not_render_for_healthy_agent(): void
+    {
+        $agent = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'agent',
+            'entityId' => $agent->id,
+        ])->assertSet('eligible', false);
+    }
+
+    public function test_diagnose_agent_with_circuit_breaker_returns_summary(): void
+    {
+        $agent = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
+        \App\Infrastructure\AI\Models\CircuitBreakerState::create([
+            'team_id' => $this->team->id,
+            'agent_id' => $agent->id,
+            'state' => 'open',
+            'failure_count' => 7,
+            'success_count' => 0,
+            'cooldown_seconds' => 60,
+            'failure_threshold' => 5,
+            'opened_at' => now(),
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'agent',
+            'entityId' => $agent->id,
+        ])
+            ->call('diagnose')
+            ->tap(function ($component) {
+                $diagnosis = $component->get('diagnosis');
+                $this->assertIsArray($diagnosis);
+                $this->assertSame('circuit_breaker_open', $diagnosis['root_cause']);
+                $this->assertStringContainsString('7', $diagnosis['summary']);
+            });
     }
 
     public function test_diagnose_populates_state(): void

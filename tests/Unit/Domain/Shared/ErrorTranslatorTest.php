@@ -202,6 +202,52 @@ class ErrorTranslatorTest extends TestCase
         $this->assertSame(ErrorCode::Internal, $result->mcpErrorCode);
     }
 
+    public function test_telemetry_entry_does_not_match_as_dictionary_pattern(): void
+    {
+        // Sanity: the 'telemetry' top-level config key must NOT be treated as
+        // an error pattern (it has no 'patterns' field, so should fall through).
+        $result = $this->translator->translateUncached(
+            'completely irrelevant text',
+            'en',
+        );
+
+        $this->assertNotSame('telemetry', $result->code);
+        $this->assertSame('unknown', $result->code);
+    }
+
+    public function test_unmatched_pattern_emits_log(): void
+    {
+        \Illuminate\Support\Facades\Log::shouldReceive('info')
+            ->once()
+            ->with('error_translator.unmatched', \Mockery::on(fn ($ctx) => is_array($ctx)
+                && isset($ctx['technical_message'])
+                && str_contains($ctx['technical_message'], 'NeverInDictionaryException')
+            ));
+
+        // Allow other log levels (warning/debug) to pass-through unmocked
+        \Illuminate\Support\Facades\Log::shouldReceive('warning')->andReturnNull();
+        \Illuminate\Support\Facades\Log::shouldReceive('debug')->andReturnNull();
+
+        // Disable Redis side to avoid hitting the connection in this test
+        config()->set('error-translations.telemetry.enabled', false);
+
+        $this->translator->translateUncached('NeverInDictionaryException: foo', 'en');
+    }
+
+    public function test_matched_pattern_does_not_emit_unmatched_log(): void
+    {
+        \Illuminate\Support\Facades\Log::shouldReceive('info')
+            ->withArgs(fn ($msg) => $msg === 'error_translator.unmatched')
+            ->never();
+        \Illuminate\Support\Facades\Log::shouldReceive('info')->andReturnNull();
+        \Illuminate\Support\Facades\Log::shouldReceive('warning')->andReturnNull();
+        \Illuminate\Support\Facades\Log::shouldReceive('debug')->andReturnNull();
+
+        config()->set('error-translations.telemetry.enabled', false);
+
+        $this->translator->translateUncached('PrismException: HTTP 429', 'en');
+    }
+
     public function test_to_array_output_shape(): void
     {
         $result = $this->translator->translateUncached('HTTP 429', 'en', ['experiment_id' => 'x']);

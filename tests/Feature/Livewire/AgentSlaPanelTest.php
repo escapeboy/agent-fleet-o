@@ -170,6 +170,43 @@ class AgentSlaPanelTest extends TestCase
             });
     }
 
+    public function test_health_score_respects_config_weights(): void
+    {
+        // Make latency the dominant weight and provide a slow-but-successful agent
+        config()->set('agent-sla.weights.success', 0.0);
+        config()->set('agent-sla.weights.latency', 1.0);
+        config()->set('agent-sla.weights.cost', 0.0);
+        config()->set('agent-sla.latency.healthy_ms', 1000);
+        config()->set('agent-sla.latency.degraded_ms', 2000);
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->makeExecution(['status' => 'success', 'duration_ms' => 10000, 'cost_credits' => 0]);
+        }
+        Cache::flush();
+
+        Livewire::test(AgentSlaPanel::class, ['agent' => $this->agent])
+            ->tap(function ($component) {
+                $score = $component->get('sla.health_score');
+                // All-fast latency budget exceeded → latency_score=0, weighted=0
+                $this->assertEqualsWithDelta(0.0, (float) $score, 0.05);
+            });
+    }
+
+    public function test_period_days_respects_config(): void
+    {
+        config()->set('agent-sla.period_days', 30);
+
+        // Execution from 20 days ago — should count under a 30-day window
+        $exec = $this->makeExecution();
+        $exec->created_at = now()->subDays(20);
+        $exec->saveQuietly();
+        Cache::flush();
+
+        Livewire::test(AgentSlaPanel::class, ['agent' => $this->agent])
+            ->assertSet('sla.total_runs', 1)
+            ->assertSet('sla.period_days', 30);
+    }
+
     public function test_refresh_recomputes(): void
     {
         $component = Livewire::test(AgentSlaPanel::class, ['agent' => $this->agent])

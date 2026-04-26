@@ -83,6 +83,13 @@
         </div>
     </div>
 
+    {{-- Fix-with-assistant card (only renders for paused or archived projects) --}}
+    @if(in_array($project->status, [\App\Domain\Project\Enums\ProjectStatus::Paused, \App\Domain\Project\Enums\ProjectStatus::Archived]))
+        <div class="mb-4">
+            <x-fix-with-assistant entity-type="project" :entity-id="$project->id" />
+        </div>
+    @endif
+
     {{-- Stats Cards --}}
     <div class="mb-6 grid grid-cols-5 gap-4">
         <div class="rounded-xl border border-gray-200 bg-white p-4">
