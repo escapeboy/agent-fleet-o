@@ -71,7 +71,12 @@ class ExperimentStateMachine
     {
         $maxIterations = $experiment->max_iterations ?? 10;
 
-        if ($experiment->current_iteration >= $maxIterations) {
+        // RunEvaluationStage::handleIterate increments current_iteration BEFORE
+        // calling transition->execute(toState: Iterating). So when current=N
+        // here, the experiment has just bumped to its N-th iteration cycle and
+        // is starting it — N == max_iterations is the LAST allowed cycle, not
+        // a violation. Throw only when we're truly past max (N > max).
+        if ($experiment->current_iteration > $maxIterations) {
             throw new InvalidArgumentException(
                 "Max iterations ({$maxIterations}) exceeded for experiment [{$experiment->id}].",
             );

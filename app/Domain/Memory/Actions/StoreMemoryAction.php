@@ -11,7 +11,6 @@ use App\Domain\Memory\Models\Memory;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 class StoreMemoryAction
 {
@@ -116,7 +115,19 @@ PROMPT;
         ?string $topic = null,
     ): ?Memory {
         $contentHash = hash('sha256', mb_strtolower(trim($chunk)));
-        $embedding = $this->generateEmbedding($chunk);
+        $embedding = $this->generateEmbedding($chunk, $teamId);
+
+        if ($embedding === null) {
+            // No usable embedding key — skip storage. The platform is BYOK;
+            // teams without an OpenAI/embedding credential simply won't have
+            // semantic memory. Log at DEBUG to avoid noise.
+            Log::debug('StoreMemoryAction: skipping chunk — no embedding key configured', [
+                'team_id' => $teamId,
+                'agent_id' => $agentId,
+            ]);
+
+            return null;
+        }
 
         // Write gate: check for duplicates before inserting
         $decision = $this->evaluateWriteGate($teamId, $agentId, $contentHash, $embedding);
@@ -232,7 +243,10 @@ PROMPT;
         $mergedContent = $this->mergeContent($existing->content, $newContent, $teamId, $agentId);
 
         if ($mergedContent && $mergedContent !== $existing->content) {
-            $mergedEmbedding = $this->generateEmbedding($mergedContent);
+            $mergedEmbedding = $this->generateEmbedding($mergedContent, $teamId);
+            if ($mergedEmbedding === null) {
+                return null;
+            }
             $mergedHash = hash('sha256', mb_strtolower(trim($mergedContent)));
 
             $existing->update([
@@ -394,22 +408,22 @@ PROMPT;
     }
 
     /**
-     * Generate embedding vector using PrismPHP.
+     * Generate embedding vector using PrismPHP, BYOK-aware.
      *
-     * @return string Vector string for pgvector (e.g. "[0.1,0.2,...]")
+     * @return string|null Vector string for pgvector (e.g. "[0.1,0.2,...]"),
+     *                     or null when no embedding key is reachable for this
+     *                     team. Caller is expected to skip storage gracefully.
      */
-    private function generateEmbedding(string $text): string
+    private function generateEmbedding(string $text, ?string $teamId): ?string
     {
-        $model = config('memory.embedding_model', 'text-embedding-3-small');
+        $service = new \App\Infrastructure\AI\Services\EmbeddingService(
+            provider: config('memory.embedding_provider', 'openai'),
+            model: config('memory.embedding_model', 'text-embedding-3-small'),
+        );
 
-        $response = Prism::embeddings()
-            ->using(config('memory.embedding_provider', 'openai'), $model)
-            ->fromInput($text)
-            ->asEmbeddings();
+        $vector = $service->embedForTeam($text, $teamId);
 
-        $vector = $response->embeddings[0]->embedding;
-
-        return '['.implode(',', $vector).']';
+        return $vector === null ? null : $service->formatForPgvector($vector);
     }
 }
 
