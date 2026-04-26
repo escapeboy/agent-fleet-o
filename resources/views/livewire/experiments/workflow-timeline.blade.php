@@ -49,11 +49,24 @@
             <div class="w-1/2">
                 @if($selectedSnapshot)
                     <div class="rounded-lg border border-gray-200 bg-white">
-                        <div class="border-b border-gray-200 px-4 py-3">
-                            <h4 class="text-sm font-semibold text-gray-900">
-                                Snapshot #{{ $selectedSnapshot['sequence'] }} — {{ str_replace('_', ' ', $selectedSnapshot['event_type']) }}
-                            </h4>
-                            <p class="text-xs text-gray-500">{{ $selectedSnapshot['created_at'] }}</p>
+                        <div class="flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-3">
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900">
+                                    Snapshot #{{ $selectedSnapshot['sequence'] }} — {{ str_replace('_', ' ', $selectedSnapshot['event_type']) }}
+                                </h4>
+                                <p class="text-xs text-gray-500">{{ $selectedSnapshot['created_at'] }}</p>
+                            </div>
+                            @if(!empty($selectedSnapshot['playbook_step_id']))
+                                <button
+                                    type="button"
+                                    wire:click="openReplay('{{ $selectedSnapshot['id'] }}')"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+                                    title="Run this step's agent against custom input without persisting an execution"
+                                >
+                                    <i class="fa-solid fa-flask"></i>
+                                    {{ __('Replay…') }}
+                                </button>
+                            @endif
                         </div>
 
                         <div class="divide-y divide-gray-100">
@@ -105,6 +118,102 @@
                         Select a snapshot to inspect
                     </div>
                 @endif
+            </div>
+        </div>
+    @endif
+
+    {{-- Replay modal — appears when openReplay() has populated $replayingFor --}}
+    @if($replayingFor !== '')
+        <div
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            wire:click.self="closeReplay"
+            x-data
+            @keydown.escape.window="$wire.closeReplay()"
+        >
+            <div class="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+                <div class="flex items-start justify-between border-b border-gray-200 px-5 py-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-900">{{ __('Replay snapshot with overrides') }}</h3>
+                        <p class="mt-0.5 text-xs text-gray-500">
+                            {{ __('Runs the agent against your input WITHOUT persisting any execution row, artifact, or AiRun. Costs LLM credits.') }}
+                        </p>
+                    </div>
+                    <button type="button" wire:click="closeReplay" class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-3 px-5 py-4">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-700">{{ __('Input message') }}</label>
+                        <textarea
+                            wire:model.live="replayInput"
+                            rows="4"
+                            class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm focus:border-primary-500 focus:ring-primary-500"
+                            placeholder="What should the agent respond to?"
+                        ></textarea>
+                    </div>
+
+                    <div x-data="{ open: false }">
+                        <button type="button" @click="open = !open" class="text-xs text-gray-600 hover:text-gray-900">
+                            <i class="fa-solid fa-caret-right" x-show="!open"></i>
+                            <i class="fa-solid fa-caret-down" x-show="open"></i>
+                            {{ __('System prompt override (optional)') }}
+                        </button>
+                        <textarea
+                            x-show="open"
+                            wire:model.live="replaySystemPromptOverride"
+                            rows="6"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white p-2 font-mono text-xs focus:border-primary-500 focus:ring-primary-500"
+                            placeholder="Leave blank to use the agent's saved system prompt."
+                        ></textarea>
+                    </div>
+
+                    @if($replayError !== '')
+                        <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                            {{ $replayError }}
+                        </div>
+                    @endif
+
+                    @if($replayResult)
+                        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                            <div class="mb-2 flex items-center justify-between text-xs text-emerald-800">
+                                <span>
+                                    {{ $replayResult['model'] ?? '' }} · {{ $replayResult['latency_ms'] ?? 0 }}ms ·
+                                    {{ ($replayResult['tokens_input'] ?? 0) }}+{{ ($replayResult['tokens_output'] ?? 0) }} tokens ·
+                                    {{ ($replayResult['cost_credits'] ?? 0) }} credits
+                                </span>
+                            </div>
+                            <pre class="max-h-64 overflow-auto whitespace-pre-wrap text-sm text-emerald-900">{{ $replayResult['output'] ?? '' }}</pre>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-3">
+                    <button
+                        type="button"
+                        wire:click="closeReplay"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                        {{ __('Close') }}
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="executeReplay"
+                        wire:loading.attr="disabled"
+                        wire:target="executeReplay"
+                        class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                        <span wire:loading.remove wire:target="executeReplay">
+                            <i class="fa-solid fa-flask"></i>
+                            {{ __('Replay') }}
+                        </span>
+                        <span wire:loading wire:target="executeReplay">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            {{ __('Replaying...') }}
+                        </span>
+                    </button>
+                </div>
             </div>
         </div>
     @endif

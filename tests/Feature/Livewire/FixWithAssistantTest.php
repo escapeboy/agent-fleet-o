@@ -274,6 +274,100 @@ class FixWithAssistantTest extends TestCase
             });
     }
 
+    public function test_renders_for_crew_with_recent_failed_task(): void
+    {
+        $crew = $this->makeCrewWithFailedTask('PrismException: HTTP 429');
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'crew',
+            'entityId' => $crew->id,
+        ])->assertSet('eligible', true);
+    }
+
+    public function test_does_not_render_for_crew_with_no_failures(): void
+    {
+        $crew = $this->makeCrew();
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'crew',
+            'entityId' => $crew->id,
+        ])->assertSet('eligible', false);
+    }
+
+    public function test_diagnose_crew_uses_error_translator(): void
+    {
+        $crew = $this->makeCrewWithFailedTask('PrismException: HTTP 429 rate limit');
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'crew',
+            'entityId' => $crew->id,
+        ])
+            ->call('diagnose')
+            ->tap(function ($component) {
+                $diagnosis = $component->get('diagnosis');
+                $this->assertIsArray($diagnosis);
+                $this->assertSame('rate_limit', $diagnosis['root_cause']);
+                $this->assertNotEmpty($diagnosis['recommended_actions']);
+            });
+    }
+
+    public function test_diagnose_crew_with_no_message(): void
+    {
+        $crew = $this->makeCrewWithFailedTask(null);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'crew',
+            'entityId' => $crew->id,
+        ])
+            ->call('diagnose')
+            ->tap(function ($component) {
+                $diagnosis = $component->get('diagnosis');
+                $this->assertIsArray($diagnosis);
+                $this->assertSame('crew_task_failure_no_message', $diagnosis['root_cause']);
+            });
+    }
+
+    private function makeCrew(): \App\Domain\Crew\Models\Crew
+    {
+        $coordinator = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
+        $qa = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
+
+        return \App\Domain\Crew\Models\Crew::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
+            'name' => 'Test crew '.bin2hex(random_bytes(3)),
+            'slug' => 'test-crew-'.bin2hex(random_bytes(3)),
+            'coordinator_agent_id' => $coordinator->id,
+            'qa_agent_id' => $qa->id,
+            'process_type' => 'sequential',
+            'status' => 'active',
+        ]);
+    }
+
+    private function makeCrewWithFailedTask(?string $errorMessage): \App\Domain\Crew\Models\Crew
+    {
+        $crew = $this->makeCrew();
+        $exec = \App\Domain\Crew\Models\CrewExecution::create([
+            'team_id' => $this->team->id,
+            'crew_id' => $crew->id,
+            'goal' => 'g',
+            'status' => \App\Domain\Crew\Enums\CrewExecutionStatus::Failed,
+        ]);
+        \App\Domain\Crew\Models\CrewTaskExecution::create([
+            'crew_execution_id' => $exec->id,
+            'agent_id' => $crew->coordinator_agent_id,
+            'title' => 'Failing task',
+            'description' => 'Test failing task',
+            'status' => \App\Domain\Crew\Enums\CrewTaskStatus::Failed,
+            'error_message' => $errorMessage,
+            'attempt_number' => 1,
+            'max_attempts' => 3,
+            'sort_order' => 1,
+        ]);
+
+        return $crew;
+    }
+
     public function test_diagnose_skill_with_empty_error_message_returns_no_message_branch(): void
     {
         $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();

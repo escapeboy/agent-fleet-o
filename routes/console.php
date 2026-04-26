@@ -26,6 +26,15 @@ Schedule::command('connectors:poll --driver=telegram')->everyMinute()->withoutOv
 Schedule::command('connectors:poll --driver=signal_protocol')->everyMinute()->withoutOverlapping(2);
 Schedule::command('connectors:poll --driver=matrix')->everyMinute()->withoutOverlapping(2);
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
+
+// Harvest unmatched ErrorTranslator patterns weekly so future dictionary
+// expansion is data-driven. Output is appended to a dedicated log file
+// for ops review and downstream pipeline processing.
+Schedule::command('error-translator:harvest --format=json')
+    ->weeklyOn(1, '08:30')
+    ->withoutOverlapping(15)
+    ->appendOutputTo(storage_path('logs/error-translator-harvest.log'));
+
 Schedule::command('audit:cleanup')->dailyAt('02:00');
 Schedule::command('worldmodel:rebuild')->dailyAt('02:15')->withoutOverlapping(60)->onOneServer();
 Schedule::command('signals:cleanup-bug-reports')->dailyAt('03:00');

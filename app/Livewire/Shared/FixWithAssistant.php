@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Livewire\Shared;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Enums\CrewTaskStatus;
+use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Models\Project;
@@ -32,7 +35,7 @@ use Livewire\Component;
  */
 class FixWithAssistant extends Component
 {
-    /** Supported entity types: 'experiment', 'project', 'agent', 'skill'. */
+    /** Supported entity types: 'experiment', 'project', 'agent', 'skill', 'crew'. */
     #[Locked]
     public string $entityType = '';
 
@@ -72,6 +75,7 @@ class FixWithAssistant extends Component
                 'project' => $this->diagnoseProject(),
                 'agent' => $this->diagnoseAgent(),
                 'skill' => $this->diagnoseSkill(),
+                'crew' => $this->diagnoseCrew(),
                 default => null,
             };
         } catch (\Throwable $e) {
@@ -172,6 +176,90 @@ class FixWithAssistant extends Component
         }
 
         return null;
+    }
+
+    /**
+     * Crew diagnosis: find the latest failed task across the crew's recent
+     * executions and route its error_message through ErrorTranslator. Crews
+     * are multi-task so we surface one failure at a time — the most recent
+     * one — and let the customer drill into the rest via the Executions tab.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function diagnoseCrew(): ?array
+    {
+        $crew = Crew::find($this->entityId);
+        if (! $crew) {
+            return null;
+        }
+
+        $latestFailedTask = CrewTaskExecution::query()
+            ->whereHas('crewExecution', fn ($q) => $q->where('crew_id', $crew->id)
+                ->where('team_id', $crew->team_id))
+            ->whereIn('status', [CrewTaskStatus::Failed, CrewTaskStatus::QaFailed])
+            ->where('created_at', '>=', now()->subDays(7))
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $latestFailedTask) {
+            return null;
+        }
+
+        $isBg = str_starts_with(app()->getLocale(), 'bg');
+        $errorMessage = (string) ($latestFailedTask->error_message ?? '');
+
+        if ($errorMessage === '') {
+            return [
+                'crew_id' => $crew->id,
+                'root_cause' => 'crew_task_failure_no_message',
+                'summary' => $isBg
+                    ? 'Една от задачите в crew-а се провали без записано съобщение. Прегледай Executions таб-а за повече детайли.'
+                    : 'A crew task failed with no recorded error message. Review the Executions tab for context.',
+                'evidence' => [
+                    [
+                        'kind' => 'crew_task',
+                        'task_id' => $latestFailedTask->id,
+                        'title' => $latestFailedTask->title,
+                        'status' => $latestFailedTask->status->value,
+                        'attempt_number' => $latestFailedTask->attempt_number,
+                        'created_at' => $latestFailedTask->created_at?->toIso8601String(),
+                    ],
+                ],
+                'recommended_actions' => [],
+                'confidence' => 0.4,
+                'retryable' => false,
+            ];
+        }
+
+        $translation = app(ErrorTranslator::class)->translate(
+            technicalMessage: $errorMessage,
+            locale: app()->getLocale(),
+            placeholders: [
+                'team_id' => (string) $crew->team_id,
+                'crew_id' => $crew->id,
+            ],
+        );
+
+        return [
+            'crew_id' => $crew->id,
+            'root_cause' => $translation->matched ? $translation->code : 'crew_unknown_failure',
+            'summary' => $translation->message,
+            'evidence' => [
+                [
+                    'kind' => 'crew_task',
+                    'task_id' => $latestFailedTask->id,
+                    'title' => $latestFailedTask->title,
+                    'status' => $latestFailedTask->status->value,
+                    'attempt_number' => $latestFailedTask->attempt_number,
+                    'created_at' => $latestFailedTask->created_at?->toIso8601String(),
+                ],
+            ],
+            'recommended_actions' => array_map(fn ($a) => $a->toArray(), $translation->actions),
+            'confidence' => $translation->matched ? 0.85 : 0.4,
+            'retryable' => $translation->retryable,
+            'mcp_error_code' => $translation->mcpErrorCode->value,
+            'matched_dictionary' => $translation->matched,
+        ];
     }
 
     /**
@@ -459,8 +547,24 @@ class FixWithAssistant extends Component
             'project' => $this->projectEligible(),
             'agent' => $this->agentEligible(),
             'skill' => $this->skillEligible(),
+            'crew' => $this->crewEligible(),
             default => false,
         };
+    }
+
+    private function crewEligible(): bool
+    {
+        $crew = Crew::find($this->entityId);
+        if (! $crew) {
+            return false;
+        }
+
+        return CrewTaskExecution::query()
+            ->whereHas('crewExecution', fn ($q) => $q->where('crew_id', $crew->id)
+                ->where('team_id', $crew->team_id))
+            ->whereIn('status', [CrewTaskStatus::Failed, CrewTaskStatus::QaFailed])
+            ->where('created_at', '>=', now()->subDays(7))
+            ->exists();
     }
 
     private function skillEligible(): bool
