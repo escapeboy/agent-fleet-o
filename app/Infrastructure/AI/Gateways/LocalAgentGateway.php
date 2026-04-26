@@ -2,13 +2,16 @@
 
 namespace App\Infrastructure\AI\Gateways;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Tool\Enums\ToolStatus;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
+use App\Infrastructure\AI\Services\ClaudeCodeMcpConfigBuilder;
 use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
 use App\Infrastructure\AI\Services\ClaudeCodeVpsGate;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
@@ -279,6 +282,12 @@ class LocalAgentGateway implements AiGatewayInterface
                 $args[] = '--model';
                 $args[] = $request->model;
             }
+
+            // Bridge any MCP tools the agent has attached so Claude Code can
+            // reach them via its own MCP protocol. Reads <HOME>/.claude.json
+            // automatically — HOME is the ephemeral workdir that gets wiped
+            // in finally{}, so the file is gone after this run.
+            $this->writeAgentMcpConfig($request, $workdir);
         }
 
         $env = [
@@ -460,6 +469,71 @@ class LocalAgentGateway implements AiGatewayInterface
         }
 
         @rmdir($path);
+    }
+
+    /**
+     * Write `<workdir>/.claude.json` with `mcpServers` translated from
+     * the agent's attached tools. Claude Code picks the file up because
+     * HOME is set to the workdir. The file is wiped along with the
+     * workdir in the surrounding finally block.
+     *
+     * Silent on failure — a missing config file just means the agent runs
+     * without MCP access (same as before this method existed).
+     */
+    private function writeAgentMcpConfig(AiRequestDTO $request, string $workdir): void
+    {
+        if (! $request->agentId) {
+            return;
+        }
+
+        try {
+            $agent = Agent::withoutGlobalScopes()->find($request->agentId);
+            if (! $agent) {
+                return;
+            }
+
+            // Bypass TeamScope on the relationship as well — VPS execution
+            // can run from queue/MCP contexts where the scope may resolve
+            // to a different team than the agent's, silently dropping tools.
+            $tools = $agent->tools()
+                ->withoutGlobalScopes()
+                ->where('tools.team_id', $agent->team_id)
+                ->where('tools.status', ToolStatus::Active->value)
+                ->get();
+
+            if ($tools->isEmpty()) {
+                return;
+            }
+
+            $config = app(ClaudeCodeMcpConfigBuilder::class)->build($tools);
+            if ($config === []) {
+                return;
+            }
+
+            $path = $workdir.'/.claude.json';
+            $bytes = @file_put_contents($path, json_encode($config, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+            if ($bytes === false) {
+                Log::warning('LocalAgentGateway: failed to write Claude Code MCP config file', [
+                    'agent_id' => $agent->id,
+                    'path' => $path,
+                ]);
+
+                return;
+            }
+            @chmod($path, 0600);
+
+            Log::info('LocalAgentGateway: wrote Claude Code MCP config for agent run', [
+                'agent_id' => $agent->id,
+                'team_id' => $request->teamId,
+                'tool_count' => count($config['mcpServers'] ?? []),
+                'tool_slugs' => array_keys($config['mcpServers'] ?? []),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: failed to write Claude Code MCP config', [
+                'agent_id' => $request->agentId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function recordVpsAudit(
