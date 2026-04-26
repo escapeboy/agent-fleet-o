@@ -89,7 +89,7 @@ class BuildWebsitePageJob implements ShouldQueue
 
             $website = Website::withoutGlobalScopes()->findOrFail($websiteId);
 
-            $html = $this->generatePageHtml($experiment->team_id, $website->name, $pageSpec, $this->allPages, $this->publicBaseUrl);
+            $html = $this->generatePageHtml($experiment->team_id, $experiment->user_id, $website->name, $pageSpec, $this->allPages, $this->publicBaseUrl);
 
             $page = app(CreateWebsitePageAction::class)->execute($website, [
                 'slug' => $pageSpec['slug'],
@@ -156,7 +156,7 @@ class BuildWebsitePageJob implements ShouldQueue
     /**
      * @param array<int, array{slug: string, title: string}> $allPages
      */
-    private function generatePageHtml(string $teamId, string $siteName, array $pageSpec, array $allPages = [], string $publicBaseUrl = ''): string
+    private function generatePageHtml(string $teamId, ?string $userId, string $siteName, array $pageSpec, array $allPages = [], string $publicBaseUrl = ''): string
     {
         $sections = implode(', ', $pageSpec['sections'] ?? ['hero', 'content', 'footer']);
 
@@ -179,6 +179,7 @@ class BuildWebsitePageJob implements ShouldQueue
             systemPrompt: 'You are a web developer. Generate clean, modern HTML with inline Tailwind CSS classes. Return ONLY the HTML body content, no <html>/<head>/<body> tags. Always include a consistent navigation header with links to all provided pages.',
             userPrompt: "Generate HTML for the '{$pageSpec['title']}' page of '{$siteName}' website.\nSections to include: {$sections}\nPage description: ".($pageSpec['meta_description'] ?? '').$navSpec,
             maxTokens: 2048,
+            userId: $userId,
             teamId: $teamId,
         ));
 

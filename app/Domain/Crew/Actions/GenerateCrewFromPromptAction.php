@@ -20,7 +20,7 @@ class GenerateCrewFromPromptAction
      *
      * @return array{crew_name: string, description: string, process_type: string, coordinator: array, qa_agent: array, workers: array, suggested_quality_threshold: float, reasoning: string}
      */
-    public function execute(string $goal, ?string $teamId = null): array
+    public function execute(string $goal, ?string $teamId = null, ?string $userId = null): array
     {
         $team = $teamId ? Team::find($teamId) : null;
         $resolved = $this->providerResolver->resolve(team: $team);
@@ -40,6 +40,7 @@ class GenerateCrewFromPromptAction
                 maxTokens: 2048,
                 temperature: 0.4,
                 purpose: 'crew.generate_from_prompt',
+                userId: $userId ?? Team::ownerIdFor($teamId),
                 teamId: $teamId,
             ));
 

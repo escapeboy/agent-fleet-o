@@ -128,4 +128,21 @@ class Team extends Model
     {
         return true;
     }
+
+    /**
+     * Look up the owner_id for a team without instantiating the model and
+     * without relying on TeamScope. Used as a userId fallback in actions
+     * that don't have an originating user context (e.g. team-default
+     * routing) — required by VPS gateway's userId check.
+     */
+    public static function ownerIdFor(?string $teamId): ?string
+    {
+        if (! $teamId) {
+            return null;
+        }
+
+        return self::withoutGlobalScopes()
+            ->where('id', $teamId)
+            ->value('owner_id');
+    }
 }

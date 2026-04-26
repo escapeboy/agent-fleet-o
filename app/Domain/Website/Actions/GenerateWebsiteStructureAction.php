@@ -20,7 +20,7 @@ class GenerateWebsiteStructureAction
      *
      * @return array{name: string, pages: array<array{slug: string, title: string, type: string, sections: string[], meta_description: string}>}
      */
-    public function execute(string $teamId, string $prompt): array
+    public function execute(string $teamId, string $prompt, ?string $userId = null): array
     {
         $team = Team::withoutGlobalScopes()->find($teamId);
         ['provider' => $provider, 'model' => $model] = $this->providerResolver->resolve(team: $team);
@@ -33,6 +33,7 @@ class GenerateWebsiteStructureAction
                 .'Return JSON: {"name": "...", "pages": [{"slug": "...", "title": "...", "type": "page|post|product|landing", "sections": ["hero","features","cta"], "meta_description": "..."}]}'
                 ."\n\nIMPORTANT: Do NOT use 'products' as a page slug — use 'catalog' instead.",
             maxTokens: 1024,
+            userId: $userId ?? Team::ownerIdFor($teamId),
             teamId: $teamId,
         ));
 
