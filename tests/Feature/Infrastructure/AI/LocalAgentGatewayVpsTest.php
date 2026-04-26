@@ -2,8 +2,12 @@
 
 namespace Tests\Feature\Infrastructure\AI;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Tool\Enums\ToolStatus;
+use App\Domain\Tool\Enums\ToolType;
+use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
@@ -205,5 +209,156 @@ SH);
             'owner_id' => $owner->id,
             'claude_code_vps_allowed' => $allowed,
         ]);
+    }
+
+    /**
+     * Shim that copies ${HOME}/.claude.json (if any) into a side-file
+     * the test reads back to assert what the gateway wrote.
+     */
+    private function writeMcpProbeShim(string $sidecarPath): void
+    {
+        $this->writeShim(<<<SH
+#!/bin/sh
+echo '{"type":"assistant","message":{"content":[{"type":"text","text":"ok"}]}}'
+if [ -f "\$HOME/.claude.json" ]; then
+    cat "\$HOME/.claude.json" > {$sidecarPath}
+else
+    echo "MISSING" > {$sidecarPath}
+fi
+SH);
+    }
+
+    public function test_agent_call_writes_claude_mcp_config_with_attached_http_tool(): void
+    {
+        $sidecar = $this->shimDir.'/mcp-config-probe.json';
+        $this->writeMcpProbeShim($sidecar);
+
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $team = $this->createTeam(true, $user);
+
+        $tool = Tool::factory()->create([
+            'team_id' => $team->id,
+            'slug' => 'fleetq_platform_mcp',
+            'type' => ToolType::McpHttp,
+            'status' => ToolStatus::Active,
+            'transport_config' => [
+                'url' => 'http://nginx',
+                'headers' => ['Authorization' => 'Bearer test-key'],
+            ],
+            'credentials' => [],
+        ]);
+
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'claude-code-vps',
+            'model' => 'claude-sonnet-4-5',
+        ]);
+        $agent->tools()->attach($tool->id);
+
+        app(LocalAgentGateway::class)->complete(new AiRequestDTO(
+            provider: 'claude-code-vps',
+            model: 'claude-sonnet-4-5',
+            systemPrompt: 'sys',
+            userPrompt: 'usr',
+            userId: $user->id,
+            teamId: $team->id,
+            agentId: $agent->id,
+        ));
+
+        $this->assertFileExists($sidecar);
+        $written = json_decode((string) file_get_contents($sidecar), true);
+
+        $this->assertIsArray($written, 'shim should have copied a JSON file');
+        $this->assertArrayHasKey('mcpServers', $written);
+        $this->assertArrayHasKey('fleetq_platform_mcp', $written['mcpServers']);
+        $this->assertSame('http', $written['mcpServers']['fleetq_platform_mcp']['type']);
+        $this->assertSame('http://nginx', $written['mcpServers']['fleetq_platform_mcp']['url']);
+    }
+
+    public function test_agent_call_with_no_attached_tools_writes_no_config(): void
+    {
+        $sidecar = $this->shimDir.'/mcp-config-probe.json';
+        $this->writeMcpProbeShim($sidecar);
+
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $team = $this->createTeam(true, $user);
+
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'claude-code-vps',
+            'model' => 'claude-sonnet-4-5',
+        ]);
+
+        app(LocalAgentGateway::class)->complete(new AiRequestDTO(
+            provider: 'claude-code-vps',
+            model: 'claude-sonnet-4-5',
+            systemPrompt: 'sys',
+            userPrompt: 'usr',
+            userId: $user->id,
+            teamId: $team->id,
+            agentId: $agent->id,
+        ));
+
+        $this->assertFileExists($sidecar);
+        $this->assertSame('MISSING', trim((string) file_get_contents($sidecar)));
+    }
+
+    public function test_request_with_no_agent_id_writes_no_config(): void
+    {
+        $sidecar = $this->shimDir.'/mcp-config-probe.json';
+        $this->writeMcpProbeShim($sidecar);
+
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $team = $this->createTeam(true, $user);
+
+        app(LocalAgentGateway::class)->complete(new AiRequestDTO(
+            provider: 'claude-code-vps',
+            model: 'claude-sonnet-4-5',
+            systemPrompt: 'sys',
+            userPrompt: 'usr',
+            userId: $user->id,
+            teamId: $team->id,
+            // no agentId
+        ));
+
+        $this->assertSame('MISSING', trim((string) file_get_contents($sidecar)));
+    }
+
+    public function test_assistant_call_does_not_write_claude_mcp_config(): void
+    {
+        $sidecar = $this->shimDir.'/mcp-config-probe.json';
+        $this->writeMcpProbeShim($sidecar);
+
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $team = $this->createTeam(true, $user);
+
+        // Even with an agent that has tools, assistant path should bypass the bridge.
+        $tool = Tool::factory()->create([
+            'team_id' => $team->id,
+            'slug' => 'fleetq_platform_mcp',
+            'type' => ToolType::McpHttp,
+            'status' => ToolStatus::Active,
+            'transport_config' => ['url' => 'http://nginx'],
+            'credentials' => [],
+        ]);
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'claude-code-vps',
+            'model' => 'claude-sonnet-4-5',
+        ]);
+        $agent->tools()->attach($tool->id);
+
+        app(LocalAgentGateway::class)->complete(new AiRequestDTO(
+            provider: 'claude-code-vps',
+            model: 'claude-sonnet-4-5',
+            systemPrompt: 'sys',
+            userPrompt: 'usr',
+            userId: $user->id,
+            teamId: $team->id,
+            agentId: $agent->id,
+            purpose: 'platform_assistant',
+        ));
+
+        $this->assertSame('MISSING', trim((string) file_get_contents($sidecar)));
     }
 }
