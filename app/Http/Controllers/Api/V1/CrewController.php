@@ -58,7 +58,7 @@ class CrewController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'coordinator_agent_id' => ['required', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
-            'qa_agent_id' => ['required', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
+            'qa_agent_id' => ['nullable', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
             'process_type' => ['sometimes', new Enum(CrewProcessType::class)],
             'max_task_iterations' => ['sometimes', 'integer', 'min:1', 'max:20'],
             'quality_threshold' => ['sometimes', 'numeric', 'min:0', 'max:1'],
@@ -85,7 +85,7 @@ class CrewController extends Controller
             userId: $request->user()->id,
             name: $request->name,
             coordinatorAgentId: $request->coordinator_agent_id,
-            qaAgentId: $request->qa_agent_id,
+            qaAgentId: $request->input('qa_agent_id'),
             description: $request->description,
             processType: $request->process_type
                 ? CrewProcessType::from($request->process_type)

@@ -24,7 +24,7 @@ class CreateCrewAction
         string $userId,
         string $name,
         string $coordinatorAgentId,
-        string $qaAgentId,
+        ?string $qaAgentId = null,
         ?string $description = null,
         CrewProcessType $processType = CrewProcessType::Hierarchical,
         int $maxTaskIterations = 3,
@@ -34,7 +34,14 @@ class CreateCrewAction
         ?string $teamId = null,
         array $workerConstraints = [],
     ): Crew {
-        if ($coordinatorAgentId === $qaAgentId) {
+        // Solo-mode crews omit the QA agent and let the coordinator review
+        // their own work. We collapse to coordinator-as-QA to keep the
+        // downstream pipeline (which assumes a non-null qa_agent_id) stable
+        // without a schema migration.
+        $soloMode = $qaAgentId === null || $qaAgentId === '';
+        if ($soloMode) {
+            $qaAgentId = $coordinatorAgentId;
+        } elseif ($coordinatorAgentId === $qaAgentId) {
             throw new InvalidArgumentException('Coordinator and QA agents must be different.');
         }
 

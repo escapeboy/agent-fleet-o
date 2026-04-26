@@ -136,6 +136,13 @@
         </div>
     </div>
 
+    {{-- Fix-with-assistant card (only renders if status is failed or paused) --}}
+    @if($experiment->status->isFailed() || $experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Paused)
+        <div class="mb-4">
+            <x-fix-with-assistant entity-type="experiment" :entity-id="$experiment->id" />
+        </div>
+    @endif
+
     {{-- 3-Phase Pipeline Stepper --}}
     @php
         $phase = $this->getPipelinePhase();

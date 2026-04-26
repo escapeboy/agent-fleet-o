@@ -43,6 +43,11 @@
         </div>
     </div>
 
+    {{-- Fix-with-assistant card (renders when a crew task has failed in the last 7d) --}}
+    <div class="mb-4">
+        <x-fix-with-assistant entity-type="crew" :entity-id="$crew->id" />
+    </div>
+
     {{-- Tabs --}}
     <div class="mb-6 border-b border-gray-200">
         <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">

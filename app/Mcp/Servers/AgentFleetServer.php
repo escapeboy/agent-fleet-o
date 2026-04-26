@@ -21,6 +21,7 @@ use App\Mcp\Tools\Agent\AgentConstraintTemplatesTool;
 use App\Mcp\Tools\Agent\AgentCostsTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
+use App\Mcp\Tools\Agent\AgentDryRunTool;
 use App\Mcp\Tools\Agent\AgentExecutionsListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
@@ -177,6 +178,7 @@ use App\Mcp\Tools\Evolution\EvolutionRejectTool;
 use App\Mcp\Tools\Experiment\ExperimentContextHealthTool;
 use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
+use App\Mcp\Tools\Experiment\ExperimentDiagnoseTool;
 use App\Mcp\Tools\Experiment\ExperimentGetTool;
 use App\Mcp\Tools\Experiment\ExperimentKillTool;
 use App\Mcp\Tools\Experiment\ExperimentListTool;
@@ -612,6 +614,7 @@ class AgentFleetServer extends Server
         AgentFeedbackListTool::class,
         AgentFeedbackStatsTool::class,
         AgentDeleteTool::class,
+        AgentDryRunTool::class,
         AgentConfigHistoryTool::class,
         AgentRollbackConfigTool::class,
         AgentRuntimeStateTool::class,
@@ -665,6 +668,7 @@ class AgentFleetServer extends Server
         ExperimentListTool::class,
         ExperimentGetTool::class,
         ExperimentCreateTool::class,
+        ExperimentDiagnoseTool::class,
         ExperimentStartTool::class,
         ExperimentPauseTool::class,
         ExperimentResumeTool::class,
