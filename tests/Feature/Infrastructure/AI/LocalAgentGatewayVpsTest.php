@@ -272,7 +272,8 @@ SH);
         $this->assertArrayHasKey('mcpServers', $written);
         $this->assertArrayHasKey('fleetq_platform_mcp', $written['mcpServers']);
         $this->assertSame('http', $written['mcpServers']['fleetq_platform_mcp']['type']);
-        $this->assertSame('http://nginx', $written['mcpServers']['fleetq_platform_mcp']['url']);
+        // URL gets `/mcp` appended (same convention McpHttpClient uses cloud-side).
+        $this->assertSame('http://nginx/mcp', $written['mcpServers']['fleetq_platform_mcp']['url']);
     }
 
     public function test_agent_call_with_no_attached_tools_writes_no_config(): void
