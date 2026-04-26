@@ -8,12 +8,14 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewTaskExecution;
+use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Services\ErrorTranslator;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Tools\Experiment\ExperimentDiagnoseTool;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
@@ -35,7 +37,7 @@ use Livewire\Component;
  */
 class FixWithAssistant extends Component
 {
-    /** Supported entity types: 'experiment', 'project', 'agent', 'skill', 'crew'. */
+    /** Supported entity types: 'experiment', 'project', 'agent', 'skill', 'crew', 'workflow'. */
     #[Locked]
     public string $entityType = '';
 
@@ -76,6 +78,7 @@ class FixWithAssistant extends Component
                 'agent' => $this->diagnoseAgent(),
                 'skill' => $this->diagnoseSkill(),
                 'crew' => $this->diagnoseCrew(),
+                'workflow' => $this->diagnoseWorkflow(),
                 default => null,
             };
         } catch (\Throwable $e) {
@@ -179,6 +182,67 @@ class FixWithAssistant extends Component
     }
 
     /**
+     * Workflow diagnosis: workflows materialize as experiments at run time,
+     * so the highest-signal diagnosis is "the latest failed experiment that
+     * used this workflow." Delegates to ExperimentDiagnoseTool to inherit
+     * the composite root-cause detection (stage error + circuit breaker +
+     * worklog) without duplicating that pipeline.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function diagnoseWorkflow(): ?array
+    {
+        $workflow = Workflow::find($this->entityId);
+        if (! $workflow) {
+            return null;
+        }
+
+        $windowDays = (int) config('self-service.diagnose.failure_window_days', 7);
+
+        $latestFailedExperiment = Experiment::query()
+            ->where('team_id', $workflow->team_id)
+            ->where('workflow_id', $workflow->id)
+            ->whereIn('status', [
+                ExperimentStatus::ScoringFailed,
+                ExperimentStatus::PlanningFailed,
+                ExperimentStatus::BuildingFailed,
+                ExperimentStatus::ExecutionFailed,
+            ])
+            ->where('updated_at', '>=', now()->subDays($windowDays))
+            ->orderByDesc('updated_at')
+            ->first();
+
+        if (! $latestFailedExperiment) {
+            return null;
+        }
+
+        // Reuse the experiment diagnosis pipeline so workflow diagnosis
+        // surfaces exactly the same actions and evidence the customer
+        // would see if they navigated to the experiment directly.
+        $tool = app(ExperimentDiagnoseTool::class);
+        $response = $tool->handle(new Request([
+            'experiment_id' => $latestFailedExperiment->id,
+            'locale' => app()->getLocale(),
+        ]));
+
+        if ($response->isError()) {
+            return null;
+        }
+
+        $payload = json_decode((string) $response->content(), true);
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        // Reframe the experiment diagnosis as a workflow-rooted summary so the
+        // user understands they're seeing the latest run of this workflow.
+        $payload['workflow_id'] = $workflow->id;
+        $payload['root_experiment_id'] = $latestFailedExperiment->id;
+
+        return $payload;
+    }
+
+    /**
      * Crew diagnosis: find the latest failed task across the crew's recent
      * executions and route its error_message through ErrorTranslator. Crews
      * are multi-task so we surface one failure at a time — the most recent
@@ -197,7 +261,7 @@ class FixWithAssistant extends Component
             ->whereHas('crewExecution', fn ($q) => $q->where('crew_id', $crew->id)
                 ->where('team_id', $crew->team_id))
             ->whereIn('status', [CrewTaskStatus::Failed, CrewTaskStatus::QaFailed])
-            ->where('created_at', '>=', now()->subDays(7))
+            ->where('created_at', '>=', now()->subDays((int) config('self-service.diagnose.failure_window_days', 7)))
             ->orderByDesc('created_at')
             ->first();
 
@@ -280,7 +344,7 @@ class FixWithAssistant extends Component
             ->where('team_id', $skill->team_id)
             ->where('skill_id', $skill->id)
             ->where('status', 'failed')
-            ->where('created_at', '>=', now()->subDays(7))
+            ->where('created_at', '>=', now()->subDays((int) config('self-service.diagnose.failure_window_days', 7)))
             ->orderByDesc('created_at')
             ->first();
 
@@ -548,8 +612,31 @@ class FixWithAssistant extends Component
             'agent' => $this->agentEligible(),
             'skill' => $this->skillEligible(),
             'crew' => $this->crewEligible(),
+            'workflow' => $this->workflowEligible(),
             default => false,
         };
+    }
+
+    private function workflowEligible(): bool
+    {
+        $workflow = Workflow::find($this->entityId);
+        if (! $workflow) {
+            return false;
+        }
+
+        $windowDays = (int) config('self-service.diagnose.failure_window_days', 7);
+
+        return Experiment::query()
+            ->where('team_id', $workflow->team_id)
+            ->where('workflow_id', $workflow->id)
+            ->whereIn('status', [
+                ExperimentStatus::ScoringFailed,
+                ExperimentStatus::PlanningFailed,
+                ExperimentStatus::BuildingFailed,
+                ExperimentStatus::ExecutionFailed,
+            ])
+            ->where('updated_at', '>=', now()->subDays($windowDays))
+            ->exists();
     }
 
     private function crewEligible(): bool
@@ -563,7 +650,7 @@ class FixWithAssistant extends Component
             ->whereHas('crewExecution', fn ($q) => $q->where('crew_id', $crew->id)
                 ->where('team_id', $crew->team_id))
             ->whereIn('status', [CrewTaskStatus::Failed, CrewTaskStatus::QaFailed])
-            ->where('created_at', '>=', now()->subDays(7))
+            ->where('created_at', '>=', now()->subDays((int) config('self-service.diagnose.failure_window_days', 7)))
             ->exists();
     }
 
@@ -578,7 +665,7 @@ class FixWithAssistant extends Component
             ->where('team_id', $skill->team_id)
             ->where('skill_id', $skill->id)
             ->where('status', 'failed')
-            ->where('created_at', '>=', now()->subDays(7))
+            ->where('created_at', '>=', now()->subDays((int) config('self-service.diagnose.failure_window_days', 7)))
             ->exists();
     }
 

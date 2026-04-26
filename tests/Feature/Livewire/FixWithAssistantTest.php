@@ -368,6 +368,68 @@ class FixWithAssistantTest extends TestCase
         return $crew;
     }
 
+    public function test_renders_for_workflow_with_failed_experiment(): void
+    {
+        $workflow = \App\Domain\Workflow\Models\Workflow::factory()->for($this->team)->create();
+        $exp = $this->makeFailedExperiment(['workflow_id' => $workflow->id]);
+        \App\Domain\Experiment\Models\ExperimentStage::create([
+            'team_id' => $this->team->id,
+            'experiment_id' => $exp->id,
+            'stage' => \App\Domain\Experiment\Enums\StageType::Building,
+            'iteration' => 1,
+            'status' => \App\Domain\Experiment\Enums\StageStatus::Failed,
+            'output_snapshot' => ['error' => 'PrismException: HTTP 429'],
+            'completed_at' => now(),
+            'duration_ms' => 0,
+            'retry_count' => 0,
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'workflow',
+            'entityId' => $workflow->id,
+        ])->assertSet('eligible', true);
+    }
+
+    public function test_does_not_render_for_workflow_with_no_failures(): void
+    {
+        $workflow = \App\Domain\Workflow\Models\Workflow::factory()->for($this->team)->create();
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'workflow',
+            'entityId' => $workflow->id,
+        ])->assertSet('eligible', false);
+    }
+
+    public function test_diagnose_workflow_delegates_to_experiment_diagnose(): void
+    {
+        $workflow = \App\Domain\Workflow\Models\Workflow::factory()->for($this->team)->create();
+        $exp = $this->makeFailedExperiment(['workflow_id' => $workflow->id]);
+        \App\Domain\Experiment\Models\ExperimentStage::create([
+            'team_id' => $this->team->id,
+            'experiment_id' => $exp->id,
+            'stage' => \App\Domain\Experiment\Enums\StageType::Building,
+            'iteration' => 1,
+            'status' => \App\Domain\Experiment\Enums\StageStatus::Failed,
+            'output_snapshot' => ['error' => 'HTTP 429 rate limit'],
+            'completed_at' => now(),
+            'duration_ms' => 0,
+            'retry_count' => 0,
+        ]);
+
+        Livewire::test(FixWithAssistant::class, [
+            'entityType' => 'workflow',
+            'entityId' => $workflow->id,
+        ])
+            ->call('diagnose')
+            ->tap(function ($component) use ($workflow, $exp) {
+                $diagnosis = $component->get('diagnosis');
+                $this->assertIsArray($diagnosis);
+                $this->assertSame($workflow->id, $diagnosis['workflow_id']);
+                $this->assertSame($exp->id, $diagnosis['root_experiment_id']);
+                $this->assertSame('rate_limit', $diagnosis['root_cause']);
+            });
+    }
+
     public function test_diagnose_skill_with_empty_error_message_returns_no_message_branch(): void
     {
         $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();

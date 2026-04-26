@@ -153,6 +153,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Pre-bind 'mcp.team_id' as null so any caller doing
+        // `app('mcp.team_id') ?? auth()->user()?->current_team_id` works
+        // without first checking $app->bound(). MCP request handlers
+        // overwrite this with the resolved team ID via app()->instance(...).
+        // Without this default, calling app('mcp.team_id') on an unbound
+        // container (e.g. in test setup that has called forgetInstance)
+        // throws BindingResolutionException because Laravel tries to
+        // autoresolve the dotted string as a class name.
+        if (! $this->app->bound('mcp.team_id')) {
+            $this->app->instance('mcp.team_id', null);
+        }
+
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
 
         // Lazy MCP stdio handle registry — one instance per request/job lifecycle

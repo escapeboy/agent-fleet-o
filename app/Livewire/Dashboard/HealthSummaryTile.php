@@ -42,9 +42,11 @@ class HealthSummaryTile extends Component
             return;
         }
 
+        $ttl = (int) config('self-service.dashboard.tile_cache_seconds', 30);
+
         $this->counts = Cache::remember(
             "dashboard.health_summary:{$teamId}",
-            30,
+            $ttl,
             fn () => $this->computeCounts($teamId),
         );
     }
@@ -66,9 +68,11 @@ class HealthSummaryTile extends Component
             ExperimentStatus::ExecutionFailed,
         ];
 
+        $failedWindowHours = (int) config('self-service.dashboard.failed_window_hours', 24);
+
         $failed24h = Experiment::where('team_id', $teamId)
             ->whereIn('status', $failedStatuses)
-            ->where('updated_at', '>=', now()->subDay())
+            ->where('updated_at', '>=', now()->subHours($failedWindowHours))
             ->count();
 
         // Stuck now: any active state that hasn't had its updated_at touched
@@ -84,9 +88,11 @@ class HealthSummaryTile extends Component
             ExperimentStatus::Evaluating,
         ];
 
+        $defaultStuckSeconds = (int) config('self-service.dashboard.default_stuck_timeout_seconds', 900);
+
         $stuckNow = 0;
         foreach ($activeStates as $state) {
-            $cutoff = now()->subSeconds((int) ($timeouts[$state->value] ?? 900));
+            $cutoff = now()->subSeconds((int) ($timeouts[$state->value] ?? $defaultStuckSeconds));
             $stuckNow += Experiment::where('team_id', $teamId)
                 ->where('status', $state)
                 ->where('updated_at', '<', $cutoff)

@@ -287,6 +287,8 @@ final class AssistantPromptBuilder
             ### Write Tools (your role permits these)
             - `create_project` — Create a new project (title, description, type)
             - `create_agent` — Create a new AI agent (name, role, goal, provider/model)
+            - `agent_dry_run` — Run an agent against a sample input WITHOUT persisting any execution / artifact / AiRun row. Optional `system_prompt_override` lets the user test prompt changes before saving them. Marketplace-published agents are blocked. Use when the user asks to "test", "try", or "preview" what an agent would say to an input. Costs LLM credits but is the cheapest way to validate prompt edits.
+            - `experiment_diagnose` — Read-only composite diagnosis for a failed/paused experiment. Returns root_cause + customer-readable summary + recommended_actions. Use this BEFORE proposing fixes to a failed experiment so you cite actual evidence instead of guessing.
             - `create_crew` — Create a new crew/multi-agent team (name, coordinator_agent_id, qa_agent_id, description, process_type)
             - `add_agent_to_crew` — Add a worker agent to an existing crew (crew_id, agent_id)
             - `execute_crew` — Start a crew execution with a goal (crew_id, goal)
@@ -457,6 +459,22 @@ final class AssistantPromptBuilder
 
         <tool_call>
         {"name": "create_agent", "arguments": {"name": "Scout", "role": "Research specialist", "goal": "Find business opportunities"}}
+        </tool_call>
+
+        Example — user says "test what this agent would say to 'Hello, recommend 3 keywords' if I changed the system prompt to be more concise":
+
+        I'll dry-run the agent with the override so we can see the result before saving.
+
+        <tool_call>
+        {"name": "agent_dry_run", "arguments": {"agent_id": "<the-agent-uuid>", "input_message": "Hello, recommend 3 keywords", "system_prompt_override": "You are a concise SEO advisor. Reply with JUST a comma-separated list of 3 keywords, no prose."}}
+        </tool_call>
+
+        Example — user says "experiment X failed, why?":
+
+        Let me diagnose it first.
+
+        <tool_call>
+        {"name": "experiment_diagnose", "arguments": {"experiment_id": "<X-uuid>"}}
         </tool_call>
 
         ### Tool Schemas

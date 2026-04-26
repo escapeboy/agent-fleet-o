@@ -50,6 +50,11 @@
         <div class="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">{{ session('success') }}</div>
     @endif
 
+    {{-- Fix-with-assistant card (renders when a workflow's recent experiment failed) --}}
+    <div class="mb-4">
+        <x-fix-with-assistant entity-type="workflow" :entity-id="$workflow->id" />
+    </div>
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {{-- Left: Workflow info --}}
         <div class="lg:col-span-2 space-y-6">

@@ -74,7 +74,9 @@ class ExperimentDiagnoseTool extends Tool
             $validated['locale'] ?? 'auto',
         );
 
-        $payload = Cache::remember($cacheKey, 60, fn () => $this->buildDiagnosis(
+        $cacheTtl = (int) config('self-service.diagnose.cache_seconds', 60);
+
+        $payload = Cache::remember($cacheKey, $cacheTtl, fn () => $this->buildDiagnosis(
             $experiment,
             $validated['locale'] ?? null,
         ));
