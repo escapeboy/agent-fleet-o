@@ -89,7 +89,13 @@ class WorkflowTimeline extends Component
             return;
         }
 
-        $step = PlaybookStep::find($playbookStepId);
+        // Defense-in-depth: PlaybookStep does not use BelongsToTeam, so the
+        // outer TeamScope on WorkflowSnapshot + experiment_id match is the
+        // primary tenant guard. Add an explicit experiment_id check here so
+        // any future refactor of the model relations can't open an IDOR
+        // window between snapshot and step.
+        $step = PlaybookStep::where('experiment_id', $this->experimentId)
+            ->find($playbookStepId);
         if (! $step || ! $step->agent_id) {
             $this->replayError = 'No agent is bound to this step.';
 
