@@ -82,12 +82,15 @@ class SynthesizeResultAction
                 .'Synthesize these into a final result.';
         }
 
+        $userId = $execution->resolveUserId();
+
         $request = new AiRequestDTO(
             provider: $resolved['provider'],
             model: $resolved['model'],
             systemPrompt: $systemPrompt,
             userPrompt: $userPrompt,
             maxTokens: 4096,
+            userId: $userId,
             teamId: $execution->team_id,
             agentId: $coordinator->id,
             purpose: 'crew.synthesize_result',
@@ -125,6 +128,7 @@ class SynthesizeResultAction
                     systemPrompt: $reviewSystem,
                     userPrompt: $reviewUser,
                     maxTokens: 2048,
+                    userId: $userId,
                     teamId: $execution->team_id,
                     agentId: $reviewerAgent->id,
                     purpose: 'crew.output_review',

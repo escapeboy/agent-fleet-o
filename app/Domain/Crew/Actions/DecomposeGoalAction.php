@@ -83,6 +83,7 @@ class DecomposeGoalAction
             systemPrompt: $systemPrompt,
             userPrompt: $userPrompt,
             maxTokens: 4096,
+            userId: $execution->resolveUserId(),
             teamId: $execution->team_id,
             agentId: $coordinator->id,
             purpose: 'crew.decompose_goal',

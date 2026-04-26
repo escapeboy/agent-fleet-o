@@ -65,7 +65,7 @@ PROMPT;
         private readonly StoreMemoryAction $storeMemory,
     ) {}
 
-    public function execute(string $agentId, string $teamId, string $executionId): void
+    public function execute(string $agentId, string $teamId, string $executionId, ?string $userId = null): void
     {
         if (! config('memory.enabled', true)) {
             return;
@@ -86,6 +86,15 @@ PROMPT;
             return;
         }
 
+        // Derive userId from the execution's experiment if not passed explicitly.
+        // Required for VPS-routed agents — LocalAgentGateway::executeVps loads the
+        // user via User::find($request->userId) and the gate denies if it's null.
+        if ($userId === null && $execution->experiment_id) {
+            $userId = \App\Domain\Experiment\Models\Experiment::withoutGlobalScopes()
+                ->where('id', $execution->experiment_id)
+                ->value('user_id');
+        }
+
         try {
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
@@ -98,6 +107,7 @@ PROMPT;
                 systemPrompt: self::SYSTEM_PROMPT,
                 userPrompt: $prompt,
                 maxTokens: 512,
+                userId: $userId,
                 teamId: $teamId,
                 agentId: $agentId,
                 experimentId: $execution->experiment_id,

@@ -142,6 +142,7 @@ class CoordinatorDecisionJob implements ShouldQueue
                 systemPrompt: $systemPrompt,
                 userPrompt: $userPrompt,
                 maxTokens: 2048,
+                userId: $execution->resolveUserId(),
                 teamId: $execution->team_id,
                 agentId: $coordinator->id,
                 purpose: 'crew.coordinator_decision',
