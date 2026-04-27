@@ -7,12 +7,19 @@ use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Jobs\ExecuteActionProposalJob;
+use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Approval\Services\ActionProposalExecutor;
+use App\Domain\GitRepository\Contracts\GitClientInterface;
+use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
+use App\Domain\Integration\Models\Integration;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use PHPUnit\Framework\Assert;
 use Tests\TestCase;
 
 class ActionProposalAutoExecuteTest extends TestCase
@@ -137,9 +144,9 @@ class ActionProposalAutoExecuteTest extends TestCase
     public function test_executor_throws_unsupported_target_type(): void
     {
         $proposal = $this->makeProposal();
-        // Sprint 3d.2 added integration_action support; git_push and outbound
-        // remain unsupported in v1.
-        $proposal->update(['target_type' => 'git_push']);
+        // Sprint 3d.2 added integration_action; Sprint 3d.3 added git_push.
+        // 'outbound' remains unsupported in v1 (see deferred design doc).
+        $proposal->update(['target_type' => 'outbound']);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('unsupported target_type');
@@ -160,7 +167,7 @@ class ActionProposalAutoExecuteTest extends TestCase
 
     public function test_executor_runs_integration_action_with_gate_bypass(): void
     {
-        $integration = \App\Domain\Integration\Models\Integration::factory()->create([
+        $integration = Integration::factory()->create([
             'team_id' => $this->team->id,
             'driver' => 'github',
         ]);
@@ -168,7 +175,7 @@ class ActionProposalAutoExecuteTest extends TestCase
         // Build a proposal as the gate would, with policy='ask'.
         $this->team->update(['settings' => ['action_proposal_policy' => ['low' => 'auto', 'medium' => 'auto', 'high' => 'ask']]]);
 
-        $proposal = app(\App\Domain\Approval\Actions\CreateActionProposalAction::class)->execute(
+        $proposal = app(CreateActionProposalAction::class)->execute(
             teamId: $this->team->id,
             targetType: 'integration_action',
             targetId: $integration->id,
@@ -185,13 +192,13 @@ class ActionProposalAutoExecuteTest extends TestCase
         // hit the real GitHub driver. The point is to assert: (a) it gets
         // called, (b) the bypass flag is set during the call so the gate
         // doesn't recurse.
-        $this->mock(\App\Domain\Integration\Actions\ExecuteIntegrationActionAction::class, function ($mock) {
+        $this->mock(ExecuteIntegrationActionAction::class, function ($mock) {
             $mock->shouldReceive('execute')
                 ->once()
                 ->andReturnUsing(function ($int, $action, $params) {
-                    \PHPUnit\Framework\Assert::assertTrue(
+                    Assert::assertTrue(
                         app()->bound('integration_gate.bypass') && app('integration_gate.bypass'),
-                        'Gate bypass must be active during executor invocation.'
+                        'Gate bypass must be active during executor invocation.',
                     );
 
                     return ['success' => true, 'deleted' => $params['branch'] ?? null];
@@ -206,11 +213,11 @@ class ActionProposalAutoExecuteTest extends TestCase
 
     public function test_executor_rejects_integration_action_with_missing_payload(): void
     {
-        $integration = \App\Domain\Integration\Models\Integration::factory()->create([
+        $integration = Integration::factory()->create([
             'team_id' => $this->team->id,
         ]);
 
-        $proposal = app(\App\Domain\Approval\Actions\CreateActionProposalAction::class)->execute(
+        $proposal = app(CreateActionProposalAction::class)->execute(
             teamId: $this->team->id,
             targetType: 'integration_action',
             targetId: $integration->id,
@@ -225,7 +232,87 @@ class ActionProposalAutoExecuteTest extends TestCase
         app(ActionProposalExecutor::class)->execute($proposal->fresh(), $this->user);
     }
 
-    private function makeProposal(): \App\Domain\Approval\Models\ActionProposal
+    public function test_executor_runs_git_push_with_gate_bypass(): void
+    {
+        $repo = GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => 'test-repo',
+            'url' => 'https://github.com/example/test',
+            'provider' => 'github',
+            'mode' => 'api_only',
+            'default_branch' => 'main',
+            'config' => [],
+            'status' => 'active',
+        ]);
+
+        $this->team->update(['settings' => ['action_proposal_policy' => ['low' => 'auto', 'medium' => 'auto', 'high' => 'ask']]]);
+
+        $proposal = app(CreateActionProposalAction::class)->execute(
+            teamId: $this->team->id,
+            targetType: 'git_push',
+            targetId: $repo->id,
+            summary: 'High-risk: github :: mergePullRequest',
+            payload: [
+                'repository_id' => $repo->id,
+                'method' => 'mergePullRequest',
+                'args' => ['pr_number' => 7, 'method' => 'squash'],
+            ],
+            userId: $this->user->id,
+        );
+
+        // Mock the router so we don't construct a real GitHub client.
+        // The fake client asserts the bypass binding is active when invoked.
+        $fakeClient = \Mockery::mock(GitClientInterface::class);
+        $fakeClient->shouldReceive('mergePullRequest')
+            ->once()
+            ->andReturnUsing(function ($prNumber, $method) {
+                Assert::assertTrue(
+                    app()->bound('git_gate.bypass') && app('git_gate.bypass'),
+                    'Git gate bypass must be active during executor invocation.',
+                );
+
+                return ['sha' => 'abc123', 'merged' => true, 'message' => "merged #{$prNumber} via {$method}"];
+            });
+
+        $this->mock(GitOperationRouter::class, function ($mock) use ($fakeClient) {
+            $mock->shouldReceive('resolve')->once()->andReturn($fakeClient);
+        });
+
+        $result = app(ActionProposalExecutor::class)->execute($proposal->fresh(), $this->user);
+
+        $this->assertTrue($result['merged']);
+        $this->assertSame('abc123', $result['sha']);
+    }
+
+    public function test_executor_rejects_git_push_with_missing_payload(): void
+    {
+        $repo = GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => 'test-repo',
+            'url' => 'https://github.com/example/test',
+            'provider' => 'github',
+            'mode' => 'api_only',
+            'default_branch' => 'main',
+            'config' => [],
+            'status' => 'active',
+        ]);
+
+        $proposal = app(CreateActionProposalAction::class)->execute(
+            teamId: $this->team->id,
+            targetType: 'git_push',
+            targetId: $repo->id,
+            summary: 'Bad',
+            payload: ['repository_id' => $repo->id], // missing 'method'
+            userId: $this->user->id,
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('repository_id and method');
+
+        app(ActionProposalExecutor::class)->execute($proposal->fresh(), $this->user);
+    }
+
+    private function makeProposal(): ActionProposal
     {
         return app(CreateActionProposalAction::class)->execute(
             teamId: $this->team->id,
