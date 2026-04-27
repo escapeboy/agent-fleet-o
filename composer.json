@@ -5,6 +5,7 @@
     "description": "AI Agent Mission Control Platform — self-hosted, open-source.",
     "keywords": ["ai", "agents", "experiments", "laravel"],
     "license": "AGPL-3.0-or-later",
+    "version": "1.23.0",
     "repositories": [
         { "type": "vcs", "url": "https://github.com/FleetQ/plugin-sdk.git" },
         { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-core.git" },

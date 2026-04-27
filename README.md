@@ -28,7 +28,7 @@
 - [Configuration](#configuration)
 - [SSH Host Access](#ssh-host-access)
 - [Architecture](#architecture)
-- [MCP Server (450+ tools)](#mcp-server)
+- [MCP Server (485+ tools)](#mcp-server)
 - [Tech Stack](#tech-stack)
 - [Contributing](#contributing)
 - [Changelog](CHANGELOG.md)
@@ -39,14 +39,16 @@
 
 Most agent frameworks give you a Python notebook. FleetQ gives you a **production platform**.
 
-- 🧩 **450+ MCP tools across 45 domains** — every feature is exposed via Model Context Protocol, so any LLM (Claude Desktop, Cursor, ChatGPT, local agents) can drive the platform programmatically.
+- 🧩 **485+ MCP tools across 46 domains** — every feature is exposed via Model Context Protocol, so any LLM (Claude Desktop, Cursor, ChatGPT, local agents) can drive the platform programmatically. New: **`/.well-known/fleetq` discovery endpoint** lets external AI tools auto-configure with one URL.
 - 🔁 **Visual DAG workflows** with 8 node types (agent, conditional, human-task, switch, dynamic-fork, do-while) — no Python glue code.
 - 👥 **Multi-agent crews** with coordinator/worker/reviewer roles, weighted QA scoring, and cross-validation.
+- 🛡️ **Real-World Action governance** — assistant tool calls, integration writes, and git pushes route through a per-tier risk policy (auto / ask / reject for low / medium / high). Approvals auto-execute. Audit trail attached.
 - 💰 **Budget controls** with a real credit ledger, pessimistic locking, and auto-pause on overspend — not just token counters.
 - 🧠 **Agent evolution** — LLM analyzes execution history and proposes config changes you approve with one click.
 - ⚙️ **BYOK + Local LLMs** — Anthropic, OpenAI, Google, plus Ollama, LM Studio, vLLM, Codex, Claude Code. Zero vendor lock-in.
 - 🔒 **Production-grade** — tenant isolation, encrypted credential vault, HMAC webhooks, SSRF guards, circuit breakers, audit trail.
-- 📊 **OpenTelemetry observability** — structured error codes (gRPC-canonical), deadline propagation, distributed tracing. Jaeger UI one-command away.
+- 📊 **OpenTelemetry observability** — structured error codes (gRPC-canonical), deadline propagation, distributed tracing. Jaeger UI one-command away. Per-team OTLP collector endpoints for BYO observability.
+- 📈 **Live team graph** — Cytoscape.js force-directed visualization of agents, humans, and crews. Real-time updates via Laravel Reverb WebSockets.
 - 🏠 **Self-host or cloud** — MIT-friendly AGPLv3 license, runs on Docker Compose, or use [FleetQ Cloud](https://fleetq.net).
 
 ## Key Concepts
@@ -223,7 +225,10 @@ Failed tasks display detailed error information including provider, error type, 
 
 ### API & MCP surface
 - **REST API** — 175+ endpoints under `/api/v1/` with Sanctum auth, cursor pagination, auto-generated OpenAPI 3.1 at `/docs/api`
-- **MCP Server** — **450+ Model Context Protocol tools across 45 domains** (stdio + HTTP/SSE + OAuth2/PKCE)
+- **MCP Server** — **485+ Model Context Protocol tools across 46 domains** (stdio + HTTP/SSE + OAuth2/PKCE)
+- **Real-World Action governance** — `ActionProposal` flow gates assistant tool calls, integration writes, and git pushes through a per-tier risk policy with auto-execute on approval
+- **Public discovery endpoint** — `GET /.well-known/fleetq` returns a config-gated capability manifest so external AI tools can auto-configure
+- **Live team graph** — `/team-graph` page with real-time updates via Laravel Reverb WebSockets
 - **Structured MCP errors** — canonical gRPC-style error codes (`UNAVAILABLE`, `PERMISSION_DENIED`, `RESOURCE_EXHAUSTED`, `DEADLINE_EXCEEDED`, `INVALID_ARGUMENT`, `FAILED_PRECONDITION`, `NOT_FOUND`, `INTERNAL`) with retryable hints — agents know when to retry vs. fail fast
 - **Per-tool deadlines** — optional `deadline_ms` parameter on every MCP tool; agents can bound wall-clock time per call
 - **OpenTelemetry tracing** — OTLP HTTP exporter, Jaeger all-in-one via `docker compose --profile observability up`, spans for MCP tool → AI gateway → LLM provider
@@ -255,7 +260,7 @@ FleetQ is built for teams running AI agents in production, not toy demos.
 | **Open source** | ✅ AGPLv3 | ✅ Sustainable Use | ✅ MIT | ✅ MIT | ❌ Proprietary |
 | **Visual DAG builder** | ✅ 8 node types | ✅ (not AI-first) | ❌ | ❌ | ✅ |
 | **Multi-agent crews** | ✅ 7 process types | ❌ | ✅ | ✅ (build-your-own) | ❌ |
-| **MCP server (native)** | ✅ 450+ tools | ❌ | ❌ | ❌ | ❌ |
+| **MCP server (native)** | ✅ 485+ tools | ❌ | ❌ | ❌ | ❌ |
 | **Human-in-the-loop** | ✅ native | ⚠️ workaround | ⚠️ code | ⚠️ code | ⚠️ approve-node |
 | **Budget ledger + locks** | ✅ pessimistic | ❌ | ❌ | ❌ | ❌ |
 | **Audit trail** | ✅ every action | ✅ | ❌ | ❌ | ✅ |
