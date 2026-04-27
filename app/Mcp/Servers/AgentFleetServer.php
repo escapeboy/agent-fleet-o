@@ -63,6 +63,10 @@ use App\Mcp\Tools\AgentChatProtocol\ExternalAgentListTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentPingTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool;
+use App\Mcp\Tools\Approval\ActionProposalApproveTool;
+use App\Mcp\Tools\Approval\ActionProposalGetTool;
+use App\Mcp\Tools\Approval\ActionProposalListTool;
+use App\Mcp\Tools\Approval\ActionProposalRejectTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
@@ -317,6 +321,7 @@ use App\Mcp\Tools\Shared\TeamAiFeaturesUpdateTool;
 use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
 use App\Mcp\Tools\Shared\TeamClaudeCodeVpsAccessTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
+use App\Mcp\Tools\Shared\TeamGraphGetTool;
 use App\Mcp\Tools\Shared\TeamInviteMemberTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamModelAllowlistTool;
@@ -398,6 +403,7 @@ use App\Mcp\Tools\System\LangfuseConfigTool;
 use App\Mcp\Tools\System\MetricsAggregationsTool;
 use App\Mcp\Tools\System\MetricsModelComparisonTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
+use App\Mcp\Tools\System\SystemDiscoveryGetTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
@@ -810,6 +816,10 @@ class AgentFleetServer extends Server
         ApprovalListTool::class,
         ApprovalApproveTool::class,
         ApprovalRejectTool::class,
+        ActionProposalListTool::class,
+        ActionProposalGetTool::class,
+        ActionProposalApproveTool::class,
+        ActionProposalRejectTool::class,
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
         ListSecurityReviewsTool::class,
@@ -967,6 +977,7 @@ class AgentFleetServer extends Server
         ContactHealthScoreTool::class,
         NotificationTool::class,
         TeamGetTool::class,
+        TeamGraphGetTool::class,
         TeamUpdateTool::class,
         TeamMembersTool::class,
         TeamAiFeaturesGetTool::class,
@@ -1029,10 +1040,11 @@ class AgentFleetServer extends Server
         EmailTemplateDeleteTool::class,
         EmailTemplateGenerateTool::class,
 
-        // System (10)
+        // System (11)
         DashboardKpisTool::class,
         SystemHealthTool::class,
         SystemVersionCheckTool::class,
+        SystemDiscoveryGetTool::class,
         AuditLogTool::class,
         GlobalSettingsUpdateTool::class,
         BlacklistManageTool::class,

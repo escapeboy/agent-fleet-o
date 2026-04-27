@@ -149,7 +149,9 @@
                                 <x-status-badge :status="$agent->status->value" />
                             </div>
                         </td>
-                        <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4 text-sm text-gray-500">{{ $agent->provider }}/{{ $agent->model }}</td>
+                        <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4 text-sm text-gray-500">
+                            <x-agent-vendor-badge :provider="$agent->provider" :model="$agent->model" />
+                        </td>
                         <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4 text-sm text-gray-500">{{ $agent->skills_count }}</td>
                         <td class="hidden md:table-cell px-3 py-3 md:px-6 md:py-4">
                             @if($agent->risk_score !== null)

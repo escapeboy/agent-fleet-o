@@ -170,8 +170,8 @@ class LocalAgentDiscovery
     public function vpsBinaryPath(): ?string
     {
         $configured = config('local_agents.vps.binary_path');
-        if (is_string($configured) && $configured !== '' && is_executable($configured)) {
-            return $configured;
+        if (is_string($configured) && $configured !== '') {
+            return is_executable($configured) ? $configured : null;
         }
 
         try {

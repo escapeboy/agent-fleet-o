@@ -5,6 +5,7 @@ namespace App\Domain\Integration\Actions;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Events\IntegrationActionExecuted;
 use App\Domain\Integration\Models\Integration;
+use App\Domain\Integration\Services\IntegrationActionGate;
 use App\Domain\Integration\Services\IntegrationManager;
 use Illuminate\Http\Client\RequestException;
 
@@ -12,10 +13,17 @@ class ExecuteIntegrationActionAction
 {
     public function __construct(
         private readonly IntegrationManager $manager,
+        private readonly IntegrationActionGate $gate,
     ) {}
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
+        // Sprint 3d.2: route through the per-tier risk policy gate before
+        // any driver call. Throws IntegrationActionProposedException or
+        // IntegrationActionRefusedException when policy demands; callers
+        // must catch and surface to the user.
+        $this->gate->check($integration, $action, $params);
+
         $driver = $this->manager->driver($integration->getAttribute('driver'));
         $start = microtime(true);
 

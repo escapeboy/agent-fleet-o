@@ -395,6 +395,16 @@ class AppServiceProvider extends ServiceProvider
             LogIntegrationExecution::class,
         );
 
+        // /team-graph live activity firehose — broadcast normalized TeamActivity events
+        Event::listen(\App\Domain\Agent\Events\AgentExecuted::class, \App\Domain\Shared\Listeners\BroadcastAgentExecuted::class);
+        Event::listen(ExperimentTransitioned::class, \App\Domain\Shared\Listeners\BroadcastExperimentTransitioned::class);
+
+        // ActionProposal auto-execute on approval — dispatches a queued job
+        Event::listen(\App\Domain\Approval\Events\ActionProposalApproved::class, \App\Domain\Approval\Listeners\DispatchActionProposalExecution::class);
+
+        // After execution, append the outcome to the originating assistant conversation
+        Event::listen(\App\Domain\Approval\Events\ActionProposalExecuted::class, \App\Domain\Approval\Listeners\AppendExecutionResultToConversation::class);
+
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
         Event::listen(ExperimentTransitioned::class, RecordTransitionMetrics::class);

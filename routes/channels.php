@@ -17,6 +17,16 @@ Broadcast::channel('daemon.{teamId}', function ($user, string $teamId) {
     return ['id' => $user->id, 'team_id' => $teamId];
 });
 
+// Per-team firehose channel for the /team-graph live activity feed.
+// Auth: any user whose current team matches the requested team id.
+Broadcast::channel('team.{teamId}.activity', function ($user, string $teamId) {
+    if ($user->current_team_id !== $teamId) {
+        return false;
+    }
+
+    return ['id' => $user->id, 'team_id' => $teamId];
+});
+
 // Experiment real-time updates (WorkflowNodeUpdated, step streaming).
 // Only team members who own the experiment may subscribe.
 Broadcast::channel('experiment.{experimentId}', function ($user, string $experimentId) {

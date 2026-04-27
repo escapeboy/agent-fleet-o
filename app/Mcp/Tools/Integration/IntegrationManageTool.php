@@ -207,6 +207,21 @@ class IntegrationManageTool extends Tool
             );
 
             return Response::text(json_encode(['success' => true, 'result' => $result]));
+        } catch (\App\Domain\Integration\Exceptions\IntegrationActionProposedException $e) {
+            return Response::text(json_encode([
+                'success' => false,
+                'status' => 'proposed',
+                'proposal_id' => $e->proposalId,
+                'risk_level' => $e->riskLevel,
+                'message' => "⏸ Action proposed for human review (proposal_id={$e->proposalId}). Approve in the Approval Inbox before this runs.",
+            ]));
+        } catch (\App\Domain\Integration\Exceptions\IntegrationActionRefusedException $e) {
+            return Response::text(json_encode([
+                'success' => false,
+                'status' => 'refused',
+                'risk_level' => $e->riskLevel,
+                'message' => "⛔ {$e->getMessage()}",
+            ]));
         } catch (\Throwable $e) {
             throw $e;
         }
