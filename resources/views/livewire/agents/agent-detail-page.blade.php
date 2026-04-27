@@ -392,10 +392,11 @@
                     <p class="mt-0.5 text-sm text-gray-500">{{ $agent->goal }}</p>
                 @endif
                 <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600"
-                        title="Resolved from: {{ match($resolvedProvider['source']) { 'agent' => 'Agent configuration', 'team' => 'Team default', 'platform' => 'Platform settings', 'config' => 'System default', default => $resolvedProvider['source'] } }}">
-                        {{ $resolvedProvider['provider'] }}/{{ $resolvedProvider['model'] }}
-                    </span>
+                    <x-agent-vendor-badge
+                        :provider="$resolvedProvider['provider']"
+                        :model="$resolvedProvider['model']"
+                        title="Resolved from: {{ match($resolvedProvider['source']) { 'agent' => 'Agent configuration', 'team' => 'Team default', 'platform' => 'Platform settings', 'config' => 'System default', default => $resolvedProvider['source'] } }}"
+                    />
                     <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ match($resolvedProvider['source']) {
                         'agent' => 'bg-blue-50 text-blue-700',
                         'team' => 'bg-purple-50 text-purple-700',
@@ -413,9 +414,7 @@
                     </span>
                     @foreach($agent->config['fallback_chain'] ?? [] as $fb)
                         <span class="text-xs text-gray-400">&rarr;</span>
-                        <span class="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-xs text-gray-500">
-                            {{ $fb['provider'] }}/{{ $fb['model'] }}
-                        </span>
+                        <x-agent-vendor-badge :provider="$fb['provider']" :model="$fb['model']" />
                     @endforeach
                 </div>
             </div>

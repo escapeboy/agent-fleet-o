@@ -19,6 +19,7 @@ use App\Domain\Agent\Pipeline\Middleware\InjectKnowledgeGraphContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectWorldModel;
 use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
+use App\Domain\Agent\Pipeline\Middleware\InjectTeamContext;
 use App\Domain\Agent\Pipeline\Middleware\PreExecutionScout;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
 use App\Domain\Agent\Services\AgentHookExecutor;
@@ -63,6 +64,7 @@ class ExecuteAgentAction
         private readonly ProviderResolver $providerResolver,
         private readonly PreExecutionScout $preExecutionScout,
         private readonly InjectMemoryContext $injectMemoryContext,
+        private readonly InjectTeamContext $injectTeamContext,
         private readonly InjectKnowledgeGraphContext $injectKgContext,
         private readonly InjectWorldModel $injectWorldModel,
         private readonly InjectRepoMapContext $injectRepoMapContext,
@@ -223,6 +225,7 @@ class ExecuteAgentAction
             ->through([
                 $this->preExecutionScout,
                 $this->injectMemoryContext,
+                $this->injectTeamContext,
                 $this->injectKgContext,
                 $this->injectWorldModel,
                 $this->injectRepoMapContext,
