@@ -402,6 +402,9 @@ class AppServiceProvider extends ServiceProvider
         // ActionProposal auto-execute on approval — dispatches a queued job
         Event::listen(\App\Domain\Approval\Events\ActionProposalApproved::class, \App\Domain\Approval\Listeners\DispatchActionProposalExecution::class);
 
+        // After execution, append the outcome to the originating assistant conversation
+        Event::listen(\App\Domain\Approval\Events\ActionProposalExecuted::class, \App\Domain\Approval\Listeners\AppendExecutionResultToConversation::class);
+
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
         Event::listen(ExperimentTransitioned::class, RecordTransitionMetrics::class);

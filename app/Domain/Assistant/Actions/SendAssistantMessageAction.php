@@ -641,30 +641,46 @@ class SendAssistantMessageAction
     private function wrapToolsWithSlowModeGate(array $tools, User $user, ?AssistantConversation $conversation): array
     {
         $team = $user->currentTeam;
-        $slowModeEnabled = (bool) ($team?->settings['slow_mode_enabled'] ?? false);
-        if (! $slowModeEnabled) {
+        $policy = $this->resolveActionPolicy($team);
+
+        if ($policy['low'] === 'auto' && $policy['medium'] === 'auto' && $policy['high'] === 'auto') {
             return $tools;
         }
 
         $teamId = $team->id;
         $userId = $user->id;
         $createProposal = $this->createActionProposal;
+        $conversationId = $conversation?->id;
 
-        $fnProperty = new \ReflectionProperty(PrismToolObject::class, 'fn');
-
-        return array_map(function (PrismToolObject $tool) use ($fnProperty, $createProposal, $teamId, $userId, $conversation) {
+        return array_map(function (PrismToolObject $tool) use ($policy, $createProposal, $teamId, $userId, $conversation, $conversationId) {
             $toolName = $tool->name();
-            if (AssistantToolRegistry::toolTier($toolName) !== 'destructive') {
+            $risk = $this->mapTierToRisk(AssistantToolRegistry::toolTier($toolName));
+            $action = $policy[$risk] ?? 'auto';
+
+            if ($action === 'auto') {
                 return $tool;
             }
 
             $clone = clone $tool;
-            $clone->using(function () use ($toolName, $createProposal, $teamId, $userId, $conversation) {
+            $clone->using(function () use ($action, $toolName, $risk, $createProposal, $teamId, $userId, $conversation, $conversationId) {
                 $positionalArgs = func_get_args();
 
-                $summary = "Destructive tool: {$toolName}";
+                if ($action === 'reject') {
+                    return "⛔ Action refused by team policy. The {$risk}-risk tool '{$toolName}' is blocked for this team. Contact a team owner to relax the policy or pick a non-blocked alternative.";
+                }
+
+                // action === 'ask' → create proposal
+                $summary = ucfirst($risk)."-risk tool: {$toolName}";
                 if (! empty($positionalArgs) && is_scalar($positionalArgs[0])) {
                     $summary .= " ({$positionalArgs[0]})";
+                }
+
+                $payload = [
+                    'tool' => $toolName,
+                    'positional_args' => $positionalArgs,
+                ];
+                if ($conversationId) {
+                    $payload['conversation_id'] = $conversationId;
                 }
 
                 $proposal = $createProposal->execute(
@@ -672,21 +688,61 @@ class SendAssistantMessageAction
                     targetType: 'tool_call',
                     targetId: null,
                     summary: $summary,
-                    payload: [
-                        'tool' => $toolName,
-                        'positional_args' => $positionalArgs,
-                    ],
+                    payload: $payload,
                     userId: $userId,
-                    riskLevel: 'high',
+                    riskLevel: $risk,
                     expiresAt: now()->addHours(24),
                     conversation: $conversation,
                 );
 
-                return "⏸ Action proposed for human review (proposal_id={$proposal->id}). The user must approve in the Approval Inbox before this runs. Continue with non-destructive next steps if possible, or report back to the user.";
+                return "⏸ Action proposed for human review (proposal_id={$proposal->id}, risk={$risk}). The user must approve in the Approval Inbox before this runs. Continue with non-blocking next steps if possible, or report back to the user.";
             });
 
             return $clone;
         }, $tools);
+    }
+
+    /**
+     * Resolve the per-tier action policy for a team. Reads
+     * `settings.action_proposal_policy` if present; falls back to the
+     * legacy `slow_mode_enabled` boolean (true → high='ask').
+     *
+     * @return array{low: 'auto'|'ask'|'reject', medium: 'auto'|'ask'|'reject', high: 'auto'|'ask'|'reject'}
+     */
+    private function resolveActionPolicy(?\App\Domain\Shared\Models\Team $team): array
+    {
+        $defaults = ['low' => 'auto', 'medium' => 'auto', 'high' => 'auto'];
+
+        if (! $team) {
+            return $defaults;
+        }
+
+        $explicit = $team->settings['action_proposal_policy'] ?? null;
+        if (is_array($explicit)) {
+            $allowed = ['auto', 'ask', 'reject'];
+
+            return [
+                'low' => in_array($explicit['low'] ?? 'auto', $allowed, true) ? $explicit['low'] : 'auto',
+                'medium' => in_array($explicit['medium'] ?? 'auto', $allowed, true) ? $explicit['medium'] : 'auto',
+                'high' => in_array($explicit['high'] ?? 'auto', $allowed, true) ? $explicit['high'] : 'auto',
+            ];
+        }
+
+        // Legacy fallback: slow_mode_enabled=true → high='ask'.
+        if ((bool) ($team->settings['slow_mode_enabled'] ?? false)) {
+            return ['low' => 'auto', 'medium' => 'auto', 'high' => 'ask'];
+        }
+
+        return $defaults;
+    }
+
+    private function mapTierToRisk(string $tier): string
+    {
+        return match ($tier) {
+            'destructive' => 'high',
+            'write' => 'medium',
+            default => 'low',
+        };
     }
 
     /**

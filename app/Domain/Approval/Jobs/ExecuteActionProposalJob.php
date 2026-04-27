@@ -3,6 +3,7 @@
 namespace App\Domain\Approval\Jobs;
 
 use App\Domain\Approval\Enums\ActionProposalStatus;
+use App\Domain\Approval\Events\ActionProposalExecuted;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Approval\Services\ActionProposalExecutor;
 use App\Domain\Shared\Models\Team;
@@ -64,12 +65,16 @@ class ExecuteActionProposalJob implements ShouldQueue
                 'execution_result' => $result,
                 'execution_error' => null,
             ]);
+
+            ActionProposalExecuted::dispatch($proposal->refresh(), true);
         } catch (Throwable $e) {
             $this->markFailed($proposal, $e->getMessage());
             Log::warning('ExecuteActionProposalJob: executor threw', [
                 'proposal_id' => $proposal->id,
                 'error' => $e->getMessage(),
             ]);
+
+            ActionProposalExecuted::dispatch($proposal->refresh(), false);
         }
     }
 
