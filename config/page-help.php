@@ -1457,4 +1457,827 @@ return [
         ],
     ],
 
+    'tools.templates' => [
+        'title' => 'GPU Tool Templates',
+        'description' => 'One-click GPU compute templates: GLM-OCR, Whisper, SDXL Turbo, FLUX.1, BGE-M3, XTTS v2, Qwen2.5 Coder, Mistral 7B, Wan2.1, Florence-2, SAM 2, Kokoro TTS, NLLB-200, MusicGen, F5-TTS, Table Transformer.',
+        'steps' => [
+            'Browse templates filtered by use case (OCR, image, audio, vision, code)',
+            'Click "Deploy" — the tool is created in your team with the right transport config',
+            'Pick a compute provider (RunPod, Replicate, Fal.ai, Vast.ai)',
+            'Attach to an agent or skill so it can invoke the GPU endpoint',
+        ],
+        'tips' => [
+            'Each template includes recommended hardware tier and cold-start expectations',
+            'Templates are skill-shaped — you can fork to customize prompts/inputs',
+        ],
+        'prerequisites' => [
+            ['label' => 'A GPU provider credential', 'route' => 'credentials.index'],
+        ],
+        'related' => [
+            ['label' => 'Tools', 'route' => 'tools.index'],
+            ['label' => 'Skills', 'route' => 'skills.index'],
+        ],
+    ],
+
+    'tools.federation-groups' => [
+        'title' => 'Tool Federation Groups',
+        'description' => 'Group multiple MCP tools into a single virtual "super-tool" that an agent can call. Useful for grouping by domain (e.g., all GitHub tools as one federated tool).',
+        'steps' => [
+            'Create a group and pick its constituent tools',
+            'Define a routing rule (round-robin, primary+failover, parallel-fanout)',
+            'Attach the group to an agent like any other tool',
+        ],
+        'tips' => [
+            'Federation reduces an agent\'s tool surface area — fewer tools = better LLM tool selection',
+            'Failover routing lets you keep working when one MCP server goes down',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Tools', 'route' => 'tools.index'],
+        ],
+    ],
+
+    'tools.search-history' => [
+        'title' => 'Tool Search History',
+        'description' => 'Audit log of every MCP tool invocation across the team. Filter by tool, agent, success/failure, or time window.',
+        'steps' => [
+            'Filter by tool name or agent to narrow the firehose',
+            'Click a row to see the input/output payloads (encrypted secrets are redacted)',
+            'Use the time-window selector to scope to a specific incident',
+        ],
+        'tips' => [
+            'Failed invocations are highlighted red — use this to spot flaky external services',
+            'Outputs are retained per the team\'s audit retention plan',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Tools', 'route' => 'tools.index'],
+            ['label' => 'Audit Log', 'route' => 'audit'],
+        ],
+    ],
+
+    // ── World Model ─────────────────────────────────────────────────
+
+    'world-model.index' => [
+        'title' => 'World Model',
+        'description' => 'What the platform "knows" about your workspace — entities, relationships, knowledge-graph facts, top contacts, recent intent signals. Used as context for every agent run.',
+        'steps' => [
+            'Browse entity counts and recent activity across domains',
+            'Drill into a specific entity (contact, project, signal) to see its facts',
+            'Use the search bar to find an entity by name across all domains',
+        ],
+        'tips' => [
+            'World-model context is automatically injected into agent prompts — keep it clean for better outputs',
+            'Stale or wrong facts: delete from the entity detail page; agents stop using them on the next run',
+            'The daily digest (see Insights) summarizes world-model deltas',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Knowledge Graph', 'route' => 'knowledge-graph.index'],
+            ['label' => 'Memory', 'route' => 'memory.index'],
+            ['label' => 'Insights', 'route' => 'insights'],
+        ],
+    ],
+
+    // ── Signals ─────────────────────────────────────────────────────
+
+    'signals.index' => [
+        'title' => 'Signals',
+        'description' => 'Inbound events from external sources — webhooks, RSS, email, GitHub, Sentry, calendars, chat platforms. Each signal can trigger experiments via Triggers.',
+        'steps' => [
+            'Filter by connector, severity, status, or time window',
+            'Click a signal to see its full payload, processing history, and downstream actions',
+            'Mark as triaged / dismissed / escalated',
+        ],
+        'tips' => [
+            'Signals get an AI-classified `intent` tag (Question / Bug / FeatureRequest / Spam / Other)',
+            'Use Trigger Rules to auto-launch experiments on matching signals — no manual review needed',
+            'Bug reports are signals with extra structure — see the Bug Reports page',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Connector Bindings', 'route' => 'signals.bindings'],
+            ['label' => 'Triggers', 'route' => 'triggers.index'],
+            ['label' => 'Contacts', 'route' => 'contacts.index'],
+        ],
+    ],
+
+    // ── AI Routing Metrics ──────────────────────────────────────────
+
+    'metrics.ai-routing' => [
+        'title' => 'AI Routing Metrics',
+        'description' => 'How requests are routed across providers and models — fallbacks triggered, circuit breaker trips, semantic cache hits, BYOK vs platform usage. Tune for cost and reliability.',
+        'steps' => [
+            'Review provider usage breakdown (Anthropic / OpenAI / Google / local)',
+            'Check fallback chain trigger frequency',
+            'Inspect semantic cache hit rate — higher = lower spend',
+            'Drill into a specific provider to see latency and error rates',
+        ],
+        'tips' => [
+            'A provider with >5% error rate is auto-circuit-broken for 60s',
+            'Semantic cache reuses results across teams — privacy-safe via vector similarity',
+            'Local agents (Codex, Claude Code) show as zero-cost in the cost panel',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Model Comparison', 'route' => 'metrics.models'],
+            ['label' => 'Health', 'route' => 'health'],
+            ['label' => 'Audit Log', 'route' => 'audit'],
+        ],
+    ],
+
+    // ── Websites (Website Builder) ──────────────────────────────────
+
+    'websites.index' => [
+        'title' => 'Websites',
+        'description' => 'Visual website builder with block-based editor, dynamic widgets (recent posts, page lists), AI generation, and one-click deployment to Vercel or downloadable ZIP.',
+        'steps' => [
+            'Click "New Website" to start blank or generate from prompt',
+            'Pick a template or describe your site for AI generation',
+            'Edit pages in the visual builder',
+            'Publish — choose Vercel deployment or ZIP download',
+        ],
+        'tips' => [
+            'Plugins extend the builder: blog (posts), forms (contact), chatbot (widget), e-commerce',
+            'Dynamic widgets like `<!-- fleetq:recent-posts -->` are rendered server-side at request time',
+            'Use Unpublish to take a website offline without deleting it',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Email Templates', 'route' => 'email.templates.index'],
+            ['label' => 'Marketplace', 'route' => 'app.marketplace.index'],
+        ],
+    ],
+
+    'websites.create' => [
+        'title' => 'Create Website',
+        'description' => 'Start a new website — from a blank canvas, a template, or AI generation from a natural-language prompt.',
+        'steps' => [
+            'Pick the start mode: Blank / Template / AI Generate',
+            'Describe your site in plain English (for AI mode)',
+            'Pick which plugins to enable (blog, forms, chatbot, e-commerce)',
+            'Continue to the builder',
+        ],
+        'tips' => [
+            'AI generation uses Claude — expect 30–60 seconds for a multi-page site',
+            'You can change plugins later from the website detail page',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Websites', 'route' => 'websites.index'],
+        ],
+    ],
+
+    'websites.show' => [
+        'title' => 'Website Detail',
+        'description' => 'Inspect a website — pages, plugins, deployment status, dynamic content widgets, navigation tree.',
+        'steps' => [
+            'Browse pages and click any to open in the builder',
+            'Toggle plugins on/off (changes apply immediately)',
+            'Trigger a deployment from the deploy panel',
+            'Use the navigation editor to reorder pages or rename links',
+        ],
+        'tips' => [
+            'Internal-link rewriting runs on every navigation change — broken `<a href="...">` links are auto-repaired',
+            'Page version history is kept; you can rollback any page',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Websites', 'route' => 'websites.index'],
+        ],
+    ],
+
+    'websites.pages.edit' => [
+        'title' => 'Page Builder',
+        'description' => 'Block-based visual editor for a single page. Drag blocks, edit content, preview live.',
+        'steps' => [
+            'Drag blocks from the sidebar palette onto the canvas',
+            'Click any block to edit its content / style / dynamic data binding',
+            'Use Preview to see the rendered output without saving',
+            'Click Save — the page is versioned and the live site updates',
+        ],
+        'tips' => [
+            'Press ⌘Z / Ctrl+Z to undo — block-level history is per-session',
+            'AI helpers can rewrite a block\'s copy from a prompt',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Website Detail', 'route' => 'websites.index'],
+        ],
+    ],
+
+    'websites.pages.preview' => [
+        'title' => 'Page Preview',
+        'description' => 'Sandboxed preview of a page as visitors will see it, before publishing.',
+        'steps' => [
+            'Compare the preview to the editor view',
+            'Test responsive: resize the window or use the device toggle',
+            'Click "Publish" when satisfied, or "Back to editor" to keep iterating',
+        ],
+        'tips' => [
+            'Dynamic widgets resolve in preview just like production — you see real recent posts, real forms, etc.',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Page Builder', 'route' => 'websites.index'],
+        ],
+    ],
+
+    // ── Plugins ─────────────────────────────────────────────────────
+
+    'plugins' => [
+        'title' => 'Plugins',
+        'description' => 'Extend FleetQ with composer-installable plugins — additional MCP tools, signal connectors, UI panels, website blocks. On cloud, plugins are platform-curated and toggleable per-team.',
+        'steps' => [
+            'Browse available plugins',
+            'Toggle a plugin on/off for your team',
+            'Configure required env vars or credentials',
+            'New tools / connectors / blocks become available immediately',
+        ],
+        'tips' => [
+            'Self-hosted: plugins are standard Composer packages (`composer require ...`)',
+            'Cloud: only platform-vetted plugins are exposed (security)',
+            'Disabled plugins keep their data — you can re-enable later',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Marketplace', 'route' => 'app.marketplace.index'],
+            ['label' => 'Tools', 'route' => 'tools.index'],
+        ],
+    ],
+
+    // ── Knowledge Sources ───────────────────────────────────────────
+
+    'knowledge.index' => [
+        'title' => 'Knowledge Sources',
+        'description' => 'Documents, URLs, FAQs, and structured data that feed your agents and chatbots. Each source is chunked, embedded, and indexed for semantic retrieval.',
+        'steps' => [
+            'Add a source: upload PDF/DOCX, paste URL, or write FAQ pairs',
+            'Wait for chunking + embedding (queued job, usually <60s)',
+            'Attach the source to an agent or chatbot',
+            'Re-index when the source content changes',
+        ],
+        'tips' => [
+            'URL sources can be set to auto-recrawl on a schedule',
+            'Chunk size is tuned per source type — adjust manually if retrieval is poor',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Memory', 'route' => 'memory.index'],
+            ['label' => 'Chatbots', 'route' => 'chatbots.index'],
+        ],
+    ],
+
+    // ── Chatbots — sub-pages ────────────────────────────────────────
+
+    'chatbots.create' => [
+        'title' => 'Create Chatbot',
+        'description' => 'Spin up a new chatbot backed by an agent. Pick the channel (web widget, Slack, Telegram, ticket inbox), pick an agent, attach knowledge sources.',
+        'steps' => [
+            'Name your chatbot and pick its primary channel',
+            'Pick the agent that drives conversations',
+            'Attach knowledge sources for retrieval-augmented answers',
+            'Continue — the embed snippet / channel-specific config appears',
+        ],
+        'tips' => [
+            'You can switch the agent later without breaking conversations',
+            'Per-chatbot LLM provider override is available',
+        ],
+        'prerequisites' => [
+            ['label' => 'At least one Agent', 'route' => 'agents.index'],
+        ],
+        'related' => [
+            ['label' => 'Chatbots', 'route' => 'chatbots.index'],
+        ],
+    ],
+
+    'chatbots.show' => [
+        'title' => 'Chatbot Detail',
+        'description' => 'Configure a chatbot — agent, knowledge sources, embed snippet, channel-specific settings, conversation history.',
+        'steps' => [
+            'Copy the embed snippet for web widgets',
+            'Adjust per-channel settings (Slack OAuth, Telegram bot token, etc.)',
+            'Tune the system prompt or pick a different agent',
+            'Browse the Conversations tab to see live sessions',
+        ],
+        'tips' => [
+            'Knowledge source changes propagate on the next conversation turn — no rebuild needed',
+            'Use Analytics to spot common drop-off points',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Chatbots', 'route' => 'chatbots.index'],
+            ['label' => 'Knowledge Sources', 'route' => 'knowledge.index'],
+        ],
+    ],
+
+    'chatbots.analytics' => [
+        'title' => 'Chatbot Analytics',
+        'description' => 'Conversation volume, deflection rate, top intents, fallback rate, latency percentiles for one chatbot.',
+        'steps' => [
+            'Pick a time window',
+            'Review volume + deflection rate (chats resolved without human)',
+            'Drill into top intents to spot common questions',
+            'Check fallback transcripts to identify gaps in knowledge sources',
+        ],
+        'tips' => [
+            'High fallback rate = add knowledge sources or tune the system prompt',
+            'p95 latency includes LLM time + knowledge retrieval',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Chatbot Detail', 'route' => 'chatbots.index'],
+        ],
+    ],
+
+    'chatbots.conversations' => [
+        'title' => 'Chatbot Conversations',
+        'description' => 'All conversations for one chatbot — search, filter by channel/sentiment/resolution, replay turn-by-turn, export.',
+        'steps' => [
+            'Filter by channel, status, or date range',
+            'Click a conversation to replay turn-by-turn',
+            'Export selected conversations as JSON',
+        ],
+        'tips' => [
+            'Conversations are retained per the team\'s audit retention plan',
+            'Replay shows tool calls and retrieved context — useful for debugging',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Chatbot Detail', 'route' => 'chatbots.index'],
+        ],
+    ],
+
+    'chatbots.knowledge' => [
+        'title' => 'Chatbot Knowledge',
+        'description' => 'Knowledge sources scoped to one chatbot. Override or extend the team-wide knowledge base for this specific bot.',
+        'steps' => [
+            'Add chatbot-specific sources (FAQs, URLs, docs)',
+            'Toggle inherited team-wide sources on/off for this bot',
+            'Re-index after changes to refresh embeddings',
+        ],
+        'tips' => [
+            'Bot-specific overrides take precedence over team-wide sources at retrieval time',
+            'Use this to give different bots different "voices" or knowledge depth',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Chatbot Detail', 'route' => 'chatbots.index'],
+            ['label' => 'Knowledge Sources', 'route' => 'knowledge.index'],
+        ],
+    ],
+
+    // ── Email — sub-pages ───────────────────────────────────────────
+
+    'email.themes.index' => [
+        'title' => 'Email Themes',
+        'description' => 'Design themes (colors, fonts, header/footer) reused across email templates. Edit once, applied everywhere.',
+        'steps' => [
+            'Click "New Theme" or duplicate an existing one',
+            'Pick brand colors, typography, header logo, footer text',
+            'Save — templates using this theme update on next send',
+        ],
+        'tips' => [
+            'Test each theme in light + dark mode previews',
+            'Themes can be duplicated to A/B test brand variations',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Email Templates', 'route' => 'email.templates.index'],
+        ],
+    ],
+
+    'email.themes.show' => [
+        'title' => 'Email Theme Detail',
+        'description' => 'Edit a single theme — colors, typography, header/footer, dark-mode overrides.',
+        'steps' => [
+            'Adjust colors via the picker; preview updates live',
+            'Override individual fields for dark mode',
+            'Save — changes propagate to all templates using this theme',
+        ],
+        'tips' => [
+            'Hex codes accept short form (#fff) or rgb()',
+            'A theme used by published templates can\'t be deleted — duplicate first',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Email Themes', 'route' => 'email.themes.index'],
+        ],
+    ],
+
+    'email.templates.edit' => [
+        'title' => 'Edit Email Template',
+        'description' => 'Visual block editor for an email template — content blocks, dynamic variables, theme application.',
+        'steps' => [
+            'Drag content blocks from the sidebar onto the email',
+            'Click any block to edit text or insert dynamic variables',
+            'Switch the theme from the top bar',
+            'Preview across light/dark + mobile/desktop',
+        ],
+        'tips' => [
+            'Variables like `{{user.name}}` are resolved at send time',
+            'Templates are versioned — earlier versions stay sendable',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Email Templates', 'route' => 'email.templates.index'],
+            ['label' => 'Email Themes', 'route' => 'email.themes.index'],
+        ],
+    ],
+
+    'email.templates.preview' => [
+        'title' => 'Email Template Preview',
+        'description' => 'See an email exactly as a recipient will. Switch between light/dark mode and viewport sizes.',
+        'steps' => [
+            'Toggle light vs dark mode',
+            'Switch between mobile and desktop preview',
+            'Send a test email to yourself',
+        ],
+        'tips' => [
+            'Test with real data by picking a sample recipient',
+            'Outlook desktop client can render differently — use a 3rd-party tester for critical campaigns',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Email Templates', 'route' => 'email.templates.index'],
+        ],
+    ],
+
+    // ── Workflow Evaluations (different from Eval Pipeline) ────────
+
+    'evaluations.index' => [
+        'title' => 'Workflow Evaluations',
+        'description' => 'Test runs of your workflows against curated inputs. Like the Eval Pipeline but at the workflow level — full DAG execution with assertion checks per step.',
+        'steps' => [
+            'Pick a workflow you want to test',
+            'Curate input cases (manually or auto-derived from real runs)',
+            'Trigger the evaluation — each case runs the full workflow',
+            'Review pass/fail per case + per assertion',
+        ],
+        'tips' => [
+            'Workflow evaluations are slower than skill evaluations — they execute the full DAG',
+            'Failed assertions surface the exact step that diverged',
+        ],
+        'prerequisites' => [
+            ['label' => 'A Workflow with at least one run', 'route' => 'workflows.index'],
+        ],
+        'related' => [
+            ['label' => 'Workflows', 'route' => 'workflows.index'],
+            ['label' => 'Eval Pipeline (skill-level)', 'route' => 'evaluation.index'],
+        ],
+    ],
+
+    // ── External Agents ─────────────────────────────────────────────
+
+    'external-agents.show' => [
+        'title' => 'External Agent Detail',
+        'description' => 'A single external agent\'s capabilities, pricing, manifest URL, and chat history. Connect, attach to a project, or chat directly.',
+        'steps' => [
+            'Read the capabilities manifest (skills, tools, supported tasks)',
+            'Review pricing — billed by the upstream platform, not FleetQ',
+            'Attach to a project, or click "Chat" for one-off interaction',
+        ],
+        'tips' => [
+            'Manifests are fetched live — capabilities reflect upstream changes immediately',
+            'External agents follow the agent-chat protocol; you can self-host one with the SDK',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'External Agents', 'route' => 'external-agents.index'],
+            ['label' => 'Agentverse', 'route' => 'external-agents.agentverse'],
+        ],
+    ],
+
+    'external-agents.agentverse' => [
+        'title' => 'Agentverse',
+        'description' => 'Public directory of external agents implementing the agent-chat protocol — discover capabilities you don\'t want to build yourself.',
+        'steps' => [
+            'Browse by category or search by capability',
+            'Click an agent to see its detail page',
+            'Connect agents you want to use',
+        ],
+        'tips' => [
+            'Agentverse is a federated directory — anyone can publish a manifest',
+            'Verified agents have a checkmark badge; unverified ones run at your own risk',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'External Agents', 'route' => 'external-agents.index'],
+        ],
+    ],
+
+    // ── Git Repository — Create ─────────────────────────────────────
+
+    'git-repositories.create' => [
+        'title' => 'Connect Git Repository',
+        'description' => 'Connect a GitHub or GitLab repository so agents can read code, open PRs, and dispatch workflows. Pick a mode based on your security and capability needs.',
+        'steps' => [
+            'Pick the provider (GitHub / GitLab) and authenticate via OAuth',
+            'Select the repository and branch',
+            'Pick a mode: API-only (safest), Sandbox (ephemeral worktree), or Bridge (local relay)',
+            'Index the repo so agents can search code',
+        ],
+        'tips' => [
+            'API-only mode never clones — all operations via the provider API. Best for production',
+            'Sandbox mode gives agents a real working directory but resets it after each run',
+            'Bridge mode requires the relay binary — most powerful but needs operator setup',
+        ],
+        'prerequisites' => [
+            ['label' => 'Provider OAuth credential', 'route' => 'credentials.index'],
+        ],
+        'related' => [
+            ['label' => 'Git Repositories', 'route' => 'git-repositories.index'],
+        ],
+    ],
+
+    // ── Integrations — sub-pages ────────────────────────────────────
+
+    'integrations.show' => [
+        'title' => 'Integration Detail',
+        'description' => 'Inspect a connected integration — health check, identity (which account), recent actions, capabilities, audit trail. Edit or disconnect from here.',
+        'steps' => [
+            'Review the identity card to confirm which account is connected',
+            'Run a ping test to verify the credential is still valid',
+            'Browse the recent-actions log for audit trail',
+            'Edit or disconnect using the action panel',
+        ],
+        'tips' => [
+            'Identity is auto-cached on each ping — if it changes, the card flags it',
+            'Mutating actions (create / update / delete) route through the per-tier risk policy',
+            'Use Disconnect to invalidate the credential platform-side immediately',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Integrations', 'route' => 'integrations.index'],
+            ['label' => 'Approvals', 'route' => 'approvals.index'],
+        ],
+    ],
+
+    'integrations.edit' => [
+        'title' => 'Edit Integration',
+        'description' => 'Update integration credentials, scopes, or display name. Schema-driven form per provider.',
+        'steps' => [
+            'Update the fields you want to change',
+            'Leave secret fields blank to keep the existing value',
+            'Save — a re-ping runs automatically to verify',
+        ],
+        'tips' => [
+            'Empty secret fields preserve the stored value (don\'t clear by accident)',
+            'Scope changes may require re-authorization — the form will redirect you to OAuth if needed',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Integration Detail', 'route' => 'integrations.index'],
+        ],
+    ],
+
+    // ── Marketplace alt routes ──────────────────────────────────────
+
+    'marketplace.index' => [
+        'title' => 'Marketplace',
+        'description' => 'Community-shared agents, skills, workflows, and frameworks. Install with one click, fork to customize, publish your own.',
+        'steps' => [
+            'Browse by category or search',
+            'Click a listing to see its details, reviews, risk score',
+            'Install — config is copied into your team',
+        ],
+        'tips' => [
+            'Every listing gets an AI risk score before publish — flagged ones surface a warning',
+            'Installed items are forks — you can edit them without affecting the original',
+            'Publish your own to earn marketplace karma',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Marketplace (in-app)', 'route' => 'app.marketplace.index'],
+            ['label' => 'Skills', 'route' => 'skills.index'],
+        ],
+    ],
+
+    'marketplace.show' => [
+        'title' => 'Marketplace Listing',
+        'description' => 'Detailed view of a marketplace listing — author, risk score, reviews, version history, install button.',
+        'steps' => [
+            'Read the listing description and recent reviews',
+            'Check the risk score (low / medium / high)',
+            'Click Install — it forks into your team workspace',
+            'Leave a review after using it',
+        ],
+        'tips' => [
+            'High-risk listings have an explicit warning panel — read it before installing',
+            'Version history shows what changed between releases',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Marketplace', 'route' => 'app.marketplace.index'],
+        ],
+    ],
+
+    'marketplace.category' => [
+        'title' => 'Marketplace Category',
+        'description' => 'Listings filtered by category (e.g., Research, Customer Support, Code Review).',
+        'steps' => [
+            'Browse listings within this category',
+            'Sort by popularity, recent, or rating',
+            'Click any listing for the detail view',
+        ],
+        'tips' => [
+            'Categories are taxonomy-driven — listings can appear in multiple',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Marketplace', 'route' => 'app.marketplace.index'],
+        ],
+    ],
+
+    // ── Triggers — Create ───────────────────────────────────────────
+
+    'triggers.create' => [
+        'title' => 'Create Trigger Rule',
+        'description' => 'Auto-launch experiments or projects when inbound signals match conditions. Map signal fields to project inputs, set cooldowns and concurrency caps.',
+        'steps' => [
+            'Pick the source: which connector should drive this trigger',
+            'Define conditions (equals, contains, threshold) on signal fields',
+            'Pick the target: experiment template or project',
+            'Map signal fields to target inputs',
+            'Set cooldown and concurrency limits',
+        ],
+        'tips' => [
+            'Use the test panel to dry-run against historical signals before activating',
+            'Cooldown prevents flap-loops; concurrency cap limits total parallel runs',
+        ],
+        'prerequisites' => [
+            ['label' => 'A configured connector binding', 'route' => 'signals.bindings'],
+            ['label' => 'A target experiment or project', 'route' => 'experiments.index'],
+        ],
+        'related' => [
+            ['label' => 'Triggers', 'route' => 'triggers.index'],
+            ['label' => 'Signals', 'route' => 'signals.entities'],
+        ],
+    ],
+
+    // ── Telegram Bots ───────────────────────────────────────────────
+
+    'telegram.bots' => [
+        'title' => 'Telegram Bots',
+        'description' => 'Register and manage Telegram bots for inbound signals or chatbot channels. Each bot has its own webhook + routing mode.',
+        'steps' => [
+            'Create a bot in BotFather and copy its token',
+            'Click "Register Bot" and paste the token',
+            'Pick a routing mode (inbound signals / chatbot / both)',
+            'Set the webhook (auto-configured for cloud)',
+        ],
+        'tips' => [
+            'Polling mode is available for self-hosted installations behind firewalls',
+            'Each bot can be bound to multiple chats — chatbinding is per-chat',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Connector Bindings', 'route' => 'signals.bindings'],
+            ['label' => 'Chatbots', 'route' => 'chatbots.index'],
+        ],
+    ],
+
+    // ── Outbound Connectors ─────────────────────────────────────────
+
+    'outbound.email' => [
+        'title' => 'Outbound Email',
+        'description' => 'Configure outbound email — platform mail driver or your own SMTP. Used by experiments, chatbots, and notifications.',
+        'steps' => [
+            'Pick driver: platform (uses FleetQ infrastructure) or custom SMTP',
+            'For SMTP: enter host, port, credentials, encryption',
+            'Set the default From address and reply-to',
+            'Send a test email to verify',
+        ],
+        'tips' => [
+            'Custom SMTP is preferred for compliance / deliverability',
+            'Platform mail has fair-use rate limits per plan',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Email Templates', 'route' => 'email.templates.index'],
+        ],
+    ],
+
+    'outbound.notifications' => [
+        'title' => 'Outbound Notifications',
+        'description' => 'In-app notification config — what triggers notifications, who receives them, default delivery channels.',
+        'steps' => [
+            'Pick which event types fire notifications',
+            'Set the default channels (in-app / email / Telegram / Slack)',
+            'Adjust per-user overrides via Profile > Notifications',
+        ],
+        'tips' => [
+            'Critical alerts (failed deploys, budget exceeded) bypass quiet hours',
+            'Each user can override defaults — these are team baselines',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Notification Preferences', 'route' => 'notifications.preferences'],
+            ['label' => 'Notifications', 'route' => 'notifications.index'],
+        ],
+    ],
+
+    'outbound.webhooks' => [
+        'title' => 'Outbound Webhooks',
+        'description' => 'Configure webhook endpoints that receive event payloads from FleetQ — experiment transitions, signal ingests, audit events. Bring your own infrastructure.',
+        'steps' => [
+            'Create an endpoint with the target URL',
+            'Pick event types to subscribe to',
+            'Set the HMAC secret (used for signature verification on your end)',
+            'Test with a sample payload',
+        ],
+        'tips' => [
+            'Use webhooks to integrate with custom internal tools',
+            'Failed deliveries retry with exponential backoff for up to 24h',
+            'Verify signatures on your end — never trust headers alone',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Audit Log', 'route' => 'audit'],
+        ],
+    ],
+
+    'outbound.whatsapp' => [
+        'title' => 'Outbound WhatsApp',
+        'description' => 'Send messages via WhatsApp Business API. Requires Meta business account + approved templates.',
+        'steps' => [
+            'Add WhatsApp credentials (phone number ID + access token)',
+            'Verify the webhook (we provide the URL + verify token)',
+            'Pick a Meta-approved message template',
+            'Send a test message',
+        ],
+        'tips' => [
+            'WhatsApp templates require Meta approval — apply in Meta Business Manager first',
+            'Free-form messages only work within a 24h customer-initiated session',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Outbound Notifications', 'route' => 'outbound.notifications'],
+        ],
+    ],
+
+    // ── Voice Sessions ──────────────────────────────────────────────
+
+    'agents.voice' => [
+        'title' => 'Voice Sessions',
+        'description' => 'Real-time voice conversations with your agents over LiveKit. Each session has audio recording, live transcript, and post-call summarization.',
+        'steps' => [
+            'Pick an agent — voice-enabled agents have a microphone badge',
+            'Allow microphone access when prompted',
+            'Talk naturally — the agent responds in voice',
+            'Review the transcript and summary after the call',
+        ],
+        'tips' => [
+            'Voice quality depends on your network — wired connections work best',
+            'Sessions are recorded by default; toggle off in agent settings if needed',
+            'STT and TTS are separate skills — costs accrue per provider',
+        ],
+        'prerequisites' => [
+            ['label' => 'A voice-enabled agent', 'route' => 'agents.index'],
+        ],
+        'related' => [
+            ['label' => 'Agents', 'route' => 'agents.index'],
+        ],
+    ],
+
+    // ── Use Cases ───────────────────────────────────────────────────
+
+    'use-cases.index' => [
+        'title' => 'Use Cases',
+        'description' => 'Curated playbooks demonstrating how FleetQ solves specific business problems — sales outreach, customer support automation, content QA, etc.',
+        'steps' => [
+            'Browse use cases by category',
+            'Click any to see the full step-by-step playbook',
+            'Install the supporting agents/skills/workflows with one click',
+        ],
+        'tips' => [
+            'Use cases are the fastest path from "what does this do" to a working setup',
+            'Each use case lists prerequisites — read those first',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Marketplace', 'route' => 'app.marketplace.index'],
+            ['label' => 'Frameworks', 'route' => 'frameworks.index'],
+        ],
+    ],
+
+    'use-cases.show' => [
+        'title' => 'Use Case Detail',
+        'description' => 'Step-by-step playbook for a single use case — required components, configuration, expected outcomes.',
+        'steps' => [
+            'Read the overview to confirm this fits your problem',
+            'Review the prerequisites and required integrations',
+            'Click "Install bundle" — agents / skills / workflows are forked into your team',
+            'Run the example experiment to verify end-to-end',
+        ],
+        'tips' => [
+            'Bundle install is reversible — uninstall removes the forked components',
+            'After install, customize the agents and prompts to match your brand',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Use Cases', 'route' => 'use-cases.index'],
+        ],
+    ],
+
 ];
