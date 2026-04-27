@@ -3,6 +3,7 @@
 namespace App\Domain\Approval\Actions;
 
 use App\Domain\Approval\Enums\ActionProposalStatus;
+use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Models\User;
 use RuntimeException;
@@ -28,6 +29,12 @@ class ApproveActionProposalAction
             'decision_reason' => $reason,
         ]);
 
-        return $proposal->refresh();
+        $fresh = $proposal->refresh();
+
+        // Fires after the status flip so listeners (executor dispatcher,
+        // future webhooks, etc.) see a coherent approved row.
+        ActionProposalApproved::dispatch($fresh);
+
+        return $fresh;
     }
 }

@@ -8,6 +8,7 @@ use App\Domain\Shared\Models\Team;
 use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -55,6 +56,10 @@ class ActionProposalsTabTest extends TestCase
 
     public function test_approve_proposal_method_sets_status_approved(): void
     {
+        // Auto-execute job runs after approval — fake queue so this test
+        // only asserts the approval state transition.
+        Queue::fake();
+
         $proposal = app(CreateActionProposalAction::class)->execute(
             teamId: $this->team->id,
             targetType: 'tool_call',

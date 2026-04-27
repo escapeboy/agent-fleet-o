@@ -660,16 +660,11 @@ class SendAssistantMessageAction
 
             $clone = clone $tool;
             $clone->using(function () use ($toolName, $createProposal, $teamId, $userId, $conversation) {
-                $args = func_get_args();
-                $argsAssoc = is_array($args[0] ?? null) ? $args[0] : ['args' => $args];
+                $positionalArgs = func_get_args();
 
                 $summary = "Destructive tool: {$toolName}";
-                if (is_array($argsAssoc) && ! empty($argsAssoc)) {
-                    $firstKey = array_key_first($argsAssoc);
-                    $firstVal = $argsAssoc[$firstKey];
-                    if (is_scalar($firstVal)) {
-                        $summary .= " ({$firstKey}={$firstVal})";
-                    }
+                if (! empty($positionalArgs) && is_scalar($positionalArgs[0])) {
+                    $summary .= " ({$positionalArgs[0]})";
                 }
 
                 $proposal = $createProposal->execute(
@@ -677,7 +672,10 @@ class SendAssistantMessageAction
                     targetType: 'tool_call',
                     targetId: null,
                     summary: $summary,
-                    payload: ['tool' => $toolName, 'args' => $argsAssoc],
+                    payload: [
+                        'tool' => $toolName,
+                        'positional_args' => $positionalArgs,
+                    ],
                     userId: $userId,
                     riskLevel: 'high',
                     expiresAt: now()->addHours(24),

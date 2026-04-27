@@ -109,6 +109,22 @@
                             </div>
                         @endif
 
+                        {{-- Execution result / error --}}
+                        @if($p->executed_at)
+                            <div>
+                                <p class="mb-1 text-xs font-semibold text-gray-700">
+                                    <i class="fa-solid fa-{{ $p->execution_error ? 'triangle-exclamation text-rose-500' : 'circle-check text-emerald-500' }} mr-1"></i>
+                                    Execution
+                                    <span class="ml-1 font-normal text-gray-400">{{ $p->executed_at->diffForHumans() }}</span>
+                                </p>
+                                @if($p->execution_error)
+                                    <pre class="max-h-32 overflow-auto rounded-md bg-rose-50 p-2 text-[11px] text-rose-700">{{ $p->execution_error }}</pre>
+                                @elseif($p->execution_result)
+                                    <pre class="max-h-48 overflow-auto rounded-md bg-emerald-50 p-2 text-[11px] text-emerald-900">{{ json_encode($p->execution_result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                @endif
+                            </div>
+                        @endif
+
                         {{-- Actions --}}
                         @if($status === \App\Domain\Approval\Enums\ActionProposalStatus::Pending)
                             <div class="flex gap-2 border-t border-gray-100 pt-3">

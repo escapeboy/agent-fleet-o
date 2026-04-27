@@ -8,6 +8,8 @@ enum ActionProposalStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Expired = 'expired';
+    case Executed = 'executed';
+    case ExecutionFailed = 'execution_failed';
 
     public function isTerminal(): bool
     {
@@ -21,6 +23,8 @@ enum ActionProposalStatus: string
             self::Approved => 'Approved',
             self::Rejected => 'Rejected',
             self::Expired => 'Expired',
+            self::Executed => 'Executed',
+            self::ExecutionFailed => 'Execution failed',
         };
     }
 
@@ -28,9 +32,11 @@ enum ActionProposalStatus: string
     {
         return match ($this) {
             self::Pending => 'amber',
-            self::Approved => 'emerald',
+            self::Approved => 'sky',
             self::Rejected => 'red',
             self::Expired => 'gray',
+            self::Executed => 'emerald',
+            self::ExecutionFailed => 'rose',
         };
     }
 }

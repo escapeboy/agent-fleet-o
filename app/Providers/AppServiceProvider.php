@@ -399,6 +399,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(\App\Domain\Agent\Events\AgentExecuted::class, \App\Domain\Shared\Listeners\BroadcastAgentExecuted::class);
         Event::listen(ExperimentTransitioned::class, \App\Domain\Shared\Listeners\BroadcastExperimentTransitioned::class);
 
+        // ActionProposal auto-execute on approval — dispatches a queued job
+        Event::listen(\App\Domain\Approval\Events\ActionProposalApproved::class, \App\Domain\Approval\Listeners\DispatchActionProposalExecution::class);
+
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
         Event::listen(ExperimentTransitioned::class, RecordTransitionMetrics::class);

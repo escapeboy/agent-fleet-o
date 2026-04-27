@@ -30,6 +30,9 @@ class ActionProposal extends Model
         'decided_by_user_id',
         'decided_at',
         'decision_reason',
+        'executed_at',
+        'execution_result',
+        'execution_error',
     ];
 
     protected function casts(): array
@@ -37,9 +40,11 @@ class ActionProposal extends Model
         return [
             'payload' => 'array',
             'lineage' => 'array',
+            'execution_result' => 'array',
             'status' => ActionProposalStatus::class,
             'expires_at' => 'datetime',
             'decided_at' => 'datetime',
+            'executed_at' => 'datetime',
         ];
     }
 

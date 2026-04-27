@@ -13,6 +13,7 @@ use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -105,6 +106,9 @@ class ActionProposalTest extends TestCase
 
     public function test_approve_proposal_marks_status_and_decision_metadata(): void
     {
+        // Auto-execute fires after approval; fake to isolate.
+        Queue::fake();
+
         $proposal = $this->makeProposal();
 
         app(ApproveActionProposalAction::class)->execute($proposal, $this->user, 'looks fine');

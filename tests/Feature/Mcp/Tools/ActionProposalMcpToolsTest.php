@@ -11,6 +11,7 @@ use App\Mcp\Tools\Approval\ActionProposalListTool;
 use App\Mcp\Tools\Approval\ActionProposalRejectTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Mcp\Request;
 use Tests\TestCase;
 
@@ -76,6 +77,10 @@ class ActionProposalMcpToolsTest extends TestCase
 
     public function test_approve_marks_status_approved(): void
     {
+        // Auto-execute job is fired after approval; isolate this test from
+        // the executor's downstream effects.
+        Queue::fake();
+
         $proposal = $this->makeProposal();
 
         $payload = $this->callTool(ActionProposalApproveTool::class, [
