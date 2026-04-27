@@ -18,7 +18,7 @@
             </span>
             <span class="ml-2 text-gray-400" x-text="liveStatusLabel"></span>
         </div>
-        <div id="team-graph-canvas" class="h-full w-full rounded-xl"></div>
+        <div wire:ignore id="team-graph-canvas" class="h-full w-full rounded-xl"></div>
 
         @if(empty($graph['nodes']))
             <div class="absolute inset-0 flex flex-col items-center justify-center text-center text-gray-500">
@@ -115,6 +115,16 @@
                     setTimeout(() => this.bootCytoscape(graph), 100);
                     return;
                 }
+                // Guard against re-init from Alpine x-init re-runs (Livewire DOM morph)
+                if (this.cy) {
+                    return;
+                }
+                const container = document.getElementById('team-graph-canvas');
+                if (!container) {
+                    // Container not in DOM yet — retry once on next tick
+                    setTimeout(() => this.bootCytoscape(graph), 50);
+                    return;
+                }
                 const elements = [
                     ...graph.nodes.map(n => ({
                         data: { id: n.id, label: n.label, type: n.type, vendor: n.vendor || null, status: n.status || null, role: n.role || null, initials: n.initials || null },
@@ -124,7 +134,7 @@
                     })),
                 ];
                 this.cy = cytoscape({
-                    container: document.getElementById('team-graph-canvas'),
+                    container,
                     elements,
                     style: [
                         { selector: 'node[type="agent"]',
