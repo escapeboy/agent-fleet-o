@@ -1130,4 +1130,331 @@ return [
         ],
     ],
 
+    // ── Team Graph ───────────────────────────────────────────────────
+
+    'team-graph' => [
+        'title' => 'Team Graph',
+        'description' => 'Live visual map of your workspace. Each node is an Agent, Human, or Crew; edges show membership and collaboration. The activity firehose on the right shows what is happening across the team in real time.',
+        'steps' => [
+            'Read the legend top-left: blue circle = Agent, green ellipse = Human, orange hexagon = Crew',
+            'Edges labeled "worker" mean an agent is a member of a crew',
+            'Click any node to see its recent activity in the side drawer',
+            'Watch the right panel for live experiment transitions and agent executions',
+        ],
+        'tips' => [
+            'Status indicator shows "live" when WebSockets are connected, "polling 5s" when falling back',
+            'Pulsing yellow border on a node means it is active right now',
+            'New nodes appear on full page reload — drag the canvas to reposition',
+            'Use this view to spot orphan agents (no crew) or overloaded hubs',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Agents', 'route' => 'agents.index'],
+            ['label' => 'Crews', 'route' => 'crews.index'],
+            ['label' => 'Audit Log', 'route' => 'audit'],
+        ],
+    ],
+
+    // ── Evaluation pipeline ─────────────────────────────────────────
+
+    'evaluation.index' => [
+        'title' => 'Eval Pipeline',
+        'description' => 'Curate test cases from real agent runs, replay them against alternative configurations, and compare outputs side-by-side. The cycle: real run → curate → replay → diff → promote.',
+        'steps' => [
+            'Pick a real agent run that produced a notable output',
+            'Curate the input/expected pair into a test case',
+            'Replay the case against a different agent, model, or skill version',
+            'Compare outputs in the Compare Runs view to decide which configuration wins',
+        ],
+        'tips' => [
+            'Eval cases are scoped to a team — they capture institutional knowledge over time',
+            'LLM-as-judge scoring is available when no exact match is required',
+            'Promote winning configurations directly to live agents from the compare view',
+        ],
+        'prerequisites' => [
+            ['label' => 'At least one Agent has runs to curate from', 'route' => 'agents.index'],
+        ],
+        'related' => [
+            ['label' => 'Agents', 'route' => 'agents.index'],
+            ['label' => 'Skills', 'route' => 'skills.index'],
+        ],
+    ],
+
+    'evaluation.compare' => [
+        'title' => 'Compare Runs',
+        'description' => 'Side-by-side comparison of two replays of the same eval case. Use this to verify a config change actually improves output before promoting it.',
+        'steps' => [
+            'Pick the baseline run on the left',
+            'Pick the candidate run on the right',
+            'Diff the outputs, token usage, latency, and cost columns',
+            'Promote the winner to the source agent or skill',
+        ],
+        'tips' => [
+            'Differences are highlighted in green/red',
+            'A failed assertion is marked with a red x even if the output looks correct — check the assertion list',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Eval Pipeline', 'route' => 'evaluation.index'],
+        ],
+    ],
+
+    // ── Frameworks (Founder Mode) ───────────────────────────────────
+
+    'frameworks.index' => [
+        'title' => 'Frameworks',
+        'description' => 'Browse 20+ business and product frameworks (RICE, SPIN, BANT, MEDDIC, OKRs, Lean Startup, Shape Up, Unit Economics, etc.) packaged as skills your agents can apply.',
+        'steps' => [
+            'Filter by category: Strategy, Product, Growth, Finance, Ops, Testing',
+            'Click a framework to see its description, inputs, and example outputs',
+            'Attach a framework skill to an agent to get framework-aware reasoning',
+        ],
+        'tips' => [
+            'Founder Mode pack installs all 20 frameworks at once via Onboarding',
+            'Frameworks are versioned skills — you can fork and customize the prompts',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Skills', 'route' => 'skills.index'],
+            ['label' => 'Agents', 'route' => 'agents.index'],
+            ['label' => 'Marketplace', 'route' => 'app.marketplace.index'],
+        ],
+    ],
+
+    // ── Bug reports ─────────────────────────────────────────────────
+
+    'bug-reports.index' => [
+        'title' => 'Bug Reports',
+        'description' => 'Bug reports collected from your public JS widget. Reporters can comment back through the same widget — agents can be assigned to investigate or fix.',
+        'steps' => [
+            'Filter by project, severity, status, or reporter',
+            'Click a report to see the screenshot, action/console/network logs, and breadcrumbs',
+            'Delegate to an agent to auto-create an Experiment scoped to the bug',
+            'Reply to the reporter through the threaded comment view',
+        ],
+        'tips' => [
+            'Source maps are resolved automatically when registered via /api/v1/source-maps',
+            'Suspect-files analysis ranks files by likelihood (0.60–0.95 confidence)',
+            'Project-level structured intake forces specific fields when enabled',
+        ],
+        'prerequisites' => [
+            ['label' => 'Configure team widget public key', 'route' => 'team.settings'],
+        ],
+        'related' => [
+            ['label' => 'Signals', 'route' => 'signals.entities'],
+            ['label' => 'Agents', 'route' => 'agents.index'],
+        ],
+    ],
+
+    'bug-reports.show' => [
+        'title' => 'Bug Report Detail',
+        'description' => 'Full bug report context: screenshot, attachments, action/console/network logs, breadcrumbs, suspect files, threaded comments. Delegate to an agent to fix it.',
+        'steps' => [
+            'Review the screenshot and reporter description',
+            'Expand the logs sections for runtime context',
+            'Check the suspect files panel for AI-ranked file likelihood',
+            'Reply to the reporter or delegate to an agent',
+        ],
+        'tips' => [
+            'Comments marked "support" are visible to the reporter; "human" comments are internal-only',
+            'Resolution can be confirmed or rejected by the reporter',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Bug Reports', 'route' => 'bug-reports.index'],
+        ],
+    ],
+
+    // ── Insights ────────────────────────────────────────────────────
+
+    'insights' => [
+        'title' => 'Insights',
+        'description' => 'Aggregated AI-generated insights from your team\'s recent activity — top patterns, anomalies, recommended actions. Refreshed daily.',
+        'steps' => [
+            'Read the daily digest at the top',
+            'Drill into a specific insight to see the underlying signals',
+            'Mark an insight as actioned when you take a step',
+        ],
+        'tips' => [
+            'Insights are derived from the world model + signal stream — make sure both are populated',
+            'Cost is one Haiku call per refresh per team',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Dashboard', 'route' => 'dashboard'],
+            ['label' => 'Audit Log', 'route' => 'audit'],
+        ],
+    ],
+
+    // ── Knowledge Graph ─────────────────────────────────────────────
+
+    'knowledge-graph.index' => [
+        'title' => 'Knowledge Graph',
+        'description' => 'Entity-relationship facts about your workspace: who, what, when, where, how. Vector-embedded for semantic retrieval. Used as context for every agent run.',
+        'steps' => [
+            'Search for an entity (person, company, project, deal, etc.)',
+            'Browse facts attached to that entity',
+            'Add a fact manually or let agents discover them automatically',
+        ],
+        'tips' => [
+            'Facts are deduplicated by an LLM normalizer to keep the graph clean',
+            'Each fact has a temporal validity window — historical facts stay queryable',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Memory', 'route' => 'memory.index'],
+            ['label' => 'Contacts', 'route' => 'contacts.index'],
+        ],
+    ],
+
+    // ── Chatbots ────────────────────────────────────────────────────
+
+    'chatbots.index' => [
+        'title' => 'Chatbots',
+        'description' => 'Embeddable chat widgets backed by your agents and knowledge base. Each chatbot has its own knowledge sources, conversation log, and analytics.',
+        'steps' => [
+            'Create a chatbot and pick its agent',
+            'Add knowledge sources (URLs, documents, FAQs)',
+            'Embed the widget snippet in your website',
+            'Monitor conversations and analytics from this page',
+        ],
+        'tips' => [
+            'A chatbot can have its own LLM provider and tool set',
+            'Slack, Telegram, and Tickets all integrate as chatbot channels',
+        ],
+        'prerequisites' => [
+            ['label' => 'At least one Agent', 'route' => 'agents.index'],
+        ],
+        'related' => [
+            ['label' => 'Agents', 'route' => 'agents.index'],
+            ['label' => 'Knowledge Sources', 'route' => 'knowledge.index'],
+        ],
+    ],
+
+    // ── Evolution ───────────────────────────────────────────────────
+
+    'evolution.index' => [
+        'title' => 'Agent Evolution',
+        'description' => 'AI-driven self-improvement. The platform analyzes each agent\'s recent execution history and proposes config changes — personality, prompt, model, tool selection. You approve with one click.',
+        'steps' => [
+            'Browse pending evolution proposals',
+            'Click a proposal to see the diff between current and proposed config',
+            'Apply or reject — applied changes create a new agent version',
+        ],
+        'tips' => [
+            'Proposals are scored on confidence — high-confidence ones surface first',
+            'Rolling back is a single click on the agent\'s config history',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Agents', 'route' => 'agents.index'],
+        ],
+    ],
+
+    // ── Git Repositories ────────────────────────────────────────────
+
+    'git-repositories.index' => [
+        'title' => 'Git Repositories',
+        'description' => 'Connected GitHub or GitLab repositories. Agents can read code, open PRs, and dispatch workflows — all routed through the per-tier risk policy gate.',
+        'steps' => [
+            'Click "Connect" to add a new repo (OAuth or token)',
+            'Pick a mode: API-only (cloud), Sandbox (ephemeral worktree), or Bridge (local relay)',
+            'Index the repo so agents can search code and call chains',
+            'Attach the repo to an agent so it can act on the codebase',
+        ],
+        'tips' => [
+            'Risky operations (commits, pushes, PR merges) route through Action Proposals when policy = "ask"',
+            'API-only mode is the safest — no local clone, all operations via the provider API',
+        ],
+        'prerequisites' => [
+            ['label' => 'Provider credentials', 'route' => 'credentials.index'],
+        ],
+        'related' => [
+            ['label' => 'Approvals', 'route' => 'approvals.index'],
+            ['label' => 'Tools', 'route' => 'tools.index'],
+        ],
+    ],
+
+    'git-repositories.show' => [
+        'title' => 'Repository Detail',
+        'description' => 'Inspect a connected repo — file tree, recent commits, open pull requests, indexed code structure, attached agents.',
+        'steps' => [
+            'Browse the file tree to confirm indexing succeeded',
+            'Open the Code Structure tab to see classes, functions, and call chains',
+            'Watch Pull Requests for agent-opened PRs awaiting review',
+        ],
+        'tips' => [
+            'Re-index after major branch changes',
+            'The repo connects to the same per-tier risk policy used for integrations',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Git Repositories', 'route' => 'git-repositories.index'],
+        ],
+    ],
+
+    // ── External Agents (agentverse) ────────────────────────────────
+
+    'external-agents.index' => [
+        'title' => 'External Agents',
+        'description' => 'Agents from other teams or platforms reachable via the agent-chat protocol. Browse, attach, or chat directly.',
+        'steps' => [
+            'Browse the agentverse for public agents',
+            'Click an agent to see its capabilities and pricing',
+            'Attach to a project or chat directly from the detail view',
+        ],
+        'tips' => [
+            'External agents are billed separately by their host platform',
+            'Manifest is fetched live — capabilities reflect the upstream owner\'s changes',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Agents', 'route' => 'agents.index'],
+        ],
+    ],
+
+    // ── Email Templates ─────────────────────────────────────────────
+
+    'email.templates.index' => [
+        'title' => 'Email Templates',
+        'description' => 'Reusable email templates for outbound and notifications. Generate new templates from a prompt with AI, or hand-craft with the visual editor.',
+        'steps' => [
+            'Click "New Template" to start from blank or AI prompt',
+            'Pick a theme (controls colors, fonts, header/footer)',
+            'Edit blocks in the visual builder',
+            'Preview across light and dark, mobile and desktop',
+        ],
+        'tips' => [
+            'AI generation produces both subject and body — refine iteratively',
+            'Templates are versioned — earlier versions stay sendable',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Email Themes', 'route' => 'email.themes.index'],
+            ['label' => 'Outbound', 'route' => 'signals.bindings'],
+        ],
+    ],
+
+    // ── Tools Marketplace (Smithery + popular) ──────────────────────
+
+    'tools.marketplace' => [
+        'title' => 'MCP Marketplace',
+        'description' => 'Browse 300+ MCP servers from the Smithery registry plus the curated FleetQ popular-tools catalog. One-click install attaches the tool to your team.',
+        'steps' => [
+            'Search by name or browse by category',
+            'Click a tool to see its required env vars and capabilities',
+            'Install — credentials prompt appears if needed',
+            'Attach the installed tool to specific agents',
+        ],
+        'tips' => [
+            'Smithery tools update via the upstream registry — check for new versions periodically',
+            'You can also self-author tools via the Plugin SDK',
+        ],
+        'prerequisites' => [],
+        'related' => [
+            ['label' => 'Tools', 'route' => 'tools.index'],
+            ['label' => 'Credentials', 'route' => 'credentials.index'],
+        ],
+    ],
+
 ];
