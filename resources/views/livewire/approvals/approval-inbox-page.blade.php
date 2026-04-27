@@ -42,7 +42,7 @@
     </div>
 
     @if($activeView === 'actions')
-        @include('livewire.approvals.partials.action-proposals-list', ['proposals' => $proposals])
+        @include('livewire.approvals.partials.action-proposals-list', ['unifiedActions' => $unifiedActions])
     @else
 
     {{-- Rejection Modal --}}

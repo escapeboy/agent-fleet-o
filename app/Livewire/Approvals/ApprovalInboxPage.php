@@ -161,21 +161,53 @@ class ApprovalInboxPage extends Component
             'expired' => ApprovalRequest::where('status', ApprovalStatus::Expired)->count(),
         ];
 
-        $proposalsQuery = ActionProposal::with(['actorUser', 'actorAgent', 'decidedByUser'])
+        // ActionProposals (the new generalized gate, Sprint 3a/3b/3c).
+        $actionProposalsCollection = ActionProposal::with(['actorUser', 'actorAgent', 'decidedByUser'])
             ->where('status', $this->statusTab)
-            ->latest();
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        // Outbound ApprovalRequests — surface them in the same view so the
+        // user gets one unified "Real-World Actions" inbox per Sprint 3d
+        // (read-side union; no bridge tables, no shadow rows).
+        $outboundApprovals = ApprovalRequest::with(['outboundProposal', 'experiment', 'reviewer'])
+            ->whereNotNull('outbound_proposal_id')
+            ->where('status', $this->statusTab)
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        // Merge into a single time-sorted collection. Each item carries a
+        // `_source` flag that the partial branches on. Manually limited to
+        // 20 (sum of two paginators isn't trivial; this view is low-traffic).
+        $unifiedActions = $actionProposalsCollection
+            ->map(fn ($p) => (object) ['_source' => 'action_proposal', '_at' => $p->created_at, 'item' => $p])
+            ->concat(
+                $outboundApprovals->map(fn ($a) => (object) ['_source' => 'outbound_approval', '_at' => $a->created_at, 'item' => $a])
+            )
+            ->sortByDesc('_at')
+            ->values()
+            ->take(20);
+
+        $outboundCounts = [
+            'pending' => ApprovalRequest::whereNotNull('outbound_proposal_id')->where('status', ApprovalStatus::Pending)->count(),
+            'approved' => ApprovalRequest::whereNotNull('outbound_proposal_id')->where('status', ApprovalStatus::Approved)->count(),
+            'rejected' => ApprovalRequest::whereNotNull('outbound_proposal_id')->where('status', ApprovalStatus::Rejected)->count(),
+            'expired' => ApprovalRequest::whereNotNull('outbound_proposal_id')->where('status', ApprovalStatus::Expired)->count(),
+        ];
 
         $proposalCounts = [
-            'pending' => ActionProposal::where('status', ActionProposalStatus::Pending->value)->count(),
-            'approved' => ActionProposal::where('status', ActionProposalStatus::Approved->value)->count(),
-            'rejected' => ActionProposal::where('status', ActionProposalStatus::Rejected->value)->count(),
-            'expired' => ActionProposal::where('status', ActionProposalStatus::Expired->value)->count(),
+            'pending' => ActionProposal::where('status', ActionProposalStatus::Pending->value)->count() + $outboundCounts['pending'],
+            'approved' => ActionProposal::where('status', ActionProposalStatus::Approved->value)->count() + $outboundCounts['approved'],
+            'rejected' => ActionProposal::where('status', ActionProposalStatus::Rejected->value)->count() + $outboundCounts['rejected'],
+            'expired' => ActionProposal::where('status', ActionProposalStatus::Expired->value)->count() + $outboundCounts['expired'],
         ];
 
         return view('livewire.approvals.approval-inbox-page', [
             'approvals' => $query->paginate(20),
             'counts' => $counts,
-            'proposals' => $proposalsQuery->paginate(20),
+            'unifiedActions' => $unifiedActions,
             'proposalCounts' => $proposalCounts,
         ])->layout('layouts.app', ['header' => 'Approval Inbox']);
     }
