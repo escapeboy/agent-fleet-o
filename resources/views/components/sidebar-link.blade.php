@@ -87,6 +87,8 @@
         <i class="fas fa-bug h-5 w-5"></i>
     @elseif($icon === 'light-bulb')
         <i class="fas fa-lightbulb h-5 w-5"></i>
+    @elseif($icon === 'sitemap')
+        <i class="fas fa-sitemap h-5 w-5"></i>
     @endif
     {{ $slot }}
 </a>

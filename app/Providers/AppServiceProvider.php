@@ -395,6 +395,10 @@ class AppServiceProvider extends ServiceProvider
             LogIntegrationExecution::class,
         );
 
+        // /team-graph live activity firehose — broadcast normalized TeamActivity events
+        Event::listen(\App\Domain\Agent\Events\AgentExecuted::class, \App\Domain\Shared\Listeners\BroadcastAgentExecuted::class);
+        Event::listen(ExperimentTransitioned::class, \App\Domain\Shared\Listeners\BroadcastExperimentTransitioned::class);
+
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
         Event::listen(ExperimentTransitioned::class, RecordTransitionMetrics::class);

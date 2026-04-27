@@ -317,6 +317,7 @@ use App\Mcp\Tools\Shared\TeamAiFeaturesUpdateTool;
 use App\Mcp\Tools\Shared\TeamByokCredentialManageTool;
 use App\Mcp\Tools\Shared\TeamClaudeCodeVpsAccessTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
+use App\Mcp\Tools\Shared\TeamGraphGetTool;
 use App\Mcp\Tools\Shared\TeamInviteMemberTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamModelAllowlistTool;
@@ -967,6 +968,7 @@ class AgentFleetServer extends Server
         ContactHealthScoreTool::class,
         NotificationTool::class,
         TeamGetTool::class,
+        TeamGraphGetTool::class,
         TeamUpdateTool::class,
         TeamMembersTool::class,
         TeamAiFeaturesGetTool::class,

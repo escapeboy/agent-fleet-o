@@ -265,6 +265,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/frameworks', FrameworksBrowsePage::class)->name('frameworks.index');
 
+    Route::get('/team-graph', \App\Livewire\TeamGraph\TeamGraphPage::class)->name('team-graph');
+
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');

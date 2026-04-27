@@ -112,6 +112,7 @@
             <p class="mb-1 px-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Fleet</p>
             <nav class="flex-1 overflow-y-auto px-2">
                 <x-sidebar-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')" icon="chart-bar">Dashboard</x-sidebar-link>
+                <x-sidebar-link href="{{ route('team-graph') }}" :active="request()->routeIs('team-graph')" icon="sitemap">Team Graph</x-sidebar-link>
                 <x-sidebar-link href="{{ route('projects.index') }}" :active="request()->routeIs('projects.*')" icon="folder">Projects</x-sidebar-link>
                 <x-sidebar-link href="{{ route('experiments.index') }}" :active="request()->routeIs('experiments.*')" icon="play">Runs</x-sidebar-link>
                 <x-sidebar-link href="{{ route('agents.index') }}" :active="request()->routeIs('agents.*')" icon="cpu-chip">Agents</x-sidebar-link>
