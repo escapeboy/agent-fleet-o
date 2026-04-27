@@ -198,6 +198,55 @@ Human-in-the-loop gates. Embedded in workflow nodes or triggered independently.
 
 ---
 
+## Real-World Action Governance
+
+Generalized proposal flow that gates assistant tool calls, integration writes, and git operations behind a per-tier risk policy. Approvals auto-execute. Visible alongside outbound approvals in the unified `/approvals` inbox.
+
+**Domain model**: `ActionProposal` (polymorphic via `target_type` discriminator: `tool_call`, `integration_action`, `git_push`).
+
+**Per-tier policy** in `team.settings.action_proposal_policy = {low, medium, high}`, each `'auto' | 'ask' | 'reject'`. Tier→risk mapping: read=low, write=medium, destructive=high. Legacy `slow_mode_enabled=true` is preserved as `{high: 'ask'}`.
+
+**Gates**:
+- `IntegrationActionGate` — single chokepoint inside `ExecuteIntegrationActionAction::execute()` covers all 50+ integration drivers. Heuristic verb classifier maps action names to tiers.
+- `GitOperationGate` — `GitOperationRouter::resolve()` wraps the `GitClientInterface` in a `GatedGitClient` decorator. All 27 MCP `GitRepository/*` tools inherit transparently.
+- Assistant slow-mode gate — `wrapToolsWithSlowModeGate()` applied in `SendAssistantMessageAction` after `getTools($user)` resolution.
+
+**Bypass via container binding**: `app('integration_gate.bypass')` and `app('git_gate.bypass')` short-circuit gates during approved-proposal re-execution. Wrap in try/finally.
+
+**Auto-execute on approval**: `ApproveActionProposalAction` → `ActionProposalApproved` event → `DispatchActionProposalExecution` listener → `ExecuteActionProposalJob` (queued, idempotent) → `ActionProposalExecutor::execute($proposal, $actor)` dispatches by `target_type`.
+
+**Conversation result append**: when `payload.conversation_id` is set, `AppendExecutionResultToConversation` listener writes the outcome back to the originating assistant conversation as an assistant-role message.
+
+**MCP tools**: `action_proposal_list`, `action_proposal_get`, `action_proposal_approve`, `action_proposal_reject`.
+
+---
+
+## Public Discovery (`/.well-known/fleetq`)
+
+Public, unauthenticated capability manifest. External AI tools (Cursor, Codex, Claude Code, OpenCode) can hit one URL to learn the MCP HTTP/stdio endpoints, REST API base, OpenAPI URL, auth scheme, and tool count. Each block is gated by a `discovery.expose_*` config flag (env-driven) so operators can scrub the public surface.
+
+**Endpoint**: `GET /.well-known/fleetq` — public, throttled to 60 req/min per IP, no auth, no CSRF.
+
+**Config**: `config/discovery.php` — flags `expose_name`, `expose_version`, `expose_mcp`, `expose_api`, `expose_auth`, `expose_tool_count`, `expose_generated_at` (all default `true`).
+
+**MCP parity**: `system_discovery_get` MCP tool returns the same payload from inside an MCP session.
+
+**Source**: `App\Http\Controllers\WellKnownFleetQController`.
+
+---
+
+## Live Team Graph
+
+Cytoscape.js force-directed visualization at `/team-graph`. Updates in real-time via Laravel Reverb WebSockets when an agent runs or an experiment transitions. Shape semantics: agents=rect, humans=ellipse-with-initials, crews=hexagon.
+
+**Real-time event**: `TeamActivityBroadcast` (broadcast on private team channel). Emitted from `BroadcastAgentExecuted` and `BroadcastExperimentTransitioned` listeners.
+
+**Reverb infrastructure**: `reverb` Docker service. `laravel-echo` + `pusher-js` declared in both parent and base `package.json`. Server-side `REVERB_HOST=reverb`, browser-side `VITE_REVERB_HOST=localhost` (or your public hostname). Echo with `wire:poll.5s` fallback when sockets are unavailable.
+
+**MCP tool**: `team_graph_get` returns the same graph data programmatically.
+
+---
+
 ## Crews (Multi-agent)
 
 Coordinated execution of multiple agents on a shared goal.

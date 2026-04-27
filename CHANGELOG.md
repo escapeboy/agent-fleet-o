@@ -2,6 +2,89 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.23.0] - 2026-04-27
+
+Three research-driven sprint arcs and a four-sprint governance build landed in this release.
+
+### Added — Real-World Action governance (Offsite-inspired arc)
+
+- **ActionProposal foundation** — polymorphic `action_proposals` table backs a generalized proposal flow. Assistant tool calls, integration writes, and git operations now route through the same approve/reject pipeline. `target_type` discriminator covers `tool_call`, `integration_action`, and `git_push` in v1; the schema is open for additional types.
+- **Auto-execute on approval** — approving an `ActionProposal` dispatches `ExecuteActionProposalJob` (queued, idempotent). The executor re-runs the gated operation with a container-binding bypass so re-execution doesn't loop back into another proposal. Failure path captures `execution_error` and transitions to `ExecutionFailed`.
+- **Per-tier risk policy** — every team has `team.settings.action_proposal_policy = {low, medium, high}` mapping each tier to `auto`/`ask`/`reject`. Tier→risk mapping: read=low, write=medium, destructive=high. Legacy `slow_mode_enabled=true` is preserved as `{high: 'ask'}`. Each proposal record stores the actual computed `risk_level` for audit.
+- **`IntegrationActionGate`** — single chokepoint inside `ExecuteIntegrationActionAction::execute()` covers all 50+ integration drivers. Heuristic verb classifier (22 high-risk verbs, 21 medium, rest low). Three callers (`IntegrationController::execute`, `IntegrationExecuteTool`, `IntegrationManageTool`) catch the new exceptions and surface coherent "proposed" / "refused" responses.
+- **`GitOperationGate`** — `GitOperationRouter::resolve()` wraps every `GitClientInterface` (GitHubApi, GitLabApi, Sandbox, Bridge) in a `GatedGitClient` decorator. All 27 MCP `GitRepository/*` tools inherit the gate transparently. Explicit per-method risk map (read=low, branch/commit/push/writeFile=medium, PR-lifecycle/dispatch/release=high; unknown methods default to **high** as a safe default).
+- **Unified Real-World Actions inbox** — the `/approvals` page now shows pending `ActionProposals` and outbound `ApprovalRequests` in one time-sorted list when `activeView=actions`. Read-side union — no shadow rows, no migration. Tab badges sum both sources.
+- **Conversation result append** — when a proposal originates from an assistant conversation, the execution outcome is appended to that conversation as an `assistant`-role message, closing the visibility loop for the user who asked.
+
+### Added — Public discovery endpoint
+
+- **`GET /.well-known/fleetq`** — public, unauthenticated capability manifest. Lets external AI tools (Cursor, Codex, Claude Code, OpenCode) one-shot discover the MCP HTTP/stdio endpoints, REST API base, OpenAPI URL, auth scheme, and tool count. Each block is gated by a `discovery.expose_*` config flag so operators can scrub the public surface.
+- **`system_discovery_get` MCP tool** — same payload as the HTTP endpoint, callable from inside an MCP session.
+- Throttled to 60 req/min per IP, no auth required, no CSRF (read-only).
+
+### Added — Live team graph
+
+- **`/team-graph` page** — Cytoscape.js force-directed visualization of agents, humans, and crews. Real-time updates via Reverb WebSockets (Echo with `wire:poll.5s` fallback). Shape semantics: agents=rect, humans=ellipse-with-initials, crews=hexagon.
+- **`TeamActivityBroadcast` event** — emitted from `BroadcastAgentExecuted` and `BroadcastExperimentTransitioned` listeners.
+- **`team_graph_get` MCP tool** — programmatic access to the same graph data.
+- **Reverb infrastructure** — new `reverb` Docker service, `laravel-echo` + `pusher-js` wired into both parent and base `package.json` (dual rule).
+
+### Added — Lightfield-inspired arc
+
+- **Citations on assistant responses** — when the assistant calls a `*_get` MCP tool, the tool result is captured and the assistant's reply renders inline citations linking back to the source entity.
+- **CSV migration agent** — drop a CSV onto a project; the agent infers schema, suggests a destination, and migrates row-by-row with progress and rollback.
+- **World-model digest** — daily summary of what the platform knows: signal counts by intent, top contacts by engagement, agent activity, budget burn-down.
+- **Signal intent classification** — every inbound signal gets a Haiku-classified `intent` tag (Question / Bug / FeatureRequest / Spam / Other). Searchable, filterable, surfaced in `signal_list`.
+- **Selection context for assistants** — Livewire pages can mark items "selected"; the assistant receives the selection as part of context. Implemented via `HasAssistantSelection` trait — bulk-select pattern for any list page.
+
+### Added — Pydantic-inspired arc (14 sub-sprints)
+
+- **Per-team OTLP observability** — teams can BYO OpenTelemetry collector endpoint. Cloud UI, queue tracer, test-connection probe, last-probe badge.
+- **Eval pipeline** — curate test cases from real runs, replay them against alternative configurations, compare outputs side-by-side. Cycle: real run → curate → replay → diff → promote.
+- **Output schema enforcement on Agent + Skill** — define a JSON schema; runs that don't match get retried with a corrective system prompt (configurable retry budget). UI editor for the schema. Schema fingerprint propagates through `LlmRequestLog` for analytics.
+- **World-model visibility page** — `/world-model` shows what the platform "knows" about the team's workspace (entities, relationships, KG facts).
+- **Bulk-select pattern** — `HasAssistantSelection` trait + UI checkbox column on list pages, bridge to assistant context.
+
+### Added — Boruna integration
+
+- **3-sprint integration build** delivering bidirectional contact sync, structured intake forms, and shared signal taxonomy with the Boruna platform.
+
+### Added — Self-service troubleshooting
+
+- **6 sprints** of UI affordances: live diagnostic panels for agents, skills, tools, projects, integrations, and tokens. Each "why isn't this working?" question now has an in-product answer.
+
+### Added — Polish
+
+- **Vendor badges** on agents (`<x-agent-vendor-badge>` Blade component) — 9 vendors, monogram or FA icon, surfaced on the agent detail and list pages.
+- **`InjectTeamContext` middleware** — runs between memory and KG retrieval in the agent execution pipeline, so every agent run sees a fresh "what's currently going on in this team" preamble.
+
+### Fixed
+
+- **CRITICAL — `LocalAgentDiscovery::vpsBinaryPath()` silently fell through to `which claude`** when `local_agents.vps.binary_path` was set but non-executable. On dev/CI machines with `claude` installed system-wide, the explicit-but-broken config was masked and the missing-binary throw never fired. Fix: early-return null when `binary_path` is configured but unusable; `which` only runs when no path is configured at all.
+- **Experiment iteration off-by-one** — `RunEvaluationStage::handleIterate` increments `current_iteration` BEFORE the Iterating transition, so `enforceIterationLimit` must use `>` not `>=`. With `>=`, experiments could never run their last legitimate iteration. Surfaced after the `AiRequestDTO::userId` sweep removed the cover.
+- **`AiRequestDTO` `userId` was sometimes null** — `LocalAgentGateway::executeVps` does `User::find($request->userId)`, so null silently denied super-admins access. Full sweep on 2026-04-26: every action that resolves a provider via the hierarchy (skill → agent → team → platform) now passes a usable `userId`. Pattern: `$userId ?? Team::ownerIdFor($teamId)` (new static helper).
+- **BYOK embeddings via `EmbeddingService::embedForTeam`** — calling `Prism::embeddings()->using('openai', ...)` directly does NOT honor team `TeamProviderCredential`. New helper applies team BYOK key like `PrismAiGateway::applyTeamCredentials` does for chat. Migrated `CloudRetrieveRelevantMemoriesAction` + `StoreMemoryAction`.
+
+### Security
+
+- **Audit trail for integration actions** — `IntegrationActionExecuted` event fires after every driver call, mapped through `OcsfMapper::integration.*`.
+- **Identity card auto-ping** — integration detail page caches `meta.account` from extended `HealthResult::ok($latency, $message, $identity)`. Surfaces account name/handle so operators see *which* account they connected, not just whether the credential is valid.
+- **URL XSS hardening** — driver-supplied profile URLs (Twitter, Discord, Google, PagerDuty, Klaviyo, GitHub, Slack, Linear, GitLab) gated through `^https?://` allowlist before render.
+- **Latent `ArgumentCountError`** in 5 drivers (Twitter/Discord/Google/PagerDuty/Klaviyo) fixed as side-effect of the identity overhaul.
+
+### Infrastructure
+
+- `GitOperationRouter` resolves a `GitClientInterface`, then wraps it in `GatedGitClient` unconditionally. The wrapper is a no-op when `app('git_gate.bypass')` is bound truthy.
+- `IntegrationActionGate` and `GitOperationGate` share the same per-tier policy resolver shape (`team.settings.action_proposal_policy` with legacy `slow_mode_enabled` fallback).
+- `ActionProposalExecutor` gains `executeIntegrationAction()` and `executeGitPush()` branches with try/finally bypass-clear discipline.
+- `AssistantToolRegistry` slow-mode wrap (`wrapToolsWithSlowModeGate`) hooks both call sites in `SendAssistantMessageAction` after `getTools($user)` resolution.
+- `package.json` now declares `laravel-echo` and `pusher-js` (dual rule with parent).
+
+### Stats
+
+- 2869 tests pass (zero failures, 11 213 assertions)
+- 485 MCP tools registered on `AgentFleetServer`
+
 ## [1.22.0] - 2026-04-22
 
 ### Added
