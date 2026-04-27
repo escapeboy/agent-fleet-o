@@ -141,6 +141,21 @@ class IntegrationController extends Controller
             );
 
             return response()->json(['success' => true, 'result' => $result]);
+        } catch (\App\Domain\Integration\Exceptions\IntegrationActionProposedException $e) {
+            return response()->json([
+                'success' => false,
+                'status' => 'proposed',
+                'proposal_id' => $e->proposalId,
+                'risk_level' => $e->riskLevel,
+                'message' => "Action proposed for human review (proposal_id={$e->proposalId}). Approve in the Approval Inbox.",
+            ], 202);
+        } catch (\App\Domain\Integration\Exceptions\IntegrationActionRefusedException $e) {
+            return response()->json([
+                'success' => false,
+                'status' => 'refused',
+                'risk_level' => $e->riskLevel,
+                'message' => $e->getMessage(),
+            ], 403);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }

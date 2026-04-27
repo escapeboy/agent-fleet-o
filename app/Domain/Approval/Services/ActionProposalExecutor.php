@@ -4,6 +4,8 @@ namespace App\Domain\Approval\Services;
 
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
+use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
+use App\Domain\Integration\Models\Integration;
 use App\Models\User;
 use Prism\Prism\Tool as PrismToolObject;
 use ReflectionProperty;
@@ -28,10 +30,65 @@ class ActionProposalExecutor
     {
         return match ($proposal->target_type) {
             'tool_call' => $this->executeToolCall($proposal, $actor),
+            'integration_action' => $this->executeIntegrationAction($proposal, $actor),
             default => throw new RuntimeException(
                 "ActionProposalExecutor: unsupported target_type '{$proposal->target_type}'."
             ),
         };
+    }
+
+    /**
+     * Re-runs the gated integration action, bypassing IntegrationActionGate
+     * via the `integration_gate.bypass` container binding so we don't loop
+     * back into another proposal-creation pass.
+     *
+     * @return array<string, mixed>
+     */
+    private function executeIntegrationAction(ActionProposal $proposal, User $actor): array
+    {
+        $integrationId = $proposal->payload['integration_id'] ?? null;
+        $action = $proposal->payload['action'] ?? null;
+        $params = $proposal->payload['params'] ?? [];
+
+        if (! is_string($integrationId) || ! is_string($action)) {
+            throw new RuntimeException(
+                'ActionProposalExecutor: integration_action payload requires integration_id and action.'
+            );
+        }
+        if (! is_array($params)) {
+            throw new RuntimeException(
+                'ActionProposalExecutor: integration_action payload.params must be an array.'
+            );
+        }
+
+        $integration = Integration::query()
+            ->withoutGlobalScopes()
+            ->where('team_id', $proposal->team_id)
+            ->find($integrationId);
+
+        if (! $integration) {
+            throw new RuntimeException(
+                "ActionProposalExecutor: integration {$integrationId} not found in team {$proposal->team_id}."
+            );
+        }
+
+        app()->instance('integration_gate.bypass', true);
+        try {
+            $result = app(ExecuteIntegrationActionAction::class)->execute($integration, $action, $params);
+        } finally {
+            app()->instance('integration_gate.bypass', false);
+        }
+
+        if (is_array($result)) {
+            return $result;
+        }
+        if (is_string($result)) {
+            $decoded = json_decode($result, true);
+
+            return is_array($decoded) ? $decoded : ['raw' => $result];
+        }
+
+        return ['raw' => is_scalar($result) ? (string) $result : null];
     }
 
     /**

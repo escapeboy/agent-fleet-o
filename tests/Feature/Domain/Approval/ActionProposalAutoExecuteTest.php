@@ -137,7 +137,9 @@ class ActionProposalAutoExecuteTest extends TestCase
     public function test_executor_throws_unsupported_target_type(): void
     {
         $proposal = $this->makeProposal();
-        $proposal->update(['target_type' => 'integration_action']);
+        // Sprint 3d.2 added integration_action support; git_push and outbound
+        // remain unsupported in v1.
+        $proposal->update(['target_type' => 'git_push']);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('unsupported target_type');
@@ -152,6 +154,73 @@ class ActionProposalAutoExecuteTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('positional_args');
+
+        app(ActionProposalExecutor::class)->execute($proposal->fresh(), $this->user);
+    }
+
+    public function test_executor_runs_integration_action_with_gate_bypass(): void
+    {
+        $integration = \App\Domain\Integration\Models\Integration::factory()->create([
+            'team_id' => $this->team->id,
+            'driver' => 'github',
+        ]);
+
+        // Build a proposal as the gate would, with policy='ask'.
+        $this->team->update(['settings' => ['action_proposal_policy' => ['low' => 'auto', 'medium' => 'auto', 'high' => 'ask']]]);
+
+        $proposal = app(\App\Domain\Approval\Actions\CreateActionProposalAction::class)->execute(
+            teamId: $this->team->id,
+            targetType: 'integration_action',
+            targetId: $integration->id,
+            summary: 'High-risk: github :: delete_branch',
+            payload: [
+                'integration_id' => $integration->id,
+                'action' => 'delete_branch',
+                'params' => ['branch' => 'feature/old'],
+            ],
+            userId: $this->user->id,
+        );
+
+        // Mock the underlying ExecuteIntegrationActionAction so we don't
+        // hit the real GitHub driver. The point is to assert: (a) it gets
+        // called, (b) the bypass flag is set during the call so the gate
+        // doesn't recurse.
+        $this->mock(\App\Domain\Integration\Actions\ExecuteIntegrationActionAction::class, function ($mock) {
+            $mock->shouldReceive('execute')
+                ->once()
+                ->andReturnUsing(function ($int, $action, $params) {
+                    \PHPUnit\Framework\Assert::assertTrue(
+                        app()->bound('integration_gate.bypass') && app('integration_gate.bypass'),
+                        'Gate bypass must be active during executor invocation.'
+                    );
+
+                    return ['success' => true, 'deleted' => $params['branch'] ?? null];
+                });
+        });
+
+        $result = app(ActionProposalExecutor::class)->execute($proposal->fresh(), $this->user);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('feature/old', $result['deleted']);
+    }
+
+    public function test_executor_rejects_integration_action_with_missing_payload(): void
+    {
+        $integration = \App\Domain\Integration\Models\Integration::factory()->create([
+            'team_id' => $this->team->id,
+        ]);
+
+        $proposal = app(\App\Domain\Approval\Actions\CreateActionProposalAction::class)->execute(
+            teamId: $this->team->id,
+            targetType: 'integration_action',
+            targetId: $integration->id,
+            summary: 'Bad',
+            payload: ['integration_id' => $integration->id], // missing 'action'
+            userId: $this->user->id,
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('integration_id and action');
 
         app(ActionProposalExecutor::class)->execute($proposal->fresh(), $this->user);
     }
