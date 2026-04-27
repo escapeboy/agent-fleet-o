@@ -11,6 +11,7 @@ use App\Domain\Assistant\Services\AssistantUiArtifactParser;
 use App\Domain\Assistant\Services\AssistantUiArtifactPersister;
 use App\Domain\Assistant\Services\CitationExtractor;
 use App\Domain\Assistant\Services\ContextResolver;
+use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Assistant\Services\ToolUsageTracker;
 use App\Domain\Memory\Jobs\AutoSaveConversationMemoryJob;
@@ -41,6 +42,7 @@ class SendAssistantMessageAction
         private readonly AssistantUiArtifactParser $artifactParser,
         private readonly AssistantUiArtifactPersister $artifactPersister,
         private readonly CitationExtractor $citationExtractor,
+        private readonly CreateActionProposalAction $createActionProposal,
     ) {}
 
     /**
@@ -126,6 +128,7 @@ class SendAssistantMessageAction
 
         // Always resolve tools regardless of provider
         $tools = $this->toolRegistry->getTools($user, $conversation);
+        $tools = $this->wrapToolsWithSlowModeGate($tools, $user, $conversation);
 
         // Build system prompt with context and tool info.
         // canExecuteTools: cloud providers use PrismPHP tools, claude-code (local or bridge) uses
@@ -582,6 +585,7 @@ class SendAssistantMessageAction
         }
 
         $tools = $this->toolRegistry->getTools($user);
+        $tools = $this->wrapToolsWithSlowModeGate($tools, $user, $conversation);
 
         $canExecuteTools = ! $isLocal || $supportsToolLoop || $supportsMcpNatively;
         $context = $this->contextResolver->resolve($contextType, $contextId);
@@ -619,6 +623,72 @@ class SendAssistantMessageAction
         $this->conversationManager->generateTitle($conversation);
 
         return $response;
+    }
+
+    /**
+     * When the team has slow_mode enabled, intercept destructive-tier tool calls
+     * and create an ActionProposal instead of executing. The agent receives a
+     * placeholder string so it can continue the conversation while the human
+     * reviews the proposal in the Approval Inbox.
+     *
+     * Tier classification reuses AssistantToolRegistry::toolTier(). Tools that
+     * are not in the destructive tier pass through untouched. When slow_mode is
+     * off this method is a no-op.
+     *
+     * @param  array<PrismToolObject>  $tools
+     * @return array<PrismToolObject>
+     */
+    private function wrapToolsWithSlowModeGate(array $tools, User $user, ?AssistantConversation $conversation): array
+    {
+        $team = $user->currentTeam;
+        $slowModeEnabled = (bool) ($team?->settings['slow_mode_enabled'] ?? false);
+        if (! $slowModeEnabled) {
+            return $tools;
+        }
+
+        $teamId = $team->id;
+        $userId = $user->id;
+        $createProposal = $this->createActionProposal;
+
+        $fnProperty = new \ReflectionProperty(PrismToolObject::class, 'fn');
+
+        return array_map(function (PrismToolObject $tool) use ($fnProperty, $createProposal, $teamId, $userId, $conversation) {
+            $toolName = $tool->name();
+            if (AssistantToolRegistry::toolTier($toolName) !== 'destructive') {
+                return $tool;
+            }
+
+            $clone = clone $tool;
+            $clone->using(function () use ($toolName, $createProposal, $teamId, $userId, $conversation) {
+                $args = func_get_args();
+                $argsAssoc = is_array($args[0] ?? null) ? $args[0] : ['args' => $args];
+
+                $summary = "Destructive tool: {$toolName}";
+                if (is_array($argsAssoc) && ! empty($argsAssoc)) {
+                    $firstKey = array_key_first($argsAssoc);
+                    $firstVal = $argsAssoc[$firstKey];
+                    if (is_scalar($firstVal)) {
+                        $summary .= " ({$firstKey}={$firstVal})";
+                    }
+                }
+
+                $proposal = $createProposal->execute(
+                    teamId: $teamId,
+                    targetType: 'tool_call',
+                    targetId: null,
+                    summary: $summary,
+                    payload: ['tool' => $toolName, 'args' => $argsAssoc],
+                    userId: $userId,
+                    riskLevel: 'high',
+                    expiresAt: now()->addHours(24),
+                    conversation: $conversation,
+                );
+
+                return "⏸ Action proposed for human review (proposal_id={$proposal->id}). The user must approve in the Approval Inbox before this runs. Continue with non-destructive next steps if possible, or report back to the user.";
+            });
+
+            return $clone;
+        }, $tools);
     }
 
     /**

@@ -63,6 +63,10 @@ use App\Mcp\Tools\AgentChatProtocol\ExternalAgentListTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentPingTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool;
+use App\Mcp\Tools\Approval\ActionProposalApproveTool;
+use App\Mcp\Tools\Approval\ActionProposalGetTool;
+use App\Mcp\Tools\Approval\ActionProposalListTool;
+use App\Mcp\Tools\Approval\ActionProposalRejectTool;
 use App\Mcp\Tools\Approval\ApprovalApproveTool;
 use App\Mcp\Tools\Approval\ApprovalCompleteHumanTaskTool;
 use App\Mcp\Tools\Approval\ApprovalListTool;
@@ -811,6 +815,10 @@ class AgentFleetServer extends Server
         ApprovalListTool::class,
         ApprovalApproveTool::class,
         ApprovalRejectTool::class,
+        ActionProposalListTool::class,
+        ActionProposalGetTool::class,
+        ActionProposalApproveTool::class,
+        ActionProposalRejectTool::class,
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
         ListSecurityReviewsTool::class,

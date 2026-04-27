@@ -6,19 +6,44 @@
         </div>
     @endif
 
+    {{-- View Switcher: Approval Requests vs Real-World Actions --}}
+    <div class="mb-4 inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+        <button wire:click="$set('activeView', 'approvals')"
+            class="rounded-md px-3 py-1.5 text-sm font-medium transition
+            {{ $activeView === 'approvals' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50' }}">
+            <i class="fa-solid fa-check-circle mr-1"></i>
+            Approval Requests
+            <span class="ml-1 rounded-full {{ $activeView === 'approvals' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600' }} px-1.5 py-0.5 text-xs">{{ $counts['pending'] }}</span>
+        </button>
+        <button wire:click="$set('activeView', 'actions')"
+            class="rounded-md px-3 py-1.5 text-sm font-medium transition
+            {{ $activeView === 'actions' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50' }}">
+            <i class="fa-solid fa-bolt mr-1"></i>
+            Real-World Actions
+            <span class="ml-1 rounded-full {{ $activeView === 'actions' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600' }} px-1.5 py-0.5 text-xs">{{ $proposalCounts['pending'] }}</span>
+        </button>
+    </div>
+
     {{-- Status Tabs --}}
     <div class="mb-6 border-b border-gray-200">
         <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
+            @php
+                $currentCounts = $activeView === 'actions' ? $proposalCounts : $counts;
+            @endphp
             @foreach(['pending', 'approved', 'rejected', 'expired'] as $tab)
                 <button wire:click="$set('statusTab', '{{ $tab }}')"
                     class="whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium transition
                     {{ $statusTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                     {{ ucfirst($tab) }}
-                    <span class="ml-1 rounded-full {{ $statusTab === $tab ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600' }} px-2 py-0.5 text-xs">{{ $counts[$tab] }}</span>
+                    <span class="ml-1 rounded-full {{ $statusTab === $tab ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600' }} px-2 py-0.5 text-xs">{{ $currentCounts[$tab] }}</span>
                 </button>
             @endforeach
         </nav>
     </div>
+
+    @if($activeView === 'actions')
+        @include('livewire.approvals.partials.action-proposals-list', ['proposals' => $proposals])
+    @else
 
     {{-- Rejection Modal --}}
     @if($rejectingId)
@@ -253,4 +278,5 @@
     <div class="mt-4">
         {{ $approvals->links() }}
     </div>
+    @endif {{-- /activeView === 'approvals' --}}
 </div>
