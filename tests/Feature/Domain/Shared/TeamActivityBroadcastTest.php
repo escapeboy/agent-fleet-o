@@ -83,6 +83,36 @@ class TeamActivityBroadcastTest extends TestCase
         $this->assertSame("private-team.{$this->team->id}.activity", $channels[0]->name);
     }
 
+    public function test_event_id_is_assigned_per_construction_and_present_in_payload(): void
+    {
+        $a = new TeamActivityBroadcast(
+            teamId: $this->team->id,
+            kind: 'agent.executed',
+            actorId: 'abc',
+            actorKind: 'agent',
+            actorLabel: 'Bot',
+            summary: 'did stuff',
+            at: now()->toIso8601String(),
+        );
+        $b = new TeamActivityBroadcast(
+            teamId: $this->team->id,
+            kind: 'agent.executed',
+            actorId: 'abc',
+            actorKind: 'agent',
+            actorLabel: 'Bot',
+            summary: 'did stuff again',
+            at: now()->toIso8601String(),
+        );
+
+        // ULIDs are 26 Crockford-base32 chars (the cast is `(string) Str::ulid()`).
+        $this->assertMatchesRegularExpression('/^[0-9A-HJKMNP-TV-Z]{26}$/', $a->eventId);
+        $this->assertNotSame($a->eventId, $b->eventId);
+
+        $payload = $a->broadcastWith();
+        $this->assertArrayHasKey('event_id', $payload);
+        $this->assertSame($a->eventId, $payload['event_id']);
+    }
+
     public function test_channel_auth_allows_team_member(): void
     {
         Broadcast::routes();
