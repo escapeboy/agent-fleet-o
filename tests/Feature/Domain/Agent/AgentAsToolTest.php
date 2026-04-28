@@ -97,10 +97,12 @@ class AgentAsToolTest extends TestCase
             userId: $this->user->id,
         );
 
-        // Should fail because no skills/tools, NOT because of depth
-        if ($result['output'] === null) {
-            $this->assertStringNotContainsString('nesting depth', $result['execution']->error_message ?? '');
-        }
+        // Should fail because no skills/tools, NOT because of depth.
+        // Always assert at least one outcome so the test is never marked risky.
+        $this->assertStringNotContainsString(
+            'nesting depth',
+            $result['execution']->error_message ?? '',
+        );
     }
 
     public function test_resolve_tools_builds_agent_tools_from_callable_ids(): void

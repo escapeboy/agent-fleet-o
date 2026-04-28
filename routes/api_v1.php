@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BootstrapController;
 use App\Http\Controllers\Api\V1\BridgeController;
+use App\Http\Controllers\Api\V1\BroadcastingConfigController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\BugReportProjectConfigController;
 use App\Http\Controllers\Api\V1\BugReportSignalController;
@@ -380,6 +381,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)
     Route::post('/broadcasting/auth', [BridgeController::class, 'broadcastingAuth']);
+
+    // Public-facing Reverb connection parameters — consumed by clients that
+    // connect over WSS without going through bridge/register (the desktop app).
+    Route::get('/broadcasting/config', BroadcastingConfigController::class);
 
     // Websites
     Route::apiResource('websites', WebsiteController::class);
