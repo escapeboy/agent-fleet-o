@@ -212,4 +212,62 @@ class BridgeControllerTest extends ApiTestCase
         $connection->refresh();
         $this->assertEquals(BridgeConnectionStatus::Disconnected, $connection->status);
     }
+
+    // -----------------------------------------------------------------------
+    // POST /api/v1/broadcasting/auth — channel auth signature (HMAC-SHA256)
+    // -----------------------------------------------------------------------
+
+    public function test_broadcasting_auth_authorizes_team_activity_channel_for_matching_team(): void
+    {
+        config([
+            'reverb.apps.apps.0.key' => 'fleetq-key',
+            'reverb.apps.apps.0.secret' => 'fleetq-secret',
+        ]);
+
+        $this->actingAsApiUser();
+
+        $channel = "private-team.{$this->team->id}.activity";
+        $response = $this->postJson('/api/v1/broadcasting/auth', [
+            'socket_id' => '1.2',
+            'channel_name' => $channel,
+        ]);
+
+        $expectedSignature = hash_hmac('sha256', "1.2:{$channel}", 'fleetq-secret');
+        $response->assertOk()
+            ->assertJsonPath('auth', "fleetq-key:{$expectedSignature}");
+    }
+
+    public function test_broadcasting_auth_rejects_team_activity_channel_for_other_team(): void
+    {
+        $this->actingAsApiUser();
+
+        $response = $this->postJson('/api/v1/broadcasting/auth', [
+            'socket_id' => '1.2',
+            'channel_name' => 'private-team.some-other-team-id.activity',
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_broadcasting_auth_still_authorizes_daemon_channel_for_matching_team(): void
+    {
+        // Regression guard: extending the channel allow-list must not break the
+        // bridge daemon's existing `private-daemon.{teamId}` flow.
+        config([
+            'reverb.apps.apps.0.key' => 'fleetq-key',
+            'reverb.apps.apps.0.secret' => 'fleetq-secret',
+        ]);
+
+        $this->actingAsApiUser();
+
+        $channel = "private-daemon.{$this->team->id}";
+        $response = $this->postJson('/api/v1/broadcasting/auth', [
+            'socket_id' => '1.2',
+            'channel_name' => $channel,
+        ]);
+
+        $expectedSignature = hash_hmac('sha256', "1.2:{$channel}", 'fleetq-secret');
+        $response->assertOk()
+            ->assertJsonPath('auth', "fleetq-key:{$expectedSignature}");
+    }
 }
