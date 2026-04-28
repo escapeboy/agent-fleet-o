@@ -381,6 +381,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)
     Route::post('/broadcasting/auth', [BridgeController::class, 'broadcastingAuth']);
 
+    // Public-facing Reverb connection parameters — consumed by clients that
+    // connect over WSS without going through bridge/register (the desktop app).
+    Route::get('/broadcasting/config', \App\Http\Controllers\Api\V1\BroadcastingConfigController::class);
+
     // Websites
     Route::apiResource('websites', WebsiteController::class);
     Route::post('/websites/{website}/publish', [WebsiteController::class, 'publish']);
