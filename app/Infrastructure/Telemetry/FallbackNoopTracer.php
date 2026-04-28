@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Telemetry;
 
+use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 
 /**
@@ -21,7 +22,7 @@ use OpenTelemetry\API\Trace\TracerInterface;
  */
 final class FallbackNoopTracer implements TracerInterface
 {
-    public function spanBuilder(string $spanName): object
+    public function spanBuilder(string $spanName): SpanBuilderInterface
     {
         return new FallbackNoopSpanBuilder;
     }
