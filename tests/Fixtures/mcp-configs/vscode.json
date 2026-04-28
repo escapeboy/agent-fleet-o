@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "my-mcp-server": {
+      "command": "node",
+      "args": ["./server.js"],
+      "cwd": "/home/user/mcp-server"
+    }
+  }
+}

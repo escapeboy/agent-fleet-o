@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "disabled-tool": {
+      "command": "npx",
+      "args": ["-y", "disabled-server"],
+      "disabled": true
+    }
+  }
+}
