@@ -28,7 +28,7 @@ class BorunaRunTool extends McpTool
 
     protected string $name = 'boruna_run';
 
-    protected string $description = 'Execute a Boruna deterministic .ax script. Runs in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call, etc.). Use inline mode for ad-hoc scripts or skill mode for saved reusable scripts. Capability gating supports both shorthand (allow-all/deny-all) and Boruna v0.2.0 structured Policy objects (default_allow + per-capability rules + net_policy).';
+    protected string $description = 'Execute a Boruna deterministic .ax script (v1.x LTS). Runs in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call, etc.). Use inline mode for ad-hoc scripts or skill mode for saved reusable scripts. Capability gating supports shorthand (allow-all/deny-all) and structured Policy objects (default_allow + per-capability rules + net_policy). Optional resource limits (max_wall_ms, max_output_bytes) available in inline mode.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -48,6 +48,8 @@ class BorunaRunTool extends McpTool
                 ->description('(inline mode) UUID of the mcp_stdio Tool pointing to the Boruna binary. If omitted, auto-detects.'),
             'input' => $schema->object()
                 ->description('Optional input data passed to the script as JSON'),
+            'limits' => $schema->object()
+                ->description('(inline mode, v1.0+) Optional resource limits: max_wall_ms (int) and/or max_output_bytes (int)'),
             'skill_id' => $schema->string()
                 ->description('(skill mode) UUID of the boruna_script Skill to execute'),
         ];
@@ -63,6 +65,9 @@ class BorunaRunTool extends McpTool
             'policy_structured.default_allow' => 'required_with:policy_structured|boolean',
             'boruna_tool_id' => 'nullable|uuid',
             'input' => 'nullable|array',
+            'limits' => 'nullable|array',
+            'limits.max_wall_ms' => 'nullable|integer|min:1',
+            'limits.max_output_bytes' => 'nullable|integer|min:1',
             'skill_id' => 'nullable|uuid',
         ]);
 
@@ -96,12 +101,14 @@ class BorunaRunTool extends McpTool
             ?? $validated['policy']
             ?? 'deny-all';
 
-        // Boruna v0.2.0 boruna_run accepts `source` (renamed from `script` in
-        // earlier integration drafts). It does not accept an `input` param —
-        // see ExecuteBorunaScriptSkillAction for the rationale.
+        // boruna_run accepts `source` (not `script`). Does not accept `input`.
+        // `limits` (max_wall_ms, max_output_bytes) added v0.3.0/LTS in v1.0.
+        $limits = $validated['limits'] ?? [];
+
         $arguments = array_filter([
             'source' => $script,
             'policy' => $policy,
+            'limits' => $limits ?: null,
         ], fn ($v) => $v !== null);
 
         try {

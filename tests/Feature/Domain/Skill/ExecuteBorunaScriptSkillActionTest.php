@@ -46,6 +46,12 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         $this->mcpClient = Mockery::mock(McpStdioClient::class);
         $this->app->instance(McpStdioClient::class, $this->mcpClient);
 
+        // Default handler for capability_set_hash lookups (v1.0+).
+        // Tests that constrain to 'boruna_run' will fall through to this for cap_list calls.
+        $this->mcpClient->shouldReceive('callTool')
+            ->with(Mockery::any(), 'boruna_capability_list', Mockery::any())
+            ->andReturn(json_encode(['capability_set_hash' => 'test-cap-hash']));
+
         // Each test starts with an empty result cache.
         Cache::flush();
     }
@@ -155,6 +161,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
 
         $this->mcpClient->shouldReceive('callTool')
             ->once()
+            ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andReturn('not-json output');
 
         $skill = $this->makeSkill(['boruna_tool_id' => $tool->id]);
@@ -176,8 +183,8 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
 
         $this->mcpClient->shouldReceive('callTool')
             ->once()
-            ->withArgs(function ($_t, $_n, array $args): bool {
-                return $args['policy'] === 'deny-all';
+            ->withArgs(function ($_t, string $name, array $args): bool {
+                return $name === 'boruna_run' && $args['policy'] === 'deny-all';
             })
             ->andReturn('{}');
 
@@ -202,8 +209,8 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
 
         $this->mcpClient->shouldReceive('callTool')
             ->once()
-            ->withArgs(function ($_t, $_n, array $args): bool {
-                return $args['policy'] === 'allow-all';
+            ->withArgs(function ($_t, string $name, array $args): bool {
+                return $name === 'boruna_run' && $args['policy'] === 'allow-all';
             })
             ->andReturn('{}');
 
@@ -278,6 +285,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
 
         $this->mcpClient->shouldReceive('callTool')
             ->once()
+            ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andThrow(new \RuntimeException('Boruna binary segfaulted'));
 
         $skill = $this->makeSkill(['boruna_tool_id' => $tool->id]);
@@ -334,6 +342,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
 
         $this->mcpClient->shouldReceive('callTool')
             ->once()
+            ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andReturn('{}');
 
         $skill = $this->makeSkill(); // no explicit boruna_tool_id — subkind='boruna' resolution required
@@ -387,6 +396,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         // First call hits the MCP server once and primes the cache.
         $this->mcpClient->shouldReceive('callTool')
             ->once()
+            ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andReturn(json_encode(['ok' => true, 'value' => 7]));
 
         $skill = $this->makeSkill(['boruna_tool_id' => $tool->id]);
@@ -428,6 +438,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         // Two different inputs MUST result in two MCP calls.
         $this->mcpClient->shouldReceive('callTool')
             ->twice()
+            ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andReturn(json_encode(['n' => 1]), json_encode(['n' => 2]));
 
         $skill = $this->makeSkill(['boruna_tool_id' => $tool->id]);
@@ -458,6 +469,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         // (i.e. failures are not memoised) and succeeds.
         $this->mcpClient->shouldReceive('callTool')
             ->twice()
+            ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andReturnUsing(
                 function () { throw new \RuntimeException('binary crashed'); },
                 fn () => json_encode(['ok' => true]),
@@ -503,6 +515,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
 
         $this->mcpClient->shouldReceive('callTool')
             ->twice()
+            ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andReturn(json_encode(['team' => 'A']), json_encode(['team' => 'B']));
 
         $skillA = $this->makeSkill(['boruna_tool_id' => $toolA->id]);
@@ -579,8 +592,8 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
 
         $this->mcpClient->shouldReceive('callTool')
             ->once()
-            ->withArgs(function ($_t, $_n, array $args): bool {
-                return $args['policy'] === 'deny-all';
+            ->withArgs(function ($_t, string $name, array $args): bool {
+                return $name === 'boruna_run' && $args['policy'] === 'deny-all';
             })
             ->andReturn('{}');
 
@@ -608,6 +621,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
         // they're semantically similar — different shapes are different keys.
         $this->mcpClient->shouldReceive('callTool')
             ->twice()
+            ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andReturn(json_encode(['legacy' => true]), json_encode(['structured' => true]));
 
         $action = app(ExecuteBorunaScriptSkillAction::class);

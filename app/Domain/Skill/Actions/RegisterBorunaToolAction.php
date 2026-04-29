@@ -36,7 +36,7 @@ class RegisterBorunaToolAction
         if (! is_executable($binary)) {
             throw new \RuntimeException(
                 "Boruna binary not found or not executable at: {$binary}. "
-                ."Rebuild the Docker image with the v0.2.0 BORUNA_VERSION arg.",
+                ."Rebuild the Docker image with the v1.1.0 BORUNA_VERSION arg.",
             );
         }
 
@@ -70,7 +70,7 @@ class RegisterBorunaToolAction
             'team_id' => $teamId,
             'name' => $name,
             'slug' => Str::slug($name).'-'.Str::lower(Str::random(6)),
-            'description' => 'Boruna deterministic .ax script runtime — capability-safe VM. Bundled with the agent-fleet base image (v0.2.0).',
+            'description' => 'Boruna deterministic .ax script runtime — capability-safe VM. Bundled with the agent-fleet base image (v1.1.0).',
             'type' => ToolType::McpStdio,
             // Set subkind explicitly here — this code path knows it's
             // registering Boruna, regardless of whether the binary path
