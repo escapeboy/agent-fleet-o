@@ -22,12 +22,12 @@ class SkillController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $skills = QueryBuilder::for(Skill::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('type'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name', 'execution_count'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name', 'execution_count')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

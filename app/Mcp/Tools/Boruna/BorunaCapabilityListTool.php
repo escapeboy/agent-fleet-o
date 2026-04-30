@@ -45,7 +45,8 @@ class BorunaCapabilityListTool extends McpTool
 
             if ($tool) {
                 try {
-                    $output = app(McpStdioClient::class)->callTool($tool, 'boruna_capabilities', []);
+                    // boruna_capability_list (added v0.3.0) includes capability_set_hash
+                    $output = app(McpStdioClient::class)->callTool($tool, 'boruna_capability_list', []);
 
                     return Response::text($output);
                 } catch (\Throwable) {
@@ -122,7 +123,7 @@ class BorunaCapabilityListTool extends McpTool
                 'allow-all' => 'All 10 capabilities are available. Use only for trusted scripts.',
                 'deny-all' => 'All capabilities are blocked. Script can only perform pure computation.',
             ],
-            'note' => 'Custom per-capability policies (e.g. allow net.fetch but deny fs.write) require CLI invocation — not supported via MCP.',
+            'note' => 'Fine-grained per-capability policies are supported via MCP boruna_run policy_structured param. Strict validator available via boruna_policy_validate.',
         ]));
     }
 }

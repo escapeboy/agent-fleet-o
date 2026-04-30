@@ -28,12 +28,12 @@ class CrewController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $crews = QueryBuilder::for(Crew::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('process_type'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name', 'status'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name', 'status')
             ->defaultSort('-created_at')
             ->with(['coordinator', 'qaAgent'])
             ->withCount('executions')
@@ -192,10 +192,10 @@ class CrewController extends Controller
         $executions = QueryBuilder::for(
             CrewExecution::query()->where('crew_id', $crew->id),
         )
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
-            ])
-            ->allowedSorts(['created_at', 'status', 'total_cost_credits', 'duration_ms'])
+            )
+            ->allowedSorts('created_at', 'status', 'total_cost_credits', 'duration_ms')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

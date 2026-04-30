@@ -20,8 +20,8 @@ class WebhookEndpointController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $endpoints = QueryBuilder::for(WebhookEndpoint::class)
-            ->allowedFilters(['is_active'])
-            ->allowedSorts(['created_at', 'name'])
+            ->allowedFilters('is_active')
+            ->allowedSorts('created_at', 'name')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

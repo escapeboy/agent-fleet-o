@@ -32,12 +32,12 @@ class MetricsController extends Controller
         $teamId = $request->user()->current_team_id;
 
         $metrics = QueryBuilder::for(Metric::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('type'),
                 AllowedFilter::exact('experiment_id'),
                 AllowedFilter::exact('source'),
-            ])
-            ->allowedSorts(['occurred_at', 'recorded_at', 'value'])
+            )
+            ->allowedSorts('occurred_at', 'recorded_at', 'value')
             ->defaultSort('-occurred_at')
             ->where('team_id', $teamId)
             ->when($request->has('from'), fn ($q) => $q->where('occurred_at', '>=', $request->input('from')))

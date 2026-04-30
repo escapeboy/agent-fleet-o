@@ -23,11 +23,11 @@ class ApprovalController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $approvals = QueryBuilder::for(ApprovalRequest::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('experiment_id'),
-            ])
-            ->allowedSorts(['created_at', 'expires_at', 'status'])
+            )
+            ->allowedSorts('created_at', 'expires_at', 'status')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

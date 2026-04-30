@@ -29,11 +29,11 @@ class VoiceSessionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $sessions = QueryBuilder::for(VoiceSession::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('agent_id'),
-            ])
-            ->allowedSorts(['created_at', 'started_at', 'ended_at'])
+            )
+            ->allowedSorts('created_at', 'started_at', 'ended_at')
             ->defaultSort('-created_at')
             ->with(['agent:id,name'])
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));

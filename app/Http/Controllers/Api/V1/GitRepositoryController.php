@@ -25,13 +25,13 @@ class GitRepositoryController extends Controller
     public function index(Request $request): JsonResponse
     {
         $repositories = QueryBuilder::for(GitRepository::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('mode'),
                 AllowedFilter::exact('provider'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name')
             ->defaultSort('name')
             ->cursorPaginate(min((int) $request->input('per_page', 20), 100));
 

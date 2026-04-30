@@ -14,22 +14,14 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
  * skip the MCP stdio round-trip on repeated calls.
  *
  * Cache key components:
- *   - team_id              tenant isolation (must be in the key, not just scope)
- *   - tool_id              binary identity at the tool registration level
- *   - tool.updated_at      proxy for binary upgrades — when the user re-points
- *                          the Tool at a new binary path/args we want a fresh key
- *   - script               the .ax source
- *   - input                JSON-serialised script arguments
- *   - policy               'allow-all' | 'deny-all'
- *
- * Note: this is a conservative key. It will produce false misses across teams
- * even when the script + binary are identical (intentional — tenant isolation).
- * It will also miss when a Boruna binary upgrade is invisible to us (e.g. the
- * user updated /usr/local/bin/boruna without bumping the Tool record). Once
- * upstream Boruna ships a versioned `capability_set_hash` (see
- * claudedocs/boruna_upstream_feedback_2026-04-25.md, ask #3) we can replace
- * `tool.updated_at` with a true binary-content hash and lift the conservative
- * miss rate.
+ *   - team_id                tenant isolation (must be in the key, not just scope)
+ *   - tool_id                binary identity at the tool registration level
+ *   - capability_set_hash    binary-version fingerprint from boruna_capability_list
+ *                            (falls back to tool.updated_at if the caller cannot
+ *                            resolve it — e.g. boruna-mcp unavailable at key time)
+ *   - script                 the .ax source
+ *   - input                  JSON-serialised script arguments
+ *   - policy                 'allow-all' | 'deny-all' or structured Policy JSON
  */
 class BorunaResultCache
 {
@@ -40,12 +32,11 @@ class BorunaResultCache
     public function __construct(private readonly CacheRepository $cache) {}
 
     /**
-     * @param  string|array<string,mixed>  $policy  Either the legacy shorthand or
-     *                                              a Boruna v0.2.0 Capability Policy.
+     * @param  string|array<string,mixed>  $policy
      */
-    public function get(Tool $tool, Skill $skill, array $input, string|array $policy): ?array
+    public function get(Tool $tool, Skill $skill, array $input, string|array $policy, ?string $capabilitySetHash = null): ?array
     {
-        $cached = $this->cache->get($this->key($tool, $skill, $input, $policy));
+        $cached = $this->cache->get($this->key($tool, $skill, $input, $policy, $capabilitySetHash));
 
         return is_array($cached) ? $cached : null;
     }
@@ -53,10 +44,10 @@ class BorunaResultCache
     /**
      * @param  string|array<string,mixed>  $policy
      */
-    public function put(Tool $tool, Skill $skill, array $input, string|array $policy, array $output): void
+    public function put(Tool $tool, Skill $skill, array $input, string|array $policy, array $output, ?string $capabilitySetHash = null): void
     {
         $this->cache->put(
-            $this->key($tool, $skill, $input, $policy),
+            $this->key($tool, $skill, $input, $policy, $capabilitySetHash),
             $output,
             self::TTL_SECONDS,
         );
@@ -65,7 +56,7 @@ class BorunaResultCache
     /**
      * @param  string|array<string,mixed>  $policy
      */
-    private function key(Tool $tool, Skill $skill, array $input, string|array $policy): string
+    private function key(Tool $tool, Skill $skill, array $input, string|array $policy, ?string $capabilitySetHash = null): string
     {
         $script = (string) ($skill->configuration['script'] ?? '');
 
@@ -76,9 +67,13 @@ class BorunaResultCache
             ? (string) json_encode($policy, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             : $policy;
 
+        // capability_set_hash (from boruna_capability_list, v1.0+) is a true
+        // binary fingerprint. Fall back to tool.updated_at when unavailable.
+        $binaryMarker = $capabilitySetHash ?? ($tool->updated_at?->toISOString() ?? '');
+
         $material = implode('|', [
             (string) $tool->id,
-            $tool->updated_at?->toISOString() ?? '',
+            $binaryMarker,
             $script,
             (string) json_encode($input, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             $policyMaterial,

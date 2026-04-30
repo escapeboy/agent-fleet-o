@@ -12,15 +12,11 @@ return new class extends Migration
         $table = config('activitylog.table_name', 'activity_log');
         $connection = config('activitylog.database_connection');
 
-        // Change bigint morph columns to UUID-compatible varchar
+        // Change bigint morph columns to UUID-compatible varchar (PostgreSQL only;
+        // SQLite gets nullableUuidMorphs which are already VARCHAR from the create migration)
         if (DB::getDriverName() === 'pgsql') {
             DB::connection($connection)->statement("ALTER TABLE {$table} ALTER COLUMN subject_id TYPE varchar(36) USING subject_id::varchar");
             DB::connection($connection)->statement("ALTER TABLE {$table} ALTER COLUMN causer_id TYPE varchar(36) USING causer_id::varchar");
-        } else {
-            Schema::connection($connection)->table($table, function (Blueprint $table) {
-                $table->string('subject_id', 36)->nullable()->change();
-                $table->string('causer_id', 36)->nullable()->change();
-            });
         }
     }
 

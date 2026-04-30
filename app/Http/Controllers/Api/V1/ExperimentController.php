@@ -35,12 +35,12 @@ class ExperimentController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $experiments = QueryBuilder::for(Experiment::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('track'),
                 AllowedFilter::partial('title'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'title', 'status'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'title', 'status')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

@@ -20,8 +20,8 @@ class OutboundConnectorConfigController extends Controller
     public function index(Request $request): JsonResponse
     {
         $configs = QueryBuilder::for(OutboundConnectorConfig::class)
-            ->allowedFilters(['channel', 'is_active'])
-            ->allowedSorts(['created_at', 'channel'])
+            ->allowedFilters('channel', 'is_active')
+            ->allowedSorts('created_at', 'channel')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

@@ -21,8 +21,8 @@ class FlowEvaluationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $datasets = QueryBuilder::for(EvaluationDataset::class)
-            ->allowedFilters(['name'])
-            ->allowedSorts(['created_at', 'name'])
+            ->allowedFilters('name')
+            ->allowedSorts('created_at', 'name')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

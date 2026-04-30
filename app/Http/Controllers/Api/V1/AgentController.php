@@ -32,12 +32,12 @@ class AgentController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $agents = QueryBuilder::for(Agent::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::partial('name'),
                 AllowedFilter::exact('provider'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name', 'status'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name', 'status')
             ->defaultSort('-created_at')
             ->with('skills')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));

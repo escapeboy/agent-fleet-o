@@ -33,12 +33,12 @@ class ProjectController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $projects = QueryBuilder::for(Project::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('type'),
                 AllowedFilter::partial('title'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'title', 'status', 'last_run_at'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'title', 'status', 'last_run_at')
             ->defaultSort('-created_at')
             ->with('schedule')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
@@ -212,10 +212,10 @@ class ProjectController extends Controller
         $runs = QueryBuilder::for(
             ProjectRun::query()->where('project_id', $project->id),
         )
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
-            ])
-            ->allowedSorts(['created_at', 'run_number', 'status', 'spend_credits'])
+            )
+            ->allowedSorts('created_at', 'run_number', 'status', 'spend_credits')
             ->defaultSort('-run_number')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

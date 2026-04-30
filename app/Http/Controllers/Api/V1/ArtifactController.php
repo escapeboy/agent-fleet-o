@@ -22,14 +22,14 @@ class ArtifactController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $artifacts = QueryBuilder::for(Artifact::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('experiment_id'),
                 AllowedFilter::exact('crew_execution_id'),
                 AllowedFilter::exact('project_run_id'),
                 AllowedFilter::exact('type'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'name', 'type'])
+            )
+            ->allowedSorts('created_at', 'name', 'type')
             ->defaultSort('-created_at')
             ->withCount('versions')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));

@@ -21,13 +21,13 @@ class MemoryController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $memories = QueryBuilder::for(Memory::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('agent_id'),
                 AllowedFilter::exact('project_id'),
                 AllowedFilter::exact('source_type'),
                 AllowedFilter::partial('content'),
-            ])
-            ->allowedSorts(['created_at', 'confidence'])
+            )
+            ->allowedSorts('created_at', 'confidence')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

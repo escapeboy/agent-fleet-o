@@ -28,12 +28,12 @@ class ToolController extends Controller
     {
         $tools = QueryBuilder::for(Tool::class)
             ->withCount('agents')
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('type'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

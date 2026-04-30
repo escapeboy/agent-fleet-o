@@ -7,6 +7,7 @@ use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Skill\Services\BorunaResultCache;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -35,6 +36,7 @@ class ExecuteBorunaScriptSkillAction
     public function __construct(
         private readonly McpStdioClient $client,
         private readonly BorunaResultCache $cache,
+        private readonly CacheRepository $store,
     ) {}
 
     /**
@@ -70,12 +72,16 @@ class ExecuteBorunaScriptSkillAction
 
         $policy = $this->normalisePolicy($config['policy'] ?? null);
 
+        // capability_set_hash (v1.0+) is a stable binary fingerprint.
+        // Cached for 1h; falls back to null on boruna-mcp unavailability.
+        $capabilitySetHash = $this->fetchCapabilitySetHash($borунaTool);
+
         $startTime = hrtime(true);
 
         // Cache hit short-circuit — Boruna runs are deterministic, so identical
         // inputs against the same Tool produce identical outputs. We still
         // record a SkillExecution so the call site sees the same shape.
-        $cached = $this->cache->get($borунaTool, $skill, $input, $policy);
+        $cached = $this->cache->get($borунaTool, $skill, $input, $policy, $capabilitySetHash);
         if ($cached !== null) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
@@ -102,18 +108,24 @@ class ExecuteBorunaScriptSkillAction
             return ['execution' => $execution, 'output' => $cached];
         }
 
-        // Boruna v0.2.0 boruna_run upstream contract:
-        //   - parameter is named `source` (not `script`)
-        //   - accepts policy (string|object), optional max_steps, optional trace
-        //   - does NOT accept an `input` parameter — `.ax` scripts read inputs
-        //     by interpolating literals into the source string before submission.
-        //     We still record $input on SkillExecution for audit; the script
-        //     author is responsible for any templating.
-        // See https://github.com/escapeboy/boruna/blob/v0.2.0/crates/boruna-mcp/src/server.rs
-        $arguments = [
+        // boruna_run contract (stable since v0.2.0, LTS-committed in v1.0):
+        //   - parameter is `source` (not `script`)
+        //   - does NOT accept `input` — scripts read inputs by literal
+        //     interpolation; we record $input on SkillExecution for audit only
+        //   - optional `limits` object (v0.3.0+): max_wall_ms, max_output_bytes
+        $timeoutMs = isset($config['timeout']) ? (int) $config['timeout'] * 1000 : null;
+        $maxOutputBytes = isset($config['max_output_bytes']) ? (int) $config['max_output_bytes'] : null;
+
+        $limits = array_filter([
+            'max_wall_ms' => $timeoutMs,
+            'max_output_bytes' => $maxOutputBytes,
+        ]);
+
+        $arguments = array_filter([
             'source' => $script,
             'policy' => $policy,
-        ];
+            'limits' => $limits ?: null,
+        ], fn ($v) => $v !== null);
 
         try {
             $rawOutput = $this->client->callTool($borунaTool, 'boruna_run', $arguments);
@@ -142,7 +154,7 @@ class ExecuteBorunaScriptSkillAction
 
             // Store in cache only on success — failures are not cached, so the
             // next call will re-execute and either succeed (and cache) or fail again.
-            $this->cache->put($borунaTool, $skill, $input, $policy, $output);
+            $this->cache->put($borунaTool, $skill, $input, $policy, $output, $capabilitySetHash);
 
             return ['execution' => $execution, 'output' => $output];
         } catch (\Throwable $e) {
@@ -159,6 +171,40 @@ class ExecuteBorunaScriptSkillAction
                 $e->getMessage(), $durationMs,
             );
         }
+    }
+
+    /**
+     * Fetch and cache the boruna binary's capability_set_hash (v1.0+).
+     *
+     * The hash is stable per binary release and changes when the binary is upgraded,
+     * making it a reliable cache-key component. We cache it in Redis for 1 hour —
+     * shorter than the result cache TTL (24h) but long enough to avoid per-call overhead.
+     * Returns null on failure so callers fall back to the tool.updated_at proxy.
+     */
+    private function fetchCapabilitySetHash(Tool $tool): ?string
+    {
+        $cacheKey = "boruna:cap_hash:{$tool->id}";
+
+        $cached = $this->store->get($cacheKey);
+        if (is_string($cached) && $cached !== '') {
+            return $cached;
+        }
+
+        try {
+            $raw = $this->client->callTool($tool, 'boruna_capability_list', []);
+            $parsed = json_decode($raw, true);
+            $hash = $parsed['capability_set_hash'] ?? null;
+
+            if (is_string($hash) && $hash !== '') {
+                $this->store->put($cacheKey, $hash, 3600);
+
+                return $hash;
+            }
+        } catch (\Throwable) {
+            // boruna-mcp unavailable — degrade gracefully
+        }
+
+        return null;
     }
 
     /**
