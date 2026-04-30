@@ -30,13 +30,13 @@ class CredentialController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $credentials = QueryBuilder::for(Credential::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('credential_type'),
                 AllowedFilter::exact('creator_source'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name', 'last_used_at'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name', 'last_used_at')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

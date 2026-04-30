@@ -23,11 +23,11 @@ class EmailThemeController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $themes = QueryBuilder::for(EmailTheme::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'name', 'status'])
+            )
+            ->allowedSorts('created_at', 'name', 'status')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

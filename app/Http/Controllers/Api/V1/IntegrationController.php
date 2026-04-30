@@ -26,12 +26,12 @@ class IntegrationController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $integrations = QueryBuilder::for(Integration::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('driver'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'name', 'status', 'driver'])
+            )
+            ->allowedSorts('created_at', 'name', 'status', 'driver')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

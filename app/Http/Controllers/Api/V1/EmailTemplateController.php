@@ -25,13 +25,13 @@ class EmailTemplateController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $templates = QueryBuilder::for(EmailTemplate::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('visibility'),
                 AllowedFilter::exact('email_theme_id'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'name', 'status'])
+            )
+            ->allowedSorts('created_at', 'name', 'status')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

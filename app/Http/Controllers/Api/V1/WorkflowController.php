@@ -27,11 +27,11 @@ class WorkflowController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $workflows = QueryBuilder::for(Workflow::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name', 'version'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name', 'version')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

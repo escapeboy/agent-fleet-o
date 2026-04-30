@@ -18,13 +18,13 @@ class AuditController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $entries = QueryBuilder::for(AuditEntry::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('event'),
                 AllowedFilter::exact('user_id'),
                 AllowedFilter::exact('subject_type'),
                 AllowedFilter::exact('subject_id'),
-            ])
-            ->allowedSorts(['created_at'])
+            )
+            ->allowedSorts('created_at')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 25), 100));
 
