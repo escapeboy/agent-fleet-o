@@ -24,7 +24,7 @@
         "laravel-notification-channels/webpush": "*",
         "laravel/ai": "*",
         "laravel/fortify": "^1.34",
-        "laravel/framework": "^12.0",
+        "laravel/framework": "^13.0",
         "laravel/horizon": "^5.43",
         "laravel/mcp": "^0.7.0",
         "laravel/passport": "^13.6",
