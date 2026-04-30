@@ -48,8 +48,9 @@ class UnifiedMemorySearchAction
 
         $queryEmbedding = $this->generateEmbedding($query);
 
-        // System 1: Vector search
-        $vectorResults = $this->getVectorResults($agentId, $query, $projectId, $teamId, $tags, $topic);
+        // System 1: Vector search — run original + keyword-expanded query variants in parallel,
+        // then merge with weighted RRF (Onyx-inspired multi-query wRRF).
+        $vectorResults = $this->getVectorResultsMultiQuery($agentId, $query, $projectId, $teamId, $tags, $topic, $rrfK);
 
         // System 2: Knowledge Graph search
         $kgResults = $this->getKgResults($teamId, $queryEmbedding);
@@ -138,6 +139,115 @@ class UnifiedMemorySearchAction
             ->sortByDesc('score')
             ->take($topK)
             ->values();
+    }
+
+    /**
+     * Run the original query + a keyword-expanded variant in parallel and merge
+     * with weighted Reciprocal Rank Fusion.
+     *
+     * Formula: score(item) = Σ weight_i / (k + rank_i)
+     * Weights: original=0.7, keyword_expanded=0.3 (BM25-like bias for expansion).
+     */
+    private function getVectorResultsMultiQuery(
+        ?string $agentId,
+        string $query,
+        ?string $projectId,
+        ?string $teamId,
+        ?array $tags,
+        ?string $topic,
+        int $k,
+    ): Collection {
+        if (! $agentId) {
+            return collect();
+        }
+
+        try {
+            $originalResults = $this->vectorSearch->execute(
+                agentId: $agentId,
+                query: $query,
+                projectId: $projectId,
+                topK: 25,
+                scope: $projectId ? 'project' : 'agent',
+                teamId: $teamId,
+                tags: $tags,
+                topic: $topic,
+            );
+
+            $expandedQuery = $this->expandKeywords($query);
+            $expandedResults = ($expandedQuery !== $query)
+                ? $this->vectorSearch->execute(
+                    agentId: $agentId,
+                    query: $expandedQuery,
+                    projectId: $projectId,
+                    topK: 25,
+                    scope: $projectId ? 'project' : 'agent',
+                    teamId: $teamId,
+                    tags: $tags,
+                    topic: $topic,
+                )
+                : collect();
+
+            return $this->weightedRrf([
+                ['results' => $originalResults, 'weight' => 0.7],
+                ['results' => $expandedResults, 'weight' => 0.3],
+            ], $k);
+        } catch (\Throwable $e) {
+            Log::debug('UnifiedSearch: multi-query vector search failed', ['error' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    /**
+     * Weighted Reciprocal Rank Fusion across multiple result sets.
+     *
+     * @param  array<int, array{results: Collection, weight: float}>  $rankedLists
+     */
+    private function weightedRrf(array $rankedLists, int $k): Collection
+    {
+        $scores = [];
+        $items = [];
+
+        foreach ($rankedLists as $list) {
+            $list['results']->values()->each(function ($item, int $rank) use (&$scores, &$items, $list, $k) {
+                $id = $item->id;
+                $scores[$id] = ($scores[$id] ?? 0.0) + ($list['weight'] / ($k + $rank + 1));
+                $items[$id] = $item;
+            });
+        }
+
+        arsort($scores);
+
+        return collect(array_keys($scores))->map(fn ($id) => $items[$id])->values();
+    }
+
+    /**
+     * Keyword expansion: remove common English stopwords and de-duplicate terms.
+     * Returns a cleaned, space-separated query string for BM25-style recall.
+     */
+    private function expandKeywords(string $query): string
+    {
+        static $stopwords = [
+            'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+            'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+            'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought',
+            'in', 'on', 'at', 'to', 'for', 'of', 'by', 'with', 'from', 'about',
+            'into', 'through', 'during', 'before', 'after', 'above', 'below',
+            'and', 'or', 'but', 'not', 'nor', 'so', 'yet', 'both', 'either',
+            'what', 'which', 'who', 'whom', 'how', 'where', 'when', 'why',
+            'this', 'that', 'these', 'those', 'it', 'its', 'i', 'me', 'my',
+            'we', 'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her',
+            'they', 'their', 'them', 'all', 'any', 'some', 'no', 'more',
+            'most', 'other', 'also', 'just', 'than', 'then', 'there', 'here',
+        ];
+
+        $words = preg_split('/\W+/', mb_strtolower($query), -1, PREG_SPLIT_NO_EMPTY);
+
+        $keywords = array_values(array_unique(
+            array_filter($words, fn ($w) => strlen($w) >= 3 && ! in_array($w, $stopwords, true)),
+        ));
+
+        return $keywords !== [] ? implode(' ', $keywords) : $query;
     }
 
     private function getVectorResults(?string $agentId, string $query, ?string $projectId, ?string $teamId, ?array $tags = null, ?string $topic = null): Collection

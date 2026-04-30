@@ -38,6 +38,8 @@ class Memory extends Model
         'topic',
         'proposed_by',
         'source_url',
+        'boost',
+        'chunk_context',
     ];
 
     protected function casts(): array
@@ -49,6 +51,7 @@ class Memory extends Model
             'importance' => 'float',
             'last_accessed_at' => 'datetime',
             'retrieval_count' => 'integer',
+            'boost' => 'integer',
             'visibility' => MemoryVisibility::class,
             'tier' => MemoryTier::class,
             'category' => MemoryCategory::class,
