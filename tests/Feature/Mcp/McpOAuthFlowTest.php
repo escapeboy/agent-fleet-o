@@ -219,7 +219,7 @@ class McpOAuthFlowTest extends TestCase
             'client_name' => 'Test Client',
         ]);
 
-        $response->assertStatus(422);
+        $response->assertStatus(400);
     }
 
     public function test_dynamic_client_registration_rejects_empty_redirect_uris(): void
@@ -229,7 +229,7 @@ class McpOAuthFlowTest extends TestCase
             'redirect_uris' => [],
         ]);
 
-        $response->assertStatus(422);
+        $response->assertStatus(400);
     }
 
     public function test_dynamic_client_registration_returns_client_id(): void
