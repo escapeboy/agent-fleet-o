@@ -87,6 +87,10 @@ use App\Mcp\Tools\Assistant\AssistantReviewConversationTool;
 use App\Mcp\Tools\Assistant\AssistantSendMessageTool;
 use App\Mcp\Tools\Auth\SocialAccountListTool;
 use App\Mcp\Tools\Auth\SocialAccountUnlinkTool;
+use App\Mcp\Tools\AuditConsole\AuditConsoleGetDecisionTool;
+use App\Mcp\Tools\AuditConsole\AuditConsoleListDecisionsTool;
+use App\Mcp\Tools\AuditConsole\AuditConsoleSettingsTool;
+use App\Mcp\Tools\AuditConsole\AuditConsoleVerifyBundleTool;
 use App\Mcp\Tools\Boruna\BorunaCapabilityListTool;
 use App\Mcp\Tools\Boruna\BorunaEvidenceTool;
 use App\Mcp\Tools\Boruna\BorunaRunTool;
@@ -1122,6 +1126,12 @@ class AgentFleetServer extends Server
         // Prompt injection can trigger account takeover, especially for social-login users.
         ProfileTwoFactorStatusTool::class,
         ProfileConnectedAccountsTool::class,
+
+        // Audit Console (4)
+        AuditConsoleListDecisionsTool::class,
+        AuditConsoleGetDecisionTool::class,
+        AuditConsoleVerifyBundleTool::class,
+        AuditConsoleSettingsTool::class,
 
         // Boruna (5)
         BorunaRunTool::class,

@@ -28,6 +28,9 @@ use App\Livewire\Agents\CreateAgentForm;
 use App\Livewire\Agents\QuickAgentForm;
 use App\Livewire\Agents\VoiceSessionPage;
 use App\Livewire\Approvals\ApprovalInboxPage;
+use App\Livewire\AuditConsole\AuditConsoleDetailPage;
+use App\Livewire\AuditConsole\AuditConsoleListPage;
+use App\Livewire\AuditConsole\AuditConsoleSettingsPage;
 use App\Livewire\Audit\AuditLogPage;
 use App\Livewire\Auth\AcceptTermsPage;
 use App\Livewire\Changelog\ChangelogPage;
@@ -395,6 +398,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/websites/{website}/pages/{page}/preview', WebsitePagePreviewController::class)->name('websites.pages.preview');
     Route::get('/websites/deployments/{deployment}/download', WebsiteDeploymentDownloadController::class)
         ->name('websites.deployment.download');
+
+    // Audit Console (Boruna cryptographic audit trail)
+    Route::get('/audit-console', AuditConsoleListPage::class)->name('audit-console.index');
+    Route::get('/audit-console/{decision}', AuditConsoleDetailPage::class)->name('audit-console.show');
+    Route::get('/settings/audit-console', AuditConsoleSettingsPage::class)->name('audit-console.settings');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

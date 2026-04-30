@@ -2,7 +2,7 @@
     $activeRailGroup = match(true) {
         request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'crews.*', 'approvals.*', 'chatbots.*') => 'fleet',
         request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'evaluations.*', 'triggers.*', 'evolution.*', 'websites.*') => 'build',
-        request()->routeIs('signals.*', 'bug-reports.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'metrics.*') => 'monitor',
+        request()->routeIs('signals.*', 'bug-reports.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'audit-console.*', 'metrics.*') => 'monitor',
         request()->routeIs('app.marketplace.*', 'marketplace.*', 'plugins', 'telegram.*') => 'marketplace',
         request()->routeIs('tools.*', 'credentials.*', 'integrations.*', 'git-repositories.*', 'team.*', 'settings', 'profile', 'notifications.*') => 'settings',
         default => null,
@@ -175,6 +175,9 @@
                 <x-sidebar-link href="{{ route('outbound.whatsapp') }}" :active="request()->routeIs('outbound.whatsapp')" icon="chat-bubble-left-right">WhatsApp</x-sidebar-link>
                 <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">Health</x-sidebar-link>
                 <x-sidebar-link href="{{ route('audit') }}" :active="request()->routeIs('audit')" icon="document-text">Audit Log</x-sidebar-link>
+                @if(config('boruna_audit.enabled', false))
+                    <x-sidebar-link href="{{ route('audit-console.index') }}" :active="request()->routeIs('audit-console.*')" icon="shield-check">Audit Console</x-sidebar-link>
+                @endif
                 <x-sidebar-link href="{{ route('metrics.models') }}" :active="request()->routeIs('metrics.models')" icon="scale">Model Comparison</x-sidebar-link>
                 <x-sidebar-link href="{{ route('metrics.ai-routing') }}" :active="request()->routeIs('metrics.ai-routing')" icon="arrow-path">AI Routing</x-sidebar-link>
                 <x-sidebar-link href="{{ route('insights') }}" :active="request()->routeIs('insights')" icon="light-bulb">Insights</x-sidebar-link>

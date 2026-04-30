@@ -47,6 +47,12 @@ return [
             'report' => false,
         ],
 
+        'boruna_bundles' => [
+            'driver' => env('BORUNA_STORAGE_DISK', 'local'),
+            'root' => storage_path('app/boruna_bundles'),
+            'throw' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

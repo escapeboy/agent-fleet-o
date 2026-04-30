@@ -85,6 +85,14 @@ Schedule::command('system:check-updates')->hourly()->runInBackground();
 // Pre-generate OpenAPI spec so /docs/api.json is served from a static file
 Schedule::command('scramble:export --path=public/api.json')->weeklyOn(1, '03:30');
 
+// Boruna Audit Console — nightly bundle integrity verification
+if (config('boruna_audit.enabled', false)) {
+    Schedule::command('boruna:verify --tenant=all --sample='.config('boruna_audit.verification.sample_size', 20))
+        ->cron(config('boruna_audit.verification.schedule_cron', '0 3 * * *'))
+        ->withoutOverlapping(120)
+        ->runInBackground();
+}
+
 Schedule::command('conversations:expire')->everyFiveMinutes();
 
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
