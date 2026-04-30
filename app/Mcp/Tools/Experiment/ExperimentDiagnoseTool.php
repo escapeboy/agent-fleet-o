@@ -194,7 +194,7 @@ class ExperimentDiagnoseTool extends Tool
                 return $snapshot['error'];
             }
             $telemetry = $stage->telemetry ?? [];
-            if (isset($telemetry['error']) && is_string($telemetry['error']) && $telemetry['error'] !== '') {
+            if (is_array($telemetry) && isset($telemetry['error']) && is_string($telemetry['error']) && $telemetry['error'] !== '') {
                 return $telemetry['error'];
             }
         }
