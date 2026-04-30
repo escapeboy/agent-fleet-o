@@ -31,7 +31,7 @@
         "laravel/reverb": "^1.8",
         "laravel/sanctum": "^4.3",
         "laravel/socialite": "^5.25",
-        "laravel/tinker": "^2.10.1",
+        "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.1",
         "neuron-core/neuron-ai": "^3.2",
         "nikic/php-parser": "^5.0",
