@@ -157,7 +157,7 @@ final class CitationExtractor
      *
      * @param  list<array{raw: string, offset: int, length: int, n: int, kind: string, id: string}>  $surviving
      * @return array<string, array{n: int, kind: string, id: string, title: string, url: string}>
-     *                                                                                              Keyed by "kind:id" so callers can look up by citation ref.
+     *                                                                                            Keyed by "kind:id" so callers can look up by citation ref.
      */
     private function resolveTitles(array $surviving): array
     {

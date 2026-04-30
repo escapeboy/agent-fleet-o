@@ -167,7 +167,7 @@ final class BuildWorldModelDigestAction
                     'model' => $model,
                     'stats' => $stats,
                     'generated_at' => now(),
-                ]
+                ],
             );
 
         return $record->refresh();

@@ -11,6 +11,7 @@ use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Models\SignalComment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class DelegateBugReportToAgentAction
 {
@@ -229,7 +230,7 @@ class DelegateBugReportToAgentAction
             return null;
         }
 
-        /** @var \Illuminate\Support\Collection<int, SignalComment> $comments */
+        /** @var Collection<int, SignalComment> $comments */
         $comments = $query->orderBy('created_at')->limit($cap)->get();
 
         $lines = [];

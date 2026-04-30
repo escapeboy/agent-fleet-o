@@ -10,6 +10,10 @@ use App\Domain\AgentChatProtocol\Events\ChatMessageDispatched;
 use App\Domain\AgentChatProtocol\Events\ChatMessageReceived;
 use App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage;
 use App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction;
+use App\Domain\Approval\Events\ActionProposalApproved;
+use App\Domain\Approval\Events\ActionProposalExecuted;
+use App\Domain\Approval\Listeners\AppendExecutionResultToConversation;
+use App\Domain\Approval\Listeners\DispatchActionProposalExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Audit\Listeners\LogIntegrationExecution;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
@@ -44,6 +48,8 @@ use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use App\Domain\Shared\Events\TeamMemberRemoved;
+use App\Domain\Shared\Listeners\BroadcastAgentExecuted;
+use App\Domain\Shared\Listeners\BroadcastExperimentTransitioned;
 use App\Domain\Shared\Listeners\RevokeTeamMemberAccess;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Shared\Services\NavigationRegistry;
@@ -396,14 +402,14 @@ class AppServiceProvider extends ServiceProvider
         );
 
         // /team-graph live activity firehose — broadcast normalized TeamActivity events
-        Event::listen(\App\Domain\Agent\Events\AgentExecuted::class, \App\Domain\Shared\Listeners\BroadcastAgentExecuted::class);
-        Event::listen(ExperimentTransitioned::class, \App\Domain\Shared\Listeners\BroadcastExperimentTransitioned::class);
+        Event::listen(AgentExecuted::class, BroadcastAgentExecuted::class);
+        Event::listen(ExperimentTransitioned::class, BroadcastExperimentTransitioned::class);
 
         // ActionProposal auto-execute on approval — dispatches a queued job
-        Event::listen(\App\Domain\Approval\Events\ActionProposalApproved::class, \App\Domain\Approval\Listeners\DispatchActionProposalExecution::class);
+        Event::listen(ActionProposalApproved::class, DispatchActionProposalExecution::class);
 
         // After execution, append the outcome to the originating assistant conversation
-        Event::listen(\App\Domain\Approval\Events\ActionProposalExecuted::class, \App\Domain\Approval\Listeners\AppendExecutionResultToConversation::class);
+        Event::listen(ActionProposalExecuted::class, AppendExecutionResultToConversation::class);
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);

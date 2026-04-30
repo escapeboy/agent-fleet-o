@@ -31,18 +31,18 @@ class AuditConsoleVerifyBundleTool extends McpTool
 
     public function handle(Request $request): Response
     {
-        $teamId = $request->teamId();
+        $teamId = app('mcp.team_id') ?? null;
 
-        $decision = AuditableDecision::where('id', $request->input('decision_id'))
+        $decision = AuditableDecision::where('id', $request->get('decision_id'))
             ->where('team_id', $teamId)
             ->first();
 
         if ($decision === null) {
-            return $this->notFound('Decision not found.');
+            return $this->notFoundError('decision', $request->get('decision_id'));
         }
 
         $verifier = app(BundleVerifier::class);
-        $result = $verifier->verify($decision, $teamId);
+        $result = $verifier->verify($decision, (string) $teamId);
 
         return Response::text(json_encode([
             'passed' => $result->passed,

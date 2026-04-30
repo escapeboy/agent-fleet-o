@@ -8,6 +8,7 @@ use App\Domain\Migration\Enums\MigrationStatus;
 use App\Domain\Migration\Models\MigrationRun;
 use App\Domain\Migration\Services\CsvParser;
 use App\Domain\Migration\Services\Importers\ImporterRegistry;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -27,7 +28,7 @@ class ExecuteMigrationJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+        return [new ApplyTenantTracer];
     }
 
     /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */

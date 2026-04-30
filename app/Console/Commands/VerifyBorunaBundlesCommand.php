@@ -11,8 +11,7 @@ class VerifyBorunaBundlesCommand extends Command
 {
     protected $signature = 'boruna:verify
                             {--tenant= : Team UUID or "all"}
-                            {--sample=20 : Number of bundles to sample}
-                            {--verbose}';
+                            {--sample=20 : Number of bundles to sample}';
 
     protected $description = 'Verify a random sample of Boruna evidence bundles for cryptographic integrity.';
 

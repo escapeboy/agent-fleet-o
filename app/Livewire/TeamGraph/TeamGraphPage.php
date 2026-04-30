@@ -8,6 +8,7 @@ use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Experiment\Models\ExperimentStateTransition;
+use App\Models\User;
 use Livewire\Component;
 
 class TeamGraphPage extends Component
@@ -135,7 +136,7 @@ class TeamGraphPage extends Component
         }
 
         if ($kind === 'human' && $id) {
-            $user = \App\Models\User::query()->where('id', $id)->first();
+            $user = User::query()->where('id', $id)->first();
             $this->drawerLabel = $user?->name ?? 'User';
             $this->drawerActivity = []; // Human activity feed deferred — no audit-by-user query in v1.
 

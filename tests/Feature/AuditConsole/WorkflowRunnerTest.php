@@ -7,7 +7,6 @@ use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
 use App\Models\User;
 use FleetQ\BorunaAudit\Exceptions\BorunaSidecarDown;
-use FleetQ\BorunaAudit\Models\AuditableDecision;
 use FleetQ\BorunaAudit\Services\BundleStorage;
 use FleetQ\BorunaAudit\Services\WorkflowRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -2,11 +2,16 @@
 
 namespace Tests\Feature\Console;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
+use App\Domain\Crew\Enums\CrewProcessType;
+use App\Domain\Crew\Enums\CrewStatus;
+use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -32,17 +37,17 @@ class RecoverStuckGeneratingWebsitesTest extends TestCase
         // Crew + coordinator agent are NOT NULL upstream of CrewExecution.crew_id.
         // Build the dependency chain explicitly so this test exercises the
         // recover-stuck command, not factory plumbing.
-        $agent = \App\Domain\Agent\Models\Agent::factory()->create(['team_id' => $team->id]);
-        $crew = \App\Domain\Crew\Models\Crew::forceCreate([
+        $agent = Agent::factory()->create(['team_id' => $team->id]);
+        $crew = Crew::forceCreate([
             'team_id' => $team->id,
-            'user_id' => $team->owner_id ?? \App\Models\User::factory()->create()->id,
+            'user_id' => $team->owner_id ?? User::factory()->create()->id,
             'name' => 'Test crew',
             'slug' => 'test-crew-'.bin2hex(random_bytes(3)),
             'description' => 'fixture',
-            'process_type' => \App\Domain\Crew\Enums\CrewProcessType::Sequential,
+            'process_type' => CrewProcessType::Sequential,
             'max_task_iterations' => 3,
             'quality_threshold' => 0.7,
-            'status' => \App\Domain\Crew\Enums\CrewStatus::Active,
+            'status' => CrewStatus::Active,
             'settings' => [],
             'coordinator_agent_id' => $agent->id,
             'qa_agent_id' => $agent->id,

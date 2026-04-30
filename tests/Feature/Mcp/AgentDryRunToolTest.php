@@ -15,6 +15,9 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Mcp\Tools\Agent\AgentDryRunTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Tests\TestCase;
@@ -148,7 +151,7 @@ class AgentDryRunToolTest extends TestCase
     public function test_missing_team_returns_permission_denied(): void
     {
         app()->forgetInstance('mcp.team_id');
-        \Illuminate\Support\Facades\Auth::logout();
+        Auth::logout();
 
         $tool = new AgentDryRunTool;
         $response = $tool->handle(new Request([
@@ -278,7 +281,7 @@ class AgentDryRunToolTest extends TestCase
     public function test_daily_quota_blocks_after_cap(): void
     {
         config()->set('self-service.dry_run.daily_cap', 2);
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
 
         $tool = new AgentDryRunTool;
         // first 2 succeed
@@ -304,7 +307,7 @@ class AgentDryRunToolTest extends TestCase
     public function test_quota_zero_disables_the_cap(): void
     {
         config()->set('self-service.dry_run.daily_cap', 0);
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
 
         $tool = new AgentDryRunTool;
         for ($i = 0; $i < 5; $i++) {
@@ -320,7 +323,7 @@ class AgentDryRunToolTest extends TestCase
     {
         $tool = new AgentDryRunTool;
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
         $tool->handle(new Request([
             'agent_id' => $this->agent->id,

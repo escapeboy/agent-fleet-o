@@ -68,7 +68,7 @@ class TenantTracerProviderFactory
     }
 
     /**
-     * @return array<string, mixed>|null  null means "use platform default"
+     * @return array<string, mixed>|null null means "use platform default"
      */
     private function resolveConfig(string $teamId): ?array
     {

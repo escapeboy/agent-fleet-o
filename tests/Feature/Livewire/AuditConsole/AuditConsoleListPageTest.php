@@ -3,6 +3,7 @@
 namespace Tests\Feature\Livewire\AuditConsole;
 
 use App\Domain\Shared\Models\Team;
+use App\Livewire\AuditConsole\AuditConsoleListPage;
 use App\Models\User;
 use FleetQ\BorunaAudit\Enums\DecisionStatus;
 use FleetQ\BorunaAudit\Models\AuditableDecision;
@@ -35,7 +36,7 @@ class AuditConsoleListPageTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test(\App\Livewire\AuditConsole\AuditConsoleListPage::class)
+        Livewire::test(AuditConsoleListPage::class)
             ->assertSee('driver_scoring');
     }
 
@@ -54,7 +55,7 @@ class AuditConsoleListPageTest extends TestCase
 
         $this->actingAs($userA);
 
-        Livewire::test(\App\Livewire\AuditConsole\AuditConsoleListPage::class)
+        Livewire::test(AuditConsoleListPage::class)
             ->assertSee('No audit decisions found');
     }
 
@@ -75,7 +76,7 @@ class AuditConsoleListPageTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test(\App\Livewire\AuditConsole\AuditConsoleListPage::class)
+        Livewire::test(AuditConsoleListPage::class)
             ->set('workflow', 'driver_scoring')
             ->assertSeeHtml('data-workflow="driver_scoring"')
             ->assertDontSeeHtml('data-workflow="route_approval"');
@@ -100,7 +101,7 @@ class AuditConsoleListPageTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test(\App\Livewire\AuditConsole\AuditConsoleListPage::class)
+        Livewire::test(AuditConsoleListPage::class)
             ->set('status', 'completed')
             ->assertSeeHtml('data-workflow="driver_scoring"')
             ->assertDontSeeHtml('data-workflow="route_approval"');

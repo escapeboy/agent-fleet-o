@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Console;
 
 use App\Domain\Shared\Services\ErrorTranslator;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Redis;
+use Symfony\Component\Console\Command\Command;
 use Tests\TestCase;
 
 class HarvestErrorTranslatorPatternsTest extends TestCase
@@ -86,10 +88,10 @@ class HarvestErrorTranslatorPatternsTest extends TestCase
         // captured output, but pretty-printed JSON sometimes triggers spurious
         // misses on chained calls. Decode the captured output and assert
         // structurally.
-        $exit = \Illuminate\Support\Facades\Artisan::call('error-translator:harvest', [
+        $exit = Artisan::call('error-translator:harvest', [
             '--format' => 'json',
         ]);
-        $output = \Illuminate\Support\Facades\Artisan::output();
+        $output = Artisan::output();
 
         $this->assertSame(0, $exit);
         $report = json_decode($output, true);
@@ -130,7 +132,7 @@ class HarvestErrorTranslatorPatternsTest extends TestCase
     public function test_unknown_format_returns_error_exit_code(): void
     {
         $this->artisan('error-translator:harvest', ['--format' => 'xml'])
-            ->assertExitCode(\Symfony\Component\Console\Command\Command::INVALID);
+            ->assertExitCode(Command::INVALID);
     }
 
     public function test_csv_format_emits_header_and_rows(): void

@@ -6,10 +6,11 @@ use App\Mcp\Concerns\HasStructuredErrors;
 use FleetQ\BorunaAudit\Services\QuotaEnforcer;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
-use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 class AuditConsoleSettingsTool extends McpTool
@@ -42,12 +43,12 @@ class AuditConsoleSettingsTool extends McpTool
 
     public function handle(Request $request): Response
     {
-        $teamId = $request->teamId();
-        $action = $request->input('action');
+        $teamId = app('mcp.team_id') ?? null;
+        $action = $request->get('action');
 
         if ($action === 'get') {
             $setting = DB::table('boruna_tenant_settings')->where('team_id', $teamId)->first();
-            $quota = app(QuotaEnforcer::class)->usage($teamId);
+            $quota = app(QuotaEnforcer::class)->usage((string) $teamId);
 
             return Response::text(json_encode([
                 'enabled' => $setting ? (bool) $setting->enabled : true,
@@ -61,12 +62,12 @@ class AuditConsoleSettingsTool extends McpTool
 
         // update
         $data = array_filter([
-            'enabled' => $request->input('enabled'),
-            'shadow_mode' => $request->input('shadow_mode'),
-            'retention_days' => $request->input('retention_days'),
-            'quota_per_month' => $request->input('quota_per_month'),
-            'workflows_enabled' => $request->input('workflows_enabled') !== null
-                ? json_encode($request->input('workflows_enabled'))
+            'enabled' => $request->get('enabled'),
+            'shadow_mode' => $request->get('shadow_mode'),
+            'retention_days' => $request->get('retention_days'),
+            'quota_per_month' => $request->get('quota_per_month'),
+            'workflows_enabled' => $request->get('workflows_enabled') !== null
+                ? json_encode($request->get('workflows_enabled'))
                 : null,
             'updated_at' => now(),
         ], fn ($v) => $v !== null);
@@ -77,7 +78,7 @@ class AuditConsoleSettingsTool extends McpTool
             DB::table('boruna_tenant_settings')->where('team_id', $teamId)->update($data);
         } else {
             DB::table('boruna_tenant_settings')->insert(array_merge($data, [
-                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'id' => (string) Str::uuid(),
                 'team_id' => $teamId,
                 'created_at' => now(),
             ]));

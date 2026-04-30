@@ -7,6 +7,8 @@ use App\Domain\Integration\Actions\DisconnectIntegrationAction;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
 use App\Domain\Integration\Actions\UpdateIntegrationAction;
+use App\Domain\Integration\Exceptions\IntegrationActionProposedException;
+use App\Domain\Integration\Exceptions\IntegrationActionRefusedException;
 use App\Domain\Integration\Jobs\ActivepiecesSyncJob;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
@@ -141,7 +143,7 @@ class IntegrationController extends Controller
             );
 
             return response()->json(['success' => true, 'result' => $result]);
-        } catch (\App\Domain\Integration\Exceptions\IntegrationActionProposedException $e) {
+        } catch (IntegrationActionProposedException $e) {
             return response()->json([
                 'success' => false,
                 'status' => 'proposed',
@@ -149,7 +151,7 @@ class IntegrationController extends Controller
                 'risk_level' => $e->riskLevel,
                 'message' => "Action proposed for human review (proposal_id={$e->proposalId}). Approve in the Approval Inbox.",
             ], 202);
-        } catch (\App\Domain\Integration\Exceptions\IntegrationActionRefusedException $e) {
+        } catch (IntegrationActionRefusedException $e) {
             return response()->json([
                 'success' => false,
                 'status' => 'refused',

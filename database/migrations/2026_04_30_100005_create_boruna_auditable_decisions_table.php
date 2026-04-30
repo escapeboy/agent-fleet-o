@@ -29,8 +29,8 @@ return new class extends Migration
         });
 
         if (config('database.default') === 'pgsql') {
-            \DB::statement('CREATE INDEX IF NOT EXISTS boruna_auditable_decisions_inputs_gin ON boruna_auditable_decisions USING gin (inputs)');
-            \DB::statement('CREATE INDEX IF NOT EXISTS boruna_auditable_decisions_outputs_gin ON boruna_auditable_decisions USING gin (outputs)');
+            DB::statement('CREATE INDEX IF NOT EXISTS boruna_auditable_decisions_inputs_gin ON boruna_auditable_decisions USING gin (inputs)');
+            DB::statement('CREATE INDEX IF NOT EXISTS boruna_auditable_decisions_outputs_gin ON boruna_auditable_decisions USING gin (outputs)');
         }
     }
 

@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Contracts\PanelExtension;
-use FleetQ\PluginSdk\Contracts\FleetPlugin;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Domain\Outbound\Managers\OutboundConnectorManager;
 use App\Domain\Shared\Models\PluginState;
@@ -11,6 +10,7 @@ use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
 use App\Domain\Workflow\Contracts\WorkflowNodeHandlerInterface;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
+use FleetQ\PluginSdk\Contracts\FleetPlugin;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;

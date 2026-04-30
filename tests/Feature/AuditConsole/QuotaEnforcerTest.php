@@ -7,6 +7,7 @@ use FleetQ\BorunaAudit\Services\QuotaEnforcer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class QuotaEnforcerTest extends TestCase
@@ -24,7 +25,7 @@ class QuotaEnforcerTest extends TestCase
     public function test_under_quota_increments_and_returns(): void
     {
         DB::table('boruna_tenant_settings')->insert([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'team_id' => $this->tenantId,
             'quota_per_month' => 100,
             'enabled' => true,
@@ -44,7 +45,7 @@ class QuotaEnforcerTest extends TestCase
     public function test_at_quota_limit_throws_exception(): void
     {
         DB::table('boruna_tenant_settings')->insert([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'team_id' => $this->tenantId,
             'quota_per_month' => 3,
             'enabled' => true,

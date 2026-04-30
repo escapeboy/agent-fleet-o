@@ -7,8 +7,8 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
 use App\Livewire\Teams\TeamSettingsPage;
 // Cloud extends base; use cloud when present so the rendered view resolves joinRequests.
-use Cloud\Livewire\Teams\CloudTeamSettingsPage;
 use App\Models\User;
+use Cloud\Livewire\Teams\CloudTeamSettingsPage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Livewire\Livewire;

@@ -10,6 +10,7 @@ use App\Domain\Memory\Jobs\ClassifyMemoryTopicJob;
 use App\Domain\Memory\Models\Memory;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Support\Facades\Log;
 
 class StoreMemoryAction
@@ -416,7 +417,7 @@ PROMPT;
      */
     private function generateEmbedding(string $text, ?string $teamId): ?string
     {
-        $service = new \App\Infrastructure\AI\Services\EmbeddingService(
+        $service = new EmbeddingService(
             provider: config('memory.embedding_provider', 'openai'),
             model: config('memory.embedding_model', 'text-embedding-3-small'),
         );

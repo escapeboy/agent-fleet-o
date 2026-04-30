@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\AuditConsole;
 
 use App\Mcp\Concerns\HasStructuredErrors;
 use FleetQ\BorunaAudit\Models\AuditableDecision;
+use FleetQ\BorunaAudit\Models\BundleVerification;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -30,16 +31,17 @@ class AuditConsoleGetDecisionTool extends McpTool
 
     public function handle(Request $request): Response
     {
-        $teamId = $request->teamId();
+        $teamId = app('mcp.team_id') ?? null;
 
-        $decision = AuditableDecision::where('id', $request->input('decision_id'))
+        $decision = AuditableDecision::where('id', $request->get('decision_id'))
             ->where('team_id', $teamId)
-            ->with('verifications')
             ->first();
 
         if ($decision === null) {
-            return $this->notFound('Decision not found.');
+            return $this->notFoundError('decision', $request->get('decision_id'));
         }
+
+        $verifications = BundleVerification::where('auditable_decision_id', $decision->id)->get();
 
         return Response::text(json_encode([
             'id' => $decision->id,
@@ -52,7 +54,7 @@ class AuditConsoleGetDecisionTool extends McpTool
             'bundle_path' => $decision->bundle_path,
             'outputs' => $decision->outputs,
             'evidence' => $decision->evidence,
-            'verifications' => $decision->verifications->map(fn ($v) => [
+            'verifications' => $verifications->map(fn (BundleVerification $v) => [
                 'id' => $v->id,
                 'status' => $v->status->value,
                 'checked_at' => $v->checked_at?->toIso8601String(),

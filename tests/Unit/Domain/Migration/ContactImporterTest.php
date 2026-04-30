@@ -38,7 +38,9 @@ class ContactImporterTest extends TestCase
             $this->team->id,
             ['Name' => 'Jane Doe', 'Email' => 'jane@example.com', 'Phone' => '+359123'],
             ['Name' => 'display_name', 'Email' => 'email', 'Phone' => 'phone'],
-            function (string $m) use (&$errors) { $errors[] = $m; },
+            function (string $m) use (&$errors) {
+                $errors[] = $m;
+            },
         );
 
         $this->assertSame('created', $outcome);
@@ -66,7 +68,9 @@ class ContactImporterTest extends TestCase
             $this->team->id,
             ['Email' => 'jane@example.com', 'Phone' => '+359999'],
             ['Email' => 'email', 'Phone' => 'phone'],
-            function (string $m) use (&$errors) { $errors[] = $m; },
+            function (string $m) use (&$errors) {
+                $errors[] = $m;
+            },
         );
         $this->assertSame('updated', $outcome);
 
@@ -87,7 +91,9 @@ class ContactImporterTest extends TestCase
             $this->team->id,
             ['Source' => 'legacy'],
             ['Source' => 'metadata'],
-            function (string $m) use (&$errors) { $errors[] = $m; },
+            function (string $m) use (&$errors) {
+                $errors[] = $m;
+            },
         );
 
         $this->assertSame('skipped', $outcome);

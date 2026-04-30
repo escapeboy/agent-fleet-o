@@ -2,10 +2,10 @@
 
 namespace Tests\Unit\Domain\Skill;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
-use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use ReflectionClass;
@@ -80,20 +80,20 @@ class SkillOutputSchemaRetryTest extends TestCase
         $this->assertFalse($this->invoke('skillSupportsLlmRetry', [$this->makeSkill(SkillType::Rule)]));
     }
 
-    public function test_resolveMaxRetries_falls_back_to_shared_config_key(): void
+    public function test_resolve_max_retries_falls_back_to_shared_config_key(): void
     {
         config(['agent.output_schema.max_retries_default' => 3]);
         $skill = $this->makeSkill(SkillType::Llm, null);
         $this->assertSame(3, $this->invoke('resolveMaxRetries', [$skill]));
     }
 
-    public function test_resolveMaxRetries_per_skill_override_wins(): void
+    public function test_resolve_max_retries_per_skill_override_wins(): void
     {
         $skill = $this->makeSkill(SkillType::Llm, 1);
         $this->assertSame(1, $this->invoke('resolveMaxRetries', [$skill]));
     }
 
-    public function test_resolveMaxRetries_clamps_to_range(): void
+    public function test_resolve_max_retries_clamps_to_range(): void
     {
         $this->assertSame(0, $this->invoke('resolveMaxRetries', [$this->makeSkill(SkillType::Llm, -1)]));
         $this->assertSame(5, $this->invoke('resolveMaxRetries', [$this->makeSkill(SkillType::Llm, 999)]));

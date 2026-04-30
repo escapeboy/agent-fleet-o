@@ -7,7 +7,6 @@ use App\Domain\Tool\Services\McpStdioClient;
 use App\Models\User;
 use FleetQ\BorunaAudit\Enums\DecisionStatus;
 use FleetQ\BorunaAudit\Models\AuditableDecision;
-use FleetQ\BorunaAudit\Services\BundleStorage;
 use FleetQ\BorunaAudit\Services\BundleVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;

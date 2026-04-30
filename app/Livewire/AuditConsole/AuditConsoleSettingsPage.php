@@ -6,6 +6,7 @@ use FleetQ\BorunaAudit\Services\QuotaEnforcer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -67,7 +68,7 @@ class AuditConsoleSettingsPage extends Component
             ]);
         } else {
             DB::table('boruna_tenant_settings')->insert([
-                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'id' => (string) Str::uuid(),
                 'team_id' => $teamId,
                 'enabled' => $this->enabled,
                 'shadow_mode' => $this->shadowMode,

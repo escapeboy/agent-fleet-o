@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Domain\WorldModel;
 
+use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Models\Signal;
@@ -46,7 +47,7 @@ class BuildWorldModelDigestTest extends TestCase
             'user_id' => $this->user->id,
             'title' => 'Ship faster',
             'thesis' => 'reduce deploy time',
-            'status' => \App\Domain\Experiment\Enums\ExperimentStatus::Completed,
+            'status' => ExperimentStatus::Completed,
         ]);
 
         $this->bindGateway('## Current focus\nShip faster.\n\n## Recent signals\nTwo webhook events.\n\n## Recent outcomes\nOne experiment completed.\n\n## Watchlist / risks\nNone observed in the window.');
@@ -72,7 +73,7 @@ class BuildWorldModelDigestTest extends TestCase
         $this->assertSame('no data in window', $record->stats['skipped'] ?? null);
     }
 
-    public function test_updateOrCreate_overwrites_existing_record(): void
+    public function test_update_or_create_overwrites_existing_record(): void
     {
         TeamWorldModel::create([
             'team_id' => $this->team->id,

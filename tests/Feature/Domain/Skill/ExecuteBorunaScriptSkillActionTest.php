@@ -85,7 +85,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
             'type' => SkillType::BorunaScript->value,
             'status' => 'active',
             'configuration' => array_merge([
-                'script' => "fn main() -> Int { 42 }",
+                'script' => 'fn main() -> Int { 42 }',
             ], $config),
         ]);
     }
@@ -471,7 +471,9 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
             ->twice()
             ->with(Mockery::any(), 'boruna_run', Mockery::any())
             ->andReturnUsing(
-                function () { throw new \RuntimeException('binary crashed'); },
+                function () {
+                    throw new \RuntimeException('binary crashed');
+                },
                 fn () => json_encode(['ok' => true]),
             );
 
@@ -527,7 +529,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
             'type' => SkillType::BorunaScript->value,
             'status' => 'active',
             'configuration' => [
-                'script' => "fn main() -> Int { 42 }", // identical to skillA
+                'script' => 'fn main() -> Int { 42 }', // identical to skillA
                 'boruna_tool_id' => $toolB->id,
             ],
         ]);
@@ -637,7 +639,7 @@ class ExecuteBorunaScriptSkillActionTest extends TestCase
             'type' => SkillType::BorunaScript->value,
             'status' => 'active',
             'configuration' => [
-                'script' => "fn main() -> Int { 42 }",
+                'script' => 'fn main() -> Int { 42 }',
                 'boruna_tool_id' => $tool->id,
                 'policy' => ['default_allow' => false],
             ],

@@ -146,7 +146,7 @@ class EvaluationCompareRunsPageTest extends TestCase
         // Case 1: 8 → 6 (delta -2, small)
         // Case 2: 5 → 9 (delta +4, improvement)
         foreach ([[$runA->id, $caseIds[0], 9], [$runA->id, $caseIds[1], 8], [$runA->id, $caseIds[2], 5],
-                  [$runB->id, $caseIds[0], 2], [$runB->id, $caseIds[1], 6], [$runB->id, $caseIds[2], 9]] as [$runId, $caseId, $score]) {
+            [$runB->id, $caseIds[0], 2], [$runB->id, $caseIds[1], 6], [$runB->id, $caseIds[2], 9]] as [$runId, $caseId, $score]) {
             EvaluationRunResult::create([
                 'run_id' => $runId, 'case_id' => $caseId,
                 'score' => $score, 'created_at' => now(),

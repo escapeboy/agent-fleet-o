@@ -3,6 +3,7 @@
 namespace App\Livewire\AuditConsole;
 
 use FleetQ\BorunaAudit\Models\AuditableDecision;
+use FleetQ\BorunaAudit\Services\BundleStorage;
 use FleetQ\BorunaAudit\Services\BundleVerifier;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -52,7 +53,7 @@ class AuditConsoleDetailPage extends Component
     {
         abort_unless($this->decision->bundle_path !== null, 404);
 
-        $storage = app(\FleetQ\BorunaAudit\Services\BundleStorage::class);
+        $storage = app(BundleStorage::class);
         $absolutePath = $storage->bundleAbsolutePath($this->decision->bundle_path);
 
         abort_unless(is_dir($absolutePath), 404);
@@ -83,8 +84,9 @@ class AuditConsoleDetailPage extends Component
     public function render()
     {
         $isAdmin = Gate::check('manage-team');
-        $evidenceChain = $this->decision->evidence['audit_log'] ?? [];
-        $llmCalls = $this->decision->evidence['llm_calls'] ?? [];
+        $evidence = $this->decision->evidence ?? [];
+        $evidenceChain = $evidence['audit_log'] ?? [];
+        $llmCalls = $evidence['llm_calls'] ?? [];
 
         if (! $isAdmin) {
             $llmCalls = array_map(function ($call) {

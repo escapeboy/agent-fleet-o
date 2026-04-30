@@ -4,10 +4,12 @@ namespace Tests\Feature\Livewire\Skills;
 
 use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Skill\Actions\RegisterBorunaToolAction;
 use App\Domain\Tool\Models\Tool;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -86,7 +88,7 @@ class CreateSkillFormBorunaEnableTest extends TestCase
             // We avoid touching system state in tests; instead we directly
             // invoke the action with our binary path to assert end-to-end
             // wiring without depending on binary location.
-            $action = app(\App\Domain\Skill\Actions\RegisterBorunaToolAction::class);
+            $action = app(RegisterBorunaToolAction::class);
             $action->execute(teamId: $user->current_team_id, binary: $this->fakeBinary);
 
             $tool = Tool::withoutGlobalScopes()
@@ -126,7 +128,7 @@ class CreateSkillFormBorunaEnableTest extends TestCase
         $user = $this->loggedInOwner();
         $team = $user->currentTeam;
 
-        \Illuminate\Support\Facades\Gate::define('manage-team', fn ($u) => false);
+        Gate::define('manage-team', fn ($u) => false);
 
         Livewire::test(CreateSkillForm::class)
             ->set('type', 'boruna_script')

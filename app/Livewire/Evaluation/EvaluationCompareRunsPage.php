@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Evaluation;
 
+use App\Domain\Evaluation\Models\EvaluationCase;
 use App\Domain\Evaluation\Models\EvaluationRun;
 use App\Domain\Evaluation\Models\EvaluationRunResult;
 use Illuminate\Contracts\View\View;
@@ -74,7 +75,7 @@ class EvaluationCompareRunsPage extends Component
             return [];
         }
 
-        $cases = \App\Domain\Evaluation\Models\EvaluationCase::whereIn('id', $caseIds)
+        $cases = EvaluationCase::whereIn('id', $caseIds)
             ->get(['id', 'input', 'expected_output'])
             ->keyBy('id');
 

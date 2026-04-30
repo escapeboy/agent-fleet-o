@@ -6,6 +6,7 @@ use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentScope;
 use App\Domain\Agent\Enums\AgentStatus;
+use App\Domain\AgentChatProtocol\Enums\AgentChatVisibility;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Shared\Enums\DataClassification;
@@ -109,7 +110,7 @@ class Agent extends Model
         return [
             'status' => AgentStatus::class,
             'chat_protocol_enabled' => 'boolean',
-            'chat_protocol_visibility' => \App\Domain\AgentChatProtocol\Enums\AgentChatVisibility::class,
+            'chat_protocol_visibility' => AgentChatVisibility::class,
             'chat_protocol_config' => 'array',
             'reasoning_strategy' => AgentReasoningStrategy::class,
             'meta' => 'array',

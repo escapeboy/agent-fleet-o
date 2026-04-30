@@ -146,7 +146,7 @@ final class DetectSchemaAction
             $entityType->value,
             implode("\n", $supportedLines),
             implode(', ', $headers),
-            implode("\n", $rowLines) ?: '(no sample rows)'
+            implode("\n", $rowLines) ?: '(no sample rows)',
         );
 
         $schema = new ObjectSchema(

@@ -10,6 +10,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\PageHelp\AgentDetailHelpResolver;
 use App\Domain\Shared\Services\PageHelpResolver;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
 use App\Models\User;
@@ -134,7 +135,7 @@ class PageHelpResolverTest extends TestCase
     public function test_dynamic_resolver_failure_does_not_break_page(): void
     {
         // Configure a resolver that throws
-        config()->set('page-help-dynamic.agents.show', \Tests\Feature\Services\ThrowingHelpResolver::class);
+        config()->set('page-help-dynamic.agents.show', ThrowingHelpResolver::class);
 
         $agent = Agent::factory()->for($this->team)->create();
         $result = $this->resolver->resolve('agents.show', ['agent' => $agent]);
@@ -159,7 +160,7 @@ class PageHelpResolverTest extends TestCase
         $all = config('page-help-dynamic');
         $this->assertIsArray($all);
         $this->assertSame(
-            \App\Domain\Shared\Services\PageHelp\AgentDetailHelpResolver::class,
+            AgentDetailHelpResolver::class,
             $all['agents.show'] ?? null,
         );
     }

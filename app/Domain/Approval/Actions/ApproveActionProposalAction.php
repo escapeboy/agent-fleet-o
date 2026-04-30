@@ -18,7 +18,7 @@ class ApproveActionProposalAction
 
         if (! $proposal->isPending()) {
             throw new RuntimeException(
-                "Proposal {$proposal->id} is not pending (status={$proposal->status->value}); cannot approve."
+                "Proposal {$proposal->id} is not pending (status={$proposal->status->value}); cannot approve.",
             );
         }
 

@@ -5,6 +5,7 @@ namespace App\Domain\Project\Jobs;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Services\ProjectScheduler;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
@@ -27,7 +28,7 @@ class ExecuteProjectRunJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+        return [new ApplyTenantTracer];
     }
 
     /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */

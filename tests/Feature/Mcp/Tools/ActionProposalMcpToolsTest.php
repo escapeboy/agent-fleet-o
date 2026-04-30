@@ -4,6 +4,7 @@ namespace Tests\Feature\Mcp\Tools;
 
 use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Approval\Enums\ActionProposalStatus;
+use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Tools\Approval\ActionProposalApproveTool;
 use App\Mcp\Tools\Approval\ActionProposalGetTool;
@@ -106,7 +107,7 @@ class ActionProposalMcpToolsTest extends TestCase
         $this->assertSame(ActionProposalStatus::Rejected->value, $proposal->fresh()->status->value);
     }
 
-    private function makeProposal(): \App\Domain\Approval\Models\ActionProposal
+    private function makeProposal(): ActionProposal
     {
         return app(CreateActionProposalAction::class)->execute(
             teamId: $this->team->id,

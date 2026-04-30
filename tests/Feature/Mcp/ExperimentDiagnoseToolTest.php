@@ -16,6 +16,7 @@ use App\Infrastructure\AI\Models\CircuitBreakerState;
 use App\Mcp\Tools\Experiment\ExperimentDiagnoseTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Tests\TestCase;
@@ -134,7 +135,7 @@ class ExperimentDiagnoseToolTest extends TestCase
     {
         app()->forgetInstance('mcp.team_id');
         // Avoid fallthrough to auth()->user()
-        \Illuminate\Support\Facades\Auth::logout();
+        Auth::logout();
 
         $experiment = Experiment::factory()
             ->for($this->team)

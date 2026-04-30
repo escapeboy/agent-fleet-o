@@ -11,6 +11,7 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Mockery;
 use Tests\TestCase;
 
@@ -87,7 +88,7 @@ class GroundedCitationsTest extends TestCase
             'title' => null,
         ]);
 
-        $fakeId = (string) \Illuminate\Support\Str::uuid();
+        $fakeId = (string) Str::uuid();
 
         $this->bindFakeGateway(
             replyText: "Here is a bogus ref [[experiment:{$fakeId}]] — should be stripped.",

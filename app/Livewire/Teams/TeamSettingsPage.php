@@ -12,7 +12,10 @@ use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
+use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
+use App\Infrastructure\Telemetry\TenantTracerTester;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -282,7 +285,7 @@ class TeamSettingsPage extends Component
         ];
 
         if ($this->observabilityToken !== '') {
-            $next['otlp_token_encrypted'] = \Illuminate\Support\Facades\Crypt::encryptString($this->observabilityToken);
+            $next['otlp_token_encrypted'] = Crypt::encryptString($this->observabilityToken);
         }
 
         $settings['observability'] = $next;
@@ -290,7 +293,7 @@ class TeamSettingsPage extends Component
 
         // Drop the in-process tracer cache so the next request picks up the
         // new endpoint/token without a process restart.
-        app(\App\Infrastructure\Telemetry\TenantTracerProviderFactory::class)->forget($team->id);
+        app(TenantTracerProviderFactory::class)->forget($team->id);
 
         $this->observabilityTokenIsSet = $next['otlp_token_encrypted'] !== '';
         $this->observabilityToken = '';
@@ -313,11 +316,11 @@ class TeamSettingsPage extends Component
         $candidate = [
             'endpoint' => trim($this->observabilityEndpoint) ?: ($saved['endpoint'] ?? ''),
             'otlp_token_encrypted' => $this->observabilityToken !== ''
-                ? \Illuminate\Support\Facades\Crypt::encryptString($this->observabilityToken)
+                ? Crypt::encryptString($this->observabilityToken)
                 : ($saved['otlp_token_encrypted'] ?? ''),
         ];
 
-        $result = app(\App\Infrastructure\Telemetry\TenantTracerTester::class)->test($candidate);
+        $result = app(TenantTracerTester::class)->test($candidate);
 
         // Sprint 18: persist probe result so the UI can show a stable
         // "Last tested N min ago" badge between sessions.
@@ -344,7 +347,7 @@ class TeamSettingsPage extends Component
         if (isset($settings['observability'])) {
             $settings['observability']['otlp_token_encrypted'] = '';
             $team->update(['settings' => $settings]);
-            app(\App\Infrastructure\Telemetry\TenantTracerProviderFactory::class)->forget($team->id);
+            app(TenantTracerProviderFactory::class)->forget($team->id);
         }
 
         $this->observabilityTokenIsSet = false;

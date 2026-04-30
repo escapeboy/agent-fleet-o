@@ -4,6 +4,7 @@ namespace App\Domain\Crew\Models;
 
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\Artifact;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -116,7 +117,7 @@ class CrewExecution extends Model
             }
         }
 
-        return \App\Domain\Shared\Models\Team::withoutGlobalScopes()
+        return Team::withoutGlobalScopes()
             ->where('id', $this->team_id)
             ->value('owner_id');
     }

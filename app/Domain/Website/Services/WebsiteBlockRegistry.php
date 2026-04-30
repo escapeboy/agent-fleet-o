@@ -2,8 +2,8 @@
 
 namespace App\Domain\Website\Services;
 
-use FleetQ\PluginSdk\Contracts\WebsiteBlockProvider;
 use App\Domain\Shared\Services\PluginRegistry;
+use FleetQ\PluginSdk\Contracts\WebsiteBlockProvider;
 
 /**
  * Discovers all registered FleetQ plugins that implement WebsiteBlockProvider

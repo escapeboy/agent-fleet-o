@@ -36,7 +36,7 @@ return new class extends Migration
         });
 
         if (config('database.default') === 'pgsql') {
-            \DB::statement('CREATE INDEX acm_payload_gin ON agent_chat_messages USING GIN (payload)');
+            DB::statement('CREATE INDEX acm_payload_gin ON agent_chat_messages USING GIN (payload)');
         }
     }
 

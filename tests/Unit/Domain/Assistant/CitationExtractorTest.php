@@ -9,6 +9,7 @@ use App\Domain\Signal\Models\Signal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CitationExtractorTest extends TestCase
@@ -198,7 +199,7 @@ class CitationExtractorTest extends TestCase
 
         $queries = DB::getQueryLog();
         $experimentQueries = collect($queries)->filter(
-            fn ($q) => str_contains($q['query'], 'experiments') && str_contains($q['query'], 'whereIn') === false && str_contains($q['query'], 'in (?')
+            fn ($q) => str_contains($q['query'], 'experiments') && str_contains($q['query'], 'whereIn') === false && str_contains($q['query'], 'in (?'),
         );
 
         // Expectation: exactly one whereIn query against experiments.
@@ -265,6 +266,6 @@ class CitationExtractorTest extends TestCase
 
     private function uuid(): string
     {
-        return (string) \Illuminate\Support\Str::uuid();
+        return (string) Str::uuid();
     }
 }

@@ -9,6 +9,7 @@ use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\CitationExtractor;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Budget\Services\CostCalculator;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -47,7 +48,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+        return [new ApplyTenantTracer];
     }
 
     public function handle(SendAssistantMessageAction $action): void

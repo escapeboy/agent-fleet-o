@@ -6,6 +6,7 @@ namespace App\Infrastructure\Telemetry;
 
 use App\Domain\Shared\Services\SsrfGuard;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 
@@ -91,7 +92,7 @@ final class TenantTracerTester
             $status = $response->status();
 
             return $this->classify($status, $latencyMs);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             $latencyMs = (int) ((hrtime(true) - $started) / 1_000_000);
 
             return $this->fail('unreachable', null, 'Could not reach the endpoint ('.$latencyMs.' ms): '.$this->shortError($e), latencyMs: $latencyMs);

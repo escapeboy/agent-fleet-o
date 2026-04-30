@@ -5,6 +5,7 @@ namespace App\Domain\Experiment\Pipeline;
 use App\Domain\Experiment\Enums\ExperimentTaskStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentTask;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Website\Actions\CreateWebsitePageAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
 use App\Domain\Website\Models\Website;
@@ -154,13 +155,13 @@ class BuildWebsitePageJob implements ShouldQueue
     }
 
     /**
-     * @param array<int, array{slug: string, title: string}> $allPages
+     * @param  array<int, array{slug: string, title: string}>  $allPages
      */
     private function generatePageHtml(string $teamId, ?string $userId, string $siteName, array $pageSpec, array $allPages = [], string $publicBaseUrl = ''): string
     {
         $sections = implode(', ', $pageSpec['sections'] ?? ['hero', 'content', 'footer']);
 
-        $team = \App\Domain\Shared\Models\Team::withoutGlobalScopes()->find($teamId);
+        $team = Team::withoutGlobalScopes()->find($teamId);
         ['provider' => $provider, 'model' => $model] = app(ProviderResolver::class)->resolve(team: $team);
 
         // Build nav spec so every page has consistent navigation with correct hrefs
@@ -168,6 +169,7 @@ class BuildWebsitePageJob implements ShouldQueue
         if (count($allPages) > 1) {
             $navLinks = array_map(function (array $p) use ($publicBaseUrl) {
                 $href = $publicBaseUrl ? "{$publicBaseUrl}/{$p['slug']}" : "/{$p['slug']}";
+
                 return "- {$p['title']}: {$href}";
             }, $allPages);
             $navSpec = "\n\nNavigation (include in header/nav on every page with these exact hrefs):\n".implode("\n", $navLinks);

@@ -184,7 +184,7 @@ class ApprovalInboxPage extends Component
         $unifiedActions = $actionProposalsCollection
             ->map(fn ($p) => (object) ['_source' => 'action_proposal', '_at' => $p->created_at, 'item' => $p])
             ->concat(
-                $outboundApprovals->map(fn ($a) => (object) ['_source' => 'outbound_approval', '_at' => $a->created_at, 'item' => $a])
+                $outboundApprovals->map(fn ($a) => (object) ['_source' => 'outbound_approval', '_at' => $a->created_at, 'item' => $a]),
             )
             ->sortByDesc('_at')
             ->values()

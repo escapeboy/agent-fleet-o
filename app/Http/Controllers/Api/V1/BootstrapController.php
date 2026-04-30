@@ -41,7 +41,7 @@ class BootstrapController extends Controller
                 'name' => $data['name'],
                 'models' => array_values(array_map(
                     fn ($m) => is_array($m) ? ($m['id'] ?? $m['name'] ?? null) : $m,
-                    $data['models']
+                    $data['models'],
                 )),
             ];
         }

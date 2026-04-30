@@ -100,7 +100,7 @@ class HasAssistantSelectionTest extends TestCase
         $this->assertSame('project', $page->selectionKind);
     }
 
-    public function test_resolveSelectionKind_infers_from_class_name_when_blank(): void
+    public function test_resolve_selection_kind_infers_from_class_name_when_blank(): void
     {
         $c = $this->makeHost(''); // blank selectionKind
         $r = new \ReflectionMethod($c, 'resolveSelectionKind');

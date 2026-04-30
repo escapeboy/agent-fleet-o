@@ -36,7 +36,7 @@ class RegisterBorunaToolAction
         if (! is_executable($binary)) {
             throw new \RuntimeException(
                 "Boruna binary not found or not executable at: {$binary}. "
-                ."Rebuild the Docker image with the v1.1.0 BORUNA_VERSION arg.",
+                .'Rebuild the Docker image with the v1.1.0 BORUNA_VERSION arg.',
             );
         }
 

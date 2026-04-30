@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Services;
 
+use Illuminate\Support\Facades\Log;
+
 /**
  * Resolves contextual page-help content per route, allowing dynamic
  * overrides that read the current entity state.
@@ -82,7 +84,7 @@ final class PageHelpResolver
         } catch (\Throwable $e) {
             // Dynamic help failures must NEVER break the page. Log once and
             // fall through to static-only help.
-            \Illuminate\Support\Facades\Log::warning('PageHelpResolver: dynamic resolver failed', [
+            Log::warning('PageHelpResolver: dynamic resolver failed', [
                 'resolver' => is_string($resolver) ? $resolver : 'closure',
                 'error' => $e->getMessage(),
             ]);

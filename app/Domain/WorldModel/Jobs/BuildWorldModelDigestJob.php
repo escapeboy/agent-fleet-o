@@ -4,6 +4,7 @@ namespace App\Domain\WorldModel\Jobs;
 
 use App\Domain\Shared\Models\Team;
 use App\Domain\WorldModel\Actions\BuildWorldModelDigestAction;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -23,7 +24,7 @@ class BuildWorldModelDigestJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+        return [new ApplyTenantTracer];
     }
 
     public function handle(BuildWorldModelDigestAction $action): void

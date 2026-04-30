@@ -31,7 +31,7 @@ return new class extends Migration
 
         if (Schema::getConnection()->getDriverName() === 'pgsql') {
             Schema::getConnection()->statement(
-                "CREATE INDEX migration_runs_active_idx ON migration_runs (status) WHERE status IN ('pending','analysing','running')"
+                "CREATE INDEX migration_runs_active_idx ON migration_runs (status) WHERE status IN ('pending','analysing','running')",
             );
         }
     }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire\Approvals;
 use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Models\Team;
@@ -91,7 +92,7 @@ class UnifiedActionsTabTest extends TestCase
         // when not approving, factories assert FK presence.
         $experiment = Experiment::factory()->create([
             'team_id' => $this->team->id,
-            'status' => \App\Domain\Experiment\Enums\ExperimentStatus::AwaitingApproval,
+            'status' => ExperimentStatus::AwaitingApproval,
         ]);
         $outbound = OutboundProposal::factory()->create(['team_id' => $this->team->id, 'experiment_id' => $experiment->id]);
         ApprovalRequest::create([
@@ -122,7 +123,7 @@ class UnifiedActionsTabTest extends TestCase
         // domain model.
         $experiment = Experiment::factory()->create([
             'team_id' => $this->team->id,
-            'status' => \App\Domain\Experiment\Enums\ExperimentStatus::AwaitingApproval,
+            'status' => ExperimentStatus::AwaitingApproval,
         ]);
         $outbound = OutboundProposal::factory()->create([
             'team_id' => $this->team->id,

@@ -41,28 +41,28 @@ class AuditConsoleListDecisionsTool extends McpTool
 
     public function handle(Request $request): Response
     {
-        $teamId = $request->teamId();
+        $teamId = app('mcp.team_id') ?? null;
 
         $query = AuditableDecision::where('team_id', $teamId)
             ->orderByDesc('created_at');
 
-        if ($workflowName = $request->input('workflow_name')) {
+        if ($workflowName = $request->get('workflow_name')) {
             $query->where('workflow_name', $workflowName);
         }
 
-        if ($status = $request->input('status')) {
+        if ($status = $request->get('status')) {
             $query->where('status', $status);
         }
 
-        if ($dateFrom = $request->input('date_from')) {
+        if ($dateFrom = $request->get('date_from')) {
             $query->whereDate('created_at', '>=', $dateFrom);
         }
 
-        if ($dateTo = $request->input('date_to')) {
+        if ($dateTo = $request->get('date_to')) {
             $query->whereDate('created_at', '<=', $dateTo);
         }
 
-        $perPage = min((int) ($request->input('per_page') ?? 25), 100);
+        $perPage = min((int) ($request->get('per_page') ?? 25), 100);
         $decisions = $query->cursorPaginate($perPage);
 
         return Response::text(json_encode([

@@ -17,9 +17,9 @@ use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
 use App\Domain\Agent\Pipeline\Middleware\InjectKnowledgeGraphContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
-use App\Domain\Agent\Pipeline\Middleware\InjectWorldModel;
 use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectTeamContext;
+use App\Domain\Agent\Pipeline\Middleware\InjectWorldModel;
 use App\Domain\Agent\Pipeline\Middleware\PreExecutionScout;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
 use App\Domain\Agent\Services\AgentHookExecutor;
@@ -89,7 +89,7 @@ class ExecuteAgentAction
      *
      * @return array{valid: bool, errors: list<string>}|null
      */
-    private function validateAgentOutput(\App\Domain\Agent\Models\Agent $agent, ?string $content): ?array
+    private function validateAgentOutput(Agent $agent, ?string $content): ?array
     {
         $schema = $agent->output_schema ?? null;
         if (! is_array($schema) || $schema === []) {
@@ -138,7 +138,7 @@ class ExecuteAgentAction
      * legitimate opt-out that preserves Sprint 8's validate-but-don't-retry
      * behavior.
      */
-    private function resolveMaxRetries(\App\Domain\Agent\Models\Agent $agent): int
+    private function resolveMaxRetries(Agent $agent): int
     {
         $value = $agent->output_schema_max_retries;
         if ($value === null) {
@@ -611,7 +611,7 @@ class ExecuteAgentAction
                     try {
                         $retryResponse = $this->gateway->complete($retryRequest);
                     } catch (\Throwable $e) {
-                        \Illuminate\Support\Facades\Log::warning('ExecuteAgentAction: schema retry failed', [
+                        Log::warning('ExecuteAgentAction: schema retry failed', [
                             'agent_id' => $agent->id,
                             'attempt' => $retryAttempts,
                             'error' => $e->getMessage(),

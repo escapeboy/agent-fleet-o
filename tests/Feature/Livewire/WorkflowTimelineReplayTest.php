@@ -165,7 +165,7 @@ class WorkflowTimelineReplayTest extends TestCase
 
         $this->assertDatabaseHas('audit_entries', [
             'event' => 'experiment.replay',
-            'subject_type' => \App\Domain\Experiment\Models\WorkflowSnapshot::class,
+            'subject_type' => WorkflowSnapshot::class,
             'subject_id' => $snapshot->id,
             'team_id' => $this->team->id,
         ]);
