@@ -21,6 +21,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Log;
 
 class ExecuteSkillAction
 {
@@ -193,7 +194,7 @@ class ExecuteSkillAction
                                 errors: $outputValidation['errors'],
                             );
                         } catch (\Throwable $e) {
-                            \Illuminate\Support\Facades\Log::warning('ExecuteSkillAction: schema retry failed', [
+                            Log::warning('ExecuteSkillAction: schema retry failed', [
                                 'skill_id' => $skill->id,
                                 'attempt' => $schemaRetryAttempts,
                                 'error' => $e->getMessage(),

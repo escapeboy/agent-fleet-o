@@ -88,7 +88,7 @@ class WorldModelPageTest extends TestCase
         // base test harness the gate resolves as always-true (single-team community
         // edition) and in cloud it checks role. We lock down that the call exists
         // rather than the gate's output, since the gate is substitutable per-edition.
-        $r = new \ReflectionMethod(\App\Livewire\WorldModel\WorldModelPage::class, 'rebuild');
+        $r = new \ReflectionMethod(WorldModelPage::class, 'rebuild');
         $source = file_get_contents((string) $r->getFileName());
         $this->assertStringContainsString("authorize('manage-team'", $source);
     }

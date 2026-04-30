@@ -10,6 +10,7 @@ use App\Mcp\Tools\Shared\TeamGraphGetTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
 use Tests\TestCase;
 
 class TeamGraphGetToolTest extends TestCase
@@ -100,7 +101,7 @@ class TeamGraphGetToolTest extends TestCase
         $this->assertNotContains('Stranger Bot', $labels);
     }
 
-    private function responseText(\Laravel\Mcp\Response $response): string
+    private function responseText(Response $response): string
     {
         return (string) $response->content();
     }

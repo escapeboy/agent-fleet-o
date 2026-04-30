@@ -29,6 +29,9 @@ use App\Livewire\Agents\QuickAgentForm;
 use App\Livewire\Agents\VoiceSessionPage;
 use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Livewire\Audit\AuditLogPage;
+use App\Livewire\AuditConsole\AuditConsoleDetailPage;
+use App\Livewire\AuditConsole\AuditConsoleListPage;
+use App\Livewire\AuditConsole\AuditConsoleSettingsPage;
 use App\Livewire\Auth\AcceptTermsPage;
 use App\Livewire\Changelog\ChangelogPage;
 use App\Livewire\Chatbots\ChatbotAnalyticsPage;
@@ -99,6 +102,7 @@ use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
 use App\Livewire\Skills\SkillListPage;
+use App\Livewire\TeamGraph\TeamGraphPage;
 use App\Livewire\Teams\TeamSettingsPage;
 use App\Livewire\Telegram\TelegramBotsPage;
 use App\Livewire\Tools\CreateToolForm;
@@ -265,7 +269,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/frameworks', FrameworksBrowsePage::class)->name('frameworks.index');
 
-    Route::get('/team-graph', \App\Livewire\TeamGraph\TeamGraphPage::class)->name('team-graph');
+    Route::get('/team-graph', TeamGraphPage::class)->name('team-graph');
 
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');
@@ -395,6 +399,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/websites/{website}/pages/{page}/preview', WebsitePagePreviewController::class)->name('websites.pages.preview');
     Route::get('/websites/deployments/{deployment}/download', WebsiteDeploymentDownloadController::class)
         ->name('websites.deployment.download');
+
+    // Audit Console (Boruna cryptographic audit trail)
+    Route::get('/audit-console', AuditConsoleListPage::class)->name('audit-console.index');
+    Route::get('/audit-console/{decision}', AuditConsoleDetailPage::class)->name('audit-console.show');
+    Route::get('/settings/audit-console', AuditConsoleSettingsPage::class)->name('audit-console.settings');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

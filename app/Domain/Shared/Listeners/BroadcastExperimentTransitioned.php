@@ -2,7 +2,6 @@
 
 namespace App\Domain\Shared\Listeners;
 
-use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Shared\Events\TeamActivityBroadcast;
 

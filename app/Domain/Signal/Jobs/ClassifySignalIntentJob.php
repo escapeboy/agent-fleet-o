@@ -4,6 +4,7 @@ namespace App\Domain\Signal\Jobs;
 
 use App\Domain\Signal\Actions\ClassifySignalIntentAction;
 use App\Domain\Signal\Models\Signal;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -22,7 +23,7 @@ class ClassifySignalIntentJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+        return [new ApplyTenantTracer];
     }
 
     /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */

@@ -14,6 +14,7 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Mockery;
 use Tests\TestCase;
 
@@ -179,7 +180,7 @@ class ReplayEvaluationDatasetTest extends TestCase
         $this->expectException(\RuntimeException::class);
         app(ReplayEvaluationDatasetAction::class)->execute(
             teamId: $this->team->id,
-            datasetId: (string) \Illuminate\Support\Str::uuid(),
+            datasetId: (string) Str::uuid(),
             targetProvider: 'anthropic',
             targetModel: 'm',
         );

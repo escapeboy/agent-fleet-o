@@ -34,7 +34,7 @@ final class ReplayEvaluationDatasetAction
 
     /**
      * @param  list<string>  $criteria  Judge criteria (faithfulness, relevance, correctness, completeness)
-     * @return EvaluationRun  with completed status + aggregate_scores + summary
+     * @return EvaluationRun with completed status + aggregate_scores + summary
      */
     public function execute(
         string $teamId,

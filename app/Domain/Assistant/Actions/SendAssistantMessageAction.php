@@ -2,6 +2,7 @@
 
 namespace App\Domain\Assistant\Actions;
 
+use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\AssistantArtifactsFeatureFlag;
@@ -11,10 +12,10 @@ use App\Domain\Assistant\Services\AssistantUiArtifactParser;
 use App\Domain\Assistant\Services\AssistantUiArtifactPersister;
 use App\Domain\Assistant\Services\CitationExtractor;
 use App\Domain\Assistant\Services\ContextResolver;
-use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Assistant\Services\ToolUsageTracker;
 use App\Domain\Memory\Jobs\AutoSaveConversationMemoryJob;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -709,7 +710,7 @@ class SendAssistantMessageAction
      *
      * @return array{low: 'auto'|'ask'|'reject', medium: 'auto'|'ask'|'reject', high: 'auto'|'ask'|'reject'}
      */
-    private function resolveActionPolicy(?\App\Domain\Shared\Models\Team $team): array
+    private function resolveActionPolicy(?Team $team): array
     {
         $defaults = ['low' => 'auto', 'medium' => 'auto', 'high' => 'auto'];
 

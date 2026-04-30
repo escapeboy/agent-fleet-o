@@ -50,7 +50,7 @@ class AgentOutputSchemaRetryTest extends TestCase
         return $m->invoke($this->action, ...$args);
     }
 
-    public function test_resolveMaxRetries_falls_back_to_config_default(): void
+    public function test_resolve_max_retries_falls_back_to_config_default(): void
     {
         config(['agent.output_schema.max_retries_default' => 3]);
         $this->agent->output_schema_max_retries = null;
@@ -58,14 +58,14 @@ class AgentOutputSchemaRetryTest extends TestCase
         $this->assertSame(3, $this->invoke('resolveMaxRetries', [$this->agent]));
     }
 
-    public function test_resolveMaxRetries_uses_per_agent_override(): void
+    public function test_resolve_max_retries_uses_per_agent_override(): void
     {
         $this->agent->output_schema_max_retries = 1;
 
         $this->assertSame(1, $this->invoke('resolveMaxRetries', [$this->agent]));
     }
 
-    public function test_resolveMaxRetries_zero_is_legitimate_opt_out(): void
+    public function test_resolve_max_retries_zero_is_legitimate_opt_out(): void
     {
         config(['agent.output_schema.max_retries_default' => 2]);
         $this->agent->output_schema_max_retries = 0;
@@ -73,14 +73,14 @@ class AgentOutputSchemaRetryTest extends TestCase
         $this->assertSame(0, $this->invoke('resolveMaxRetries', [$this->agent]));
     }
 
-    public function test_resolveMaxRetries_clamps_negative_to_zero(): void
+    public function test_resolve_max_retries_clamps_negative_to_zero(): void
     {
         $this->agent->output_schema_max_retries = -5;
 
         $this->assertSame(0, $this->invoke('resolveMaxRetries', [$this->agent]));
     }
 
-    public function test_resolveMaxRetries_clamps_above_five(): void
+    public function test_resolve_max_retries_clamps_above_five(): void
     {
         $this->agent->output_schema_max_retries = 99;
 

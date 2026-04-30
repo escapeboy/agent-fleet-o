@@ -2,9 +2,9 @@
 
 namespace App\Domain\Chatbot\Services;
 
+use App\Domain\Chatbot\Contracts\KnowledgeGraphContextProviderInterface;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Shared\Models\Team;
-use App\Domain\Chatbot\Contracts\KnowledgeGraphContextProviderInterface;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Prism;
 

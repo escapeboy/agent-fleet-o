@@ -42,8 +42,8 @@ final class ErrorTranslator
     /**
      * Translate a technical exception/error string for the given locale.
      *
-     * @param  array<string, string>  $placeholders   replacements applied to action params + assistant prompt targets;
-     *                                                e.g. ['experiment_id' => 'abc-123']
+     * @param  array<string, string>  $placeholders  replacements applied to action params + assistant prompt targets;
+     *                                               e.g. ['experiment_id' => 'abc-123']
      */
     public function translate(
         string $technicalMessage,

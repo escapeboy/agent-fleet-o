@@ -3,7 +3,6 @@
 namespace Tests\Unit\Jobs;
 
 use App\Domain\Shared\Models\Team;
-use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
 use App\Infrastructure\Telemetry\TracerProvider;
 use App\Jobs\Middleware\ApplyTenantTracer;
 use App\Models\User;
@@ -50,7 +49,7 @@ class ApplyTenantTracerMiddlewareTest extends TestCase
         return $p->getValue($provider);
     }
 
-    public function test_public_teamId_property_is_resolved(): void
+    public function test_public_team_id_property_is_resolved(): void
     {
         $team = $this->seedTeamWithObservability();
         $job = new class($team->id)
@@ -59,14 +58,16 @@ class ApplyTenantTracerMiddlewareTest extends TestCase
         };
 
         $called = false;
-        $this->middleware->handle($job, function () use (&$called) { $called = true; });
+        $this->middleware->handle($job, function () use (&$called) {
+            $called = true;
+        });
 
         $this->assertTrue($called);
         $bound = app(TracerProvider::class);
         $this->assertSame('https://job-team.example', $this->peekOverrides($bound)['endpoint']);
     }
 
-    public function test_teamId_method_is_used_when_property_absent(): void
+    public function test_team_id_method_is_used_when_property_absent(): void
     {
         $team = $this->seedTeamWithObservability();
         $job = new class($team->id)
@@ -98,7 +99,7 @@ class ApplyTenantTracerMiddlewareTest extends TestCase
         $this->assertSame($originalBinding, app(TracerProvider::class));
     }
 
-    public function test_empty_teamId_falls_through_to_platform_default(): void
+    public function test_empty_team_id_falls_through_to_platform_default(): void
     {
         $originalBinding = app(TracerProvider::class);
         $job = new class
@@ -118,14 +119,18 @@ class ApplyTenantTracerMiddlewareTest extends TestCase
             {
                 public string $teamId = '';
             },
-            function () use (&$called) { $called++; },
+            function () use (&$called) {
+                $called++;
+            },
         );
         $this->middleware->handle(
             new class
             {
                 public string $teamId = 'ghost-uuid-not-in-db';
             },
-            function () use (&$called) { $called++; },
+            function () use (&$called) {
+                $called++;
+            },
         );
         $this->assertSame(2, $called);
     }

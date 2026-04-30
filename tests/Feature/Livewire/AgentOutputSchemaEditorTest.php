@@ -103,7 +103,7 @@ class AgentOutputSchemaEditorTest extends TestCase
             ->assertHasErrors(['editOutputSchemaMaxRetries']);
     }
 
-    public function test_clearOutputSchema_button_clears_both_fields(): void
+    public function test_clear_output_schema_button_clears_both_fields(): void
     {
         $this->agent->update([
             'output_schema' => ['type' => 'object'],

@@ -4,6 +4,7 @@ namespace App\Domain\Memory\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Shared\Models\Team;
@@ -90,7 +91,7 @@ PROMPT;
         // Required for VPS-routed agents — LocalAgentGateway::executeVps loads the
         // user via User::find($request->userId) and the gate denies if it's null.
         if ($userId === null && $execution->experiment_id) {
-            $userId = \App\Domain\Experiment\Models\Experiment::withoutGlobalScopes()
+            $userId = Experiment::withoutGlobalScopes()
                 ->where('id', $execution->experiment_id)
                 ->value('user_id');
         }

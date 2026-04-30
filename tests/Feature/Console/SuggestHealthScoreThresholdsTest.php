@@ -9,6 +9,8 @@ use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Console\Command\Command;
 use Tests\TestCase;
 
 class SuggestHealthScoreThresholdsTest extends TestCase
@@ -64,10 +66,10 @@ class SuggestHealthScoreThresholdsTest extends TestCase
         // Plus a single successful run
         $this->makeExecution(1000, 10);
 
-        $exit = \Illuminate\Support\Facades\Artisan::call('health-score:suggest', [
+        $exit = Artisan::call('health-score:suggest', [
             '--format' => 'json',
         ]);
-        $report = json_decode(\Illuminate\Support\Facades\Artisan::output(), true);
+        $report = json_decode(Artisan::output(), true);
 
         $this->assertSame(0, $exit);
         $this->assertSame(1, $report['sample_size_latency']);
@@ -82,10 +84,10 @@ class SuggestHealthScoreThresholdsTest extends TestCase
         }
         $this->makeExecution(60000, 50);
 
-        \Illuminate\Support\Facades\Artisan::call('health-score:suggest', [
+        Artisan::call('health-score:suggest', [
             '--format' => 'json',
         ]);
-        $report = json_decode(\Illuminate\Support\Facades\Artisan::output(), true);
+        $report = json_decode(Artisan::output(), true);
 
         // p50 of 11 sorted ≈ index 5 → 6000ms
         // p95 of 11 sorted ≈ index 9 → 10000ms (just below the outlier)
@@ -107,6 +109,6 @@ class SuggestHealthScoreThresholdsTest extends TestCase
     public function test_unknown_format_fails(): void
     {
         $this->artisan('health-score:suggest', ['--format' => 'xml'])
-            ->assertExitCode(\Symfony\Component\Console\Command\Command::INVALID);
+            ->assertExitCode(Command::INVALID);
     }
 }

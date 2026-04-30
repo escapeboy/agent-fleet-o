@@ -6,6 +6,8 @@ use App\Domain\Integration\Actions\ConnectIntegrationAction;
 use App\Domain\Integration\Actions\DisconnectIntegrationAction;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
+use App\Domain\Integration\Exceptions\IntegrationActionProposedException;
+use App\Domain\Integration\Exceptions\IntegrationActionRefusedException;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Mcp\Attributes\AssistantTool;
@@ -207,7 +209,7 @@ class IntegrationManageTool extends Tool
             );
 
             return Response::text(json_encode(['success' => true, 'result' => $result]));
-        } catch (\App\Domain\Integration\Exceptions\IntegrationActionProposedException $e) {
+        } catch (IntegrationActionProposedException $e) {
             return Response::text(json_encode([
                 'success' => false,
                 'status' => 'proposed',
@@ -215,7 +217,7 @@ class IntegrationManageTool extends Tool
                 'risk_level' => $e->riskLevel,
                 'message' => "⏸ Action proposed for human review (proposal_id={$e->proposalId}). Approve in the Approval Inbox before this runs.",
             ]));
-        } catch (\App\Domain\Integration\Exceptions\IntegrationActionRefusedException $e) {
+        } catch (IntegrationActionRefusedException $e) {
             return Response::text(json_encode([
                 'success' => false,
                 'status' => 'refused',

@@ -21,7 +21,7 @@ class CommentAttachmentIngester
      * @param  SignalComment  $comment  Already persisted comment.
      * @param  string  $sourcePath  Real filesystem path of the uploaded image.
      * @param  string  $originalFileName  Original client-supplied name (for sanitization).
-     * @return Media|null  Attached Media or null when the upload failed sanitization.
+     * @return Media|null Attached Media or null when the upload failed sanitization.
      */
     public function attachReencodedImage(
         SignalComment $comment,
@@ -38,7 +38,7 @@ class CommentAttachmentIngester
         $tmpPath = tempnam(sys_get_temp_dir(), 'fleetq_img_').'.'.$normalizedExt;
 
         try {
-            $manager = new ImageManager(new Driver());
+            $manager = new ImageManager(new Driver);
             $image = $manager->decodePath($sourcePath);
             // save() encodes using the path's extension; GD re-encodes on write
             // which strips EXIF/metadata from the stored copy.

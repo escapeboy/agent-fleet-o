@@ -36,7 +36,7 @@ class AppendExecutionResultToConversation
         if ($event->succeeded) {
             $resultJson = json_encode(
                 $proposal->execution_result ?? [],
-                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
             );
             $content = "[Action approved and executed — proposal {$proposal->id}]\n"
                 ."Tool: {$proposal->payload['tool']}\n"

@@ -17,7 +17,7 @@ class RejectActionProposalAction
 
         if (! $proposal->isPending()) {
             throw new RuntimeException(
-                "Proposal {$proposal->id} is not pending (status={$proposal->status->value}); cannot reject."
+                "Proposal {$proposal->id} is not pending (status={$proposal->status->value}); cannot reject.",
             );
         }
 

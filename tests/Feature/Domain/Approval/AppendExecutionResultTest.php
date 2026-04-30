@@ -6,6 +6,7 @@ use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Events\ActionProposalExecuted;
 use App\Domain\Approval\Listeners\AppendExecutionResultToConversation;
+use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Shared\Models\Team;
@@ -105,7 +106,7 @@ class AppendExecutionResultTest extends TestCase
         $this->assertSame($before, AssistantMessage::count());
     }
 
-    private function makeProposal(bool $withConversation): \App\Domain\Approval\Models\ActionProposal
+    private function makeProposal(bool $withConversation): ActionProposal
     {
         $payload = [
             'tool' => 'agent_delete',

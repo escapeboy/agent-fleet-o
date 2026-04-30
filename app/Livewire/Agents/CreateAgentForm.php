@@ -11,7 +11,6 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
-use App\Models\GlobalSetting;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 

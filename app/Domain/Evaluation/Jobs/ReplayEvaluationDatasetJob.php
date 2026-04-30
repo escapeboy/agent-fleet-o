@@ -3,8 +3,7 @@
 namespace App\Domain\Evaluation\Jobs;
 
 use App\Domain\Evaluation\Actions\ReplayEvaluationDatasetAction;
-use App\Domain\Evaluation\Enums\EvaluationStatus;
-use App\Domain\Evaluation\Models\EvaluationRun;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -38,7 +37,7 @@ class ReplayEvaluationDatasetJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return [new \App\Jobs\Middleware\ApplyTenantTracer];
+        return [new ApplyTenantTracer];
     }
 
     public function handle(ReplayEvaluationDatasetAction $action): void

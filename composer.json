@@ -7,6 +7,11 @@
     "license": "AGPL-3.0-or-later",
     "version": "1.23.0",
     "repositories": [
+        {
+            "type": "path",
+            "url": "../../packages/fleetq-boruna-audit",
+            "options": {"symlink": false}
+        },
         { "type": "vcs", "url": "https://github.com/FleetQ/plugin-sdk.git" },
         { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-core.git" },
         { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-blog.git" },
@@ -19,6 +24,7 @@
         "asbiin/laravel-webauthn": "^5.4",
         "dedoc/scramble": "^0.13.12",
         "ezyang/htmlpurifier": "^4.19",
+        "fleetq/boruna-audit": "@dev",
         "fleetq/plugin-sdk": "^1.0",
         "intervention/image": "^4.0",
         "laravel-notification-channels/webpush": "*",

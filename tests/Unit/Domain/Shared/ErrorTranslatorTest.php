@@ -6,6 +6,7 @@ namespace Tests\Unit\Domain\Shared;
 
 use App\Domain\Shared\Services\ErrorTranslator;
 use App\Mcp\ErrorCode;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class ErrorTranslatorTest extends TestCase
@@ -277,16 +278,16 @@ class ErrorTranslatorTest extends TestCase
 
     public function test_unmatched_pattern_emits_log(): void
     {
-        \Illuminate\Support\Facades\Log::shouldReceive('info')
+        Log::shouldReceive('info')
             ->once()
             ->with('error_translator.unmatched', \Mockery::on(fn ($ctx) => is_array($ctx)
                 && isset($ctx['technical_message'])
-                && str_contains($ctx['technical_message'], 'NeverInDictionaryException')
+                && str_contains($ctx['technical_message'], 'NeverInDictionaryException'),
             ));
 
         // Allow other log levels (warning/debug) to pass-through unmocked
-        \Illuminate\Support\Facades\Log::shouldReceive('warning')->andReturnNull();
-        \Illuminate\Support\Facades\Log::shouldReceive('debug')->andReturnNull();
+        Log::shouldReceive('warning')->andReturnNull();
+        Log::shouldReceive('debug')->andReturnNull();
 
         // Disable Redis side to avoid hitting the connection in this test
         config()->set('error-translations.telemetry.enabled', false);
@@ -296,12 +297,12 @@ class ErrorTranslatorTest extends TestCase
 
     public function test_matched_pattern_does_not_emit_unmatched_log(): void
     {
-        \Illuminate\Support\Facades\Log::shouldReceive('info')
+        Log::shouldReceive('info')
             ->withArgs(fn ($msg) => $msg === 'error_translator.unmatched')
             ->never();
-        \Illuminate\Support\Facades\Log::shouldReceive('info')->andReturnNull();
-        \Illuminate\Support\Facades\Log::shouldReceive('warning')->andReturnNull();
-        \Illuminate\Support\Facades\Log::shouldReceive('debug')->andReturnNull();
+        Log::shouldReceive('info')->andReturnNull();
+        Log::shouldReceive('warning')->andReturnNull();
+        Log::shouldReceive('debug')->andReturnNull();
 
         config()->set('error-translations.telemetry.enabled', false);
 

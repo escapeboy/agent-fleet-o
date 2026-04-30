@@ -4,12 +4,24 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Livewire;
 
+use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Enums\CrewExecutionStatus;
+use App\Domain\Crew\Enums\CrewTaskStatus;
+use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Project\Enums\ProjectStatus;
+use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Models\SkillExecution;
+use App\Domain\Workflow\Models\Workflow;
+use App\Infrastructure\AI\Models\CircuitBreakerState;
 use App\Livewire\Shared\FixWithAssistant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -100,11 +112,11 @@ class FixWithAssistantTest extends TestCase
 
     public function test_renders_for_paused_project(): void
     {
-        $project = \App\Domain\Project\Models\Project::create([
+        $project = Project::create([
             'team_id' => $this->team->id,
             'user_id' => $this->user->id,
             'title' => 'Paused',
-            'status' => \App\Domain\Project\Enums\ProjectStatus::Paused,
+            'status' => ProjectStatus::Paused,
             'project_type' => 'one_shot',
         ]);
 
@@ -116,11 +128,11 @@ class FixWithAssistantTest extends TestCase
 
     public function test_does_not_render_for_active_project(): void
     {
-        $project = \App\Domain\Project\Models\Project::create([
+        $project = Project::create([
             'team_id' => $this->team->id,
             'user_id' => $this->user->id,
             'title' => 'Active',
-            'status' => \App\Domain\Project\Enums\ProjectStatus::Active,
+            'status' => ProjectStatus::Active,
             'project_type' => 'one_shot',
         ]);
 
@@ -132,11 +144,11 @@ class FixWithAssistantTest extends TestCase
 
     public function test_diagnose_paused_project_returns_state_driven_summary(): void
     {
-        $project = \App\Domain\Project\Models\Project::create([
+        $project = Project::create([
             'team_id' => $this->team->id,
             'user_id' => $this->user->id,
             'title' => 'Paused',
-            'status' => \App\Domain\Project\Enums\ProjectStatus::Paused,
+            'status' => ProjectStatus::Paused,
             'project_type' => 'one_shot',
         ]);
 
@@ -155,8 +167,8 @@ class FixWithAssistantTest extends TestCase
 
     public function test_renders_for_agent_with_open_circuit_breaker(): void
     {
-        $agent = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
-        \App\Infrastructure\AI\Models\CircuitBreakerState::create([
+        $agent = Agent::factory()->for($this->team)->create();
+        CircuitBreakerState::create([
             'team_id' => $this->team->id,
             'agent_id' => $agent->id,
             'state' => 'open',
@@ -175,7 +187,7 @@ class FixWithAssistantTest extends TestCase
 
     public function test_does_not_render_for_healthy_agent(): void
     {
-        $agent = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
+        $agent = Agent::factory()->for($this->team)->create();
 
         Livewire::test(FixWithAssistant::class, [
             'entityType' => 'agent',
@@ -185,8 +197,8 @@ class FixWithAssistantTest extends TestCase
 
     public function test_renders_for_skill_with_recent_failed_execution(): void
     {
-        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
-        \App\Domain\Skill\Models\SkillExecution::create([
+        $skill = Skill::factory()->for($this->team)->create();
+        SkillExecution::create([
             'team_id' => $this->team->id,
             'skill_id' => $skill->id,
             'status' => 'failed',
@@ -205,9 +217,9 @@ class FixWithAssistantTest extends TestCase
 
     public function test_does_not_render_for_skill_with_no_recent_failures(): void
     {
-        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
+        $skill = Skill::factory()->for($this->team)->create();
         // Only completed executions
-        \App\Domain\Skill\Models\SkillExecution::create([
+        SkillExecution::create([
             'team_id' => $this->team->id,
             'skill_id' => $skill->id,
             'status' => 'completed',
@@ -225,8 +237,8 @@ class FixWithAssistantTest extends TestCase
 
     public function test_does_not_render_for_skill_with_old_failures(): void
     {
-        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
-        $old = \App\Domain\Skill\Models\SkillExecution::create([
+        $skill = Skill::factory()->for($this->team)->create();
+        $old = SkillExecution::create([
             'team_id' => $this->team->id,
             'skill_id' => $skill->id,
             'status' => 'failed',
@@ -248,8 +260,8 @@ class FixWithAssistantTest extends TestCase
 
     public function test_diagnose_skill_uses_error_translator(): void
     {
-        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
-        \App\Domain\Skill\Models\SkillExecution::create([
+        $skill = Skill::factory()->for($this->team)->create();
+        SkillExecution::create([
             'team_id' => $this->team->id,
             'skill_id' => $skill->id,
             'status' => 'failed',
@@ -327,12 +339,12 @@ class FixWithAssistantTest extends TestCase
             });
     }
 
-    private function makeCrew(): \App\Domain\Crew\Models\Crew
+    private function makeCrew(): Crew
     {
-        $coordinator = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
-        $qa = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
+        $coordinator = Agent::factory()->for($this->team)->create();
+        $qa = Agent::factory()->for($this->team)->create();
 
-        return \App\Domain\Crew\Models\Crew::create([
+        return Crew::create([
             'team_id' => $this->team->id,
             'user_id' => $this->user->id,
             'name' => 'Test crew '.bin2hex(random_bytes(3)),
@@ -344,21 +356,21 @@ class FixWithAssistantTest extends TestCase
         ]);
     }
 
-    private function makeCrewWithFailedTask(?string $errorMessage): \App\Domain\Crew\Models\Crew
+    private function makeCrewWithFailedTask(?string $errorMessage): Crew
     {
         $crew = $this->makeCrew();
-        $exec = \App\Domain\Crew\Models\CrewExecution::create([
+        $exec = CrewExecution::create([
             'team_id' => $this->team->id,
             'crew_id' => $crew->id,
             'goal' => 'g',
-            'status' => \App\Domain\Crew\Enums\CrewExecutionStatus::Failed,
+            'status' => CrewExecutionStatus::Failed,
         ]);
-        \App\Domain\Crew\Models\CrewTaskExecution::create([
+        CrewTaskExecution::create([
             'crew_execution_id' => $exec->id,
             'agent_id' => $crew->coordinator_agent_id,
             'title' => 'Failing task',
             'description' => 'Test failing task',
-            'status' => \App\Domain\Crew\Enums\CrewTaskStatus::Failed,
+            'status' => CrewTaskStatus::Failed,
             'error_message' => $errorMessage,
             'attempt_number' => 1,
             'max_attempts' => 3,
@@ -370,14 +382,14 @@ class FixWithAssistantTest extends TestCase
 
     public function test_renders_for_workflow_with_failed_experiment(): void
     {
-        $workflow = \App\Domain\Workflow\Models\Workflow::factory()->for($this->team)->create();
+        $workflow = Workflow::factory()->for($this->team)->create();
         $exp = $this->makeFailedExperiment(['workflow_id' => $workflow->id]);
-        \App\Domain\Experiment\Models\ExperimentStage::create([
+        ExperimentStage::create([
             'team_id' => $this->team->id,
             'experiment_id' => $exp->id,
-            'stage' => \App\Domain\Experiment\Enums\StageType::Building,
+            'stage' => StageType::Building,
             'iteration' => 1,
-            'status' => \App\Domain\Experiment\Enums\StageStatus::Failed,
+            'status' => StageStatus::Failed,
             'output_snapshot' => ['error' => 'PrismException: HTTP 429'],
             'completed_at' => now(),
             'duration_ms' => 0,
@@ -392,7 +404,7 @@ class FixWithAssistantTest extends TestCase
 
     public function test_does_not_render_for_workflow_with_no_failures(): void
     {
-        $workflow = \App\Domain\Workflow\Models\Workflow::factory()->for($this->team)->create();
+        $workflow = Workflow::factory()->for($this->team)->create();
 
         Livewire::test(FixWithAssistant::class, [
             'entityType' => 'workflow',
@@ -402,14 +414,14 @@ class FixWithAssistantTest extends TestCase
 
     public function test_diagnose_workflow_delegates_to_experiment_diagnose(): void
     {
-        $workflow = \App\Domain\Workflow\Models\Workflow::factory()->for($this->team)->create();
+        $workflow = Workflow::factory()->for($this->team)->create();
         $exp = $this->makeFailedExperiment(['workflow_id' => $workflow->id]);
-        \App\Domain\Experiment\Models\ExperimentStage::create([
+        ExperimentStage::create([
             'team_id' => $this->team->id,
             'experiment_id' => $exp->id,
-            'stage' => \App\Domain\Experiment\Enums\StageType::Building,
+            'stage' => StageType::Building,
             'iteration' => 1,
-            'status' => \App\Domain\Experiment\Enums\StageStatus::Failed,
+            'status' => StageStatus::Failed,
             'output_snapshot' => ['error' => 'HTTP 429 rate limit'],
             'completed_at' => now(),
             'duration_ms' => 0,
@@ -432,8 +444,8 @@ class FixWithAssistantTest extends TestCase
 
     public function test_diagnose_skill_with_empty_error_message_returns_no_message_branch(): void
     {
-        $skill = \App\Domain\Skill\Models\Skill::factory()->for($this->team)->create();
-        \App\Domain\Skill\Models\SkillExecution::create([
+        $skill = Skill::factory()->for($this->team)->create();
+        SkillExecution::create([
             'team_id' => $this->team->id,
             'skill_id' => $skill->id,
             'status' => 'failed',
@@ -458,8 +470,8 @@ class FixWithAssistantTest extends TestCase
 
     public function test_diagnose_agent_with_circuit_breaker_returns_summary(): void
     {
-        $agent = \App\Domain\Agent\Models\Agent::factory()->for($this->team)->create();
-        \App\Infrastructure\AI\Models\CircuitBreakerState::create([
+        $agent = Agent::factory()->for($this->team)->create();
+        CircuitBreakerState::create([
             'team_id' => $this->team->id,
             'agent_id' => $agent->id,
             'state' => 'open',

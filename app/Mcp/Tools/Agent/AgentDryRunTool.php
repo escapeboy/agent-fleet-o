@@ -6,8 +6,10 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Actions\DryRunAgentAction;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Shared\Models\Team;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
+use App\Mcp\ErrorCode;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Mcp\Request;
@@ -70,7 +72,7 @@ class AgentDryRunTool extends Tool
             return $this->permissionDeniedError('No current team.');
         }
 
-        $userId = auth()->id() ?? \App\Domain\Shared\Models\Team::ownerIdFor((string) $teamId);
+        $userId = auth()->id() ?? Team::ownerIdFor((string) $teamId);
 
         if ($userId === null) {
             return $this->permissionDeniedError('No usable user_id for dry-run.');
@@ -96,7 +98,7 @@ class AgentDryRunTool extends Tool
             $current = (int) (Cache::get($key) ?? 0);
             if ($current >= $dailyCap) {
                 return $this->errorResponse(
-                    \App\Mcp\ErrorCode::ResourceExhausted,
+                    ErrorCode::ResourceExhausted,
                     sprintf(
                         'Daily dry-run cap reached (%d/%d). The counter resets at 00:00 UTC.',
                         $current,
@@ -121,7 +123,7 @@ class AgentDryRunTool extends Tool
             );
         } catch (\InvalidArgumentException $e) {
             return $this->errorResponse(
-                \App\Mcp\ErrorCode::FailedPrecondition,
+                ErrorCode::FailedPrecondition,
                 $e->getMessage(),
             );
         }

@@ -17,9 +17,13 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Tools\Experiment\ExperimentDiagnoseTool;
+use App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool;
+use App\Mcp\Tools\Experiment\ExperimentResumeTool;
+use App\Mcp\Tools\Experiment\ExperimentRetryTool;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
 use Laravel\Mcp\Request;
+use Laravel\Mcp\Server\Tool;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -530,9 +534,9 @@ class FixWithAssistant extends Component
         // self-service customers can run from the diagnose card. Adding to this
         // list MUST be done together with the dictionary 'tier' => 'safe'.
         $allowed = [
-            'experiment_retry' => \App\Mcp\Tools\Experiment\ExperimentRetryTool::class,
-            'experiment_resume' => \App\Mcp\Tools\Experiment\ExperimentResumeTool::class,
-            'experiment_resume_from_checkpoint' => \App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool::class,
+            'experiment_retry' => ExperimentRetryTool::class,
+            'experiment_resume' => ExperimentResumeTool::class,
+            'experiment_resume_from_checkpoint' => ExperimentResumeFromCheckpointTool::class,
         ];
 
         if (! isset($allowed[$toolName])) {
@@ -556,9 +560,9 @@ class FixWithAssistant extends Component
                 app()->instance('mcp.team_id', $teamId);
             }
 
-            /** @var \Laravel\Mcp\Server\Tool $tool */
+            /** @var Tool $tool */
             $tool = app($allowed[$toolName]);
-            $response = $tool->handle(new \Laravel\Mcp\Request($params));
+            $response = $tool->handle(new Request($params));
 
             if ($response->isError()) {
                 $payload = json_decode((string) $response->content(), true);
