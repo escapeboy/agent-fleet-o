@@ -61,9 +61,9 @@ class ExecuteBorunaScriptSkillAction
             );
         }
 
-        $borунaTool = $this->resolveTool($teamId, $config['boruna_tool_id'] ?? null);
+        $borunaTool = $this->resolveTool($teamId, $config['boruna_tool_id'] ?? null);
 
-        if (! $borунaTool) {
+        if (! $borunaTool) {
             return $this->failExecution(
                 $skill, $teamId, $agentId, $experimentId, $input,
                 'No active Boruna tool found for this team. Create an mcp_stdio Tool pointing to the Boruna binary.',
@@ -74,14 +74,14 @@ class ExecuteBorunaScriptSkillAction
 
         // capability_set_hash (v1.0+) is a stable binary fingerprint.
         // Cached for 1h; falls back to null on boruna-mcp unavailability.
-        $capabilitySetHash = $this->fetchCapabilitySetHash($borунaTool);
+        $capabilitySetHash = $this->fetchCapabilitySetHash($borunaTool);
 
         $startTime = hrtime(true);
 
         // Cache hit short-circuit — Boruna runs are deterministic, so identical
         // inputs against the same Tool produce identical outputs. We still
         // record a SkillExecution so the call site sees the same shape.
-        $cached = $this->cache->get($borунaTool, $skill, $input, $policy, $capabilitySetHash);
+        $cached = $this->cache->get($borunaTool, $skill, $input, $policy, $capabilitySetHash);
         if ($cached !== null) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
@@ -101,7 +101,7 @@ class ExecuteBorunaScriptSkillAction
 
             Log::debug('Boruna result cache hit', [
                 'skill_id' => $skill->id,
-                'tool_id' => $borунaTool->id,
+                'tool_id' => $borunaTool->id,
                 'duration_ms' => $durationMs,
             ]);
 
@@ -128,7 +128,7 @@ class ExecuteBorunaScriptSkillAction
         ], fn ($v) => $v !== null);
 
         try {
-            $rawOutput = $this->client->callTool($borунaTool, 'boruna_run', $arguments);
+            $rawOutput = $this->client->callTool($borunaTool, 'boruna_run', $arguments);
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
@@ -154,7 +154,7 @@ class ExecuteBorunaScriptSkillAction
 
             // Store in cache only on success — failures are not cached, so the
             // next call will re-execute and either succeed (and cache) or fail again.
-            $this->cache->put($borунaTool, $skill, $input, $policy, $output, $capabilitySetHash);
+            $this->cache->put($borunaTool, $skill, $input, $policy, $output, $capabilitySetHash);
 
             return ['execution' => $execution, 'output' => $output];
         } catch (\Throwable $e) {
