@@ -3,6 +3,7 @@
 namespace App\Domain\Memory\Actions;
 
 use App\Domain\Memory\Models\Memory;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\EmbeddingService;
@@ -55,6 +56,7 @@ PROMPT;
                 userPrompt: sprintf(self::CONTEXT_PROMPT, $truncatedDoc, $memory->content),
                 maxTokens: 128,
                 teamId: $memory->team_id,
+                userId: Team::ownerIdFor($memory->team_id),
                 purpose: 'memory.contextual_rag',
                 temperature: 0.0,
             ));
