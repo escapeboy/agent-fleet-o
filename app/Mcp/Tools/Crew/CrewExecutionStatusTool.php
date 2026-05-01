@@ -19,8 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class CrewExecutionStatusTool extends Tool
 {
-    use HasStructuredErrors;
     use HasMcpAppUi;
+    use HasStructuredErrors;
 
     protected string $name = 'crew_execution_status';
 
@@ -83,6 +83,7 @@ class CrewExecutionStatusTool extends Tool
             'crew_id' => $execution->crew_id,
             'goal' => $execution->goal,
             'result' => $resultText,
+            'quality_dimensions' => $execution->quality_dimensions,
             'artifacts_count' => $execution->artifacts_count,
             'blocked_count' => $execution->taskExecutions()
                 ->where('status', CrewTaskStatus::Blocked->value)

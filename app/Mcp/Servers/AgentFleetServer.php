@@ -146,6 +146,7 @@ use App\Mcp\Tools\Credential\CredentialRollbackTool;
 use App\Mcp\Tools\Credential\CredentialRotateTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
 use App\Mcp\Tools\Crew\CrewActivateTool;
+use App\Mcp\Tools\Crew\CrewBeliefTrajectoryTool;
 use App\Mcp\Tools\Crew\CrewBlackboardPostTool;
 use App\Mcp\Tools\Crew\CrewBlackboardReadTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
@@ -208,6 +209,7 @@ use App\Mcp\Tools\Experiment\ExperimentStageTelemetryTool;
 use App\Mcp\Tools\Experiment\ExperimentStartTool;
 use App\Mcp\Tools\Experiment\ExperimentSteerTool;
 use App\Mcp\Tools\Experiment\ExperimentStepsTool;
+use App\Mcp\Tools\Experiment\ExperimentTrajectoryTool;
 use App\Mcp\Tools\Experiment\ExperimentUpdateTool;
 use App\Mcp\Tools\Experiment\ExperimentValidTransitionsTool;
 use App\Mcp\Tools\Experiment\PlanWithKnowledgeTool;
@@ -685,6 +687,7 @@ class AgentFleetServer extends Server
         CrewMemberRemoveTool::class,
         CrewBlackboardPostTool::class,
         CrewBlackboardReadTool::class,
+        CrewBeliefTrajectoryTool::class,
 
         // Experiment (16)
         ExperimentListTool::class,
@@ -708,6 +711,7 @@ class AgentFleetServer extends Server
         ExperimentContextHealthTool::class,
         ExperimentSkipStageTool::class,
         ExperimentUpdateTool::class,
+        ExperimentTrajectoryTool::class,
         WorkflowSnapshotListTool::class,
         UncertaintyEmitTool::class,
         UncertaintyResolveTool::class,

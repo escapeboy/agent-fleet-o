@@ -38,6 +38,7 @@ class CrewTaskExecution extends Model
         'started_at',
         'completed_at',
         'claimed_at',
+        'belief_state',
     ];
 
     protected function casts(): array
@@ -48,6 +49,7 @@ class CrewTaskExecution extends Model
             'output' => 'array',
             'qa_feedback' => 'array',
             'qa_score' => 'float',
+            'belief_state' => 'array',
             'depends_on' => 'array',
             'skip_condition' => 'array',
             'attempt_number' => 'integer',

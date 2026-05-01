@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Actions\BuildAdversarialRoundTasksAction;
 use App\Domain\Crew\Actions\ClaimNextTaskAction;
 use App\Domain\Crew\Actions\CollectCrewArtifactsAction;
+use App\Domain\Crew\Actions\ComputeCrewQualityAction;
 use App\Domain\Crew\Actions\DecomposeGoalAction;
 use App\Domain\Crew\Actions\SendAgentMessageAction;
 use App\Domain\Crew\Actions\SynthesizeResultAction;
@@ -709,6 +710,8 @@ class CrewOrchestrator
                     ? (int) $execution->started_at->diffInMilliseconds(now())
                     : null,
             ]);
+
+            app(ComputeCrewQualityAction::class)->execute($execution);
 
             // Collect artifacts from task outputs
             $this->collectArtifacts->execute($execution);
