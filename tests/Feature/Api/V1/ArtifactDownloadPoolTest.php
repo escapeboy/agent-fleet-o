@@ -2,10 +2,9 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Domain\Agent\Models\AiRun;
-use App\Domain\Experiment\Models\Artifact;
-use App\Domain\Experiment\Models\ArtifactVersion;
 use App\Domain\Shared\Models\Team;
+use App\Models\Artifact;
+use App\Models\ArtifactVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Redis;
@@ -51,10 +50,10 @@ class ArtifactDownloadPoolTest extends TestCase
         ]);
 
         ArtifactVersion::create([
+            'team_id' => $this->team->id,
             'artifact_id' => $artifact->id,
             'version' => 1,
             'content' => 'test content',
-            'created_by_run_id' => null,
         ]);
 
         return $artifact;

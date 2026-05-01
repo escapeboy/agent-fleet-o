@@ -40,7 +40,11 @@ class CrewBoundedConcurrencyTest extends TestCase
         Bus::fake();
 
         $agent = Agent::factory()->create(['team_id' => $this->team->id]);
-        $crew = Crew::factory()->create(['team_id' => $this->team->id]);
+        $crew = Crew::factory()->create([
+            'team_id' => $this->team->id,
+            'coordinator_agent_id' => $agent->id,
+            'qa_agent_id' => $agent->id,
+        ]);
 
         $execution = CrewExecution::create([
             'team_id' => $this->team->id,
@@ -82,7 +86,11 @@ class CrewBoundedConcurrencyTest extends TestCase
         Bus::fake();
 
         $agent = Agent::factory()->create(['team_id' => $this->team->id]);
-        $crew = Crew::factory()->create(['team_id' => $this->team->id]);
+        $crew = Crew::factory()->create([
+            'team_id' => $this->team->id,
+            'coordinator_agent_id' => $agent->id,
+            'qa_agent_id' => $agent->id,
+        ]);
 
         $execution = CrewExecution::create([
             'team_id' => $this->team->id,

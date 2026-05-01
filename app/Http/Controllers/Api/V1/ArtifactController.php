@@ -67,7 +67,7 @@ class ArtifactController extends Controller
         ]);
     }
 
-    public function download(Artifact $artifact, Request $request): StreamedResponse
+    public function download(Artifact $artifact, Request $request): StreamedResponse|JsonResponse
     {
         $version = $request->query('version')
             ? $artifact->versions()->where('version', $request->query('version'))->firstOrFail()
@@ -93,10 +93,12 @@ class ArtifactController extends Controller
 
         if ($current > $maxConcurrent) {
             $redis->decr($poolKey);
-            abort(429, 'Too many concurrent downloads.', [
-                'Retry-After' => '5',
-                'X-RateLimit-Limit' => (string) $maxConcurrent,
-            ]);
+
+            return response()->json(
+                ['message' => 'Too many concurrent downloads. Please try again shortly.'],
+                429,
+                ['Retry-After' => '5', 'X-RateLimit-Limit' => (string) $maxConcurrent],
+            );
         }
 
         try {
