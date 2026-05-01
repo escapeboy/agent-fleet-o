@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\Concerns\HasMcpAppUi;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -16,8 +17,14 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 class WorkflowGetTool extends Tool
 {
     use HasStructuredErrors;
+    use HasMcpAppUi;
 
     protected string $name = 'workflow_get';
+
+    protected function uiResourceUri(): string
+    {
+        return 'ui://fleetq/workflow-dag';
+    }
 
     protected string $description = 'Get detailed information about a specific workflow including its nodes and edges.';
 

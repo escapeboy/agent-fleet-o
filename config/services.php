@@ -103,6 +103,12 @@ return [
         'url' => env('SEARXNG_URL'),
     ],
 
+    'webclaw' => [
+        'url' => env('WEBCLAW_URL', 'http://webclaw:3000'),
+        'cloud_url' => env('WEBCLAW_CLOUD_URL', 'https://api.webclaw.io'),
+        'api_key' => env('WEBCLAW_API_KEY'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Social Login (OAuth) Providers
@@ -145,10 +151,6 @@ return [
         'client_id' => env('LUKANET_CLIENT_ID'),
         'client_secret' => env('LUKANET_CLIENT_SECRET'),
         'redirect' => env('LUKANET_REDIRECT_URI'),
-    ],
-
-    'searxng' => [
-        'url' => env('SEARXNG_URL'),
     ],
 
 ];

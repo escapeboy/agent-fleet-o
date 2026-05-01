@@ -104,6 +104,9 @@ return [
         // Voice & Real-time
         'livekit' => ['label' => 'LiveKit',              'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🎙️', 'category' => 'realtime',     'description' => 'Real-time audio/video infrastructure. Create rooms, manage participants, and stream.'],
 
+        // Data & Scraping
+        'webclaw' => ['label' => 'Webclaw',              'auth' => 'api_key',      'poll_frequency' => 0,    'icon' => '🕸️', 'category' => 'data',         'description' => 'Web scraping API for LLMs and AI agents. Enables antibot bypass, JS rendering, and structured extraction.', 'webhook_events' => [], 'capabilities' => ['scrape', 'crawl', 'diff']],
+
         // New integrations
         'resend' => ['label' => 'Resend',            'auth' => 'api_key', 'poll_frequency' => 0, 'icon' => '✉️', 'category' => 'communication', 'description' => 'Modern email API for developers. Send transactional and marketing emails with high deliverability.', 'credential_fields' => ['api_key' => ['label' => 'API Key', 'hint' => 'resend.com/api-keys']]],
         'sendgrid' => ['label' => 'SendGrid',          'auth' => 'api_key', 'poll_frequency' => 0, 'icon' => '📤', 'category' => 'communication', 'description' => 'Cloud email delivery. Send emails, manage templates, and track delivery metrics.', 'credential_fields' => ['api_key' => ['label' => 'API Key', 'hint' => 'app.sendgrid.com/settings/api_keys']]],

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasMcpAppUi;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -19,8 +20,14 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 class CrewExecutionStatusTool extends Tool
 {
     use HasStructuredErrors;
+    use HasMcpAppUi;
 
     protected string $name = 'crew_execution_status';
+
+    protected function uiResourceUri(): string
+    {
+        return 'ui://fleetq/crew-execution';
+    }
 
     protected string $description = 'Poll the status of a crew execution. Returns execution details including status, goal, and result preview.';
 

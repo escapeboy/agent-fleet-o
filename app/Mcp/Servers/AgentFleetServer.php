@@ -4,7 +4,12 @@ namespace App\Mcp\Servers;
 
 use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
+use App\Mcp\Resources\AgentMonitorResource;
 use App\Mcp\Resources\ApprovalsResource;
+use App\Mcp\Resources\CrewExecutionResource;
+use App\Mcp\Resources\DashboardResource;
+use App\Mcp\Resources\ExperimentDetailResource;
+use App\Mcp\Resources\WorkflowDagResource;
 use App\Mcp\Tools\A2ui\A2uiComponentCatalogTool;
 use App\Mcp\Tools\A2ui\A2uiRenderSurfaceTool;
 use App\Mcp\Tools\A2ui\A2uiValidateSurfaceTool;
@@ -119,6 +124,7 @@ use App\Mcp\Tools\Chatbot\ChatbotAnalyticsSummaryTool;
 use App\Mcp\Tools\Chatbot\ChatbotCreateTool;
 use App\Mcp\Tools\Chatbot\ChatbotDeleteTool;
 use App\Mcp\Tools\Chatbot\ChatbotGetTool;
+use App\Mcp\Tools\Chatbot\ChatbotKnowledgeSourceCreateTool;
 use App\Mcp\Tools\Chatbot\ChatbotLearningEntriesListTool;
 use App\Mcp\Tools\Chatbot\ChatbotListTool;
 use App\Mcp\Tools\Chatbot\ChatbotSessionListTool;
@@ -379,6 +385,8 @@ use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SourceMapUploadTool;
 use App\Mcp\Tools\Signal\SupabaseConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
+use App\Mcp\Tools\Signal\WebclawCrawlTool;
+use App\Mcp\Tools\Signal\WebclawScrapeTool;
 use App\Mcp\Tools\Skill\BrowserSkillTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
@@ -869,6 +877,10 @@ class AgentFleetServer extends Server
         // Web Search (1)
         SearxngSearchTool::class,
 
+        // Webclaw (2)
+        WebclawScrapeTool::class,
+        WebclawCrawlTool::class,
+
         // KnowledgeGraph (9)
         KgSearchTool::class,
         KgEntityFactsTool::class,
@@ -1077,6 +1089,7 @@ class AgentFleetServer extends Server
         ChatbotSessionListTool::class,
         ChatbotAnalyticsSummaryTool::class,
         ChatbotLearningEntriesListTool::class,
+        ChatbotKnowledgeSourceCreateTool::class,
 
         // Bridge (10)
         BridgeStatusTool::class,
@@ -1197,5 +1210,10 @@ class AgentFleetServer extends Server
     protected array $resources = [
         // MCP Apps UI resources — only exposed to clients that declare MCP Apps capability
         ApprovalsResource::class,
+        ExperimentDetailResource::class,
+        AgentMonitorResource::class,
+        WorkflowDagResource::class,
+        CrewExecutionResource::class,
+        DashboardResource::class,
     ];
 }

@@ -7,6 +7,7 @@ use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasMcpAppUi;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -19,7 +20,14 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class DashboardKpisTool extends Tool
 {
+    use HasMcpAppUi;
+
     protected string $name = 'system_dashboard_kpis';
+
+    protected function uiResourceUri(): string
+    {
+        return 'ui://fleetq/dashboard';
+    }
 
     protected string $description = 'Get dashboard KPIs: experiment counts (total, running, completed, failed, paused), project counts (total, active), agent counts (total, active), bridge connection status.';
 
