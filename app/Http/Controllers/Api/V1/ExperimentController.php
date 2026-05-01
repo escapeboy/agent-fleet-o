@@ -16,6 +16,7 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Models\WorkflowSnapshot;
+use App\Http\Controllers\Api\V1\Concerns\DocumentsResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreExperimentRequest;
 use App\Http\Requests\Api\V1\TransitionExperimentRequest;
@@ -32,6 +33,8 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class ExperimentController extends Controller
 {
+    use DocumentsResponses;
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $experiments = QueryBuilder::for(Experiment::class)
@@ -85,7 +88,7 @@ class ExperimentController extends Controller
             actorId: $request->user()->id,
         );
 
-        return new ExperimentResource($experiment);
+        return (new ExperimentResource($experiment))->invalidates('experiments');
     }
 
     public function pause(Request $request, Experiment $experiment, PauseExperimentAction $action): ExperimentResource

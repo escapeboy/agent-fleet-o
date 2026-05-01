@@ -169,6 +169,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Contextual RAG
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, each stored chunk gets an LLM-generated 64-token context
+    | prepended before re-embedding (Anthropic Contextual Retrieval technique).
+    | Significantly improves retrieval for ambiguous or out-of-context chunks.
+    | Cost: ~1 Haiku call per chunk at index time.
+    |
+    */
+    'contextual_rag' => [
+        'enabled' => (bool) env('MEMORY_CONTEXTUAL_RAG_ENABLED', false),
+        'model' => env('MEMORY_CONTEXTUAL_RAG_MODEL', 'claude-haiku-4-5'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Visibility & Cross-Agent Sharing
     |--------------------------------------------------------------------------
     |

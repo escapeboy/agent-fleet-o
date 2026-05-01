@@ -262,6 +262,7 @@ use App\Mcp\Tools\Marketplace\MarketplaceUnpublishTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryExportTool;
+use App\Mcp\Tools\Memory\MemoryFeedbackTool;
 use App\Mcp\Tools\Memory\MemoryGetTool;
 use App\Mcp\Tools\Memory\MemoryListProposalsTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
@@ -922,8 +923,9 @@ class AgentFleetServer extends Server
         RagflowKnowledgeGraphBuildTool::class,
         RagflowRaptorBuildTool::class,
 
-        // Memory (14)
+        // Memory (15)
         MemorySearchTool::class,
+        MemoryFeedbackTool::class,
         MemoryUnifiedSearchTool::class,
         MemoryListRecentTool::class,
         MemoryStatsTool::class,

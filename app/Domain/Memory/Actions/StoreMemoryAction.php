@@ -7,6 +7,7 @@ use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Memory\Enums\WriteGateDecision;
 use App\Domain\Memory\Jobs\ClassifyMemoryTopicJob;
+use App\Domain\Memory\Jobs\ContextualChunkEnricherJob;
 use App\Domain\Memory\Models\Memory;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -53,6 +54,7 @@ PROMPT;
         ?string $proposedBy = null,
         ?MemoryCategory $category = null,
         ?string $topic = null,
+        ?string $documentContext = null,
     ): array {
         if (! config('memory.enabled', true)) {
             return [];
@@ -82,6 +84,11 @@ PROMPT;
                     // Async topic classification when no topic was provided
                     if ($topic === null && $memory->topic === null) {
                         ClassifyMemoryTopicJob::dispatch($memory->id);
+                    }
+
+                    // Contextual RAG: enrich new chunks with LLM-generated situating context
+                    if ($documentContext !== null && $memory->chunk_context === null) {
+                        ContextualChunkEnricherJob::dispatch($memory->id, $documentContext);
                     }
                 }
             } catch (\Throwable $e) {

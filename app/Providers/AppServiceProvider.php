@@ -64,6 +64,7 @@ use App\Domain\Signal\Connectors\DiscordWebhookConnector;
 use App\Domain\Signal\Connectors\GitHubIssuesConnector;
 use App\Domain\Signal\Connectors\GitHubWebhookConnector;
 use App\Domain\Signal\Connectors\GitHubWikiConnector;
+use App\Domain\Signal\Connectors\GoogleDriveConnector;
 use App\Domain\Signal\Connectors\HttpMonitorConnector;
 use App\Domain\Signal\Connectors\ImapConnector;
 use App\Domain\Signal\Connectors\JiraConnector;
@@ -77,6 +78,7 @@ use App\Domain\Signal\Connectors\ScreenpipeConnector;
 use App\Domain\Signal\Connectors\SearxngConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
 use App\Domain\Signal\Connectors\SignalProtocolConnector;
+use App\Domain\Signal\Connectors\SlackChannelKnowledgeConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
 use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
@@ -246,6 +248,8 @@ class AppServiceProvider extends ServiceProvider
             ConfluenceConnector::class,
             GitHubWikiConnector::class,
             BugReportConnector::class,
+            GoogleDriveConnector::class,
+            SlackChannelKnowledgeConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors

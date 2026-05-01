@@ -52,11 +52,13 @@ class RetrieveRelevantMemoriesAction
             // Composite score using effective_importance (base + retrieval reinforcement).
             // Curated tiers (canonical, facts, decisions, failures, successes) receive a +0.10 boost
             // so human-approved knowledge surfaces preferentially over agent-proposed memories.
+            // User feedback boost: COALESCE(boost, 0) * 0.05 — max +0.5 for boost=10.
             $compositeScoreSql = <<<'SQL'
                 (? * (1 - (embedding <=> ?))) +
                 (? * POWER(0.5, EXTRACT(EPOCH FROM (NOW() - COALESCE(last_accessed_at, created_at))) / 86400.0 / ?)) +
                 (? * LEAST(COALESCE(importance, 0.5) + LN(1 + COALESCE(retrieval_count, 0)) * 0.15, 1.0)) +
-                CASE WHEN COALESCE(tier, 'working') IN ('canonical','facts','decisions','failures','successes') THEN 0.10 ELSE 0.0 END
+                CASE WHEN COALESCE(tier, 'working') IN ('canonical','facts','decisions','failures','successes') THEN 0.10 ELSE 0.0 END +
+                (COALESCE(boost, 0) * 0.05)
                 AS composite_score
             SQL;
 

@@ -254,5 +254,13 @@
     @if(config('webmcp.enabled', true) && empty($suppressWebmcp))
         <script src="https://unpkg.com/@mcp-b/global@2.2.0/dist/index.iife.js" defer></script>
     @endif
+    <script>
+        window.addEventListener('fleetq:invalidate', function (event) {
+            var tag = event.detail.tag;
+            if (window.Livewire) {
+                window.Livewire.dispatch('fleetq:invalidate:' + tag);
+            }
+        });
+    </script>
 </body>
 </html>
