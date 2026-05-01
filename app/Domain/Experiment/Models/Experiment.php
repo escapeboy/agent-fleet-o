@@ -177,6 +177,7 @@ class Experiment extends Model
         return $this->hasMany(ExperimentStateTransition::class);
     }
 
+    /** @return HasMany<PlaybookStep, $this> */
     public function playbookSteps(): HasMany
     {
         return $this->hasMany(PlaybookStep::class)->orderBy('order');

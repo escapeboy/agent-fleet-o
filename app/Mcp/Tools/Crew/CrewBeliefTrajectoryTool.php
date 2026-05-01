@@ -35,7 +35,7 @@ class CrewBeliefTrajectoryTool extends Tool
     public function handle(Request $request): Response
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-        $executionId = $request->get('execution_id');
+        $executionId = (string) $request->get('execution_id');
 
         $execution = CrewExecution::withoutGlobalScopes()
             ->where('team_id', $teamId)

@@ -76,7 +76,7 @@ class ValidateTaskOutputAction
             'status' => $passed ? CrewTaskStatus::Validated : CrewTaskStatus::NeedsRevision,
         ]);
 
-        $qaScore = $validation['score'] ?? 0.5;
+        $qaScore = $validation['score'];
         $stance = round(($qaScore - 0.5) * 2, 4);
         $confidence = round($qaScore, 4);
         $attemptRatio = max(0, round(1 - (($taskExecution->attempt_number - 1) / max($taskExecution->max_attempts, 1)), 4));

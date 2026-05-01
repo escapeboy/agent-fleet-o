@@ -64,6 +64,7 @@ class CrewExecution extends Model
         return $this->belongsTo(Experiment::class);
     }
 
+    /** @return HasMany<CrewTaskExecution, $this> */
     public function taskExecutions(): HasMany
     {
         return $this->hasMany(CrewTaskExecution::class)->orderBy('sort_order');

@@ -3,6 +3,7 @@
 namespace App\Domain\Experiment\Actions;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\PlaybookStep;
 use Illuminate\Support\Str;
 
 class ExportTrajectoryAction
@@ -13,11 +14,11 @@ class ExportTrajectoryAction
 
         $rows = $steps->map(fn ($step) => [
             'step_order' => $step->order,
-            'step_type' => $step->execution_mode?->value ?? 'unknown',
+            'step_type' => $step->execution_mode->value,
             'agent_name' => $step->agent?->name ?? '',
             'skill_name' => $step->skill?->name ?? '',
             'crew_name' => $step->crew?->name ?? '',
-            'status' => is_string($step->status) ? $step->status : ($step->status?->value ?? ''),
+            'status' => $step->status,
             'duration_ms' => $step->duration_ms ?? 0,
             'cost_credits' => $step->cost_credits ?? 0,
             'started_at' => $step->started_at?->toIso8601String() ?? '',
