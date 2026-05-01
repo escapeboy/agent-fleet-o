@@ -49,6 +49,31 @@ class ExtractKnowledgeEdgesAction
             return;
         }
 
+        // Second pass: glean missed relationships
+        $gleaned = $this->gleanEdges($teamId, $text, $entityList, $edges);
+        foreach ($gleaned as $gleanedEdge) {
+            $dedupeKey = strtolower(
+                ($gleanedEdge['source_entity'] ?? '').
+                ($gleanedEdge['relation'] ?? '').
+                ($gleanedEdge['target_entity'] ?? ''),
+            );
+            $alreadyPresent = false;
+            foreach ($edges as $existing) {
+                $existingKey = strtolower(
+                    ($existing['source_entity'] ?? '').
+                    ($existing['relation'] ?? '').
+                    ($existing['target_entity'] ?? ''),
+                );
+                if ($dedupeKey === $existingKey) {
+                    $alreadyPresent = true;
+                    break;
+                }
+            }
+            if (! $alreadyPresent) {
+                $edges[] = $gleanedEdge;
+            }
+        }
+
         foreach ($edges as $edge) {
             try {
                 $this->storeEdge($teamId, $edge, $signal);
@@ -109,6 +134,66 @@ class ExtractKnowledgeEdgesAction
             );
         } catch (\Throwable $e) {
             Log::warning('ExtractKnowledgeEdgesAction: LLM extraction failed', [
+                'team_id' => $teamId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Second LLM pass to find relationships missed by the first extraction.
+     *
+     * @return array<int, array{source_entity: string, source_type: string, relation: string,
+     *                          target_entity: string, target_type: string, fact: string,
+     *                          valid_at: string|null, confidence: float}>
+     */
+    private function gleanEdges(string $teamId, string $text, array $entities, array $alreadyExtracted): array
+    {
+        $alreadyJson = json_encode(array_values(array_map(
+            fn ($e) => [
+                'source_entity' => $e['source_entity'] ?? '',
+                'relation' => $e['relation'] ?? '',
+                'target_entity' => $e['target_entity'] ?? '',
+            ],
+            $alreadyExtracted,
+        )), JSON_UNESCAPED_UNICODE);
+
+        $request = new AiRequestDTO(
+            provider: LlmDefaults::provider(),
+            model: LlmDefaults::model(),
+            systemPrompt: "You are extracting missed entity relationships from text. These relationships were already found: {$alreadyJson}. Find ONLY new relationships not already captured. Return ONLY a valid JSON array with the same format: source_entity, source_type, relation, target_entity, target_type, fact, valid_at, confidence.",
+            userPrompt: mb_substr($text, 0, 6000),
+            maxTokens: 512,
+            teamId: $teamId,
+            purpose: 'kg_edge_gleaning',
+            temperature: 0.2,
+        );
+
+        try {
+            $response = $this->gateway->complete($request);
+            $content = trim($response->content ?? '');
+
+            if (str_starts_with($content, '```')) {
+                $content = preg_replace('/^```\w*\n?/', '', $content);
+                $content = preg_replace('/\n?```$/', '', $content);
+            }
+
+            $decoded = json_decode(trim($content), true);
+            if (! is_array($decoded)) {
+                return [];
+            }
+
+            if (isset($decoded['edges']) && is_array($decoded['edges'])) {
+                $decoded = $decoded['edges'];
+            }
+
+            return array_filter($decoded, fn ($e) => isset($e['source_entity'], $e['relation'], $e['target_entity'], $e['fact'])
+                && ((float) ($e['confidence'] ?? 1.0)) >= 0.7,
+            );
+        } catch (\Throwable $e) {
+            Log::warning('ExtractKnowledgeEdgesAction: gleaning pass failed', [
                 'team_id' => $teamId,
                 'error' => $e->getMessage(),
             ]);

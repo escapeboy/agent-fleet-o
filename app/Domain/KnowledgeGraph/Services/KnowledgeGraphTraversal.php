@@ -49,8 +49,8 @@ class KnowledgeGraphTraversal
     }
 
     /**
-     * GLOBAL mode: find high-centrality entities (ranked by edge count) connected to
-     * $entityIds, then return memories linked to those entities.
+     * GLOBAL mode: find high-centrality entities using Personalized PageRank,
+     * then return memories linked to those entities.
      *
      * @param  string[]  $entityIds  Seed entity UUIDs
      * @return Collection<int, Memory>
@@ -61,22 +61,124 @@ class KnowledgeGraphTraversal
             return collect();
         }
 
-        $highCentrality = DB::table('kg_edges')
-            ->where('team_id', $teamId)
-            ->whereNull('invalid_at')
-            ->whereIn('source_entity_id', $entityIds)
-            ->where('edge_type', 'relates_to')
-            ->select('target_entity_id', DB::raw('COUNT(*) as edge_count'))
-            ->groupBy('target_entity_id')
-            ->orderByDesc('edge_count')
-            ->limit($topK)
-            ->pluck('target_entity_id');
+        return $this->personalizedPageRank($teamId, $entityIds, topK: $topK);
+    }
 
-        if ($highCentrality->isEmpty()) {
+    /**
+     * Personalized PageRank (PPR) over the entity subgraph.
+     *
+     * Loads up to $maxHops hops from the seed entities, builds an undirected
+     * adjacency list, and runs power iteration to convergence.
+     *
+     * @param  string[]  $seedEntityIds
+     * @return Collection<int, Memory>
+     */
+    public function personalizedPageRank(
+        string $teamId,
+        array $seedEntityIds,
+        float $alpha = 0.85,
+        int $maxIterations = 20,
+        int $topK = 20,
+        int $maxHops = 3,
+    ): Collection {
+        if (empty($seedEntityIds)) {
             return collect();
         }
 
-        return $this->memoriesForEntities($teamId, $highCentrality->toArray());
+        // Collect all node IDs in the subgraph
+        $subgraphIds = array_unique(array_merge(
+            $seedEntityIds,
+            $this->multiHopEntityIds($teamId, $seedEntityIds, $maxHops)->toArray(),
+        ));
+
+        if (count($subgraphIds) === 0) {
+            return collect();
+        }
+
+        // Load all relates_to edges between subgraph nodes
+        $edges = DB::table('kg_edges')
+            ->where('team_id', $teamId)
+            ->whereNull('invalid_at')
+            ->where('edge_type', 'relates_to')
+            ->whereIn('source_entity_id', $subgraphIds)
+            ->whereIn('target_entity_id', $subgraphIds)
+            ->select('source_entity_id', 'target_entity_id')
+            ->get();
+
+        // Build undirected adjacency list and out-degree
+        $adj = [];
+        $degree = [];
+        foreach ($subgraphIds as $id) {
+            $adj[$id] = [];
+            $degree[$id] = 0;
+        }
+
+        foreach ($edges as $edge) {
+            $s = $edge->source_entity_id;
+            $t = $edge->target_entity_id;
+            if ($s === $t) {
+                continue;
+            }
+            if (! isset($adj[$s][$t])) {
+                $adj[$s][$t] = true;
+                $degree[$s]++;
+            }
+            if (! isset($adj[$t][$s])) {
+                $adj[$t][$s] = true;
+                $degree[$t]++;
+            }
+        }
+
+        $nodeCount = count($subgraphIds);
+        $seedSet = array_flip($seedEntityIds);
+        $seedCount = count($seedEntityIds);
+        $personalization = 1.0 / $seedCount;
+
+        // Initialize scores
+        $scores = [];
+        foreach ($subgraphIds as $id) {
+            $scores[$id] = isset($seedSet[$id]) ? $personalization : 0.0;
+        }
+
+        // Power iteration
+        for ($iter = 0; $iter < $maxIterations; $iter++) {
+            $newScores = [];
+            foreach ($subgraphIds as $id) {
+                $newScores[$id] = (1.0 - $alpha) * (isset($seedSet[$id]) ? $personalization : 0.0);
+            }
+
+            foreach ($subgraphIds as $u) {
+                $degU = $degree[$u];
+                if ($degU === 0 || $scores[$u] == 0.0) {
+                    continue;
+                }
+                $contribution = $alpha * $scores[$u] / $degU;
+                foreach (array_keys($adj[$u]) as $v) {
+                    $newScores[$v] += $contribution;
+                }
+            }
+
+            // Check convergence
+            $delta = 0.0;
+            foreach ($subgraphIds as $id) {
+                $delta += abs($newScores[$id] - $scores[$id]);
+            }
+            $scores = $newScores;
+
+            if ($delta < 1e-6) {
+                break;
+            }
+        }
+
+        // Sort descending, take topK
+        arsort($scores);
+        $topEntities = array_keys(array_slice($scores, 0, $topK, true));
+
+        if (empty($topEntities)) {
+            return collect();
+        }
+
+        return $this->memoriesForEntities($teamId, $topEntities);
     }
 
     /**

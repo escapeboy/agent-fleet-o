@@ -360,11 +360,14 @@ use App\Mcp\Tools\Signal\ImapMailboxTool;
 use App\Mcp\Tools\Signal\InboundConnectorManageTool;
 use App\Mcp\Tools\Signal\IntentScoreTool;
 use App\Mcp\Tools\Signal\KgAddFactTool;
+use App\Mcp\Tools\Signal\KgCommunitySearchTool;
 use App\Mcp\Tools\Signal\KgEdgeProvenanceTool;
 use App\Mcp\Tools\Signal\KgEntityFactsTool;
 use App\Mcp\Tools\Signal\KgGraphSearchTool;
 use App\Mcp\Tools\Signal\KgInvalidateFactTool;
+use App\Mcp\Tools\Signal\KgMergeEntitiesTool;
 use App\Mcp\Tools\Signal\KgSearchTool;
+use App\Mcp\Tools\Signal\KgSuggestMergesTool;
 use App\Mcp\Tools\Signal\ListHighRiskContactsTool;
 use App\Mcp\Tools\Signal\RouteMapLookupTool;
 use App\Mcp\Tools\Signal\SearxngSearchTool;
@@ -866,13 +869,16 @@ class AgentFleetServer extends Server
         // Web Search (1)
         SearxngSearchTool::class,
 
-        // KnowledgeGraph (6)
+        // KnowledgeGraph (9)
         KgSearchTool::class,
         KgEntityFactsTool::class,
         KgAddFactTool::class,
         KgInvalidateFactTool::class,
         KgGraphSearchTool::class,
         KgEdgeProvenanceTool::class,
+        KgCommunitySearchTool::class,
+        KgSuggestMergesTool::class,
+        KgMergeEntitiesTool::class,
 
         // Budget (7)
         BudgetSummaryTool::class,

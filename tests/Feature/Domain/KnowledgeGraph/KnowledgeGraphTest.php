@@ -4,12 +4,14 @@ namespace Tests\Feature\Domain\KnowledgeGraph;
 
 use App\Domain\KnowledgeGraph\Actions\AddKnowledgeFactAction;
 use App\Domain\KnowledgeGraph\Actions\DetectContradictionAction;
+use App\Domain\KnowledgeGraph\Actions\ExtractKnowledgeEdgesAction;
 use App\Domain\KnowledgeGraph\Actions\NormalizeKnowledgeInputAction;
 use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Models\Entity;
+use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
@@ -656,5 +658,158 @@ class KnowledgeGraphTest extends TestCase
         // Fact is still stored (we don't reject), but with a warning
         $this->assertNotNull($edge->id);
         $this->assertEquals('Incoherent fact', $edge->attributes['validation_warning'] ?? null);
+    }
+
+    // ─── Gleaning (2nd LLM pass) ───────────────────────────────────────────────
+
+    public function test_gleaning_stores_edges_found_only_in_second_pass(): void
+    {
+        $this->fakeEmbedding();
+
+        $signal = Signal::factory()->create([
+            'team_id' => $this->team->id,
+            'payload' => ['title' => 'Alice works at Acme. Bob also knows Charlie.'],
+        ]);
+
+        // Two entities so the action proceeds
+        $alice = Entity::factory()->create([
+            'team_id' => $this->team->id,
+            'name' => 'Alice',
+            'canonical_name' => 'alice',
+            'type' => 'person',
+        ]);
+        $acme = Entity::factory()->create([
+            'team_id' => $this->team->id,
+            'name' => 'Acme',
+            'canonical_name' => 'acme',
+            'type' => 'company',
+        ]);
+        $signal->entities()->attach($alice->id, ['context' => '', 'confidence' => 1.0]);
+        $signal->entities()->attach($acme->id, ['context' => '', 'confidence' => 1.0]);
+
+        // First call → first pass edges; second call → gleaned edges
+        $firstPassEdges = json_encode([[
+            'source_entity' => 'Alice',
+            'source_type' => 'person',
+            'relation' => 'works_at',
+            'target_entity' => 'Acme',
+            'target_type' => 'company',
+            'fact' => 'Alice works at Acme',
+            'valid_at' => null,
+            'confidence' => 0.9,
+        ]]);
+
+        $gleanedEdges = json_encode([[
+            'source_entity' => 'Bob',
+            'source_type' => 'person',
+            'relation' => 'knows',
+            'target_entity' => 'Charlie',
+            'target_type' => 'person',
+            'fact' => 'Bob knows Charlie',
+            'valid_at' => null,
+            'confidence' => 0.8,
+        ]]);
+
+        $firstResponse = new AiResponseDTO(
+            content: $firstPassEdges,
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 50, completionTokens: 50, costCredits: 1),
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5-20251001',
+            latencyMs: 10,
+        );
+
+        $gleanResponse = new AiResponseDTO(
+            content: $gleanedEdges,
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 50, completionTokens: 50, costCredits: 1),
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5-20251001',
+            latencyMs: 10,
+        );
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')
+            ->twice()
+            ->andReturn($firstResponse, $gleanResponse);
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $this->fakeEmbedding();
+
+        $action = app(ExtractKnowledgeEdgesAction::class);
+        $action->execute($signal);
+
+        // Both first-pass and gleaned edges should be stored
+        $this->assertDatabaseHas('kg_edges', [
+            'team_id' => $this->team->id,
+            'relation_type' => 'works_at',
+        ]);
+
+        $this->assertDatabaseHas('kg_edges', [
+            'team_id' => $this->team->id,
+            'relation_type' => 'knows',
+        ]);
+    }
+
+    public function test_gleaning_deduplicates_edges_already_in_first_pass(): void
+    {
+        $this->fakeEmbedding();
+
+        $signal = Signal::factory()->create([
+            'team_id' => $this->team->id,
+            'payload' => ['title' => 'Alice works at Acme Corp.'],
+        ]);
+
+        $alice = Entity::factory()->create([
+            'team_id' => $this->team->id,
+            'name' => 'Alice',
+            'canonical_name' => 'alice',
+            'type' => 'person',
+        ]);
+        $acme = Entity::factory()->create([
+            'team_id' => $this->team->id,
+            'name' => 'Acme',
+            'canonical_name' => 'acme',
+            'type' => 'company',
+        ]);
+        $signal->entities()->attach($alice->id, ['context' => '', 'confidence' => 1.0]);
+        $signal->entities()->attach($acme->id, ['context' => '', 'confidence' => 1.0]);
+
+        $duplicateEdge = json_encode([[
+            'source_entity' => 'Alice',
+            'source_type' => 'person',
+            'relation' => 'works_at',
+            'target_entity' => 'Acme',
+            'target_type' => 'company',
+            'fact' => 'Alice works at Acme',
+            'valid_at' => null,
+            'confidence' => 0.9,
+        ]]);
+
+        $response = new AiResponseDTO(
+            content: $duplicateEdge,
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 50, completionTokens: 50, costCredits: 1),
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5-20251001',
+            latencyMs: 10,
+        );
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        // Both calls return the same edge
+        $gateway->shouldReceive('complete')
+            ->twice()
+            ->andReturn($response, $response);
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $this->fakeEmbedding();
+
+        $action = app(ExtractKnowledgeEdgesAction::class);
+        $action->execute($signal);
+
+        // Should only have ONE works_at edge, not two
+        $this->assertEquals(1, KgEdge::where('team_id', $this->team->id)
+            ->where('relation_type', 'works_at')
+            ->count());
     }
 }

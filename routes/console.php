@@ -37,6 +37,8 @@ Schedule::command('error-translator:harvest --format=json')
 
 Schedule::command('audit:cleanup')->dailyAt('02:00');
 Schedule::command('worldmodel:rebuild')->dailyAt('02:15')->withoutOverlapping(60)->onOneServer();
+Schedule::command('kg:build-communities')->dailyAt('02:45')->withoutOverlapping(60)->onOneServer();
+Schedule::command('kg:merge-entities')->dailyAt('04:30')->withoutOverlapping(30)->onOneServer();
 Schedule::command('signals:cleanup-bug-reports')->dailyAt('03:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
