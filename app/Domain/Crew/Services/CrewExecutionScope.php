@@ -17,11 +17,10 @@ final class CrewExecutionScope
     {
         $this->execution->refresh();
 
-        return in_array(
-            $this->execution->status,
-            [CrewExecutionStatus::Failed, CrewExecutionStatus::Terminated],
-            true,
-        );
+        $status = $this->execution->status;
+
+        return $status === CrewExecutionStatus::Failed
+            || $status === CrewExecutionStatus::Terminated;
     }
 
     public function assertNotCancelled(): void

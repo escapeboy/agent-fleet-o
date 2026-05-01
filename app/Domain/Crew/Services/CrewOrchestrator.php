@@ -137,7 +137,8 @@ class CrewOrchestrator
         $tasks = $this->getTasks($execution);
         $ready = $this->dependencyResolver->resolveReady($tasks);
 
-        $maxParallel = (int) ($execution->config_snapshot['max_parallel_tasks'] ?? 10);
+        $snapshot = is_array($execution->config_snapshot) ? $execution->config_snapshot : [];
+        $maxParallel = (int) ($snapshot['max_parallel_tasks'] ?? 10);
         $ready = $ready->take($maxParallel);
 
         if ($ready->isEmpty()) {
