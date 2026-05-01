@@ -81,10 +81,34 @@ class ArtifactController extends Controller
             ? $version->content
             : json_encode($version->content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        return response()->streamDownload(function () use ($content) {
-            echo $content;
-        }, $filename, [
-            'Content-Type' => $mime,
-        ]);
+        $poolKey = 'artifact:download:pool';
+        $maxConcurrent = config('artifacts.max_concurrent_downloads', 25);
+        $ttl = config('artifacts.download_slot_ttl', 60);
+
+        $redis = app('redis');
+        $current = $redis->incr($poolKey);
+        if ($current === 1) {
+            $redis->expire($poolKey, $ttl);
+        }
+
+        if ($current > $maxConcurrent) {
+            $redis->decr($poolKey);
+            abort(429, 'Too many concurrent downloads.', [
+                'Retry-After' => '5',
+                'X-RateLimit-Limit' => (string) $maxConcurrent,
+            ]);
+        }
+
+        try {
+            return response()->streamDownload(function () use ($content, $poolKey, $redis) {
+                echo $content;
+                $redis->decr($poolKey);
+            }, $filename, [
+                'Content-Type' => $mime,
+            ]);
+        } catch (\Throwable $e) {
+            $redis->decr($poolKey);
+            throw $e;
+        }
     }
 }

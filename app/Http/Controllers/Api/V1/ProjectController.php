@@ -173,28 +173,28 @@ class ProjectController extends Controller
             $triggerAction->execute($project->fresh(), 'initial');
         }
 
-        return new ProjectResource($project->fresh()->load('schedule'));
+        return (new ProjectResource($project->fresh()->load('schedule')))->invalidates('projects');
     }
 
     public function pause(Request $request, Project $project, PauseProjectAction $action): ProjectResource
     {
         $action->execute($project, $request->input('reason', 'Paused via API'));
 
-        return new ProjectResource($project->fresh()->load('schedule'));
+        return (new ProjectResource($project->fresh()->load('schedule')))->invalidates('projects');
     }
 
     public function resume(Project $project, ResumeProjectAction $action): ProjectResource
     {
         $action->execute($project);
 
-        return new ProjectResource($project->fresh()->load('schedule'));
+        return (new ProjectResource($project->fresh()->load('schedule')))->invalidates('projects');
     }
 
     public function restart(Project $project, RestartProjectAction $action): ProjectResource
     {
         $action->execute($project);
 
-        return new ProjectResource($project->fresh()->load('schedule'));
+        return (new ProjectResource($project->fresh()->load('schedule')))->invalidates('projects');
     }
 
     /**

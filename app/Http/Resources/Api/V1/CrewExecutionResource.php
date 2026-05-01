@@ -3,9 +3,8 @@
 namespace App\Http\Resources\Api\V1;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 
-class CrewExecutionResource extends JsonResource
+class CrewExecutionResource extends FleetQResource
 {
     public function toArray(Request $request): array
     {

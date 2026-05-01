@@ -51,7 +51,7 @@ class ApprovalController extends Controller
             notes: $request->notes,
         );
 
-        return new ApprovalResource($approval->fresh());
+        return (new ApprovalResource($approval->fresh()))->invalidates('approvals');
     }
 
     public function reject(Request $request, ApprovalRequest $approval, RejectAction $action): ApprovalResource
@@ -68,7 +68,7 @@ class ApprovalController extends Controller
             notes: $request->notes,
         );
 
-        return new ApprovalResource($approval->fresh());
+        return (new ApprovalResource($approval->fresh()))->invalidates('approvals');
     }
 
     public function completeHumanTask(Request $request, ApprovalRequest $approval, CompleteHumanTaskAction $action): JsonResponse

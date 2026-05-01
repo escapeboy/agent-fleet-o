@@ -36,7 +36,7 @@ class AggregateMetrics extends Command
         ])
             ->whereBetween('occurred_at', [$periodStart, $periodEnd])
             ->groupBy('team_id', 'experiment_id', 'type')
-            ->get();
+            ->cursor();
 
         $created = 0;
 

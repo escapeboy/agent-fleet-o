@@ -9,6 +9,8 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Models\SemanticCacheEntry;
 use App\Infrastructure\AI\Services\EmbeddingService;
 use Closure;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -39,51 +41,96 @@ class SemanticCache implements AiMiddlewareInterface
         // Fast-path: exact text match
         $hit = $this->findExactMatch($request->teamId, $request->provider, $request->model, $promptHash);
 
-        // Semantic match via embedding similarity
-        if (! $hit) {
+        if ($hit) {
+            return $this->buildHitResponse($hit);
+        }
+
+        return $this->resolveWithSingleflight($request, $promptHash, $requestText, $threshold, $next);
+    }
+
+    private function resolveWithSingleflight(AiRequestDTO $request, string $promptHash, string $requestText, float $threshold, Closure $next): AiResponseDTO
+    {
+        $lockKey = "scache:inf:{$promptHash}";
+        $lock = Cache::lock($lockKey, 60);
+
+        if ($lock->get()) {
+            // We are the single executor: generate embedding, check semantic match, call LLM, store.
             try {
                 $embedding = $this->generateEmbedding($requestText);
                 $hit = $this->findSemanticMatch($request->teamId, $request->provider, $request->model, $embedding, $threshold);
+
+                if ($hit) {
+                    return $this->buildHitResponse($hit);
+                }
+
+                $response = $next($request);
+
+                try {
+                    $this->storeEntry($request, $promptHash, $requestText, $embedding, $response);
+                } catch (\Throwable $e) {
+                    Log::warning('SemanticCache: failed to store cache entry', ['error' => $e->getMessage()]);
+                }
+
+                return $response;
             } catch (\Throwable $e) {
-                Log::warning('SemanticCache: embedding generation failed, bypassing cache', [
-                    'error' => $e->getMessage(),
-                ]);
+                if (! ($e instanceof LockTimeoutException)) {
+                    Log::warning('SemanticCache: embedding generation failed, bypassing cache', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 return $next($request);
+            } finally {
+                $lock->release();
             }
         }
 
-        if ($hit) {
-            $hit->increment('hit_count');
-            $metadata = $hit->response_metadata ?? [];
-
-            return new AiResponseDTO(
-                content: $hit->response_content,
-                parsedOutput: $metadata['parsed_output'] ?? null,
-                usage: new AiUsageDTO(
-                    promptTokens: $metadata['prompt_tokens'] ?? 0,
-                    completionTokens: $metadata['completion_tokens'] ?? 0,
-                    costCredits: 0,
-                ),
-                provider: $hit->provider,
-                model: $hit->model,
-                latencyMs: 0,
-                cached: true,
-            );
-        }
-
-        $response = $next($request);
-
-        // Store response in cache; don't let storage failures affect the caller
+        // Another worker is computing — wait for it to finish, then re-check.
         try {
-            if (isset($embedding)) {
-                $this->storeEntry($request, $promptHash, $requestText, $embedding, $response);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('SemanticCache: failed to store cache entry', ['error' => $e->getMessage()]);
+            $lock->block(25);
+            $lock->release();
+        } catch (LockTimeoutException) {
+            return $next($request);
         }
 
-        return $response;
+        // Re-check exact match first (winner likely stored it).
+        $hit = $this->findExactMatch($request->teamId, $request->provider, $request->model, $promptHash);
+        if ($hit) {
+            return $this->buildHitResponse($hit);
+        }
+
+        // Try a fresh semantic match as well.
+        try {
+            $embedding = $this->generateEmbedding($requestText);
+            $hit = $this->findSemanticMatch($request->teamId, $request->provider, $request->model, $embedding, $threshold);
+            if ($hit) {
+                return $this->buildHitResponse($hit);
+            }
+        } catch (\Throwable) {
+            // Embedding failed — fall through to a direct LLM call without storing.
+        }
+
+        return $next($request);
+    }
+
+    private function buildHitResponse(SemanticCacheEntry $hit): AiResponseDTO
+    {
+        $hit->increment('hit_count');
+        $metadata = $hit->response_metadata ?? [];
+
+        return new AiResponseDTO(
+            content: $hit->response_content,
+            parsedOutput: $metadata['parsed_output'] ?? null,
+            usage: new AiUsageDTO(
+                promptTokens: $metadata['prompt_tokens'] ?? 0,
+                completionTokens: $metadata['completion_tokens'] ?? 0,
+                costCredits: 0,
+            ),
+            provider: $hit->provider,
+            model: $hit->model,
+            latencyMs: 0,
+            cached: true,
+        );
     }
 
     private function findExactMatch(?string $teamId, string $provider, string $model, string $promptHash): ?SemanticCacheEntry

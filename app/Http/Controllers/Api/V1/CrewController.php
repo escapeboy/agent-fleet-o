@@ -9,6 +9,7 @@ use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Http\Controllers\Api\V1\Concerns\DocumentsResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CrewExecutionResource;
 use App\Http\Resources\Api\V1\CrewResource;
@@ -25,6 +26,8 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class CrewController extends Controller
 {
+    use DocumentsResponses;
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $crews = QueryBuilder::for(Crew::class)
@@ -183,6 +186,7 @@ class CrewController extends Controller
         );
 
         return (new CrewExecutionResource($execution))
+            ->invalidates('crews')
             ->response()
             ->setStatusCode(201);
     }

@@ -13,6 +13,7 @@ use App\Domain\Agent\Models\AgentConfigRevision;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
+use App\Http\Controllers\Api\V1\Concerns\DocumentsResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreAgentRequest;
 use App\Http\Requests\Api\V1\UpdateAgentRequest;
@@ -29,6 +30,8 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class AgentController extends Controller
 {
+    use DocumentsResponses;
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $agents = QueryBuilder::for(Agent::class)
