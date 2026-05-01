@@ -32,6 +32,7 @@ class ExperimentStage extends Model
         'started_at',
         'completed_at',
         'searchable_text',
+        'annotation',
         'telemetry',
     ];
 

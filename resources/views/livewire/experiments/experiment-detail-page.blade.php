@@ -420,8 +420,8 @@
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @php
-                $workflowTabs = ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
-                $standardTabs = ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
+                $workflowTabs = ['tasks' => 'Tasks', 'notebook' => 'Notebook', 'blocks' => 'Blocks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
+                $standardTabs = ['timeline' => 'Timeline', 'notebook' => 'Notebook', 'blocks' => 'Blocks', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
                 if ($experiment->status->isFailed()) {
                     $workflowTabs['lessons'] = 'Lessons Learned';
                     $standardTabs['lessons'] = 'Lessons Learned';
@@ -459,7 +459,11 @@
     </div>
 
     {{-- Tab Content --}}
-    @if($activeTab === 'timeline')
+    @if($activeTab === 'notebook')
+        <livewire:experiments.experiment-notebook-panel :experimentId="$experiment->id" :key="'notebook-'.$experiment->id" />
+    @elseif($activeTab === 'blocks')
+        <livewire:experiments.ai-run-blocks-panel :experimentId="$experiment->id" :key="'blocks-'.$experiment->id" />
+    @elseif($activeTab === 'timeline')
         <livewire:experiments.experiment-timeline :experiment="$experiment" :key="'timeline-'.$experiment->id" />
     @elseif($activeTab === 'time-travel')
         <livewire:experiments.workflow-timeline :experimentId="$experiment->id" :key="'time-travel-'.$experiment->id" />

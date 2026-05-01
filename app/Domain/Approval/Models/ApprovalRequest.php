@@ -55,6 +55,8 @@ class ApprovalRequest extends Model
         'chatbot_message_id',
         'edited_content',
         'mode',
+        'preview_type',
+        'preview_data',
         'intervention_window_seconds',
         'auto_approved_at',
     ];
@@ -66,6 +68,7 @@ class ApprovalRequest extends Model
             'mode' => ApprovalMode::class,
             'intervention_window_seconds' => 'integer',
             'auto_approved_at' => 'datetime',
+            'preview_data' => 'array',
             'context' => 'array',
             'form_schema' => 'array',
             'form_response' => 'array',

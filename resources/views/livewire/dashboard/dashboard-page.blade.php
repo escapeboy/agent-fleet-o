@@ -26,6 +26,34 @@
         <livewire:dashboard.health-summary-tile />
     </div>
 
+    {{-- NL → Workflow Generator --}}
+    <div class="mb-6 rounded-xl border border-primary-200 bg-gradient-to-r from-primary-50 to-indigo-50 p-5">
+        <div class="mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-primary-600"></i>
+            <p class="text-sm font-semibold text-primary-900">What do you want to automate?</p>
+        </div>
+        <form wire:submit="generateWorkflow" class="flex gap-2">
+            <input
+                type="text"
+                wire:model="workflowPrompt"
+                placeholder="e.g. Monitor new GitHub issues, classify them, and send a Slack summary daily…"
+                class="flex-1 rounded-lg border border-primary-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                :disabled="$wire.workflowGenerating"
+            />
+            <button
+                type="submit"
+                wire:loading.attr="disabled"
+                class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+            >
+                <span wire:loading.remove wire:target="generateWorkflow">Generate workflow</span>
+                <span wire:loading wire:target="generateWorkflow">Generating…</span>
+            </button>
+        </form>
+        @if($workflowError)
+            <p class="mt-2 text-xs text-red-600">{{ $workflowError }}</p>
+        @endif
+    </div>
+
     {{-- Bento KPI Grid --}}
     <div class="grid grid-cols-12 gap-4">
 

@@ -19,6 +19,7 @@ use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Domain\Workflow\Actions\GenerateWorkflowFromPromptAction;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 
@@ -26,6 +27,12 @@ class DashboardPage extends Component
 {
     /** @var array<string, bool> */
     public array $widgets = [];
+
+    public string $workflowPrompt = '';
+
+    public bool $workflowGenerating = false;
+
+    public string $workflowError = '';
 
     /** Default widget visibility — all on by default */
     protected const DEFAULT_WIDGETS = [
@@ -44,6 +51,34 @@ class DashboardPage extends Component
         $team = auth()->user()->currentTeam;
         $saved = $team?->dashboard_config['widgets'] ?? [];
         $this->widgets = array_merge(self::DEFAULT_WIDGETS, $saved);
+    }
+
+    public function generateWorkflow(): void
+    {
+        $this->validate(['workflowPrompt' => 'required|string|min:10|max:1000']);
+
+        $this->workflowError = '';
+        $this->workflowGenerating = true;
+
+        try {
+            $teamId = auth()->user()->current_team_id;
+            $result = app(GenerateWorkflowFromPromptAction::class)->execute(
+                prompt: $this->workflowPrompt,
+                userId: auth()->id(),
+                teamId: $teamId,
+            );
+
+            if ($result['workflow']) {
+                $this->workflowPrompt = '';
+                $this->redirect(route('workflows.show', $result['workflow']), navigate: true);
+            } else {
+                $this->workflowError = implode(' ', $result['errors']) ?: 'Failed to generate workflow. Try a more detailed description.';
+            }
+        } catch (\Throwable $e) {
+            $this->workflowError = 'An error occurred while generating the workflow.';
+        } finally {
+            $this->workflowGenerating = false;
+        }
     }
 
     public function toggleWidget(string $key): void

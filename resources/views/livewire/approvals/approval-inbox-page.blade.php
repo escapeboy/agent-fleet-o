@@ -222,6 +222,11 @@
                             </div>
                         @endif
 
+                        {{-- Structured preview (code diff, email, JSON diff, API request) --}}
+                        @if($approval->preview_type)
+                            <x-approval-preview :approval="$approval" />
+                        @endif
+
                         @if($approval->isClarification() || $approval->isHumanTask())
                             <div class="mt-3">
                                 <livewire:approvals.human-task-form :task="$approval" :key="'htf-'.$approval->id" />
