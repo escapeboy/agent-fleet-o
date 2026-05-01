@@ -33,6 +33,7 @@ class CrewExecution extends Model
         'delegation_depth',
         'started_at',
         'completed_at',
+        'quality_dimensions',
     ];
 
     protected function casts(): array
@@ -43,6 +44,7 @@ class CrewExecution extends Model
             'final_output' => 'array',
             'config_snapshot' => 'array',
             'quality_score' => 'float',
+            'quality_dimensions' => 'array',
             'coordinator_iterations' => 'integer',
             'total_cost_credits' => 'integer',
             'duration_ms' => 'integer',
@@ -62,6 +64,7 @@ class CrewExecution extends Model
         return $this->belongsTo(Experiment::class);
     }
 
+    /** @return HasMany<CrewTaskExecution, $this> */
     public function taskExecutions(): HasMany
     {
         return $this->hasMany(CrewTaskExecution::class)->orderBy('sort_order');

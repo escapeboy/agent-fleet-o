@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Experiment</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: var(--color-background-primary, #0f0f0f);
+    --bg2: var(--color-background-secondary, #1a1a1a);
+    --bg3: var(--color-background-tertiary, #242424);
+    --text: var(--color-text-primary, #f5f5f5);
+    --text2: var(--color-text-secondary, #a0a0a0);
+    --border: var(--color-border-primary, #2e2e2e);
+    --accent: var(--color-accent-primary, #6366f1);
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --font: var(--font-sans, system-ui, -apple-system, sans-serif);
+    --radius: 8px;
+  }
+
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--font);
+    font-size: 13px; line-height: 1.5; padding: 12px; min-height: 100vh;
+  }
+
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; gap: 8px; }
+  .title { font-size: 15px; font-weight: 600; flex: 1; word-break: break-word; }
+  .badge { border-radius: 99px; padding: 2px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+  .badge-running   { background: #1d4ed8; color: #fff; }
+  .badge-completed { background: #065f46; color: #6ee7b7; }
+  .badge-failed    { background: #7f1d1d; color: #fca5a5; }
+  .badge-paused    { background: #78350f; color: #fde68a; }
+  .badge-default   { background: var(--bg3); color: var(--text2); }
+
+  .thesis { color: var(--text2); font-size: 12px; margin-bottom: 14px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 6px; }
+
+  .budget-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .budget-bar-wrap { flex: 1; background: var(--bg3); border-radius: 99px; height: 6px; overflow: hidden; }
+  .budget-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.4s; }
+  .budget-bar-fill.warn   { background: var(--warning); }
+  .budget-bar-fill.danger { background: var(--danger); }
+  .budget-text { font-size: 11px; color: var(--text2); white-space: nowrap; }
+
+  .iter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .iter-pips { display: flex; gap: 4px; }
+  .iter-pip { width: 10px; height: 10px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border); }
+  .iter-pip.done   { background: var(--accent); border-color: var(--accent); }
+  .iter-pip.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,0.3); }
+
+  .stages { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .stage { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; }
+  .stage-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .stage-icon.pending { background: var(--bg3); color: var(--text2); }
+  .stage-icon.running { background: #1d4ed8; color: #fff; animation: pulse 1.5s infinite; }
+  .stage-icon.done    { background: #065f46; color: #6ee7b7; }
+  .stage-icon.failed  { background: #7f1d1d; color: #fca5a5; }
+  .stage-icon.skipped { background: var(--bg3); color: var(--text2); }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+  .stage-name { font-size: 12px; font-weight: 500; flex: 1; text-transform: capitalize; }
+  .stage-status { font-size: 10px; color: var(--text2); text-transform: capitalize; }
+  .stage-preview { font-size: 10px; color: var(--text2); margin-top: 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 220px; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .btn { border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: opacity 0.15s, filter 0.15s; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-warn    { background: var(--warning); color: #000; }
+  .btn-danger  { background: var(--danger); color: #fff; }
+  .btn-neutral { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 4px; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .result-msg { margin-top: 8px; font-size: 12px; padding: 6px 10px; border-radius: 6px; }
+  .result-msg.success { background: #064e3b; color: #6ee7b7; }
+  .result-msg.error   { background: #450a0a; color: #fca5a5; }
+  .meta-row { font-size: 11px; color: var(--text2); margin-top: 10px; }
+  .loading { text-align: center; color: var(--text2); padding: 48px 0; }
+  .empty-msg { color: var(--text2); font-size: 12px; padding: 24px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  'use strict';
+
+  // ── MCP postMessage client ────────────────────────────────────────────────
+  var _id = 1, _pending = {}, _handlers = {};
+
+  function mcpSend(method, params) {
+    window.parent.postMessage({ jsonrpc: '2.0', method: method, params: params || {} }, '*');
+  }
+  function mcpRequest(method, params) {
+    return new Promise(function (resolve, reject) {
+      var id = _id++;
+      _pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ jsonrpc: '2.0', id: id, method: method, params: params || {} }, '*');
+      setTimeout(function () { if (_pending[id]) { delete _pending[id]; reject(new Error('Timeout: ' + method)); } }, 30000);
+    });
+  }
+  window.addEventListener('message', function (e) {
+    var msg = e.data;
+    if (!msg || msg.jsonrpc !== '2.0') return;
+    if (msg.id && _pending[msg.id]) {
+      var cb = _pending[msg.id]; delete _pending[msg.id];
+      if (msg.error) cb.reject(new Error(msg.error.message || 'MCP error'));
+      else cb.resolve(msg.result);
+      return;
+    }
+    if (msg.method && _handlers[msg.method]) _handlers[msg.method](msg.params);
+  });
+  function callTool(name, args) { return mcpRequest('tools/call', { name: name, arguments: args || {} }); }
+
+  // ── DOM helpers (no innerHTML with user data) ─────────────────────────────
+  var root = document.getElementById('root');
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function clearEl(container) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+  }
+  function showLoading(msg) {
+    clearEl(root);
+    var d = el('div', 'loading');
+    var sp = el('span', 'spinner'); d.appendChild(sp);
+    d.appendChild(document.createTextNode(' ' + (msg || 'Loading…')));
+    root.appendChild(d);
+  }
+  function showEmpty(msg) {
+    clearEl(root);
+    root.appendChild(el('div', 'empty-msg', msg || 'No data.'));
+  }
+
+  // ── Status helpers ────────────────────────────────────────────────────────
+  function statusBadgeCls(status) {
+    var s = (status || '').toLowerCase();
+    if (s.includes('fail') || s === 'killed' || s === 'discarded') return 'badge badge-failed';
+    if (s === 'completed') return 'badge badge-completed';
+    if (s === 'paused') return 'badge badge-paused';
+    if (['scoring','planning','building','executing','evaluating','iterating',
+         'awaiting_approval','approved','collect','signal_detected'].some(function(k){ return s.includes(k); })) return 'badge badge-running';
+    return 'badge badge-default';
+  }
+  function stageIconInfo(status) {
+    var s = (status || '').toLowerCase();
+    if (s === 'running' || s === 'executing') return { cls: 'running', char: '▶' };
+    if (s === 'completed') return { cls: 'done', char: '✓' };
+    if (s.includes('fail')) return { cls: 'failed', char: '✗' };
+    if (s === 'skipped') return { cls: 'skipped', char: '—' };
+    return { cls: 'pending', char: '○' };
+  }
+  function fmtCredits(n) { return n !== null && n !== undefined ? Number(n).toFixed(2) + ' cr' : '—'; }
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  var currentData = null;
+  var initialDataReceived = false;
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function render(d) {
+    currentData = d;
+    clearEl(root);
+
+    var status = (d.status || '').replace(/_/g, ' ');
+
+    // Header
+    var header = el('div', 'header');
+    header.appendChild(el('div', 'title', d.title || 'Experiment'));
+    header.appendChild(el('span', statusBadgeCls(d.status), status || 'unknown'));
+    root.appendChild(header);
+
+    // Thesis
+    if (d.thesis) root.appendChild(el('div', 'thesis', d.thesis));
+
+    // Budget
+    var cap = Number(d.budget_cap_credits) || 0;
+    var spent = Number(d.budget_spent_credits) || 0;
+    var pct = cap > 0 ? Math.min(100, Math.max(0, (spent / cap) * 100)) : 0;
+    root.appendChild(el('div', 'section-label', 'Budget'));
+    var budgetRow = el('div', 'budget-row');
+    var barWrap = el('div', 'budget-bar-wrap');
+    var barFill = el('div', 'budget-bar-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warn' : ''));
+    barFill.style.width = pct.toFixed(1) + '%';
+    barWrap.appendChild(barFill); budgetRow.appendChild(barWrap);
+    budgetRow.appendChild(el('span', 'budget-text', fmtCredits(spent) + ' / ' + fmtCredits(cap)));
+    root.appendChild(budgetRow);
+
+    // Iterations
+    var maxIter = Math.max(1, Number(d.max_iterations) || 1);
+    var curIter = Number(d.current_iteration) || 0;
+    root.appendChild(el('div', 'section-label', 'Iterations'));
+    var iterRow = el('div', 'iter-row');
+    var pips = el('div', 'iter-pips');
+    for (var i = 1; i <= maxIter; i++) {
+      pips.appendChild(el('div', 'iter-pip' + (i < curIter ? ' done' : i === curIter ? ' active' : '')));
+    }
+    iterRow.appendChild(pips);
+    iterRow.appendChild(el('span', 'budget-text', curIter + ' / ' + maxIter));
+    root.appendChild(iterRow);
+
+    // Stages
+    var stages = d.stages || [];
+    if (stages.length > 0) {
+      root.appendChild(el('div', 'section-label', 'Pipeline'));
+      var stagesWrap = el('div', 'stages');
+      stages.forEach(function (s) {
+        var info = stageIconInfo(s.status);
+        var stageEl = el('div', 'stage');
+        stageEl.appendChild(el('div', 'stage-icon ' + info.cls, info.char));
+        var body = el('div'); body.style.flex = '1'; body.style.minWidth = '0';
+        body.appendChild(el('div', 'stage-name', (s.type || '').replace(/_/g, ' ')));
+        if (s.output_preview) body.appendChild(el('div', 'stage-preview', s.output_preview));
+        stageEl.appendChild(body);
+        stageEl.appendChild(el('span', 'stage-status', s.status || ''));
+        stagesWrap.appendChild(stageEl);
+      });
+      root.appendChild(stagesWrap);
+    }
+
+    // Actions
+    root.appendChild(el('div', 'section-label', 'Actions'));
+    var actionsWrap = el('div', 'actions');
+    actionsWrap.id = 'exp-actions';
+    var sv = (d.status || '').toLowerCase();
+    var isTerminal = ['completed','killed','discarded'].indexOf(sv) !== -1;
+    var isPaused = sv === 'paused';
+
+    if (!isTerminal) {
+      if (isPaused) {
+        var btnResume = el('button', 'btn btn-primary', 'Resume');
+        btnResume.addEventListener('click', function () { doAction('resume', 'experiment_resume', { experiment_id: d.id }); });
+        actionsWrap.appendChild(btnResume);
+      } else {
+        var btnPause = el('button', 'btn btn-warn', 'Pause');
+        btnPause.addEventListener('click', function () { doAction('pause', 'experiment_pause', { experiment_id: d.id }); });
+        actionsWrap.appendChild(btnPause);
+      }
+      var btnKill = el('button', 'btn btn-danger', 'Kill');
+      btnKill.addEventListener('click', function () {
+        if (!window.confirm('Kill this experiment? This cannot be undone.')) return;
+        doAction('kill', 'experiment_kill', { experiment_id: d.id });
+      });
+      actionsWrap.appendChild(btnKill);
+    }
+
+    var btnRetry = el('button', 'btn btn-neutral', 'Retry');
+    btnRetry.addEventListener('click', function () { doAction('retry', 'experiment_retry', { experiment_id: d.id }); });
+    actionsWrap.appendChild(btnRetry);
+
+    if (isTerminal) btnRetry.disabled = false;
+    root.appendChild(actionsWrap);
+
+    var msgEl = el('div');
+    msgEl.id = 'exp-result';
+    root.appendChild(msgEl);
+
+    root.appendChild(el('div', 'meta-row', 'Created ' + (d.created_at || '—')));
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  function doAction(label, toolName, args) {
+    var actEl = document.getElementById('exp-actions');
+    var msgEl = document.getElementById('exp-result');
+    if (actEl) Array.from(actEl.querySelectorAll('.btn')).forEach(function (b) { b.disabled = true; });
+    if (msgEl) { msgEl.textContent = ''; msgEl.className = ''; }
+
+    callTool(toolName, args)
+      .then(function () {
+        if (msgEl) { msgEl.textContent = '✓ ' + label.charAt(0).toUpperCase() + label.slice(1) + ' successful.'; msgEl.className = 'result-msg success'; }
+        mcpSend('ui/update-model-context', { content: [{ type: 'text', text: 'Experiment ' + ((currentData && currentData.id) ? currentData.id.slice(0, 8) : '') + ' was ' + label + 'd.' }] });
+        setTimeout(function () { if (currentData && currentData.id) loadExperiment(currentData.id); }, 1200);
+      })
+      .catch(function (err) {
+        if (msgEl) { msgEl.textContent = '✗ ' + err.message; msgEl.className = 'result-msg error'; }
+        if (actEl) Array.from(actEl.querySelectorAll('.btn')).forEach(function (b) { b.disabled = false; });
+      });
+  }
+
+  function loadExperiment(id) {
+    if (!id) { showEmpty('No experiment ID. Call experiment_get to load one.'); return; }
+    showLoading('Loading experiment…');
+    callTool('experiment_get', { experiment_id: id })
+      .then(function (result) {
+        var text = result && result.content && result.content[0] && result.content[0].text;
+        if (!text) throw new Error('Empty response');
+        render(JSON.parse(text));
+      })
+      .catch(function (err) { showEmpty('Failed to load: ' + err.message); });
+  }
+
+  // ── Handle initial data pushed by host ────────────────────────────────────
+  _handlers['ui/notifications/tool-result'] = function (params) {
+    var text = params && params.content && params.content[0] && params.content[0].text;
+    if (!text) return;
+    try {
+      var d = JSON.parse(text);
+      if (d.id && d.status !== undefined) { initialDataReceived = true; render(d); }
+    } catch (_) {}
+  };
+
+  // ── Initialize ────────────────────────────────────────────────────────────
+  showLoading('Connecting…');
+  mcpRequest('ui/initialize', { protocolVersion: '2026-01-26', clientInfo: { name: 'fleetq-experiment-detail', version: '1.0.0' }, appCapabilities: {} })
+    .then(function () { mcpSend('ui/notifications/initialized', {}); })
+    .catch(function () {})
+    .finally(function () {
+      setTimeout(function () {
+        if (!initialDataReceived) showEmpty('No experiment data received. Call experiment_get first.');
+      }, 600);
+    });
+
+})();
+</script>
+</body>
+</html>

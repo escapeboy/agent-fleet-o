@@ -62,21 +62,25 @@ class PlaybookStep extends Model
         ];
     }
 
+    /** @return BelongsTo<Experiment, $this> */
     public function experiment(): BelongsTo
     {
         return $this->belongsTo(Experiment::class);
     }
 
+    /** @return BelongsTo<Agent, $this> */
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
     }
 
+    /** @return BelongsTo<Skill, $this> */
     public function skill(): BelongsTo
     {
         return $this->belongsTo(Skill::class);
     }
 
+    /** @return BelongsTo<Crew, $this> */
     public function crew(): BelongsTo
     {
         return $this->belongsTo(Crew::class);

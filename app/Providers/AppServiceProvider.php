@@ -82,7 +82,9 @@ use App\Domain\Signal\Connectors\SlackChannelKnowledgeConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
 use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
+use App\Domain\Signal\Connectors\UrlWatchConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
+use App\Domain\Signal\Connectors\WebScrapingConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalStatusChanged;
@@ -250,6 +252,8 @@ class AppServiceProvider extends ServiceProvider
             BugReportConnector::class,
             GoogleDriveConnector::class,
             SlackChannelKnowledgeConnector::class,
+            WebScrapingConnector::class,
+            UrlWatchConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors

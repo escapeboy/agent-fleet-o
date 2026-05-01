@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crew Execution</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: var(--color-background-primary, #0f0f0f);
+    --bg2: var(--color-background-secondary, #1a1a1a);
+    --bg3: var(--color-background-tertiary, #242424);
+    --text: var(--color-text-primary, #f5f5f5);
+    --text2: var(--color-text-secondary, #a0a0a0);
+    --border: var(--color-border-primary, #2e2e2e);
+    --accent: var(--color-accent-primary, #6366f1);
+    --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+    --font: var(--font-sans, system-ui, -apple-system, sans-serif);
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.5; padding: 12px; min-height: 100vh; }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+  .title { font-size: 15px; font-weight: 600; flex: 1; }
+  .badge { border-radius: 99px; padding: 2px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-running   { background: #1d4ed8; color: #fff; }
+  .badge-completed { background: #065f46; color: #6ee7b7; }
+  .badge-failed    { background: #7f1d1d; color: #fca5a5; }
+  .badge-paused    { background: #78350f; color: #fde68a; }
+  .badge-default   { background: var(--bg3); color: var(--text2); }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 6px; }
+  .goal { font-size: 12px; color: var(--text2); margin-bottom: 12px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  .meta-chips { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; font-size: 11px; color: var(--text2); }
+  .chip strong { color: var(--text); }
+  .progress-bar-wrap { background: var(--bg3); border-radius: 99px; height: 8px; overflow: hidden; margin-bottom: 14px; }
+  .progress-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.4s; }
+  .progress-bar-fill.done { background: var(--success); }
+  .tasks { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .task-item { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  .task-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .task-icon.pending  { background: var(--bg3); color: var(--text2); }
+  .task-icon.running  { background: #1d4ed8; color: #fff; animation: pulse 1.5s infinite; }
+  .task-icon.done     { background: #065f46; color: #6ee7b7; }
+  .task-icon.failed   { background: #7f1d1d; color: #fca5a5; }
+  .task-icon.blocked  { background: #78350f; color: #fde68a; }
+  .task-icon.skipped  { background: var(--bg3); color: var(--text2); }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+  .task-body { flex: 1; min-width: 0; }
+  .task-title { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .task-meta { font-size: 10px; color: var(--text2); margin-top: 1px; }
+  .task-status { font-size: 10px; color: var(--text2); text-transform: capitalize; flex-shrink: 0; }
+  .result-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; }
+  .result-text { font-size: 12px; color: var(--text2); word-break: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .btn { border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: opacity 0.15s, filter 0.15s; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-warn    { background: var(--warning); color: #000; }
+  .btn-neutral { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  .result-msg { margin-top: 8px; font-size: 12px; padding: 6px 10px; border-radius: 6px; }
+  .result-msg.success { background: #064e3b; color: #6ee7b7; }
+  .result-msg.error   { background: #450a0a; color: #fca5a5; }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 4px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading { text-align: center; color: var(--text2); padding: 48px 0; }
+  .empty-msg { color: var(--text2); font-size: 12px; padding: 24px 0; text-align: center; }
+  .meta-row { font-size: 11px; color: var(--text2); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  'use strict';
+
+  var _id = 1, _pending = {}, _handlers = {};
+  function mcpSend(method, params) { window.parent.postMessage({ jsonrpc: '2.0', method: method, params: params || {} }, '*'); }
+  function mcpRequest(method, params) {
+    return new Promise(function (resolve, reject) {
+      var id = _id++;
+      _pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ jsonrpc: '2.0', id: id, method: method, params: params || {} }, '*');
+      setTimeout(function () { if (_pending[id]) { delete _pending[id]; reject(new Error('Timeout')); } }, 30000);
+    });
+  }
+  window.addEventListener('message', function (e) {
+    var msg = e.data;
+    if (!msg || msg.jsonrpc !== '2.0') return;
+    if (msg.id && _pending[msg.id]) { var cb = _pending[msg.id]; delete _pending[msg.id]; if (msg.error) cb.reject(new Error(msg.error.message || 'error')); else cb.resolve(msg.result); return; }
+    if (msg.method && _handlers[msg.method]) _handlers[msg.method](msg.params);
+  });
+  function callTool(name, args) { return mcpRequest('tools/call', { name: name, arguments: args || {} }); }
+
+  var root = document.getElementById('root');
+  var currentData = null;
+  var initialDataReceived = false;
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function clearEl(c) { while (c.firstChild) c.removeChild(c.firstChild); }
+  function showLoading(msg) { clearEl(root); var d = el('div', 'loading'); d.appendChild(el('span', 'spinner')); d.appendChild(document.createTextNode(' ' + (msg || 'Loading…'))); root.appendChild(d); }
+  function showEmpty(msg) { clearEl(root); root.appendChild(el('div', 'empty-msg', msg)); }
+
+  function statusBadgeCls(s) {
+    var sv = (s || '').toLowerCase();
+    if (['running','in_progress','pending'].indexOf(sv) !== -1 || sv.includes('running')) return 'badge badge-running';
+    if (sv === 'completed' || sv === 'done') return 'badge badge-completed';
+    if (sv.includes('fail') || sv === 'error') return 'badge badge-failed';
+    if (sv === 'paused') return 'badge badge-paused';
+    return 'badge badge-default';
+  }
+  function taskIconInfo(s) {
+    var sv = (s || '').toLowerCase();
+    if (sv === 'running' || sv === 'in_progress') return { cls: 'running', char: '▶' };
+    if (sv === 'completed' || sv === 'done') return { cls: 'done', char: '✓' };
+    if (sv.includes('fail') || sv === 'error') return { cls: 'failed', char: '✗' };
+    if (sv === 'blocked') return { cls: 'blocked', char: '!' };
+    if (sv === 'skipped') return { cls: 'skipped', char: '—' };
+    return { cls: 'pending', char: '○' };
+  }
+
+  function render(d) {
+    currentData = d;
+    clearEl(root);
+
+    // Header
+    var header = el('div', 'header');
+    header.appendChild(el('div', 'title', 'Crew Execution'));
+    header.appendChild(el('span', statusBadgeCls(d.status), (d.status || 'unknown').replace(/_/g, ' ')));
+    root.appendChild(header);
+
+    if (d.goal) root.appendChild(el('div', 'goal', d.goal));
+
+    // Meta
+    var chips = el('div', 'meta-chips');
+    function chip(label, val) { var c = el('div', 'chip'); c.appendChild(document.createTextNode(label + ': ')); var strong = el('strong', null, val); c.appendChild(strong); return c; }
+    chips.appendChild(chip('ID', (d.id || '—').slice(0, 8)));
+    chips.appendChild(chip('Tasks', String((d.tasks || []).length)));
+    if (d.blocked_count > 0) chips.appendChild(chip('Blocked', String(d.blocked_count)));
+    if (d.artifacts_count) chips.appendChild(chip('Artifacts', String(d.artifacts_count)));
+    root.appendChild(chips);
+
+    // Progress
+    var tasks = d.tasks || [];
+    var done = tasks.filter(function (t) { var s = (t.status || '').toLowerCase(); return s === 'completed' || s === 'done'; }).length;
+    var pct = tasks.length > 0 ? (done / tasks.length) * 100 : 0;
+    var isAllDone = pct >= 100;
+    root.appendChild(el('div', 'section-label', 'Progress (' + done + '/' + tasks.length + ')'));
+    var pwrap = el('div', 'progress-bar-wrap');
+    var pfill = el('div', 'progress-bar-fill' + (isAllDone ? ' done' : ''));
+    pfill.style.width = pct.toFixed(1) + '%';
+    pwrap.appendChild(pfill);
+    root.appendChild(pwrap);
+
+    // Tasks
+    if (tasks.length > 0) {
+      root.appendChild(el('div', 'section-label', 'Tasks'));
+      var taskList = el('div', 'tasks');
+      var sorted = tasks.slice().sort(function (a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
+      sorted.forEach(function (t) {
+        var info = taskIconInfo(t.status);
+        var item = el('div', 'task-item');
+        item.appendChild(el('div', 'task-icon ' + info.cls, info.char));
+        var body = el('div', 'task-body');
+        body.appendChild(el('div', 'task-title', t.title || 'Task'));
+        if (t.started_at || t.completed_at) {
+          var meta = el('div', 'task-meta');
+          if (t.started_at) meta.appendChild(document.createTextNode('Started: ' + t.started_at.slice(0, 16).replace('T', ' ')));
+          if (t.completed_at) { if (t.started_at) meta.appendChild(document.createTextNode(' · ')); meta.appendChild(document.createTextNode('Done: ' + t.completed_at.slice(0, 16).replace('T', ' '))); }
+          body.appendChild(meta);
+        }
+        item.appendChild(body);
+        item.appendChild(el('span', 'task-status', (t.status || '').replace(/_/g, ' ')));
+        taskList.appendChild(item);
+      });
+      root.appendChild(taskList);
+    }
+
+    // Result
+    if (d.result) {
+      root.appendChild(el('div', 'section-label', 'Result'));
+      var resSection = el('div', 'result-section');
+      resSection.appendChild(el('div', 'result-text', d.result));
+      root.appendChild(resSection);
+    }
+
+    // Actions
+    var sv = (d.status || '').toLowerCase();
+    var isRunning = ['running','in_progress','pending'].indexOf(sv) !== -1 || sv.includes('running');
+    var isPaused = sv === 'paused';
+
+    if (isRunning || isPaused) {
+      root.appendChild(el('div', 'section-label', 'Actions'));
+      var actEl = el('div', 'actions');
+      actEl.id = 'crew-actions';
+      if (isRunning) {
+        var btnPause = el('button', 'btn btn-warn', 'Pause');
+        btnPause.addEventListener('click', function () { doAction('pause', 'crew_execution_pause', { execution_id: d.id }); });
+        actEl.appendChild(btnPause);
+      }
+      if (isPaused) {
+        var btnResume = el('button', 'btn btn-primary', 'Resume');
+        btnResume.addEventListener('click', function () { doAction('resume', 'crew_execution_resume', { execution_id: d.id }); });
+        actEl.appendChild(btnResume);
+      }
+      root.appendChild(actEl);
+      var msgEl = el('div'); msgEl.id = 'crew-result'; root.appendChild(msgEl);
+    }
+
+    root.appendChild(el('div', 'meta-row', 'Started ' + (d.created_at ? d.created_at.slice(0, 16).replace('T', ' ') : '—')));
+  }
+
+  function doAction(label, toolName, args) {
+    var actEl = document.getElementById('crew-actions');
+    var msgEl = document.getElementById('crew-result');
+    if (actEl) Array.from(actEl.querySelectorAll('.btn')).forEach(function (b) { b.disabled = true; });
+    if (msgEl) { msgEl.textContent = ''; msgEl.className = ''; }
+    callTool(toolName, args)
+      .then(function () {
+        if (msgEl) { msgEl.textContent = '✓ ' + label.charAt(0).toUpperCase() + label.slice(1) + ' done.'; msgEl.className = 'result-msg success'; }
+        mcpSend('ui/update-model-context', { content: [{ type: 'text', text: 'Crew execution ' + ((currentData && currentData.id) ? currentData.id.slice(0, 8) : '') + ': ' + label + '.' }] });
+        setTimeout(function () { if (currentData && currentData.id) loadExecution(currentData.id); }, 1200);
+      })
+      .catch(function (err) {
+        if (msgEl) { msgEl.textContent = '✗ ' + err.message; msgEl.className = 'result-msg error'; }
+        if (actEl) Array.from(actEl.querySelectorAll('.btn')).forEach(function (b) { b.disabled = false; });
+      });
+  }
+
+  function loadExecution(id) {
+    if (!id) { showEmpty('No execution ID. Call crew_execution_status to load one.'); return; }
+    showLoading('Loading crew execution…');
+    callTool('crew_execution_status', { execution_id: id })
+      .then(function (result) {
+        var text = result && result.content && result.content[0] && result.content[0].text;
+        if (!text) throw new Error('Empty response');
+        render(JSON.parse(text));
+      })
+      .catch(function (err) { showEmpty('Failed to load: ' + err.message); });
+  }
+
+  _handlers['ui/notifications/tool-result'] = function (params) {
+    var text = params && params.content && params.content[0] && params.content[0].text;
+    if (!text) return;
+    try { var d = JSON.parse(text); if (d.id && d.tasks !== undefined) { initialDataReceived = true; render(d); } } catch (_) {}
+  };
+
+  showLoading('Connecting…');
+  mcpRequest('ui/initialize', { protocolVersion: '2026-01-26', clientInfo: { name: 'fleetq-crew-execution', version: '1.0.0' }, appCapabilities: {} })
+    .then(function () { mcpSend('ui/notifications/initialized', {}); })
+    .catch(function () {})
+    .finally(function () {
+      setTimeout(function () { if (!initialDataReceived) showEmpty('No execution data received. Call crew_execution_status first.'); }, 600);
+    });
+
+})();
+</script>
+</body>
+</html>

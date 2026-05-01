@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Models\Agent;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasMcpAppUi;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -18,8 +19,14 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 class AgentGetTool extends Tool
 {
     use HasStructuredErrors;
+    use HasMcpAppUi;
 
     protected string $name = 'agent_get';
+
+    protected function uiResourceUri(): string
+    {
+        return 'ui://fleetq/agent-monitor';
+    }
 
     protected string $description = 'Get detailed information about a specific AI agent including role, goal, backstory, provider, model, and budget.';
 

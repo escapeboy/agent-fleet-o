@@ -34,6 +34,7 @@ use App\Domain\Integration\Drivers\Teams\TeamsIntegrationDriver;
 use App\Domain\Integration\Drivers\Telegram\TelegramIntegrationDriver;
 use App\Domain\Integration\Drivers\Twitter\TwitterIntegrationDriver;
 use App\Domain\Integration\Drivers\Vercel\VercelIntegrationDriver;
+use App\Domain\Integration\Drivers\Webclaw\WebclawIntegrationDriver;
 use App\Domain\Integration\Drivers\WhatsApp\WhatsAppIntegrationDriver;
 use App\Domain\Integration\Drivers\Zapier\ZapierIntegrationDriver;
 use Illuminate\Support\Manager;
@@ -219,5 +220,10 @@ class IntegrationManager extends Manager
     public function create1passwordDriver(): IntegrationDriverInterface
     {
         return $this->container->make(OnePasswordIntegrationDriver::class);
+    }
+
+    public function createWebclawDriver(): IntegrationDriverInterface
+    {
+        return $this->container->make(WebclawIntegrationDriver::class);
     }
 }

@@ -523,6 +523,52 @@
                                         {{ $msg['tool_calls_count'] }} tool call{{ $msg['tool_calls_count'] > 1 ? 's' : '' }}
                                     </div>
                                 @endif
+                                @if(!empty($msg['mcp_app_uris']))
+                                    @foreach($msg['mcp_app_uris'] as $mcpToolName => $mcpUri)
+                                        @php $mcpHtml = \App\Mcp\Services\McpAppRegistry::htmlForUri($mcpUri); @endphp
+                                        @if($mcpHtml)
+                                            <div wire:ignore class="mt-3"
+                                                 x-data="{
+                                                    init() {
+                                                        const encoded = this.$el.dataset.apphtml;
+                                                        if (encoded) this.$refs.frame.srcdoc = atob(encoded);
+                                                        const self = this;
+                                                        self._msgHandler = function(e) {
+                                                            if (!self.$refs.frame || e.source !== self.$refs.frame.contentWindow) return;
+                                                            const msg = e.data;
+                                                            if (!msg || msg.jsonrpc !== '2.0') return;
+                                                            if (msg.method === 'ui/initialize' && msg.id !== undefined) {
+                                                                e.source.postMessage({ jsonrpc: '2.0', id: msg.id, result: { protocolVersion: '2026-01-26', serverInfo: { name: 'fleetq-assistant', version: '1.0.0' }, capabilities: {} } }, '*');
+                                                                return;
+                                                            }
+                                                            if (msg.method === 'ui/notifications/initialized') return;
+                                                            if (msg.method === 'ui/update-model-context') return;
+                                                            if (msg.method === 'tools/call' && msg.id !== undefined) {
+                                                                const toolName = msg.params && msg.params.name;
+                                                                const args = (msg.params && msg.params.arguments) || {};
+                                                                if (!toolName) return;
+                                                                self.$wire.mcpAppCallTool(toolName, args)
+                                                                    .then(function(result) {
+                                                                        if (self.$refs.frame) self.$refs.frame.contentWindow.postMessage({ jsonrpc: '2.0', id: msg.id, result: result }, '*');
+                                                                    })
+                                                                    .catch(function(err) {
+                                                                        if (self.$refs.frame) self.$refs.frame.contentWindow.postMessage({ jsonrpc: '2.0', id: msg.id, error: { code: -32000, message: err.message || 'Error' } }, '*');
+                                                                    });
+                                                            }
+                                                        };
+                                                        window.addEventListener('message', self._msgHandler);
+                                                        this.$cleanup(function() { window.removeEventListener('message', self._msgHandler); });
+                                                    }
+                                                 }"
+                                                 data-apphtml="{{ base64_encode($mcpHtml) }}">
+                                                <iframe x-ref="frame"
+                                                    sandbox="allow-scripts"
+                                                    style="width:100%;height:420px;border:0;border-radius:8px;background:#0f0f0f;display:block"
+                                                    title="{{ $mcpToolName }} app"></iframe>
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                @endif
                             @else
                                 <p class="text-sm whitespace-pre-wrap">{{ $msg['content'] }}</p>
                             @endif

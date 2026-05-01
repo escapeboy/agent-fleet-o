@@ -21,8 +21,11 @@ return new class extends Migration
         });
 
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement('ALTER TABLE kg_communities ADD COLUMN IF NOT EXISTS summary_embedding vector(1536)');
-            DB::statement('CREATE INDEX IF NOT EXISTS kg_communities_summary_embedding_hnsw ON kg_communities USING hnsw (summary_embedding vector_cosine_ops)');
+            $hasVector = DB::selectOne("SELECT 1 FROM pg_extension WHERE extname = 'vector'");
+            if ($hasVector) {
+                DB::statement('ALTER TABLE kg_communities ADD COLUMN IF NOT EXISTS summary_embedding vector(1536)');
+                DB::statement('CREATE INDEX IF NOT EXISTS kg_communities_summary_embedding_hnsw ON kg_communities USING hnsw (summary_embedding vector_cosine_ops)');
+            }
         }
     }
 

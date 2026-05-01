@@ -126,6 +126,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/experiments/{experiment}/steps', [ExperimentController::class, 'steps']);
     Route::get('/experiments/{experiment}/snapshots', [ExperimentController::class, 'snapshots']);
     Route::get('/experiments/{experiment}/cost', [ExperimentController::class, 'cost']);
+    Route::get('/experiments/{experiment}/trajectory', [ExperimentController::class, 'trajectory']);
 
     // Agents
     Route::apiResource('agents', AgentController::class);

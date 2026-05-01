@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Agent\Models\AiRun;
 use App\Domain\Experiment\Actions\CreateExperimentAction;
+use App\Domain\Experiment\Actions\ExportTrajectoryAction;
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
@@ -27,6 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @tags Experiments
@@ -288,5 +290,28 @@ class ExperimentController extends Controller
             'by_stage' => $byStage,
             'by_model' => $byModel,
         ]);
+    }
+
+    /**
+     * Export an experiment's execution trajectory as CSV or JSONL.
+     *
+     * @response 200 scenario="csv" {"description":"CSV file download"}
+     */
+    public function trajectory(Request $request, Experiment $experiment): StreamedResponse
+    {
+        $request->validate(['format' => 'nullable|string|in:csv,jsonl']);
+
+        if ($experiment->team_id !== $request->user()->current_team_id) {
+            abort(403);
+        }
+
+        $format = $request->input('format', 'csv');
+        $result = (new ExportTrajectoryAction)->execute($experiment, $format);
+
+        return response()->streamDownload(
+            fn () => print ($result['content']),
+            $result['filename'],
+            ['Content-Type' => $result['mime']],
+        );
     }
 }

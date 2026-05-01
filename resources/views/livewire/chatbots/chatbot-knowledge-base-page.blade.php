@@ -38,6 +38,7 @@
                         <div>
                             <x-form-select wire:model.live="sourceType" label="Type">
                                 <option value="url">Web URL</option>
+                                <option value="website">Website (Crawl)</option>
                                 <option value="sitemap">Sitemap</option>
                                 <option value="document">Document</option>
                                 <option value="git_repository">Git Repository</option>
@@ -61,6 +62,9 @@
                     @elseif($sourceType === 'git_repository')
                         <x-form-input wire:model="sourceUrl" label="Repository URL" placeholder="https://github.com/org/repo" />
                         <x-form-input wire:model="sourceBranch" label="Branch" placeholder="main" hint="Leave blank to use main." />
+                    @elseif($sourceType === 'website')
+                        <x-form-input wire:model="sourceUrl" label="Website URL" placeholder="https://example.com" />
+                        <x-form-input wire:model="maxPages" type="number" label="Max Pages" placeholder="30" hint="Maximum pages to crawl (1–100)." />
                     @else
                         <x-form-input wire:model="sourceUrl" label="URL" placeholder="https://example.com/docs" />
                     @endif

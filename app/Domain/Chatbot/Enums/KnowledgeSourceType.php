@@ -8,6 +8,7 @@ enum KnowledgeSourceType: string
     case Url = 'url';
     case Sitemap = 'sitemap';
     case GitRepository = 'git_repository';
+    case Website = 'website';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum KnowledgeSourceType: string
             self::Url => 'URL',
             self::Sitemap => 'Sitemap',
             self::GitRepository => 'Git Repository',
+            self::Website => 'Website (Crawl)',
         };
     }
 }

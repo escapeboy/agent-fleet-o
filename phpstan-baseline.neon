@@ -181,12 +181,6 @@ parameters:
 			path: app/Console/Commands/RecoverStuckTasks.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/RecoverStuckTasks.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:users\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -685,12 +679,6 @@ parameters:
 			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
-
-		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
 			count: 1
@@ -718,12 +706,6 @@ parameters:
 			message: '#^Offset ''step_id'' on string\|null on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 2
-			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
-
-		-
-			message: '#^Parameter \#1 \$experiment of method App\\Domain\\Workflow\\Services\\WorkflowGraphExecutor\:\:execute\(\) expects App\\Domain\\Experiment\\Models\\Experiment, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
 			path: app/Domain/Approval/Actions/CompleteHumanTaskAction.php
 
 		-
@@ -2719,54 +2701,6 @@ parameters:
 			path: app/Domain/Crew/Actions/BuildAdversarialRoundTasksAction.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cost_credits\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$duration_ms\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qa_score\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sort_order\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/CollectCrewArtifactsAction.php
-
-		-
 			message: '#^Parameter \#1 \$key of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:contains\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|Illuminate\\Database\\Eloquent\\Model\|int\|string, Closure\(App\\Domain\\Crew\\Models\\CrewMember\)\: false given\.$#'
 			identifier: argument.type
 			count: 1
@@ -2881,30 +2815,6 @@ parameters:
 			path: app/Domain/Crew/Actions/ExecuteCrewAction.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/SynthesizeResultAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/SynthesizeResultAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qa_score\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/SynthesizeResultAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Crew/Actions/SynthesizeResultAction.php
-
-		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
 			count: 1
@@ -2919,12 +2829,6 @@ parameters:
 		-
 			message: '#^Offset ''process_type'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Crew/Actions/SynthesizeResultAction.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
 			count: 1
 			path: app/Domain/Crew/Actions/SynthesizeResultAction.php
 
@@ -3301,12 +3205,6 @@ parameters:
 			path: app/Domain/Crew/Services/CrewContextCompactor.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: non\-falsy\-string, Closure\(App\\Domain\\Crew\\Models\\CrewTaskExecution\)\: non\-falsy\-string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Crew/Services/CrewContextCompactor.php
-
-		-
 			message: '#^Result of \|\| is always false\.$#'
 			identifier: booleanOr.alwaysFalse
 			count: 1
@@ -3667,10 +3565,34 @@ parameters:
 			path: app/Domain/Evolution/Actions/ProposeCrewRestructuringAction.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Experiment/Actions/ExportTrajectoryAction.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Domain/Experiment/Actions/ExportTrajectoryAction.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Experiment/Actions/ExportTrajectoryAction.php
+
+		-
+			message: '#^Parameter \#1 \$output of method App\\Domain\\Experiment\\Actions\\ExportTrajectoryAction\:\:extractText\(\) expects array\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Domain/Experiment/Actions/ExportTrajectoryAction.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 3
-			path: app/Domain/Experiment/Actions/CollectWorkflowArtifactsAction.php
+			path: app/Domain/Experiment/Actions/ExportTrajectoryAction.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
@@ -4087,12 +4009,6 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/ExecuteOutbound.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
-
-		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
@@ -4111,19 +4027,7 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
-			message: '#^Parameter \$agent of method App\\Domain\\Agent\\Actions\\ExecuteAgentAction\:\:execute\(\) expects App\\Domain\\Agent\\Models\\Agent, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
-
-		-
 			message: '#^Parameter \$guardrailSkill of method App\\Domain\\Skill\\Actions\\ExecuteGuardrailAction\:\:execute\(\) expects App\\Domain\\Skill\\Models\\Skill, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
-
-		-
-			message: '#^Parameter \$skill of method App\\Domain\\Skill\\Actions\\ExecuteSkillAction\:\:execute\(\) expects App\\Domain\\Skill\\Models\\Skill, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
@@ -4933,6 +4837,12 @@ parameters:
 			path: app/Domain/Integration/Models/WebhookRoute.php
 
 		-
+			message: '#^Unsafe call to private method App\\Domain\\Integration\\Services\\WebclawResolver\:\:resolveApiKey\(\) through static\:\:\.$#'
+			identifier: staticClassAccess.privateMethod
+			count: 1
+			path: app/Domain/Integration/Services/WebclawResolver.php
+
+		-
 			message: '#^Offset ''api_key'' on string in isset\(\) does not exist\.$#'
 			identifier: isset.offset
 			count: 1
@@ -4975,6 +4885,12 @@ parameters:
 			path: app/Domain/KnowledgeGraph/Actions/AddKnowledgeFactAction.php
 
 		-
+			message: '#^Property App\\Infrastructure\\AI\\DTOs\\AiResponseDTO\:\:\$content \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/BuildKgCommunitiesAction.php
+
+		-
 			message: '#^Parameter \#2 \$b of method App\\Domain\\KnowledgeGraph\\Actions\\DetectContradictionAction\:\:cosineSimilarity\(\) expects array, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -5011,6 +4927,18 @@ parameters:
 			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
 
 		-
+			message: '#^Offset ''relation'' on array\{source_entity\: string, source_type\: string, relation\: string, target_entity\: string, target_type\: string, fact\: string, valid_at\: string\|null, confidence\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''source_entity'' on array\{source_entity\: string, source_type\: string, relation\: string, target_entity\: string, target_type\: string, fact\: string, valid_at\: string\|null, confidence\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
 			message: '#^Offset ''subject'' on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -5020,6 +4948,12 @@ parameters:
 			message: '#^Offset ''summary'' on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Offset ''target_entity'' on array\{source_entity\: string, source_type\: string, relation\: string, target_entity\: string, target_type\: string, fact\: string, valid_at\: string\|null, confidence\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
 			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
 
 		-
@@ -5049,8 +4983,14 @@ parameters:
 		-
 			message: '#^Property App\\Infrastructure\\AI\\DTOs\\AiResponseDTO\:\:\$content \(string\) on left side of \?\? is not nullable\.$#'
 			identifier: nullCoalesce.property
-			count: 1
+			count: 2
 			path: app/Domain/KnowledgeGraph/Actions/ExtractKnowledgeEdgesAction.php
+
+		-
+			message: '#^Cannot call method gt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/KnowledgeGraph/Actions/MergeEntitiesAction.php
 
 		-
 			message: '#^Property App\\Infrastructure\\AI\\DTOs\\AiResponseDTO\:\:\$content \(string\) on left side of \?\? is not nullable\.$#'
@@ -5087,6 +5027,12 @@ parameters:
 			identifier: method.staticCall
 			count: 1
 			path: app/Domain/KnowledgeGraph/Actions/UpdateKnowledgeFactAction.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between int\<1, max\> and 0 will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/KnowledgeGraph/Services/KnowledgeGraphTraversal.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
@@ -10153,12 +10099,6 @@ parameters:
 			path: app/Domain/Workflow/Actions/RunCompensationChainAction.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Workflow/Actions/SuggestWorkflowAction.php
-
-		-
 			message: '#^Property App\\Domain\\Workflow\\Models\\Workflow\:\:\$settings \(string\) does not accept array\<mixed, mixed\>\.$#'
 			identifier: assign.propertyType
 			count: 1
@@ -10615,24 +10555,6 @@ parameters:
 			path: app/Domain/Workflow/Services/WorkflowSuggestionEngine.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$model\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Workflow/Services/WorkflowSuggestionEngine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Domain/Workflow/Services/WorkflowSuggestionEngine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Workflow/Services/WorkflowSuggestionEngine.php
-
-		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
@@ -10641,7 +10563,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 1
+			count: 2
 			path: app/Domain/Workflow/Services/WorkflowSuggestionEngine.php
 
 		-
@@ -15055,6 +14977,12 @@ parameters:
 			path: app/Livewire/Assistant/AssistantPanel.php
 
 		-
+			message: '#^Parameter \#1 \$toolCalls of method App\\Livewire\\Assistant\\AssistantPanel\:\:extractMcpAppUris\(\) expects array\<int, array\{toolName\: string\}\>\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/Assistant/AssistantPanel.php
+
+		-
 			message: '#^Result of \|\| is always false\.$#'
 			identifier: booleanOr.alwaysFalse
 			count: 1
@@ -15307,21 +15235,9 @@ parameters:
 			path: app/Livewire/Crews/CrewExecutionPage.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Livewire/Crews/CrewExecutionPanel.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isValidated\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Livewire/Crews/CrewExecutionPanel.php
-
-		-
 			message: '#^Cannot call method isActive\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 1
+			count: 2
 			path: app/Livewire/Crews/CrewExecutionPanel.php
 
 		-
@@ -15332,6 +15248,18 @@ parameters:
 
 		-
 			message: '#^Strict comparison using \=\=\= between '''' and ''chat_room'' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Livewire/Crews/CrewExecutionPanel.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Crew\\Enums\\CrewTaskStatus\:\:Failed will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Livewire/Crews/CrewExecutionPanel.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Crew\\Enums\\CrewTaskStatus\:\:QaFailed will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Livewire/Crews/CrewExecutionPanel.php
@@ -15471,7 +15399,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 1
 			path: app/Livewire/Experiments/ExperimentTasksPanel.php
 
 		-
@@ -15489,7 +15417,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$provider\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: app/Livewire/Experiments/ExperimentTasksPanel.php
 
 		-
@@ -15513,12 +15441,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Livewire/Experiments/ExperimentTasksPanel.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
 			count: 1
 			path: app/Livewire/Experiments/ExperimentTasksPanel.php
 
@@ -16639,6 +16561,18 @@ parameters:
 			path: app/Mcp/ErrorClassifier.php
 
 		-
+			message: '#^Call to an undefined method App\\Mcp\\McpAppResource\:\:handle\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Services/McpAppRegistry.php
+
+		-
+			message: '#^Offset ''toolName'' on array\{toolName\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Services/McpAppRegistry.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -17407,6 +17341,12 @@ parameters:
 			path: app/Mcp/Tools/Chatbot/ChatbotGetTool.php
 
 		-
+			message: '#^Method Laravel\\Mcp\\Request\:\:get\(\) invoked with 0 parameters, 1\-2 required\.$#'
+			identifier: arguments.count
+			count: 1
+			path: app/Mcp/Tools/Chatbot/ChatbotKnowledgeSourceCreateTool.php
+
+		-
 			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Support\\Carbon\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -17479,6 +17419,24 @@ parameters:
 			path: app/Mcp/Tools/Credential/CredentialRotateTool.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewBeliefTrajectoryTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewBeliefTrajectoryTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Crew\\Models\\CrewTaskExecution\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewBeliefTrajectoryTool.php
+
+		-
 			message: '#^Invalid array key type float\.$#'
 			identifier: array.invalidKey
 			count: 1
@@ -17527,42 +17485,6 @@ parameters:
 			path: app/Mcp/Tools/Crew/CrewExecutionResumeTool.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$completed_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sort_order\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$started_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
-
-		-
 			message: '#^Call to function is_array\(\) with non\-falsy\-string will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 2
@@ -17571,11 +17493,17 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 1
+			count: 2
 			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Crew\\Models\\CrewTaskExecution\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
@@ -19531,6 +19459,12 @@ parameters:
 			path: app/Mcp/Tools/Signal/KgSearchTool.php
 
 		-
+			message: '#^Parameter \#1 \$array \(list\<array\{canonical_id\: string, canonical_name\: string\|null, canonical_type\: string\|null, canonical_mentions\: int\<0, max\>\|null, duplicate_id\: string, duplicate_name\: string\|null, duplicate_type\: string\|null, duplicate_mentions\: int\<0, max\>\|null, \.\.\.\}\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Mcp/Tools/Signal/KgSuggestMergesTool.php
+
+		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -19553,6 +19487,18 @@ parameters:
 			identifier: unset.offset
 			count: 1
 			path: app/Mcp/Tools/Signal/SignalIntentReclassifyTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Signal\\WebclawCrawlTool\:\:internalError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Signal/WebclawCrawlTool.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 1
+			path: app/Mcp/Tools/Signal/WebclawCrawlTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'

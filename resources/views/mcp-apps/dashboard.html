@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FleetQ Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: var(--color-background-primary, #0f0f0f);
+    --bg2: var(--color-background-secondary, #1a1a1a);
+    --bg3: var(--color-background-tertiary, #242424);
+    --text: var(--color-text-primary, #f5f5f5);
+    --text2: var(--color-text-secondary, #a0a0a0);
+    --border: var(--color-border-primary, #2e2e2e);
+    --accent: var(--color-accent-primary, #6366f1);
+    --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+    --font: var(--font-sans, system-ui, -apple-system, sans-serif);
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.5; padding: 12px; min-height: 100vh; }
+  .title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 6px; margin-top: 14px; }
+  .section-label:first-of-type { margin-top: 0; }
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+  .kpi-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+  .kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .kpi-card.accent { border-color: var(--accent); }
+  .kpi-card.success { border-color: var(--success); }
+  .kpi-card.danger { border-color: var(--danger); }
+  .kpi-card.warning { border-color: var(--warning); }
+  .kpi-val { font-size: 22px; font-weight: 700; line-height: 1.1; }
+  .kpi-lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+  .kpi-val.success { color: var(--success); }
+  .kpi-val.danger  { color: var(--danger); }
+  .kpi-val.warning { color: var(--warning); }
+  .kpi-val.accent  { color: var(--accent); }
+  .bridge-row { display: flex; align-items: center; gap: 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 4px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-on  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .dot-off { background: var(--text2); }
+  .bridge-label { font-size: 12px; font-weight: 600; flex: 1; }
+  .bridge-meta { font-size: 11px; color: var(--text2); }
+  .exp-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .mini-stat { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; text-align: center; }
+  .mini-val { font-size: 15px; font-weight: 700; }
+  .mini-lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 4px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading { text-align: center; color: var(--text2); padding: 48px 0; }
+  .empty-msg { color: var(--text2); font-size: 12px; padding: 24px 0; text-align: center; }
+  .refresh-row { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .btn { border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 500; cursor: pointer; font-family: var(--font); background: var(--bg3); color: var(--text); border: 1px solid var(--border); transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.8; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .last-updated { font-size: 10px; color: var(--text2); margin-right: 8px; line-height: 1; align-self: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  'use strict';
+
+  var _id = 1, _pending = {}, _handlers = {};
+  function mcpSend(method, params) { window.parent.postMessage({ jsonrpc: '2.0', method: method, params: params || {} }, '*'); }
+  function mcpRequest(method, params) {
+    return new Promise(function (resolve, reject) {
+      var id = _id++;
+      _pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ jsonrpc: '2.0', id: id, method: method, params: params || {} }, '*');
+      setTimeout(function () { if (_pending[id]) { delete _pending[id]; reject(new Error('Timeout')); } }, 30000);
+    });
+  }
+  window.addEventListener('message', function (e) {
+    var msg = e.data;
+    if (!msg || msg.jsonrpc !== '2.0') return;
+    if (msg.id && _pending[msg.id]) {
+      var cb = _pending[msg.id]; delete _pending[msg.id];
+      if (msg.error) cb.reject(new Error(msg.error.message || 'MCP error'));
+      else cb.resolve(msg.result); return;
+    }
+    if (msg.method && _handlers[msg.method]) _handlers[msg.method](msg.params);
+  });
+  function callTool(name, args) { return mcpRequest('tools/call', { name: name, arguments: args || {} }); }
+
+  var root = document.getElementById('root');
+  var lastUpdated = null;
+  var refreshBtn = null;
+  var initialDataReceived = false;
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function clearEl(c) { while (c.firstChild) c.removeChild(c.firstChild); }
+  function showLoading(msg) { clearEl(root); var d = el('div', 'loading'); var sp = el('span', 'spinner'); d.appendChild(sp); d.appendChild(document.createTextNode(' ' + (msg || 'Loading…'))); root.appendChild(d); }
+  function showEmpty(msg) { clearEl(root); root.appendChild(el('div', 'empty-msg', msg)); }
+  function fmtNum(n) { return n !== null && n !== undefined ? Number(n).toLocaleString() : '—'; }
+  function fmtTime(s) {
+    if (!s) return '—';
+    try { var d = new Date(s); return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (_) { return s; }
+  }
+
+  function kpiCard(val, lbl, valCls, cardCls) {
+    var card = el('div', 'kpi-card' + (cardCls ? ' ' + cardCls : ''));
+    card.appendChild(el('div', 'kpi-val' + (valCls ? ' ' + valCls : ''), String(val !== null && val !== undefined ? val : '—')));
+    card.appendChild(el('div', 'kpi-lbl', lbl));
+    return card;
+  }
+
+  function miniStat(val, lbl, valCls) {
+    var s = el('div', 'mini-stat');
+    var v = el('div', 'mini-val' + (valCls ? ' ' + valCls : ''), String(val !== null && val !== undefined ? val : '—'));
+    s.appendChild(v);
+    s.appendChild(el('div', 'mini-lbl', lbl));
+    return s;
+  }
+
+  function render(d) {
+    clearEl(root);
+
+    var titleEl = el('div', 'title', 'FleetQ Dashboard');
+    root.appendChild(titleEl);
+
+    // Refresh row
+    var rr = el('div', 'refresh-row');
+    var tsEl = el('span', 'last-updated');
+    tsEl.id = 'last-updated';
+    if (lastUpdated) tsEl.textContent = 'Updated ' + lastUpdated;
+    rr.appendChild(tsEl);
+    refreshBtn = el('button', 'btn', 'Refresh');
+    refreshBtn.addEventListener('click', function () { loadDashboard(); });
+    rr.appendChild(refreshBtn);
+    root.appendChild(rr);
+
+    // Experiments
+    root.appendChild(el('div', 'section-label', 'Experiments'));
+    var exp = d.experiments || {};
+    var expTotal = exp.total || 0;
+    var expRunning = exp.running || 0;
+    var expCompleted = exp.completed || 0;
+    var expFailed = exp.failed || 0;
+    var expPaused = exp.paused || 0;
+
+    var topGrid = el('div', 'kpi-grid');
+    topGrid.appendChild(kpiCard(fmtNum(expTotal), 'Total', '', ''));
+    topGrid.appendChild(kpiCard(fmtNum(expRunning), 'Running', expRunning > 0 ? 'accent' : '', expRunning > 0 ? 'accent' : ''));
+    root.appendChild(topGrid);
+
+    var expRow = el('div', 'exp-row');
+    expRow.appendChild(miniStat(fmtNum(expCompleted), 'Completed', 'success'));
+    expRow.appendChild(miniStat(fmtNum(expFailed), 'Failed', expFailed > 0 ? 'danger' : ''));
+    expRow.appendChild(miniStat(fmtNum(expPaused), 'Paused', expPaused > 0 ? 'warning' : ''));
+    root.appendChild(expRow);
+
+    // Agents
+    root.appendChild(el('div', 'section-label', 'Agents'));
+    var agt = d.agents || {};
+    var agtGrid = el('div', 'kpi-grid');
+    agtGrid.appendChild(kpiCard(fmtNum(agt.total), 'Total', '', ''));
+    agtGrid.appendChild(kpiCard(fmtNum(agt.active), 'Active', agt.active > 0 ? 'success' : '', agt.active > 0 ? 'success' : ''));
+    root.appendChild(agtGrid);
+
+    // Projects
+    root.appendChild(el('div', 'section-label', 'Projects'));
+    var proj = d.projects || {};
+    var projGrid = el('div', 'kpi-grid');
+    projGrid.appendChild(kpiCard(fmtNum(proj.total), 'Total', '', ''));
+    projGrid.appendChild(kpiCard(fmtNum(proj.active), 'Active', proj.active > 0 ? 'accent' : '', proj.active > 0 ? 'accent' : ''));
+    root.appendChild(projGrid);
+
+    // Bridge
+    root.appendChild(el('div', 'section-label', 'Bridge'));
+    var br = d.bridge || {};
+    var connected = !!br.connected;
+    var bridgeRow = el('div', 'bridge-row');
+    bridgeRow.appendChild(el('span', 'dot ' + (connected ? 'dot-on' : 'dot-off')));
+    bridgeRow.appendChild(el('span', 'bridge-label', connected ? 'Connected' : 'Disconnected'));
+    if (connected) {
+      var meta = el('span', 'bridge-meta');
+      var parts = [];
+      if (br.llm_count !== undefined) parts.push(fmtNum(br.llm_count) + ' LLMs');
+      if (br.agent_count !== undefined) parts.push(fmtNum(br.agent_count) + ' agents');
+      if (br.last_seen_at) parts.push(fmtTime(br.last_seen_at));
+      meta.textContent = parts.join(' · ');
+      bridgeRow.appendChild(meta);
+    }
+    root.appendChild(bridgeRow);
+  }
+
+  function loadDashboard() {
+    if (refreshBtn) refreshBtn.disabled = true;
+    if (!initialDataReceived) showLoading('Loading dashboard…');
+    callTool('system_dashboard_kpis', {})
+      .then(function (result) {
+        var text = result && result.content && result.content[0] && result.content[0].text;
+        if (!text) throw new Error('Empty response');
+        var d = JSON.parse(text);
+        lastUpdated = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        initialDataReceived = true;
+        render(d);
+      })
+      .catch(function (err) { if (!initialDataReceived) showEmpty('Failed: ' + err.message); })
+      .finally(function () { if (refreshBtn) refreshBtn.disabled = false; });
+  }
+
+  _handlers['ui/notifications/tool-result'] = function (params) {
+    var text = params && params.content && params.content[0] && params.content[0].text;
+    if (!text) return;
+    try {
+      var d = JSON.parse(text);
+      if (d.experiments !== undefined || d.agents !== undefined) {
+        lastUpdated = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        initialDataReceived = true;
+        render(d);
+      }
+    } catch (_) {}
+  };
+
+  showLoading('Connecting…');
+  mcpRequest('ui/initialize', { protocolVersion: '2026-01-26', clientInfo: { name: 'fleetq-dashboard', version: '1.0.0' }, appCapabilities: {} })
+    .then(function () { mcpSend('ui/notifications/initialized', {}); })
+    .catch(function () {})
+    .finally(function () {
+      setTimeout(function () { if (!initialDataReceived) loadDashboard(); }, 600);
+    });
+
+})();
+</script>
+</body>
+</html>

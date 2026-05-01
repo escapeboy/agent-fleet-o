@@ -8,6 +8,7 @@ use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Shared\Enums\TeamRole;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Mcp\Services\McpAppRegistry;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -341,6 +342,7 @@ class AssistantPanel extends Component
                     'cost_credits' => $msg->token_usage['cost_credits'] ?? 0,
                     'a2ui_surfaces' => $metadata['a2ui_surfaces'] ?? [],
                     'citations' => $metadata['citations'] ?? [],
+                    'mcp_app_uris' => $this->extractMcpAppUris($msg->tool_calls),
                 ];
             }
 
@@ -383,6 +385,7 @@ class AssistantPanel extends Component
                 'cost_credits' => $m->token_usage['cost_credits'] ?? 0,
                 'a2ui_surfaces' => $m->metadata['a2ui_surfaces'] ?? [],
                 'citations' => $m->metadata['citations'] ?? [],
+                'mcp_app_uris' => $this->extractMcpAppUris($m->tool_calls),
             ])
             ->toArray();
 
@@ -487,6 +490,31 @@ class AssistantPanel extends Component
                 'Create a Slack outbound connector for sales alerts',
             ],
         ];
+    }
+
+    /**
+     * Called by the AssistantPanel postMessage bridge when an MCP App iframe
+     * invokes a tools/call request. Rate-limited to 30 calls/min per user.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array{content?: list<array{type: string, text: string}>, error?: string}
+     */
+    public function mcpAppCallTool(string $toolName, array $params = []): array
+    {
+        return McpAppRegistry::callTool($toolName, $params);
+    }
+
+    /**
+     * @param  array<int, array{toolName: string}>|null  $toolCalls
+     * @return array<string, string>  Map of toolName => uri://
+     */
+    private function extractMcpAppUris(?array $toolCalls): array
+    {
+        if (! $toolCalls) {
+            return [];
+        }
+
+        return McpAppRegistry::extractUris($toolCalls);
     }
 
     public function render()

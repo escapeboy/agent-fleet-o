@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\Concerns\HasMcpAppUi;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -16,8 +17,14 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 class ExperimentGetTool extends Tool
 {
     use HasStructuredErrors;
+    use HasMcpAppUi;
 
     protected string $name = 'experiment_get';
+
+    protected function uiResourceUri(): string
+    {
+        return 'ui://fleetq/experiment-detail';
+    }
 
     protected string $description = 'Get detailed information about a specific experiment including stages, thesis, budget, and iteration info.';
 
