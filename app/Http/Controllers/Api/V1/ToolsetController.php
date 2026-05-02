@@ -8,6 +8,7 @@ use App\Domain\Tool\Actions\UpdateToolsetAction;
 use App\Domain\Tool\Models\Toolset;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 
 /**
@@ -34,23 +35,22 @@ class ToolsetController extends Controller
 
     public function store(Request $request, CreateToolsetAction $action): JsonResponse
     {
+        $teamId = $request->user()->current_team_id;
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:2000',
             'tool_ids' => 'array',
-            'tool_ids.*' => 'uuid|exists:tools,id',
+            'tool_ids.*' => ['uuid', Rule::exists('tools', 'id')->where('team_id', $teamId)],
             'tags' => 'array',
             'tags.*' => 'string|max:50',
-            'is_platform' => 'boolean',
         ]);
 
         $toolset = $action->execute(
-            teamId: $request->user()->current_team_id,
+            teamId: $teamId,
             name: $validated['name'],
             description: $validated['description'] ?? '',
             toolIds: $validated['tool_ids'] ?? [],
             tags: $validated['tags'] ?? [],
-            isPlatform: $validated['is_platform'] ?? false,
             createdBy: $request->user()->id,
         );
 
@@ -59,14 +59,14 @@ class ToolsetController extends Controller
 
     public function update(Request $request, Toolset $toolset, UpdateToolsetAction $action): JsonResponse
     {
+        $teamId = $request->user()->current_team_id;
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string|max:2000',
             'tool_ids' => 'array',
-            'tool_ids.*' => 'uuid|exists:tools,id',
+            'tool_ids.*' => ['uuid', Rule::exists('tools', 'id')->where('team_id', $teamId)],
             'tags' => 'array',
             'tags.*' => 'string|max:50',
-            'is_platform' => 'boolean',
         ]);
 
         $toolset = $action->execute($toolset, $validated);
