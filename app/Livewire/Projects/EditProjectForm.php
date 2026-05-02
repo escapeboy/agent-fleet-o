@@ -133,11 +133,13 @@ class EditProjectForm extends Component
 
     protected function rules(): array
     {
+        $teamId = auth()->user()->current_team_id;
+
         $rules = [
             'title' => 'required|min:2|max:255',
             'description' => 'nullable|max:2000',
-            'workflowId' => 'nullable|exists:workflows,id',
-            'agentId' => $this->workflowId ? 'nullable' : 'required|exists:agents,id',
+            'workflowId' => "nullable|exists:workflows,id,team_id,{$teamId}",
+            'agentId' => $this->workflowId ? 'nullable' : "required|exists:agents,id,team_id,{$teamId}",
         ];
 
         if ($this->project->isContinuous()) {

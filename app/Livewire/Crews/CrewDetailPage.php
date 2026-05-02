@@ -168,10 +168,12 @@ class CrewDetailPage extends Component
 
     public function save(UpdateCrewAction $action): void
     {
+        $teamId = auth()->user()->current_team_id;
+
         $this->validate([
             'editName' => 'required|min:2|max:255',
-            'editCoordinatorId' => 'required|exists:agents,id',
-            'editQaId' => 'required|exists:agents,id|different:editCoordinatorId',
+            'editCoordinatorId' => "required|exists:agents,id,team_id,{$teamId}",
+            'editQaId' => "required|exists:agents,id,team_id,{$teamId}|different:editCoordinatorId",
             'editProcessType' => 'required|in:sequential,parallel,hierarchical',
             'editMaxIterations' => 'required|integer|min:1|max:10',
             'editQualityThreshold' => 'required|numeric|min:0|max:1',

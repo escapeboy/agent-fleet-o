@@ -57,10 +57,12 @@ class CreateTriggerRuleForm extends Component
 
     public function save(CreateTriggerRuleAction $action): void
     {
+        $teamId = auth()->user()->current_team_id;
+
         $this->validate([
             'name' => 'required|string|max:255',
             'source_type' => 'required|string',
-            'project_id' => 'nullable|uuid|exists:projects,id',
+            'project_id' => "nullable|uuid|exists:projects,id,team_id,{$teamId}",
             'cooldown_seconds' => 'integer|min:0|max:86400',
             'max_concurrent' => 'integer|min:-1|max:10',
             'conditionRows.*.field' => 'required_with:conditionRows.*.operator|string|regex:/^[a-zA-Z0-9_.]+$/',

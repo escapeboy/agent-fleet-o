@@ -70,12 +70,14 @@ class CreateProjectForm extends Component
 
     protected function rules(): array
     {
+        $teamId = auth()->user()->current_team_id;
+
         $rules = [
             'title' => 'required|min:2|max:255',
             'description' => 'required|max:2000',
             'type' => 'required|in:one_shot,continuous',
-            'agentId' => $this->workflowId ? 'nullable' : 'required|exists:agents,id',
-            'workflowId' => 'nullable|exists:workflows,id',
+            'agentId' => $this->workflowId ? 'nullable' : "required|exists:agents,id,team_id,{$teamId}",
+            'workflowId' => "nullable|exists:workflows,id,team_id,{$teamId}",
         ];
 
         if ($this->deliveryChannel !== 'none') {

@@ -78,18 +78,23 @@ class ProjectCreateTool extends Tool
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return $this->permissionDeniedError('No current team.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'nullable|string|in:one_shot,continuous',
             'goal' => 'nullable|string',
             'execution_mode' => 'nullable|string|in:autonomous,watcher',
-            'workflow_id' => 'nullable|uuid|exists:workflows,id',
-            'crew_id' => 'nullable|uuid|exists:crews,id',
+            'workflow_id' => "nullable|uuid|exists:workflows,id,team_id,{$teamId}",
+            'crew_id' => "nullable|uuid|exists:crews,id,team_id,{$teamId}",
             'allowed_tool_ids' => 'nullable|array',
-            'allowed_tool_ids.*' => 'uuid|exists:tools,id',
+            'allowed_tool_ids.*' => "uuid|exists:tools,id,team_id,{$teamId}",
             'allowed_credential_ids' => 'nullable|array',
-            'allowed_credential_ids.*' => 'uuid|exists:credentials,id',
+            'allowed_credential_ids.*' => "uuid|exists:credentials,id,team_id,{$teamId}",
             'schedule' => 'nullable|array',
             'schedule.frequency' => 'nullable|string|in:every_5_minutes,every_10_minutes,every_15_minutes,every_30_minutes,hourly,daily,weekly,monthly,cron,once',
             'schedule.cron_expression' => 'nullable|string',
@@ -99,10 +104,6 @@ class ProjectCreateTool extends Tool
             'schedule.catchup_missed' => 'nullable|boolean',
             'schedule.run_immediately' => 'nullable|boolean',
         ]);
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-        if (! $teamId) {
-            return $this->permissionDeniedError('No current team.');
-        }
 
         try {
             $project = app(CreateProjectAction::class)->execute(
