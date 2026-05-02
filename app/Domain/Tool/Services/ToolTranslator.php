@@ -186,6 +186,7 @@ class ToolTranslator
             BuiltInToolKind::BrowserRelay => $this->buildBrowserRelayTools($tool),
             BuiltInToolKind::ComputerUse => $this->buildComputerUseTools($tool),
             BuiltInToolKind::BrowserUseCloud => $this->buildBrowserUseCloudTools($tool),
+            BuiltInToolKind::ExecuteCode => $this->buildExecuteCodeTools($tool, $workspace),
             default => [],
         };
     }
@@ -1021,5 +1022,30 @@ class ToolTranslator
 
         // Fallback: raw proxy_url in transport_config (for manual/legacy config).
         return $config['proxy_url'] ?? null;
+    }
+
+    private function buildExecuteCodeTools(Tool $tool, ?SandboxedWorkspace $workspace = null): array
+    {
+        $timeout = $tool->settings['timeout'] ?? 30;
+
+        return [
+            PrismTool::as('execute_code')
+                ->for('Execute Python code in a sandboxed environment. No network access. Returns stdout, stderr, exit_code.')
+                ->withStringParameter('code', 'Python code to execute', required: true)
+                ->withNumberParameter('timeout_seconds', 'Execution timeout in seconds (max 120, default 30)', required: false)
+                ->using(function (string $code, ?float $timeout_seconds = null) use ($workspace, $timeout, $tool): string {
+                    $effectiveTimeout = $timeout_seconds !== null ? (int) $timeout_seconds : $timeout;
+
+                    $handler = app(\App\Domain\Tool\Services\BuiltIn\ExecuteCodeHandler::class);
+                    $result = $handler->execute($code, $effectiveTimeout, $workspace);
+
+                    return json_encode([
+                        'stdout' => $result['stdout'],
+                        'stderr' => $result['stderr'],
+                        'exit_code' => $result['exit_code'],
+                        'successful' => $result['successful'],
+                    ]);
+                }),
+        ];
     }
 }

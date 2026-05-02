@@ -72,6 +72,9 @@ Schedule::command('memory:prune')->dailyAt('03:15')->withoutOverlapping(30);
 // Agent feedback analysis — weekly batch generates EvolutionProposals for underperforming agents
 Schedule::command('agents:analyze-feedback')->weeklyOn(1, '06:00');
 
+// GEPA skill evolution cycle — generates and evaluates system_prompt mutations for mature skills
+Schedule::command('skills:evolve')->weeklyOn(0, '03:00')->withoutOverlapping(120);
+
 // Skill degradation monitor — hourly scan creates EvolutionProposals for underperforming skills
 Schedule::command('skills:monitor-degradation')->hourly();
 

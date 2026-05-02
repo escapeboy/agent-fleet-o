@@ -129,6 +129,19 @@ class ResolveAgentToolsAction
             $agentTools = $agentTools->merge($federatedTools)->unique('id');
         }
 
+        // Toolset expansion: merge tools from all toolsets attached to the agent.
+        $toolsets = $agent->toolsets;
+        if ($toolsets->isNotEmpty()) {
+            $toolsetToolIds = $toolsets->flatMap(fn ($ts) => $ts->tool_ids ?? [])->unique()->values()->toArray();
+            if (! empty($toolsetToolIds)) {
+                $toolsetTools = Tool::whereIn('id', $toolsetToolIds)
+                    ->where('team_id', $agent->team_id)
+                    ->where('status', ToolStatus::Active->value)
+                    ->get();
+                $agentTools = $agentTools->merge($toolsetTools)->unique('id')->values();
+            }
+        }
+
         // Tool search: auto-discover team-wide tools via semantic match when enabled.
         // Opt-in via use_tool_search config flag; requires a semanticQuery to be provided.
         // Merges up to tool_search_top_k (default 5) new tools, deduplicated against existing.
