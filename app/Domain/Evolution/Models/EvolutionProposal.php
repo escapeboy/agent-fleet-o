@@ -5,6 +5,7 @@ namespace App\Domain\Evolution\Models;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
+use App\Domain\Evolution\Enums\EvolutionType;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Skill\Models\Skill;
 use App\Models\User;
@@ -49,6 +50,8 @@ class EvolutionProposal extends Model
         'reviewed_at',
         'complexity_delta',
         'complexity_penalty_applied',
+        'evolution_type',
+        'mutation_variant',
     ];
 
     protected function casts(): array
@@ -61,6 +64,8 @@ class EvolutionProposal extends Model
             'trigger' => 'string',
             'complexity_delta' => 'integer',
             'complexity_penalty_applied' => 'float',
+            'evolution_type' => EvolutionType::class,
+            'mutation_variant' => 'array',
         ];
     }
 

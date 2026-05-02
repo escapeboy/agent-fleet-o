@@ -110,6 +110,9 @@ use App\Livewire\Tools\FederationGroupsPage;
 use App\Livewire\Tools\McpMarketplacePage;
 use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
+use App\Livewire\Toolsets\CreateToolsetForm;
+use App\Livewire\Toolsets\ToolsetDetailPage;
+use App\Livewire\Toolsets\ToolsetListPage;
 use App\Livewire\Tools\ToolSearchHistoryPage;
 use App\Livewire\Tools\ToolTemplateCatalogPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
@@ -288,6 +291,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/chatbots/{chatbot}/conversations', ChatbotConversationListPage::class)->name('chatbots.conversations');
     Route::get('/chatbots/{chatbot}/knowledge', ChatbotKnowledgeBasePage::class)->name('chatbots.knowledge');
     Route::get('/chatbots/{chatbot}', ChatbotDetailPage::class)->name('chatbots.show');
+
+    Route::get('/toolsets', ToolsetListPage::class)->name('toolsets.index');
+    Route::get('/toolsets/create', CreateToolsetForm::class)->name('toolsets.create');
+    Route::get('/toolsets/{toolset}', ToolsetDetailPage::class)->name('toolsets.show');
 
     Route::get('/tools', ToolListPage::class)->name('tools.index');
     Route::get('/tools/create', CreateToolForm::class)->name('tools.create');

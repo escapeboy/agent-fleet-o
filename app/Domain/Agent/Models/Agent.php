@@ -14,6 +14,7 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Models\Toolset;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Models\User;
@@ -182,6 +183,13 @@ class Agent extends Model
             ->withPivot('priority', 'overrides', 'approval_mode', 'approval_timeout_minutes', 'approval_timeout_action')
             ->withTimestamps()
             ->orderByPivot('priority');
+    }
+
+    public function toolsets(): BelongsToMany
+    {
+        return $this->belongsToMany(Toolset::class, 'agent_toolset')
+            ->withPivot('priority', 'auto_select')
+            ->withTimestamps();
     }
 
     public function hooks(): HasMany

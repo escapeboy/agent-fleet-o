@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AgentChatController;
 use App\Http\Controllers\Api\V1\AgentChatSessionController;
 use App\Http\Controllers\Api\V1\AgentController;
+use App\Http\Controllers\Api\V1\AgentManifestController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AssistantController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\Api\V1\SshFingerprintController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ToolController;
 use App\Http\Controllers\Api\V1\ToolFederationGroupController;
+use App\Http\Controllers\Api\V1\ToolsetController;
 use App\Http\Controllers\Api\V1\ToolTemplateController;
 use App\Http\Controllers\Api\V1\TriggerController;
 use App\Http\Controllers\Api\V1\VoiceSessionController;
@@ -130,6 +132,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Agents
     Route::apiResource('agents', AgentController::class);
+    Route::get('/agents/{agent}/a2a', [AgentManifestController::class, 'a2a']);
     Route::patch('/agents/{agent}/status', [AgentController::class, 'toggleStatus']);
     Route::get('/agents/{agent}/config-history', [AgentController::class, 'configHistory']);
     Route::post('/agents/{agent}/rollback', [AgentController::class, 'rollback']);
@@ -161,6 +164,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Tools
     Route::apiResource('tools', ToolController::class);
+    Route::apiResource('toolsets', ToolsetController::class);
     Route::apiResource('tool-federation-groups', ToolFederationGroupController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('/ssh-fingerprints', [SshFingerprintController::class, 'index']);
 

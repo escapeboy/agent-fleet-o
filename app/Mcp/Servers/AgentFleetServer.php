@@ -190,6 +190,9 @@ use App\Mcp\Tools\Evolution\EvolutionDeleteTool;
 use App\Mcp\Tools\Evolution\EvolutionGetTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
 use App\Mcp\Tools\Evolution\EvolutionRejectTool;
+use App\Mcp\Tools\Evolution\SkillEvolveTool;
+use App\Mcp\Tools\Evolution\SkillMutationApplyTool;
+use App\Mcp\Tools\Evolution\SkillMutationListTool;
 use App\Mcp\Tools\Experiment\ExperimentContextHealthTool;
 use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
@@ -411,6 +414,7 @@ use App\Mcp\Tools\Skill\SkillPlaygroundTestTool;
 use App\Mcp\Tools\Skill\SkillQualityTool;
 use App\Mcp\Tools\Skill\SkillSearchTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
+use App\Mcp\Tools\Skill\SkillTrajectoryExtractTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
 use App\Mcp\Tools\System\AuditLogTool;
@@ -448,6 +452,11 @@ use App\Mcp\Tools\Tool\ToolProfileListTool;
 use App\Mcp\Tools\Tool\ToolSearchTool;
 use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
 use App\Mcp\Tools\Tool\ToolTemplateManageTool;
+use App\Mcp\Tools\Tool\ToolsetCreateTool;
+use App\Mcp\Tools\Tool\ToolsetDeleteTool;
+use App\Mcp\Tools\Tool\ToolsetGetTool;
+use App\Mcp\Tools\Tool\ToolsetListTool;
+use App\Mcp\Tools\Tool\ToolsetUpdateTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
@@ -658,7 +667,7 @@ class AgentFleetServer extends Server
         AgentExecutionsListTool::class,
         AgentCostsTool::class,
 
-        // Evolution (7)
+        // Evolution (10)
         EvolutionProposalListTool::class,
         EvolutionAnalyzeTool::class,
         EvolutionApproveTool::class,
@@ -666,6 +675,9 @@ class AgentFleetServer extends Server
         EvolutionRejectTool::class,
         EvolutionGetTool::class,
         EvolutionDeleteTool::class,
+        SkillEvolveTool::class,
+        SkillMutationListTool::class,
+        SkillMutationApplyTool::class,
 
         // Crew (16)
         CrewListTool::class,
@@ -745,8 +757,9 @@ class AgentFleetServer extends Server
         SkillBenchmarkListTool::class,
         SkillAutoGenerateRunTool::class,
         SkillCloneTool::class,
+        SkillTrajectoryExtractTool::class,
 
-        // Tool (19)
+        // Tool (24)
         ToolListTool::class,
         ToolGetTool::class,
         ToolCreateTool::class,
@@ -771,6 +784,11 @@ class AgentFleetServer extends Server
         ToolMiddlewareListTool::class,
         ToolMiddlewareConfigTool::class,
         ToolTemplateManageTool::class,
+        ToolsetListTool::class,
+        ToolsetGetTool::class,
+        ToolsetCreateTool::class,
+        ToolsetUpdateTool::class,
+        ToolsetDeleteTool::class,
 
         // Credential (10)
         CredentialListTool::class,

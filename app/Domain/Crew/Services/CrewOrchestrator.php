@@ -742,6 +742,9 @@ class CrewOrchestrator
                     data: ['crew_execution_id' => $execution->id, 'url' => '/crews/'.$execution->crew_id.'/execute'],
                 );
             }
+            if (($execution->coordinator_iterations ?? 0) >= 3) {
+                \App\Domain\Skill\Jobs\ExtractSkillFromTrajectoryJob::dispatch($execution->id, 'crew');
+            }
         } catch (\Throwable $e) {
             $this->failExecution($execution, 'Synthesis failed: '.$e->getMessage());
         }

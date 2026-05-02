@@ -11,6 +11,7 @@ enum BuiltInToolKind: string
     case BrowserRelay = 'browser_relay';
     case ComputerUse = 'computer_use';
     case BrowserUseCloud = 'browser_use_cloud';
+    case ExecuteCode = 'execute_code';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum BuiltInToolKind: string
             self::BrowserRelay => 'Browser Relay (via relay agent)',
             self::ComputerUse => 'Computer Use (desktop automation)',
             self::BrowserUseCloud => 'Browser Use Cloud (cloud.browser-use.com)',
+            self::ExecuteCode => 'Execute Code',
         };
     }
 }
