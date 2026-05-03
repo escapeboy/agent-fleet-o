@@ -71,7 +71,7 @@ class CrewMemberSetModelOverrideTool extends Tool
 
         if ($provider !== null && $provider !== '') {
             if ($model === null || $model === '') {
-                return $this->validationError('model is required when provider is set');
+                return $this->invalidArgumentError('model is required when provider is set');
             }
             $config['model_override'] = ['provider' => $provider, 'model' => $model];
             $action = 'set';
