@@ -29,13 +29,8 @@ class RepoTestRatchetCheckTool extends Tool
                 ->description('GitRepository UUID')
                 ->required(),
             'changes' => $schema->array()
-                ->description('Array of {path, mode, content?, content_before?} change descriptors')
-                ->items($schema->object()->properties([
-                    'path' => $schema->string()->required(),
-                    'mode' => $schema->string()->enum(['add', 'modify', 'delete']),
-                    'content' => $schema->string(),
-                    'content_before' => $schema->string(),
-                ]))
+                ->description('Array of change descriptors, each: {path: string, mode?: "add"|"modify"|"delete", content?: string, content_before?: string}')
+                ->items($schema->object()->description('Change descriptor with path, mode, content, content_before'))
                 ->required(),
         ];
     }
