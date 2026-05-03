@@ -15,6 +15,7 @@ use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Services\BuiltIn\ExecuteCodeHandler;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -1033,10 +1034,10 @@ class ToolTranslator
                 ->for('Execute Python code in a sandboxed environment. No network access. Returns stdout, stderr, exit_code.')
                 ->withStringParameter('code', 'Python code to execute', required: true)
                 ->withNumberParameter('timeout_seconds', 'Execution timeout in seconds (max 120, default 30)', required: false)
-                ->using(function (string $code, ?float $timeout_seconds = null) use ($workspace, $timeout, $tool): string {
+                ->using(function (string $code, ?float $timeout_seconds = null) use ($workspace, $timeout): string {
                     $effectiveTimeout = $timeout_seconds !== null ? (int) $timeout_seconds : $timeout;
 
-                    $handler = app(\App\Domain\Tool\Services\BuiltIn\ExecuteCodeHandler::class);
+                    $handler = app(ExecuteCodeHandler::class);
                     $result = $handler->execute($code, $effectiveTimeout, $workspace);
 
                     return json_encode([

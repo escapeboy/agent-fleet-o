@@ -49,12 +49,12 @@
     {{-- Runtime Reverb config (read by bootstrap.js). PHP-rendered so env
          changes don't require a frontend rebuild. --}}
     <script>
-        window.FLEETQ_REVERB_CONFIG = @json([
+        window.FLEETQ_REVERB_CONFIG = {!! json_encode([
             'key' => config('reverb.apps.apps.0.key'),
             'host' => env('VITE_REVERB_HOST', request()->getHost()),
             'port' => (int) env('VITE_REVERB_PORT', request()->isSecure() ? 443 : 80),
             'scheme' => env('VITE_REVERB_SCHEME', request()->isSecure() ? 'https' : 'http'),
-        ]);
+        ], JSON_THROW_ON_ERROR) !!};
     </script>
 </head>
 <body class="bg-(--color-surface-alt) font-sans antialiased text-(--color-on-surface)">

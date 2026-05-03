@@ -16,8 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ExperimentGetTool extends Tool
 {
-    use HasStructuredErrors;
     use HasMcpAppUi;
+    use HasStructuredErrors;
 
     protected string $name = 'experiment_get';
 

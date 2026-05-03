@@ -20,7 +20,10 @@ use Illuminate\Support\Facades\Process;
  * future iteration. Until then, --network none is always used regardless of policy rules to
  * maintain the safe-by-default posture (no outbound access).
  */
-final class DockerSandboxExecutor
+// Trendshift top-5 build #4 (browser harness): `final` removed so test doubles
+// can subclass with a no-op execute() — keeps the BrowserHarnessHandler unit-
+// testable without introducing a separate sandbox-executor contract.
+class DockerSandboxExecutor
 {
     /**
      * @param  array<string, string>|null  $env  Environment variables to inject into the container

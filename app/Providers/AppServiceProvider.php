@@ -104,6 +104,8 @@ use App\Domain\Website\Drivers\WebsiteDeploymentDriverRegistry;
 use App\Domain\Website\Drivers\ZipDeploymentDriver;
 use App\Domain\Website\Models\WebsitePage;
 use App\Domain\Website\Observers\WebsitePageObserver;
+use App\Domain\Workflow\Events\WorkflowSaved;
+use App\Domain\Workflow\Listeners\QueueWorkflowYamlPush;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
@@ -123,9 +125,11 @@ use App\Livewire\Hooks\PluginDispatchHook;
 use App\Mcp\DeadlineContext;
 use App\Mcp\ErrorClassifier;
 use App\Mcp\Listeners\McpAppsCapabilityListener;
+use App\Mcp\Services\ConnectorMcpRegistrar;
 use App\Models\User;
 use Barsy\Events\ChatMessageCompleted;
 use Carbon\CarbonInterval;
+use Composer\Autoload\ClassLoader;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -219,6 +223,18 @@ class AppServiceProvider extends ServiceProvider
 
         // Accumulator for plugin-contributed MCP tool class names
         $this->app->instance('fleet.mcp.tool_classes', []);
+
+        // Trendshift top-5 sprint, build #3: PSR-4 prefix for synthesized connector MCP tool classes.
+        // ConnectorMcpRegistrar generates one .php file per opt-in connector under bootstrap/cache.
+        if (file_exists(base_path('vendor/autoload.php'))) {
+            $loader = require base_path('vendor/autoload.php');
+            if ($loader instanceof ClassLoader) {
+                $loader->setPsr4(ConnectorMcpRegistrar::NAMESPACE.'\\', [
+                    base_path(ConnectorMcpRegistrar::CACHE_DIR),
+                ]);
+            }
+        }
+        $this->app->singleton(ConnectorMcpRegistrar::class);
 
         // Tag all built-in signal connectors so plugins and the registry can discover them
         $this->app->tag([
@@ -418,6 +434,13 @@ class AppServiceProvider extends ServiceProvider
 
         // After execution, append the outcome to the originating assistant conversation
         Event::listen(ActionProposalExecuted::class, AppendExecutionResultToConversation::class);
+
+        // Trendshift top-5 sprint, build #5 (Kestra YAML Git Sync):
+        // queue a YAML push whenever a Workflow saves with a linked git sync.
+        Event::listen(
+            WorkflowSaved::class,
+            QueueWorkflowYamlPush::class,
+        );
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);

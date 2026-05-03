@@ -4,8 +4,11 @@ namespace Tests\Feature\Api\V1;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
+use App\Http\Resources\Api\V1\ExperimentResource;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class InvalidationSignalsTest extends TestCase
@@ -33,16 +36,16 @@ class InvalidationSignalsTest extends TestCase
     public function test_experiment_resource_with_invalidation_sets_header(): void
     {
         $experiment = Experiment::factory()->make(['team_id' => $this->team->id]);
-        $resource = new \App\Http\Resources\Api\V1\ExperimentResource($experiment);
+        $resource = new ExperimentResource($experiment);
         $resource->invalidates('experiments');
 
-        $request = \Illuminate\Http\Request::create('/test');
-        $response = new \Illuminate\Http\JsonResponse();
+        $request = Request::create('/test');
+        $response = new JsonResponse;
         $resource->withResponse($request, $response);
 
         $this->assertTrue(
             $response->headers->has('X-FleetQ-Invalidate'),
-            'X-FleetQ-Invalidate header missing on experiment resource response'
+            'X-FleetQ-Invalidate header missing on experiment resource response',
         );
         $this->assertStringContainsString('experiments', $response->headers->get('X-FleetQ-Invalidate'));
     }
@@ -57,15 +60,15 @@ class InvalidationSignalsTest extends TestCase
 
     public function test_fleetq_resource_invalidates_adds_tags(): void
     {
-        $resource = new \App\Http\Resources\Api\V1\ExperimentResource(
-            Experiment::factory()->make(['team_id' => $this->team->id])
+        $resource = new ExperimentResource(
+            Experiment::factory()->make(['team_id' => $this->team->id]),
         );
 
         $resource->invalidates('experiments', 'crews');
 
         // Simulate request/response to check header is set
-        $request = \Illuminate\Http\Request::create('/test');
-        $response = new \Illuminate\Http\JsonResponse();
+        $request = Request::create('/test');
+        $response = new JsonResponse;
 
         $resource->withResponse($request, $response);
 
@@ -74,12 +77,12 @@ class InvalidationSignalsTest extends TestCase
 
     public function test_fleetq_resource_without_invalidation_has_no_header(): void
     {
-        $resource = new \App\Http\Resources\Api\V1\ExperimentResource(
-            Experiment::factory()->make(['team_id' => $this->team->id])
+        $resource = new ExperimentResource(
+            Experiment::factory()->make(['team_id' => $this->team->id]),
         );
 
-        $request = \Illuminate\Http\Request::create('/test');
-        $response = new \Illuminate\Http\JsonResponse();
+        $request = Request::create('/test');
+        $response = new JsonResponse;
 
         $resource->withResponse($request, $response);
 
@@ -88,14 +91,14 @@ class InvalidationSignalsTest extends TestCase
 
     public function test_invalidates_deduplicates_tags(): void
     {
-        $resource = new \App\Http\Resources\Api\V1\ExperimentResource(
-            Experiment::factory()->make(['team_id' => $this->team->id])
+        $resource = new ExperimentResource(
+            Experiment::factory()->make(['team_id' => $this->team->id]),
         );
 
         $resource->invalidates('experiments', 'experiments', 'crews');
 
-        $request = \Illuminate\Http\Request::create('/test');
-        $response = new \Illuminate\Http\JsonResponse();
+        $request = Request::create('/test');
+        $response = new JsonResponse;
         $resource->withResponse($request, $response);
 
         $this->assertSame('experiments,crews', $response->headers->get('X-FleetQ-Invalidate'));

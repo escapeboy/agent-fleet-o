@@ -24,7 +24,9 @@ class GEPAOptimizerTest extends TestCase
     use RefreshDatabase;
 
     private Team $team;
+
     private Skill $skill;
+
     private User $user;
 
     protected function setUp(): void

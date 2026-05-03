@@ -2,9 +2,12 @@
 
 namespace App\Domain\GitRepository\Services;
 
+use App\Domain\GitRepository\Actions\GenerateCommitMessageAction;
 use App\Domain\GitRepository\Contracts\GitClientInterface;
+use App\Domain\GitRepository\Enums\CommitDiscipline;
 use App\Domain\GitRepository\Enums\GitRepoMode;
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Infrastructure\Git\Clients\AtomicCommittingGitClient;
 use App\Infrastructure\Git\Clients\BridgeGitClient;
 use App\Infrastructure\Git\Clients\GatedGitClient;
 use App\Infrastructure\Git\Clients\GitHubApiClient;
@@ -21,6 +24,18 @@ class GitOperationRouter
             GitRepoMode::Sandbox => app(SandboxGitClient::class, ['repo' => $repo]),
             GitRepoMode::Bridge => app(BridgeGitClient::class, ['repo' => $repo]),
         };
+
+        // Trendshift top-5 sprint, build #2: Aider-inspired commit discipline.
+        // When discipline=atomic, every mutation's commit message is rewritten
+        // via a weak LLM (haiku) into Conventional Commits format. Wraps the
+        // inner client BEFORE the gate so the gate sees the rewritten message.
+        if ($repo->commit_discipline === CommitDiscipline::Atomic) {
+            $client = new AtomicCommittingGitClient(
+                inner: $client,
+                repo: $repo,
+                messageGen: app(GenerateCommitMessageAction::class),
+            );
+        }
 
         // Sprint 3d.3: wrap the resolved client in a per-team risk gate
         // so writes/PRs/releases route through the proposal flow when the

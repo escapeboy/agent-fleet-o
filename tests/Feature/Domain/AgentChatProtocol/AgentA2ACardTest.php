@@ -21,6 +21,7 @@ class AgentA2ACardTest extends TestCase
     use RefreshDatabase;
 
     private Team $team;
+
     private User $user;
 
     protected function setUp(): void

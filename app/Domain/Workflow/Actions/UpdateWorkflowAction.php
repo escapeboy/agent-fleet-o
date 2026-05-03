@@ -2,6 +2,7 @@
 
 namespace App\Domain\Workflow\Actions;
 
+use App\Domain\Workflow\Events\WorkflowSaved;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
@@ -29,7 +30,7 @@ class UpdateWorkflowAction
         ?string $mcpToolName = null,
         ?string $mcpExecutionMode = null,
     ): Workflow {
-        return DB::transaction(function () use ($workflow, $name, $description, $maxLoopIterations, $nodes, $edges, $settings, $budgetCapCredits, $clearBudgetCap, $mcpExposed, $mcpToolName, $mcpExecutionMode) {
+        $workflow = DB::transaction(function () use ($workflow, $name, $description, $maxLoopIterations, $nodes, $edges, $settings, $budgetCapCredits, $clearBudgetCap, $mcpExposed, $mcpToolName, $mcpExecutionMode) {
             $changes = [];
 
             if ($name !== null && $name !== $workflow->name) {
@@ -98,6 +99,11 @@ class UpdateWorkflowAction
 
             return $workflow->fresh();
         });
+
+        // Trendshift top-5 build #5: notify Git-sync listener (one-way YAML push).
+        WorkflowSaved::dispatch($workflow);
+
+        return $workflow;
     }
 
     private function replaceGraph(Workflow $workflow, array $nodes, array $edges): void

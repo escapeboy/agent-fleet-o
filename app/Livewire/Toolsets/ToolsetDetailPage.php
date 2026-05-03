@@ -14,9 +14,13 @@ class ToolsetDetailPage extends Component
     public Toolset $toolset;
 
     public bool $editing = false;
+
     public string $name = '';
+
     public string $description = '';
+
     public array $selectedToolIds = [];
+
     public string $tagsInput = '';
 
     public function mount(Toolset $toolset): void

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Domain\Crew;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Actions\ComputeCrewQualityAction;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
-use App\Domain\Agent\Models\Agent;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +19,7 @@ class ComputeCrewQualityTest extends TestCase
     use RefreshDatabase;
 
     private Team $team;
+
     private CrewExecution $execution;
 
     protected function setUp(): void

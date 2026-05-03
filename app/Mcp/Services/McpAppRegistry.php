@@ -135,7 +135,7 @@ class McpAppRegistry
      * Extract all MCP App URIs for a given set of tool calls stored in AssistantMessage.tool_calls.
      *
      * @param  array<int, array{toolName: string}>  $toolCalls
-     * @return array<string, string>  Map of toolName => uri
+     * @return array<string, string> Map of toolName => uri
      */
     public static function extractUris(array $toolCalls): array
     {

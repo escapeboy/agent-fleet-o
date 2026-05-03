@@ -40,7 +40,8 @@ Thumbs.db
 /PRESENTATION_DESIGN_GUIDE.md
 /WORKFLOW_ORCHESTRATION_PATTERNS.md
 /database/schemas
-/packages
+/packages/*
+!/packages/fleetq-boruna-audit
 /services
 /phpstan
 /phpstan-filter.php

@@ -10,6 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property array<int, string>|null $tool_ids
+ * @property array<int, string>|null $tags
+ * @property bool $is_platform
+ * @property array<string, mixed>|null $browser_helpers
+ * @property bool $browser_helpers_pending_review
+ */
 class Toolset extends Model
 {
     use BelongsToTeam, HasUuids, SoftDeletes;
@@ -23,6 +30,8 @@ class Toolset extends Model
         'tags',
         'is_platform',
         'created_by',
+        'browser_helpers',
+        'browser_helpers_pending_review',
     ];
 
     protected function casts(): array
@@ -31,6 +40,8 @@ class Toolset extends Model
             'tool_ids' => 'array',
             'tags' => 'array',
             'is_platform' => 'boolean',
+            'browser_helpers' => 'array',
+            'browser_helpers_pending_review' => 'boolean',
         ];
     }
 

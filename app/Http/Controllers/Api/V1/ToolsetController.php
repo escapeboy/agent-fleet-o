@@ -8,8 +8,8 @@ use App\Domain\Tool\Actions\UpdateToolsetAction;
 use App\Domain\Tool\Models\Toolset;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * @tags Toolsets
