@@ -353,3 +353,8 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Mcp/Tools/GitRepository/RepoTestRatchetCheckTool.php
+	-
+		message: '#^Call to an undefined static method Propaganistas\\LaravelDisposableEmail\\Facades\\DisposableDomains\:\:isDisposable\(\)\.$#'
+		identifier: staticMethod.notFound
+		count: 1
+		path: app/Domain/Signal/Rules/E01DisposableEmailRule.php
