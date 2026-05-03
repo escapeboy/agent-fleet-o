@@ -85,6 +85,15 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Build frontend assets (vite manifest needed for layout @vite)
+        run: npm ci && npm run build
+
       - name: Prepare Laravel
         run: |
           cp .env.example .env
