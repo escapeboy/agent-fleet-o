@@ -58,6 +58,13 @@ jobs:
       CACHE_STORE: array
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: array
+      # Self-hosted runner has Redis bound to 127.0.0.1 (no docker-compose hostname).
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      # ext-intl not available on runner; force English locale formatting in Cashier.
+      CASHIER_CURRENCY_LOCALE: en
+      # Webclaw container only exists in docker-compose; tests must not call it.
+      WEBCLAW_URL: http://127.0.0.1:65535
 
     steps:
       - uses: actions/checkout@v4
