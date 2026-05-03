@@ -59,10 +59,12 @@ class TriggerRulesPage extends Component
 
     public function saveEdit(): void
     {
+        $teamId = auth()->user()->current_team_id;
+
         $this->validate([
             'editName' => 'required|string|max:255',
             'editSourceType' => 'required|string',
-            'editProjectId' => 'nullable|uuid|exists:projects,id',
+            'editProjectId' => "nullable|uuid|exists:projects,id,team_id,{$teamId}",
             'editCooldownSeconds' => 'integer|min:0|max:86400',
             'editMaxConcurrent' => 'integer|min:-1|max:10',
         ]);

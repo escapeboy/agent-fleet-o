@@ -48,10 +48,12 @@ class CreateCrewForm extends Component
 
     protected function rules(): array
     {
+        $teamId = auth()->user()->current_team_id;
+
         return [
             'name' => 'required|min:2|max:255',
-            'coordinatorAgentId' => 'required|exists:agents,id',
-            'qaAgentId' => 'required|exists:agents,id|different:coordinatorAgentId',
+            'coordinatorAgentId' => "required|exists:agents,id,team_id,{$teamId}",
+            'qaAgentId' => "required|exists:agents,id,team_id,{$teamId}|different:coordinatorAgentId",
             'processType' => 'required|in:sequential,parallel,hierarchical,self_claim,adversarial',
             'maxTaskIterations' => 'required|integer|min:1|max:10',
             'qualityThreshold' => 'required|numeric|min:0|max:1',

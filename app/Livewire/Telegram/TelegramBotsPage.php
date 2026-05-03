@@ -29,7 +29,7 @@ class TelegramBotsPage extends Component
         return [
             'botToken' => ['required', 'string', 'min:10'],
             'routingMode' => ['required', 'in:assistant,project,trigger_rules'],
-            'defaultProjectId' => [$this->routingMode === 'project' ? 'required' : 'nullable', 'nullable', 'exists:projects,id'],
+            'defaultProjectId' => [$this->routingMode === 'project' ? 'required' : 'nullable', 'nullable', 'exists:projects,id,team_id,'.auth()->user()->current_team_id],
         ];
     }
 

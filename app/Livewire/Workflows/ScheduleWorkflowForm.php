@@ -91,9 +91,11 @@ class ScheduleWorkflowForm extends Component
 
     protected function rules(): array
     {
+        $teamId = auth()->user()->current_team_id;
+
         $rules = [
             'title' => 'required|min:2|max:255',
-            'workflowId' => 'required|exists:workflows,id',
+            'workflowId' => "required|exists:workflows,id,team_id,{$teamId}",
             'frequency' => 'required|in:'.implode(',', array_column(ScheduleFrequency::cases(), 'value')),
             'timezone' => 'required|timezone',
             'overlapPolicy' => 'required|in:'.implode(',', array_column(OverlapPolicy::cases(), 'value')),

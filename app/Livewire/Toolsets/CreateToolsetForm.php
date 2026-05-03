@@ -25,7 +25,7 @@ class CreateToolsetForm extends Component
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:2000',
             'selectedToolIds' => 'array',
-            'selectedToolIds.*' => 'uuid|exists:tools,id',
+            'selectedToolIds.*' => 'uuid|exists:tools,id,team_id,'.auth()->user()->current_team_id,
         ];
     }
 

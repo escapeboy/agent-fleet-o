@@ -42,11 +42,13 @@ class ToolsetDetailPage extends Component
 
     public function save(): void
     {
+        $teamId = auth()->user()->current_team_id;
+
         $this->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:2000',
             'selectedToolIds' => 'array',
-            'selectedToolIds.*' => 'uuid|exists:tools,id',
+            'selectedToolIds.*' => "uuid|exists:tools,id,team_id,{$teamId}",
         ]);
 
         $tags = array_filter(array_map('trim', explode(',', $this->tagsInput)));

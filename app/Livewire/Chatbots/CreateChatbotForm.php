@@ -48,7 +48,7 @@ class CreateChatbotForm extends Component
             'name' => 'required|min:2|max:255',
             'type' => 'required|in:'.implode(',', array_column(ChatbotType::cases(), 'value')),
             'agentMode' => 'required|in:new,existing',
-            'existingAgentId' => 'required_if:agentMode,existing|nullable|exists:agents,id',
+            'existingAgentId' => 'required_if:agentMode,existing|nullable|exists:agents,id,team_id,'.auth()->user()->current_team_id,
             'provider' => 'required_if:agentMode,new|nullable|string',
             'model' => 'required_if:agentMode,new|nullable|string',
             'welcomeMessage' => 'nullable|max:500',
