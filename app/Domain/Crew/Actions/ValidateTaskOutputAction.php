@@ -5,6 +5,7 @@ namespace App\Domain\Crew\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -31,7 +32,10 @@ class ValidateTaskOutputAction
             throw new \RuntimeException('QA agent not found.');
         }
 
-        $resolved = $this->providerResolver->resolve(agent: $qaAgent);
+        $qaMember = CrewMember::forAgentInCrew($qaAgent->id, $execution->crew_id);
+        $resolved = $qaMember
+            ? $this->providerResolver->forCrewRole($qaMember)
+            : $this->providerResolver->resolve(agent: $qaAgent);
 
         $rubric = $this->resolveRubric($taskExecution, $config);
         $qualityThreshold = $rubric['min_score'] ?? $config['quality_threshold'] ?? 0.70;

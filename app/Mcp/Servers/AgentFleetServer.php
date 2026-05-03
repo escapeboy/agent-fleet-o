@@ -43,6 +43,7 @@ use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentResetSessionTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
 use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
+use App\Mcp\Tools\Agent\AgentWorkspaceContractGetTool;
 use App\Mcp\Tools\Agent\AgentSandboxTool;
 use App\Mcp\Tools\Agent\AgentSetReasoningStrategyTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
@@ -69,6 +70,11 @@ use App\Mcp\Tools\AgentChatProtocol\ExternalAgentListTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentPingTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool;
+use App\Mcp\Tools\AgentSession\AgentSessionEventsTool;
+use App\Mcp\Tools\AgentSession\AgentSessionGetTool;
+use App\Mcp\Tools\AgentSession\AgentSessionListTool;
+use App\Mcp\Tools\AgentSession\AgentSessionSleepTool;
+use App\Mcp\Tools\AgentSession\AgentSessionWakeTool;
 use App\Mcp\Tools\Approval\ActionProposalApproveTool;
 use App\Mcp\Tools\Approval\ActionProposalGetTool;
 use App\Mcp\Tools\Approval\ActionProposalListTool;
@@ -162,6 +168,7 @@ use App\Mcp\Tools\Crew\CrewGetMessagesTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
 use App\Mcp\Tools\Crew\CrewMemberRemoveTool;
+use App\Mcp\Tools\Crew\CrewMemberSetModelOverrideTool;
 use App\Mcp\Tools\Crew\CrewMemberUpdatePolicyTool;
 use App\Mcp\Tools\Crew\CrewProposeRestructuringTool;
 use App\Mcp\Tools\Crew\CrewSendMessageTool;
@@ -204,6 +211,7 @@ use App\Mcp\Tools\Experiment\ExperimentListTool;
 use App\Mcp\Tools\Experiment\ExperimentPauseTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
+use App\Mcp\Tools\Experiment\ExperimentDoneJudgeRunTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
 use App\Mcp\Tools\Experiment\ExperimentSearchHistoryTool;
@@ -239,6 +247,7 @@ use App\Mcp\Tools\GitRepository\GitFileListTool;
 use App\Mcp\Tools\GitRepository\GitFileReadTool;
 use App\Mcp\Tools\GitRepository\GitFileWriteTool;
 use App\Mcp\Tools\GitRepository\GitPullRequestCreateTool;
+use App\Mcp\Tools\GitRepository\RepoTestRatchetCheckTool;
 use App\Mcp\Tools\GitRepository\GitPullRequestListTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryCreateTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryDeleteTool;
@@ -682,6 +691,7 @@ class AgentFleetServer extends Server
         AgentConfigHistoryTool::class,
         AgentRollbackConfigTool::class,
         AgentRuntimeStateTool::class,
+        AgentWorkspaceContractGetTool::class,
         AgentResetSessionTool::class,
         AgentSandboxTool::class,
         AgentHeartbeatUpdateTool::class,
@@ -723,6 +733,7 @@ class AgentFleetServer extends Server
         CrewSendMessageTool::class,
         CrewGetMessagesTool::class,
         CrewMemberUpdatePolicyTool::class,
+        CrewMemberSetModelOverrideTool::class,
         CrewGenerateFromPromptTool::class,
         CrewProposeRestructuringTool::class,
         CrewActivateTool::class,
@@ -753,6 +764,7 @@ class AgentFleetServer extends Server
         ExperimentSearchHistoryTool::class,
         ExperimentContextHealthTool::class,
         ExperimentSkipStageTool::class,
+        ExperimentDoneJudgeRunTool::class,
         ExperimentUpdateTool::class,
         ExperimentTrajectoryTool::class,
         WorkflowSnapshotListTool::class,
@@ -1103,6 +1115,13 @@ class AgentFleetServer extends Server
         ActivepiecesSyncTool::class,
         ActivepiecesListPiecesTool::class,
 
+        // Agent Session (5)
+        AgentSessionListTool::class,
+        AgentSessionGetTool::class,
+        AgentSessionEventsTool::class,
+        AgentSessionWakeTool::class,
+        AgentSessionSleepTool::class,
+
         // Compute (1)
         ComputeManageTool::class,
 
@@ -1193,6 +1212,7 @@ class AgentFleetServer extends Server
         CodeCallChainTool::class,
         CodeSkimFileTool::class,
         ExperimentRepoMapTool::class,
+        RepoTestRatchetCheckTool::class,
 
         // Auth / Social Login (2)
         SocialAccountListTool::class,

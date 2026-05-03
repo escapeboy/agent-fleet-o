@@ -120,4 +120,43 @@ class CrewMember extends Model
 
         return $value !== null ? (int) $value : null;
     }
+
+    /**
+     * Look up the CrewMember row for a given agent within a specific crew,
+     * if one exists. Returns null when the agent is not enrolled in the crew
+     * (e.g., legacy executions whose qa_agent / coordinator predates the
+     * members table population).
+     */
+    public static function forAgentInCrew(?string $agentId, ?string $crewId): ?self
+    {
+        if ($agentId === null || $crewId === null) {
+            return null;
+        }
+
+        return static::query()
+            ->where('crew_id', $crewId)
+            ->where('agent_id', $agentId)
+            ->first();
+    }
+
+    /**
+     * Per-role model override resolved from config JSONB.
+     * Returns ['provider' => string, 'model' => string] or null when unset.
+     *
+     * @return array{provider: string, model: string}|null
+     */
+    public function getModelOverrideAttribute(): ?array
+    {
+        $override = $this->config['model_override'] ?? null;
+        if (! is_array($override)) {
+            return null;
+        }
+        $provider = $override['provider'] ?? null;
+        $model = $override['model'] ?? null;
+        if (! is_string($provider) || $provider === '' || ! is_string($model) || $model === '') {
+            return null;
+        }
+
+        return ['provider' => $provider, 'model' => $model];
+    }
 }

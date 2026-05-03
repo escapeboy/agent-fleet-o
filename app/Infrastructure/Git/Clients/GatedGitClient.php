@@ -3,8 +3,12 @@
 namespace App\Infrastructure\Git\Clients;
 
 use App\Domain\GitRepository\Contracts\GitClientInterface;
+use App\Domain\GitRepository\Enums\TestRatchetMode;
+use App\Domain\GitRepository\Exceptions\TestRatchetViolationException;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationGate;
+use App\Domain\GitRepository\Services\TestRatchetGuard;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Decorator that gates GitClientInterface write methods through
@@ -65,6 +69,8 @@ class GatedGitClient implements GitClientInterface
             'branch' => $branch,
         ]);
 
+        $this->enforceTestRatchet([['path' => $path, 'mode' => 'modify', 'content' => $content]]);
+
         return $this->inner->writeFile($path, $content, $message, $branch);
     }
 
@@ -86,7 +92,39 @@ class GatedGitClient implements GitClientInterface
             'branch' => $branch,
         ]);
 
+        $this->enforceTestRatchet($changes);
+
         return $this->inner->commit($changes, $message, $branch);
+    }
+
+    /**
+     * Resolve the per-repo test_ratchet_mode (default Soft) and apply the guard.
+     * Off → no-op. Soft → log warning. Hard → throw TestRatchetViolationException.
+     *
+     * @param  array<int, array<string, mixed>>  $changes
+     */
+    private function enforceTestRatchet(array $changes): void
+    {
+        $rawMode = $this->repo->config['test_ratchet_mode'] ?? TestRatchetMode::Soft->value;
+        $mode = TestRatchetMode::tryFrom((string) $rawMode) ?? TestRatchetMode::Soft;
+
+        if ($mode === TestRatchetMode::Off) {
+            return;
+        }
+
+        $verdict = app(TestRatchetGuard::class)->inspect($changes);
+        if (! $verdict->violation) {
+            return;
+        }
+
+        if ($mode === TestRatchetMode::Hard) {
+            throw new TestRatchetViolationException($verdict);
+        }
+
+        Log::warning('TestRatchet (soft): test files affected', [
+            'repo_id' => $this->repo->id,
+            'verdict' => $verdict->toArray(),
+        ]);
     }
 
     public function push(string $branch): void

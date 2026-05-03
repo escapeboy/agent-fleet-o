@@ -429,6 +429,12 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(AgentExecuted::class, BroadcastAgentExecuted::class);
         Event::listen(ExperimentTransitioned::class, BroadcastExperimentTransitioned::class);
 
+        // AgentSession event log — funnel existing experiment transitions into the session log
+        Event::listen(
+            ExperimentTransitioned::class,
+            \App\Domain\AgentSession\Listeners\MirrorExperimentTransition::class,
+        );
+
         // ActionProposal auto-execute on approval — dispatches a queued job
         Event::listen(ActionProposalApproved::class, DispatchActionProposalExecution::class);
 

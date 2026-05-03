@@ -52,6 +52,7 @@ class TransitionExperimentAction
                 'reason' => $reason,
                 'actor_id' => $actorId,
                 'metadata' => $metadata,
+                'judge_verdict' => $this->prerequisiteValidator->lastJudgeVerdict?->toArray(),
                 'created_at' => now(),
             ]);
 

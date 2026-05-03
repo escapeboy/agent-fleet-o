@@ -13,6 +13,7 @@ enum BuiltInToolKind: string
     case BrowserUseCloud = 'browser_use_cloud';
     case ExecuteCode = 'execute_code';
     case BrowserHarness = 'browser_harness';
+    case ProgressAppend = 'progress_append';
 
     public function label(): string
     {
@@ -26,6 +27,7 @@ enum BuiltInToolKind: string
             self::BrowserUseCloud => 'Browser Use Cloud (cloud.browser-use.com)',
             self::ExecuteCode => 'Execute Code',
             self::BrowserHarness => 'Browser Harness (self-healing CDP)',
+            self::ProgressAppend => 'Progress Log (workspace contract)',
         };
     }
 }
