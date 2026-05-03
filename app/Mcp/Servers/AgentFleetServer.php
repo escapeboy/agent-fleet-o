@@ -10,6 +10,7 @@ use App\Mcp\Resources\CrewExecutionResource;
 use App\Mcp\Resources\DashboardResource;
 use App\Mcp\Resources\ExperimentDetailResource;
 use App\Mcp\Resources\WorkflowDagResource;
+use App\Mcp\Services\ConnectorMcpRegistrar;
 use App\Mcp\Tools\A2ui\A2uiComponentCatalogTool;
 use App\Mcp\Tools\A2ui\A2uiRenderSurfaceTool;
 use App\Mcp\Tools\A2ui\A2uiValidateSurfaceTool;
@@ -415,8 +416,8 @@ use App\Mcp\Tools\Skill\SkillListTool;
 use App\Mcp\Tools\Skill\SkillPlaygroundTestTool;
 use App\Mcp\Tools\Skill\SkillQualityTool;
 use App\Mcp\Tools\Skill\SkillSearchTool;
-use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillTrajectoryExtractTool;
+use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
 use App\Mcp\Tools\System\AuditLogTool;
@@ -453,13 +454,13 @@ use App\Mcp\Tools\Tool\ToolPoolListTool;
 use App\Mcp\Tools\Tool\ToolProbeRemoteMcpTool;
 use App\Mcp\Tools\Tool\ToolProfileListTool;
 use App\Mcp\Tools\Tool\ToolSearchTool;
-use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
-use App\Mcp\Tools\Tool\ToolTemplateManageTool;
 use App\Mcp\Tools\Tool\ToolsetCreateTool;
 use App\Mcp\Tools\Tool\ToolsetDeleteTool;
 use App\Mcp\Tools\Tool\ToolsetGetTool;
 use App\Mcp\Tools\Tool\ToolsetListTool;
 use App\Mcp\Tools\Tool\ToolsetUpdateTool;
+use App\Mcp\Tools\Tool\ToolSshFingerprintsTool;
+use App\Mcp\Tools\Tool\ToolTemplateManageTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
@@ -617,7 +618,7 @@ class AgentFleetServer extends Server
                     }
                 }
             }
-            foreach (app(\App\Mcp\Services\ConnectorMcpRegistrar::class)->discoverToolClasses() as $synthCls) {
+            foreach (app(ConnectorMcpRegistrar::class)->discoverToolClasses() as $synthCls) {
                 $name = (new $synthCls)->name();
                 if (! isset($existing[$name])) {
                     $this->tools[] = $synthCls;

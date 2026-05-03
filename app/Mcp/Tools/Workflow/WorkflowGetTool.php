@@ -16,8 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class WorkflowGetTool extends Tool
 {
-    use HasStructuredErrors;
     use HasMcpAppUi;
+    use HasStructuredErrors;
 
     protected string $name = 'workflow_get';
 

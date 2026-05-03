@@ -2,7 +2,7 @@
 
 namespace App\Mcp\Services;
 
-use App\Mcp\Contracts\AutoRegistersAsMcpTool;
+use App\Domain\Shared\Contracts\AutoRegistersAsMcpTool;
 use Illuminate\Support\Facades\File;
 
 /**
@@ -100,7 +100,7 @@ class ConnectorMcpRegistrar
                 'namespace App\\Mcp\\Tools\\Synthetic\\Generated;'."\n\n".
                 "class {$shortName} extends \\App\\Mcp\\Tools\\Synthetic\\SyntheticConnectorTool\n".
                 "{\n".
-                "    protected function connector(): \\App\\Mcp\\Contracts\\AutoRegistersAsMcpTool\n".
+                "    protected function connector(): \\App\\Domain\\Shared\\Contracts\\AutoRegistersAsMcpTool\n".
                 "    {\n".
                 '        return \\App\\Mcp\\Services\\ConnectorMcpRegistrar::resolveBinding('."'{$key}'".");\n".
                 "    }\n".

@@ -9,8 +9,12 @@ use App\Mcp\Tools\Memory\MemoryChunkReadTool;
 use App\Mcp\Tools\Memory\MemoryKeywordSearchTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
+use Tests\TestCase;
 
 /**
  * A-RAG (build #1, Trendshift top-5 sprint).
@@ -259,14 +263,14 @@ class MemoryHierarchicalRetrievalTest extends TestCase
     /**
      * Invoke an MCP tool and return its Response.
      *
-     * @param  class-string<\Laravel\Mcp\Server\Tool>  $toolClass
+     * @param  class-string<Tool>  $toolClass
      * @param  array<string, mixed>  $params
      */
-    private function invoke(string $toolClass, array $params): \Laravel\Mcp\Response
+    private function invoke(string $toolClass, array $params): Response
     {
-        /** @var \Laravel\Mcp\Server\Tool $tool */
+        /** @var Tool $tool */
         $tool = app($toolClass);
-        $request = new \Laravel\Mcp\Request($params);
+        $request = new Request($params);
 
         return $tool->handle($request);
     }
@@ -278,7 +282,7 @@ class MemoryHierarchicalRetrievalTest extends TestCase
     {
         try {
             $this->invoke($toolClass, $params);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return $e;
         } catch (\Throwable $e) {
             return $e;
@@ -315,7 +319,7 @@ class MemoryHierarchicalRetrievalTest extends TestCase
         return $memory;
     }
 
-    private function decode(\Laravel\Mcp\Response $response): array
+    private function decode(Response $response): array
     {
         return json_decode((string) $response->content(), true) ?? [];
     }

@@ -20,6 +20,7 @@ use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Shared\Services\NotificationService;
+use App\Domain\Skill\Jobs\ExtractSkillFromTrajectoryJob;
 use App\Domain\Workflow\Services\ConditionEvaluator;
 use App\Mcp\DeadlineContext;
 use Illuminate\Support\Collection;
@@ -743,7 +744,7 @@ class CrewOrchestrator
                 );
             }
             if (($execution->coordinator_iterations ?? 0) >= 3) {
-                \App\Domain\Skill\Jobs\ExtractSkillFromTrajectoryJob::dispatch($execution->id, 'crew');
+                ExtractSkillFromTrajectoryJob::dispatch($execution->id, 'crew');
             }
         } catch (\Throwable $e) {
             $this->failExecution($execution, 'Synthesis failed: '.$e->getMessage());

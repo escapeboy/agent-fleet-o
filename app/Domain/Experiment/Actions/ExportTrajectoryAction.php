@@ -3,7 +3,6 @@
 namespace App\Domain\Experiment\Actions;
 
 use App\Domain\Experiment\Models\Experiment;
-use App\Domain\Experiment\Models\PlaybookStep;
 use Illuminate\Support\Str;
 
 class ExportTrajectoryAction

@@ -29,11 +29,11 @@ class GenerateCommitMessageAction
     public function __construct(private readonly AiGatewayInterface $gateway) {}
 
     /**
-     * @param  list<string>  $paths   Paths affected by the mutation
-     * @param  string        $kind    'write' | 'delete' | 'patch' | 'commit_batch'
-     * @param  string        $contentSample  Up to ~3500 chars of content/diff (will be truncated)
-     * @param  string        $teamId  Resolved team id (for budget / userId fallback)
-     * @param  string|null   $original Optional caller-supplied message — kept as fallback if generation fails.
+     * @param  list<string>  $paths  Paths affected by the mutation
+     * @param  string  $kind  'write' | 'delete' | 'patch' | 'commit_batch'
+     * @param  string  $contentSample  Up to ~3500 chars of content/diff (will be truncated)
+     * @param  string  $teamId  Resolved team id (for budget / userId fallback)
+     * @param  string|null  $original  Optional caller-supplied message — kept as fallback if generation fails.
      */
     public function execute(
         array $paths,
@@ -68,7 +68,7 @@ class GenerateCommitMessageAction
             );
 
             $response = $this->gateway->complete($request);
-            $candidate = $this->sanitize((string) ($response->content ?? ''));
+            $candidate = $this->sanitize($response->content);
 
             if ($candidate !== '') {
                 return $candidate;

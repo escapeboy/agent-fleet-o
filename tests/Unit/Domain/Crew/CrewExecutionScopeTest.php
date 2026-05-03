@@ -69,9 +69,15 @@ class CrewExecutionScopeTest extends TestCase
         $scope = new CrewExecutionScope($this->makeExecution(CrewExecutionStatus::Executing));
 
         $order = [];
-        $scope->onDispose(function () use (&$order) { $order[] = 1; });
-        $scope->onDispose(function () use (&$order) { $order[] = 2; });
-        $scope->onDispose(function () use (&$order) { $order[] = 3; });
+        $scope->onDispose(function () use (&$order) {
+            $order[] = 1;
+        });
+        $scope->onDispose(function () use (&$order) {
+            $order[] = 2;
+        });
+        $scope->onDispose(function () use (&$order) {
+            $order[] = 3;
+        });
 
         $scope->dispose();
 
@@ -83,9 +89,15 @@ class CrewExecutionScopeTest extends TestCase
         $scope = new CrewExecutionScope($this->makeExecution(CrewExecutionStatus::Executing));
 
         $ran = [];
-        $scope->onDispose(function () use (&$ran) { $ran[] = 'a'; });
-        $scope->onDispose(function () { throw new \RuntimeException('cleanup error'); });
-        $scope->onDispose(function () use (&$ran) { $ran[] = 'b'; });
+        $scope->onDispose(function () use (&$ran) {
+            $ran[] = 'a';
+        });
+        $scope->onDispose(function () {
+            throw new \RuntimeException('cleanup error');
+        });
+        $scope->onDispose(function () use (&$ran) {
+            $ran[] = 'b';
+        });
 
         $scope->dispose();
 
@@ -98,7 +110,9 @@ class CrewExecutionScopeTest extends TestCase
         $scope = new CrewExecutionScope($this->makeExecution(CrewExecutionStatus::Executing));
 
         $count = 0;
-        $scope->onDispose(function () use (&$count) { $count++; });
+        $scope->onDispose(function () use (&$count) {
+            $count++;
+        });
 
         $scope->dispose();
         $scope->dispose();

@@ -9,6 +9,7 @@ use App\Domain\GitRepository\Enums\GitProvider;
 use App\Domain\GitRepository\Enums\GitRepoMode;
 use App\Domain\GitRepository\Enums\GitRepositoryStatus;
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -171,7 +172,7 @@ class AtomicCommitTest extends TestCase
         // Stub the underlying GitHubApiClient so resolution doesn't hit the network/auth.
         $this->app->bind(GitHubApiClient::class, fn () => $this->inner);
 
-        $router = new \App\Domain\GitRepository\Services\GitOperationRouter;
+        $router = new GitOperationRouter;
         $outer = $router->resolve($this->repo->fresh());
 
         // Outermost is always GatedGitClient. Its inner should be the FakeGitClient (no atomic wrap).
@@ -188,7 +189,7 @@ class AtomicCommitTest extends TestCase
     {
         $this->app->bind(GitHubApiClient::class, fn () => $this->inner);
 
-        $router = new \App\Domain\GitRepository\Services\GitOperationRouter;
+        $router = new GitOperationRouter;
         $outer = $router->resolve($this->repo->fresh());
 
         $reflection = new \ReflectionObject($outer);

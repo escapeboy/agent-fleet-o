@@ -4,6 +4,7 @@ namespace App\Domain\Workflow\Jobs;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\UserNotification;
 use App\Domain\Workflow\Actions\ExportWorkflowAction;
 use App\Domain\Workflow\Models\Workflow;
@@ -46,12 +47,13 @@ class PushWorkflowYamlJob implements ShouldQueue
         }
 
         $yaml = $exporter->execute($workflow, format: 'yaml');
+        $yamlString = is_string($yaml) ? $yaml : json_encode($yaml, JSON_PRETTY_PRINT);
         $path = $sync->path_prefix.$workflow->slug.'.yaml';
 
         $client = $router->resolve($repo);
         $sha = $client->writeFile(
             path: $path,
-            content: is_string($yaml) ? $yaml : (string) $yaml,
+            content: (string) $yamlString,
             message: 'chore(fleetq): sync workflow "'.$workflow->name.'"',
             branch: $sync->branch,
         );
@@ -70,7 +72,7 @@ class PushWorkflowYamlJob implements ShouldQueue
         }
 
         // Surface as a notification on the team owner.
-        $ownerId = \App\Domain\Shared\Models\Team::ownerIdFor($sync->team_id);
+        $ownerId = Team::ownerIdFor($sync->team_id);
         if (! $ownerId) {
             return;
         }

@@ -9,6 +9,7 @@ use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
+use App\Domain\Crew\Services\CrewExecutionScope;
 use App\Domain\Crew\Services\CrewOrchestrator;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
@@ -73,7 +74,7 @@ class CrewBoundedConcurrencyTest extends TestCase
         }
 
         $orchestrator = app(CrewOrchestrator::class);
-        $orchestrator->dispatchParallel($execution, new \App\Domain\Crew\Services\CrewExecutionScope($execution));
+        $orchestrator->dispatchParallel($execution, new CrewExecutionScope($execution));
 
         // Only 3 jobs should be in the batch (max_parallel_tasks = 3)
         Bus::assertBatchCount(1);
@@ -119,7 +120,7 @@ class CrewBoundedConcurrencyTest extends TestCase
         }
 
         $orchestrator = app(CrewOrchestrator::class);
-        $orchestrator->dispatchParallel($execution, new \App\Domain\Crew\Services\CrewExecutionScope($execution));
+        $orchestrator->dispatchParallel($execution, new CrewExecutionScope($execution));
 
         Bus::assertBatchCount(1);
         $batches = Bus::dispatchedBatches();

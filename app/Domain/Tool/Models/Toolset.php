@@ -10,6 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property array<int, string>|null $tool_ids
+ * @property array<int, string>|null $tags
+ * @property bool $is_platform
+ * @property array<string, mixed>|null $browser_helpers
+ * @property bool $browser_helpers_pending_review
+ */
 class Toolset extends Model
 {
     use BelongsToTeam, HasUuids, SoftDeletes;

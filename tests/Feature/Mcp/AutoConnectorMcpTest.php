@@ -2,17 +2,18 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Domain\Shared\Contracts\AutoRegistersAsMcpTool;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Connectors\RssConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WebScrapingConnector;
-use App\Mcp\Contracts\AutoRegistersAsMcpTool;
 use App\Mcp\Services\ConnectorMcpRegistrar;
 use App\Mcp\Tools\Synthetic\SyntheticConnectorTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Laravel\Mcp\Request;
 use Tests\TestCase;
 
 /**
@@ -111,7 +112,7 @@ class AutoConnectorMcpTest extends TestCase
         $tool = $this->findToolByName('signal.rss.poll');
         $this->assertNotNull($tool);
 
-        $request = new \Laravel\Mcp\Request(['url' => 'https://example.com/feed']);
+        $request = new Request(['url' => 'https://example.com/feed']);
         $response = $tool->handle($request);
         $payload = json_decode((string) $response->content(), true);
 
@@ -136,7 +137,7 @@ class AutoConnectorMcpTest extends TestCase
         $tool = $this->findToolByName('signal.rss.poll');
         $this->assertNotNull($tool);
 
-        $request = new \Laravel\Mcp\Request(['url' => 'https://example.com/feed', 'tags' => ['test']]);
+        $request = new Request(['url' => 'https://example.com/feed', 'tags' => ['test']]);
         $response = $tool->handle($request);
         $payload = json_decode((string) $response->content(), true);
 

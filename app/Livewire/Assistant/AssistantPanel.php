@@ -506,7 +506,7 @@ class AssistantPanel extends Component
 
     /**
      * @param  array<int, array{toolName: string}>|null  $toolCalls
-     * @return array<string, string>  Map of toolName => uri://
+     * @return array<string, string> Map of toolName => uri://
      */
     private function extractMcpAppUris(?array $toolCalls): array
     {

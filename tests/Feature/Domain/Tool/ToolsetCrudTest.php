@@ -6,11 +6,11 @@ namespace Tests\Feature\Domain\Tool;
 
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Tool\Actions\CreateToolsetAction;
 use App\Domain\Tool\Actions\DeleteToolsetAction;
 use App\Domain\Tool\Actions\UpdateToolsetAction;
 use App\Domain\Tool\Models\Toolset;
-use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -21,6 +21,7 @@ class ToolsetCrudTest extends TestCase
     use RefreshDatabase;
 
     private Team $team;
+
     private User $user;
 
     protected function setUp(): void

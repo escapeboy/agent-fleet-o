@@ -10,9 +10,13 @@ use Livewire\Component;
 class CreateToolsetForm extends Component
 {
     public string $name = '';
+
     public string $description = '';
+
     public array $selectedToolIds = [];
+
     public array $tags = [];
+
     public string $tagsInput = '';
 
     protected function rules(): array

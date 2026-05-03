@@ -31,7 +31,7 @@ class BrowserHarnessHandler
      */
     public function execute(array $params, string $teamId, ?SandboxedWorkspace $workspace = null): array
     {
-        $task = (string) ($params['task'] ?? '');
+        $task = trim($params['task']);
         if ($task === '') {
             return ['ok' => false, 'error' => 'task required'];
         }
@@ -116,18 +116,25 @@ class BrowserHarnessHandler
 
     private function loadApprovedHelpers(string $toolsetId, string $teamId): string
     {
+        /** @var Toolset|null $toolset */
         $toolset = Toolset::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->where('id', $toolsetId)
             ->first();
 
-        if (! $toolset || empty($toolset->browser_helpers['helpers'] ?? null)) {
+        if ($toolset === null) {
+            return '';
+        }
+
+        $stored = $toolset->browser_helpers ?? [];
+        $helpers = $stored['helpers'] ?? [];
+        if (! is_array($helpers) || $helpers === []) {
             return '';
         }
 
         $snippets = [];
-        foreach ($toolset->browser_helpers['helpers'] as $helper) {
-            if (! ($helper['approved'] ?? false)) {
+        foreach ($helpers as $helper) {
+            if (! is_array($helper) || ! ($helper['approved'] ?? false)) {
                 continue;
             }
             $snippets[] = '# helper: '.($helper['name'] ?? 'unnamed')."\n".($helper['code'] ?? '');
@@ -138,16 +145,22 @@ class BrowserHarnessHandler
 
     private function stagePendingHelpers(string $toolsetId, string $teamId, string $diff): void
     {
+        /** @var Toolset|null $toolset */
         $toolset = Toolset::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->where('id', $toolsetId)
             ->first();
 
-        if (! $toolset) {
+        if ($toolset === null) {
             return;
         }
 
-        $existing = $toolset->browser_helpers['helpers'] ?? [];
+        $stored = $toolset->browser_helpers ?? [];
+        $existing = $stored['helpers'] ?? [];
+        if (! is_array($existing)) {
+            $existing = [];
+        }
+
         $existing[] = [
             'name' => 'pending_'.now()->format('Ymd_His'),
             'code' => $diff,

@@ -2,22 +2,47 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "agent-fleet/agent-fleet",
     "type": "project",
-    "description": "AI Agent Mission Control Platform — self-hosted, open-source.",
-    "keywords": ["ai", "agents", "experiments", "laravel"],
+    "description": "AI Agent Mission Control Platform \u2014 self-hosted, open-source.",
+    "keywords": [
+        "ai",
+        "agents",
+        "experiments",
+        "laravel"
+    ],
     "license": "AGPL-3.0-or-later",
-    "version": "1.23.0",
+    "version": "1.24.0",
     "repositories": [
         {
             "type": "path",
-            "url": "../../packages/fleetq-boruna-audit",
-            "options": {"symlink": false}
+            "url": "packages/fleetq-boruna-audit",
+            "options": {
+                "symlink": false
+            }
         },
-        { "type": "vcs", "url": "https://github.com/FleetQ/plugin-sdk.git" },
-        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-core.git" },
-        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-blog.git" },
-        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-forms.git" },
-        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-chatbot.git" },
-        { "type": "vcs", "url": "https://github.com/FleetQ/website-plugin-ecommerce.git" }
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/plugin-sdk.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-core.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-blog.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-forms.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-chatbot.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-ecommerce.git"
+        }
     ],
     "require": {
         "php": "^8.2",

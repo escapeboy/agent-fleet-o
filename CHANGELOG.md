@@ -2,6 +2,60 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.24.0] - 2026-05-03
+
+Five borrowable patterns from the Trendshift research sweep ([`claudedocs/research_trendshift_borrowable_2026-05-03.md`](https://github.com/escapeboy/agent-fleet/blob/master/claudedocs/research_trendshift_borrowable_2026-05-03.md) in the parent repo) — each one shipped as a small, opt-in addition rather than a sweeping refactor.
+
+### Added — A-RAG hierarchical retrieval
+
+Inspired by the [A-RAG paper (arXiv 2602.03442)](https://arxiv.org/abs/2602.03442). Two new MCP tools complement the existing semantic `memory_search`:
+
+- **`memory_keyword_search`** — exact-term retrieval via the existing PostgreSQL full-text `content_tsv` column (with `ts_rank` ordering and SQLite `ilike` fallback for tests). Use when the agent needs passages mentioning specific terms verbatim.
+- **`memory_chunk_read`** — fetch a memory by id with optional ±N adjacent chunks within the same `topic`+`agent` partition. Pairs naturally with the search tools so the agent can pivot between granularities mid-trace.
+
+### Added — Aider-inspired commit discipline
+
+- **`GitRepository.commit_discipline = atomic`** activates a new `AtomicCommittingGitClient` decorator that rewrites every mutation's commit message via a weak LLM (haiku) into Conventional Commits format (capped 72 chars, type-prefixed). Falls back to the caller's message when the LLM is unavailable. Off by default; enable per repository.
+
+### Added — Activepieces-inspired auto-MCP for connectors
+
+- **`AutoRegistersAsMcpTool` contract** — connectors / drivers / sources can opt in once and be auto-exposed as MCP tools. The platform's `ConnectorMcpRegistrar` discovers tagged services at boot and synthesizes a per-connector `Tool` subclass under `bootstrap/cache/synthetic-mcp-tools/` (PSR-4 autoloaded). Hand-written tools always win on name collision; existing 485+ tools keep working unchanged.
+- **3 opt-in proofs** this release: `signal.rss.poll`, `signal.webhook.ingest`, `signal.webclaw.scrape`.
+- **`php artisan mcp:cache-connector-tools` / `--clear`** — manage the cache.
+
+### Added — Self-healing browser harness
+
+Inspired by [browser-use/browser-harness](https://github.com/browser-use/browser-harness). New built-in tool kind:
+
+- **`BuiltInToolKind::BrowserHarness`** + `BrowserHarnessHandler` — runs a CDP-driven Chrome inside the existing `DockerSandboxExecutor`. The agent provides a task and (optionally) a Python helpers diff appended to a `helpers.py` for that run.
+- **`browser_harness_run` MCP tool** — single entry point for agents.
+- **Persisted helpers gate** — with `persist_helpers: true`, the diff is staged on a linked Toolset (`browser_helpers_pending_review = true`) for human review before becoming approved. Pairs with the trajectory→skill extractor shipped in 1.23.
+
+### Added — Kestra-inspired Workflow YAML Git Sync
+
+- **One-way `Workflow` → `GitRepository`** sync via the new `WorkflowGitSync` model. Save a workflow → `WorkflowSaved` event → debounced 60s → `PushWorkflowYamlJob` writes `workflows/{slug}.yaml` to the configured branch via the existing `GitClientInterface`. Failures surface as `UserNotification` after 3 retries.
+- **`workflow_export_yaml` / `workflow_import_yaml` MCP tools** — round-trip a portable v2 envelope (with checksum + fuzzy reference hints) over the existing `ExportWorkflowAction` / `ImportWorkflowAction`.
+- Reverse direction (PR-merge → import) is documented as P2.
+
+### Migrations (3)
+
+- `2026_05_03_110000_add_commit_discipline_to_git_repositories`
+- `2026_05_03_120000_add_browser_helpers_to_toolsets`
+- `2026_05_03_130000_create_workflow_git_syncs_table`
+
+### MCP — 8 new tools
+
+`memory_keyword_search`, `memory_chunk_read`, `signal.rss.poll`, `signal.webhook.ingest`, `signal.webclaw.scrape`, `browser_harness_run`, `workflow_export_yaml`, `workflow_import_yaml`. Total tool count: **493+**.
+
+### Infrastructure
+
+- **`base/packages/fleetq-boruna-audit/`** — vendored locally so standalone base CI can install (was previously a `../../packages/...` path repo that only resolved inside the parent monorepo). Parent monorepo continues to use its own copy.
+- **PHPStan baseline** — third baseline file `phpstan-baseline-trendshift.neon` adds 16 patterns for pre-existing errors that surfaced when the composer.lock was refreshed (Hermes-sprint code; not behavioral).
+
+### Tests
+
+46 new tests, 117 assertions: `MemoryHierarchicalRetrievalTest`, `AtomicCommitTest`, `AutoConnectorMcpTest`, `BrowserHarnessHandlerTest`, `WorkflowYamlGitSyncTest`.
+
 ## [1.23.0] - 2026-04-27
 
 Three research-driven sprint arcs and a four-sprint governance build landed in this release.

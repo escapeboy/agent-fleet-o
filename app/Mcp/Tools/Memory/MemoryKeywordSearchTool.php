@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Memory;
 
 use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -29,7 +30,7 @@ class MemoryKeywordSearchTool extends Tool
 
     public function schema(JsonSchema $schema): array
     {
-        $teamId = (string) (app('mcp.team_id') ?? auth()->user()?->current_team_id ?? '');
+        $teamId = (string) (app('mcp.team_id') ?? auth()->user()->current_team_id ?? '');
 
         return [
             'query' => $schema->string()
@@ -83,7 +84,7 @@ class MemoryKeywordSearchTool extends Tool
     /**
      * @param  array<string, mixed>  $v
      */
-    private function ftsSearch(string $teamId, array $v, int $limit): \Illuminate\Support\Collection
+    private function ftsSearch(string $teamId, array $v, int $limit): Collection
     {
         $query = DB::table('memories')
             ->select(['id', 'content', 'topic', 'agent_id', 'created_at',
@@ -105,7 +106,7 @@ class MemoryKeywordSearchTool extends Tool
     /**
      * @param  array<string, mixed>  $v
      */
-    private function ilikeFallback(string $teamId, array $v, int $limit): \Illuminate\Support\Collection
+    private function ilikeFallback(string $teamId, array $v, int $limit): Collection
     {
         $tokens = array_values(array_filter(preg_split('/\s+/', (string) $v['query']) ?: []));
 

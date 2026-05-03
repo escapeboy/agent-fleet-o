@@ -2,10 +2,10 @@
 
 namespace App\Domain\Signal\Connectors;
 
+use App\Domain\Shared\Contracts\AutoRegistersAsMcpTool;
 use App\Domain\Signal\Actions\IngestSignalAction;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Domain\Signal\Models\Signal;
-use App\Mcp\Contracts\AutoRegistersAsMcpTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
 

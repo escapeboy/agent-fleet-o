@@ -121,10 +121,7 @@ class AtomicCommittingGitClient implements GitClientInterface
 
     public function commit(array $changes, string $message, string $branch): string
     {
-        $paths = array_values(array_filter(array_map(
-            fn ($c) => is_array($c) ? ($c['path'] ?? null) : null,
-            $changes,
-        )));
+        $paths = array_values(array_map(fn ($c) => $c['path'], $changes));
 
         // Build a small content sample from non-deleted files (paths only for deletes).
         $sampleParts = [];
@@ -132,17 +129,15 @@ class AtomicCommittingGitClient implements GitClientInterface
         $hasDeletes = false;
         $hasWrites = false;
         foreach ($changes as $c) {
-            if (! is_array($c)) {
-                continue;
-            }
             if (! empty($c['deleted'])) {
                 $hasDeletes = true;
+
                 continue;
             }
             $hasWrites = true;
-            $body = (string) ($c['content'] ?? '');
+            $body = $c['content'];
             if ($body !== '') {
-                $sampleParts[] = '--- '.($c['path'] ?? '?')."\n".mb_substr($body, 0, 800);
+                $sampleParts[] = '--- '.$c['path']."\n".mb_substr($body, 0, 800);
                 if (mb_strlen(implode("\n", $sampleParts)) >= 3000) {
                     break;
                 }

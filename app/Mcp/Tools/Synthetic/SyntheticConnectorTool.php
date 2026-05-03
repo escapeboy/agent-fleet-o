@@ -2,7 +2,7 @@
 
 namespace App\Mcp\Tools\Synthetic;
 
-use App\Mcp\Contracts\AutoRegistersAsMcpTool;
+use App\Domain\Shared\Contracts\AutoRegistersAsMcpTool;
 use App\Mcp\ErrorClassifier;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
@@ -56,11 +56,11 @@ abstract class SyntheticConnectorTool extends Tool
             ]);
 
             $classifier = app()->bound(ErrorClassifier::class) ? app(ErrorClassifier::class) : null;
-            $code = $classifier ? $classifier->classify($e) : 'INTERNAL';
+            $code = $classifier !== null ? $classifier->classify($e) : 'INTERNAL';
 
             return Response::text(json_encode([
                 'error' => $e->getMessage(),
-                'code' => is_object($code) && method_exists($code, 'value') ? $code->value : (string) $code,
+                'code' => is_array($code) ? $code['code'] : (string) $code,
             ]));
         }
     }

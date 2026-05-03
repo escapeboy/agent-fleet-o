@@ -18,8 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AgentGetTool extends Tool
 {
-    use HasStructuredErrors;
     use HasMcpAppUi;
+    use HasStructuredErrors;
 
     protected string $name = 'agent_get';
 

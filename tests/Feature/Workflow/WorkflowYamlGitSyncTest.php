@@ -12,6 +12,7 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\UserNotification;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\CreateWorkflowGitSyncAction;
+use App\Domain\Workflow\Actions\ExportWorkflowAction;
 use App\Domain\Workflow\Events\WorkflowSaved;
 use App\Domain\Workflow\Jobs\PushWorkflowYamlJob;
 use App\Domain\Workflow\Models\Workflow;
@@ -23,6 +24,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
+use Laravel\Mcp\Request;
 use Symfony\Component\Yaml\Yaml;
 use Tests\TestCase;
 
@@ -136,7 +139,8 @@ class WorkflowYamlGitSyncTest extends TestCase
             ->execute($workflow->id, $this->repo->id, $this->team->id);
 
         $captured = ['path' => null, 'content' => null, 'branch' => null];
-        $client = new class($captured) implements GitClientInterface {
+        $client = new class($captured) implements GitClientInterface
+        {
             public function __construct(private array &$captured) {}
 
             public function ping(): bool
@@ -219,7 +223,7 @@ class WorkflowYamlGitSyncTest extends TestCase
         $router->shouldReceive('resolve')->andReturn($client);
 
         (new PushWorkflowYamlJob($sync->id))->handle(
-            app(\App\Domain\Workflow\Actions\ExportWorkflowAction::class),
+            app(ExportWorkflowAction::class),
             $router,
         );
 
@@ -253,7 +257,7 @@ class WorkflowYamlGitSyncTest extends TestCase
         $workflow = $this->makeWorkflow('Marketing Sequence');
 
         $tool = app(WorkflowExportYamlTool::class);
-        $request = new \Laravel\Mcp\Request(['workflow_id' => $workflow->id]);
+        $request = new Request(['workflow_id' => $workflow->id]);
         $response = $tool->handle($request);
 
         $body = (string) $response->content();
@@ -279,9 +283,9 @@ class WorkflowYamlGitSyncTest extends TestCase
         // Reset mcp.team_id back to my team.
         app()->instance('mcp.team_id', $this->team->id);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
         app(WorkflowExportYamlTool::class)->handle(
-            new \Laravel\Mcp\Request(['workflow_id' => $foreignWorkflow->id]),
+            new Request(['workflow_id' => $foreignWorkflow->id]),
         );
     }
 
@@ -289,11 +293,11 @@ class WorkflowYamlGitSyncTest extends TestCase
     {
         Event::fake([WorkflowSaved::class]);
         $sourceWorkflow = $this->makeWorkflow('Source Flow');
-        $exporter = app(\App\Domain\Workflow\Actions\ExportWorkflowAction::class);
+        $exporter = app(ExportWorkflowAction::class);
         $yaml = $exporter->execute($sourceWorkflow, format: 'yaml');
 
         $tool = app(WorkflowImportYamlTool::class);
-        $response = $tool->handle(new \Laravel\Mcp\Request([
+        $response = $tool->handle(new Request([
             'yaml_content' => $yaml,
             'name_override' => 'Imported Flow',
         ]));

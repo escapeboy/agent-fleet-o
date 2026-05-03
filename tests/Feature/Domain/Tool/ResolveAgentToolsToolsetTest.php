@@ -6,11 +6,11 @@ namespace Tests\Feature\Domain\Tool;
 
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\Toolset;
-use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -21,6 +21,7 @@ class ResolveAgentToolsToolsetTest extends TestCase
     use RefreshDatabase;
 
     private Team $team;
+
     private Agent $agent;
 
     protected function setUp(): void

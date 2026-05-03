@@ -21,7 +21,7 @@ class BrowserHarnessRunTool extends Tool
 
     public function schema(JsonSchema $schema): array
     {
-        $teamId = (string) (app('mcp.team_id') ?? auth()->user()?->current_team_id ?? '');
+        $teamId = (string) (app('mcp.team_id') ?? auth()->user()->current_team_id ?? '');
 
         return [
             'task' => $schema->string()->required()

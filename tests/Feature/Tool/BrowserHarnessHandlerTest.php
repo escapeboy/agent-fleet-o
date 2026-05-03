@@ -11,6 +11,8 @@ use App\Domain\Tool\Services\BuiltIn\BrowserHarnessHandler;
 use App\Mcp\Tools\Tool\BrowserHarnessRunTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
+use Laravel\Mcp\Request;
 use Tests\TestCase;
 
 /**
@@ -163,21 +165,21 @@ class BrowserHarnessHandlerTest extends TestCase
         ]);
 
         $tool = app(BrowserHarnessRunTool::class);
-        $request = new \Laravel\Mcp\Request([
+        $request = new Request([
             'task' => 'should be blocked',
             'toolset_id' => $foreignToolset->id,
         ]);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
         $tool->handle($request);
     }
 
     public function test_mcp_tool_rejects_blank_task(): void
     {
         $tool = app(BrowserHarnessRunTool::class);
-        $request = new \Laravel\Mcp\Request(['task' => 'tiny']);
+        $request = new Request(['task' => 'tiny']);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
         $tool->handle($request);
     }
 }

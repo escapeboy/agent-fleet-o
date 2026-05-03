@@ -18,6 +18,7 @@ class ExportTrajectoryTest extends TestCase
     use RefreshDatabase;
 
     private Team $team;
+
     private Experiment $experiment;
 
     protected function setUp(): void
