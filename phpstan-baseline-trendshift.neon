@@ -1,6 +1,12 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Call to an undefined static method Propaganistas\\LaravelDisposableEmail\\Facades\\DisposableDomains::isDisposable\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Domain/Signal/Rules/E01DisposableEmailRule.php
+
+		-
 			message: '#^Offset ''parent_score'' on string\|null on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
