@@ -32,7 +32,10 @@ class SynthesizeResultAction
             throw new \RuntimeException('Coordinator agent not found.');
         }
 
-        $resolved = $this->providerResolver->resolve(agent: $coordinator);
+        $coordinatorMember = \App\Domain\Crew\Models\CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $resolved = $coordinatorMember
+            ? $this->providerResolver->forCrewRole($coordinatorMember)
+            : $this->providerResolver->resolve(agent: $coordinator);
 
         $processType = $config['process_type'] ?? 'parallel';
         $isAdversarial = $processType === 'adversarial';
@@ -112,7 +115,7 @@ class SynthesizeResultAction
             $reviewerAgent = Agent::withoutGlobalScopes()->find($outputReviewerMember->agent_id);
 
             if ($reviewerAgent) {
-                $reviewResolved = $this->providerResolver->resolve(agent: $reviewerAgent);
+                $reviewResolved = $this->providerResolver->forCrewRole($outputReviewerMember);
 
                 $reviewSystem = "You are {$reviewerAgent->role}. Your task is to review the synthesized result for quality, completeness, and accuracy. "
                     .'Output valid JSON with: "approved" (bool), "score" (0-1), "feedback" (string), '

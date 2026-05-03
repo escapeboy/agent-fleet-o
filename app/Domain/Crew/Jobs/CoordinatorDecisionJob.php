@@ -93,7 +93,10 @@ class CoordinatorDecisionJob implements ShouldQueue
             return;
         }
 
-        $resolved = $providerResolver->resolve(agent: $coordinator);
+        $coordinatorMember = \App\Domain\Crew\Models\CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $resolved = $coordinatorMember
+            ? $providerResolver->forCrewRole($coordinatorMember)
+            : $providerResolver->resolve(agent: $coordinator);
 
         // Build context: completed tasks and their outputs
         $completedTasks = $execution->taskExecutions()

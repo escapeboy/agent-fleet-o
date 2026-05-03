@@ -45,7 +45,10 @@ class DecomposeGoalAction
             throw new \RuntimeException('Coordinator agent not found.');
         }
 
-        $resolved = $this->providerResolver->resolve(agent: $coordinator);
+        $coordinatorMember = \App\Domain\Crew\Models\CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $resolved = $coordinatorMember
+            ? $this->providerResolver->forCrewRole($coordinatorMember)
+            : $this->providerResolver->resolve(agent: $coordinator);
 
         $workerDescriptions = collect($config['workers'] ?? [])
             ->map(fn ($w) => "- {$w['name']} ({$w['role']}): {$w['goal']}. Skills: ".implode(', ', $w['skills'] ?? []))

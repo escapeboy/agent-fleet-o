@@ -51,6 +51,7 @@ class AgentExecution extends Model
         'judge_model',
         'error_message',
         'extracted_skill_id',
+        'workspace_contract',
     ];
 
     protected function casts(): array
@@ -66,6 +67,7 @@ class AgentExecution extends Model
             'cost_credits' => 'integer',
             'quality_score' => 'float',
             'quality_details' => 'array',
+            'workspace_contract' => 'array',
         ];
     }
 
