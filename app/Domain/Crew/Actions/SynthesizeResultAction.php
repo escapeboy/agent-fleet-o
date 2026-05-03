@@ -32,7 +32,7 @@ class SynthesizeResultAction
             throw new \RuntimeException('Coordinator agent not found.');
         }
 
-        $coordinatorMember = \App\Domain\Crew\Models\CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $coordinatorMember = CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
         $resolved = $coordinatorMember
             ? $this->providerResolver->forCrewRole($coordinatorMember)
             : $this->providerResolver->resolve(agent: $coordinator);

@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Exceptions\MaxDelegationDepthExceededException;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Experiment\Actions\PlanWithKnowledgeAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -45,7 +46,7 @@ class DecomposeGoalAction
             throw new \RuntimeException('Coordinator agent not found.');
         }
 
-        $coordinatorMember = \App\Domain\Crew\Models\CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $coordinatorMember = CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
         $resolved = $coordinatorMember
             ? $this->providerResolver->forCrewRole($coordinatorMember)
             : $this->providerResolver->resolve(agent: $coordinator);

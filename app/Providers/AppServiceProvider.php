@@ -10,6 +10,7 @@ use App\Domain\AgentChatProtocol\Events\ChatMessageDispatched;
 use App\Domain\AgentChatProtocol\Events\ChatMessageReceived;
 use App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage;
 use App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction;
+use App\Domain\AgentSession\Listeners\MirrorExperimentTransition;
 use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Events\ActionProposalExecuted;
 use App\Domain\Approval\Listeners\AppendExecutionResultToConversation;
@@ -432,7 +433,7 @@ class AppServiceProvider extends ServiceProvider
         // AgentSession event log — funnel existing experiment transitions into the session log
         Event::listen(
             ExperimentTransitioned::class,
-            \App\Domain\AgentSession\Listeners\MirrorExperimentTransition::class,
+            MirrorExperimentTransition::class,
         );
 
         // ActionProposal auto-execute on approval — dispatches a queued job

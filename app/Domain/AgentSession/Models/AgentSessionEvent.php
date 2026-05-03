@@ -4,6 +4,7 @@ namespace App\Domain\AgentSession\Models;
 
 use App\Domain\AgentSession\Enums\AgentSessionEventKind;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $seq
  * @property AgentSessionEventKind $kind
  * @property array<string, mixed>|null $payload
- * @property \Carbon\Carbon $created_at
+ * @property Carbon $created_at
  */
 class AgentSessionEvent extends Model
 {

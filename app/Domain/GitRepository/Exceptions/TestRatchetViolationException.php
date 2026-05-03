@@ -13,7 +13,7 @@ class TestRatchetViolationException extends RuntimeException
             'TestRatchetViolation: '.$verdict->reason
             .' (deleted='.count($verdict->deletedTestFiles)
             .' modified='.count($verdict->modifiedTestFiles)
-            .' removed_assertions='.$verdict->removedAssertionCount.')'
+            .' removed_assertions='.$verdict->removedAssertionCount.')',
         );
     }
 }

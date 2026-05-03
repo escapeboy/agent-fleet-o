@@ -9,8 +9,6 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Services\DoneConditionJudge;
 use App\Domain\Experiment\States\TransitionPrerequisiteValidator;
-use App\Domain\Project\Models\Project;
-use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Shared\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;

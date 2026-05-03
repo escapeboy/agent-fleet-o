@@ -5,8 +5,10 @@ namespace App\Domain\Agent\Services;
 use App\Domain\Agent\DTOs\WorkspaceContractSnapshot;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectMilestone;
+use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Workflow\Models\Workflow;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -218,7 +220,7 @@ class WorkspaceContractWriter
             '#!/usr/bin/env bash',
             'set -euo pipefail',
             '',
-            "echo \"[init] starting workspace for agent ".($agent?->id ?? 'unknown')."\"",
+            'echo "[init] starting workspace for agent '.($agent?->id ?? 'unknown').'"',
             '',
             'if [ -f composer.json ]; then',
             '  composer install --no-interaction --prefer-dist 2>/dev/null || true',
@@ -227,7 +229,7 @@ class WorkspaceContractWriter
             '  npm ci --no-audit --no-fund 2>/dev/null || true',
             'fi',
             '',
-            "echo \"[init] complete\"",
+            'echo "[init] complete"',
         ];
 
         return implode("\n", $lines)."\n";
@@ -236,7 +238,7 @@ class WorkspaceContractWriter
     private function resolveWorkflow(AgentExecution $execution): ?Workflow
     {
         $experiment = $execution->experiment_id
-            ? \App\Domain\Experiment\Models\Experiment::withoutGlobalScopes()->find($execution->experiment_id)
+            ? Experiment::withoutGlobalScopes()->find($execution->experiment_id)
             : null;
         $workflowId = $experiment?->workflow_id;
         if (! is_string($workflowId) || $workflowId === '') {
@@ -249,13 +251,13 @@ class WorkspaceContractWriter
     private function resolveProject(AgentExecution $execution): ?Project
     {
         $experiment = $execution->experiment_id
-            ? \App\Domain\Experiment\Models\Experiment::withoutGlobalScopes()->find($execution->experiment_id)
+            ? Experiment::withoutGlobalScopes()->find($execution->experiment_id)
             : null;
         $projectRunId = $experiment?->project_run_id ?? null;
         if (! is_string($projectRunId) || $projectRunId === '') {
             return null;
         }
-        $projectRun = \App\Domain\Project\Models\ProjectRun::withoutGlobalScopes()->find($projectRunId);
+        $projectRun = ProjectRun::withoutGlobalScopes()->find($projectRunId);
 
         return $projectRun ? Project::withoutGlobalScopes()->find($projectRun->project_id) : null;
     }

@@ -8,6 +8,7 @@ use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,9 +28,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $crew_execution_id
  * @property string|null $user_id
  * @property AgentSessionStatus $status
- * @property \Carbon\Carbon|null $started_at
- * @property \Carbon\Carbon|null $ended_at
- * @property \Carbon\Carbon|null $last_heartbeat_at
+ * @property Carbon|null $started_at
+ * @property Carbon|null $ended_at
+ * @property Carbon|null $last_heartbeat_at
  * @property array<string, mixed>|null $workspace_contract_snapshot
  * @property string|null $last_known_sandbox_id
  * @property array<string, mixed>|null $metadata
