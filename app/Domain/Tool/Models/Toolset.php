@@ -23,6 +23,8 @@ class Toolset extends Model
         'tags',
         'is_platform',
         'created_by',
+        'browser_helpers',
+        'browser_helpers_pending_review',
     ];
 
     protected function casts(): array
@@ -31,6 +33,8 @@ class Toolset extends Model
             'tool_ids' => 'array',
             'tags' => 'array',
             'is_platform' => 'boolean',
+            'browser_helpers' => 'array',
+            'browser_helpers_pending_review' => 'boolean',
         ];
     }
 

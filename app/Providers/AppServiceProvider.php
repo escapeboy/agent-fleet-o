@@ -220,6 +220,18 @@ class AppServiceProvider extends ServiceProvider
         // Accumulator for plugin-contributed MCP tool class names
         $this->app->instance('fleet.mcp.tool_classes', []);
 
+        // Trendshift top-5 sprint, build #3: PSR-4 prefix for synthesized connector MCP tool classes.
+        // ConnectorMcpRegistrar generates one .php file per opt-in connector under bootstrap/cache.
+        if (file_exists(base_path('vendor/autoload.php'))) {
+            $loader = require base_path('vendor/autoload.php');
+            if ($loader instanceof \Composer\Autoload\ClassLoader) {
+                $loader->setPsr4(\App\Mcp\Services\ConnectorMcpRegistrar::NAMESPACE.'\\', [
+                    base_path(\App\Mcp\Services\ConnectorMcpRegistrar::CACHE_DIR),
+                ]);
+            }
+        }
+        $this->app->singleton(\App\Mcp\Services\ConnectorMcpRegistrar::class);
+
         // Tag all built-in signal connectors so plugins and the registry can discover them
         $this->app->tag([
             WebhookConnector::class,
@@ -418,6 +430,13 @@ class AppServiceProvider extends ServiceProvider
 
         // After execution, append the outcome to the originating assistant conversation
         Event::listen(ActionProposalExecuted::class, AppendExecutionResultToConversation::class);
+
+        // Trendshift top-5 sprint, build #5 (Kestra YAML Git Sync):
+        // queue a YAML push whenever a Workflow saves with a linked git sync.
+        Event::listen(
+            \App\Domain\Workflow\Events\WorkflowSaved::class,
+            \App\Domain\Workflow\Listeners\QueueWorkflowYamlPush::class,
+        );
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);

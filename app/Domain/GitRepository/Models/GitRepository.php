@@ -3,6 +3,7 @@
 namespace App\Domain\GitRepository\Models;
 
 use App\Domain\Credential\Models\Credential;
+use App\Domain\GitRepository\Enums\CommitDiscipline;
 use App\Domain\GitRepository\Enums\GitProvider;
 use App\Domain\GitRepository\Enums\GitRepoMode;
 use App\Domain\GitRepository\Enums\GitRepositoryStatus;
@@ -30,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $indexing_status
  * @property Carbon|null $last_indexed_at
  * @property string|null $indexed_commit_sha
+ * @property CommitDiscipline $commit_discipline
  */
 class GitRepository extends Model
 {
@@ -50,6 +52,7 @@ class GitRepository extends Model
         'indexing_status',
         'last_indexed_at',
         'indexed_commit_sha',
+        'commit_discipline',
     ];
 
     protected function casts(): array
@@ -58,6 +61,7 @@ class GitRepository extends Model
             'provider' => GitProvider::class,
             'mode' => GitRepoMode::class,
             'status' => GitRepositoryStatus::class,
+            'commit_discipline' => CommitDiscipline::class,
             'config' => 'array',
             'last_ping_at' => 'datetime',
             'last_indexed_at' => 'datetime',

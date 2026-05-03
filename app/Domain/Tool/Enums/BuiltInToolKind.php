@@ -12,6 +12,7 @@ enum BuiltInToolKind: string
     case ComputerUse = 'computer_use';
     case BrowserUseCloud = 'browser_use_cloud';
     case ExecuteCode = 'execute_code';
+    case BrowserHarness = 'browser_harness';
 
     public function label(): string
     {
@@ -24,6 +25,7 @@ enum BuiltInToolKind: string
             self::ComputerUse => 'Computer Use (desktop automation)',
             self::BrowserUseCloud => 'Browser Use Cloud (cloud.browser-use.com)',
             self::ExecuteCode => 'Execute Code',
+            self::BrowserHarness => 'Browser Harness (self-healing CDP)',
         };
     }
 }

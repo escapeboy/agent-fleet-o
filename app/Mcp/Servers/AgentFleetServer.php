@@ -271,10 +271,12 @@ use App\Mcp\Tools\Marketplace\MarketplaceRescanRiskTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
 use App\Mcp\Tools\Marketplace\MarketplaceUnpublishTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
+use App\Mcp\Tools\Memory\MemoryChunkReadTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryExportTool;
 use App\Mcp\Tools\Memory\MemoryFeedbackTool;
 use App\Mcp\Tools\Memory\MemoryGetTool;
+use App\Mcp\Tools\Memory\MemoryKeywordSearchTool;
 use App\Mcp\Tools\Memory\MemoryListProposalsTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemoryPromoteTool;
@@ -429,6 +431,7 @@ use App\Mcp\Tools\System\SystemDiscoveryGetTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
+use App\Mcp\Tools\Tool\BrowserHarnessRunTool;
 use App\Mcp\Tools\Tool\ToolActivateTool;
 use App\Mcp\Tools\Tool\ToolBashPolicyTool;
 use App\Mcp\Tools\Tool\ToolCreateTool;
@@ -501,10 +504,12 @@ use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
 use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
 use App\Mcp\Tools\Workflow\WorkflowExportPolicyTool;
 use App\Mcp\Tools\Workflow\WorkflowExportTool;
+use App\Mcp\Tools\Workflow\WorkflowExportYamlTool;
 use App\Mcp\Tools\Workflow\WorkflowGatewayTool;
 use App\Mcp\Tools\Workflow\WorkflowGenerateTool;
 use App\Mcp\Tools\Workflow\WorkflowGetTool;
 use App\Mcp\Tools\Workflow\WorkflowImportTool;
+use App\Mcp\Tools\Workflow\WorkflowImportYamlTool;
 use App\Mcp\Tools\Workflow\WorkflowListGatewayToolsTool;
 use App\Mcp\Tools\Workflow\WorkflowListTool;
 use App\Mcp\Tools\Workflow\WorkflowNodeAddTool;
@@ -596,6 +601,31 @@ class AgentFleetServer extends Server
             if (! in_array($toolClass, $this->tools, true)) {
                 $this->tools[] = $toolClass;
             }
+        }
+
+        // Trendshift top-5 sprint, build #3: Activepieces-inspired auto-MCP for opt-in connectors.
+        // Discovers tagged services implementing AutoRegistersAsMcpTool and synthesises a Tool
+        // subclass per connector. Falls back silently if the service isn't bound yet (e.g. partial test boot).
+        try {
+            $existing = [];
+            foreach ($this->tools as $cls) {
+                if (is_string($cls) && class_exists($cls)) {
+                    try {
+                        $existing[(new $cls)->name()] = true;
+                    } catch (\Throwable) {
+                        // Skip tools that can't be instantiated for name comparison.
+                    }
+                }
+            }
+            foreach (app(\App\Mcp\Services\ConnectorMcpRegistrar::class)->discoverToolClasses() as $synthCls) {
+                $name = (new $synthCls)->name();
+                if (! isset($existing[$name])) {
+                    $this->tools[] = $synthCls;
+                    $existing[$name] = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('AgentFleetServer: synthetic connector MCP discovery skipped', ['error' => $e->getMessage()]);
         }
 
         // Dynamically register each MCP-exposed workflow as a named gateway tool.
@@ -759,7 +789,8 @@ class AgentFleetServer extends Server
         SkillCloneTool::class,
         SkillTrajectoryExtractTool::class,
 
-        // Tool (24)
+        // Tool (25) — Browser Harness (build #4)
+        BrowserHarnessRunTool::class,
         ToolListTool::class,
         ToolGetTool::class,
         ToolCreateTool::class,
@@ -802,7 +833,9 @@ class AgentFleetServer extends Server
         CredentialListVersionsTool::class,
         CredentialRollbackTool::class,
 
-        // Workflow (21)
+        // Workflow (23) — Kestra-inspired YAML Git Sync (build #5)
+        WorkflowExportYamlTool::class,
+        WorkflowImportYamlTool::class,
         WorkflowListTool::class,
         WorkflowGetTool::class,
         WorkflowCreateTool::class,
@@ -963,8 +996,10 @@ class AgentFleetServer extends Server
         RagflowKnowledgeGraphBuildTool::class,
         RagflowRaptorBuildTool::class,
 
-        // Memory (15)
+        // Memory (17) — A-RAG hierarchical retrieval (build #1)
         MemorySearchTool::class,
+        MemoryKeywordSearchTool::class,
+        MemoryChunkReadTool::class,
         MemoryFeedbackTool::class,
         MemoryUnifiedSearchTool::class,
         MemoryListRecentTool::class,
