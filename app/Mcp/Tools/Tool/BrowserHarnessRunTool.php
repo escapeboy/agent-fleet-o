@@ -8,10 +8,12 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * Run a browser task via the self-healing CDP harness (build #4, Trendshift top-5 sprint).
  */
+#[IsDestructive]
 #[AssistantTool('write')]
 class BrowserHarnessRunTool extends Tool
 {
@@ -21,8 +23,6 @@ class BrowserHarnessRunTool extends Tool
 
     public function schema(JsonSchema $schema): array
     {
-        $teamId = (string) (app('mcp.team_id') ?? auth()->user()->current_team_id ?? '');
-
         return [
             'task' => $schema->string()->required()
                 ->description('Natural-language description of what to do in the browser.'),

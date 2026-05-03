@@ -26,8 +26,6 @@ class WorkflowExportYamlTool extends Tool
 
     public function schema(JsonSchema $schema): array
     {
-        $teamId = (string) (app('mcp.team_id') ?? auth()->user()->current_team_id ?? '');
-
         return [
             'workflow_id' => $schema->string()
                 ->required()
