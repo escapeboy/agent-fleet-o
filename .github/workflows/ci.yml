@@ -91,6 +91,10 @@ jobs:
           php artisan key:generate
           php artisan config:clear
           mkdir -p storage/framework/{cache,sessions,views} storage/logs
+          # Self-hosted runner shares storage/framework between runs — purge stale compiled views
+          # so a Blade component edit from one run doesn't leak into the next.
+          rm -f storage/framework/views/*.php
+          php artisan view:clear
 
       - name: Run tests
         run: vendor/bin/phpunit
