@@ -1,16 +1,208 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Call to an undefined static method Propaganistas\\LaravelDisposableEmail\\Facades\\DisposableDomains::isDisposable\(\)\.$#'
-			identifier: staticMethod.notFound
+			message: '#^Access to an undefined property App\\Domain\\Experiment\\Models\\Experiment\:\:\$project_run_id\.$#'
+			identifier: property.notFound
 			count: 1
-			path: app/Domain/Signal/Rules/E01DisposableEmailRule.php
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between \*NEVER\* and array\{\} will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>goal" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>project_run_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>role" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Agent/Services/WorkspaceContractWriter.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionStatus\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/AgentSession/Actions/CancelAgentSessionAction.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionStatus\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/AgentSession/Actions/SleepAgentSessionAction.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionStatus\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/AgentSession/Actions/WakeAgentSessionAction.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/AgentSession/Actions/WakeAgentSessionAction.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionEventKind\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/AgentSession/Actions/WakeAgentSessionAction.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionStatus\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/AgentSession/DTOs/SessionContext.php
+
+		-
+			message: '#^Call to function is_array\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Crew/Models/CrewMember.php
+
+		-
+			message: '#^Offset ''model_override'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Crew/Models/CrewMember.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Crew/Models/CrewMember.php
 
 		-
 			message: '#^Offset ''parent_score'' on string\|null on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Evolution/Jobs/EvaluateSkillMutationJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output_snapshot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$stage\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Call to function array_key_exists\(\) with ''done_gate_enabled''\|''done_gate_judge''\|''done_gate_kill…'' and array\{\} will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 2
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Offset ''feature_list_json'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between \*NEVER\* and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Experiment/States/TransitionPrerequisiteValidator.php
+
+		-
+			message: '#^Offset ''path'' on array\{path\: string, mode\?\: string, content\?\: string\|null, content_before\?\: string\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/GitRepository/Services/TestRatchetGuard.php
 
 		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
@@ -85,7 +277,79 @@ parameters:
 			path: app/Http/Controllers/Api/V1/AgentManifestController.php
 
 		-
-			message: '#^Access to an undefined property Cloud\\Domain\\Shared\\Models\\TeamInvitation\:\:\$id\.$#'
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team\.$#'
 			identifier: property.notFound
-			count: 2
-			path: app/Mcp/Tools/Shared/TeamInviteMemberTool.php
+			count: 1
+			path: app/Infrastructure/AI/Services/ProviderResolver.php
+
+		-
+			message: '#^Parameter \#2 \$agent of method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:enforceDataClassification\(\) expects App\\Domain\\Agent\\Models\\Agent\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Infrastructure/AI/Services/ProviderResolver.php
+
+		-
+			message: '#^Parameter \$agent of method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:resolve\(\) expects App\\Domain\\Agent\\Models\\Agent\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Infrastructure/AI/Services/ProviderResolver.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/AgentSession/AgentSessionEventsTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionEventKind\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/AgentSession/AgentSessionEventsTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionStatus\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/AgentSession/AgentSessionGetTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionStatus\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/AgentSession/AgentSessionListTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\AgentSession\\Enums\\AgentSessionStatus\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/AgentSession/AgentSessionSleepTool.php
+
+		-
+			message: '#^Cannot unset offset ''model_override'' on array\{\}\|string\.$#'
+			identifier: unset.offset
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewMemberSetModelOverrideTool.php
+
+		-
+			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentDoneJudgeRunTool.php
+
+		-
+			message: '#^Offset ''feature_list_json'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentDoneJudgeRunTool.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentDoneJudgeRunTool.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\JsonSchema\\Types\\ObjectType\:\:properties\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/GitRepository/RepoTestRatchetCheckTool.php
