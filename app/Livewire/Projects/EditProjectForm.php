@@ -13,6 +13,7 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class EditProjectForm extends Component
@@ -181,6 +182,8 @@ class EditProjectForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $budgetConfig = array_filter([

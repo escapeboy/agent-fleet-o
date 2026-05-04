@@ -5,6 +5,7 @@ namespace App\Livewire\GitRepositories;
 use App\Domain\GitRepository\Actions\TestGitConnectionAction;
 use App\Domain\GitRepository\Enums\TestRatchetMode;
 use App\Domain\GitRepository\Models\GitRepository;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class GitRepositoryDetailPage extends Component
@@ -44,6 +45,8 @@ class GitRepositoryDetailPage extends Component
 
     public function saveTestRatchetMode(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'testRatchetMode' => 'required|in:'.implode(',', array_column(TestRatchetMode::cases(), 'value')),
         ]);
