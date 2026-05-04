@@ -29,6 +29,8 @@ class AiRun extends Model
         'schema_valid',
         'input_tokens',
         'output_tokens',
+        'cached_input_tokens',
+        'cache_strategy',
         'cost_credits',
         'latency_ms',
         'status',

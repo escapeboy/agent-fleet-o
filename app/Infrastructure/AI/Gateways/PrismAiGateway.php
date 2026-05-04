@@ -25,6 +25,7 @@ use Prism\Prism\Streaming\Events\StreamEndEvent;
 use Prism\Prism\Streaming\Events\TextDeltaEvent;
 use Prism\Prism\ValueObjects\Messages\AssistantMessage;
 use Prism\Prism\ValueObjects\Messages\SystemMessage;
+use Prism\Prism\ValueObjects\Usage;
 use RuntimeException;
 
 class PrismAiGateway implements AiGatewayInterface
@@ -200,6 +201,8 @@ class PrismAiGateway implements AiGatewayInterface
             $completionTokens = (int) ceil(strlen($accumulated) / 4);
         }
 
+        $cacheStrategy = $this->resolveCacheStrategy($request);
+
         return new AiResponseDTO(
             content: $accumulated,
             parsedOutput: null,
@@ -211,7 +214,11 @@ class PrismAiGateway implements AiGatewayInterface
                     model: $request->model,
                     inputTokens: $promptTokens,
                     outputTokens: $completionTokens,
+                    cachedInputTokens: 0,
+                    cacheStrategy: $cacheStrategy,
                 ),
+                cachedInputTokens: 0,
+                cacheStrategy: $cacheStrategy,
             ),
             provider: $request->provider,
             model: $request->model,
@@ -325,16 +332,7 @@ class PrismAiGateway implements AiGatewayInterface
         return new AiResponseDTO(
             content: $text,
             parsedOutput: null,
-            usage: new AiUsageDTO(
-                promptTokens: $response->usage->promptTokens,
-                completionTokens: $response->usage->completionTokens,
-                costCredits: $this->costCalculator->calculateCost(
-                    provider: $request->provider,
-                    model: $request->model,
-                    inputTokens: $response->usage->promptTokens,
-                    outputTokens: $response->usage->completionTokens,
-                ),
-            ),
+            usage: $this->buildUsageDTO($response->usage, $request),
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
@@ -369,16 +367,7 @@ class PrismAiGateway implements AiGatewayInterface
             return new AiResponseDTO(
                 content: json_encode($response->structured),
                 parsedOutput: $response->structured,
-                usage: new AiUsageDTO(
-                    promptTokens: $response->usage->promptTokens,
-                    completionTokens: $response->usage->completionTokens,
-                    costCredits: $this->costCalculator->calculateCost(
-                        provider: $request->provider,
-                        model: $request->model,
-                        inputTokens: $response->usage->promptTokens,
-                        outputTokens: $response->usage->completionTokens,
-                    ),
-                ),
+                usage: $this->buildUsageDTO($response->usage, $request),
                 provider: $request->provider,
                 model: $request->model,
                 latencyMs: $latencyMs,
@@ -518,16 +507,7 @@ class PrismAiGateway implements AiGatewayInterface
         return new AiResponseDTO(
             content: $text,
             parsedOutput: null,
-            usage: new AiUsageDTO(
-                promptTokens: $response->usage->promptTokens,
-                completionTokens: $response->usage->completionTokens,
-                costCredits: $this->costCalculator->calculateCost(
-                    provider: $request->provider,
-                    model: $request->model,
-                    inputTokens: $response->usage->promptTokens,
-                    outputTokens: $response->usage->completionTokens,
-                ),
-            ),
+            usage: $this->buildUsageDTO($response->usage, $request),
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
@@ -542,6 +522,54 @@ class PrismAiGateway implements AiGatewayInterface
     /**
      * Detect repeated identical tool call sequences across steps.
      *
+     * Build the usage DTO with cache info extracted from Prism's Usage value object.
+     *
+     * cacheReadInputTokens is exposed by Anthropic, OpenAI, Gemini, and OpenRouter
+     * provider handlers when prompt caching is engaged. cacheStrategy is derived
+     * from the request flag — Anthropic uses ephemeral_5m by default in our code path.
+     */
+    private function buildUsageDTO(Usage $usage, AiRequestDTO $request): AiUsageDTO
+    {
+        $cachedInputTokens = (int) ($usage->cacheReadInputTokens ?? 0);
+        $cacheStrategy = $this->resolveCacheStrategy($request);
+
+        return new AiUsageDTO(
+            promptTokens: $usage->promptTokens,
+            completionTokens: $usage->completionTokens,
+            costCredits: $this->costCalculator->calculateCost(
+                provider: $request->provider,
+                model: $request->model,
+                inputTokens: $usage->promptTokens,
+                outputTokens: $usage->completionTokens,
+                cachedInputTokens: $cachedInputTokens,
+                cacheStrategy: $cacheStrategy,
+            ),
+            cachedInputTokens: $cachedInputTokens,
+            cacheStrategy: $cacheStrategy,
+        );
+    }
+
+    /**
+     * Map the request's prompt-caching flag + provider to a CostCalculator cache strategy.
+     * Returns null when caching is disabled or the provider doesn't engage write surcharges
+     * in our current code path (gateway only injects cache_control for Anthropic).
+     */
+    private function resolveCacheStrategy(AiRequestDTO $request): ?string
+    {
+        if (! $request->enablePromptCaching) {
+            return null;
+        }
+
+        // Today the gateway injects cacheType=ephemeral on Anthropic system prompts + last tool.
+        // Other providers consume the cached_tokens value but don't incur write surcharge here.
+        if ($request->provider === 'anthropic') {
+            return CostCalculator::CACHE_STRATEGY_5M;
+        }
+
+        return null;
+    }
+
+    /**
      * Each step's tool calls are serialised (sorted name+args) and hashed with MD5.
      * Returns the maximum repeat count for any single hash and the full distribution.
      *
