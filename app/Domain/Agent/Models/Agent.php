@@ -104,6 +104,7 @@ class Agent extends Model
         'chat_protocol_slug',
         'chat_protocol_config',
         'chat_protocol_secret',
+        'tool_deny_list',
     ];
 
     protected function casts(): array
@@ -138,6 +139,7 @@ class Agent extends Model
             'system_prompt_template' => 'array',
             'scope' => AgentScope::class,
             'environment' => AgentEnvironment::class,
+            'tool_deny_list' => 'array',
         ];
     }
 

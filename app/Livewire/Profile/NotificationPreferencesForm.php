@@ -3,6 +3,7 @@
 namespace App\Livewire\Profile;
 
 use App\Domain\Shared\Services\NotificationPreferencesService;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class NotificationPreferencesForm extends Component
@@ -33,6 +34,8 @@ class NotificationPreferencesForm extends Component
 
     public function savePushSubscription(array $payload): void
     {
+        Gate::authorize('update-self');
+
         $user = auth()->user();
 
         $endpoint = $payload['endpoint'] ?? '';
@@ -57,12 +60,16 @@ class NotificationPreferencesForm extends Component
 
     public function deletePushSubscription(string $endpoint): void
     {
+        Gate::authorize('update-self');
+
         auth()->user()?->deletePushSubscription($endpoint);
         $this->pushStatus = 'unsubscribed';
     }
 
     public function save(): void
     {
+        Gate::authorize('update-self');
+
         $user = auth()->user();
         $available = NotificationPreferencesService::availableChannels();
 

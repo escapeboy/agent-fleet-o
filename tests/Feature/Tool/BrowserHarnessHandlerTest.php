@@ -30,6 +30,8 @@ class BrowserHarnessHandlerTest extends TestCase
     {
         parent::setUp();
 
+        config(['browser.harness_enabled' => true]);
+
         $this->team = Team::factory()->create();
         User::factory()->create(['current_team_id' => $this->team->id]);
         app()->instance('mcp.team_id', $this->team->id);

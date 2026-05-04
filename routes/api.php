@@ -10,6 +10,7 @@ use App\Http\Controllers\DatadogAlertWebhookController;
 use App\Http\Controllers\DiscordWebhookController;
 use App\Http\Controllers\GitHubIssueWebhookController;
 use App\Http\Controllers\GitHubWebhookController;
+use App\Http\Controllers\GitHubWorkflowYamlWebhookController;
 use App\Http\Controllers\IntegrationWebhookController;
 use App\Http\Controllers\JiraWebhookController;
 use App\Http\Controllers\LinearWebhookController;
@@ -96,6 +97,13 @@ Route::post('/signals/{driver}/{teamId}', PerTeamSignalWebhookController::class)
 
 // Legacy signal ingestion (single-team / self-hosted — HMAC validated in controller)
 Route::post('/signals/webhook', SignalWebhookController::class)->name('signals.webhook');
+
+// Reverse Workflow YAML git sync — GitHub PR-merged → ImportWorkflowAction.
+// HMAC-SHA256 signature verified in controller using team's git_webhook_secret.
+Route::post('/webhooks/github/workflow-yaml/{teamId}', GitHubWorkflowYamlWebhookController::class)
+    ->name('webhooks.github.workflow-yaml')
+    ->middleware('throttle:60,1')
+    ->whereUuid('teamId');
 
 // Slack Events API (HMAC-SHA256 + URL verification challenge)
 Route::post('/signals/slack', SlackWebhookController::class)->name('signals.slack');

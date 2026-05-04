@@ -85,6 +85,18 @@ class ResolveAgentToolsAction
             return ($mode ?? 'auto') !== ToolApprovalMode::Deny->value;
         });
 
+        // Per-agent tool deny list — operator-managed allowlist of tool IDs
+        // the agent is explicitly forbidden from using regardless of pivot.
+        // The cast on Agent.tool_deny_list returns array|null; phpstan can't
+        // see the cast through the magic property and infers string|null,
+        // hence the explicit array narrowing here.
+        /** @var array<int, string>|null $denyListRaw */
+        $denyListRaw = $agent->getAttribute('tool_deny_list');
+        $denyList = is_array($denyListRaw) ? $denyListRaw : [];
+        if ($denyList !== []) {
+            $agentTools = $agentTools->filter(fn (Tool $tool) => ! in_array($tool->id, $denyList, true));
+        }
+
         // Apply project-level restrictions if set
         if ($project && ! empty($project->allowed_tool_ids)) {
             $agentTools = $agentTools->filter(
