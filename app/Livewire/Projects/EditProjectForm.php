@@ -212,6 +212,13 @@ class EditProjectForm extends Component
             'agent_config' => $this->agentId ? ['lead_agent_id' => $this->agentId] : $this->project->agent_config,
             'budget_config' => $budgetConfig ?: [],
             'delivery_config' => $deliveryConfig,
+            'allowed_tool_ids' => array_values($this->selectedToolIds),
+            'allowed_credential_ids' => array_values($this->selectedCredentialIds),
+            'email_template_id' => $this->emailTemplateId ?: null,
+            'settings' => [
+                'done_gate_enabled' => $this->doneGateEnabled,
+                'done_gate_kill_switch' => $this->doneGateKillSwitch,
+            ],
         ];
 
         if ($this->project->isContinuous()) {
@@ -229,18 +236,6 @@ class EditProjectForm extends Component
         }
 
         app(UpdateProjectAction::class)->execute($this->project, $data);
-
-        // Update tools, credentials, email template, quality gates
-        $existingSettings = $this->project->settings ?? [];
-        $existingSettings['done_gate_enabled'] = $this->doneGateEnabled;
-        $existingSettings['done_gate_kill_switch'] = $this->doneGateKillSwitch;
-
-        $this->project->update([
-            'allowed_tool_ids' => array_values($this->selectedToolIds),
-            'allowed_credential_ids' => array_values($this->selectedCredentialIds),
-            'email_template_id' => $this->emailTemplateId ?: null,
-            'settings' => $existingSettings,
-        ]);
 
         session()->flash('message', 'Project updated successfully!');
         $this->redirect(route('projects.show', $this->project));

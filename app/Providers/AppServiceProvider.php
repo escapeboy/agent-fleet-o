@@ -383,6 +383,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('edit-content', fn ($user) => true);
         Gate::define('delete-team', fn ($user) => true);
 
+        // Per-user gate — used by Profile/Notification forms that write only to
+        // auth()->user(). Always true in community edition. Cloud may override
+        // (e.g. to lock down impersonated sessions) without breaking the
+        // assumption that an authenticated user can edit their own profile.
+        Gate::define('update-self', fn ($user) => true);
+
         // Deployment mode feature gates
         $mode = app(DeploymentMode::class);
         Gate::define('feature.local_agents', fn ($user) => $mode->isSelfHosted());

@@ -31,6 +31,10 @@ class BrowserHarnessHandler
      */
     public function execute(array $params, string $teamId, ?SandboxedWorkspace $workspace = null): array
     {
+        if (! config('browser.harness_enabled', false)) {
+            return ['ok' => false, 'error' => 'browser harness is disabled — set BROWSER_HARNESS_ENABLED=true and rebuild the sandbox image with chromium installed'];
+        }
+
         $task = trim($params['task']);
         if ($task === '') {
             return ['ok' => false, 'error' => 'task required'];

@@ -55,10 +55,12 @@ class Team extends Model
         'allowed_models',
         'widget_public_key',
         'dashboard_config',
+        'git_webhook_secret',
     ];
 
     protected $hidden = [
         'credential_key',
+        'git_webhook_secret',
     ];
 
     protected function casts(): array

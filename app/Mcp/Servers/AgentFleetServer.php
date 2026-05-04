@@ -49,6 +49,7 @@ use App\Mcp\Tools\Agent\AgentSkillSyncTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentToolApprovalConfigureTool;
+use App\Mcp\Tools\Agent\AgentToolDenySetTool;
 use App\Mcp\Tools\Agent\AgentToolSyncTool;
 use App\Mcp\Tools\Agent\AgentUpdateIdentityTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
@@ -286,6 +287,7 @@ use App\Mcp\Tools\Marketplace\MarketplaceUnpublishTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
 use App\Mcp\Tools\Memory\MemoryChunkReadTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
+use App\Mcp\Tools\Memory\MemoryDriftStatusTool;
 use App\Mcp\Tools\Memory\MemoryExportTool;
 use App\Mcp\Tools\Memory\MemoryFeedbackTool;
 use App\Mcp\Tools\Memory\MemoryGetTool;
@@ -697,6 +699,7 @@ class AgentFleetServer extends Server
         AgentWorkspaceContractGetTool::class,
         AgentResetSessionTool::class,
         AgentSandboxTool::class,
+        AgentToolDenySetTool::class,
         AgentHeartbeatUpdateTool::class,
         AgentHeartbeatRunNowTool::class,
         AgentHookListTool::class,
@@ -1020,6 +1023,7 @@ class AgentFleetServer extends Server
         MemoryUnifiedSearchTool::class,
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
+        MemoryDriftStatusTool::class,
         MemoryDeleteTool::class,
         MemoryUploadKnowledgeTool::class,
         MemoryAddTool::class,

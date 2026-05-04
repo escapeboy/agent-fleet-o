@@ -23,6 +23,7 @@ class Memory extends Model
         'project_id',
         'content',
         'embedding',
+        'embedding_at_creation',
         'metadata',
         'source_type',
         'source_id',
