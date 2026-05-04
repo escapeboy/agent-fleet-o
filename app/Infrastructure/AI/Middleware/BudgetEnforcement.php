@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\AI\Middleware;
 
+use App\Domain\Budget\Actions\EnforceMaxCreditsPerCallAction;
 use App\Domain\Budget\Actions\ReserveBudgetAction;
 use App\Domain\Budget\Actions\SettleBudgetAction;
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
@@ -17,6 +18,7 @@ class BudgetEnforcement implements AiMiddlewareInterface
         private readonly CostCalculator $costCalculator,
         private readonly ReserveBudgetAction $reserveBudget,
         private readonly SettleBudgetAction $settleBudget,
+        private readonly EnforceMaxCreditsPerCallAction $enforceMaxCap,
     ) {}
 
     public function handle(AiRequestDTO $request, Closure $next): AiResponseDTO
@@ -24,6 +26,14 @@ class BudgetEnforcement implements AiMiddlewareInterface
         if (! $request->userId) {
             return $next($request);
         }
+
+        // Pre-call max-credits-per-call enforcement (throws before any LLM hit).
+        $this->enforceMaxCap->execute(
+            teamId: $request->teamId ?? '',
+            provider: $request->provider,
+            model: $request->model,
+            maxOutputTokens: $request->maxTokens,
+        );
 
         $estimatedCost = $this->costCalculator->estimateCost(
             provider: $request->provider,

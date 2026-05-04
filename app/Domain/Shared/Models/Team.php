@@ -19,6 +19,9 @@ use Illuminate\Support\Str;
  * @property array<string, mixed>|null $settings
  * @property string|null $plan
  * @property array<string, mixed>|null $custom_limits
+ * @property string|null $sub_program_slug
+ * @property float|null $credit_margin_multiplier
+ * @property int|null $max_credits_per_call
  */
 class Team extends Model
 {
@@ -129,6 +132,24 @@ class Team extends Model
     public function hasFeature(string $feature): bool
     {
         return true;
+    }
+
+    /**
+     * Community edition has no per-team override — falls through to config.
+     */
+    public function effectiveMarginMultiplier(): float
+    {
+        return (float) config('llm_pricing.margin_multiplier', 1.30);
+    }
+
+    /**
+     * Community edition has no per-team cap — falls through to config.
+     */
+    public function effectiveMaxCreditsPerCall(): ?int
+    {
+        $configMax = config('llm_pricing.max_credits_per_call');
+
+        return $configMax !== null ? (int) $configMax : null;
     }
 
     /**
