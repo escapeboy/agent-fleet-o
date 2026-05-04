@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Actions;
 
+use App\Domain\Agent\DTOs\WorkspaceContractSnapshot;
 use App\Domain\Agent\Enums\AgentHookPosition;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentStatus;
@@ -27,6 +28,7 @@ use App\Domain\Agent\Services\AgentPromptCompiler;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Agent\Services\ToolRecoveryOrchestrator;
+use App\Domain\Agent\Services\WorkspaceContractWriter;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
@@ -76,7 +78,15 @@ class ExecuteAgentAction
         private readonly AgentPromptCompiler $promptCompiler,
         private readonly ToolRecoveryOrchestrator $toolRecovery,
         private readonly SchemaValidator $schemaValidator,
+        private readonly WorkspaceContractWriter $workspaceContractWriter,
     ) {}
+
+    /**
+     * Workspace contract built once per execute() call and reused by every
+     * AgentExecution::create() callsite plus the post-success progress append.
+     * Reset to null after execute() returns.
+     */
+    private ?WorkspaceContractSnapshot $currentWorkspaceContract = null;
 
     /**
      * Validate an agent's final output against its `output_schema` JSONB, if
@@ -234,12 +244,19 @@ class ExecuteAgentAction
             ])
             ->thenReturn();
 
+        // Use the (potentially summarized) input going forward
+        $input = $ctx->input;
+
+        // Build workspace contract once for this execute() call. Stored on the
+        // instance so every AgentExecution::create() callsite below — including
+        // requestClarification — can attach it without threading a parameter
+        // through method signatures.
+        $this->currentWorkspaceContract = $this->workspaceContractWriter
+            ->buildSnapshotForExecution($agent, $experimentId, $project, $input);
+
         if ($ctx->requiresClarification) {
             return $this->requestClarification($ctx, $stepId);
         }
-
-        // Use the (potentially summarized) input going forward
-        $input = $ctx->input;
 
         // Workflow-driven execution: if input has a 'task' key (from workflow node prompt),
         // execute directly with LLM instead of skill chain
@@ -266,6 +283,26 @@ class ExecuteAgentAction
             );
 
             $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId, $currentDepth, $userId, $semanticQuery, $allowedToolIds);
+
+            // Materialize the workspace contract files into the sandbox before the
+            // LLM tool-loop starts so the agent can read AGENTS.md / feature-list.json /
+            // progress.md / init.sh from disk via filesystem tools. Best-effort —
+            // failure is logged, never raised. currentWorkspaceContract is always
+            // populated by this point (set right after pipeline middleware above).
+            if ($agent->team_id) {
+                try {
+                    $this->workspaceContractWriter->materializeSnapshot(
+                        new SandboxedWorkspace($sandboxId, $agent->id, $agent->team_id),
+                        $this->currentWorkspaceContract,
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('WorkspaceContract materialize failed', [
+                        'sandbox_id' => $sandboxId,
+                        'agent_id' => $agent->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             if (! empty($tools)) {
                 try {
@@ -297,6 +334,25 @@ class ExecuteAgentAction
 
         // Plugin hook: notify plugins of execution result
         event(new AgentExecuted($agent, $result['execution'], $result['output'] !== null));
+
+        // Best-effort: log a single progress line summarising the run. Never
+        // raised — progress is observability, not a hard dependency.
+        if ($result['execution'] instanceof AgentExecution) {
+            try {
+                $status = $result['execution']->status;
+                $note = "Run {$result['execution']->id} ".(
+                    $result['output'] !== null ? "completed (status={$status})" : "ended without output (status={$status})"
+                );
+                $this->workspaceContractWriter->appendProgress($result['execution'], $note);
+            } catch (\Throwable $e) {
+                Log::warning('WorkspaceContract appendProgress failed', [
+                    'execution_id' => $result['execution']->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $this->currentWorkspaceContract = null;
 
         return $result;
     }
@@ -439,6 +495,7 @@ class ExecuteAgentAction
                     'tier' => $tierConfig['tier']->value,
                     'semantic_loop_max_repeat' => $semanticMaxRepeat >= $semanticWarn ? $semanticMaxRepeat : null,
                 ]),
+                'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
 
             $this->runtimeStateService->recordExecution($agent, $response->usage);
@@ -483,6 +540,7 @@ class ExecuteAgentAction
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
                 'quality_details' => ['result_as_answer' => true],
+                'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
 
             return [
@@ -651,6 +709,7 @@ class ExecuteAgentAction
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
                 'quality_details' => $qualityDetails,
+                'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
 
             $this->runtimeStateService->recordExecution($agent, $response->usage);
@@ -959,6 +1018,7 @@ class ExecuteAgentAction
                 'skills_executed' => $skillResults,
                 'duration_ms' => $durationMs,
                 'cost_credits' => $totalCost,
+                'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
 
             ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)
@@ -1053,6 +1113,7 @@ class ExecuteAgentAction
             'output' => ['awaiting_clarification' => true, 'question' => $question],
             'duration_ms' => 0,
             'cost_credits' => 0,
+            'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
         ]);
 
         return [
@@ -1086,6 +1147,7 @@ class ExecuteAgentAction
             'duration_ms' => $durationMs,
             'cost_credits' => $costCredits,
             'error_message' => $errorMessage,
+            'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
         ]);
 
         return [

@@ -36,6 +36,7 @@ Schedule::command('error-translator:harvest --format=json')
     ->appendOutputTo(storage_path('logs/error-translator-harvest.log'));
 
 Schedule::command('audit:cleanup')->dailyAt('02:00');
+Schedule::command('agent-session-events:cleanup')->dailyAt('03:45')->withoutOverlapping(60)->onOneServer();
 Schedule::command('worldmodel:rebuild')->dailyAt('02:15')->withoutOverlapping(60)->onOneServer();
 Schedule::command('kg:build-communities')->dailyAt('02:45')->withoutOverlapping(60)->onOneServer();
 Schedule::command('kg:merge-entities')->dailyAt('04:30')->withoutOverlapping(30)->onOneServer();

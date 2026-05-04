@@ -40,20 +40,92 @@ class WorkspaceContractWriter
         $workflow = $this->resolveWorkflow($execution);
         $project = $this->resolveProject($execution);
 
-        $snapshot = new WorkspaceContractSnapshot(
-            agentsMd: $this->buildAgentsMd($agent, $execution, $project),
-            featureListJson: $this->buildFeatureListJson($execution, $workflow, $project),
-            progressMd: $this->buildProgressMd($execution),
-            initSh: $this->buildInitSh($agent),
+        $snapshot = $this->buildSnapshot(
+            agent: $agent,
+            workflow: $workflow,
+            project: $project,
+            executionContext: [
+                'execution_id' => $execution->id,
+                'agent_id' => $execution->agent_id,
+                'created_at' => $execution->created_at?->toIso8601String(),
+                'input' => $execution->input,
+            ],
         );
 
         if ($sandbox !== null) {
-            $this->materialize($sandbox, $snapshot);
+            $this->materializeSnapshot($sandbox, $snapshot);
         }
 
         $execution->update(['workspace_contract' => $snapshot->toArray()]);
 
         return $snapshot;
+    }
+
+    /**
+     * Build a snapshot without persisting or materializing.
+     *
+     * Used by call sites that want the contract built upfront — before an
+     * AgentExecution row exists — so it can be (a) materialized to a sandbox
+     * for the LLM tool-loop to read, and (b) stored on the eventual
+     * AgentExecution row when the run record is created.
+     *
+     * @param  array{execution_id?: string|null, agent_id?: string|null, created_at?: string|null, input?: mixed}  $executionContext
+     */
+    public function buildSnapshot(
+        ?Agent $agent,
+        ?Workflow $workflow,
+        ?Project $project,
+        array $executionContext = [],
+    ): WorkspaceContractSnapshot {
+        return new WorkspaceContractSnapshot(
+            agentsMd: $this->buildAgentsMdFromContext($agent, $executionContext, $project),
+            featureListJson: $this->buildFeatureListJsonFromContext($executionContext, $workflow, $project),
+            progressMd: $this->buildProgressMdFromContext($executionContext),
+            initSh: $this->buildInitSh($agent),
+        );
+    }
+
+    /**
+     * Write a snapshot's 4 files into a sandbox without touching the DB.
+     */
+    public function materializeSnapshot(SandboxedWorkspace $sandbox, WorkspaceContractSnapshot $snapshot): void
+    {
+        $this->materialize($sandbox, $snapshot);
+    }
+
+    /**
+     * Convenience for ExecuteAgentAction: resolves the optional Workflow from
+     * an experimentId and delegates to buildSnapshot(). Avoids leaking
+     * resolveWorkflow/resolveProject internals into action code.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function buildSnapshotForExecution(
+        Agent $agent,
+        ?string $experimentId,
+        ?Project $project,
+        array $input,
+    ): WorkspaceContractSnapshot {
+        $workflow = null;
+        if (is_string($experimentId) && $experimentId !== '') {
+            $experiment = Experiment::withoutGlobalScopes()->find($experimentId);
+            $workflowId = $experiment?->workflow_id;
+            if (is_string($workflowId) && $workflowId !== '') {
+                $workflow = Workflow::withoutGlobalScopes()->find($workflowId);
+            }
+        }
+
+        return $this->buildSnapshot(
+            agent: $agent,
+            workflow: $workflow,
+            project: $project,
+            executionContext: [
+                'execution_id' => null,
+                'agent_id' => $agent->id,
+                'created_at' => null,
+                'input' => $input,
+            ],
+        );
     }
 
     /**
@@ -106,7 +178,10 @@ class WorkspaceContractWriter
         @chmod($initPath, 0o755);
     }
 
-    private function buildAgentsMd(?Agent $agent, AgentExecution $execution, ?Project $project): string
+    /**
+     * @param  array{execution_id?: string|null, agent_id?: string|null, created_at?: string|null, input?: mixed}  $context
+     */
+    private function buildAgentsMdFromContext(?Agent $agent, array $context, ?Project $project): string
     {
         $name = $agent?->name ?? 'Agent';
         $role = $agent?->role ?? 'Generalist';
@@ -124,6 +199,8 @@ class WorkspaceContractWriter
         }
 
         $rulesBlock = collect($rules)->map(fn ($r) => "- $r")->implode("\n");
+        $executionId = (string) ($context['execution_id'] ?? '(pending)');
+        $startedAt = (string) ($context['created_at'] ?? Carbon::now()->toIso8601String());
 
         return <<<MD
         # AGENTS.md
@@ -146,13 +223,16 @@ class WorkspaceContractWriter
 
         ## Execution
 
-        - id: {$execution->id}
-        - started_at: {$execution->created_at?->toIso8601String()}
+        - id: {$executionId}
+        - started_at: {$startedAt}
 
         MD;
     }
 
-    private function buildFeatureListJson(AgentExecution $execution, ?Workflow $workflow, ?Project $project): string
+    /**
+     * @param  array{execution_id?: string|null, agent_id?: string|null, input?: mixed}  $context
+     */
+    private function buildFeatureListJsonFromContext(array $context, ?Workflow $workflow, ?Project $project): string
     {
         $features = [];
 
@@ -186,24 +266,29 @@ class WorkspaceContractWriter
             $features[] = [
                 'id' => Str::uuid7()->toString(),
                 'title' => 'Primary execution goal',
-                'done_criteria' => $execution->input ?? null,
+                'done_criteria' => $context['input'] ?? null,
                 'status' => 'pending',
             ];
         }
 
         return json_encode([
-            'execution_id' => $execution->id,
-            'agent_id' => $execution->agent_id,
+            'execution_id' => $context['execution_id'] ?? null,
+            'agent_id' => $context['agent_id'] ?? null,
             'features' => $features,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
-    private function buildProgressMd(AgentExecution $execution): string
+    /**
+     * @param  array{execution_id?: string|null}  $context
+     */
+    private function buildProgressMdFromContext(array $context): string
     {
+        $executionId = (string) ($context['execution_id'] ?? '(pending)');
+
         return <<<MD
         # progress.md
 
-        Rolling iteration log for execution `{$execution->id}`.
+        Rolling iteration log for execution `{$executionId}`.
 
         ## Iteration log
 

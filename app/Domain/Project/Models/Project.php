@@ -21,6 +21,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property array<string, mixed>|null $settings
+ */
 class Project extends Model
 {
     use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids;

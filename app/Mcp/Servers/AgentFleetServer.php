@@ -70,9 +70,12 @@ use App\Mcp\Tools\AgentChatProtocol\ExternalAgentListTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentPingTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool;
+use App\Mcp\Tools\AgentSession\AgentSessionCancelTool;
 use App\Mcp\Tools\AgentSession\AgentSessionEventsTool;
 use App\Mcp\Tools\AgentSession\AgentSessionGetTool;
+use App\Mcp\Tools\AgentSession\AgentSessionHandoffTool;
 use App\Mcp\Tools\AgentSession\AgentSessionListTool;
+use App\Mcp\Tools\AgentSession\AgentSessionReplayTool;
 use App\Mcp\Tools\AgentSession\AgentSessionSleepTool;
 use App\Mcp\Tools\AgentSession\AgentSessionWakeTool;
 use App\Mcp\Tools\Approval\ActionProposalApproveTool;
@@ -1115,12 +1118,15 @@ class AgentFleetServer extends Server
         ActivepiecesSyncTool::class,
         ActivepiecesListPiecesTool::class,
 
-        // Agent Session (5)
+        // Agent Session (8)
         AgentSessionListTool::class,
         AgentSessionGetTool::class,
         AgentSessionEventsTool::class,
         AgentSessionWakeTool::class,
         AgentSessionSleepTool::class,
+        AgentSessionCancelTool::class,
+        AgentSessionHandoffTool::class,
+        AgentSessionReplayTool::class,
 
         // Compute (1)
         ComputeManageTool::class,
