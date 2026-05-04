@@ -295,6 +295,18 @@
                 <p class="mt-1.5 text-xs text-gray-500">Credits. Leave empty for unlimited. Project auto-pauses when a cap is hit and resumes when the period resets.</p>
             </div>
 
+            {{-- Quality Gates --}}
+            <div>
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Quality Gates</h3>
+                <div class="space-y-3 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                    <x-form-checkbox wire:model="doneGateEnabled" label="Done-Condition Gate"
+                        hint="When enabled, transitions to Completed run a Haiku-judged check that the work matches the externalized done_criteria. Override the judge model in project.settings.done_gate_judge if needed." />
+                    <x-form-checkbox wire:model="doneGateKillSwitch" label="Kill switch (bypass gate)"
+                        hint="Bypasses the Done-Condition Gate even when enabled. Use only to break out of false-negative judge loops." />
+                </div>
+                <p class="mt-1.5 text-xs text-gray-500">The gate prevents premature completions by re-checking against feature-list.json — see AGENTS.md workspace contract.</p>
+            </div>
+
             {{-- Email Template --}}
             @if($emailTemplates->isNotEmpty())
                 <div>

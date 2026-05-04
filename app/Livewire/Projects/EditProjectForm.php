@@ -81,6 +81,11 @@ class EditProjectForm extends Component
 
     public array $selectedCredentialIds = [];
 
+    // Quality Gates (live in project.settings JSONB)
+    public bool $doneGateEnabled = false;
+
+    public bool $doneGateKillSwitch = false;
+
     public function mount(Project $project): void
     {
         $this->project = $project;
@@ -129,6 +134,11 @@ class EditProjectForm extends Component
         // Tools & Credentials
         $this->selectedToolIds = $project->allowed_tool_ids ?? [];
         $this->selectedCredentialIds = $project->allowed_credential_ids ?? [];
+
+        // Quality Gates
+        $settings = $project->settings ?? [];
+        $this->doneGateEnabled = (bool) ($settings['done_gate_enabled'] ?? false);
+        $this->doneGateKillSwitch = (bool) ($settings['done_gate_kill_switch'] ?? false);
     }
 
     protected function rules(): array
@@ -162,6 +172,9 @@ class EditProjectForm extends Component
         $rules['heartbeatBudgetCap'] = 'nullable|integer|min:1';
         $rules['heartbeatContextSources'] = 'array';
         $rules['heartbeatContextSources.*'] = 'string|in:signals,metrics,audit,experiments';
+
+        $rules['doneGateEnabled'] = 'boolean';
+        $rules['doneGateKillSwitch'] = 'boolean';
 
         return $rules;
     }
@@ -214,11 +227,16 @@ class EditProjectForm extends Component
 
         app(UpdateProjectAction::class)->execute($this->project, $data);
 
-        // Update tools, credentials, email template
+        // Update tools, credentials, email template, quality gates
+        $existingSettings = $this->project->settings ?? [];
+        $existingSettings['done_gate_enabled'] = $this->doneGateEnabled;
+        $existingSettings['done_gate_kill_switch'] = $this->doneGateKillSwitch;
+
         $this->project->update([
             'allowed_tool_ids' => array_values($this->selectedToolIds),
             'allowed_credential_ids' => array_values($this->selectedCredentialIds),
             'email_template_id' => $this->emailTemplateId ?: null,
+            'settings' => $existingSettings,
         ]);
 
         session()->flash('message', 'Project updated successfully!');
