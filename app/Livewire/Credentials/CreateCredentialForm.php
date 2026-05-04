@@ -4,6 +4,7 @@ namespace App\Livewire\Credentials;
 
 use App\Domain\Credential\Actions\CreateCredentialAction;
 use App\Domain\Credential\Enums\CredentialType;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateCredentialForm extends Component
@@ -120,6 +121,8 @@ class CreateCredentialForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $team = auth()->user()->currentTeam;
         $type = CredentialType::from($this->credentialType);
         $secretData = $this->buildSecretData($type);

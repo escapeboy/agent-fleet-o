@@ -12,6 +12,7 @@ use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ToolDetailPage extends Component
@@ -61,6 +62,8 @@ class ToolDetailPage extends Component
 
     public function toggleStatus(): void
     {
+        Gate::authorize('edit-content');
+
         $teamId = auth()->user()->current_team_id;
 
         if ($this->tool->isPlatformTool()) {
@@ -84,6 +87,8 @@ class ToolDetailPage extends Component
 
     public function saveCredentials(): void
     {
+        Gate::authorize('edit-content');
+
         $teamId = auth()->user()->current_team_id;
         $overrides = array_filter($this->credentialInputs, fn ($v) => $v !== '');
 
@@ -121,6 +126,8 @@ class ToolDetailPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         if ($this->tool->isPlatformTool()) {
             return;
         }
@@ -147,6 +154,8 @@ class ToolDetailPage extends Component
 
     public function saveProxyCredential(): void
     {
+        Gate::authorize('edit-content');
+
         $config = $this->tool->transport_config ?? [];
 
         if ($this->proxyCredentialId) {
@@ -166,6 +175,8 @@ class ToolDetailPage extends Component
 
     public function deleteTool(): void
     {
+        Gate::authorize('edit-content');
+
         if ($this->tool->isPlatformTool()) {
             return;
         }

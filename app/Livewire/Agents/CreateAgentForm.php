@@ -11,6 +11,7 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -137,6 +138,8 @@ class CreateAgentForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $team = auth()->user()->currentTeam;

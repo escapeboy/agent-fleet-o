@@ -13,6 +13,7 @@ use App\Domain\Chatbot\Models\ChatbotChannel;
 use App\Domain\Chatbot\Models\ChatbotToken;
 use App\Domain\Workflow\Models\Workflow;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ChatbotDetailPage extends Component
@@ -67,6 +68,8 @@ class ChatbotDetailPage extends Component
 
     public function toggleStatus(): void
     {
+        Gate::authorize('edit-content');
+
         app(ToggleChatbotStatusAction::class)->execute($this->chatbot);
         $this->chatbot->refresh();
         session()->flash('message', 'Chatbot status updated.');
@@ -94,6 +97,8 @@ class ChatbotDetailPage extends Component
 
     public function saveEdit(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'editName' => 'required|min:2|max:255',
             'editConfidenceThreshold' => 'required|numeric|min:0.1|max:1.0',
@@ -124,6 +129,8 @@ class ChatbotDetailPage extends Component
 
     public function generateToken(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'newTokenName' => 'required|min:1|max:100',
         ]);
@@ -144,6 +151,8 @@ class ChatbotDetailPage extends Component
 
     public function revokeToken(string $tokenId): void
     {
+        Gate::authorize('edit-content');
+
         $token = ChatbotToken::where('id', $tokenId)
             ->where('chatbot_id', $this->chatbot->id)
             ->firstOrFail();
@@ -181,6 +190,8 @@ class ChatbotDetailPage extends Component
 
     public function saveTelegramChannel(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'telegramBotToken' => 'required|string|min:10',
             'telegramWebhookSecret' => 'nullable|string|max:256',
@@ -211,6 +222,8 @@ class ChatbotDetailPage extends Component
 
     public function toggleTelegramChannel(string $channelId): void
     {
+        Gate::authorize('edit-content');
+
         $channel = ChatbotChannel::where('id', $channelId)
             ->where('chatbot_id', $this->chatbot->id)
             ->firstOrFail();
@@ -220,6 +233,8 @@ class ChatbotDetailPage extends Component
 
     public function deleteTelegramChannel(string $channelId): void
     {
+        Gate::authorize('edit-content');
+
         ChatbotChannel::where('id', $channelId)
             ->where('chatbot_id', $this->chatbot->id)
             ->delete();
@@ -229,6 +244,8 @@ class ChatbotDetailPage extends Component
 
     public function delete(): void
     {
+        Gate::authorize('edit-content');
+
         app(DeleteChatbotAction::class)->execute($this->chatbot);
 
         session()->flash('message', 'Chatbot deleted.');

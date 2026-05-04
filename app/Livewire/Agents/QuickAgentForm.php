@@ -5,6 +5,7 @@ namespace App\Livewire\Agents;
 use App\Domain\Agent\Actions\CreateAgentAction;
 use App\Domain\Project\Actions\CreateProjectAction;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class QuickAgentForm extends Component
@@ -41,6 +42,8 @@ class QuickAgentForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $team = auth()->user()->currentTeam;

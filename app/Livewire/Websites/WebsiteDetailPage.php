@@ -15,6 +15,7 @@ use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Exceptions\DeploymentDriverException;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
@@ -42,6 +43,8 @@ class WebsiteDetailPage extends Component
 
     public function addPage(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'pageTitle' => 'required|max:255',
             'pageSlug' => 'required|max:255',
@@ -64,6 +67,8 @@ class WebsiteDetailPage extends Component
 
     public function deletePage(string $pageId): void
     {
+        Gate::authorize('edit-content');
+
         // Scope to this website — prevents cross-website page deletion within same team
         $page = $this->website->pages()->findOrFail($pageId);
         app(DeleteWebsitePageAction::class)->execute($page);
@@ -74,6 +79,8 @@ class WebsiteDetailPage extends Component
 
     public function publishPage(string $pageId): void
     {
+        Gate::authorize('edit-content');
+
         // Scope to this website — prevents cross-website page publishing within same team
         $page = $this->website->pages()->findOrFail($pageId);
         app(PublishWebsitePageAction::class)->execute($page);
@@ -84,6 +91,8 @@ class WebsiteDetailPage extends Component
 
     public function unpublishPage(string $pageId): void
     {
+        Gate::authorize('edit-content');
+
         // Scope to this website — prevents cross-website page unpublishing within same team
         $page = $this->website->pages()->findOrFail($pageId);
         app(UnpublishWebsitePageAction::class)->execute($page);
@@ -94,6 +103,8 @@ class WebsiteDetailPage extends Component
 
     public function unpublishWebsite(): void
     {
+        Gate::authorize('edit-content');
+
         app(UnpublishWebsiteAction::class)->execute($this->website);
 
         session()->flash('success', 'Website unpublished.');
@@ -102,6 +113,8 @@ class WebsiteDetailPage extends Component
 
     public function publishWebsite(): void
     {
+        Gate::authorize('edit-content');
+
         // Only publish draft pages that have content — skip empty drafts
         $this->website->pages()
             ->where('status', 'draft')
@@ -119,6 +132,8 @@ class WebsiteDetailPage extends Component
 
     public function deleteWebsite(): void
     {
+        Gate::authorize('edit-content');
+
         app(DeleteWebsiteAction::class)->execute($this->website);
 
         session()->flash('success', 'Website deleted.');
@@ -127,6 +142,8 @@ class WebsiteDetailPage extends Component
 
     public function deployWebsite(string $provider = 'zip'): void
     {
+        Gate::authorize('edit-content');
+
         $providerEnum = DeploymentProvider::tryFrom($provider);
         if (! $providerEnum) {
             session()->flash('error', "Unknown deployment provider '{$provider}'.");

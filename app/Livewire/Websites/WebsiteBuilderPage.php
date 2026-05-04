@@ -6,6 +6,7 @@ use App\Domain\Website\Actions\PublishWebsitePageAction;
 use App\Domain\Website\Actions\UpdateWebsitePageAction;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsitePage;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class WebsiteBuilderPage extends Component
@@ -33,6 +34,8 @@ class WebsiteBuilderPage extends Component
 
     public function saveContent(array $grapesJson, string $html, string $css): void
     {
+        Gate::authorize('edit-content');
+
         app(UpdateWebsitePageAction::class)->execute($this->page, [
             'grapes_json' => $grapesJson,
             'exported_html' => $html,
@@ -44,6 +47,8 @@ class WebsiteBuilderPage extends Component
 
     public function saveSettings(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'title' => 'required|max:255',
             'slug' => 'required|max:255',
@@ -60,6 +65,8 @@ class WebsiteBuilderPage extends Component
 
     public function publishPage(): void
     {
+        Gate::authorize('edit-content');
+
         app(PublishWebsitePageAction::class)->execute($this->page);
 
         session()->flash('message', 'Page published.');

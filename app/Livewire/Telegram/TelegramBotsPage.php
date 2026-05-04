@@ -5,6 +5,7 @@ namespace App\Livewire\Telegram;
 use App\Domain\Project\Models\Project;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
@@ -35,6 +36,8 @@ class TelegramBotsPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
         $this->error = null;
 
@@ -60,6 +63,8 @@ class TelegramBotsPage extends Component
 
     public function toggleStatus(string $botId): void
     {
+        Gate::authorize('edit-content');
+
         $bot = TelegramBot::findOrFail($botId);
         $bot->update(['status' => $bot->isActive() ? 'disabled' : 'active']);
         $this->success = 'Bot status updated.';
@@ -68,6 +73,8 @@ class TelegramBotsPage extends Component
 
     public function delete(string $botId): void
     {
+        Gate::authorize('edit-content');
+
         TelegramBot::findOrFail($botId)->delete();
         $this->success = 'Bot removed.';
         $this->error = null;

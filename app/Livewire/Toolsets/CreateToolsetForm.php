@@ -5,6 +5,7 @@ namespace App\Livewire\Toolsets;
 use App\Domain\Tool\Actions\CreateToolsetAction;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateToolsetForm extends Component
@@ -31,6 +32,8 @@ class CreateToolsetForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $teamId = auth()->user()->current_team_id;
