@@ -8,6 +8,8 @@ final readonly class AiUsageDTO
         public int $promptTokens,
         public int $completionTokens,
         public int $costCredits,
+        public int $cachedInputTokens = 0,
+        public ?string $cacheStrategy = null,
     ) {}
 
     public function totalTokens(): int
