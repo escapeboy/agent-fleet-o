@@ -7,6 +7,7 @@ use App\Domain\Tool\Actions\UpdateToolsetAction;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\Toolset;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ToolsetDetailPage extends Component
@@ -42,6 +43,8 @@ class ToolsetDetailPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $teamId = auth()->user()->current_team_id;
 
         $this->validate([
@@ -67,6 +70,8 @@ class ToolsetDetailPage extends Component
 
     public function delete(): void
     {
+        Gate::authorize('edit-content');
+
         app(DeleteToolsetAction::class)->execute($this->toolset);
         $this->redirect(route('toolsets.index'), navigate: true);
     }

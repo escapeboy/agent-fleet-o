@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -114,6 +115,8 @@ class ConnectorConfigModal extends Component
 
     public function save(): void
     {
+        Gate::authorize('manage-team');
+
         $credentials = $this->collectCredentials();
 
         if (empty(array_filter($credentials, fn ($v) => $v !== null && $v !== ''))) {
@@ -138,6 +141,8 @@ class ConnectorConfigModal extends Component
 
     public function testConnection(): void
     {
+        Gate::authorize('manage-team');
+
         $this->testing = true;
         $this->testResult = null;
         $this->testError = null;
@@ -169,6 +174,8 @@ class ConnectorConfigModal extends Component
 
     public function disconnect(): void
     {
+        Gate::authorize('manage-team');
+
         $teamId = $this->resolveTeamId();
 
         OutboundConnectorConfig::withoutGlobalScopes()

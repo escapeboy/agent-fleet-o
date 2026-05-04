@@ -9,6 +9,7 @@ use App\Domain\Email\Enums\EmailTemplateStatus;
 use App\Domain\Email\Enums\EmailTemplateVisibility;
 use App\Domain\Email\Models\EmailTemplate;
 use App\Domain\Email\Models\EmailTheme;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class EmailTemplateBuilderPage extends Component
@@ -43,6 +44,8 @@ class EmailTemplateBuilderPage extends Component
 
     public function saveSettings(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'name' => 'required|min:2|max:255',
             'subject' => 'nullable|max:500',
@@ -67,6 +70,8 @@ class EmailTemplateBuilderPage extends Component
 
     public function save(string $html, string $designJsonStr): void
     {
+        Gate::authorize('edit-content');
+
         $designJson = json_decode($designJsonStr, true) ?? [];
 
         app(RenderEmailTemplateAction::class)->execute($this->template, $html, $designJson);
@@ -79,6 +84,8 @@ class EmailTemplateBuilderPage extends Component
 
     public function deleteTemplate(): void
     {
+        Gate::authorize('edit-content');
+
         app(DeleteEmailTemplateAction::class)->execute($this->template);
 
         session()->flash('message', 'Template deleted.');

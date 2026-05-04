@@ -4,6 +4,7 @@ namespace App\Livewire\OutboundConnectors;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Livewire\Component;
 
@@ -59,6 +60,8 @@ class WhatsAppOutboundPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('manage-team');
+
         $this->validate([
             'phoneNumberId' => 'required|string|max:64|regex:/^\d+$/',
             'businessAccountId' => 'nullable|string|max:64',
@@ -104,6 +107,8 @@ class WhatsAppOutboundPage extends Component
      */
     public function testConnection(): void
     {
+        Gate::authorize('manage-team');
+
         $team = auth()->user()->currentTeam;
         $config = OutboundConnectorConfig::where('team_id', $team->id)
             ->where('channel', 'whatsapp')

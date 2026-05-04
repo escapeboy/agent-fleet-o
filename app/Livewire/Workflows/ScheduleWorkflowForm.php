@@ -10,6 +10,7 @@ use App\Domain\Project\Enums\ScheduleFrequency;
 use App\Domain\Project\Services\NaturalLanguageScheduleParser;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ScheduleWorkflowForm extends Component
@@ -131,6 +132,8 @@ class ScheduleWorkflowForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         if ($this->useNlpSchedule && $this->nlpScheduleInput) {
             $this->parseNlpSchedule();
         }

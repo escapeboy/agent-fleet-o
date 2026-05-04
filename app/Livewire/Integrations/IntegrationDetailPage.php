@@ -12,6 +12,7 @@ use App\Domain\Integration\Services\IntegrationManager;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class IntegrationDetailPage extends Component
@@ -75,6 +76,8 @@ class IntegrationDetailPage extends Component
 
     public function disconnect(DisconnectIntegrationAction $action): void
     {
+        Gate::authorize('edit-content');
+
         $action->execute($this->integration);
         session()->flash('message', 'Integration disconnected.');
         $this->redirect(route('integrations.index'), navigate: true);
@@ -85,6 +88,8 @@ class IntegrationDetailPage extends Component
      */
     public function syncNow(SyncActivepiecesToolsAction $action): void
     {
+        Gate::authorize('edit-content');
+
         if ($this->integration->getAttribute('driver') !== 'activepieces') {
             return;
         }

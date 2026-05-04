@@ -3,6 +3,7 @@
 namespace App\Livewire\OutboundConnectors;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class NotificationOutboundPage extends Component
@@ -30,6 +31,8 @@ class NotificationOutboundPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('manage-team');
+
         $this->validate([
             'defaultPriority' => 'required|in:low,normal,high',
         ]);

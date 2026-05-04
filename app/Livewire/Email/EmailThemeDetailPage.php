@@ -7,6 +7,7 @@ use App\Domain\Email\Actions\UpdateEmailThemeAction;
 use App\Domain\Email\Enums\EmailThemeStatus;
 use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Shared\Models\Team;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class EmailThemeDetailPage extends Component
@@ -100,6 +101,8 @@ class EmailThemeDetailPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'editName' => 'required|min:2|max:255',
             'editStatus' => 'required|in:draft,active,archived',
@@ -158,6 +161,8 @@ class EmailThemeDetailPage extends Component
 
     public function setAsDefault(): void
     {
+        Gate::authorize('edit-content');
+
         $team = auth()->user()->currentTeam;
 
         Team::withoutGlobalScopes()
@@ -169,6 +174,8 @@ class EmailThemeDetailPage extends Component
 
     public function deleteTheme(): void
     {
+        Gate::authorize('edit-content');
+
         app(DeleteEmailThemeAction::class)->execute($this->theme);
 
         session()->flash('message', 'Email theme deleted.');

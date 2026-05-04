@@ -3,6 +3,7 @@
 namespace App\Livewire\OutboundConnectors;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Livewire\Component;
 
@@ -46,6 +47,8 @@ class WebhookOutboundPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('manage-team');
+
         $this->validate([
             'webhookUrl' => 'required|url|max:2048',
             'method' => 'required|in:POST,PUT,PATCH',
@@ -84,6 +87,8 @@ class WebhookOutboundPage extends Component
 
     public function testConnection(): void
     {
+        Gate::authorize('manage-team');
+
         $team = auth()->user()->currentTeam;
         $config = OutboundConnectorConfig::where('team_id', $team->id)
             ->where('channel', 'webhook')

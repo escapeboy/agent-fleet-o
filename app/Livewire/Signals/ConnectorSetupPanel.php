@@ -6,6 +6,7 @@ use App\Domain\Signal\Actions\CreateSignalConnectorSettingAction;
 use App\Domain\Signal\Actions\RotateSignalSecretAction;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Models\SignalConnectorSetting;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -203,6 +204,8 @@ class ConnectorSetupPanel extends Component
      */
     public function rotateSecret(): void
     {
+        Gate::authorize('manage-team');
+
         $teamId = auth()->user()?->currentTeam?->id ?? session('team_id');
 
         if (! $teamId) {
@@ -231,6 +234,8 @@ class ConnectorSetupPanel extends Component
      */
     public function savePastedSecret(): void
     {
+        Gate::authorize('manage-team');
+
         $this->validate(['pasteSecretValue' => 'required|min:8']);
 
         $teamId = auth()->user()?->currentTeam?->id ?? session('team_id');

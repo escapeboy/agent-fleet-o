@@ -15,6 +15,7 @@ use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -164,12 +165,16 @@ class WorkflowBuilderPage extends Component
 
     public function saveGraph(array $nodes, array $edges): void
     {
+        Gate::authorize('edit-content');
+
         $this->nodes = $nodes;
         $this->edges = $edges;
     }
 
     public function save(bool $flash = true): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'name' => 'required|string|max:255',
             'maxLoopIterations' => 'required|integer|min:1|max:100',

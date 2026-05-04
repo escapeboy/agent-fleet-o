@@ -9,6 +9,7 @@ use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewMember;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CrewDetailPage extends Component
@@ -59,6 +60,8 @@ class CrewDetailPage extends Component
 
     public function toggleStatus(): void
     {
+        Gate::authorize('edit-content');
+
         $newStatus = $this->crew->status === CrewStatus::Active
             ? CrewStatus::Archived
             : CrewStatus::Active;
@@ -69,6 +72,8 @@ class CrewDetailPage extends Component
 
     public function activate(): void
     {
+        Gate::authorize('edit-content');
+
         $this->crew->update(['status' => CrewStatus::Active]);
         $this->crew->refresh();
     }
@@ -134,6 +139,8 @@ class CrewDetailPage extends Component
      */
     public function saveMemberPolicy(UpdateCrewAction $action): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'editMemberMaxSteps' => 'nullable|integer|min:1|max:100',
             'editMemberMaxCredits' => 'nullable|integer|min:1|max:1000000',
@@ -168,6 +175,8 @@ class CrewDetailPage extends Component
 
     public function save(UpdateCrewAction $action): void
     {
+        Gate::authorize('edit-content');
+
         $teamId = auth()->user()->current_team_id;
 
         $this->validate([
@@ -203,6 +212,8 @@ class CrewDetailPage extends Component
 
     public function deleteCrew(): void
     {
+        Gate::authorize('edit-content');
+
         $this->crew->delete();
         session()->flash('message', 'Crew deleted.');
         $this->redirect(route('crews.index'));

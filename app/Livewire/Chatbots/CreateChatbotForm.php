@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Chatbot\Actions\CreateChatbotAction;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateChatbotForm extends Component
@@ -58,6 +59,8 @@ class CreateChatbotForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $team = auth()->user()->currentTeam;

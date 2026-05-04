@@ -8,6 +8,7 @@ use App\Domain\Integration\Actions\OAuthConnectAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class IntegrationListPage extends Component
@@ -78,6 +79,8 @@ class IntegrationListPage extends Component
 
     public function connectOAuth(OAuthConnectAction $action): mixed
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'connectDriver' => 'required|string',
             'connectName' => 'required|string|min:2|max:255',
@@ -124,6 +127,8 @@ class IntegrationListPage extends Component
 
     public function connect(ConnectIntegrationAction $action): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'connectDriver' => 'required|string',
             'connectName' => 'required|string|min:2|max:255',
@@ -150,6 +155,8 @@ class IntegrationListPage extends Component
 
     public function disconnect(string $integrationId, DisconnectIntegrationAction $action): void
     {
+        Gate::authorize('edit-content');
+
         $integration = Integration::findOrFail($integrationId);
         $action->execute($integration);
 

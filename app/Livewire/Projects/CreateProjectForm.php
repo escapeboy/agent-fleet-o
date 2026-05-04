@@ -12,6 +12,7 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateProjectForm extends Component
@@ -136,6 +137,8 @@ class CreateProjectForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $team = auth()->user()->currentTeam;

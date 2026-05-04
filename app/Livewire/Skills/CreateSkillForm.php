@@ -186,6 +186,8 @@ class CreateSkillForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute,runpod_endpoint,runpod_pod,boruna_script,supabase_edge_function';
         if (config('browser.enabled', false)) {
             $allowedTypes .= ',browser';
