@@ -65,6 +65,11 @@ class TeamSettingsPage extends Component
     // Approval settings
     public int $approvalTimeoutHours = 48;
 
+    // Billing & limits
+    public string $maxCreditsPerCall = '';
+
+    public string $creditMarginMultiplier = '';
+
     // Bridge routing
     public string $bridgeRoutingMode = 'auto';
 
@@ -163,6 +168,18 @@ class TeamSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+
+        // Billing & limits — only meaningful in cloud builds (columns may not exist in community).
+        if (\Illuminate\Support\Facades\Schema::hasColumn('teams', 'max_credits_per_call')) {
+            $this->maxCreditsPerCall = $team->max_credits_per_call !== null
+                ? (string) $team->max_credits_per_call
+                : '';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('teams', 'credit_margin_multiplier')) {
+            $this->creditMarginMultiplier = $team->credit_margin_multiplier !== null
+                ? (string) $team->credit_margin_multiplier
+                : '';
+        }
 
         // AI Features
         $this->autoSkillProposeEnabled = (bool) ($settings['auto_skill_propose_enabled'] ?? config('skills.auto_propose.enabled', true));
@@ -457,6 +474,69 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Session TTL saved.');
+    }
+
+    public function saveCreditsLimits(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('teams', 'max_credits_per_call')) {
+            session()->flash('error', 'Per-call credit limits are not available in this build.');
+
+            return;
+        }
+
+        $this->validate([
+            'maxCreditsPerCall' => 'nullable|string',
+        ]);
+
+        $value = trim($this->maxCreditsPerCall);
+        $intValue = $value === '' ? null : (int) $value;
+
+        if ($intValue !== null && ($intValue < 1 || $intValue > 100_000)) {
+            $this->addError('maxCreditsPerCall', 'Must be between 1 and 100,000 (or empty for unlimited).');
+
+            return;
+        }
+
+        auth()->user()->currentTeam->update([
+            'max_credits_per_call' => $intValue,
+        ]);
+
+        session()->flash('message', 'Per-call credit limit saved.');
+    }
+
+    public function saveCreditMargin(): void
+    {
+        $user = auth()->user();
+        if (! $user || ! ($user->is_super_admin ?? false)) {
+            abort(403, 'Super-admin role required to change margin multiplier.');
+        }
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('teams', 'credit_margin_multiplier')) {
+            session()->flash('error', 'Margin override is not available in this build.');
+
+            return;
+        }
+
+        $this->validate([
+            'creditMarginMultiplier' => 'nullable|string',
+        ]);
+
+        $value = trim($this->creditMarginMultiplier);
+        $floatValue = $value === '' ? null : (float) $value;
+
+        if ($floatValue !== null && ($floatValue < 0.5 || $floatValue > 3.0)) {
+            $this->addError('creditMarginMultiplier', 'Must be between 0.5 and 3.0 (or empty for default).');
+
+            return;
+        }
+
+        $user->currentTeam->update([
+            'credit_margin_multiplier' => $floatValue,
+        ]);
+
+        session()->flash('message', 'Credit margin multiplier saved.');
     }
 
     public function saveApprovalSettings(): void

@@ -72,6 +72,13 @@
                 <x-form-input wire:model.number="budgetCapCredits" label="Budget Cap (credits)" type="number" min="0" placeholder="Leave empty for unlimited" />
             </div>
 
+            @if($supportsMaxCreditsPerCall)
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <x-form-input wire:model.number="maxCreditsPerCall" label="Max credits per call (override)" type="number" min="1"
+                    hint="Per-agent cap that overrides the team default for a single LLM call. Leave empty to inherit team / platform setting." />
+            </div>
+            @endif
+
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <x-form-select wire:model="executionTier" label="Execution Tier">
                     @foreach(\App\Domain\Agent\Enums\ExecutionTier::cases() as $tier)
