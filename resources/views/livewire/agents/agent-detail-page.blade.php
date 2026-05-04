@@ -63,6 +63,13 @@
                         hint="Leave empty for unlimited" />
                 </div>
 
+                @if(\Illuminate\Support\Facades\Schema::hasColumn('agents', 'max_credits_per_call'))
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <x-form-input wire:model.number="editMaxCreditsPerCall" label="Max credits per call (override)" type="number" min="1"
+                        hint="Per-agent cap, overrides the team default for a single LLM call. Leave empty to inherit." />
+                </div>
+                @endif
+
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <x-form-select wire:model="editExecutionTier" label="Execution Tier">
                         @foreach(\App\Domain\Agent\Enums\ExecutionTier::cases() as $tier)

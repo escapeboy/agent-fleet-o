@@ -30,6 +30,21 @@ return [
         ? (int) env('FLEETQ_MAX_CREDITS_PER_CALL')
         : null,
 
+    // BYOK platform fee — flat platform_credits charged per LLM call when team uses
+    // their own provider key. Default 0 preserves current "BYOK skips deduction" behavior.
+    // Per-team override via teams.byok_platform_fee_per_call.
+    'byok_platform_fee_per_call' => (int) env('FLEETQ_BYOK_PLATFORM_FEE', 0),
+
+    // Cost-alert thresholds for EvaluateCostAlertsCommand (P1-3).
+    'alerts' => [
+        'bleeding_team_ratio' => (float) env('FLEETQ_ALERT_BLEEDING_RATIO', 1.5),
+        'stale_pricing_days' => (int) env('FLEETQ_ALERT_STALE_DAYS', 90),
+        'margin_drift_threshold_pct' => (float) env('FLEETQ_ALERT_MARGIN_DRIFT', 25),
+    ],
+
+    // Helicone auto-sync drift threshold (fraction). >this triggers snapshot rotation. (P1-1)
+    'sync_drift_threshold' => (float) env('FLEETQ_PRICING_DRIFT_THRESHOLD', 0.05),
+
     'usd_to_eur_rate' => (float) env('FLEETQ_USD_TO_EUR', 0.91),
 
     'last_updated_at' => '2026-05-04',

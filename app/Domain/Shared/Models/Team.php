@@ -22,6 +22,7 @@ use Illuminate\Support\Str;
  * @property string|null $sub_program_slug
  * @property float|null $credit_margin_multiplier
  * @property int|null $max_credits_per_call
+ * @property int|null $byok_platform_fee_per_call
  */
 class Team extends Model
 {
@@ -150,6 +151,14 @@ class Team extends Model
         $configMax = config('llm_pricing.max_credits_per_call');
 
         return $configMax !== null ? (int) $configMax : null;
+    }
+
+    /**
+     * Community edition has no per-team BYOK fee — falls through to config.
+     */
+    public function effectiveByokPlatformFee(): int
+    {
+        return (int) config('llm_pricing.byok_platform_fee_per_call', 0);
     }
 
     /**

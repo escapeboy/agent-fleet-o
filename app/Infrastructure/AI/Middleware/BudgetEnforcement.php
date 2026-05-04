@@ -33,6 +33,7 @@ class BudgetEnforcement implements AiMiddlewareInterface
             provider: $request->provider,
             model: $request->model,
             maxOutputTokens: $request->maxTokens,
+            agentId: $request->agentId,
         );
 
         $estimatedCost = $this->costCalculator->estimateCost(

@@ -10,6 +10,7 @@ use App\Domain\AgentChatProtocol\Enums\AgentChatVisibility;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Shared\Enums\DataClassification;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Models\Skill;
@@ -45,6 +46,7 @@ use Illuminate\Support\Carbon;
  * @property array|null $constraints
  * @property int|null $budget_cap_credits
  * @property int $budget_spent_credits
+ * @property int|null $max_credits_per_call
  * @property int $cost_per_1k_input
  * @property int $cost_per_1k_output
  * @property Carbon|null $last_health_check
@@ -78,6 +80,7 @@ class Agent extends Model
         'constraints',
         'budget_cap_credits',
         'budget_spent_credits',
+        'max_credits_per_call',
         'evaluation_enabled',
         'evaluation_sample_rate',
         'evaluation_model',
@@ -126,6 +129,7 @@ class Agent extends Model
             'cost_per_1k_output' => 'integer',
             'budget_cap_credits' => 'integer',
             'budget_spent_credits' => 'integer',
+            'max_credits_per_call' => 'integer',
             'evaluation_enabled' => 'boolean',
             'evaluation_sample_rate' => 'float',
             'evaluation_criteria' => 'array',
@@ -277,5 +281,25 @@ class Agent extends Model
         }
 
         return max(0, $this->budget_cap_credits - $this->budget_spent_credits);
+    }
+
+    /**
+     * Resolve the effective max-credits-per-call cap with precedence:
+     * agent.max_credits_per_call → team.effectiveMaxCreditsPerCall() → config.
+     * Returns null when uncapped.
+     */
+    public function effectiveMaxCreditsPerCall(?Team $team = null): ?int
+    {
+        if ($this->max_credits_per_call !== null) {
+            return (int) $this->max_credits_per_call;
+        }
+
+        if ($team !== null) {
+            return $team->effectiveMaxCreditsPerCall();
+        }
+
+        $configMax = config('llm_pricing.max_credits_per_call');
+
+        return $configMax !== null ? (int) $configMax : null;
     }
 }

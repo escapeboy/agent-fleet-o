@@ -2,6 +2,7 @@
 
 namespace App\Domain\Budget\Actions;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Shared\Models\Team;
@@ -27,6 +28,7 @@ class EnforceMaxCreditsPerCallAction
         int $maxOutputTokens,
         int $estimatedInputTokens = 500,
         ?string $cacheStrategy = null,
+        ?string $agentId = null,
     ): void {
         if ($teamId === '') {
             return;
@@ -37,7 +39,13 @@ class EnforceMaxCreditsPerCallAction
             return;
         }
 
-        $cap = $team->effectiveMaxCreditsPerCall();
+        if ($agentId !== null) {
+            $agent = Agent::withoutGlobalScopes()->find($agentId);
+            $cap = $agent ? $agent->effectiveMaxCreditsPerCall($team) : $team->effectiveMaxCreditsPerCall();
+        } else {
+            $cap = $team->effectiveMaxCreditsPerCall();
+        }
+
         if ($cap === null) {
             return;
         }

@@ -30,6 +30,7 @@ use App\Domain\Tool\Models\ToolSearchLog;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -56,6 +57,8 @@ class AgentDetailPage extends Component
     public string $editModel = '';
 
     public ?int $editBudgetCap = null;
+
+    public ?int $editMaxCreditsPerCall = null;
 
     public array $editFallbackChain = [];
 
@@ -238,6 +241,9 @@ class AgentDetailPage extends Component
         $this->editProvider = $this->agent->provider;
         $this->editModel = $this->agent->model;
         $this->editBudgetCap = $this->agent->budget_cap_credits;
+        $this->editMaxCreditsPerCall = Schema::hasColumn('agents', 'max_credits_per_call')
+            ? $this->agent->max_credits_per_call
+            : null;
         $this->editFallbackChain = $this->agent->config['fallback_chain'] ?? [];
         $this->editExecutionTier = $this->agent->config['execution_tier'] ?? 'standard';
         /** @var array<string, mixed> $personality */
@@ -411,13 +417,21 @@ class AgentDetailPage extends Component
             'model' => $this->editModel,
             'budget_cap_credits' => $this->editBudgetCap,
             'tool_profile' => $this->editToolProfile ?: null,
+            // max_credits_per_call only applied when the cloud column exists.
+        ];
+
+        if (Schema::hasColumn('agents', 'max_credits_per_call')) {
+            $newConfig['max_credits_per_call'] = $this->editMaxCreditsPerCall;
+        }
+
+        $newConfig = array_merge($newConfig, [
             'environment' => $this->editEnvironment ?: null,
             'evaluation_enabled' => $this->editEvaluationEnabled,
             'evaluation_sample_rate' => $this->editEvaluationEnabled ? ($this->editEvaluationSampleRate ?? 0.2) : 0.0,
             'config' => $config,
             'cost_per_1k_input' => $pricing['input'] ?? 0,
             'cost_per_1k_output' => $pricing['output'] ?? 0,
-        ];
+        ]);
 
         app(RecordAgentConfigRevisionAction::class)->execute(
             agent: $this->agent,

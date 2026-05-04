@@ -12,6 +12,7 @@ use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -41,6 +42,8 @@ class CreateAgentForm extends Component
     public string $model = '';
 
     public ?int $budgetCapCredits = null;
+
+    public ?int $maxCreditsPerCall = null;
 
     public array $selectedSkillIds = [];
 
@@ -133,6 +136,8 @@ class CreateAgentForm extends Component
             'environment' => ['nullable', Rule::enum(AgentEnvironment::class)],
             'useToolSearch' => ['nullable', 'boolean'],
             'toolSearchTopK' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'budgetCapCredits' => ['nullable', 'integer', 'min:0'],
+            'maxCreditsPerCall' => ['nullable', 'integer', 'min:1'],
         ];
     }
 
@@ -217,6 +222,10 @@ class CreateAgentForm extends Component
             config: $config,
             personality: $personality,
         );
+
+        if ($this->maxCreditsPerCall !== null && Schema::hasColumn('agents', 'max_credits_per_call')) {
+            $agent->update(['max_credits_per_call' => $this->maxCreditsPerCall]);
+        }
 
         if ($this->toolProfile !== '') {
             $agent->update(['tool_profile' => $this->toolProfile]);
@@ -349,6 +358,7 @@ class CreateAgentForm extends Component
             'canCreate' => true,
             'availableGitRepositories' => $availableGitRepositories,
             'availableKnowledgeBases' => $availableKnowledgeBases,
+            'supportsMaxCreditsPerCall' => Schema::hasColumn('agents', 'max_credits_per_call'),
         ])->layout('layouts.app', ['header' => 'Create Agent']);
     }
 }
