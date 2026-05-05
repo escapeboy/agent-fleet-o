@@ -45,10 +45,18 @@ class OpenAiRequestTranslator
             return ['type' => 'passthrough', 'provider' => $provider, 'model' => $model, 'entity' => null];
         }
 
-        // No namespace — try agent slug first, then treat as raw model
+        // No namespace — try agent slug first, then UUID, then treat as raw model
         $agent = Agent::where('team_id', $teamId)->where('slug', $modelId)->first();
         if ($agent) {
             return ['type' => 'agent', 'provider' => $agent->provider, 'model' => $agent->model, 'entity' => $agent];
+        }
+
+        // Try by UUID (agent ID) — used by partner integrations that store the agent UUID
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $modelId)) {
+            $agent = Agent::where('team_id', $teamId)->where('id', $modelId)->first();
+            if ($agent) {
+                return ['type' => 'agent', 'provider' => $agent->provider, 'model' => $agent->model, 'entity' => $agent];
+            }
         }
 
         // Fallback: assume anthropic provider

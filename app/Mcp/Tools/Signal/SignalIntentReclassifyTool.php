@@ -33,7 +33,11 @@ class SignalIntentReclassifyTool extends Tool
             return Response::error('signal_id is required');
         }
 
-        $signal = Signal::find($signalId);
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+
+        $signal = Signal::withoutGlobalScopes()
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->find($signalId);
         if ($signal === null) {
             return Response::error("Signal {$signalId} not found");
         }
