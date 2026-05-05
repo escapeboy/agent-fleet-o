@@ -136,6 +136,12 @@ class FallbackAiGateway implements AiGatewayInterface
                 }
             }
 
+            if (! $this->providerHasApiKey($providerName)) {
+                Log::debug("AI Gateway: skipping {$providerName} (no API key configured)");
+
+                continue;
+            }
+
             if (! $this->circuitBreaker->isAvailable($providerName)) {
                 Log::debug("CircuitBreaker: skipping {$providerName} (circuit open)");
 
@@ -315,6 +321,10 @@ class FallbackAiGateway implements AiGatewayInterface
                 }
             }
 
+            if (! $this->providerHasApiKey($providerName)) {
+                continue;
+            }
+
             if (! $this->circuitBreaker->isAvailable($providerName)) {
                 continue;
             }
@@ -414,6 +424,35 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         return (bool) config("llm_providers.{$provider}.local");
+    }
+
+    /**
+     * Whether a non-bridge / non-local provider has an API key configured.
+     *
+     * Bridge and local providers never need a key, so always return true for them.
+     * For cloud providers (anthropic, openai, google, etc.) check both the
+     * provider-specific config (config/ai.php) and the generic services config —
+     * either is enough to satisfy Prism. An empty string is treated as missing.
+     */
+    private function providerHasApiKey(string $providerName): bool
+    {
+        if ($this->isBridgeProvider($providerName) || $this->isLocalProvider($providerName)) {
+            return true;
+        }
+
+        $candidates = [
+            config("ai.providers.{$providerName}.api_key"),
+            config("services.{$providerName}.key"),
+            config("services.{$providerName}"),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && $candidate !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
