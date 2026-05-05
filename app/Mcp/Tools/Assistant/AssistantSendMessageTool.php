@@ -102,7 +102,7 @@ class AssistantSendMessageTool extends Tool
             return Response::text(json_encode([
                 'conversation_id' => $conversation->id,
                 'reply' => $reply?->content,
-                'total_tokens' => $aiResponse->usage->totalTokens ?? null,
+                'total_tokens' => $aiResponse->usage?->totalTokens(),
             ]));
         } catch (\Throwable $e) {
             throw $e;

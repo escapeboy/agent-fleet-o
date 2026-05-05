@@ -495,6 +495,10 @@
                         <dt class="text-gray-500">Reported</dt>
                         <dd class="text-gray-800">{{ $signal->created_at?->diffForHumans() }}</dd>
                     </div>
+                    <div>
+                        <dt class="text-gray-500">Assignee</dt>
+                        <dd class="text-gray-800 font-medium">{{ $signal->assignedUser?->name ?? '—' }}</dd>
+                    </div>
                     @if($signal->experiment_id)
                         <div>
                             <dt class="text-gray-500">Experiment</dt>
@@ -559,6 +563,22 @@
                 </div>
             @endif
 
+            {{-- Assign / Reassign --}}
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                <h2 class="text-sm font-semibold text-gray-900 mb-3">
+                    {{ $signal->assignedUser ? 'Reassign' : 'Assign' }}
+                </h2>
+                @if($signal->assignedUser)
+                    <p class="text-xs text-gray-500 mb-3">Assigned to <span class="font-medium text-gray-800">{{ $signal->assignedUser->name }}</span></p>
+                @endif
+                <button
+                    wire:click="openAssignModal"
+                    class="w-full px-3 py-2.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700"
+                >
+                    {{ $signal->assignedUser ? 'Reassign' : 'Assign to team member' }}
+                </button>
+            </div>
+
             {{-- Delegate to Agent --}}
             @if(! in_array($signal->status, [\App\Domain\Signal\Enums\SignalStatus::DelegatedToAgent, \App\Domain\Signal\Enums\SignalStatus::AgentFixing, \App\Domain\Signal\Enums\SignalStatus::Review, \App\Domain\Signal\Enums\SignalStatus::Resolved, \App\Domain\Signal\Enums\SignalStatus::Dismissed]))
                 <div class="bg-white rounded-lg border border-gray-200 p-4">
@@ -584,4 +604,41 @@
             @endif
         </div>
     </div>
+
+    {{-- Assign Modal --}}
+    @if($showAssignModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" wire:click.self="$set('showAssignModal', false)">
+            <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900">Assign Bug Report</h3>
+                    <button wire:click="$set('showAssignModal', false)" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <x-form-select wire:model="assignUserId" label="Assign to">
+                            <option value="">— Unassign —</option>
+                            @foreach($teamMembers as $member)
+                                <option value="{{ $member->id }}">{{ $member->name }} ({{ $member->email }})</option>
+                            @endforeach
+                        </x-form-select>
+                        @error('assignUserId') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <x-form-textarea wire:model="assignReason" label="Note (optional)" rows="3"
+                            hint="Added as an internal comment, not visible to the reporter." />
+                        @error('assignReason') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end gap-2">
+                    <button wire:click="$set('showAssignModal', false)" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button wire:click="submitAssign" wire:loading.attr="disabled" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60">
+                        <span wire:loading.remove wire:target="submitAssign">Confirm</span>
+                        <span wire:loading wire:target="submitAssign">Saving…</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
