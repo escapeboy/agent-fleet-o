@@ -18,6 +18,12 @@ class FallbackAiGatewayLocalTest extends TestCase
     {
         parent::setUp();
 
+        config([
+            'services.anthropic.key' => 'sk-test',
+            'services.openai.key' => 'sk-test',
+            'services.google.key' => 'sk-test',
+        ]);
+
         // Configure codex as a local provider
         config(['llm_providers.codex' => [
             'name' => 'Codex (Local)',
