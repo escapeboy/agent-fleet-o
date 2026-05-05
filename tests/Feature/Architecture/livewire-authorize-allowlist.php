@@ -125,6 +125,7 @@ return [
     'App\\Livewire\\Teams\\TeamSettingsPage::saveOllamaCredential' => 'pre-existing — tracked for livewire-authorize-sweep-2 sprint',
     'App\\Livewire\\Teams\\TeamSettingsPage::saveOpenaiCompatibleCredential' => 'pre-existing — tracked for livewire-authorize-sweep-2 sprint',
     'App\\Livewire\\Teams\\TeamSettingsPage::savePortkeyConfig' => 'pre-existing — tracked for livewire-authorize-sweep-2 sprint',
+    'App\\Livewire\\Teams\\TeamSettingsPage::saveCreditMargin' => 'pre-existing — super-admin only; checked via is_super_admin, not Gate. Tracked for livewire-authorize-sweep-2 sprint',
     'App\\Livewire\\Teams\\TeamSettingsPage::saveTeamSettings' => 'pre-existing — tracked for livewire-authorize-sweep-2 sprint',
     'App\\Livewire\\Teams\\TeamSettingsPage::saveTelegramBot' => 'pre-existing — tracked for livewire-authorize-sweep-2 sprint',
     'App\\Livewire\\Teams\\TeamSettingsPage::toggleCustomEndpoint' => 'pre-existing — tracked for livewire-authorize-sweep-2 sprint',

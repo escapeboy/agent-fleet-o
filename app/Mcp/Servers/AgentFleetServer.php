@@ -399,6 +399,7 @@ use App\Mcp\Tools\Signal\KgSuggestMergesTool;
 use App\Mcp\Tools\Signal\ListHighRiskContactsTool;
 use App\Mcp\Tools\Signal\RouteMapLookupTool;
 use App\Mcp\Tools\Signal\SearxngSearchTool;
+use App\Mcp\Tools\Signal\SignalAssignTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalIntentReclassifyTool;
@@ -915,10 +916,11 @@ class AgentFleetServer extends Server
         ListSecurityReviewsTool::class,
         ResolveSecurityReviewTool::class,
 
-        // Signal (21)
+        // Signal (22)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
+        SignalAssignTool::class,
         SignalIntentReclassifyTool::class,
         TicketConnectorTool::class,
         AlertConnectorTool::class,

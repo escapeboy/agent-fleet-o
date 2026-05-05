@@ -10,6 +10,7 @@ use Database\Factories\Domain\Signal\SignalFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -39,6 +40,8 @@ class Signal extends Model implements HasMedia
         'scored_at',
         'duplicate_count',
         'last_received_at',
+        'assigned_user_id',
+        'assigned_at',
     ];
 
     protected function casts(): array
@@ -54,6 +57,7 @@ class Signal extends Model implements HasMedia
             'scored_at' => 'datetime',
             'duplicate_count' => 'integer',
             'last_received_at' => 'datetime',
+            'assigned_at' => 'datetime',
         ];
     }
 
@@ -77,6 +81,11 @@ class Signal extends Model implements HasMedia
         return $this->belongsToMany(Entity::class, 'entity_signal')
             ->withPivot(['context', 'confidence'])
             ->withTimestamps();
+    }
+
+    public function assignedUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_user_id');
     }
 
     public function comments(): HasMany

@@ -87,11 +87,13 @@ use App\Domain\Signal\Connectors\UrlWatchConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WebScrapingConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
+use App\Domain\Signal\Events\SignalAssigned;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalStatusChanged;
 use App\Domain\Signal\Listeners\InferIncomingSignalIntent;
 use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
 use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
+use App\Domain\Signal\Listeners\SendSignalAssignedNotification;
 use App\Domain\Signal\Listeners\SyncSignalStatusOnExperimentComplete;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
@@ -532,6 +534,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(SignalIngested::class, NotifyOnCriticalBugReport::class);
         Event::listen(SignalIngested::class, InferIncomingSignalIntent::class);
         Event::listen(SignalStatusChanged::class, NotifyOnSignalStatusChange::class);
+        Event::listen(SignalAssigned::class, SendSignalAssignedNotification::class);
 
         // Bug report delegation: advance signal to review when agent experiment completes
         Event::listen(ExperimentTransitioned::class, SyncSignalStatusOnExperimentComplete::class);
