@@ -35,15 +35,18 @@ class ClaudeCodeVpsGate
             return false;
         }
 
+        // Team-level whitelist passes without a user — covers queue jobs and
+        // automated calls (world model digest, experiment pipeline) where no
+        // HTTP session is active but the team has been explicitly allowed.
+        if ($team?->claude_code_vps_allowed) {
+            return true;
+        }
+
         if (! $user) {
             return false;
         }
 
-        if ($user->is_super_admin) {
-            return true;
-        }
-
-        return (bool) ($team?->claude_code_vps_allowed);
+        return $user->is_super_admin;
     }
 
     public function assertAllowed(?User $user, ?Team $team): void
