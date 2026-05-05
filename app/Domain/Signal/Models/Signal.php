@@ -18,13 +18,11 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
+ * @property array<string, mixed> $payload
  * @property string $team_id
  * @property string|null $assigned_user_id
  * @property \Carbon\Carbon|null $assigned_at
- * @property array<string, mixed> $payload
- * @property array<string, mixed> $scoring_details
- * @property array<string, mixed> $metadata
- * @property array<int, string> $tags
+ * @property User|null $assignedUser
  */
 class Signal extends Model implements HasMedia
 {

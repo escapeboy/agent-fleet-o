@@ -57,7 +57,7 @@ class BugReportListController extends Controller
                 ? $signal->status->value
                 : (string) $signal->status;
 
-            $payload = is_array($signal->payload) ? $signal->payload : [];
+            $payload = $signal->payload;
 
             return [
                 'id' => $signal->id,
